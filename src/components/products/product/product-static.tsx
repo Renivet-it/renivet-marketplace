@@ -9,7 +9,7 @@ import {
     CircleDot,
     Factory,
     Leaf,
-    Map,
+    MapPin,
     PackageCheck,
     ShieldCheck,
     Users,
@@ -114,10 +114,16 @@ const buildDonut = (points: PricePoint[]) => {
     return `conic-gradient(${stops})`;
 };
 
+const locationHeadline = (value: string) => {
+    const firstChunk = value.split(",")[0]?.trim() || value.trim();
+    return titleCase(firstChunk.toLowerCase());
+};
+
 export const ProductCard = ({ product }: ProductCardProps) => {
     const [expandedStories, setExpandedStories] = useState<
         Record<string, boolean>
     >({});
+    const [isWhyExpanded, setIsWhyExpanded] = useState(false);
     const { data: decodeX, isLoading } =
         trpc.general.decodex.getPublicByScope.useQuery({
             brandId: product.brandId,
@@ -260,6 +266,25 @@ export const ProductCard = ({ product }: ProductCardProps) => {
               ? "Supplier declaration has been provided for this profile."
               : "Journey details are mapped from supplier and manufacturing inputs.";
 
+    const locationRoles = [
+        "Raw material origin",
+        "Manufacturing & dispatch",
+        "Packaging & certification",
+    ];
+
+    const locationInsights = uniqueLocations.slice(0, 3).map((location, index) => ({
+        location,
+        headline: locationHeadline(location),
+        role: locationRoles[index] ?? "Supply chain milestone",
+    }));
+
+    const whyText = normalizeParagraph(decodeX.storyWhy);
+    const whySentences = whyText
+        ? whyText.split(/(?<=[.!?])\s+/).filter(Boolean)
+        : [];
+    const whyQuote = whySentences[0] ?? whyText;
+    const whyBody = whySentences.slice(1).join(" ");
+
     return (
         <section className="mt-6 overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] text-[#1e2b3f]">
             <header className="relative border-b border-[#d7dde6] bg-[radial-gradient(circle_at_top_right,_#eaf1fa_0%,_#f1f5fa_35%,_#f7f9fb_65%,_#fcfbf4_100%)] p-6">
@@ -357,21 +382,34 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 </div>
 
                 {uniqueLocations.length > 0 && (
-                    <div className="grid gap-3 rounded-2xl border border-[#d7dde6] bg-white p-4">
-                        <div className="flex items-center gap-2 text-sm font-medium text-[#2f425d]">
-                            <Map className="size-4 text-[#6f90b8]" />
-                            Supply chain footprint
+                    <div className="grid gap-4 rounded-2xl border border-[#d7dde6] bg-[#edf3fa] p-4 sm:grid-cols-[170px_1fr] sm:items-center">
+                        <div className="mx-auto">
+                            <SupplyChainSketch />
                         </div>
-                        <div className="space-y-1.5">
-                            {uniqueLocations.slice(0, 3).map((location) => (
-                                <p
-                                    key={location}
-                                    className="flex items-center gap-2 text-sm text-[#4f657e]"
-                                >
-                                    <span className="inline-flex size-2 rounded-full bg-[#89a8ca]" />
-                                    <span>{location}</span>
-                                </p>
-                            ))}
+                        <div className="space-y-2">
+                            <div className="flex items-center gap-2 text-sm font-medium text-[#2f425d]">
+                                <MapPin className="size-4 text-[#6f90b8]" />
+                                Supply chain footprint
+                            </div>
+                            <div className="space-y-1.5">
+                                {locationInsights.map((item) => (
+                                    <p
+                                        key={item.location}
+                                        className="flex items-start gap-2 text-sm text-[#4f657e]"
+                                    >
+                                        <span className="mt-1.5 inline-flex size-2.5 shrink-0 rounded-full bg-[#86a8cd] shadow-[0_0_0_3px_rgba(134,168,205,0.15)]" />
+                                        <span className="break-words">
+                                            <span className="font-semibold text-[#2b4b72]">
+                                                {item.headline}
+                                            </span>{" "}
+                                            - {item.role}
+                                        </span>
+                                    </p>
+                                ))}
+                            </div>
+                            <p className="pt-1 text-sm italic text-[#7388a0]">
+                                100% Made in India supply chain
+                            </p>
                         </div>
                     </div>
                 )}
@@ -433,33 +471,51 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
             {(decodeX.storyWhy || pricePoints.length > 0) && (
                 <div className="border-t border-[#d7dde6] bg-[#fcfbf4] p-6">
-                    {decodeX.storyWhy && (
-                        <article className="mb-3 rounded-2xl border border-[#dce4ee] bg-white p-5">
+                    {whyText && (
+                        <article className="mb-4 rounded-2xl border border-[#dce4ee] bg-white p-5">
                             <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8ca0b7]">
                                 Why Choose This
                             </p>
-                            <p className="mt-2 font-playfair text-[30px] italic leading-[1.25] text-[#2e425d]">
-                                &quot;{normalizeParagraph(decodeX.storyWhy)}&quot;
+                            <p className="mt-3 border-l-2 border-[#8cade0] pl-4 font-playfair text-[clamp(1.24rem,2.1vw,1.7rem)] italic leading-[1.28] text-[#233d63]">
+                                &quot;{whyQuote}&quot;
                             </p>
+                            {Boolean(whyBody) && (
+                                <p className="mt-4 max-w-[68ch] text-[15px] leading-8 text-[#516983]">
+                                    {isWhyExpanded
+                                        ? whyBody
+                                        : previewText(whyBody, 220)}
+                                </p>
+                            )}
+                            {whyBody.length > 220 && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setIsWhyExpanded((prev) => !prev)
+                                    }
+                                    className="mt-3 text-xs font-semibold uppercase tracking-widest text-[#6a86a6] hover:text-[#4e6886]"
+                                >
+                                    {isWhyExpanded ? "Show less" : "Read more"}
+                                </button>
+                            )}
                         </article>
                     )}
 
                     {pricePoints.length > 0 && (
                         <article className="overflow-hidden rounded-2xl border border-[#dce4ee] bg-white">
-                            <div className="grid lg:grid-cols-[150px_1fr]">
-                                <div className="bg-[linear-gradient(145deg,#85aeda_0%,#8db5df_35%,#9bbfe5_100%)] p-4 text-white">
-                                    <p className="font-playfair text-[28px] leading-[1.1]">
+                            <div className="grid lg:grid-cols-[190px_1fr]">
+                                <div className="bg-[linear-gradient(145deg,#85aeda_0%,#8db5df_35%,#9bbfe5_100%)] p-5 text-white">
+                                    <p className="font-playfair text-[34px] leading-[1.06]">
                                         What&apos;s
                                         <br />
                                         in the
                                         <br />
                                         price
                                     </p>
-                                    <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">
+                                    <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">
                                         What customers usually don&apos;t see
                                     </p>
                                 </div>
-                                <div className="p-4">
+                                <div className="p-5">
                                     <div className="grid gap-4 sm:grid-cols-[84px_1fr]">
                                         <div className="mx-auto">
                                             <div
@@ -473,28 +529,33 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                                         </div>
                                         <div className="space-y-2">
                                             {pricePoints.map((point, index) => (
-                                                <div
-                                                    key={`${point.label}-${index}`}
-                                                    className="flex items-center gap-2"
-                                                >
-                                                    <span
-                                                        className="inline-flex size-2.5 rounded-sm"
-                                                        style={{
-                                                            backgroundColor:
-                                                                PRICE_COLORS[
-                                                                    index %
-                                                                        PRICE_COLORS.length
-                                                                ],
-                                                        }}
-                                                    />
-                                                    <span className="flex-1 text-sm text-[#4f6075]">
-                                                        {point.label}
-                                                    </span>
-                                                    <span className="text-sm font-semibold text-[#5d7693]">
-                                                        {point.percent}%
-                                                    </span>
+                                                <div key={`${point.label}-${index}`}>
+                                                    <div className="flex items-start gap-2">
+                                                        <span
+                                                            className="mt-1 inline-flex size-2.5 rounded-sm"
+                                                            style={{
+                                                                backgroundColor:
+                                                                    PRICE_COLORS[
+                                                                        index %
+                                                                            PRICE_COLORS.length
+                                                                    ],
+                                                            }}
+                                                        />
+                                                        <span className="flex-1 break-words text-sm leading-6 text-[#4f6075]">
+                                                            {point.label}
+                                                        </span>
+                                                        <span className="text-xs font-semibold text-[#5d7693]">
+                                                            {point.percent}%
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             ))}
+                                            <div className="h-px bg-[#dbe4ef]" />
+                                            <p className="pt-1 text-sm leading-7 text-[#5b7189]">
+                                                We don&apos;t dilute costs across high
+                                                volumes, so each rupee in the price tag
+                                                stays honest and accounted for.
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -518,6 +579,43 @@ function SectionTitle({ title }: { title: string }) {
     );
 }
 
+function SupplyChainSketch() {
+    return (
+        <svg
+            viewBox="0 0 170 190"
+            className="h-[150px] w-[135px]"
+            aria-hidden
+            focusable="false"
+        >
+            <path
+                d="M84 6 C108 8, 130 34, 132 58 C132 74, 120 86, 119 97 C121 108, 132 118, 129 130 C120 144, 97 164, 86 184 C78 164, 58 142, 45 125 C37 113, 33 94, 35 80 C38 60, 42 33, 58 18 C66 10, 74 8, 84 6 Z"
+                fill="none"
+                stroke="#7CA4D1"
+                strokeWidth="2.2"
+            />
+            <line
+                x1="42"
+                y1="70"
+                x2="88"
+                y2="114"
+                stroke="#AFC6DF"
+                strokeWidth="2"
+                strokeDasharray="5 4"
+            />
+            <circle cx="40" cy="68" r="11" fill="#D9E8F7" />
+            <circle cx="92" cy="118" r="12" fill="#D9E8F7" />
+            <circle cx="40" cy="68" r="6.3" fill="#7CA4D1" />
+            <circle cx="92" cy="118" r="7" fill="#7CA4D1" />
+            <text x="27" y="63" fill="#90ABCA" fontSize="10">
+                GJ
+            </text>
+            <text x="95" y="118" fill="#90ABCA" fontSize="10">
+                HYD
+            </text>
+        </svg>
+    );
+}
+
 function StatItem({
     icon: Icon,
     value,
@@ -531,7 +629,7 @@ function StatItem({
 }) {
     return (
         <div
-            className={`flex items-start gap-3 px-4 py-4 ${
+            className={`flex items-start gap-3 p-4 ${
                 bordered ? "border-b border-[#d2dbe8] sm:border-b-0 sm:border-r" : ""
             }`}
         >
