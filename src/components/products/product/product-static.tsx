@@ -124,6 +124,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         Record<string, boolean>
     >({});
     const [isWhyExpanded, setIsWhyExpanded] = useState(false);
+    const [isPriceExpanded, setIsPriceExpanded] = useState(false);
     const { data: decodeX, isLoading } =
         trpc.general.decodex.getPublicByScope.useQuery({
             brandId: product.brandId,
@@ -284,6 +285,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         : [];
     const whyQuote = whySentences[0] ?? whyText;
     const whyBody = whySentences.slice(1).join(" ");
+    const hasLongPriceLabels = pricePoints.some((point) => point.label.length > 92);
 
     return (
         <section className="mt-6 overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] text-[#1e2b3f]">
@@ -502,63 +504,93 @@ export const ProductCard = ({ product }: ProductCardProps) => {
 
                     {pricePoints.length > 0 && (
                         <article className="overflow-hidden rounded-2xl border border-[#dce4ee] bg-white">
-                            <div className="grid lg:grid-cols-[190px_1fr]">
-                                <div className="bg-[linear-gradient(145deg,#85aeda_0%,#8db5df_35%,#9bbfe5_100%)] p-5 text-white">
-                                    <p className="font-playfair text-[34px] leading-[1.06]">
+                            <div className="grid gap-0 border-b border-[#dfe8f2] bg-[#f9fbff] p-5 sm:grid-cols-[185px_1fr] sm:p-6">
+                                <div className="relative overflow-hidden rounded-xl bg-[linear-gradient(155deg,#80a9d7_0%,#90b8df_48%,#9ec3e7_100%)] p-5 text-white">
+                                    <div className="pointer-events-none absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.2)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.2)_1px,transparent_1px)] [background-size:22px_22px]" />
+                                    <p className="relative font-playfair text-[clamp(2.2rem,4vw,3rem)] leading-[0.96]">
                                         What&apos;s
                                         <br />
                                         in the
                                         <br />
                                         price
                                     </p>
-                                    <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">
+                                    <p className="relative mt-4 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/90">
                                         What customers usually don&apos;t see
                                     </p>
                                 </div>
-                                <div className="p-5">
-                                    <div className="grid gap-4 sm:grid-cols-[84px_1fr]">
+                                <div className="rounded-xl border border-[#dfe8f2] bg-white p-4 sm:ml-5">
+                                    <div className="grid gap-4 sm:grid-cols-[88px_1fr] sm:items-center">
                                         <div className="mx-auto">
                                             <div
-                                                className="relative size-[84px] rounded-full"
+                                                className="relative size-[88px] rounded-full"
                                                 style={{ background: donutBackground }}
                                             >
-                                                <div className="absolute inset-[14px] flex items-center justify-center rounded-full bg-white text-[9px] uppercase tracking-[0.12em] text-[#7e94ae]">
+                                                <div className="absolute inset-[13px] flex items-center justify-center rounded-full bg-white text-[9px] uppercase tracking-[0.12em] text-[#7e94ae]">
                                                     Price
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="space-y-2">
-                                            {pricePoints.map((point, index) => (
-                                                <div key={`${point.label}-${index}`}>
-                                                    <div className="flex items-start gap-2">
-                                                        <span
-                                                            className="mt-1 inline-flex size-2.5 rounded-sm"
-                                                            style={{
-                                                                backgroundColor:
-                                                                    PRICE_COLORS[
-                                                                        index %
-                                                                            PRICE_COLORS.length
-                                                                    ],
-                                                            }}
-                                                        />
-                                                        <span className="flex-1 break-words text-sm leading-6 text-[#4f6075]">
-                                                            {point.label}
-                                                        </span>
-                                                        <span className="text-xs font-semibold text-[#5d7693]">
-                                                            {point.percent}%
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            <div className="h-px bg-[#dbe4ef]" />
-                                            <p className="pt-1 text-sm leading-7 text-[#5b7189]">
-                                                We don&apos;t dilute costs across high
-                                                volumes, so each rupee in the price tag
-                                                stays honest and accounted for.
-                                            </p>
-                                        </div>
+                                        <p className="text-sm leading-7 text-[#5a7189]">
+                                            The cost mix below explains where value is
+                                            created across craftsmanship, material quality,
+                                            and compliance.
+                                        </p>
                                     </div>
                                 </div>
+                            </div>
+
+                            <div className="bg-white p-5 sm:p-6">
+                                <div className="space-y-2.5">
+                                    {pricePoints.map((point, index) => (
+                                        <div
+                                            key={`${point.label}-${index}`}
+                                            className="rounded-xl border border-transparent px-2 py-1.5"
+                                        >
+                                            <div className="grid grid-cols-[auto_1fr_auto] items-start gap-2.5">
+                                                <span
+                                                    className="mt-1.5 inline-flex size-2.5 rounded-full"
+                                                    style={{
+                                                        backgroundColor:
+                                                            PRICE_COLORS[
+                                                                index %
+                                                                    PRICE_COLORS.length
+                                                            ],
+                                                    }}
+                                                />
+                                                <p className="break-words text-sm leading-7 text-[#49607c]">
+                                                    {isPriceExpanded
+                                                        ? point.label
+                                                        : previewText(
+                                                              point.label,
+                                                              92
+                                                          )}
+                                                </p>
+                                                <span className="pt-0.5 text-xs font-semibold text-[#5d7693]">
+                                                    {point.percent}%
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {hasLongPriceLabels && (
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            setIsPriceExpanded((prev) => !prev)
+                                        }
+                                        className="mt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#6c88a8] hover:text-[#4e6886]"
+                                    >
+                                        {isPriceExpanded ? "Show less" : "Read more"}
+                                    </button>
+                                )}
+
+                                <div className="mt-3 h-px bg-[#dbe4ef]" />
+                                <p className="pt-3 text-sm leading-7 text-[#5b7189]">
+                                    We don&apos;t dilute costs across high volumes, so
+                                    each rupee in the price tag stays honest and
+                                    accounted for.
+                                </p>
                             </div>
                         </article>
                     )}
