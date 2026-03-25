@@ -10,6 +10,7 @@ import {
 import {
     createTRPCRouter,
     isTRPCAuth,
+    publicProcedure,
     protectedProcedure,
 } from "@/lib/trpc/trpc";
 import { TRPCError } from "@trpc/server";
@@ -105,6 +106,63 @@ export const decodeXRouter = createTRPCRouter({
                 },
                 orderBy: [asc(subCategories.name)],
             });
+        }),
+
+    getPublicByScope: publicProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid(),
+                subcategoryId: z.string().uuid(),
+            })
+        )
+        .query(async ({ input }) => {
+            const journey =
+                await db.query.brandSubcategoryDecodeXJourneys.findFirst({
+                    where: and(
+                        eq(brandSubcategoryDecodeXJourneys.brandId, input.brandId),
+                        eq(
+                            brandSubcategoryDecodeXJourneys.subcategoryId,
+                            input.subcategoryId
+                        )
+                    ),
+                    with: {
+                        brand: {
+                            columns: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                        subcategory: {
+                            columns: {
+                                id: true,
+                                name: true,
+                            },
+                        },
+                    },
+                });
+
+            if (!journey) {
+                return null;
+            }
+
+            const story = await db.query.brandSubcategoryDecodeXStories.findFirst({
+                where: and(
+                    eq(brandSubcategoryDecodeXStories.brandId, input.brandId),
+                    eq(
+                        brandSubcategoryDecodeXStories.subcategoryId,
+                        input.subcategoryId
+                    )
+                ),
+            });
+
+            return {
+                ...journey,
+                storyHuman: story?.storyHuman ?? null,
+                storyTruth: story?.storyTruth ?? null,
+                storyImpact: story?.storyImpact ?? null,
+                storyWhy: story?.storyWhy ?? null,
+                storyPriceBreakdown: story?.storyPriceBreakdown ?? null,
+            };
         }),
 
     getAll: protectedProcedure
