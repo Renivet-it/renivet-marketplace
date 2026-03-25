@@ -68,6 +68,44 @@ class MediaCache {
         };
     }
 
+    async getByExactKeys(keys: string[]) {
+        if (keys.length === 0) return { data: [], count: 0 };
+
+        const cachedMediaItems = await redis.mget(...keys);
+        const mediaItems: CachedBrandMediaItem[] = [];
+        const missingIds: string[] = [];
+        // Parse Redis results
+        for (let i = 0; i < cachedMediaItems.length; i++) {
+            const cached = parseToJSON<CachedBrandMediaItem>(cachedMediaItems[i]);
+            if (cached) {
+                mediaItems.push(cached);
+            } else {
+                const parts = keys[i].split(":");
+                if (parts.length >= 2) {
+                    missingIds.push(parts[1]);
+                }
+            }
+        }
+        // Fetch missing media from DB only
+        if (missingIds.length > 0) {
+            const dbMediaItems = await brandMediaItemQueries.getBrandMediaItemsByIds(missingIds);
+            if (dbMediaItems.count > 0) {
+                mediaItems.push(...dbMediaItems.data);
+                // Add missing items back to Redis cache
+                await this.addBulk(dbMediaItems.data);
+            }
+        }
+        // Sort by createdAt (same as before)
+        mediaItems.sort(
+            (a, b) =>
+                new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        return {
+            data: mediaItems,
+            count: mediaItems.length,
+        };
+    }
+
     async getByIds(ids: string[]) {
         if (ids.length === 0) return { data: [], count: 0 };
 

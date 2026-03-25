@@ -227,16 +227,16 @@ export function ProductCard({
                         if (isWishlistHovered) e.preventDefault();
                     }}
                 >
-                    <div className="relative aspect-[3/4] overflow-hidden">
+                    <div className="relative aspect-[3/4] overflow-hidden bg-gray-100 dark:bg-gray-800">
                         {/* Product default image */}
                         {isEmptyArray(mediaUrls) && (
                             <Image
                                 src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
                                 alt="default image"
-                                width={1000}
-                                height={1000}
+                                fill
+                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                                 className={cn(
-                                    "size-full object-cover transition-all duration-500 ease-in-out",
+                                    "object-cover transition-all duration-500 ease-in-out",
                                     isProductHovered ? "scale-105" : "scale-100"
                                 )}
                             />
@@ -245,10 +245,10 @@ export function ProductCard({
                             <Image
                                 src={mediaUrls[currentImageIndex]}
                                 alt={product.title}
-                                width={1000}
-                                height={1000}
+                                fill
+                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                                 className={cn(
-                                    "size-full object-cover transition-all duration-500 ease-in-out",
+                                    "object-cover transition-all duration-500 ease-in-out",
                                     isProductHovered ? "scale-105" : "scale-100"
                                 )}
                             />
