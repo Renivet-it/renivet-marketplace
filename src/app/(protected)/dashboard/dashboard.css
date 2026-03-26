@@ -1,0 +1,158 @@
+/* 
+    Shopify Polaris-style Dashboard Theme Overrides 
+*/
+.dashboard-theme {
+    /* Main Backgrounds & Foreground */
+    --background: 210 24% 96%; /* #f4f6f8 */
+    --foreground: 0 0% 12%; /* #1f1f1f */
+    
+    /* Cards */
+    --card: 0 0% 100%; /* #ffffff */
+    --card-foreground: 0 0% 12%; 
+    --border: 210 14% 89%; /* #e3e5e7 */
+    
+    /* Inputs */
+    --input: 210 14% 75%; /* #a6aab0 */
+    --ring: 220 100% 50%; /* #005bd3 - Primary Shopify Blue for focus */
+    
+    /* Primary Colors */
+    --primary: 0 0% 10%; /* Modern Shopify uses black/dark for primary actions, or 160 100% 25% for Green */
+    --primary-foreground: 0 0% 100%;
+
+    /* Mutable/Secondary Strings */
+    --muted: 210 20% 98%; /* #f9fafb for table headers */
+    --muted-foreground: 210 9% 45%; /* #6d7175 for subtle text */
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 95%; /* #f1f2f4 */
+    --sidebar-foreground: 0 0% 18%; /* #303030 */
+    --sidebar-primary: 0 0% 12%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 100%; /* active backgrounds = white */
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border: 0 0% 90%;
+    
+    /* Radius */
+    --radius: 0.5rem; /* 8px for cards/buttons */
+
+    /* Typography */
+    font-family: var(--font-inter), sans-serif;
+}
+
+/* Shopify-style Elevated Cards */
+.dashboard-theme .bg-card {
+    box-shadow: 0 0 0 1px rgba(63, 63, 68, 0.05), 0 1px 3px 0 rgba(63, 63, 68, 0.15);
+    border-color: transparent !important;
+}
+
+/* Base Shadow utility if needed */
+.dashboard-theme .shadow-sm {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* Tables Styling (Polaris) */
+.dashboard-theme table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.dashboard-theme thead th {
+    background-color: #f9fafb; /* Lighter background for headers */
+    color: #6d7175;
+    font-weight: 500;
+    text-transform: capitalize;
+    font-size: 0.875rem;
+    border-bottom: 1px solid #e1e3e5;
+    padding: 12px 16px;
+}
+
+.dashboard-theme tbody td {
+    padding: 12px 16px;
+    border-bottom: 1px solid #ebebeb;
+    font-size: 0.875rem;
+    color: #202223;
+}
+
+.dashboard-theme tbody tr:hover td {
+    background-color: #f6f6f7; /* Very subtle hover */
+}
+
+/* Inputs Styling (Polaris) */
+.dashboard-theme input:not([type="checkbox"]):not([type="radio"]), 
+.dashboard-theme textarea, 
+.dashboard-theme select {
+    background-color: #ffffff;
+    border: 1px solid #8c9196;
+    border-radius: 6px;
+    padding: 8px 12px;
+    color: #202223;
+    font-size: 0.875rem;
+    box-shadow: inset 0 1px 0 0 rgba(63,63,68,.05);
+    transition: all 0.2s ease;
+}
+
+.dashboard-theme input:focus, 
+.dashboard-theme textarea:focus, 
+.dashboard-theme select:focus {
+    border-color: #005bd3;
+    box-shadow: 0 0 0 2px rgba(0, 91, 211, 0.2);
+    outline: none;
+}
+
+/* Buttons (Polaris Default & Primary) */
+.dashboard-theme button.bg-primary {
+    background-color: #1a1a1a;
+    color: #ffffff;
+    border: none;
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.05); /* Slight bottom shadow for depth */
+    font-weight: 500;
+}
+.dashboard-theme button.bg-primary:hover {
+    background-color: #303030;
+}
+
+.dashboard-theme button.bg-secondary {
+    background-color: #ffffff;
+    color: #202223;
+    border: 1px solid #c9cccf;
+    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
+    font-weight: 500;
+}
+.dashboard-theme button.bg-secondary:hover {
+    background-color: #f6f6f7;
+}
+
+/* Adjust dark mode */
+.dark .dashboard-theme {
+    --background: 240 6% 10%; 
+    --foreground: 0 0% 89%; 
+    --card: 0 0% 14%; 
+    --card-foreground: 0 0% 89%;
+    --border: 0 0% 20%; 
+    --input: 0 0% 30%;
+    --sidebar-background: 240 6% 10%;
+    --sidebar-foreground: 0 0% 89%;
+    --sidebar-accent: 0 0% 20%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 0 0% 20%;
+}
+
+.dark .dashboard-theme .bg-card {
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.5);
+}
+
+.dark .dashboard-theme thead th {
+    background-color: #1a1a1a;
+    color: #a6aab0;
+    border-bottom-color: #333333;
+}
+
+.dark .dashboard-theme tbody td {
+    border-bottom-color: #333333;
+    color: #e3e3e3;
+}
+
+.dark .dashboard-theme tbody tr:hover td {
+    background-color: #2a2a2a;
+}
+

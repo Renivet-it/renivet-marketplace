@@ -7,6 +7,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Metadata } from "next";
 
+import "./dashboard.css";
+
 export const metadata: Metadata = {
     title: {
         default: "Dashboard",
@@ -17,25 +19,27 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: LayoutProps) {
     return (
-        <SidebarProvider>
-            <Sidebar />
+        <div className="dashboard-theme min-h-screen bg-background font-inter text-foreground">
+            <SidebarProvider>
+                <Sidebar />
 
-            <ShadSidebarInset className="min-w-0 max-w-full overflow-x-hidden">
-                <header className="flex h-16 shrink-0 items-center gap-2 transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
-                    <div className="product-breadcrum flex items-center gap-2 px-4">
-                        <SidebarTrigger className="-ml-1 hover:bg-transparent hover:text-foreground" />
+                <ShadSidebarInset className="bg-background min-w-0 max-w-full overflow-x-hidden">
+                    <header className="flex h-16 shrink-0 items-center gap-2 border-b border-border bg-card transition-[width,height] ease-linear group-has-[[data-collapsible=icon]]/sidebar-wrapper:h-12">
+                        <div className="product-breadcrum flex items-center gap-2 px-4">
+                            <SidebarTrigger className="-ml-1 hover:bg-transparent hover:text-foreground" />
 
-                        <Separator
-                            orientation="vertical"
-                            className="mr-2 h-4"
-                        />
+                            <Separator
+                                orientation="vertical"
+                                className="mr-2 h-4"
+                            />
 
-                        <SidebarInset />
-                    </div>
-                </header>
+                            <SidebarInset />
+                        </div>
+                    </header>
 
-                {children}
-            </ShadSidebarInset>
-        </SidebarProvider>
+                    {children}
+                </ShadSidebarInset>
+            </SidebarProvider>
+        </div>
     );
 }

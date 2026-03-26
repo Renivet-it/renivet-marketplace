@@ -18,6 +18,7 @@ export default withUt({
                 dmsans: ["var(--font-dmsans)", ...fontFamily.sans],
                 lato: ["var(--font-lato)", ...fontFamily.sans],
                 playfair: ["var(--font-playfair)", ...fontFamily.serif],
+                inter: ["var(--font-inter)", ...fontFamily.sans],
             },
             colors: {
                 "myntra-primary": "#282c3f",

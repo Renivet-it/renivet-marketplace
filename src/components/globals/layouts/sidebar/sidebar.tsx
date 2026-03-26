@@ -97,9 +97,9 @@ export function Sidebar() {
     return (
         <ShadSidebar
             collapsible="icon"
-            className="border-r border-sidebar-border/70 bg-sidebar/95 backdrop-blur-md"
+            className="border-r border-sidebar-border bg-sidebar"
         >
-            <SidebarHeader className="border-b border-sidebar-border/70 p-3">
+            <SidebarHeader className="border-b border-sidebar-border p-3">
                 <GenericHeader />
             </SidebarHeader>
 
@@ -134,7 +134,7 @@ export function Sidebar() {
                 />
             </SidebarContent>
 
-            <SidebarFooter className="border-t border-sidebar-border/70 p-3">
+            <SidebarFooter className="border-t border-sidebar-border p-3">
                 <NavUser />
             </SidebarFooter>
 

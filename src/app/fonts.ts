@@ -4,6 +4,7 @@ import {
     Playfair_Display,
     Rubik,
     Work_Sans,
+    Inter,
 } from "next/font/google";
 
 export const dmsans = DM_Sans({
@@ -39,4 +40,11 @@ export const playfair = Playfair_Display({
     weight: ["400", "600", "700"],
     display: "swap",
     variable: "--font-playfair",
+});
+
+export const inter = Inter({
+    subsets: ["latin"],
+    weight: ["400", "500", "600", "700"],
+    display: "swap",
+    variable: "--font-inter",
 });
