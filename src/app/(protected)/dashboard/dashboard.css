@@ -1,158 +1,339 @@
 /* 
-    Shopify Polaris-style Dashboard Theme Overrides 
+    Radical High-Contrast Dashboard Theme Overrides
 */
+
 .dashboard-theme {
     /* Main Backgrounds & Foreground */
-    --background: 210 24% 96%; /* #f4f6f8 */
-    --foreground: 0 0% 12%; /* #1f1f1f */
+    --background: 210 20% 95%; /* More noticeable smooth gray #f1f3f5 */
+    --foreground: 0 0% 9%; /* Very dark text */
     
     /* Cards */
-    --card: 0 0% 100%; /* #ffffff */
-    --card-foreground: 0 0% 12%; 
+    --card: 0 0% 100%; /* Pure white */
+    --card-foreground: 0 0% 9%; 
     --border: 210 14% 89%; /* #e3e5e7 */
     
     /* Inputs */
-    --input: 210 14% 75%; /* #a6aab0 */
-    --ring: 220 100% 50%; /* #005bd3 - Primary Shopify Blue for focus */
+    --input: 210 10% 75%; 
+    --ring: 160 100% 25%; /* Signature Shopify Green focus */
     
-    /* Primary Colors */
-    --primary: 0 0% 10%; /* Modern Shopify uses black/dark for primary actions, or 160 100% 25% for Green */
+    /* Primary Colors (Shopify Green) */
+    --primary: 160 100% 25%; /* #008060 */
     --primary-foreground: 0 0% 100%;
 
-    /* Mutable/Secondary Strings */
-    --muted: 210 20% 98%; /* #f9fafb for table headers */
-    --muted-foreground: 210 9% 45%; /* #6d7175 for subtle text */
+    /* Mutable/Secondary */
+    --muted: 210 15% 97%; 
+    --muted-foreground: 210 9% 45%; 
 
-    /* Sidebar */
-    --sidebar-background: 0 0% 95%; /* #f1f2f4 */
-    --sidebar-foreground: 0 0% 18%; /* #303030 */
-    --sidebar-primary: 0 0% 12%;
+    /* Massive Visual Difference: Premium White Sidebar */
+    --sidebar-background: 0 0% 100%; /* Pure white sidebar */
+    --sidebar-foreground: 0 0% 20%; /* Dark text */
+    --sidebar-primary: 160 100% 25%; /* Green accents */
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 100%; /* active backgrounds = white */
-    --sidebar-accent-foreground: 0 0% 10%;
-    --sidebar-border: 0 0% 90%;
+    --sidebar-accent: 210 14% 96%; /* Soft sleek gray for hover #f4f5f7 */
+    --sidebar-accent-foreground: 0 0% 10%; /* Dark hover text */
+    --sidebar-border: 210 14% 89%; /* Subtle right border */
     
-    /* Radius */
-    --radius: 0.5rem; /* 8px for cards/buttons */
+    /* Bigger softer radius */
+    --radius: 0.75rem; /* 12px for cards/buttons */
 
-    /* Typography */
     font-family: var(--font-inter), sans-serif;
 }
 
-/* Shopify-style Elevated Cards */
+/* =========================================
+   Ultra-Premium Components Styling
+   ========================================= */
+
+/* Elevated Minimalist Cards */
 .dashboard-theme .bg-card {
-    box-shadow: 0 0 0 1px rgba(63, 63, 68, 0.05), 0 1px 3px 0 rgba(63, 63, 68, 0.15);
+    box-shadow: 
+        0 1px 2px rgba(0, 0, 0, 0.05),
+        0 4px 6px -1px rgba(0, 0, 0, 0.02),
+        0 0 0 1px rgba(0,0,0,0.04);
     border-color: transparent !important;
+    border-radius: 12px;
+    background-color: #ffffff;
+    overflow: hidden; /* Important for rounding tables properly */
 }
 
-/* Base Shadow utility if needed */
-.dashboard-theme .shadow-sm {
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
-/* Tables Styling (Polaris) */
+/* Beautiful Minimalist Table Styling */
+.dashboard-theme div[data-state="expanded"] table,
+.dashboard-theme div.overflow-auto table,
 .dashboard-theme table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: collapse; /* Revert back to unified table */
+    border-spacing: 0;
 }
 
 .dashboard-theme thead th {
-    background-color: #f9fafb; /* Lighter background for headers */
-    color: #6d7175;
+    background-color: #f9fafb; /* Soft gray header */
+    color: #5c5f62; /* Precise Shopify Gray */
     font-weight: 500;
-    text-transform: capitalize;
-    font-size: 0.875rem;
-    border-bottom: 1px solid #e1e3e5;
-    padding: 12px 16px;
+    text-transform: none; /* Modern flat look without screaming uppercase */
+    font-size: 0.85rem;
+    padding: 12px 24px;
+    border-bottom: 1px solid #ebebeb;
+    text-align: left;
+}
+
+.dashboard-theme tbody tr {
+    background-color: #ffffff;
+    border-bottom: 1px solid #f1f2f4; /* Subtle line separating rows */
+    transition: background-color 0.2s ease;
+    box-shadow: none; /* Remove floating row shadows */
+    border-radius: 0;
+}
+
+.dashboard-theme tbody tr:last-child {
+    border-bottom: none; /* Clean bottom edge */
+}
+
+.dashboard-theme tbody tr:hover {
+    background-color: #f7f9fa; /* Very subtle pristine hover */
+    transform: none; /* No row jumping */
+    box-shadow: none;
 }
 
 .dashboard-theme tbody td {
-    padding: 12px 16px;
-    border-bottom: 1px solid #ebebeb;
+    padding: 14px 24px;
+    border: none;
     font-size: 0.875rem;
     color: #202223;
 }
-
-.dashboard-theme tbody tr:hover td {
-    background-color: #f6f6f7; /* Very subtle hover */
+.dashboard-theme tbody td:first-child {
+    border-radius: 0;
+}
+.dashboard-theme tbody td:last-child {
+    border-radius: 0;
 }
 
-/* Inputs Styling (Polaris) */
+/* Beautiful Premium Inputs */
 .dashboard-theme input:not([type="checkbox"]):not([type="radio"]), 
 .dashboard-theme textarea, 
 .dashboard-theme select {
     background-color: #ffffff;
-    border: 1px solid #8c9196;
-    border-radius: 6px;
-    padding: 8px 12px;
-    color: #202223;
-    font-size: 0.875rem;
-    box-shadow: inset 0 1px 0 0 rgba(63,63,68,.05);
-    transition: all 0.2s ease;
+    border: 1px solid #c9cccf;
+    border-radius: 8px;
+    padding: 10px 16px;
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);
+    transition: all 0.25s ease;
 }
 
 .dashboard-theme input:focus, 
 .dashboard-theme textarea:focus, 
 .dashboard-theme select:focus {
-    border-color: #005bd3;
-    box-shadow: 0 0 0 2px rgba(0, 91, 211, 0.2);
+    border-color: #008060;
+    box-shadow: 0 0 0 3px rgba(0, 128, 96, 0.15);
     outline: none;
+    transform: translateY(-1px);
 }
 
-/* Buttons (Polaris Default & Primary) */
+/* Premium Buttons */
 .dashboard-theme button.bg-primary {
-    background-color: #1a1a1a;
+    background-color: #1a1a1a; /* Sleek authoritative black */
     color: #ffffff;
     border: none;
-    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.05); /* Slight bottom shadow for depth */
+    border-radius: 8px;
+    padding: 10px 20px;
     font-weight: 500;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    transition: all 0.25s ease;
 }
 .dashboard-theme button.bg-primary:hover {
     background-color: #303030;
+    box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
 }
 
-.dashboard-theme button.bg-secondary {
-    background-color: #ffffff;
-    color: #202223;
-    border: 1px solid #c9cccf;
-    box-shadow: 0 1px 0 rgba(0, 0, 0, 0.05);
-    font-weight: 500;
-}
-.dashboard-theme button.bg-secondary:hover {
-    background-color: #f6f6f7;
+/* Header Styling */
+.dashboard-theme header {
+    background-color: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px) !important;
+    border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.02);
 }
 
-/* Adjust dark mode */
+/* Custom Scrollbars */
+.dashboard-theme ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+.dashboard-theme ::-webkit-scrollbar-track {
+    background: transparent; 
+}
+.dashboard-theme ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15); 
+    border-radius: 10px;
+}
+.dashboard-theme ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 128, 96, 0.5); 
+}
+
+/* Dark Mode Overrides */
 .dark .dashboard-theme {
-    --background: 240 6% 10%; 
-    --foreground: 0 0% 89%; 
-    --card: 0 0% 14%; 
-    --card-foreground: 0 0% 89%;
-    --border: 0 0% 20%; 
-    --input: 0 0% 30%;
-    --sidebar-background: 240 6% 10%;
-    --sidebar-foreground: 0 0% 89%;
-    --sidebar-accent: 0 0% 20%;
-    --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 20%;
+    --background: 240 6% 6%; 
+    --foreground: 0 0% 95%; 
+    --card: 240 6% 10%; 
+    --card-foreground: 0 0% 95%;
+    --border: 0 0% 15%; 
+    --input: 0 0% 20%;
+    
+    --sidebar-background: 0 0% 4%;
+    --sidebar-border: 0 0% 10%;
+    --sidebar-accent: 0 0% 12%;
 }
 
-.dark .dashboard-theme .bg-card {
-    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 1px 3px 0 rgba(0, 0, 0, 0.5);
-}
-
-.dark .dashboard-theme thead th {
+.dark .dashboard-theme tbody tr {
     background-color: #1a1a1a;
-    color: #a6aab0;
-    border-bottom-color: #333333;
+    box-shadow: none;
+    border-bottom: 1px solid #333;
 }
-
 .dark .dashboard-theme tbody td {
-    border-bottom-color: #333333;
     color: #e3e3e3;
 }
-
-.dark .dashboard-theme tbody tr:hover td {
-    background-color: #2a2a2a;
+.dark .dashboard-theme tbody tr:hover {
+    box-shadow: none;
+    background-color: #242424;
 }
+.dark .dashboard-theme input {
+    background-color: #0e0e0e;
+    border-color: #333;
+    color: #fff;
+}
+
+
+/* =========================================
+   Advanced Smooth UI & Micro-interactions
+   ========================================= */
+
+/* Smooth Transitions */
+.dashboard-theme a, 
+.dashboard-theme button, 
+.dashboard-theme input, 
+.dashboard-theme select, 
+.dashboard-theme textarea,
+.dashboard-theme tr,
+.dashboard-theme td,
+.dashboard-theme .bg-card {
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Beautiful Custom Scrollbars */
+.dashboard-theme ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+.dashboard-theme ::-webkit-scrollbar-track {
+    background: transparent; 
+}
+.dashboard-theme ::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.15); 
+    border-radius: 10px;
+}
+.dashboard-theme ::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.25); 
+}
+.dark .dashboard-theme ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2); 
+}
+.dark .dashboard-theme ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3); 
+}
+
+/* Enhancing Cards with Multi-layered Premium Shadows */
+.dashboard-theme .bg-card {
+    box-shadow: 
+        0 1px 2px 0 rgba(0, 0, 0, 0.03), 
+        0 1px 6px -1px rgba(0, 0, 0, 0.02), 
+        0 2px 4px 0 rgba(0, 0, 0, 0.02);
+    transform: translateY(0);
+}
+
+.dashboard-theme .bg-card:hover {
+    box-shadow: 
+        0 6px 16px -4px rgba(0, 0, 0, 0.06),
+        0 4px 6px -2px rgba(0, 0, 0, 0.03);
+    transform: translateY(-2px);
+}
+
+/* Button Micro-interactions */
+.dashboard-theme button:active {
+    transform: scale(0.97);
+}
+
+/* =========================================
+   Tree Connectors for Submenus (L-Shaped)
+   ========================================= */
+.dashboard-theme [data-sidebar="menu-sub"] {
+    /* Remove standard left border to make way for curved lines */
+    border-left: transparent !important;
+    position: relative;
+    padding-left: 12px !important; /* ensure spacing */
+}
+
+/* Draw a stronger solid vertical parent line to ensure it displays */
+.dashboard-theme [data-sidebar="menu-sub"]::before {
+    content: "";
+    position: absolute;
+    left: 4px;
+    top: 0;
+    bottom: 0px;
+    width: 2px;
+    background-color: #cbd5e1; /* highly visible slate gray */
+    z-index: 1;
+}
+
+.dashboard-theme [data-sidebar="menu-sub-item"] {
+    position: relative;
+    z-index: 2; /* keep text above lines */
+}
+
+.dashboard-theme [data-sidebar="menu-sub-item"]::before {
+    content: "";
+    position: absolute;
+    /* Move left out of the item's box to align with the parent's icon */
+    left: -8px;
+    /* Start high enough to connect from the previous item or parent */
+    top: -12px;
+    /* End halfway down the current item */
+    bottom: 50%;
+    /* Connect horizontally */
+    width: 10px;
+    /* Draw the L-shape */
+    border-left: 2px solid #cbd5e1; /* highly visible slate gray */
+    border-bottom: 2px solid #cbd5e1;
+    border-bottom-left-radius: 8px; /* The curve */
+    pointer-events: none;
+    z-index: -1;
+}
+
+/* =========================================
+   Premium Entry Animations
+   ========================================= */
+@keyframes smoothSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.dashboard-theme .bg-card, 
+.dashboard-theme tbody tr {
+    animation: smoothSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Stagger animations slightly for table rows to look incredible */
+.dashboard-theme tbody tr:nth-child(1) { animation-delay: 0.05s; }
+.dashboard-theme tbody tr:nth-child(2) { animation-delay: 0.1s; }
+.dashboard-theme tbody tr:nth-child(3) { animation-delay: 0.15s; }
+.dashboard-theme tbody tr:nth-child(4) { animation-delay: 0.2s; }
+.dashboard-theme tbody tr:nth-child(5) { animation-delay: 0.25s; }
+.dashboard-theme tbody tr:nth-child(6) { animation-delay: 0.3s; }
+.dashboard-theme tbody tr:nth-child(7) { animation-delay: 0.35s; }
+.dashboard-theme tbody tr:nth-child(8) { animation-delay: 0.4s; }
 
