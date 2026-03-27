@@ -22,14 +22,14 @@ import { Suspense } from "react";
 
 export const metadata: Metadata = {
     title: "Products",
-    description: "Manage products under review",
+    description: "Manage products",
 };
 
 interface PageProps {
     searchParams: Promise<{
         page?: string;
         limit?: string;
-        verificationStatus?: Product["verificationStatus"];
+        verificationStatus?: Product["verificationStatus"] | "all";
         search?: string;
     }>;
 }
@@ -41,7 +41,7 @@ export default function Page(props: PageProps) {
                 <div className="space-y-1 text-center md:text-start">
                     <h1 className="text-2xl font-bold">Products</h1>
                     <p className="text-balance text-sm text-muted-foreground">
-                        Manage products under review
+                        Manage all products
                     </p>
                 </div>
 
@@ -73,10 +73,12 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
     } = await searchParams;
 
     const limit =
-        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
+        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 15;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const verificationStatus =
-        verificationStatusRaw === undefined ? "pending" : verificationStatusRaw;
+        verificationStatusRaw && verificationStatusRaw !== "all"
+            ? verificationStatusRaw
+            : undefined;
     const search = searchRaw?.length ? searchRaw : undefined;
 
     const data = await productQueries.getProducts({

@@ -735,9 +735,22 @@ class ProductQuery {
             const lowRelevanceQuery = sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
             const semanticQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
             // Also include exact text matches (title/description) so literal brand/product searches always work
+            const searchPattern = `%${search}%`;
             const textQuery = or(
-                ilike(products.title, `%${search}%`),
-                ilike(products.description, `%${search}%`)
+                ilike(products.title, searchPattern),
+                ilike(products.description, searchPattern),
+                ilike(products.nativeSku, searchPattern),
+                ilike(products.sku, searchPattern),
+                sql`EXISTS (
+                    SELECT 1
+                    FROM ${productVariants}
+                    WHERE ${productVariants.productId} = ${products.id}
+                      AND ${productVariants.isDeleted} = false
+                      AND (
+                          ${productVariants.nativeSku} ILIKE ${searchPattern}
+                          OR ${productVariants.sku} ILIKE ${searchPattern}
+                      )
+                )`
             );
             searchQuery = or(semanticQuery, textQuery);
         } else if (searchEmbedding) {
@@ -748,9 +761,22 @@ class ProductQuery {
             const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
             const semanticQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
             // Also include exact text matches
+            const searchPattern = `%${search}%`;
             const textQuery = or(
-                ilike(products.title, `%${search}%`),
-                ilike(products.description, `%${search}%`)
+                ilike(products.title, searchPattern),
+                ilike(products.description, searchPattern),
+                ilike(products.nativeSku, searchPattern),
+                ilike(products.sku, searchPattern),
+                sql`EXISTS (
+                    SELECT 1
+                    FROM ${productVariants}
+                    WHERE ${productVariants.productId} = ${products.id}
+                      AND ${productVariants.isDeleted} = false
+                      AND (
+                          ${productVariants.nativeSku} ILIKE ${searchPattern}
+                          OR ${productVariants.sku} ILIKE ${searchPattern}
+                      )
+                )`
             );
             searchQuery = or(semanticQuery, textQuery);
         }

@@ -196,7 +196,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         ],
     },
     {
-        title: "Management",
+        title: "Store Operations",
         url: "#",
         icon: "Settings2",
         items: [
@@ -256,7 +256,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
-                title: "Supports",
+                title: "Support",
                 url: "/dashboard/general/support",
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |
@@ -286,7 +286,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_PRODUCTS,
             },
             {
-                title: "Discrepency Table",
+                title: "Discrepancy Table",
                 url: "/dashboard/general/discrepency-table",
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |
@@ -329,7 +329,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
             },
             {
-                title: "Product Catalogue",
+                title: "Catalog",
                 url: "/dashboard/general/product-catalogue",
                 permissions:
                     BitFieldSitePermission.MANAGE_CATEGORIES |
@@ -344,7 +344,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_CATEGORIES,
             },
             {
-                title: "Sub Categories",
+                title: "Subcategories",
                 url: "/dashboard/general/sub-categories",
                 permissions:
                     BitFieldSitePermission.MANAGE_CATEGORIES |
@@ -374,14 +374,14 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_ORDERS,
             },
             {
-                title: "Orders RTO Request Table",
+                title: "RTO Requests",
                 url: "/dashboard/general/return-replace",
                 permissions:
                     BitFieldSitePermission.VIEW_ORDERS |
                     BitFieldSitePermission.MANAGE_ORDERS,
             },
             {
-                title: "Orders Intent Table",
+                title: "Order Intent",
                 url: "/dashboard/general/order-intent",
                 permissions:
                     BitFieldSitePermission.VIEW_ORDERS |
@@ -390,7 +390,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         ],
     },
     {
-        title: "Marketing Management",
+        title: "Marketing",
         url: "#",
         icon: "Megaphone",
         items: [

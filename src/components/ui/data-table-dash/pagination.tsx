@@ -10,130 +10,53 @@ import {
     Pagination as ShadPagination,
 } from "@/components/ui/pagination-dash";
 import { parseAsInteger, useQueryState } from "nuqs";
+import { Fragment, useMemo, useState } from "react";
 
 interface PageProps {
     total: number;
 }
+
+const MAX_VISIBLE_NEIGHBORS = 1;
 
 export function Pagination({ total }: PageProps) {
     const [page, setPage] = useQueryState(
         "page",
         parseAsInteger.withDefault(1)
     );
+    const [jumpValue, setJumpValue] = useState("");
+
+    const safeTotal = Math.max(total, 1);
 
     const handlePageChange = (newPage: number) => {
-        if (newPage >= 1 && newPage <= total) setPage(newPage);
+        if (newPage >= 1 && newPage <= safeTotal) {
+            void setPage(newPage);
+        }
     };
 
-    const renderPageNumbers = () => {
-        const pages = [];
-        const maxVisiblePages = 4;
+    const pagesToRender = useMemo(() => {
+        const pages = new Set<number>([1, safeTotal]);
 
-        if (total <= maxVisiblePages) {
-            for (let i = 1; i <= total; i++) {
-                pages.push(
-                    <PaginationItem key={i} className="hidden sm:inline-block">
-                        <PaginationLink
-                            size="sm"
-                            href="#"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handlePageChange(i);
-                            }}
-                            isActive={page === i}
-                            disabled={total === 1}
-                        >
-                            {i}
-                        </PaginationLink>
-                    </PaginationItem>
-                );
-            }
-        } else {
-            pages.push(
-                <PaginationItem key={1} className="hidden sm:inline-block">
-                    <PaginationLink
-                        size="sm"
-                        href="#"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handlePageChange(1);
-                        }}
-                        isActive={page === 1}
-                        disabled={total === 1}
-                    >
-                        1
-                    </PaginationLink>
-                </PaginationItem>
-            );
-
-            if (page > 2) {
-                pages.push(
-                    <PaginationItem
-                        key="ellipsis-start"
-                        className="hidden sm:inline-block"
-                    >
-                        <PaginationEllipsis />
-                    </PaginationItem>
-                );
-            }
-
-            if (page !== 1 && page !== total) {
-                pages.push(
-                    <PaginationItem
-                        key={page}
-                        className="hidden sm:inline-block"
-                    >
-                        <PaginationLink
-                            size="sm"
-                            href="#"
-                            onClick={(e) => {
-                                e.preventDefault();
-                                handlePageChange(page);
-                            }}
-                            isActive
-                            disabled
-                        >
-                            {page}
-                        </PaginationLink>
-                    </PaginationItem>
-                );
-            }
-
-            if (page < total - 1) {
-                pages.push(
-                    <PaginationItem
-                        key="ellipsis-end"
-                        className="hidden sm:inline-block"
-                    >
-                        <PaginationEllipsis />
-                    </PaginationItem>
-                );
-            }
-
-            pages.push(
-                <PaginationItem key={total} className="hidden sm:inline-block">
-                    <PaginationLink
-                        size="sm"
-                        href="#"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            handlePageChange(total);
-                        }}
-                        isActive={page === total}
-                        disabled={total === 1}
-                    >
-                        {total}
-                    </PaginationLink>
-                </PaginationItem>
-            );
+        for (
+            let i = Math.max(1, page - MAX_VISIBLE_NEIGHBORS);
+            i <= Math.min(safeTotal, page + MAX_VISIBLE_NEIGHBORS);
+            i++
+        ) {
+            pages.add(i);
         }
 
-        return pages;
+        return Array.from(pages).sort((a, b) => a - b);
+    }, [page, safeTotal]);
+
+    const handleJump = () => {
+        const target = Number(jumpValue);
+        if (!Number.isFinite(target)) return;
+        handlePageChange(Math.trunc(target));
+        setJumpValue("");
     };
 
     return (
-        <div>
-            <ShadPagination>
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+            <ShadPagination className="mx-0 w-full sm:w-auto">
                 <PaginationContent>
                     <PaginationItem>
                         <PaginationPrevious
@@ -146,7 +69,37 @@ export function Pagination({ total }: PageProps) {
                             disabled={page === 1}
                         />
                     </PaginationItem>
-                    {renderPageNumbers()}
+
+                    {pagesToRender.map((current, index) => {
+                        const previous = pagesToRender[index - 1];
+                        const hasGap = previous && current - previous > 1;
+
+                        return (
+                            <Fragment key={current}>
+                                {hasGap && (
+                                    <PaginationItem className="hidden sm:inline-block">
+                                        <PaginationEllipsis />
+                                    </PaginationItem>
+                                )}
+
+                                <PaginationItem className="hidden sm:inline-block">
+                                    <PaginationLink
+                                        size="sm"
+                                        href="#"
+                                        onClick={(e) => {
+                                            e.preventDefault();
+                                            handlePageChange(current);
+                                        }}
+                                        isActive={page === current}
+                                        disabled={safeTotal === 1}
+                                    >
+                                        {current}
+                                    </PaginationLink>
+                                </PaginationItem>
+                            </Fragment>
+                        );
+                    })}
+
                     <PaginationItem>
                         <PaginationNext
                             size="sm"
@@ -155,11 +108,38 @@ export function Pagination({ total }: PageProps) {
                                 e.preventDefault();
                                 handlePageChange(page + 1);
                             }}
-                            disabled={total === 0 || page === total}
+                            disabled={page === safeTotal}
                         />
                     </PaginationItem>
                 </PaginationContent>
             </ShadPagination>
+
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span>
+                    Page {Math.min(page, safeTotal)} of {safeTotal}
+                </span>
+                <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={safeTotal}
+                    value={jumpValue}
+                    onChange={(e) => setJumpValue(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") handleJump();
+                    }}
+                    placeholder="Go to"
+                    className="h-8 w-16 rounded-md border border-input bg-background px-2 text-xs text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label="Jump to page"
+                />
+                <button
+                    type="button"
+                    onClick={handleJump}
+                    className="h-8 rounded-md border border-input px-2 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                    Go
+                </button>
+            </div>
         </div>
     );
 }

@@ -124,7 +124,9 @@ export function Sidebar() {
                         })}
                     />
                 )}
+            </SidebarContent>
 
+            <SidebarFooter className="space-y-2 border-t border-sidebar-border p-3">
                 <NavLegal
                     legal={data.legal}
                     userPermissions={userPermissions}
@@ -132,9 +134,6 @@ export function Sidebar() {
                         hidden: !isGeneral,
                     })}
                 />
-            </SidebarContent>
-
-            <SidebarFooter className="border-t border-sidebar-border p-3">
                 <NavUser />
             </SidebarFooter>
 
