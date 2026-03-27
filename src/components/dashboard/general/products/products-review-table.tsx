@@ -44,7 +44,6 @@ import {
     formatPriceTag,
 } from "@/lib/utils";
 import { CachedBrand, ProductWithBrand } from "@/lib/validations";
-import { useQueryClient } from "@tanstack/react-query";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -59,11 +58,11 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 import {
+    parseAsArrayOf,
     parseAsInteger,
     parseAsString,
     parseAsStringLiteral,
     useQueryState,
-    parseAsArrayOf
 } from "nuqs";
 import { useMemo, useState } from "react";
 import { ProductAction } from "./product-admin-action";
@@ -71,13 +70,15 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from "sonner";
 
 export type TableProduct = ProductWithBrand & {
     stock: number;
     brandName: string;
-    visibility: boolean; // Make this optional
+    visibility: boolean;
 };
 
 type ImageFilter = "with" | "without" | "all";
@@ -85,12 +86,40 @@ type VisiblityFilter = "private" | "public" | "all";
 
 const columns: ColumnDef<TableProduct>[] = [
     {
+        id: "select",
+        enableHiding: false,
+        header: ({ table }) => (
+            <Checkbox
+                checked={
+                    table.getIsAllPageRowsSelected() ||
+                    (table.getIsSomePageRowsSelected() && "indeterminate")
+                }
+                onCheckedChange={(value) =>
+                    table.toggleAllPageRowsSelected(!!value)
+                }
+                aria-label="Select all rows"
+            />
+        ),
+        cell: ({ row }) => (
+            <Checkbox
+                checked={row.getIsSelected()}
+                onCheckedChange={(value) => row.toggleSelected(!!value)}
+                aria-label="Select row"
+            />
+        ),
+    },
+    {
         accessorKey: "title",
-        header: "Title",
+        header: () => <div className="min-w-[16rem]">Title</div>,
         enableHiding: false,
         cell: ({ row }) => (
-            <div className="w-56 whitespace-normal break-words px-2 py-1">
-                {row.original.title}
+            <div className="min-w-[16rem] max-w-[20rem] px-2 py-1">
+                <p
+                    className="line-clamp-2 leading-snug break-words"
+                    title={row.original.title}
+                >
+                    {row.original.title}
+                </p>
             </div>
         ),
     },
@@ -157,8 +186,17 @@ const columns: ColumnDef<TableProduct>[] = [
             return (
                 <TooltipProvider delayDuration={0}>
                     <Tooltip>
-                        <TooltipTrigger className="underline">
-                            View
+                        <TooltipTrigger asChild>
+                            <Button
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                            >
+                                <Icons.Info className="size-4" />
+                                <span className="sr-only">
+                                    View category details
+                                </span>
+                            </Button>
                         </TooltipTrigger>
 
                         <TooltipContent>
@@ -183,8 +221,15 @@ const columns: ColumnDef<TableProduct>[] = [
                 <span>N/A</span>
             ) : (
                 <Dialog>
-                    <DialogTrigger className="underline">
-                        View ({data.variants.length})
+                    <DialogTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className="h-8 gap-1 px-2 text-xs"
+                            title="View variants"
+                        >
+                            <Icons.Layers className="size-4" />
+                            {data.variants.length}
+                        </Button>
                     </DialogTrigger>
 
                     <DialogContent className="max-w-4xl">
@@ -298,6 +343,7 @@ const columns: ColumnDef<TableProduct>[] = [
                               ? "destructive"
                               : "default"
                     }
+                    className="capitalize"
                 >
                     {convertValueToLabel(data.verificationStatus)}
                 </Badge>
@@ -309,7 +355,18 @@ const columns: ColumnDef<TableProduct>[] = [
         header: "Visibility",
         cell: ({ row }) => {
             const data = row.original;
-            return data.visibility ? "Public" : "Private";
+            return (
+                <Badge
+                    variant={data.visibility ? "secondary" : "outline"}
+                    className={
+                        data.visibility
+                            ? "bg-sky-100 text-sky-700 hover:bg-sky-100/90"
+                            : "bg-slate-100 text-slate-700 hover:bg-slate-100/90"
+                    }
+                >
+                    {data.visibility ? "Public" : "Private"}
+                </Badge>
+            );
         },
     },
     {
@@ -323,12 +380,66 @@ const columns: ColumnDef<TableProduct>[] = [
 
     {
         id: "actions",
+        enableHiding: false,
+        header: () => <div className="text-right">Actions</div>,
         cell: ({ row }) => {
             const data = row.original;
             return (
-                <ProductAction
-                    product={{ ...data, visibility: data.visibility ?? true }}
-                />
+                <div className="flex items-center justify-end gap-1 py-1">
+                    <TooltipProvider delayDuration={0}>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8"
+                                    asChild
+                                >
+                                    <Link
+                                        href={`/dashboard/general/products/preview-form/${data.id}`}
+                                        target="_blank"
+                                    >
+                                        <Icons.Edit className="size-4" />
+                                        <span className="sr-only">
+                                            Edit product
+                                        </span>
+                                    </Link>
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Edit</TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+
+                    {data.isPublished && (
+                        <TooltipProvider delayDuration={0}>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-8"
+                                        asChild
+                                    >
+                                        <Link
+                                            href={`/products/${data.slug}`}
+                                            target="_blank"
+                                        >
+                                            <Icons.ExternalLink className="size-4" />
+                                            <span className="sr-only">
+                                                View live product
+                                            </span>
+                                        </Link>
+                                    </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View live</TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
+
+                    <ProductAction
+                        product={{ ...data, visibility: data.visibility ?? true }}
+                    />
+                </div>
             );
         },
     },
@@ -354,7 +465,7 @@ interface PageProps {
 
 export function ProductsReviewTable({ initialData, brandData }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
-    const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
+    const [limit] = useQueryState("limit", parseAsInteger.withDefault(15));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
     });
@@ -367,12 +478,8 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
     const [productVisiblity, setVisiblityFilter] = useQueryState(
         "productVisiblity",
         parseAsStringLiteral(["private", "public", "all"] as const).withDefault(
-            "public"
+            "all"
         )
-    );
-    const [brandFilter, setBrandFilter] = useQueryState(
-        "brand",
-        parseAsString.withDefault("all")
     );
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
@@ -381,11 +488,12 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
     const [verificationStatus, setVerificationStatus] = useQueryState(
         "verificationStatus",
         parseAsStringLiteral([
+            "all",
             "idle",
             "pending",
             "approved",
             "rejected",
-        ] as const).withDefault("approved")
+        ] as const).withDefault("all")
     );
 
     const [sorting, setSorting] = useState<SortingState>([]);
@@ -412,10 +520,11 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
             limit,
             page,
             search,
-            verificationStatus,
+            verificationStatus:
+                verificationStatus === "all" ? undefined : verificationStatus,
             productImage,
             productVisiblity,
-            brandIds: brandIds.length > 0 ? brandIds : undefined, // Add brandIds filter
+            brandIds: brandIds.length > 0 ? brandIds : undefined,
         },
         { initialData }
     );
@@ -454,12 +563,39 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
         },
     });
 
+    const selectedProducts = table.getSelectedRowModel().rows.map(
+        (row) => row.original
+    );
+
+    const clearAllFilters = () => {
+        table.resetColumnFilters();
+        void setSearch("");
+        void setVerificationStatus("all");
+        void setImageFilter("all");
+        void setVisiblityFilter("all");
+        void setBrandIds([]);
+        void table.resetRowSelection();
+    };
+
+    const copySelectedProductIds = async () => {
+        if (selectedProducts.length === 0) return;
+
+        try {
+            await navigator.clipboard.writeText(
+                selectedProducts.map((product) => product.id).join(", ")
+            );
+            toast.success(`Copied ${selectedProducts.length} product ID(s)`);
+        } catch {
+            toast.error("Failed to copy selected IDs");
+        }
+    };
+
     return (
         <div className="space-y-4">
-            <div className="flex items-center gap-2">
-                <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
+            <div className="rounded-lg border bg-card p-3">
+                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
                     <Input
-                        placeholder="Search by title..."
+                        placeholder="Search by title or SKU..."
                         value={
                             (table
                                 .getColumn("title")
@@ -481,11 +617,17 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                             verificationStatus
                         }
                         onValueChange={(value) => {
+                            const nextValue =
+                                value as
+                                    | "all"
+                                    | TableProduct["verificationStatus"];
                             table
                                 .getColumn("verificationStatus")
-                                ?.setFilterValue(value);
+                                ?.setFilterValue(
+                                    nextValue === "all" ? undefined : nextValue
+                                );
                             setVerificationStatus(
-                                value as TableProduct["verificationStatus"]
+                                nextValue
                             );
                         }}
                     >
@@ -493,16 +635,16 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                             <SelectValue placeholder="Search by status" />
                         </SelectTrigger>
                         <SelectContent>
-                            {["idle", "pending", "approved", "rejected"].map(
-                                (x) => (
-                                    <SelectItem key={x} value={x}>
-                                        {convertValueToLabel(x)}
-                                    </SelectItem>
-                                )
-                            )}
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            {["idle", "pending", "approved", "rejected"].map((x) => (
+                                <SelectItem key={x} value={x}>
+                                    {convertValueToLabel(x)}
+                                </SelectItem>
+                            ))}
                         </SelectContent>
                     </Select>
                     <Select
+                        value={productImage}
                         onValueChange={(value: ImageFilter) =>
                             setImageFilter(value)
                         }
@@ -519,75 +661,106 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                         </SelectContent>
                     </Select>
                     <Select
+                        value={productVisiblity}
                         onValueChange={(value: VisiblityFilter) =>
                             setVisiblityFilter(value)
                         }
                     >
                         <SelectTrigger>
-                            <SelectValue placeholder="Filter by Visiblity" />
+                            <SelectValue placeholder="Filter by Visibility" />
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="public">Public</SelectItem>
-                            <SelectItem value="private">
-                               Private
-                            </SelectItem>
+                            <SelectItem value="private">Private</SelectItem>
                             <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                     </Select>
                     <DropdownMenu>
-    <DropdownMenuTrigger asChild>
-        <Button variant="outline" className="w-full md:w-48">
-            {brandIds.length > 0
-                ? `${brandIds.length} brand(s) selected`
-                : "Filter by brands..."}
-        </Button>
-    </DropdownMenuTrigger>
-    <DropdownMenuContent className="max-h-80 w-60 overflow-y-auto">
-        {brandsData?.data?.map((brand) => (
-            <DropdownMenuItem
-                key={brand.id}
-                asChild
-                onSelect={(e) => e.preventDefault()}
-            >
-                <div className="flex items-center space-x-2">
-                    <Checkbox
-                        checked={brandIds.includes(brand.id)}
-                        onCheckedChange={(checked) => {
-                            const newBrandIds = checked
-                                ? [...brandIds, brand.id]
-                                : brandIds.filter((id) => id !== brand.id);
-                            setBrandIds(newBrandIds);
-                            if (newBrandIds.length > 0) {
-                                setBrandFilter("all");
-                            }
-                        }}
-                    />
-                    <span
-                        className="cursor-pointer"
-                        onClick={() => {
-                            const newBrandIds = brandIds.includes(brand.id)
-                                ? brandIds.filter((id) => id !== brand.id)
-                                : [...brandIds, brand.id];
-                            setBrandIds(newBrandIds);
-                            if (newBrandIds.length > 0) {
-                                setBrandFilter("all");
-                            }
-                        }}
-                    >
-                        {brand.name}
-                    </span>
-                </div>
-            </DropdownMenuItem>
-        ))}
-    </DropdownMenuContent>
-</DropdownMenu>
-                </div>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" className="w-full justify-start">
+                                {brandIds.length > 0
+                                    ? `${brandIds.length} brand(s) selected`
+                                    : "Filter by brands"}
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent className="max-h-80 w-60 overflow-y-auto">
+                            {brandIds.length > 0 && (
+                                <>
+                                    <DropdownMenuItem
+                                        onSelect={(event) => {
+                                            event.preventDefault();
+                                            setBrandIds([]);
+                                        }}
+                                    >
+                                        <Icons.X className="size-4" />
+                                        Clear brand filter
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                </>
+                            )}
 
+                            {brandsData?.data?.map((brand) => (
+                                <DropdownMenuItem
+                                    key={brand.id}
+                                    asChild
+                                    onSelect={(event) => event.preventDefault()}
+                                >
+                                    <label className="flex cursor-pointer items-center gap-2">
+                                        <Checkbox
+                                            checked={brandIds.includes(brand.id)}
+                                            onCheckedChange={(checked) => {
+                                                const nextBrandIds = checked
+                                                    ? [...brandIds, brand.id]
+                                                    : brandIds.filter(
+                                                          (id) => id !== brand.id
+                                                      );
+                                                void setBrandIds(nextBrandIds);
+                                            }}
+                                        />
+                                        <span>{brand.name}</span>
+                                    </label>
+                                </DropdownMenuItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+
+                    <Button
+                        variant="outline"
+                        onClick={clearAllFilters}
+                        className="w-full xl:w-auto"
+                    >
+                        <Icons.ListRestart className="size-4" />
+                        Clear all filters
+                    </Button>
+                </div>
+            </div>
+
+            {selectedProducts.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2">
+                    <Badge variant="secondary">
+                        {selectedProducts.length} selected
+                    </Badge>
+                    <Button variant="outline" size="sm" onClick={copySelectedProductIds}>
+                        <Icons.Copy className="size-4" />
+                        Copy selected IDs
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => table.resetRowSelection()}
+                    >
+                        <Icons.X className="size-4" />
+                        Clear selection
+                    </Button>
+                </div>
+            )}
+
+            <div className="flex justify-end">
                 <DataTableViewOptions table={table} />
             </div>
 
             <DataTable
-                columns={columns as ColumnDef<any>[]}
+                columns={columns as ColumnDef<TableProduct>[]}
                 table={table}
                 pages={pages}
                 count={count}

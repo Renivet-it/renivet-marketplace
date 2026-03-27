@@ -93,7 +93,7 @@ export function NavMain({
                                     <SidebarMenuButton
                                         tooltip={item.title}
                                         isActive={isItemActive || hasActiveChild}
-                                        className="h-10 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/90 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm"
+                                        className="relative h-10 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/90 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm data-[active=true]:before:absolute data-[active=true]:before:inset-y-2 data-[active=true]:before:left-1 data-[active=true]:before:w-1 data-[active=true]:before:rounded-full data-[active=true]:before:bg-sidebar-primary-foreground/90"
                                     >
                                         {Icon && <Icon />}
                                         <span>{item.title}</span>
@@ -102,7 +102,7 @@ export function NavMain({
                                 </CollapsibleTrigger>
 
                                 <CollapsibleContent>
-                                    <SidebarMenuSub className="mx-2.5 mt-1 gap-1 border-l-0 p-0">
+                                    <SidebarMenuSub className="mx-2 mt-1 gap-1 border-l border-sidebar-border/60 pl-2">
                                         {filteredItems?.map((subItem) => (
                                             <SidebarMenuSubItem
                                                 key={subItem.title}
@@ -112,11 +112,13 @@ export function NavMain({
                                                     isActive={isSubItemActive(
                                                         subItem.url
                                                     )}
-                                                    className="h-8 rounded-lg px-3 pl-9 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:font-medium data-[active=true]:text-sidebar-foreground"
+                                                    className="relative h-8 rounded-lg px-3 pl-6 text-sm text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:font-semibold data-[active=true]:text-sidebar-foreground data-[active=true]:before:absolute data-[active=true]:before:left-2.5 data-[active=true]:before:top-1/2 data-[active=true]:before:size-1.5 data-[active=true]:before:-translate-y-1/2 data-[active=true]:before:rounded-full data-[active=true]:before:bg-sidebar-primary"
                                                 >
                                                     <Link
                                                         href={subItem.url}
                                                         prefetch
+                                                        className="block w-full truncate"
+                                                        title={subItem.title}
                                                     >
                                                         {subItem.title}
                                                     </Link>
