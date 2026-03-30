@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { products } from "@/lib/db/schema";
 import { getEmbedding768 } from "@/lib/python/sematic-search";
-import { eq } from "drizzle-orm";
+import { eq, isNull } from "drizzle-orm";
 
 /**
  * Generate 768-dim semantic search embeddings for all products
@@ -10,11 +10,23 @@ import { eq } from "drizzle-orm";
  * Run with: bun run generate-embeddings.ts
  */
 async function generateAdvancedEmbeddings() {
+    const forceRegenerate = process.argv.includes("--force");
+
     console.log(
-        "🚀 Starting advanced embedding generation (768-dim E5 model)...\n"
+        "🚀 Starting advanced embedding generation (768-dim E5 model)..."
     );
+    if (forceRegenerate) {
+        console.log("⚠️ FORCE REGENERATE MODE: Updating all products\n");
+    } else {
+        console.log(
+            "ℹ️ NORMAL MODE: Only updating products with missing embeddings (use --force to update all)\n"
+        );
+    }
 
     const allProducts = await db.query.products.findMany({
+        where: forceRegenerate
+            ? undefined
+            : isNull(products.semanticSearchEmbeddings),
         columns: {
             id: true,
             title: true,
