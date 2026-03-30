@@ -32,7 +32,7 @@ const globalForDb = globalThis as unknown as {
 const connection =
     globalForDb.conn ??
     postgres(process.env.DATABASE_URL!, {
-        max: 1,
+        max: 15,
         idle_timeout: 20,
         connect_timeout: 10,
         max_lifetime: 60 * 30,
