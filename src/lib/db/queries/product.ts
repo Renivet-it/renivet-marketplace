@@ -743,12 +743,12 @@ class ProductQuery {
                 ilike(products.sku, searchPattern),
                 sql`EXISTS (
                     SELECT 1
-                    FROM ${productVariants}
-                    WHERE ${productVariants.productId} = ${products.id}
-                      AND ${productVariants.isDeleted} = false
+                    FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                      AND pv.is_deleted = false
                       AND (
-                          ${productVariants.nativeSku} ILIKE ${searchPattern}
-                          OR ${productVariants.sku} ILIKE ${searchPattern}
+                          pv.native_sku ILIKE ${searchPattern}
+                          OR pv.sku ILIKE ${searchPattern}
                       )
                 )`
             );
@@ -769,12 +769,12 @@ class ProductQuery {
                 ilike(products.sku, searchPattern),
                 sql`EXISTS (
                     SELECT 1
-                    FROM ${productVariants}
-                    WHERE ${productVariants.productId} = ${products.id}
-                      AND ${productVariants.isDeleted} = false
+                    FROM ${productVariants} pv
+                    WHERE pv.product_id = ${products.id}
+                      AND pv.is_deleted = false
                       AND (
-                          ${productVariants.nativeSku} ILIKE ${searchPattern}
-                          OR ${productVariants.sku} ILIKE ${searchPattern}
+                          pv.native_sku ILIKE ${searchPattern}
+                          OR pv.sku ILIKE ${searchPattern}
                       )
                 )`
             );
