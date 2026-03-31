@@ -186,6 +186,14 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
             },
             {
+                title: "Operational Reports",
+                url: "/dashboard/general/operational-reports",
+                permissions:
+                    BitFieldSitePermission.VIEW_ANALYTICS |
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
+            },
+            {
                 title: "CAPI Logs",
                 url: "/dashboard/capi-logs",
                 permissions:
