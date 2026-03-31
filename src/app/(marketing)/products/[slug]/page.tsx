@@ -215,7 +215,7 @@ async function ProductFetch({ params }: PageProps) {
         {
             content_ids: [existingProduct.id],
             content_name: existingProduct.title,
-            content_type: "product",
+            content_type: existingProduct.productHasVariants ? "product_group" : "product",
             content_category: existingProduct.brand?.name || "Unknown Brand",
             value: parseFloat(priceInRupees),
             currency: "INR",

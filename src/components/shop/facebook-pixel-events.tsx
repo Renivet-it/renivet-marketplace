@@ -41,7 +41,7 @@ export function TrackViewContent({
                     {
                         content_ids: [product.id], // Make sure this matches your product catalog
                         content_name: product.title,
-                        content_type: "product",
+                        content_type: product.productHasVariants ? "product_group" : "product",
                         value: parseFloat(
                             convertPaiseToRupees(
                                 product.costPerItem
