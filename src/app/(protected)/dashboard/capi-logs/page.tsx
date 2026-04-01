@@ -70,12 +70,16 @@ function cellValue(val: unknown): string {
 export default function CapiLogsPage() {
     const [page, setPage] = useState(1);
     const [eventFilter, setEventFilter] = useState<string>("");
+    const [fromDate, setFromDate] = useState<string>("");
+    const [toDate, setToDate] = useState<string>("");
     const limit = 50;
 
     const { data, isLoading } = trpc.general.capiLogs.getLogs.useQuery({
         page,
         limit,
         eventName: eventFilter || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
     });
 
     const utils = trpc.useUtils();
@@ -91,6 +95,8 @@ export default function CapiLogsPage() {
         try {
             const allData = await utils.general.capiLogs.getAllLogs.fetch({
                 eventName: eventFilter || undefined,
+                fromDate: fromDate || undefined,
+                toDate: toDate || undefined,
             });
 
             if (!allData?.logs?.length) {
@@ -132,7 +138,7 @@ export default function CapiLogsPage() {
             const csvContent = [headers, ...rows]
                 .map((row) =>
                     row
-                        .map((c) => `"${String(c).replace(/"/g, '""')}"`)
+                        .map((c) => `"${String(c).replace(/"/g, "\"\"")}"`)
                         .join(",")
                 )
                 .join("\n");
@@ -200,12 +206,35 @@ export default function CapiLogsPage() {
                     ))}
                 </select>
 
-                {eventFilter && (
+                <input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => {
+                        setFromDate(e.target.value);
+                        setPage(1);
+                    }}
+                    className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+
+                <input
+                    type="date"
+                    value={toDate}
+                    min={fromDate || undefined}
+                    onChange={(e) => {
+                        setToDate(e.target.value);
+                        setPage(1);
+                    }}
+                    className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                />
+
+                {(eventFilter || fromDate || toDate) && (
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
                             setEventFilter("");
+                            setFromDate("");
+                            setToDate("");
                             setPage(1);
                         }}
                         className="text-xs text-muted-foreground"
