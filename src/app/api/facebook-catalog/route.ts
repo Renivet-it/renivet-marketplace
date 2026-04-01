@@ -25,6 +25,12 @@ export async function GET(req: Request) {
             }
         };
 
+        const getOptimizedFacebookImageLink = (url: string) => {
+            const safeUrl = sanitizeLink(url);
+            // Route through Next.js image optimizer to keep feed images lighter for Facebook fetch limits
+            return `${baseUrl}/_next/image?url=${encodeURIComponent(safeUrl)}&w=1200&q=70`;
+        };
+
         const getGenderFromCategory = (categoryName?: string | null) => {
             const normalizedCategory = categoryName?.trim().toLowerCase();
             if (!normalizedCategory) return "";
@@ -55,13 +61,13 @@ export async function GET(req: Request) {
                     .forEach((variant) => {
                         const price = variant.price ? ((variant.price)/100).toFixed(2) + " INR" : "0.00 INR";
                         const availability = variant.quantity && variant.quantity > 0 ? "in stock" : "out of stock";
-                        
+
                         // Ignore out of stock items to remove the warning in Facebook Business Manager
                         if (availability === "out of stock") return;
 
                         // Use variant specific image, fallback to parent image, sanitize against broken links
                         const rawImageLink = variant.mediaItem?.url || product.media?.[0]?.mediaItem?.url || "";
-                        const imageLink = sanitizeLink(rawImageLink);
+                        const imageLink = getOptimizedFacebookImageLink(rawImageLink);
 
                         // Extract color and size from variant dictionary
                         let color = "";
@@ -97,12 +103,12 @@ export async function GET(req: Request) {
                 // Single product without variants
                 const price = product.price ? ((product.price)/100).toFixed(2) + " INR" : "0.00 INR";
                 const availability = product.quantity && product.quantity > 0 ? "in stock" : "out of stock";
-                
+
                 // Ignore out of stock items to remove the warning in Facebook Business Manager
                 if (availability === "out of stock") return;
-                
+
                 const rawImageLink = product.media?.[0]?.mediaItem?.url || "";
-                const imageLink = sanitizeLink(rawImageLink);
+                const imageLink = getOptimizedFacebookImageLink(rawImageLink);
 
                 csvRows.push([
                     product.id,
