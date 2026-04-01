@@ -172,9 +172,14 @@ interface PageProps {
         data: CachedBrand[];
         count: number;
     };
+    isOrderManager?: boolean;
 }
 
-export function OrdersTable({ initialData, brandData }: PageProps) {
+export function OrdersTable({
+    initialData,
+    brandData,
+    isOrderManager = false,
+}: PageProps) {
     const [page, setPage] = useQueryState(
         "page",
         parseAsInteger.withDefault(1)
@@ -278,18 +283,6 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
         trpc.general.orders.getOrderStatusCounts.useQuery(undefined, {
             refetchOnWindowFocus: false,
         });
-
-    const { data: currentUser } = trpc.general.users.currentUser.useQuery(
-        undefined,
-        {
-            refetchOnWindowFocus: false,
-        }
-    );
-
-    const isOrderManager = currentUser?.roles?.some((role) => {
-        const roleName = role.name.trim().toLowerCase();
-        return roleName === "order manager" || roleName === "order amanger";
-    });
 
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
     const isBrandSelected = brandIds.length > 0;

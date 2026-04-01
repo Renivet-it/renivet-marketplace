@@ -188,7 +188,7 @@ export default function CapiLogsPage() {
             </div>
 
             {/* Filter bar */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-end gap-3">
                 <Filter className="size-4 text-muted-foreground" />
                 <select
                     value={eventFilter}
@@ -206,26 +206,38 @@ export default function CapiLogsPage() {
                     ))}
                 </select>
 
-                <input
-                    type="date"
-                    value={fromDate}
-                    onChange={(e) => {
-                        setFromDate(e.target.value);
-                        setPage(1);
-                    }}
-                    className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-                />
+                <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">
+                        From Date
+                    </span>
+                    <input
+                        type="date"
+                        aria-label="From Date"
+                        value={fromDate}
+                        onChange={(e) => {
+                            setFromDate(e.target.value);
+                            setPage(1);
+                        }}
+                        className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    />
+                </div>
 
-                <input
-                    type="date"
-                    value={toDate}
-                    min={fromDate || undefined}
-                    onChange={(e) => {
-                        setToDate(e.target.value);
-                        setPage(1);
-                    }}
-                    className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
-                />
+                <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">
+                        To Date
+                    </span>
+                    <input
+                        type="date"
+                        aria-label="To Date"
+                        value={toDate}
+                        min={fromDate || undefined}
+                        onChange={(e) => {
+                            setToDate(e.target.value);
+                            setPage(1);
+                        }}
+                        className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    />
+                </div>
 
                 {(eventFilter || fromDate || toDate) && (
                     <Button
@@ -243,6 +255,11 @@ export default function CapiLogsPage() {
                     </Button>
                 )}
             </div>
+
+            <p className="text-xs text-muted-foreground">
+                Date filter is applied on the <strong>Created At</strong> column
+                and the same range is used for CSV export.
+            </p>
 
             {/* Scrollable table — must fill parent width and scroll horizontally */}
             <div

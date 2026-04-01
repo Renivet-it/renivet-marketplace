@@ -10,13 +10,17 @@ import { z } from "zod";
 const DATE_FILTER_REGEX = /^\d{4}-\d{2}-\d{2}$/;
 
 const capiAccessProcedure = protectedProcedure.use(({ ctx, next }) => {
-    const normalizedRoleNames = ctx.user.roles.map((role) =>
-        role.name.trim().toLowerCase()
-    );
+    const hasOrderManagerRole = ctx.user.roles.some((role) => {
+        const normalized = `${role.name ?? ""} ${role.slug ?? ""}`
+            .toLowerCase()
+            .replace(/[^a-z]/g, "");
 
-    const hasOrderManagerRole = normalizedRoleNames.some(
-        (name) => name === "order manager" || name === "order amanger"
-    );
+        return (
+            normalized.includes("ordermanag") ||
+            normalized.includes("ordersmanag") ||
+            normalized.includes("orderamanger")
+        );
+    });
 
     const hasOrderPermissions = hasPermission(
         ctx.user.sitePermissions,
