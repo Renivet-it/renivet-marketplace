@@ -12,10 +12,33 @@ export async function GET(req: Request) {
         });
 
         const baseUrl = "https://renivet.com"; // Replace with your actual domain
+        const FALLBACK_IMAGE_URL = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+
+        const sanitizeLink = (url: string) => {
+            if (!url) return FALLBACK_IMAGE_URL;
+            try {
+                // Ensure spaces are encoded and standard URL format is respected
+                const parsed = new URL(url.startsWith("/") ? `${baseUrl}${url}` : url);
+                return parsed.toString();
+            } catch {
+                return FALLBACK_IMAGE_URL; // Fallback if link is broken
+            }
+        };
+
+        const getGenderFromCategory = (categoryName?: string | null) => {
+            const normalizedCategory = categoryName?.trim().toLowerCase();
+            if (!normalizedCategory) return "";
+            const hasMen = normalizedCategory.includes("men");
+            const hasWomen = normalizedCategory.includes("women");
+            if (hasMen && hasWomen) return "Men and Women";
+            if (hasMen) return "Men";
+            if (hasWomen) return "Women";
+            return "";
+        };
 
         // Standard Facebook Catalog CSV Headers with Variant Support
         const csvRows = [
-            ["id", "item_group_id", "title", "description", "availability", "condition", "price", "link", "image_link", "brand", "color", "size"]
+            ["id", "item_group_id", "title", "description", "availability", "condition", "price", "link", "image_link", "brand", "color", "size", "gender"]
         ];
 
         productsList.forEach((product) => {
@@ -23,6 +46,7 @@ export async function GET(req: Request) {
             const brandName = product.brand?.name || "Unknown Brand";
             const escapeCSV = (str: string) => `"${(str || "").replace(/"/g, "\"\"")}"`;
             const description = escapeCSV(product.description || product.title);
+            const gender = getGenderFromCategory(product.category?.name);
 
             if (product.productHasVariants && product.variants?.length > 0) {
                 // If product has variants, row for each variant sharing the same item_group_id (parent ID)
@@ -31,9 +55,13 @@ export async function GET(req: Request) {
                     .forEach((variant) => {
                         const price = variant.price ? ((variant.price)/100).toFixed(2) + " INR" : "0.00 INR";
                         const availability = variant.quantity && variant.quantity > 0 ? "in stock" : "out of stock";
+                        
+                        // Ignore out of stock items to remove the warning in Facebook Business Manager
+                        if (availability === "out of stock") return;
 
-                        // Use variant specific image, fallback to parent image
-                        const imageLink = variant.mediaItem?.url || product.media?.[0]?.mediaItem?.url || "";
+                        // Use variant specific image, fallback to parent image, sanitize against broken links
+                        const rawImageLink = variant.mediaItem?.url || product.media?.[0]?.mediaItem?.url || "";
+                        const imageLink = sanitizeLink(rawImageLink);
 
                         // Extract color and size from variant dictionary
                         let color = "";
@@ -61,14 +89,20 @@ export async function GET(req: Request) {
                             escapeCSV(imageLink),
                             escapeCSV(brandName),
                             escapeCSV(color),
-                            escapeCSV(size)
+                            escapeCSV(size),
+                            escapeCSV(gender)
                         ]);
                     });
             } else {
                 // Single product without variants
                 const price = product.price ? ((product.price)/100).toFixed(2) + " INR" : "0.00 INR";
                 const availability = product.quantity && product.quantity > 0 ? "in stock" : "out of stock";
-                const imageLink = product.media?.[0]?.mediaItem?.url || "";
+                
+                // Ignore out of stock items to remove the warning in Facebook Business Manager
+                if (availability === "out of stock") return;
+                
+                const rawImageLink = product.media?.[0]?.mediaItem?.url || "";
+                const imageLink = sanitizeLink(rawImageLink);
 
                 csvRows.push([
                     product.id,
@@ -82,7 +116,8 @@ export async function GET(req: Request) {
                     escapeCSV(imageLink),
                     escapeCSV(brandName),
                     "",
-                    ""
+                    "",
+                    escapeCSV(gender)
                 ]);
             }
         });
