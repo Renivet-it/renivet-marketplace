@@ -172,9 +172,14 @@ interface PageProps {
         data: CachedBrand[];
         count: number;
     };
+    isOrderManager?: boolean;
 }
 
-export function OrdersTable({ initialData, brandData }: PageProps) {
+export function OrdersTable({
+    initialData,
+    brandData,
+    isOrderManager = false,
+}: PageProps) {
     const [page, setPage] = useQueryState(
         "page",
         parseAsInteger.withDefault(1)
@@ -278,6 +283,7 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
         trpc.general.orders.getOrderStatusCounts.useQuery(undefined, {
             refetchOnWindowFocus: false,
         });
+
     const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
     const isBrandSelected = brandIds.length > 0;
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
@@ -965,40 +971,46 @@ export function OrdersTable({ initialData, brandData }: PageProps) {
                             </DropdownMenuContent>
                         </DropdownMenu>
                     </div>
-                    <div className="flex items-center gap-2 pb-2">
-                        <Checkbox
-                            id="shipment-flag"
-                            checked={applyShipmentFlag}
-                            onCheckedChange={(checked) =>
-                                setApplyShipmentFlag(Boolean(checked))
-                            }
-                        />
-                        <Label
-                            htmlFor="shipment-flag"
-                            className="text-sm font-medium"
-                        >
-                            Apply 5% Shipment Adjustment
-                        </Label>
-                    </div>
+                    {!isOrderManager && (
+                        <div className="flex items-center gap-2 pb-2">
+                            <Checkbox
+                                id="shipment-flag"
+                                checked={applyShipmentFlag}
+                                onCheckedChange={(checked) =>
+                                    setApplyShipmentFlag(Boolean(checked))
+                                }
+                            />
+                            <Label
+                                htmlFor="shipment-flag"
+                                className="text-sm font-medium"
+                            >
+                                Apply 5% Shipment Adjustment
+                            </Label>
+                        </div>
+                    )}
                 </div>
 
                 {/* Actions Group */}
                 <div className="flex flex-wrap gap-3">
-                    <Button
-                        onClick={handleDownloadPDF}
-                        className="min-w-[180px]"
-                        disabled={!isBrandSelected}
-                    >
-                        Download Consolidated Report
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={handleDownloadBrandPDF}
-                        className="min-w-[180px]"
-                        disabled={!isBrandSelected}
-                    >
-                        Download Brand Invoice
-                    </Button>
+                    {!isOrderManager && (
+                        <Button
+                            onClick={handleDownloadPDF}
+                            className="min-w-[180px]"
+                            disabled={!isBrandSelected}
+                        >
+                            Download Consolidated Report
+                        </Button>
+                    )}
+                    {!isOrderManager && (
+                        <Button
+                            variant="secondary"
+                            onClick={handleDownloadBrandPDF}
+                            className="min-w-[180px]"
+                            disabled={!isBrandSelected}
+                        >
+                            Download Brand Invoice
+                        </Button>
+                    )}
                     <DataTableViewOptions table={table} />
                 </div>
             </div>

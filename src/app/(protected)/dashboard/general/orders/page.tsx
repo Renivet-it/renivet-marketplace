@@ -4,7 +4,8 @@ import {
 } from "@/components/dashboard/general/orders";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
-import { orderQueries } from "@/lib/db/queries";
+import { orderQueries, userQueries } from "@/lib/db/queries";
+import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { Suspense } from "react";
 
@@ -28,6 +29,23 @@ interface PageProps {
             | "rto";
     }>;
 }
+
+const isOrderManagerRole = (
+    roles: { name: string; slug: string }[] | undefined | null
+) => {
+    if (!roles?.length) return false;
+
+    return roles.some((role) => {
+        const raw = `${role.name ?? ""} ${role.slug ?? ""}`.toLowerCase();
+        const normalized = raw.replace(/[^a-z]/g, "");
+
+        return (
+            normalized.includes("ordermanag") ||
+            normalized.includes("ordersmanag") ||
+            normalized.includes("orderamanger")
+        );
+    });
+};
 
 export default function Page(props: PageProps) {
     return (
@@ -53,6 +71,8 @@ export default function Page(props: PageProps) {
 }
 
 async function OrdersFetch({ searchParams }: PageProps) {
+    const { userId } = await auth();
+
     const {
         page: pageRaw,
         limit: limitRaw,
@@ -73,7 +93,10 @@ async function OrdersFetch({ searchParams }: PageProps) {
         statusTab,
     });
 
-    return <OrdersTable initialData={data} />;
+    const currentUser = userId ? await userQueries.getUser(userId) : null;
+    const isOrderManager = isOrderManagerRole(currentUser?.roles);
+
+    return <OrdersTable initialData={data} isOrderManager={isOrderManager} />;
 }
 
 async function OrdersDownloadFetch() {

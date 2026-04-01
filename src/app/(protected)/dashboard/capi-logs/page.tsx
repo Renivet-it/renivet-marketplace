@@ -70,12 +70,16 @@ function cellValue(val: unknown): string {
 export default function CapiLogsPage() {
     const [page, setPage] = useState(1);
     const [eventFilter, setEventFilter] = useState<string>("");
+    const [fromDate, setFromDate] = useState<string>("");
+    const [toDate, setToDate] = useState<string>("");
     const limit = 50;
 
     const { data, isLoading } = trpc.general.capiLogs.getLogs.useQuery({
         page,
         limit,
         eventName: eventFilter || undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
     });
 
     const utils = trpc.useUtils();
@@ -91,6 +95,8 @@ export default function CapiLogsPage() {
         try {
             const allData = await utils.general.capiLogs.getAllLogs.fetch({
                 eventName: eventFilter || undefined,
+                fromDate: fromDate || undefined,
+                toDate: toDate || undefined,
             });
 
             if (!allData?.logs?.length) {
@@ -132,7 +138,7 @@ export default function CapiLogsPage() {
             const csvContent = [headers, ...rows]
                 .map((row) =>
                     row
-                        .map((c) => `"${String(c).replace(/"/g, '""')}"`)
+                        .map((c) => `"${String(c).replace(/"/g, "\"\"")}"`)
                         .join(",")
                 )
                 .join("\n");
@@ -182,7 +188,7 @@ export default function CapiLogsPage() {
             </div>
 
             {/* Filter bar */}
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-end gap-3">
                 <Filter className="size-4 text-muted-foreground" />
                 <select
                     value={eventFilter}
@@ -200,12 +206,47 @@ export default function CapiLogsPage() {
                     ))}
                 </select>
 
-                {eventFilter && (
+                <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">
+                        From Date
+                    </span>
+                    <input
+                        type="date"
+                        aria-label="From Date"
+                        value={fromDate}
+                        onChange={(e) => {
+                            setFromDate(e.target.value);
+                            setPage(1);
+                        }}
+                        className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    />
+                </div>
+
+                <div className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-muted-foreground">
+                        To Date
+                    </span>
+                    <input
+                        type="date"
+                        aria-label="To Date"
+                        value={toDate}
+                        min={fromDate || undefined}
+                        onChange={(e) => {
+                            setToDate(e.target.value);
+                            setPage(1);
+                        }}
+                        className="rounded-md border bg-background px-3 py-1.5 text-sm outline-none focus:ring-2 focus:ring-ring"
+                    />
+                </div>
+
+                {(eventFilter || fromDate || toDate) && (
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={() => {
                             setEventFilter("");
+                            setFromDate("");
+                            setToDate("");
                             setPage(1);
                         }}
                         className="text-xs text-muted-foreground"
@@ -214,6 +255,11 @@ export default function CapiLogsPage() {
                     </Button>
                 )}
             </div>
+
+            <p className="text-xs text-muted-foreground">
+                Date filter is applied on the <strong>Created At</strong> column
+                and the same range is used for CSV export.
+            </p>
 
             {/* Scrollable table — must fill parent width and scroll horizontally */}
             <div
