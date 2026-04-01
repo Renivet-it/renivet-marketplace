@@ -10,6 +10,34 @@ import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icons } from "../icons";
 
+type BrowserSpeechRecognition = {
+    lang: string;
+    interimResults: boolean;
+    maxAlternatives: number;
+    start: () => void;
+    stop: () => void;
+    onresult: ((event: SpeechRecognitionResultEventLike) => void) | null;
+    onerror: ((event: SpeechRecognitionErrorEventLike) => void) | null;
+    onend: (() => void) | null;
+};
+
+type SpeechRecognitionResultEventLike = {
+    results: ArrayLike<ArrayLike<{ transcript?: string }>>;
+};
+
+type SpeechRecognitionErrorEventLike = {
+    error?: string;
+};
+
+type BrowserSpeechRecognitionConstructor = new () => BrowserSpeechRecognition;
+
+declare global {
+    interface Window {
+        SpeechRecognition?: BrowserSpeechRecognitionConstructor;
+        webkitSpeechRecognition?: BrowserSpeechRecognitionConstructor;
+    }
+}
+
 export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
     classNames?: {
         wrapper?: string;
@@ -28,8 +56,11 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [isSearching, setIsSearching] = useState(false);
         const [showSuggestions, setShowSuggestions] = useState(false);
         const [selectedIndex, setSelectedIndex] = useState(-1);
+        const [isListening, setIsListening] = useState(false);
+        const [isVoiceSupported, setIsVoiceSupported] = useState(false);
         const wrapperRef = useRef<HTMLDivElement>(null);
         const inputRef = useRef<HTMLInputElement | null>(null);
+        const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
 
         // Merge refs
         const setRefs = useCallback(
@@ -202,6 +233,64 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             setLocalSearch(search);
         }, [search]);
 
+        useEffect(() => {
+            const SpeechRecognitionCtor =
+                typeof window !== "undefined"
+                    ? window.SpeechRecognition || window.webkitSpeechRecognition
+                    : undefined;
+            setIsVoiceSupported(!!SpeechRecognitionCtor);
+        }, []);
+
+        useEffect(() => {
+            return () => {
+                recognitionRef.current?.stop();
+            };
+        }, []);
+
+        const handleVoiceSearch = () => {
+            if (!isVoiceSupported) return;
+
+            if (isListening) {
+                recognitionRef.current?.stop();
+                setIsListening(false);
+                return;
+            }
+
+            const SpeechRecognitionCtor =
+                window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SpeechRecognitionCtor) return;
+
+            const recognition = new SpeechRecognitionCtor();
+            recognition.lang =
+                typeof navigator !== "undefined"
+                    ? navigator.language || "en-IN"
+                    : "en-IN";
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.onresult = (event) => {
+                const transcript =
+                    event?.results?.[0]?.[0]?.transcript?.trim() || "";
+                if (!transcript) return;
+                setLocalSearch(transcript);
+                setShowSuggestions(false);
+                setSelectedIndex(-1);
+                handleSearch(transcript);
+            };
+
+            recognition.onerror = () => {
+                setIsListening(false);
+            };
+
+            recognition.onend = () => {
+                setIsListening(false);
+            };
+
+            recognitionRef.current = recognition;
+            recognition.start();
+            setIsListening(true);
+        };
+
         return (
             <div ref={wrapperRef} className="relative w-full">
                 <div
@@ -239,16 +328,44 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                         {...props}
                     />
 
-                    {localSearch && !isSearching && (
-                        <button
-                            type="button"
-                            className="absolute right-2 p-1"
-                            onClick={handleClear}
-                            aria-label="Clear search"
-                        >
-                            <Icons.X className="size-5 opacity-60 hover:opacity-100" />
-                        </button>
-                    )}
+                    <div className="absolute right-2 flex items-center gap-1">
+                        {isVoiceSupported && (
+                            <button
+                                type="button"
+                                className={cn(
+                                    "rounded p-1 transition-colors",
+                                    isListening
+                                        ? "bg-red-100 text-red-600"
+                                        : "text-gray-500 hover:text-gray-700"
+                                )}
+                                onClick={handleVoiceSearch}
+                                disabled={disabled || isSearching}
+                                aria-label={
+                                    isListening
+                                        ? "Stop voice search"
+                                        : "Start voice search"
+                                }
+                                title={
+                                    isListening
+                                        ? "Stop voice search"
+                                        : "Search by voice"
+                                }
+                            >
+                                <Icons.AudioWaveform className="size-5" />
+                            </button>
+                        )}
+
+                        {localSearch && !isSearching && (
+                            <button
+                                type="button"
+                                className="p-1"
+                                onClick={handleClear}
+                                aria-label="Clear search"
+                            >
+                                <Icons.X className="size-5 opacity-60 hover:opacity-100" />
+                            </button>
+                        )}
+                    </div>
                 </div>
 
                 {/* Suggestions Dropdown - Myntra Style */}
