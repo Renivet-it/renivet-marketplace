@@ -34,11 +34,14 @@ export async function GET(req: Request) {
         const getGenderFromCategory = (categoryName?: string | null) => {
             const normalizedCategory = categoryName?.trim().toLowerCase();
             if (!normalizedCategory) return "";
-            const hasMen = normalizedCategory.includes("men");
-            const hasWomen = normalizedCategory.includes("women");
-            if (hasMen && hasWomen) return "Men and Women";
-            if (hasMen) return "Men";
-            if (hasWomen) return "Women";
+
+            // Match whole words to avoid false positives like "women" matching "men".
+            const hasMen = /\b(men|mens|man|male)\b/.test(normalizedCategory);
+            const hasWomen = /\b(women|womens|woman|female|ladies|lady)\b/.test(normalizedCategory);
+
+            if (hasMen && hasWomen) return "unisex";
+            if (hasWomen) return "female";
+            if (hasMen) return "male";
             return "";
         };
 
