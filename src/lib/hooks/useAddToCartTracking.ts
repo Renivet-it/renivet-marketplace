@@ -2,11 +2,13 @@
 
 import { trackAddToCartCapi } from "@/actions/analytics";
 import { trackAddToCart } from "@/actions/track-product";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { fbEvent } from "@/lib/fbpixel";
 import { useGuestPopupStore } from "@/lib/store/use-guest-popup-store";
 import { convertPaiseToRupees, getAbsoluteURL } from "@/lib/utils";
 import { useUser } from "@clerk/nextjs";
 import { useCallback } from "react";
+import { usePostHog } from "posthog-js/react";
 
 export interface TrackAddToCartParams {
     productId: string;
@@ -19,6 +21,7 @@ export interface TrackAddToCartParams {
 
 export function useAddToCartTracking() {
     const { user } = useUser();
+    const posthog = usePostHog();
     const { openPopup } = useGuestPopupStore();
 
     const trackAddToCartEvent = useCallback(
@@ -39,14 +42,24 @@ export function useAddToCartTracking() {
                 // Tracking product in DB
                 await trackAddToCart(productId, brandId);
 
-                // 🔹 Generate Event ID
+                // Generate Event ID
                 const eventId = crypto.randomUUID();
 
                 // FB expects value in Rupees but converted
                 const parsedPrice =
                     parseFloat(convertPaiseToRupees(productPrice)) * quantity;
 
-                // 🔹 FB Pixel (Client)
+                posthog?.capture(POSTHOG_EVENTS.COMMERCE.ADD_TO_CART, {
+                    product_id: productId,
+                    brand_id: brandId,
+                    product_title: productTitle,
+                    brand_name: brandName,
+                    price: parsedPrice,
+                    quantity,
+                    currency: "INR",
+                });
+
+                // FB Pixel (Client)
                 fbEvent(
                     "AddToCart",
                     {
@@ -62,7 +75,7 @@ export function useAddToCartTracking() {
                     { eventId }
                 );
 
-                // 🔹 CAPI (Server)
+                // CAPI (Server)
                 const userData = {
                     em: user?.primaryEmailAddress?.emailAddress,
                     ph: user?.primaryPhoneNumber?.phoneNumber,
@@ -92,7 +105,7 @@ export function useAddToCartTracking() {
                 console.error("Failed to track AddToCart:", error);
             }
         },
-        [user, openPopup]
+        [user, openPopup, posthog]
     );
 
     return { trackAddToCartEvent };

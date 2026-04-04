@@ -67,6 +67,10 @@ export const env = createEnv({
             })
             .min(1, "SHIPROCKET_WEBHOOK_API_KEY is required"),
 
+        POSTHOG_PROJECT_ID: z.string().optional(),
+        POSTHOG_PERSONAL_API_KEY: z.string().optional(),
+        ANALYTICS_CRON_SECRET: z.string().optional(),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -119,6 +123,9 @@ export const env = createEnv({
         SHIPROCKET_LOGIN_EMAIL: process.env.SHIPROCKET_LOGIN_EMAIL,
         SHIPROCKET_LOGIN_PASSWORD: process.env.SHIPROCKET_LOGIN_PASSWORD,
         SHIPROCKET_WEBHOOK_API_KEY: process.env.SHIPROCKET_WEBHOOK_API_KEY,
+        POSTHOG_PROJECT_ID: process.env.POSTHOG_PROJECT_ID,
+        POSTHOG_PERSONAL_API_KEY: process.env.POSTHOG_PERSONAL_API_KEY,
+        ANALYTICS_CRON_SECRET: process.env.ANALYTICS_CRON_SECRET,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

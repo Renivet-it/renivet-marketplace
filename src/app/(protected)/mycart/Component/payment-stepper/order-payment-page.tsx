@@ -5,6 +5,7 @@ import {
     trackInitiateCheckoutCapi,
     trackPurchaseCapi,
 } from "@/actions/analytics";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 // Impoert actions
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
@@ -31,6 +32,7 @@ import { useMutation } from "@tanstack/react-query";
 import { CreditCard, Leaf, Shield, Truck } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { usePostHog } from "posthog-js/react";
 import { toast } from "sonner";
 
 // Retry configuration
@@ -59,6 +61,7 @@ export function OrderPage({
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
         "online" | "cod"
     >("online");
+    const posthog = usePostHog();
 
     const { selectedShippingAddress, appliedCoupon } = useCartStore();
 
@@ -198,6 +201,16 @@ export function OrderPage({
                           new Date().getTime() +
                           "_" +
                           Math.random().toString(36).substr(2, 9);
+
+                posthog?.capture(POSTHOG_EVENTS.COMMERCE.PURCHASE_COMPLETED, {
+                    order_id: newOrder.id,
+                    product_ids: variables.items.map((item: any) => item.productId),
+                    brand_ids: variables.items.map((item: any) => item.brandId),
+                    total_amount: Number(convertPaiseToRupees(variables.totalAmount)),
+                    currency: "INR",
+                    total_items: variables.totalItems,
+                    payment_method: variables.paymentMethod,
+                });
 
                 fbEvent(
                     "Purchase",
@@ -547,6 +560,15 @@ export function OrderPage({
                   "_" +
                   Math.random().toString(36).substring(2, 9);
 
+        posthog?.capture(POSTHOG_EVENTS.COMMERCE.CHECKOUT_STARTED, {
+            product_ids: availableItems.map((item) => item.product.id),
+            brand_ids: availableItems.map((item) => item.product.brandId),
+            total_amount: Number(convertPaiseToRupees(priceList.total)),
+            currency: "INR",
+            total_items: totalQuantity,
+            payment_method: selectedPaymentMethod,
+        });
+
         // 🔹 FB Pixel (Client)
         fbEvent(
             "InitiateCheckout",
@@ -819,3 +841,5 @@ export function OrderPage({
         </>
     );
 }
+
+
