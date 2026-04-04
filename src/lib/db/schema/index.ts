@@ -30,3 +30,6 @@ export * from "./order-return-exchange";
 export * from "./search";
 export * from "./types";
 export * from "./capi-logs";
+
+export * from "./analytics";
+

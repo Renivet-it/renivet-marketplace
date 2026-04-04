@@ -181,6 +181,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
         icon: "ChartNoAxesColumn",
         items: [
             {
+                title: "Dashboard",
+                url: "/dashboard/general/analytics",
+                permissions: BitFieldSitePermission.VIEW_ANALYTICS,
+            },
+            {
                 title: "Product Reports",
                 url: "/dashboard/general/product-reports-analytics",
                 permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
@@ -1108,3 +1113,4 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
         },
     ];
 }
+

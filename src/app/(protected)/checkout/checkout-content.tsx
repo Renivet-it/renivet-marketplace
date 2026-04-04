@@ -6,6 +6,7 @@ import {
     trackInitiateCheckoutCapi,
     trackPurchaseCapi,
 } from "@/actions/analytics";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
@@ -43,6 +44,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import { usePostHog } from "posthog-js/react";
 import { toast } from "sonner";
 import ShippingAddress from "../mycart/Component/address-stepper/address-stepper";
 import { OrderProductCard } from "../mycart/Component/payment-stepper/ordered-product-card-view";
@@ -53,6 +55,7 @@ const RETRY_DELAY_BASE = 1000;
 export default function CheckoutContent({ userId }: { userId: string }) {
     const router = useRouter();
     const searchParams = useSearchParams();
+    const posthog = usePostHog();
 
     const isBuyNow = searchParams.get("buy_now") === "true";
     const buyNowItemId = searchParams.get("item");
@@ -249,6 +252,10 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const { mutateAsync: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
             onSuccess: (order, variables) => {
+                const totalAmountPaise = Number(variables.totalAmount ?? 0);
+                const orderIds = Array.isArray(order)
+                    ? order.map((entry) => entry.id)
+                    : [];
                 const eventId =
                     typeof crypto !== "undefined" && crypto.randomUUID
                         ? crypto.randomUUID()
@@ -257,10 +264,20 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                           "_" +
                           Math.random().toString(36).substr(2, 9);
 
+                posthog?.capture(POSTHOG_EVENTS.COMMERCE.PURCHASE_COMPLETED, {
+                    order_ids: orderIds,
+                    product_ids: variables.items.map((item: any) => item.productId),
+                    brand_ids: variables.items.map((item: any) => item.brandId),
+                    total_amount: Number(convertPaiseToRupees(totalAmountPaise)),
+                    currency: "INR",
+                    total_items: variables.totalItems,
+                    payment_method: variables.paymentMethod,
+                });
+
                 fbEvent(
                     "Purchase",
                     {
-                        value: variables.totalAmount,
+                        value: totalAmountPaise,
                         currency: "INR",
                         content_type: "product",
                         content_ids: variables.items.map(
@@ -284,7 +301,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         external_id: user?.id,
                     },
                     {
-                        value: variables.totalAmount,
+                        value: totalAmountPaise,
                         currency: "INR",
                         content_type: "product",
                         content_ids: variables.items.map(
@@ -572,6 +589,15 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                   new Date().getTime() +
                   "_" +
                   Math.random().toString(36).substring(2, 9);
+        posthog?.capture(POSTHOG_EVENTS.COMMERCE.CHECKOUT_STARTED, {
+            product_ids: availableItems.map((item) => item.product.id),
+            brand_ids: availableItems.map((item) => item.product.brandId),
+            total_amount: Number(convertPaiseToRupees(priceList.total)),
+            currency: "INR",
+            total_items: itemsCount,
+            payment_method: selectedPaymentMethod,
+        });
+
         fbEvent(
             "InitiateCheckout",
             {
@@ -1072,3 +1098,8 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         </div>
     );
 }
+
+
+
+
+

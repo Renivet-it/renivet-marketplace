@@ -79,4 +79,10 @@ export const POSTHOG_EVENTS = {
         UNSUBSCRIBED: "newsletter_unsubscribed",
         DELETED: "newsletter_deleted",
     },
+    COMMERCE: {
+        PRODUCT_VIEWED: "product_viewed",
+        ADD_TO_CART: "add_to_cart",
+        CHECKOUT_STARTED: "checkout_started",
+        PURCHASE_COMPLETED: "purchase_completed",
+    },
 } as const;
