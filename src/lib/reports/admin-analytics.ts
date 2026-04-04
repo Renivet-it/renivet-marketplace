@@ -217,6 +217,10 @@ function toNum(value: unknown) {
     return Number.isFinite(num) ? num : 0;
 }
 
+function toSqlDateTime(value: Date) {
+    return value.toISOString().replace("T", " ").slice(0, 19);
+}
+
 export function resolveDateWindow(input: AnalyticsDateInput): AnalyticsDateWindow {
     const now = new Date();
     const end = input.datePreset === "custom" && input.endDate
@@ -270,9 +274,12 @@ export function resolveDateWindow(input: AnalyticsDateInput): AnalyticsDateWindo
 }
 
 async function getWindowAggregates(start: Date, end: Date): Promise<WindowAggregates> {
+    const startSql = toSqlDateTime(start);
+    const endSql = toSqlDateTime(end);
+
     const validOrdersWhere = and(
-        gte(orders.createdAt, start),
-        lte(orders.createdAt, end),
+        sql`${orders.createdAt} >= ${startSql}`,
+        sql`${orders.createdAt} <= ${endSql}`,
         ne(orders.status, "cancelled"),
         ne(orders.paymentStatus, "failed")
     );
@@ -306,8 +313,8 @@ async function getWindowAggregates(start: Date, end: Date): Promise<WindowAggreg
         .where(
             and(
                 eq(refunds.status, "processed"),
-                gte(refunds.createdAt, start),
-                lte(refunds.createdAt, end)
+                sql`${refunds.createdAt} >= ${startSql}`,
+                sql`${refunds.createdAt} <= ${endSql}`
             )
         );
 
@@ -318,8 +325,8 @@ async function getWindowAggregates(start: Date, end: Date): Promise<WindowAggreg
         WHERE os.status = 'delivered'
           AND o.status <> 'cancelled'
           AND o.payment_status <> 'failed'
-          AND o.created_at >= ${start}
-          AND o.created_at <= ${end}
+          AND o.created_at >= ${startSql}
+          AND o.created_at <= ${endSql}
     `);
 
     const customerRows = await db.execute(sql`
@@ -335,13 +342,13 @@ async function getWindowAggregates(start: Date, end: Date): Promise<WindowAggreg
             FROM ${orders}
             WHERE status <> 'cancelled'
               AND payment_status <> 'failed'
-              AND created_at >= ${start}
-              AND created_at <= ${end}
+              AND created_at >= ${startSql}
+              AND created_at <= ${endSql}
         )
         SELECT
             COUNT(*)::int AS total_customers,
-            SUM(CASE WHEN fo.first_order_at < ${start} THEN 1 ELSE 0 END)::int AS returning_customers,
-            SUM(CASE WHEN fo.first_order_at >= ${start} AND fo.first_order_at <= ${end} THEN 1 ELSE 0 END)::int AS new_customers
+            SUM(CASE WHEN fo.first_order_at < ${startSql} THEN 1 ELSE 0 END)::int AS returning_customers,
+            SUM(CASE WHEN fo.first_order_at >= ${startSql} AND fo.first_order_at <= ${endSql} THEN 1 ELSE 0 END)::int AS new_customers
         FROM period_customers pc
         INNER JOIN first_orders fo ON fo.user_id = pc.user_id
     `);
@@ -446,6 +453,9 @@ export async function getAdminSalesBreakdown(input: AnalyticsDateInput): Promise
 }
 
 async function getSalesSeriesWindow(start: Date, end: Date): Promise<Map<string, SalesTrendPoint>> {
+    const startSql = toSqlDateTime(start);
+    const endSql = toSqlDateTime(end);
+
     const rows = await db.execute(sql`
         WITH order_daily AS (
             SELECT
@@ -455,8 +465,8 @@ async function getSalesSeriesWindow(start: Date, end: Date): Promise<Map<string,
             FROM ${orders} o
             WHERE o.status <> 'cancelled'
               AND o.payment_status <> 'failed'
-              AND o.created_at >= ${start}
-              AND o.created_at <= ${end}
+              AND o.created_at >= ${startSql}
+              AND o.created_at <= ${endSql}
             GROUP BY DATE(o.created_at)
         ),
         gross_daily AS (
@@ -469,8 +479,8 @@ async function getSalesSeriesWindow(start: Date, end: Date): Promise<Map<string,
             LEFT JOIN ${productVariants} v ON oi.variant_id = v.id
             WHERE o.status <> 'cancelled'
               AND o.payment_status <> 'failed'
-              AND o.created_at >= ${start}
-              AND o.created_at <= ${end}
+              AND o.created_at >= ${startSql}
+              AND o.created_at <= ${endSql}
             GROUP BY DATE(o.created_at)
         ),
         refunds_daily AS (
@@ -479,8 +489,8 @@ async function getSalesSeriesWindow(start: Date, end: Date): Promise<Map<string,
                 COALESCE(SUM(r.amount), 0)::numeric AS returns
             FROM ${refunds} r
             WHERE r.status = 'processed'
-              AND r.created_at >= ${start}
-              AND r.created_at <= ${end}
+              AND r.created_at >= ${startSql}
+              AND r.created_at <= ${endSql}
             GROUP BY DATE(r.created_at)
         )
         SELECT
@@ -651,6 +661,9 @@ export async function runAdminFreeformReport(input: FreeformQueryInput): Promise
         COALESCE(SUM(li.quantity), 0)::int AS units_sold
     `;
 
+    const startSql = toSqlDateTime(window.current.start);
+    const endSql = toSqlDateTime(window.current.end);
+
     const rows = await db.execute(sql`
         WITH line_items AS (
             SELECT
@@ -674,8 +687,8 @@ export async function runAdminFreeformReport(input: FreeformQueryInput): Promise
             LEFT JOIN ${productVariants} v ON oi.variant_id = v.id
             WHERE o.status <> 'cancelled'
               AND o.payment_status <> 'failed'
-              AND o.created_at >= ${window.current.start}
-              AND o.created_at <= ${window.current.end}
+              AND o.created_at >= ${startSql}
+              AND o.created_at <= ${endSql}
         ),
         order_gross AS (
             SELECT order_id, SUM(line_gross) AS order_gross
@@ -745,8 +758,8 @@ export async function runAdminFreeformReport(input: FreeformQueryInput): Promise
             LEFT JOIN ${categories} c ON p.category_id = c.id
             WHERE o.status <> 'cancelled'
               AND o.payment_status <> 'failed'
-              AND o.created_at >= ${window.current.start}
-              AND o.created_at <= ${window.current.end}
+              AND o.created_at >= ${startSql}
+              AND o.created_at <= ${endSql}
         )
         SELECT COUNT(*)::int AS total
         FROM (

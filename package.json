@@ -10,7 +10,8 @@
     "email:dev": "email dev --dir=src/lib/resend/emails",
     "db:gen": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
-    "db:mig": "drizzle-kit generate && drizzle-kit migrate"
+    "db:mig": "drizzle-kit generate && drizzle-kit migrate",
+    "embeddings:brands": "bun run generateBrandEmbeddings.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.11.1",
