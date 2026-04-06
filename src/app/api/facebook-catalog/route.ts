@@ -47,7 +47,7 @@ export async function GET(req: Request) {
 
         // Standard Facebook Catalog CSV Headers with Variant Support
         const csvRows = [
-            ["id", "item_group_id", "title", "description", "availability", "condition", "price", "link", "image_link", "brand", "color", "size", "gender"]
+            ["id", "item_group_id", "title", "description", "availability", "condition", "price", "link", "image_link", "brand", "color", "size", "gender", "product_type"]
         ];
 
         productsList.forEach((product) => {
@@ -56,6 +56,11 @@ export async function GET(req: Request) {
             const escapeCSV = (str: string) => `"${(str || "").replace(/"/g, "\"\"")}"`;
             const description = escapeCSV(product.description || product.title);
             const gender = getGenderFromCategory(product.category?.name);
+            const productType =
+                product.productType?.name ||
+                product.subcategory?.name ||
+                product.category?.name ||
+                "";
 
             if (product.productHasVariants && product.variants?.length > 0) {
                 // If product has variants, row for each variant sharing the same item_group_id (parent ID)
@@ -99,7 +104,8 @@ export async function GET(req: Request) {
                             escapeCSV(brandName),
                             escapeCSV(color),
                             escapeCSV(size),
-                            escapeCSV(gender)
+                            escapeCSV(gender),
+                            escapeCSV(productType)
                         ]);
                     });
             } else {
@@ -126,7 +132,8 @@ export async function GET(req: Request) {
                     escapeCSV(brandName),
                     "",
                     "",
-                    escapeCSV(gender)
+                    escapeCSV(gender),
+                    escapeCSV(productType)
                 ]);
             }
         });
