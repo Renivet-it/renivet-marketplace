@@ -104,10 +104,34 @@ async function runHogQL<T extends Record<string, unknown>>(query: string): Promi
         }
 
         const payload = (await response.json()) as {
-            results?: T[];
+            results?: unknown[];
+            columns?: string[];
         };
 
-        return payload.results ?? [];
+        const rawResults = Array.isArray(payload.results) ? payload.results : [];
+        if (rawResults.length === 0) return [];
+
+        const firstRow = rawResults[0];
+
+        if (firstRow && typeof firstRow === "object" && !Array.isArray(firstRow)) {
+            return rawResults as T[];
+        }
+
+        const columns = Array.isArray(payload.columns) ? payload.columns : [];
+        if (columns.length === 0) {
+            console.error("PostHog HogQL query returned array rows without columns");
+            return [];
+        }
+
+        return rawResults
+            .filter((row): row is unknown[] => Array.isArray(row))
+            .map((row) => {
+                const mapped: Record<string, unknown> = {};
+                for (let i = 0; i < columns.length; i += 1) {
+                    mapped[columns[i] ?? `col_${i}`] = row[i];
+                }
+                return mapped as T;
+            });
     } catch (error) {
         console.error("PostHog HogQL request failed", error);
         return [];
@@ -234,8 +258,9 @@ export async function getPostHogLandingPageDaily(
 ): Promise<PostHogLandingPageRow[]> {
     const startSql = formatDateTime(start);
     const endSql = formatDateTime(end);
+    const safeLimit = Math.max(limit, 1);
 
-    const rows = await runHogQL<{
+    const detailedRows = await runHogQL<{
         date_key: string;
         landing_path: string;
         landing_type: string;
@@ -307,18 +332,72 @@ export async function getPostHogLandingPageDaily(
         LEFT JOIN session_engagement e ON e.session_key = s.session_key
         GROUP BY s.date_key, s.landing_path, landing_type
         ORDER BY sessions DESC
-        LIMIT ${Math.max(limit, 1)}
+        LIMIT ${safeLimit}
     `);
 
-    return rows.map((row) => ({
+    if (detailedRows.length > 0) {
+        return detailedRows.map((row) => ({
+            dateKey: row.date_key,
+            landingPath: String(row.landing_path ?? "unknown"),
+            landingType: String(row.landing_type ?? "unknown"),
+            sessions: toNumber(row.sessions),
+            visitors: toNumber(row.visitors),
+            sessionsWithCart: toNumber(row.sessions_with_cart),
+            sessionsReachedCheckout: toNumber(row.sessions_reached_checkout),
+        }));
+    }
+
+    const fallbackRows = await runHogQL<{
+        date_key: string;
+        landing_path: string;
+        landing_type: string;
+        sessions: number;
+        visitors: number;
+    }>(`
+        SELECT
+            substring(toString(timestamp), 1, 10) AS date_key,
+            coalesce(nullIf(toString(properties.$pathname), ''), 'unknown') AS landing_path,
+            multiIf(
+                startsWith(coalesce(nullIf(toString(properties.$pathname), ''), 'unknown'), '/products'),
+                'product',
+                startsWith(coalesce(nullIf(toString(properties.$pathname), ''), 'unknown'), '/collections'),
+                'collection',
+                startsWith(coalesce(nullIf(toString(properties.$pathname), ''), 'unknown'), '/'),
+                'page',
+                'unknown'
+            ) AS landing_type,
+            uniq(
+                coalesce(
+                    nullIf(toString(properties.$session_id), ''),
+                    concat('anon:', toString(distinct_id), ':', substring(toString(timestamp), 1, 10))
+                )
+            ) AS sessions,
+            uniq(distinct_id) AS visitors
+        FROM events
+        WHERE event = '$pageview'
+          AND timestamp >= toDateTime('${startSql}')
+          AND timestamp <= toDateTime('${endSql}')
+        GROUP BY date_key, landing_path, landing_type
+        ORDER BY sessions DESC
+        LIMIT ${safeLimit}
+    `);
+
+    if (fallbackRows.length > 0) {
+        console.warn(
+            "PostHog landing detailed query returned no rows. Using fallback landing query."
+        );
+    }
+
+    return fallbackRows.map((row) => ({
         dateKey: row.date_key,
-        landingPath: row.landing_path,
-        landingType: row.landing_type,
+        landingPath: String(row.landing_path ?? "unknown"),
+        landingType: String(row.landing_type ?? "unknown"),
         sessions: toNumber(row.sessions),
         visitors: toNumber(row.visitors),
-        sessionsWithCart: toNumber(row.sessions_with_cart),
-        sessionsReachedCheckout: toNumber(row.sessions_reached_checkout),
+        sessionsWithCart: 0,
+        sessionsReachedCheckout: 0,
     }));
 }
+
 
 

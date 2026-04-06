@@ -45,6 +45,18 @@ type FreeformFilters = Filters & {
     sortDirection: "asc" | "desc";
 };
 
+type LandingSortBy = "sessions" | "visitors" | "sessionShare" | "visitorRate";
+
+type LandingSectionFilters = {
+    search: string;
+    type: "all" | "page" | "product" | "collection" | "unknown" | "summary";
+    minSessions: number;
+    hideInternal: boolean;
+    sortBy: LandingSortBy;
+    sortDirection: "asc" | "desc";
+    limit: number;
+};
+
 const DATE_LABEL: Record<AnalyticsDatePreset, string> = {
     "7d": "Last 7 days",
     "30d": "Last 30 days",
@@ -138,6 +150,16 @@ export function AdminAnalyticsDashboard() {
 
     const [applied, setApplied] = useState<FreeformFilters>(draft);
 
+    const [landingSectionFilters, setLandingSectionFilters] = useState<LandingSectionFilters>({
+        search: "",
+        type: "all",
+        minSessions: 0,
+        hideInternal: true,
+        sortBy: "sessions",
+        sortDirection: "desc",
+        limit: 20,
+    });
+
     const hasValidDateRange =
         filters.datePreset !== "custom" ||
         (Boolean(filters.startDate) && Boolean(filters.endDate));
@@ -146,6 +168,8 @@ export function AdminAnalyticsDashboard() {
         applied.datePreset !== "custom" ||
         (Boolean(applied.startDate) && Boolean(applied.endDate));
 
+    const landingQueryLimit = Math.min(100, Math.max(landingSectionFilters.limit * 3, 40));
+
     const overview = trpc.general.analytics.getOverview.useQuery(filters, {
         enabled: hasValidDateRange,
     });
@@ -153,7 +177,7 @@ export function AdminAnalyticsDashboard() {
         enabled: hasValidDateRange,
     });
     const landing = trpc.general.analytics.getLandingPagePerformance.useQuery(
-        { ...filters, limit: 8 },
+        { ...filters, limit: landingQueryLimit },
         { enabled: hasValidDateRange }
     );
     const series = trpc.general.analytics.getSalesTimeSeries.useQuery(filters, {
@@ -178,13 +202,17 @@ export function AdminAnalyticsDashboard() {
     });
     const refreshSnapshots = trpc.general.analytics.refreshSnapshots.useMutation();
 
-    const landingRows = (landing.data ?? []) as Array<{
-        landingPath: string;
-        landingType: string;
-        sessions: number;
-        visitors: number;
-        sessionsReachedCheckout: number;
-    }>;
+    const landingRows = useMemo(
+        () =>
+            ((landing.data ?? []) as Array<{
+                landingPath: string;
+                landingType: string;
+                sessions: number;
+                visitors: number;
+                sessionsReachedCheckout: number;
+            }>),
+        [landing.data]
+    );
     const reportRows = reports.data ?? [];
     const freeformMetrics = freeform.data?.metrics ?? applied.metrics;
     const freeformMetricColSpan = 1 + freeformMetrics.length;
@@ -197,6 +225,77 @@ export function AdminAnalyticsDashboard() {
             previousTotalSales: series.data?.previous?.[index]?.totalSales ?? 0,
         }));
     }, [series.data]);
+
+    const landingSectionRows = useMemo(() => {
+        const q = landingSectionFilters.search.trim().toLowerCase();
+        const normalizePath = (value: string) => String(value ?? "").trim() || "unknown";
+
+        const normalized = landingRows.map((row) => {
+            const path = normalizePath(row.landingPath);
+            const type = String(row.landingType ?? "unknown").trim() || "unknown";
+            const sessions = Number.isFinite(Number(row.sessions)) ? Number(row.sessions) : 0;
+            const visitors = Number.isFinite(Number(row.visitors)) ? Number(row.visitors) : 0;
+            return {
+                landingPath: path,
+                landingType: type,
+                sessions,
+                visitors,
+            };
+        });
+
+        const totalVisibleSessions = normalized.reduce((sum, row) => sum + row.sessions, 0);
+
+        const internalPrefixes = ["/dashboard", "/auth", "/api", "/admin"];
+
+        const filtered = normalized.filter((row) => {
+            if (landingSectionFilters.type !== "all" && row.landingType !== landingSectionFilters.type) {
+                return false;
+            }
+
+            if (landingSectionFilters.hideInternal && internalPrefixes.some((prefix) => row.landingPath.startsWith(prefix))) {
+                return false;
+            }
+
+            if (row.sessions < landingSectionFilters.minSessions) {
+                return false;
+            }
+
+            if (q && !(row.landingPath.toLowerCase().includes(q) || row.landingType.toLowerCase().includes(q))) {
+                return false;
+            }
+
+            return true;
+        });
+
+        const withDerived = filtered.map((row) => ({
+            ...row,
+            sessionShare: totalVisibleSessions > 0 ? (row.sessions / totalVisibleSessions) * 100 : 0,
+            visitorRate: row.sessions > 0 ? (row.visitors / row.sessions) * 100 : 0,
+        }));
+
+        const direction = landingSectionFilters.sortDirection === "asc" ? 1 : -1;
+        withDerived.sort((a, b) => {
+            if (landingSectionFilters.sortBy === "visitors") {
+                return (a.visitors - b.visitors) * direction;
+            }
+
+            if (landingSectionFilters.sortBy === "sessionShare") {
+                return (a.sessionShare - b.sessionShare) * direction;
+            }
+
+            if (landingSectionFilters.sortBy === "visitorRate") {
+                return (a.visitorRate - b.visitorRate) * direction;
+            }
+
+            return (a.sessions - b.sessions) * direction;
+        });
+
+        return {
+            rows: withDerived.slice(0, landingSectionFilters.limit),
+            totalRowsBeforeLimit: withDerived.length,
+            totalSessions: totalVisibleSessions,
+        };
+    }, [landingRows, landingSectionFilters]);
 
     const loading =
         overview.isLoading ||
@@ -417,40 +516,154 @@ export function AdminAnalyticsDashboard() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Landing page performance</CardTitle>
-                            <CardDescription>Top landing paths by sessions</CardDescription>
+                            <CardDescription>Top landing paths by sessions with dedicated PostHog filters.</CardDescription>
                         </CardHeader>
-                        <CardContent className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-                                        <th className="px-2 py-2">Landing path</th>
-                                        <th className="px-2 py-2">Type</th>
-                                        <th className="px-2 py-2 text-right">Sessions</th>
-                                        <th className="px-2 py-2 text-right">Visitors</th>
-                                        <th className="px-2 py-2 text-right">Checkout sessions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {landingRows.map((row) => (
-                                        <tr key={`${row.landingPath}-${row.landingType}`} className="border-b">
-                                            <td className="px-2 py-2 font-medium">{row.landingPath}</td>
-                                            <td className="px-2 py-2">{row.landingType}</td>
-                                            <td className="px-2 py-2 text-right">{row.sessions.toLocaleString()}</td>
-                                            <td className="px-2 py-2 text-right">{row.visitors.toLocaleString()}</td>
-                                            <td className="px-2 py-2 text-right">{row.sessionsReachedCheckout.toLocaleString()}</td>
+                        <CardContent className="space-y-4">
+                            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                                <div className="space-y-1 xl:col-span-2">
+                                    <label className="text-xs font-semibold uppercase text-muted-foreground">Search path/type</label>
+                                    <input
+                                        type="text"
+                                        value={landingSectionFilters.search}
+                                        onChange={(e) =>
+                                            setLandingSectionFilters((prev) => ({ ...prev, search: e.target.value }))
+                                        }
+                                        placeholder="/shop, /men, page"
+                                        className="w-full rounded-md border bg-background px-3 py-2 text-sm"
+                                    />
+                                </div>
+
+                                <SelectBlock
+                                    label="Landing type"
+                                    value={landingSectionFilters.type}
+                                    onChange={(value) =>
+                                        setLandingSectionFilters((prev) => ({
+                                            ...prev,
+                                            type: value as LandingSectionFilters["type"],
+                                        }))
+                                    }
+                                    options={[
+                                        { value: "all", label: "All types" },
+                                        { value: "page", label: "Page" },
+                                        { value: "product", label: "Product" },
+                                        { value: "collection", label: "Collection" },
+                                        { value: "unknown", label: "Unknown" },
+                                        { value: "summary", label: "Summary" },
+                                    ]}
+                                />
+
+                                <InputBlock
+                                    label="Min sessions"
+                                    value={String(landingSectionFilters.minSessions)}
+                                    onChange={(value) =>
+                                        setLandingSectionFilters((prev) => ({
+                                            ...prev,
+                                            minSessions: Math.max(0, Number(value || 0)),
+                                        }))
+                                    }
+                                />
+
+                                <SelectBlock
+                                    label="Sort by"
+                                    value={landingSectionFilters.sortBy}
+                                    onChange={(value) =>
+                                        setLandingSectionFilters((prev) => ({
+                                            ...prev,
+                                            sortBy: value as LandingSortBy,
+                                        }))
+                                    }
+                                    options={[
+                                        { value: "sessions", label: "Sessions" },
+                                        { value: "visitors", label: "Visitors" },
+                                        { value: "sessionShare", label: "Session share" },
+                                        { value: "visitorRate", label: "Visitor rate" },
+                                    ]}
+                                />
+
+                                <div className="grid grid-cols-2 gap-2">
+                                    <SelectBlock
+                                        label="Direction"
+                                        value={landingSectionFilters.sortDirection}
+                                        onChange={(value) =>
+                                            setLandingSectionFilters((prev) => ({
+                                                ...prev,
+                                                sortDirection: value as "asc" | "desc",
+                                            }))
+                                        }
+                                        options={[
+                                            { value: "desc", label: "Desc" },
+                                            { value: "asc", label: "Asc" },
+                                        ]}
+                                    />
+                                    <InputBlock
+                                        label="Rows"
+                                        value={String(landingSectionFilters.limit)}
+                                        onChange={(value) =>
+                                            setLandingSectionFilters((prev) => ({
+                                                ...prev,
+                                                limit: Math.max(5, Math.min(Number(value || 20), 100)),
+                                            }))
+                                        }
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-3">
+                                <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
+                                    <input
+                                        type="checkbox"
+                                        checked={landingSectionFilters.hideInternal}
+                                        onChange={(e) =>
+                                            setLandingSectionFilters((prev) => ({
+                                                ...prev,
+                                                hideInternal: e.target.checked,
+                                            }))
+                                        }
+                                        className="h-4 w-4 rounded border"
+                                    />
+                                    Hide internal paths (/dashboard, /auth, /api)
+                                </label>
+
+                                <p className="text-xs text-muted-foreground">
+                                    Showing {landingSectionRows.rows.length} of {landingSectionRows.totalRowsBeforeLimit} rows - total sessions {landingSectionRows.totalSessions.toLocaleString()}
+                                </p>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                            <th className="px-2 py-2">Landing path</th>
+                                            <th className="px-2 py-2">Type</th>
+                                            <th className="px-2 py-2 text-right">Sessions</th>
+                                            <th className="px-2 py-2 text-right">Visitors</th>
+                                            <th className="px-2 py-2 text-right">Session share</th>
+                                            <th className="px-2 py-2 text-right">Visitor rate</th>
                                         </tr>
-                                    ))}
-                                    {landingRows.length === 0 ? (
-                                        <tr>
-                                            <td className="px-2 py-6 text-center text-muted-foreground" colSpan={5}>
-                                                {behavior.data?.source === "unconfigured"
-                                                    ? "PostHog behavior query API is not configured yet."
-                                                    : "No landing page rows in selected range."}
-                                            </td>
-                                        </tr>
-                                    ) : null}
-                                </tbody>
-                            </table>
+                                    </thead>
+                                    <tbody>
+                                        {landingSectionRows.rows.map((row) => (
+                                            <tr key={`${row.landingPath}-${row.landingType}`} className="border-b">
+                                                <td className="px-2 py-2 font-medium">{row.landingPath}</td>
+                                                <td className="px-2 py-2">{row.landingType}</td>
+                                                <td className="px-2 py-2 text-right">{row.sessions.toLocaleString()}</td>
+                                                <td className="px-2 py-2 text-right">{row.visitors.toLocaleString()}</td>
+                                                <td className="px-2 py-2 text-right">{percent(row.sessionShare)}</td>
+                                                <td className="px-2 py-2 text-right">{percent(row.visitorRate)}</td>
+                                            </tr>
+                                        ))}
+                                        {landingSectionRows.rows.length === 0 ? (
+                                            <tr>
+                                                <td className="px-2 py-6 text-center text-muted-foreground" colSpan={6}>
+                                                    {behavior.data?.source === "unconfigured"
+                                                        ? "PostHog behavior query API is not configured yet."
+                                                        : "No landing rows match the selected landing filters."}
+                                                </td>
+                                            </tr>
+                                        ) : null}
+                                    </tbody>
+                                </table>
+                            </div>
                         </CardContent>
                     </Card>
 
@@ -635,6 +848,7 @@ function InputBlock({ label, value, onChange }: { label: string; value: string; 
         </div>
     );
 }
+
 
 
 

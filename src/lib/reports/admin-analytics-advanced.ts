@@ -192,9 +192,33 @@ export async function getAdminLandingPagePerformance(
         Math.max(limit * 10, 100)
     );
 
+    const normalizedRows = rows
+        .map((row) => ({
+            landingPath: String(row.landingPath ?? "unknown").trim() || "unknown",
+            landingType: String(row.landingType ?? "unknown").trim() || "unknown",
+            sessions: Number(row.sessions ?? 0),
+            visitors: Number(row.visitors ?? 0),
+            sessionsWithCart: Number(row.sessionsWithCart ?? 0),
+            sessionsReachedCheckout: Number(row.sessionsReachedCheckout ?? 0),
+        }))
+        .filter(
+            (row) =>
+                Number.isFinite(row.sessions) &&
+                Number.isFinite(row.visitors) &&
+                Number.isFinite(row.sessionsWithCart) &&
+                Number.isFinite(row.sessionsReachedCheckout)
+        )
+        .filter(
+            (row) =>
+                row.sessions > 0 ||
+                row.visitors > 0 ||
+                row.sessionsWithCart > 0 ||
+                row.sessionsReachedCheckout > 0
+        );
+
     const grouped = new Map<string, LandingPagePerformanceRow>();
 
-    for (const row of rows) {
+    for (const row of normalizedRows) {
         const key = `${row.landingPath}::${row.landingType}`;
         const existing = grouped.get(key);
 
@@ -216,9 +240,38 @@ export async function getAdminLandingPagePerformance(
         });
     }
 
-    return Array.from(grouped.values())
+    const rankedRows = Array.from(grouped.values())
         .sort((a, b) => b.sessions - a.sessions)
         .slice(0, limit);
+
+    if (rankedRows.length > 0) {
+        return rankedRows;
+    }
+
+    const summary = await getPostHogBehaviorOverview(
+        window.current.start,
+        window.current.end
+    );
+
+    if (
+        summary.sessions <= 0 &&
+        summary.visitors <= 0 &&
+        summary.sessionsWithCart <= 0 &&
+        summary.sessionsReachedCheckout <= 0
+    ) {
+        return [];
+    }
+
+    return [
+        {
+            landingPath: "(all landing pages)",
+            landingType: "summary",
+            sessions: summary.sessions,
+            visitors: summary.visitors,
+            sessionsWithCart: summary.sessionsWithCart,
+            sessionsReachedCheckout: summary.sessionsReachedCheckout,
+        },
+    ];
 }
 
 export async function getAdminReportLibrary(userId?: string): Promise<AnalyticsReportLibraryItem[]> {
