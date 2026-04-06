@@ -16,9 +16,11 @@ export function PostHogPageView() {
             }
             posthog.capture("$pageview", {
                 $current_url: url,
+                $pathname: pathname,
             });
         }
     }, [pathname, searchParams, posthog]);
 
     return null;
 }
+

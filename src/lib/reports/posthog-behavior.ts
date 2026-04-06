@@ -36,8 +36,27 @@ function formatDateTime(date: Date) {
     return date.toISOString().replace("T", " ").slice(0, 19);
 }
 
+function normalizePostHogApiHost(rawHost?: string | null) {
+    if (!rawHost) return null;
+
+    const withProtocol = /^https?:\/\//i.test(rawHost)
+        ? rawHost
+        : `https://${rawHost}`;
+
+    try {
+        const parsed = new URL(withProtocol);
+        // `*.i.posthog.com` is the ingestion host. HogQL/API requests must use app host.
+        parsed.hostname = parsed.hostname.replace(/\.i\.posthog\.com$/i, ".posthog.com");
+        return parsed.origin.replace(/\/$/, "");
+    } catch {
+        return rawHost.replace(/\/$/, "");
+    }
+}
+
 function getPostHogConfig() {
-    const host = env.NEXT_PUBLIC_POSTHOG_HOST?.replace(/\/$/, "");
+    const host = normalizePostHogApiHost(
+        process.env.POSTHOG_API_HOST ?? env.NEXT_PUBLIC_POSTHOG_HOST
+    );
     const projectId = process.env.POSTHOG_PROJECT_ID;
     const personalApiKey = process.env.POSTHOG_PERSONAL_API_KEY;
 
@@ -75,6 +94,12 @@ async function runHogQL<T extends Record<string, unknown>>(query: string): Promi
         );
 
         if (!response.ok) {
+            const errorText = await response.text().catch(() => "");
+            console.error(
+                "PostHog HogQL query failed",
+                response.status,
+                errorText.slice(0, 500)
+            );
             return [];
         }
 
@@ -83,7 +108,8 @@ async function runHogQL<T extends Record<string, unknown>>(query: string): Promi
         };
 
         return payload.results ?? [];
-    } catch {
+    } catch (error) {
+        console.error("PostHog HogQL request failed", error);
         return [];
     }
 }
@@ -104,7 +130,7 @@ export async function getPostHogBehaviorOverview(start: Date, end: Date): Promis
     }>(`
         SELECT
             countDistinctIf(toString(properties.$session_id), toString(properties.$session_id) != '') AS sessions,
-            countDistinct(distinct_id) AS visitors,
+            uniq(distinct_id) AS visitors,
             countDistinctIf(toString(properties.$session_id), event = 'add_to_cart' AND toString(properties.$session_id) != '') AS sessions_with_cart,
             countDistinctIf(toString(properties.$session_id), event = 'checkout_started' AND toString(properties.$session_id) != '') AS sessions_reached_checkout
         FROM events
@@ -152,16 +178,16 @@ export async function getPostHogDailyBehavior(start: Date, end: Date): Promise<P
         sessions_reached_checkout: number;
     }>(`
         SELECT
-            toString(toDate(timestamp)) AS date_key,
+            substring(toString(timestamp), 1, 10) AS date_key,
             countDistinctIf(toString(properties.$session_id), toString(properties.$session_id) != '') AS sessions,
-            countDistinct(distinct_id) AS visitors,
+            uniq(distinct_id) AS visitors,
             countDistinctIf(toString(properties.$session_id), event = 'add_to_cart' AND toString(properties.$session_id) != '') AS sessions_with_cart,
             countDistinctIf(toString(properties.$session_id), event = 'checkout_started' AND toString(properties.$session_id) != '') AS sessions_reached_checkout
         FROM events
         WHERE timestamp >= toDateTime('${startSql}')
           AND timestamp <= toDateTime('${endSql}')
-        GROUP BY toDate(timestamp)
-        ORDER BY toDate(timestamp)
+        GROUP BY date_key
+        ORDER BY date_key
     `);
 
     const bounceRows = await runHogQL<{
@@ -170,7 +196,7 @@ export async function getPostHogDailyBehavior(start: Date, end: Date): Promise<P
     }>(`
         WITH pageview_sessions AS (
             SELECT
-                toString(toDate(timestamp)) AS date_key,
+                substring(toString(timestamp), 1, 10) AS date_key,
                 toString(properties.$session_id) AS session_id,
                 count() AS pageviews
             FROM events
@@ -218,19 +244,68 @@ export async function getPostHogLandingPageDaily(
         sessions_with_cart: number;
         sessions_reached_checkout: number;
     }>(`
+        WITH session_first_touch AS (
+            SELECT
+                coalesce(
+                    nullIf(toString(properties.$session_id), ''),
+                    concat('anon:', toString(distinct_id), ':', substring(toString(timestamp), 1, 10))
+                ) AS session_key,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.$pathname), ''),
+                        nullIf(
+                            extract(
+                                toString(properties.$current_url),
+                                'https?://[^/]+([^?#]*)'
+                            ),
+                            ''
+                        ),
+                        nullIf(toString(properties.$current_url), ''),
+                        'unknown'
+                    ),
+                    timestamp
+                ) AS landing_path,
+                argMin(distinct_id, timestamp) AS visitor_id,
+                substring(toString(min(timestamp)), 1, 10) AS date_key
+            FROM events
+            WHERE event = '$pageview'
+              AND timestamp >= toDateTime('${startSql}')
+              AND timestamp <= toDateTime('${endSql}')
+            GROUP BY session_key
+        ),
+        session_engagement AS (
+            SELECT
+                coalesce(
+                    nullIf(toString(properties.$session_id), ''),
+                    concat('anon:', toString(distinct_id), ':', substring(toString(timestamp), 1, 10))
+                ) AS session_key,
+                max(event = 'add_to_cart') AS has_cart,
+                max(event = 'checkout_started') AS has_checkout
+            FROM events
+            WHERE timestamp >= toDateTime('${startSql}')
+              AND timestamp <= toDateTime('${endSql}')
+              AND event IN ('add_to_cart', 'checkout_started')
+            GROUP BY session_key
+        )
         SELECT
-            toString(toDate(timestamp)) AS date_key,
-            coalesce(toString(properties.$pathname), 'unknown') AS landing_path,
-            multiIf(startsWith(coalesce(toString(properties.$pathname), ''), '/products'), 'product', startsWith(coalesce(toString(properties.$pathname), ''), '/collections'), 'collection', startsWith(coalesce(toString(properties.$pathname), ''), '/'), 'page', 'unknown') AS landing_type,
-            countDistinctIf(toString(properties.$session_id), toString(properties.$session_id) != '') AS sessions,
-            countDistinct(distinct_id) AS visitors,
-            countDistinctIf(toString(properties.$session_id), event = 'add_to_cart' AND toString(properties.$session_id) != '') AS sessions_with_cart,
-            countDistinctIf(toString(properties.$session_id), event = 'checkout_started' AND toString(properties.$session_id) != '') AS sessions_reached_checkout
-        FROM events
-        WHERE timestamp >= toDateTime('${startSql}')
-          AND timestamp <= toDateTime('${endSql}')
-          AND event IN ('$pageview', 'add_to_cart', 'checkout_started')
-        GROUP BY toDate(timestamp), landing_path, landing_type
+            s.date_key,
+            s.landing_path,
+            multiIf(
+                startsWith(s.landing_path, '/products'),
+                'product',
+                startsWith(s.landing_path, '/collections'),
+                'collection',
+                startsWith(s.landing_path, '/'),
+                'page',
+                'unknown'
+            ) AS landing_type,
+            count() AS sessions,
+            uniq(s.visitor_id) AS visitors,
+            countIf(e.has_cart = 1) AS sessions_with_cart,
+            countIf(e.has_checkout = 1) AS sessions_reached_checkout
+        FROM session_first_touch s
+        LEFT JOIN session_engagement e ON e.session_key = s.session_key
+        GROUP BY s.date_key, s.landing_path, landing_type
         ORDER BY sessions DESC
         LIMIT ${Math.max(limit, 1)}
     `);
@@ -245,3 +320,5 @@ export async function getPostHogLandingPageDaily(
         sessionsReachedCheckout: toNumber(row.sessions_reached_checkout),
     }));
 }
+
+
