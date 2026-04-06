@@ -17,6 +17,7 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { TrendingDown, TrendingUp } from "lucide-react";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
     CartesianGrid,
@@ -56,6 +57,8 @@ type LandingSectionFilters = {
     sortDirection: "asc" | "desc";
     limit: number;
 };
+
+type DashboardSection = "overview" | "behavior" | "landing" | "reports" | "freeform" | "all";
 
 const DATE_LABEL: Record<AnalyticsDatePreset, string> = {
     "7d": "Last 7 days",
@@ -160,6 +163,8 @@ export function AdminAnalyticsDashboard() {
         limit: 20,
     });
 
+    const [activeSection, setActiveSection] = useState<DashboardSection>("overview");
+
     const hasValidDateRange =
         filters.datePreset !== "custom" ||
         (Boolean(filters.startDate) && Boolean(filters.endDate));
@@ -192,11 +197,6 @@ export function AdminAnalyticsDashboard() {
             await reports.refetch();
         },
     });
-    const deleteReport = trpc.general.analytics.deleteReport.useMutation({
-        onSuccess: async () => {
-            await reports.refetch();
-        },
-    });
     const freeform = trpc.general.analytics.runFreeformReport.useQuery(applied, {
         enabled: hasValidAppliedDateRange,
     });
@@ -213,7 +213,21 @@ export function AdminAnalyticsDashboard() {
             }>),
         [landing.data]
     );
-    const reportRows = reports.data ?? [];
+    const reportRows = useMemo(() => {
+        const allowedIds = [
+            "sales_by_product",
+            "sessions_by_landing_page",
+            "sessions_by_location",
+            "bounce_rate_over_time",
+            "checkout_conversion_over_time",
+        ];
+
+        const byId = new Map((reports.data ?? []).map((report) => [report.id, report]));
+        return allowedIds.flatMap((id) => {
+            const report = byId.get(id);
+            return report ? [report] : [];
+        });
+    }, [reports.data]);
     const freeformMetrics = freeform.data?.metrics ?? applied.metrics;
     const freeformMetricColSpan = 1 + freeformMetrics.length;
 
@@ -305,34 +319,21 @@ export function AdminAnalyticsDashboard() {
         breakdown.isLoading ||
         reports.isLoading;
 
+    const sectionOptions: Array<{ key: DashboardSection; label: string }> = [
+        { key: "overview", label: "Overview" },
+        { key: "behavior", label: "Behavior" },
+        { key: "landing", label: "Landing" },
+        { key: "reports", label: "Reports" },
+        { key: "freeform", label: "Freeform" },
+        { key: "all", label: "All" },
+    ];
+
     const toggleMetric = (metric: FreeformMetric) => {
         setDraft((prev) => {
             const exists = prev.metrics.includes(metric);
             const next = exists ? prev.metrics.filter((m) => m !== metric) : [...prev.metrics, metric];
             return { ...prev, metrics: next.length ? next : [metric] };
         });
-    };
-
-    const applySavedReport = (report: {
-        dimensions: FreeformDimension[];
-        metrics: FreeformMetric[];
-        filtersJson?: Record<string, unknown>;
-    }) => {
-        const dimension = report.dimensions[0] ?? "product_title";
-        const metrics = report.metrics.length ? report.metrics : (["total_sales"] as FreeformMetric[]);
-
-        const next = {
-            ...draft,
-            dimension,
-            metrics,
-            datePreset: filters.datePreset,
-            comparison: filters.comparison,
-            startDate: filters.startDate,
-            endDate: filters.endDate,
-        };
-
-        setDraft(next);
-        setApplied(next);
     };
 
     const saveCurrentReport = async () => {
@@ -451,13 +452,34 @@ export function AdminAnalyticsDashboard() {
                 </CardContent>
             </Card>
 
+            <Card>
+                <CardContent className="flex flex-wrap items-center gap-2 p-3">
+                    <span className="mr-2 text-xs font-semibold uppercase text-muted-foreground">Section menu</span>
+                    {sectionOptions.map((section) => (
+                        <button
+                            key={section.key}
+                            type="button"
+                            onClick={() => setActiveSection(section.key)}
+                            className={cn(
+                                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                                activeSection === section.key
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border text-foreground/80 hover:bg-muted"
+                            )}
+                        >
+                            {section.label}
+                        </button>
+                    ))}
+                </CardContent>
+            </Card>
+
             {loading ? (
                 <Card>
                     <CardContent className="p-6 text-sm text-muted-foreground">Loading dashboard data...</CardContent>
                 </Card>
             ) : (
                 <>
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className={cn("grid gap-4 md:grid-cols-2 xl:grid-cols-4", activeSection !== "all" && activeSection !== "overview" && "hidden")}>
                         <Kpi title="Gross sales" value={money(overview.data?.grossSales ?? 0)} change={overview.data?.comparison.grossSales ?? 0} />
                         <Kpi
                             title="Returning customer rate"
@@ -469,14 +491,14 @@ export function AdminAnalyticsDashboard() {
                         <Kpi title="Orders" value={(overview.data?.orders ?? 0).toLocaleString()} change={overview.data?.comparison.orders ?? 0} />
                     </div>
 
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                    <div className={cn("grid gap-4 md:grid-cols-2 xl:grid-cols-4", activeSection !== "all" && activeSection !== "behavior" && "hidden")}>
                         <Kpi title="Sessions" value={(behavior.data?.sessions ?? 0).toLocaleString()} change={behavior.data?.comparison.sessions ?? 0} />
                         <Kpi title="Visitors" value={(behavior.data?.visitors ?? 0).toLocaleString()} change={behavior.data?.comparison.visitors ?? 0} />
                         <Kpi title="Checkout conversion" value={percent(behavior.data?.checkoutConversionRate ?? 0)} change={behavior.data?.comparison.checkoutConversionRate ?? 0} />
                         <Kpi title="Bounce rate" value={percent(behavior.data?.bounceRate ?? 0)} change={behavior.data?.comparison.bounceRate ?? 0} />
                     </div>
 
-                    <div className="grid gap-4 xl:grid-cols-[2fr_1fr]">
+                    <div className={cn("grid gap-4 xl:grid-cols-[2fr_1fr]", activeSection !== "all" && activeSection !== "overview" && "hidden")}>
                         <Card>
                             <CardHeader>
                                 <CardTitle>Total sales over time</CardTitle>
@@ -513,7 +535,7 @@ export function AdminAnalyticsDashboard() {
                         </Card>
                     </div>
 
-                    <Card>
+                    <Card className={cn(activeSection !== "all" && activeSection !== "landing" && "hidden")}>
                         <CardHeader>
                             <CardTitle>Landing page performance</CardTitle>
                             <CardDescription>Top landing paths by sessions with dedicated PostHog filters.</CardDescription>
@@ -667,11 +689,11 @@ export function AdminAnalyticsDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className={cn(activeSection !== "all" && activeSection !== "reports" && "hidden")}>
                         <CardHeader className="flex-row items-center justify-between">
                             <div>
                                 <CardTitle>Reports</CardTitle>
-                                <CardDescription>System and saved reports</CardDescription>
+                                <CardDescription>Curated report templates (red-box selection).</CardDescription>
                             </div>
                             <Button onClick={saveCurrentReport} disabled={saveReport.isPending}>
                                 {saveReport.isPending ? "Saving..." : "Save current report"}
@@ -691,27 +713,15 @@ export function AdminAnalyticsDashboard() {
                                 <tbody>
                                     {reportRows.map((report) => (
                                         <tr key={report.id} className="border-b">
-                                            <td className="px-2 py-2 font-medium">{report.name}</td>
+                                            <td className="px-2 py-2 font-medium"><Link className="hover:underline" href={`/dashboard/general/analytics/reports/${report.id}`}>{report.name}</Link></td>
                                             <td className="px-2 py-2"><Badge variant="outline">{report.category}</Badge></td>
                                             <td className="px-2 py-2">{report.createdBy}</td>
                                             <td className="px-2 py-2">{report.lastViewed}</td>
                                             <td className="px-2 py-2">
                                                 <div className="flex justify-end gap-2">
-                                                    <Button
-                                                        className="h-7 px-2 text-xs"
-                                                        onClick={() => applySavedReport(report)}
-                                                    >
-                                                        Open
+                                                    <Button className="h-7 px-2 text-xs" asChild>
+                                                        <Link href={`/dashboard/general/analytics/reports/${report.id}`}>Open</Link>
                                                     </Button>
-                                                    {!report.isSystemReport ? (
-                                                        <Button
-                                                            className="h-7 px-2 text-xs"
-                                                            onClick={() => deleteReport.mutate({ id: report.id })}
-                                                            disabled={deleteReport.isPending}
-                                                        >
-                                                            Delete
-                                                        </Button>
-                                                    ) : null}
                                                 </div>
                                             </td>
                                         </tr>
@@ -721,7 +731,7 @@ export function AdminAnalyticsDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card>
+                    <Card className={cn(activeSection !== "all" && activeSection !== "freeform" && "hidden")}>
                         <CardHeader>
                             <CardTitle>Freeform report</CardTitle>
                             <CardDescription>Choose metrics and dimension, then run.</CardDescription>

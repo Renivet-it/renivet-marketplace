@@ -11,8 +11,10 @@ import {
 } from "@/lib/reports/admin-analytics";
 import {
     getAdminBehaviorOverview,
+    getAdminBehaviorTimeSeries,
     getAdminLandingPagePerformance,
     getAdminReportLibrary,
+    getAdminSessionsByLocation,
     saveAdminReport,
     updateAdminReport,
     deleteAdminReport,
@@ -87,12 +89,22 @@ export const adminAnalyticsRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
         .query(async ({ input }) => getAdminBehaviorOverview(input)),
 
+    getBehaviorTimeSeries: protectedProcedure
+        .input(dateInputSchema)
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .query(async ({ input }) => getAdminBehaviorTimeSeries(input)),
+
     getLandingPagePerformance: protectedProcedure
         .input(dateWithLimitInputSchema)
         .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
         .query(async ({ input }) =>
             getAdminLandingPagePerformance(input, input.limit)
         ),
+
+    getSessionsByLocation: protectedProcedure
+        .input(dateWithLimitInputSchema)
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .query(async ({ input }) => getAdminSessionsByLocation(input, input.limit)),
 
     getSalesTimeSeries: protectedProcedure
         .input(dateInputSchema)

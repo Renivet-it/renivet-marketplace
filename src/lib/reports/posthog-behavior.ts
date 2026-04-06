@@ -27,6 +27,12 @@ export interface PostHogLandingPageRow {
     sessionsReachedCheckout: number;
 }
 
+export interface PostHogLocationRow {
+    location: string;
+    sessions: number;
+    visitors: number;
+}
+
 function toNumber(value: unknown) {
     const numeric = Number(value ?? 0);
     return Number.isFinite(numeric) ? numeric : 0;
@@ -400,4 +406,49 @@ export async function getPostHogLandingPageDaily(
 }
 
 
+
+
+
+export async function getPostHogSessionsByLocation(
+    start: Date,
+    end: Date,
+    limit = 50
+): Promise<PostHogLocationRow[]> {
+    const startSql = formatDateTime(start);
+    const endSql = formatDateTime(end);
+    const safeLimit = Math.max(limit, 1);
+
+    const rows = await runHogQL<{
+        location: string;
+        sessions: number;
+        visitors: number;
+    }>(`
+        SELECT
+            coalesce(
+                nullIf(toString(properties.$geoip_country_name), ''),
+                nullIf(toString(properties.$geoip_country_code), ''),
+                'Unknown'
+            ) AS location,
+            uniq(
+                coalesce(
+                    nullIf(toString(properties.$session_id), ''),
+                    concat('anon:', toString(distinct_id), ':', substring(toString(timestamp), 1, 10))
+                )
+            ) AS sessions,
+            uniq(distinct_id) AS visitors
+        FROM events
+        WHERE event = '$pageview'
+          AND timestamp >= toDateTime('${startSql}')
+          AND timestamp <= toDateTime('${endSql}')
+        GROUP BY location
+        ORDER BY sessions DESC
+        LIMIT ${safeLimit}
+    `);
+
+    return rows.map((row) => ({
+        location: String(row.location ?? "Unknown"),
+        sessions: toNumber(row.sessions),
+        visitors: toNumber(row.visitors),
+    }));
+}
 
