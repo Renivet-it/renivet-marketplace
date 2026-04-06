@@ -18,7 +18,9 @@ import {
 } from "@/lib/reports/admin-analytics";
 import {
     getPostHogBehaviorOverview,
+    getPostHogDailyBehavior,
     getPostHogLandingPageDaily,
+    getPostHogSessionsByLocation,
     isPostHogBehaviorConfigured,
 } from "@/lib/reports/posthog-behavior";
 import { and, desc, eq } from "drizzle-orm";
@@ -74,6 +76,20 @@ export interface LandingPagePerformanceRow {
     visitors: number;
     sessionsWithCart: number;
     sessionsReachedCheckout: number;
+}
+
+export interface AdminBehaviorTimeSeriesPoint {
+    date: string;
+    sessions: number;
+    visitors: number;
+    bounceRate: number;
+    checkoutConversionRate: number;
+}
+
+export interface AdminSessionsByLocationRow {
+    location: string;
+    sessions: number;
+    visitors: number;
 }
 
 export interface RefreshAnalyticsSnapshotsInput {
@@ -177,6 +193,47 @@ export async function getAdminBehaviorOverview(
         },
         source: "posthog",
     };
+}
+
+
+export async function getAdminBehaviorTimeSeries(
+    input: AnalyticsDateInput
+): Promise<AdminBehaviorTimeSeriesPoint[]> {
+    if (!isPostHogBehaviorConfigured()) return [];
+
+    const window = resolveDateWindow(input);
+    const rows = await getPostHogDailyBehavior(window.current.start, window.current.end);
+
+    return rows.map((row) => ({
+        date: row.dateKey,
+        sessions: row.sessions,
+        visitors: row.visitors,
+        bounceRate: safeRate(row.bounceSessions, row.sessions),
+        checkoutConversionRate: safeRate(row.sessionsReachedCheckout, row.sessions),
+    }));
+}
+
+export async function getAdminSessionsByLocation(
+    input: AnalyticsDateInput,
+    limit = 20
+): Promise<AdminSessionsByLocationRow[]> {
+    if (!isPostHogBehaviorConfigured()) return [];
+
+    const window = resolveDateWindow(input);
+    const rows = await getPostHogSessionsByLocation(
+        window.current.start,
+        window.current.end,
+        Math.max(limit, 1)
+    );
+
+    return rows
+        .map((row) => ({
+            location: String(row.location ?? "Unknown").trim() || "Unknown",
+            sessions: Number(row.sessions ?? 0),
+            visitors: Number(row.visitors ?? 0),
+        }))
+        .filter((row) => row.sessions > 0 || row.visitors > 0)
+        .slice(0, limit);
 }
 
 export async function getAdminLandingPagePerformance(

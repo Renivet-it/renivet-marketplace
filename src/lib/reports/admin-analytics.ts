@@ -53,6 +53,8 @@ export const FREEFORM_METRICS = [
     "units_sold",
 ] as const;
 
+const TAX_RATE = 0.18;
+
 export type AnalyticsDatePreset = (typeof ANALYTICS_DATE_PRESETS)[number];
 export type AnalyticsComparison = (typeof ANALYTICS_COMPARISONS)[number];
 export type FreeformDimension = (typeof FREEFORM_DIMENSIONS)[number];
@@ -221,6 +223,15 @@ function toSqlDateTime(value: Date) {
     return value.toISOString().replace("T", " ").slice(0, 19);
 }
 
+function computeTaxesFromGrossPaise(grossSalesPaise: number) {
+    return Math.round(Math.max(grossSalesPaise, 0) * TAX_RATE);
+}
+
+function computeNetFromGrossPaise(grossSalesPaise: number) {
+    const taxesPaise = computeTaxesFromGrossPaise(grossSalesPaise);
+    return Math.max(grossSalesPaise - taxesPaise, 0);
+}
+
 export function resolveDateWindow(input: AnalyticsDateInput): AnalyticsDateWindow {
     const now = new Date();
     const end = input.datePreset === "custom" && input.endDate
@@ -353,21 +364,25 @@ async function getWindowAggregates(start: Date, end: Date): Promise<WindowAggreg
         INNER JOIN first_orders fo ON fo.user_id = pc.user_id
     `);
 
+    const grossSalesPaise = toNum(grossTotals?.grossSalesPaise);
     const totalSalesPaise = toNum(orderTotals?.totalSalesPaise);
     const returnsPaise = toNum(returnsTotals?.returnsPaise);
+
+    const taxesPaise = computeTaxesFromGrossPaise(grossSalesPaise);
+    const netSalesPaise = computeNetFromGrossPaise(grossSalesPaise);
 
     const totalCustomers = toNum(customerRows[0]?.total_customers);
     const returningCustomers = toNum(customerRows[0]?.returning_customers);
     const newCustomers = toNum(customerRows[0]?.new_customers);
 
     return {
-        grossSalesPaise: toNum(grossTotals?.grossSalesPaise),
+        grossSalesPaise,
         discountsPaise: toNum(orderTotals?.discountsPaise),
         returnsPaise,
-        taxesPaise: toNum(orderTotals?.taxesPaise),
+        taxesPaise,
         shippingPaise: toNum(orderTotals?.shippingPaise),
         totalSalesPaise,
-        netSalesPaise: Math.max(totalSalesPaise - returnsPaise, 0),
+        netSalesPaise,
         orders: toNum(orderTotals?.orders),
         ordersFulfilled: toNum(fulfilledRows[0]?.fulfilled),
         returningCustomerRate:
@@ -510,11 +525,12 @@ async function getSalesSeriesWindow(start: Date, end: Date): Promise<Map<string,
     for (const row of rows) {
         const date = new Date(row.date as string | Date);
         const key = toDateOnlyKey(date);
+        const grossSalesPaise = toNum(row.gross_sales);
         map.set(key, {
             date: key,
             totalSales: paiseToRupees(toNum(row.total_sales)),
-            netSales: paiseToRupees(toNum(row.net_sales)),
-            grossSales: paiseToRupees(toNum(row.gross_sales)),
+            netSales: paiseToRupees(computeNetFromGrossPaise(grossSalesPaise)),
+            grossSales: paiseToRupees(grossSalesPaise),
             orders: toNum(row.orders),
         });
     }
@@ -573,9 +589,9 @@ export function getAdminReportLibrary(): AnalyticsReportLibraryItem[] {
             name: "Total sales by product",
             category: "Sales",
             createdBy: "System",
-            lastViewed: "2026-04-03",
+            lastViewed: "2026-04-07",
             dimensions: ["product_title", "product_vendor"],
-            metrics: ["gross_sales", "total_sales", "net_sales", "orders"],
+            metrics: ["gross_sales", "taxes", "net_sales", "total_sales", "orders"],
             isSystemReport: true,
         },
         {
@@ -583,19 +599,29 @@ export function getAdminReportLibrary(): AnalyticsReportLibraryItem[] {
             name: "Sessions by landing page",
             category: "Behavior",
             createdBy: "System",
-            lastViewed: "2026-04-03",
+            lastViewed: "2026-04-07",
             dimensions: ["order_date"],
             metrics: ["orders"],
             isSystemReport: true,
         },
         {
-            id: "sales_by_location",
-            name: "Sales by location (placeholder)",
+            id: "sessions_by_location",
+            name: "Sessions by location",
             category: "Acquisition",
             createdBy: "System",
-            lastViewed: "2026-04-03",
+            lastViewed: "2026-04-07",
             dimensions: ["order_date"],
-            metrics: ["total_sales", "orders"],
+            metrics: ["orders"],
+            isSystemReport: true,
+        },
+        {
+            id: "bounce_rate_over_time",
+            name: "Bounce rate over time",
+            category: "Behavior",
+            createdBy: "System",
+            lastViewed: "2026-04-07",
+            dimensions: ["order_date"],
+            metrics: ["orders"],
             isSystemReport: true,
         },
         {
@@ -603,14 +629,13 @@ export function getAdminReportLibrary(): AnalyticsReportLibraryItem[] {
             name: "Checkout conversion rate over time",
             category: "Behavior",
             createdBy: "System",
-            lastViewed: "2026-04-03",
+            lastViewed: "2026-04-07",
             dimensions: ["order_date"],
             metrics: ["orders"],
             isSystemReport: true,
         },
     ];
 }
-
 function getFreeformDimensionSql(dimension: FreeformDimension) {
     if (dimension === "product_title") {
         return sql`COALESCE(li.product_title, 'Unknown product')`;
@@ -653,8 +678,8 @@ export async function runAdminFreeformReport(input: FreeformQueryInput): Promise
         ROUND(COALESCE(SUM(li.line_gross), 0) / 100.0, 2) AS gross_sales,
         ROUND(COALESCE(SUM(li.alloc_discount), 0) / 100.0, 2) AS discounts,
         ROUND(COALESCE(SUM(li.alloc_returns), 0) / 100.0, 2) AS returns,
-        ROUND((COALESCE(SUM(li.alloc_total), 0) - COALESCE(SUM(li.alloc_returns), 0)) / 100.0, 2) AS net_sales,
-        ROUND(COALESCE(SUM(li.alloc_tax), 0) / 100.0, 2) AS taxes,
+        ROUND((COALESCE(SUM(li.line_gross), 0) - (COALESCE(SUM(li.line_gross), 0) * ${TAX_RATE})) / 100.0, 2) AS net_sales,
+        ROUND((COALESCE(SUM(li.line_gross), 0) * ${TAX_RATE}) / 100.0, 2) AS taxes,
         ROUND(COALESCE(SUM(li.alloc_shipping), 0) / 100.0, 2) AS shipping,
         ROUND(COALESCE(SUM(li.alloc_total), 0) / 100.0, 2) AS total_sales,
         COUNT(DISTINCT li.order_id)::int AS orders,
@@ -979,3 +1004,5 @@ export async function refreshAdminAnalyticsSnapshots(
         posthogConfigured,
     };
 }
+
+
