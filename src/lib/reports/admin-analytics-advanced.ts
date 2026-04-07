@@ -1,6 +1,10 @@
 import { db } from "@/lib/db";
 import {
     analyticsSavedReports,
+    brands,
+    categories,
+    products,
+    subCategories,
     users,
 } from "@/lib/db/schema";
 import {
@@ -23,7 +27,7 @@ import {
     getPostHogSessionsByLocation,
     isPostHogBehaviorConfigured,
 } from "@/lib/reports/posthog-behavior";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 
 export const REPORT_CATEGORIES = ["Sales", "Behavior", "Acquisition"] as const;
 export const REPORT_VISUALIZATIONS = [
@@ -76,6 +80,10 @@ export interface LandingPagePerformanceRow {
     visitors: number;
     sessionsWithCart: number;
     sessionsReachedCheckout: number;
+    productTitle?: string;
+    productBrandName?: string;
+    productSubcategoryName?: string;
+    productCategoryName?: string;
 }
 
 export interface AdminBehaviorTimeSeriesPoint {
@@ -130,6 +138,78 @@ function toVisualization(value: unknown): ReportVisualization {
         return value as ReportVisualization;
     }
     return "line";
+}
+
+function extractProductSlugFromLandingPath(path: string): string | null {
+    const normalizedPath = String(path ?? "").trim();
+    if (!normalizedPath.startsWith("/products/")) return null;
+
+    const pathOnly = normalizedPath.split("?")[0]?.split("#")[0] ?? normalizedPath;
+    const segments = pathOnly.split("/").filter(Boolean);
+    if (segments.length < 2 || segments[0] !== "products") return null;
+
+    const rawSlug = segments[1]?.trim();
+    if (!rawSlug) return null;
+
+    try {
+        const decoded = decodeURIComponent(rawSlug).trim();
+        return decoded || null;
+    } catch {
+        return rawSlug;
+    }
+}
+
+async function enrichLandingRowsWithProductDetails(
+    rows: LandingPagePerformanceRow[]
+): Promise<LandingPagePerformanceRow[]> {
+    if (!rows.length) return rows;
+
+    const slugByPath = new Map<string, string>();
+    for (const row of rows) {
+        if (row.landingType !== "product") continue;
+        const slug = extractProductSlugFromLandingPath(row.landingPath);
+        if (!slug) continue;
+        slugByPath.set(row.landingPath, slug);
+    }
+
+    const slugs = Array.from(new Set(slugByPath.values()));
+    if (!slugs.length) return rows;
+
+    const productRows = await db
+        .select({
+            slug: products.slug,
+            productTitle: products.title,
+            productBrandName: brands.name,
+            productSubcategoryName: subCategories.name,
+            productCategoryName: categories.name,
+        })
+        .from(products)
+        .leftJoin(brands, eq(products.brandId, brands.id))
+        .leftJoin(subCategories, eq(products.subcategoryId, subCategories.id))
+        .leftJoin(categories, eq(products.categoryId, categories.id))
+        .where(inArray(products.slug, slugs));
+
+    const detailsBySlug = new Map(
+        productRows.map((row) => [row.slug, row])
+    );
+
+    return rows.map((row) => {
+        if (row.landingType !== "product") return row;
+
+        const slug = slugByPath.get(row.landingPath);
+        if (!slug) return row;
+
+        const details = detailsBySlug.get(slug);
+        if (!details) return row;
+
+        return {
+            ...row,
+            productTitle: details.productTitle ?? undefined,
+            productBrandName: details.productBrandName ?? undefined,
+            productSubcategoryName: details.productSubcategoryName ?? undefined,
+            productCategoryName: details.productCategoryName ?? undefined,
+        };
+    });
 }
 
 export async function getAdminBehaviorOverview(
@@ -302,7 +382,7 @@ export async function getAdminLandingPagePerformance(
         .slice(0, limit);
 
     if (rankedRows.length > 0) {
-        return rankedRows;
+        return enrichLandingRowsWithProductDetails(rankedRows);
     }
 
     const summary = await getPostHogBehaviorOverview(

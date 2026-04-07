@@ -1,3 +1,4 @@
+
 "use client";
 
 import { Button } from "@/components/ui/button-general";
@@ -10,7 +11,8 @@ import {
 } from "@/lib/reports/admin-analytics-shared";
 import { trpc } from "@/lib/trpc/client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 import {
     CartesianGrid,
     Legend,
@@ -35,6 +37,10 @@ type ReportId =
     | "sessions_by_location"
     | "bounce_rate_over_time"
     | "checkout_conversion_over_time";
+
+type SearchParamReader = {
+    get: (key: string) => string | null;
+};
 
 const REPORT_META: Record<ReportId, { title: string; description: string }> = {
     sales_by_product: {
@@ -89,6 +95,76 @@ const money = (value: number) =>
 
 const percent = (value: number) => `${Number.isFinite(value) ? value.toFixed(2) : "0.00"}%`;
 
+const escapeCsv = (value: unknown) => {
+    const raw = String(value ?? "");
+    return `"${raw.replace(/"/g, "\"\"")}"`;
+};
+
+const buildCsv = (headers: string[], rows: Array<Array<unknown>>) =>
+    [headers.map(escapeCsv).join(","), ...rows.map((row) => row.map(escapeCsv).join(","))].join("\n");
+
+const downloadCsvFile = (fileName: string, csv: string) => {
+    if (typeof window === "undefined") return;
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+};
+
+const parseDatePreset = (value: string | null): AnalyticsDatePreset => {
+    if (value && ANALYTICS_DATE_PRESETS.includes(value as AnalyticsDatePreset)) {
+        return value as AnalyticsDatePreset;
+    }
+    return "30d";
+};
+
+const parseComparison = (value: string | null): AnalyticsComparison => {
+    if (value && ANALYTICS_COMPARISONS.includes(value as AnalyticsComparison)) {
+        return value as AnalyticsComparison;
+    }
+    return "previous_period";
+};
+
+const parseFiltersFromSearchParams = (searchParams: SearchParamReader): Filters => {
+    const datePreset = parseDatePreset(searchParams.get("datePreset"));
+    const comparison = parseComparison(searchParams.get("comparison"));
+
+    if (datePreset !== "custom") {
+        return { datePreset, comparison };
+    }
+
+    return {
+        datePreset,
+        comparison,
+        startDate: searchParams.get("startDate") ?? undefined,
+        endDate: searchParams.get("endDate") ?? undefined,
+    };
+};
+
+const buildFilterQuery = (filters: Filters) => {
+    const params = new URLSearchParams();
+    params.set("datePreset", filters.datePreset);
+    params.set("comparison", filters.comparison);
+
+    if (filters.datePreset === "custom") {
+        if (filters.startDate) params.set("startDate", filters.startDate);
+        if (filters.endDate) params.set("endDate", filters.endDate);
+    }
+
+    return params.toString();
+};
+
+const buildFileSuffix = (filters: Filters) =>
+    filters.datePreset === "custom"
+        ? `${filters.startDate ?? "start"}_to_${filters.endDate ?? "end"}`
+        : filters.datePreset;
+
 function isReportId(value: string): value is ReportId {
     return value in REPORT_META;
 }
@@ -96,10 +172,13 @@ function isReportId(value: string): value is ReportId {
 export function AnalyticsReportDetailPage({ reportId }: { reportId: string }) {
     const activeReportId = isReportId(reportId) ? reportId : null;
 
-    const [filters, setFilters] = useState<Filters>({
-        datePreset: "30d",
-        comparison: "previous_period",
-    });
+    const searchParams = useSearchParams();
+    const initialFilters = useMemo(
+        () => parseFiltersFromSearchParams(searchParams),
+        [searchParams]
+    );
+
+    const [filters, setFilters] = useState<Filters>(() => initialFilters);
 
     const hasValidDateRange =
         filters.datePreset !== "custom" ||
@@ -157,6 +236,76 @@ export function AnalyticsReportDetailPage({ reportId }: { reportId: string }) {
         }));
     }, [behaviorSeries.data]);
 
+    const backHref = useMemo(() => {
+        const query = buildFilterQuery(filters);
+        return query ? `/dashboard/general/analytics?${query}` : "/dashboard/general/analytics";
+    }, [filters]);
+
+    const exportCurrentReport = useCallback(() => {
+        if (!activeReportId) return;
+
+        if (activeReportId === "sales_by_product") {
+            const csv = buildCsv(
+                ["product", "gross_sales", "taxes", "net_sales", "total_sales", "orders"],
+                (salesByProduct.data?.rows ?? []).map((row) => [
+                    row.dimension,
+                    row.metrics.gross_sales,
+                    row.metrics.taxes,
+                    row.metrics.net_sales,
+                    row.metrics.total_sales,
+                    row.metrics.orders ?? 0,
+                ])
+            );
+            downloadCsvFile(`report-sales-by-product-${buildFileSuffix(filters)}.csv`, csv);
+            return;
+        }
+
+        if (activeReportId === "sessions_by_landing_page") {
+            const csv = buildCsv(
+                ["landing_path", "type", "brand", "product_title", "category", "subcategory", "sessions", "visitors"],
+                (landing.data ?? []).map((row) => [
+                    row.landingPath,
+                    row.landingType,
+                    row.landingType === "product" ? row.productBrandName ?? "" : "",
+                    row.landingType === "product" ? row.productTitle ?? "" : "",
+                    row.landingType === "product" ? row.productCategoryName ?? "" : "",
+                    row.landingType === "product" ? row.productSubcategoryName ?? "" : "",
+                    row.sessions,
+                    row.visitors,
+                ])
+            );
+            downloadCsvFile(`report-sessions-by-landing-${buildFileSuffix(filters)}.csv`, csv);
+            return;
+        }
+
+        if (activeReportId === "sessions_by_location") {
+            const total = (locations.data ?? []).reduce((sum, row) => sum + row.sessions, 0);
+            const csv = buildCsv(
+                ["location", "sessions", "visitors", "session_share"],
+                (locations.data ?? []).map((row) => [
+                    row.location,
+                    row.sessions,
+                    row.visitors,
+                    total > 0 ? ((row.sessions / total) * 100).toFixed(2) : "0.00",
+                ])
+            );
+            downloadCsvFile(`report-sessions-by-location-${buildFileSuffix(filters)}.csv`, csv);
+            return;
+        }
+
+        const csv = buildCsv(
+            ["date", "bounce_rate", "checkout_conversion_rate", "sessions", "visitors"],
+            chartData.map((row) => [
+                row.date,
+                row.bounceRate,
+                row.checkoutConversionRate,
+                row.sessions,
+                row.visitors,
+            ])
+        );
+        downloadCsvFile(`report-behavior-timeseries-${buildFileSuffix(filters)}.csv`, csv);
+    }, [activeReportId, chartData, filters, landing.data, locations.data, salesByProduct.data]);
+
     if (!activeReportId) {
         return (
             <Card>
@@ -180,9 +329,12 @@ export function AnalyticsReportDetailPage({ reportId }: { reportId: string }) {
                     <h1 className="text-2xl font-bold">{REPORT_META[activeReportId].title}</h1>
                     <p className="text-sm text-muted-foreground">{REPORT_META[activeReportId].description}</p>
                 </div>
-                <Button asChild variant="outline">
-                    <Link href="/dashboard/general/analytics">Back</Link>
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="outline" onClick={exportCurrentReport}>Export to Excel</Button>
+                    <Button asChild variant="outline">
+                        <Link href={backHref}>Back</Link>
+                    </Button>
+                </div>
             </div>
 
             <Card>
@@ -310,6 +462,10 @@ export function AnalyticsReportDetailPage({ reportId }: { reportId: string }) {
                                 <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                                     <th className="px-2 py-2">Landing path</th>
                                     <th className="px-2 py-2">Type</th>
+                                    <th className="px-2 py-2">Brand</th>
+                                    <th className="px-2 py-2">Product title</th>
+                                    <th className="px-2 py-2">Category</th>
+                                    <th className="px-2 py-2">Subcategory</th>
                                     <th className="px-2 py-2 text-right">Sessions</th>
                                     <th className="px-2 py-2 text-right">Visitors</th>
                                 </tr>
@@ -319,6 +475,10 @@ export function AnalyticsReportDetailPage({ reportId }: { reportId: string }) {
                                     <tr key={`${row.landingPath}-${row.landingType}`} className="border-b">
                                         <td className="px-2 py-2 font-medium">{row.landingPath}</td>
                                         <td className="px-2 py-2">{row.landingType}</td>
+                                        <td className="px-2 py-2">{row.landingType === "product" ? (row.productBrandName ?? "-") : "-"}</td>
+                                        <td className="px-2 py-2">{row.landingType === "product" ? (row.productTitle ?? "-") : "-"}</td>
+                                        <td className="px-2 py-2">{row.landingType === "product" ? (row.productCategoryName ?? "-") : "-"}</td>
+                                        <td className="px-2 py-2">{row.landingType === "product" ? (row.productSubcategoryName ?? "-") : "-"}</td>
                                         <td className="px-2 py-2 text-right">{row.sessions.toLocaleString()}</td>
                                         <td className="px-2 py-2 text-right">{row.visitors.toLocaleString()}</td>
                                     </tr>
