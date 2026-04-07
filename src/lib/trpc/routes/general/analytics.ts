@@ -25,6 +25,10 @@ import {
 import { createTRPCRouter, isTRPCAuth, protectedProcedure } from "@/lib/trpc/trpc";
 import { z } from "zod";
 
+const ANALYTICS_READ_PERMISSION =
+    BitFieldSitePermission.VIEW_ANALYTICS |
+    BitFieldSitePermission.VIEW_ORDERS;
+
 const baseDateInputSchema = z.object({
     datePreset: z.enum(ANALYTICS_DATE_PRESETS).default("30d"),
     comparison: z.enum(ANALYTICS_COMPARISONS).default("previous_period"),
@@ -58,6 +62,12 @@ const dateWithLimitInputSchema = baseDateInputSchema
         }
     });
 
+const notFulfilledOrdersInputSchema = z.object({
+    startDate: z.string(),
+    endDate: z.string(),
+    limit: z.number().int().min(1).max(200).default(50),
+});
+
 const freeformInputSchema = baseDateInputSchema
     .extend({
         metrics: z.array(z.enum(FREEFORM_METRICS)).min(1),
@@ -81,44 +91,57 @@ const freeformInputSchema = baseDateInputSchema
 export const adminAnalyticsRouter = createTRPCRouter({
     getOverview: protectedProcedure
         .input(dateInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) => getAdminOverviewMetrics(input)),
 
     getBehaviorOverview: protectedProcedure
         .input(dateInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) => getAdminBehaviorOverview(input)),
 
     getBehaviorTimeSeries: protectedProcedure
         .input(dateInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) => getAdminBehaviorTimeSeries(input)),
 
     getLandingPagePerformance: protectedProcedure
         .input(dateWithLimitInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) =>
             getAdminLandingPagePerformance(input, input.limit)
         ),
 
     getSessionsByLocation: protectedProcedure
         .input(dateWithLimitInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) => getAdminSessionsByLocation(input, input.limit)),
 
     getSalesTimeSeries: protectedProcedure
         .input(dateInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) => getAdminSalesTimeSeries(input)),
 
     getSalesBreakdown: protectedProcedure
         .input(dateInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) => getAdminSalesBreakdown(input)),
 
     getReportLibrary: protectedProcedure
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ ctx }) => getAdminReportLibrary(ctx.user.id)),
+
+    getNotFulfilledOrders: protectedProcedure
+        .input(notFulfilledOrdersInputSchema)
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
+        .query(async ({ input, ctx }) =>
+            ctx.queries.orders.getOrders({
+                page: 1,
+                limit: input.limit,
+                startDate: input.startDate,
+                endDate: input.endDate,
+                statusTab: "not_fulfilled",
+            })
+        ),
 
     saveReport: protectedProcedure
         .input(
@@ -156,7 +179,7 @@ export const adminAnalyticsRouter = createTRPCRouter({
 
     runFreeformReport: protectedProcedure
         .input(freeformInputSchema)
-        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ANALYTICS, "any", "site"))
+        .use(isTRPCAuth(ANALYTICS_READ_PERMISSION, "any", "site"))
         .query(async ({ input }) => runAdminFreeformReport(input)),
 
     refreshSnapshots: protectedProcedure

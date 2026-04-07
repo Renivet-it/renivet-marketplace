@@ -5,6 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-dash";
+import {
     ANALYTICS_COMPARISONS,
     ANALYTICS_DATE_PRESETS,
     FREEFORM_DIMENSIONS,
@@ -202,6 +209,34 @@ const buildFilterQuery = (filters: Filters) => {
     return params.toString();
 };
 
+const getOrdersDateRangeFromFilters = (filters: Filters) => {
+    if (filters.datePreset === "custom") {
+        return {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+        };
+    }
+
+    const now = new Date();
+    const endDate = toInputDate(now);
+    let start = new Date(now);
+
+    if (filters.datePreset === "7d") {
+        start = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+    } else if (filters.datePreset === "30d") {
+        start = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+    } else if (filters.datePreset === "90d") {
+        start = new Date(now.getTime() - 89 * 24 * 60 * 60 * 1000);
+    } else if (filters.datePreset === "ytd") {
+        start = new Date(now.getFullYear(), 0, 1);
+    }
+
+    return {
+        startDate: toInputDate(start),
+        endDate,
+    };
+};
+
 const buildFileSuffix = (filters: Filters) =>
     filters.datePreset === "custom"
         ? `${filters.startDate ?? "start"}_to_${filters.endDate ?? "end"}`
@@ -258,6 +293,27 @@ export function AdminAnalyticsDashboard() {
         sortDirection: "desc",
         limit: 20,
     });
+
+    const [isNotFulfilledDialogOpen, setIsNotFulfilledDialogOpen] = useState(false);
+
+    const notFulfilledRange = useMemo(
+        () => getOrdersDateRangeFromFilters(filters),
+        [filters]
+    );
+
+    const notFulfilledOrders = trpc.general.analytics.getNotFulfilledOrders.useQuery(
+        {
+            startDate: notFulfilledRange.startDate ?? "",
+            endDate: notFulfilledRange.endDate ?? "",
+            limit: 100,
+        },
+        {
+            enabled:
+                isNotFulfilledDialogOpen &&
+                Boolean(notFulfilledRange.startDate) &&
+                Boolean(notFulfilledRange.endDate),
+        }
+    );
 
     const [activeSection, setActiveSection] = useState<DashboardSection>("overview");
 
@@ -713,6 +769,8 @@ export function AdminAnalyticsDashboard() {
                             title="Orders fulfilled"
                             value={(overview.data?.ordersFulfilled ?? 0).toLocaleString()}
                             change={overview.data?.comparison.ordersFulfilled ?? 0}
+                            subtext="Click to view not fulfilled orders"
+                            onClick={() => setIsNotFulfilledDialogOpen(true)}
                         />
                         <Kpi
                             title="Orders"
@@ -1098,13 +1156,104 @@ export function AdminAnalyticsDashboard() {
                     </Card>
                 </>
             )}
+            <Dialog open={isNotFulfilledDialogOpen} onOpenChange={setIsNotFulfilledDialogOpen}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Not Fulfilled Orders</DialogTitle>
+                        <DialogDescription>
+                            {notFulfilledRange.startDate && notFulfilledRange.endDate
+                                ? `Orders without delivered shipment from ${notFulfilledRange.startDate} to ${notFulfilledRange.endDate}.`
+                                : "Select a valid date range to view not fulfilled orders."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {!notFulfilledRange.startDate || !notFulfilledRange.endDate ? (
+                        <p className="text-sm text-muted-foreground">
+                            Choose a valid date range first.
+                        </p>
+                    ) : notFulfilledOrders.isLoading ? (
+                        <p className="text-sm text-muted-foreground">Loading not fulfilled orders...</p>
+                    ) : notFulfilledOrders.error ? (
+                        <p className="text-sm text-rose-600">Unable to load not fulfilled orders right now.</p>
+                    ) : (notFulfilledOrders.data?.data.length ?? 0) === 0 ? (
+                        <p className="text-sm text-muted-foreground">No not fulfilled orders found for this date range.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="text-xs text-muted-foreground">
+                                Showing {(notFulfilledOrders.data?.data.length ?? 0).toLocaleString()} of {(notFulfilledOrders.data?.count ?? 0).toLocaleString()} orders.
+                            </div>
+                            <div className="max-h-[420px] overflow-auto rounded-md border">
+                                <table className="w-full text-sm">
+                                    <thead className="sticky top-0 bg-background">
+                                        <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                            <th className="px-3 py-2">Order ID</th>
+                                            <th className="px-3 py-2">Customer</th>
+                                            <th className="px-3 py-2">Status</th>
+                                            <th className="px-3 py-2">Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(notFulfilledOrders.data?.data ?? []).map((order) => {
+                                            const customer = `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim();
+                                            const status = String(order.status ?? "").replace(/_/g, " ");
+                                            return (
+                                                <tr key={order.id} className="border-b">
+                                                    <td className="px-3 py-2 font-mono text-xs">{order.id}</td>
+                                                    <td className="px-3 py-2">{customer || "N/A"}</td>
+                                                    <td className="px-3 py-2 capitalize">{status || "N/A"}</td>
+                                                    <td className="px-3 py-2">
+                                                        {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                                                            day: "2-digit",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        })}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
-function Kpi({ title, value, change, subtext }: { title: string; value: string; change: number; subtext?: string }) {
+function Kpi({
+    title,
+    value,
+    change,
+    subtext,
+    onClick,
+}: {
+    title: string;
+    value: string;
+    change: number;
+    subtext?: string;
+    onClick?: () => void;
+}) {
+    const interactive = Boolean(onClick);
+
     return (
-        <Card>
+        <Card
+            className={cn(interactive && "cursor-pointer transition-shadow hover:shadow-md")}
+            onClick={onClick}
+            role={interactive ? "button" : undefined}
+            tabIndex={interactive ? 0 : undefined}
+            onKeyDown={
+                interactive
+                    ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              onClick?.();
+                          }
+                      }
+                    : undefined
+            }
+        >
             <CardHeader className="pb-2">
                 <CardDescription>{title}</CardDescription>
                 <CardTitle className="text-2xl">{value}</CardTitle>
@@ -1116,7 +1265,6 @@ function Kpi({ title, value, change, subtext }: { title: string; value: string; 
         </Card>
     );
 }
-
 function Breakdown({ label, value, change, negative, strong }: { label: string; value: number; change: number; negative?: boolean; strong?: boolean }) {
     return (
         <div className="flex items-center justify-between gap-3">
@@ -1150,3 +1298,8 @@ function InputBlock({ label, value, onChange }: { label: string; value: string; 
         </div>
     );
 }
+
+
+
+
+

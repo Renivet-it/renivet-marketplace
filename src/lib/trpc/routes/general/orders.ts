@@ -116,6 +116,7 @@ export const ordersRouter = createTRPCRouter({
                         "delivered",
                         "cancelled",
                         "rto",
+                        "not_fulfilled",
                     ])
                     .optional(),
             })

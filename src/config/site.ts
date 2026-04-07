@@ -183,7 +183,9 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             {
                 title: "Dashboard",
                 url: "/dashboard/general/analytics",
-                permissions: BitFieldSitePermission.VIEW_ANALYTICS,
+                permissions:
+                    BitFieldSitePermission.VIEW_ANALYTICS |
+                    BitFieldSitePermission.VIEW_ORDERS,
             },
             {
                 title: "Product Reports",

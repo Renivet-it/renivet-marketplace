@@ -22,6 +22,7 @@ import {
     inArray,
     lt,
     lte,
+    ne,
     or,
     sql,
 } from "drizzle-orm";
@@ -213,7 +214,8 @@ class OrderQuery {
             | "shipped"
             | "delivered"
             | "cancelled"
-            | "rto";
+            | "rto"
+            | "not_fulfilled";
     }) {
         const whereConditions = [];
 
@@ -333,6 +335,17 @@ class OrderQuery {
                                     )
                                 )
                         )
+                    );
+                    break;
+                case "not_fulfilled":
+                    // Match analytics logic: valid orders that do not have a delivered shipment yet.
+                    whereConditions.push(ne(orders.status, "cancelled"));
+                    whereConditions.push(ne(orders.paymentStatus, "failed"));
+                    whereConditions.push(
+                        sql`${orders.id} NOT IN (
+                            SELECT order_id FROM order_shipments
+                            WHERE status = 'delivered'
+                        )`
                     );
                     break;
             }
@@ -457,6 +470,7 @@ class OrderQuery {
             deliveredCount,
             cancelledCount,
             rtoCount,
+            notFulfilledCount,
         ] = await Promise.all([
             // All orders
             db.$count(orders, dateFilter),
@@ -544,6 +558,20 @@ class OrderQuery {
                     dateFilter
                 )
             ),
+
+            // Not fulfilled: valid orders that do not yet have a delivered shipment.
+            db.$count(
+                orders,
+                and(
+                    ne(orders.status, "cancelled"),
+                    ne(orders.paymentStatus, "failed"),
+                    sql`${orders.id} NOT IN (
+                        SELECT order_id FROM order_shipments
+                        WHERE status = 'delivered'
+                    )`,
+                    dateFilter
+                )
+            ),
         ]);
 
         return {
@@ -554,6 +582,7 @@ class OrderQuery {
             delivered: Number(deliveredCount),
             cancelled: Number(cancelledCount),
             rto: Number(rtoCount),
+            not_fulfilled: Number(notFulfilledCount),
         };
     }
 
