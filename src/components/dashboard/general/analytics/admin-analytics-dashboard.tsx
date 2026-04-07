@@ -5,6 +5,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-dash";
+import {
     ANALYTICS_COMPARISONS,
     ANALYTICS_DATE_PRESETS,
     FREEFORM_DIMENSIONS,
@@ -18,7 +25,8 @@ import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { TrendingDown, TrendingUp } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useCallback, useMemo, useState } from "react";
 import {
     CartesianGrid,
     Legend,
@@ -58,7 +66,7 @@ type LandingSectionFilters = {
     limit: number;
 };
 
-type DashboardSection = "overview" | "behavior" | "landing" | "reports" | "freeform" | "all";
+type DashboardSection = "overview" | "webanalytics" | "reports" | "freeform" | "all";
 
 const DATE_LABEL: Record<AnalyticsDatePreset, string> = {
     "7d": "Last 7 days",
@@ -104,6 +112,22 @@ const CURRENCY_METRICS: FreeformMetric[] = [
     "total_sales",
 ];
 
+type SearchParamReader = {
+    get: (key: string) => string | null;
+};
+
+type LandingRow = {
+    landingPath: string;
+    landingType: string;
+    sessions: number;
+    visitors: number;
+    sessionsReachedCheckout: number;
+    productTitle?: string;
+    productBrandName?: string;
+    productSubcategoryName?: string;
+    productCategoryName?: string;
+};
+
 const toInputDate = (date: Date) => {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
@@ -119,6 +143,104 @@ const money = (value: number) =>
     }).format(value || 0);
 
 const percent = (value: number) => `${Number.isFinite(value) ? value.toFixed(2) : "0.00"}%`;
+
+const escapeCsv = (value: unknown) => {
+    const raw = String(value ?? "");
+    return `"${raw.replace(/"/g, "\"\"")}"`;
+};
+
+const buildCsv = (headers: string[], rows: Array<Array<unknown>>) =>
+    [headers.map(escapeCsv).join(","), ...rows.map((row) => row.map(escapeCsv).join(","))].join("\n");
+
+const downloadCsvFile = (fileName: string, csv: string) => {
+    if (typeof window === "undefined") return;
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+};
+
+const parseDatePreset = (value: string | null): AnalyticsDatePreset => {
+    if (value && ANALYTICS_DATE_PRESETS.includes(value as AnalyticsDatePreset)) {
+        return value as AnalyticsDatePreset;
+    }
+    return "30d";
+};
+
+const parseComparison = (value: string | null): AnalyticsComparison => {
+    if (value && ANALYTICS_COMPARISONS.includes(value as AnalyticsComparison)) {
+        return value as AnalyticsComparison;
+    }
+    return "previous_period";
+};
+
+const parseFiltersFromSearchParams = (searchParams: SearchParamReader): Filters => {
+    const datePreset = parseDatePreset(searchParams.get("datePreset"));
+    const comparison = parseComparison(searchParams.get("comparison"));
+
+    if (datePreset !== "custom") {
+        return { datePreset, comparison };
+    }
+
+    return {
+        datePreset,
+        comparison,
+        startDate: searchParams.get("startDate") ?? undefined,
+        endDate: searchParams.get("endDate") ?? undefined,
+    };
+};
+
+const buildFilterQuery = (filters: Filters) => {
+    const params = new URLSearchParams();
+    params.set("datePreset", filters.datePreset);
+    params.set("comparison", filters.comparison);
+
+    if (filters.datePreset === "custom") {
+        if (filters.startDate) params.set("startDate", filters.startDate);
+        if (filters.endDate) params.set("endDate", filters.endDate);
+    }
+
+    return params.toString();
+};
+
+const getOrdersDateRangeFromFilters = (filters: Filters) => {
+    if (filters.datePreset === "custom") {
+        return {
+            startDate: filters.startDate,
+            endDate: filters.endDate,
+        };
+    }
+
+    const now = new Date();
+    const endDate = toInputDate(now);
+    let start = new Date(now);
+
+    if (filters.datePreset === "7d") {
+        start = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+    } else if (filters.datePreset === "30d") {
+        start = new Date(now.getTime() - 29 * 24 * 60 * 60 * 1000);
+    } else if (filters.datePreset === "90d") {
+        start = new Date(now.getTime() - 89 * 24 * 60 * 60 * 1000);
+    } else if (filters.datePreset === "ytd") {
+        start = new Date(now.getFullYear(), 0, 1);
+    }
+
+    return {
+        startDate: toInputDate(start),
+        endDate,
+    };
+};
+
+const buildFileSuffix = (filters: Filters) =>
+    filters.datePreset === "custom"
+        ? `${filters.startDate ?? "start"}_to_${filters.endDate ?? "end"}`
+        : filters.datePreset;
 
 function Delta({ value }: { value: number }) {
     const positive = value >= 0;
@@ -136,22 +258,31 @@ function Delta({ value }: { value: number }) {
 }
 
 export function AdminAnalyticsDashboard() {
-    const [filters, setFilters] = useState<Filters>({
-        datePreset: "30d",
-        comparison: "previous_period",
-    });
+    const searchParams = useSearchParams();
+    const initialFilters = useMemo(
+        () => parseFiltersFromSearchParams(searchParams),
+        [searchParams]
+    );
 
-    const [draft, setDraft] = useState<FreeformFilters>({
-        ...filters,
+    const [filters, setFilters] = useState<Filters>(() => initialFilters);
+    const [draft, setDraft] = useState<FreeformFilters>(() => ({
+        ...initialFilters,
         metrics: ["total_sales", "orders"],
         dimension: "product_title",
         limit: 20,
         offset: 0,
         sortBy: "total_sales",
         sortDirection: "desc",
-    });
-
-    const [applied, setApplied] = useState<FreeformFilters>(draft);
+    }));
+    const [applied, setApplied] = useState<FreeformFilters>(() => ({
+        ...initialFilters,
+        metrics: ["total_sales", "orders"],
+        dimension: "product_title",
+        limit: 20,
+        offset: 0,
+        sortBy: "total_sales",
+        sortDirection: "desc",
+    }));
 
     const [landingSectionFilters, setLandingSectionFilters] = useState<LandingSectionFilters>({
         search: "",
@@ -162,6 +293,27 @@ export function AdminAnalyticsDashboard() {
         sortDirection: "desc",
         limit: 20,
     });
+
+    const [isNotFulfilledDialogOpen, setIsNotFulfilledDialogOpen] = useState(false);
+
+    const notFulfilledRange = useMemo(
+        () => getOrdersDateRangeFromFilters(filters),
+        [filters]
+    );
+
+    const notFulfilledOrders = trpc.general.analytics.getNotFulfilledOrders.useQuery(
+        {
+            startDate: notFulfilledRange.startDate ?? "",
+            endDate: notFulfilledRange.endDate ?? "",
+            limit: 100,
+        },
+        {
+            enabled:
+                isNotFulfilledDialogOpen &&
+                Boolean(notFulfilledRange.startDate) &&
+                Boolean(notFulfilledRange.endDate),
+        }
+    );
 
     const [activeSection, setActiveSection] = useState<DashboardSection>("overview");
 
@@ -203,16 +355,10 @@ export function AdminAnalyticsDashboard() {
     const refreshSnapshots = trpc.general.analytics.refreshSnapshots.useMutation();
 
     const landingRows = useMemo(
-        () =>
-            ((landing.data ?? []) as Array<{
-                landingPath: string;
-                landingType: string;
-                sessions: number;
-                visitors: number;
-                sessionsReachedCheckout: number;
-            }>),
+        () => (landing.data ?? []) as LandingRow[],
         [landing.data]
     );
+
     const reportRows = useMemo(() => {
         const allowedIds = [
             "sales_by_product",
@@ -228,6 +374,7 @@ export function AdminAnalyticsDashboard() {
             return report ? [report] : [];
         });
     }, [reports.data]);
+
     const freeformMetrics = freeform.data?.metrics ?? applied.metrics;
     const freeformMetricColSpan = 1 + freeformMetrics.length;
 
@@ -249,16 +396,20 @@ export function AdminAnalyticsDashboard() {
             const type = String(row.landingType ?? "unknown").trim() || "unknown";
             const sessions = Number.isFinite(Number(row.sessions)) ? Number(row.sessions) : 0;
             const visitors = Number.isFinite(Number(row.visitors)) ? Number(row.visitors) : 0;
+
             return {
                 landingPath: path,
                 landingType: type,
                 sessions,
                 visitors,
+                productTitle: String(row.productTitle ?? "").trim() || undefined,
+                productBrandName: String(row.productBrandName ?? "").trim() || undefined,
+                productSubcategoryName: String(row.productSubcategoryName ?? "").trim() || undefined,
+                productCategoryName: String(row.productCategoryName ?? "").trim() || undefined,
             };
         });
 
         const totalVisibleSessions = normalized.reduce((sum, row) => sum + row.sessions, 0);
-
         const internalPrefixes = ["/dashboard", "/auth", "/api", "/admin"];
 
         const filtered = normalized.filter((row) => {
@@ -266,7 +417,10 @@ export function AdminAnalyticsDashboard() {
                 return false;
             }
 
-            if (landingSectionFilters.hideInternal && internalPrefixes.some((prefix) => row.landingPath.startsWith(prefix))) {
+            if (
+                landingSectionFilters.hideInternal &&
+                internalPrefixes.some((prefix) => row.landingPath.startsWith(prefix))
+            ) {
                 return false;
             }
 
@@ -274,7 +428,18 @@ export function AdminAnalyticsDashboard() {
                 return false;
             }
 
-            if (q && !(row.landingPath.toLowerCase().includes(q) || row.landingType.toLowerCase().includes(q))) {
+            const searchableDetails = [
+                row.landingType,
+                row.productTitle,
+                row.productBrandName,
+                row.productSubcategoryName,
+                row.productCategoryName,
+            ]
+                .filter(Boolean)
+                .join(" ")
+                .toLowerCase();
+
+            if (q && !(row.landingPath.toLowerCase().includes(q) || searchableDetails.includes(q))) {
                 return false;
             }
 
@@ -321,8 +486,7 @@ export function AdminAnalyticsDashboard() {
 
     const sectionOptions: Array<{ key: DashboardSection; label: string }> = [
         { key: "overview", label: "Overview" },
-        { key: "behavior", label: "Behavior" },
-        { key: "landing", label: "Landing" },
+        { key: "webanalytics", label: "Web Analytics" },
         { key: "reports", label: "Reports" },
         { key: "freeform", label: "Freeform" },
         { key: "all", label: "All" },
@@ -350,6 +514,104 @@ export function AdminAnalyticsDashboard() {
         });
     };
 
+    const reportFilterQuery = useMemo(() => buildFilterQuery(filters), [filters]);
+
+    const getReportHref = useCallback(
+        (reportId: string) =>
+            reportFilterQuery
+                ? `/dashboard/general/analytics/reports/${reportId}?${reportFilterQuery}`
+                : `/dashboard/general/analytics/reports/${reportId}`,
+        [reportFilterQuery]
+    );
+
+    const exportOverviewSnapshot = useCallback(() => {
+        const rows: Array<Array<unknown>> = [
+            ["overview", "gross_sales", overview.data?.grossSales ?? 0, overview.data?.comparison.grossSales ?? 0],
+            [
+                "overview",
+                "returning_customer_rate",
+                overview.data?.returningCustomerRate ?? 0,
+                overview.data?.comparison.returningCustomerRate ?? 0,
+            ],
+            ["overview", "orders_fulfilled", overview.data?.ordersFulfilled ?? 0, overview.data?.comparison.ordersFulfilled ?? 0],
+            ["overview", "orders", overview.data?.orders ?? 0, overview.data?.comparison.orders ?? 0],
+            ["webanalytics", "sessions", behavior.data?.sessions ?? 0, behavior.data?.comparison.sessions ?? 0],
+            ["webanalytics", "visitors", behavior.data?.visitors ?? 0, behavior.data?.comparison.visitors ?? 0],
+            [
+                "webanalytics",
+                "checkout_conversion_rate",
+                behavior.data?.checkoutConversionRate ?? 0,
+                behavior.data?.comparison.checkoutConversionRate ?? 0,
+            ],
+            ["webanalytics", "bounce_rate", behavior.data?.bounceRate ?? 0, behavior.data?.comparison.bounceRate ?? 0],
+            ["sales_breakdown", "gross_sales", breakdown.data?.grossSales ?? 0, breakdown.data?.comparison.grossSales ?? 0],
+            ["sales_breakdown", "discounts", breakdown.data?.discounts ?? 0, breakdown.data?.comparison.discounts ?? 0],
+            ["sales_breakdown", "returns", breakdown.data?.returns ?? 0, breakdown.data?.comparison.returns ?? 0],
+            ["sales_breakdown", "net_sales", breakdown.data?.netSales ?? 0, breakdown.data?.comparison.netSales ?? 0],
+            ["sales_breakdown", "shipping", breakdown.data?.shipping ?? 0, breakdown.data?.comparison.shipping ?? 0],
+            ["sales_breakdown", "taxes", breakdown.data?.taxes ?? 0, breakdown.data?.comparison.taxes ?? 0],
+            ["sales_breakdown", "total_sales", breakdown.data?.totalSales ?? 0, breakdown.data?.comparison.totalSales ?? 0],
+            ...chartData.map((point) => ["sales_time_series", point.date, point.totalSales, point.previousTotalSales]),
+        ];
+
+        const csv = buildCsv(["section", "metric", "value", "comparison_value"], rows);
+        downloadCsvFile(`analytics-overview-${buildFileSuffix(filters)}.csv`, csv);
+    }, [behavior.data, breakdown.data, chartData, filters, overview.data]);
+
+    const exportLanding = useCallback(() => {
+        const rows = landingSectionRows.rows.map((row) => [
+            row.landingPath,
+            row.landingType,
+            row.productBrandName ?? "",
+            row.productTitle ?? "",
+            row.productCategoryName ?? "",
+            row.productSubcategoryName ?? "",
+            row.sessions,
+            row.visitors,
+            row.sessionShare,
+            row.visitorRate,
+        ]);
+
+        const csv = buildCsv(
+            [
+                "landing_path",
+                "type",
+                "brand",
+                "product_title",
+                "category",
+                "subcategory",
+                "sessions",
+                "visitors",
+                "session_share",
+                "visitor_rate",
+            ],
+            rows
+        );
+
+        downloadCsvFile(`landing-performance-${buildFileSuffix(filters)}.csv`, csv);
+    }, [filters, landingSectionRows.rows]);
+
+    const exportReports = useCallback(() => {
+        const csv = buildCsv(
+            ["name", "category", "created_by", "last_viewed"],
+            reportRows.map((report) => [report.name, report.category, report.createdBy, report.lastViewed])
+        );
+        downloadCsvFile(`analytics-reports-${buildFileSuffix(filters)}.csv`, csv);
+    }, [filters, reportRows]);
+
+    const exportFreeform = useCallback(() => {
+        const dimensionLabel = DIM_LABEL[freeform.data?.dimension ?? applied.dimension];
+        const csv = buildCsv(
+            [dimensionLabel, ...freeformMetrics.map((metric) => METRIC_LABEL[metric])],
+            (freeform.data?.rows ?? []).map((row) => [
+                row.dimension,
+                ...freeformMetrics.map((metric) => row.metrics[metric] ?? 0),
+            ])
+        );
+
+        downloadCsvFile(`freeform-report-${buildFileSuffix(filters)}.csv`, csv);
+    }, [applied.dimension, filters, freeform.data, freeformMetrics]);
+
     return (
         <div className="space-y-6">
             <div className="space-y-1">
@@ -358,8 +620,8 @@ export function AdminAnalyticsDashboard() {
             </div>
 
             <Card>
-                <CardContent className="grid gap-4 p-4 md:grid-cols-4">
-                    <div className="space-y-1">
+                <CardContent className="flex flex-wrap items-end gap-3 p-3">
+                    <div className="min-w-[180px] flex-1 space-y-1">
                         <label className="text-xs font-semibold uppercase text-muted-foreground">Date range</label>
                         <select
                             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -381,12 +643,14 @@ export function AdminAnalyticsDashboard() {
                             }}
                         >
                             {ANALYTICS_DATE_PRESETS.map((preset) => (
-                                <option key={preset} value={preset}>{DATE_LABEL[preset]}</option>
+                                <option key={preset} value={preset}>
+                                    {DATE_LABEL[preset]}
+                                </option>
                             ))}
                         </select>
                     </div>
 
-                    <div className="space-y-1">
+                    <div className="min-w-[180px] flex-1 space-y-1">
                         <label className="text-xs font-semibold uppercase text-muted-foreground">Comparison</label>
                         <select
                             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -398,14 +662,16 @@ export function AdminAnalyticsDashboard() {
                             }}
                         >
                             {ANALYTICS_COMPARISONS.map((comparison) => (
-                                <option key={comparison} value={comparison}>{COMP_LABEL[comparison]}</option>
+                                <option key={comparison} value={comparison}>
+                                    {COMP_LABEL[comparison]}
+                                </option>
                             ))}
                         </select>
                     </div>
 
                     {filters.datePreset === "custom" ? (
                         <>
-                            <div className="space-y-1">
+                            <div className="min-w-[170px] space-y-1">
                                 <label className="text-xs font-semibold uppercase text-muted-foreground">Start date</label>
                                 <input
                                     type="date"
@@ -418,7 +684,7 @@ export function AdminAnalyticsDashboard() {
                                     }}
                                 />
                             </div>
-                            <div className="space-y-1">
+                            <div className="min-w-[170px] space-y-1">
                                 <label className="text-xs font-semibold uppercase text-muted-foreground">End date</label>
                                 <input
                                     type="date"
@@ -434,7 +700,10 @@ export function AdminAnalyticsDashboard() {
                         </>
                     ) : null}
 
-                    <div className="flex justify-end md:col-span-4">
+                    <div className="ml-auto flex items-center gap-2">
+                        <Button variant="outline" onClick={exportOverviewSnapshot}>
+                            Export to Excel
+                        </Button>
                         <Button
                             onClick={() =>
                                 refreshSnapshots.mutate({
@@ -453,15 +722,15 @@ export function AdminAnalyticsDashboard() {
             </Card>
 
             <Card>
-                <CardContent className="flex flex-wrap items-center gap-2 p-3">
-                    <span className="mr-2 text-xs font-semibold uppercase text-muted-foreground">Section menu</span>
+                <CardContent className="flex flex-wrap items-center gap-3 p-4">
+                    <span className="mr-2 text-sm font-semibold uppercase text-muted-foreground">Section menu</span>
                     {sectionOptions.map((section) => (
                         <button
                             key={section.key}
                             type="button"
                             onClick={() => setActiveSection(section.key)}
                             className={cn(
-                                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
+                                "rounded-full border px-4 py-2 text-sm font-medium transition-colors",
                                 activeSection === section.key
                                     ? "border-primary bg-primary/10 text-primary"
                                     : "border-border text-foreground/80 hover:bg-muted"
@@ -479,30 +748,77 @@ export function AdminAnalyticsDashboard() {
                 </Card>
             ) : (
                 <>
-                    <div className={cn("grid gap-4 md:grid-cols-2 xl:grid-cols-4", activeSection !== "all" && activeSection !== "overview" && "hidden")}>
-                        <Kpi title="Gross sales" value={money(overview.data?.grossSales ?? 0)} change={overview.data?.comparison.grossSales ?? 0} />
+                    <div
+                        className={cn(
+                            "grid gap-4 md:grid-cols-2 xl:grid-cols-4",
+                            activeSection !== "all" && activeSection !== "overview" && "hidden"
+                        )}
+                    >
+                        <Kpi
+                            title="Gross sales"
+                            value={money(overview.data?.grossSales ?? 0)}
+                            change={overview.data?.comparison.grossSales ?? 0}
+                        />
                         <Kpi
                             title="Returning customer rate"
                             value={percent(overview.data?.returningCustomerRate ?? 0)}
                             change={overview.data?.comparison.returningCustomerRate ?? 0}
                             subtext={`${overview.data?.returningCustomers ?? 0} returning / ${overview.data?.newCustomers ?? 0} new`}
                         />
-                        <Kpi title="Orders fulfilled" value={(overview.data?.ordersFulfilled ?? 0).toLocaleString()} change={overview.data?.comparison.ordersFulfilled ?? 0} />
-                        <Kpi title="Orders" value={(overview.data?.orders ?? 0).toLocaleString()} change={overview.data?.comparison.orders ?? 0} />
+                        <Kpi
+                            title="Orders fulfilled"
+                            value={(overview.data?.ordersFulfilled ?? 0).toLocaleString()}
+                            change={overview.data?.comparison.ordersFulfilled ?? 0}
+                            subtext="Click to view not fulfilled orders"
+                            onClick={() => setIsNotFulfilledDialogOpen(true)}
+                        />
+                        <Kpi
+                            title="Orders"
+                            value={(overview.data?.orders ?? 0).toLocaleString()}
+                            change={overview.data?.comparison.orders ?? 0}
+                        />
                     </div>
 
-                    <div className={cn("grid gap-4 md:grid-cols-2 xl:grid-cols-4", activeSection !== "all" && activeSection !== "behavior" && "hidden")}>
-                        <Kpi title="Sessions" value={(behavior.data?.sessions ?? 0).toLocaleString()} change={behavior.data?.comparison.sessions ?? 0} />
-                        <Kpi title="Visitors" value={(behavior.data?.visitors ?? 0).toLocaleString()} change={behavior.data?.comparison.visitors ?? 0} />
-                        <Kpi title="Checkout conversion" value={percent(behavior.data?.checkoutConversionRate ?? 0)} change={behavior.data?.comparison.checkoutConversionRate ?? 0} />
-                        <Kpi title="Bounce rate" value={percent(behavior.data?.bounceRate ?? 0)} change={behavior.data?.comparison.bounceRate ?? 0} />
+                    <div
+                        className={cn(
+                            "grid gap-4 md:grid-cols-2 xl:grid-cols-4",
+                            activeSection !== "all" && activeSection !== "webanalytics" && "hidden"
+                        )}
+                    >
+                        <Kpi
+                            title="Sessions"
+                            value={(behavior.data?.sessions ?? 0).toLocaleString()}
+                            change={behavior.data?.comparison.sessions ?? 0}
+                        />
+                        <Kpi
+                            title="Visitors"
+                            value={(behavior.data?.visitors ?? 0).toLocaleString()}
+                            change={behavior.data?.comparison.visitors ?? 0}
+                        />
+                        <Kpi
+                            title="Checkout conversion"
+                            value={percent(behavior.data?.checkoutConversionRate ?? 0)}
+                            change={behavior.data?.comparison.checkoutConversionRate ?? 0}
+                        />
+                        <Kpi
+                            title="Bounce rate"
+                            value={percent(behavior.data?.bounceRate ?? 0)}
+                            change={behavior.data?.comparison.bounceRate ?? 0}
+                        />
                     </div>
 
-                    <div className={cn("grid gap-4 xl:grid-cols-[2fr_1fr]", activeSection !== "all" && activeSection !== "overview" && "hidden")}>
+                    <div
+                        className={cn(
+                            "grid gap-4 xl:grid-cols-[2fr_1fr]",
+                            activeSection !== "all" && activeSection !== "overview" && "hidden"
+                        )}
+                    >
                         <Card>
                             <CardHeader>
                                 <CardTitle>Total sales over time</CardTitle>
-                                <CardDescription>{DATE_LABEL[filters.datePreset]} with {COMP_LABEL[filters.comparison].toLowerCase()}</CardDescription>
+                                <CardDescription>
+                                    {DATE_LABEL[filters.datePreset]} with {COMP_LABEL[filters.comparison].toLowerCase()}
+                                </CardDescription>
                             </CardHeader>
                             <CardContent className="h-[340px]">
                                 <ResponsiveContainer width="100%" height="100%">
@@ -512,8 +828,23 @@ export function AdminAnalyticsDashboard() {
                                         <YAxis tickFormatter={(v) => `INR ${Number(v).toLocaleString()}`} />
                                         <Tooltip formatter={(value: number, name) => [money(Number(value)), name]} />
                                         <Legend />
-                                        <Line type="monotone" dataKey="totalSales" stroke="#0ea5e9" strokeWidth={2} dot={false} name="Total sales" />
-                                        <Line type="monotone" dataKey="previousTotalSales" stroke="#94a3b8" strokeDasharray="4 4" strokeWidth={2} dot={false} name="Comparison" />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="totalSales"
+                                            stroke="#0ea5e9"
+                                            strokeWidth={2}
+                                            dot={false}
+                                            name="Total sales"
+                                        />
+                                        <Line
+                                            type="monotone"
+                                            dataKey="previousTotalSales"
+                                            stroke="#94a3b8"
+                                            strokeDasharray="4 4"
+                                            strokeWidth={2}
+                                            dot={false}
+                                            name="Comparison"
+                                        />
                                     </LineChart>
                                 </ResponsiveContainer>
                             </CardContent>
@@ -535,13 +866,18 @@ export function AdminAnalyticsDashboard() {
                         </Card>
                     </div>
 
-                    <Card className={cn(activeSection !== "all" && activeSection !== "landing" && "hidden")}>
-                        <CardHeader>
-                            <CardTitle>Landing page performance</CardTitle>
-                            <CardDescription>Top landing paths by sessions with dedicated PostHog filters.</CardDescription>
+                    <Card className={cn(activeSection !== "all" && activeSection !== "webanalytics" && "hidden")}>
+                        <CardHeader className="flex-row items-center justify-between gap-3">
+                            <div>
+                                <CardTitle>Landing page performance</CardTitle>
+                                <CardDescription>Top landing paths by sessions with dedicated PostHog filters.</CardDescription>
+                            </div>
+                            <Button variant="outline" onClick={exportLanding}>
+                                Export to Excel
+                            </Button>
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                        <CardContent className="space-y-5">
+                            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                                 <div className="space-y-1 xl:col-span-2">
                                     <label className="text-xs font-semibold uppercase text-muted-foreground">Search path/type</label>
                                     <input
@@ -657,6 +993,10 @@ export function AdminAnalyticsDashboard() {
                                         <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                                             <th className="px-2 py-2">Landing path</th>
                                             <th className="px-2 py-2">Type</th>
+                                            <th className="px-2 py-2">Brand</th>
+                                            <th className="px-2 py-2">Product title</th>
+                                            <th className="px-2 py-2">Category</th>
+                                            <th className="px-2 py-2">Subcategory</th>
                                             <th className="px-2 py-2 text-right">Sessions</th>
                                             <th className="px-2 py-2 text-right">Visitors</th>
                                             <th className="px-2 py-2 text-right">Session share</th>
@@ -668,6 +1008,10 @@ export function AdminAnalyticsDashboard() {
                                             <tr key={`${row.landingPath}-${row.landingType}`} className="border-b">
                                                 <td className="px-2 py-2 font-medium">{row.landingPath}</td>
                                                 <td className="px-2 py-2">{row.landingType}</td>
+                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productBrandName ?? "-" : "-"}</td>
+                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productTitle ?? "-" : "-"}</td>
+                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productCategoryName ?? "-" : "-"}</td>
+                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productSubcategoryName ?? "-" : "-"}</td>
                                                 <td className="px-2 py-2 text-right">{row.sessions.toLocaleString()}</td>
                                                 <td className="px-2 py-2 text-right">{row.visitors.toLocaleString()}</td>
                                                 <td className="px-2 py-2 text-right">{percent(row.sessionShare)}</td>
@@ -676,7 +1020,7 @@ export function AdminAnalyticsDashboard() {
                                         ))}
                                         {landingSectionRows.rows.length === 0 ? (
                                             <tr>
-                                                <td className="px-2 py-6 text-center text-muted-foreground" colSpan={6}>
+                                                <td className="px-2 py-6 text-center text-muted-foreground" colSpan={10}>
                                                     {behavior.data?.source === "unconfigured"
                                                         ? "PostHog behavior query API is not configured yet."
                                                         : "No landing rows match the selected landing filters."}
@@ -695,9 +1039,12 @@ export function AdminAnalyticsDashboard() {
                                 <CardTitle>Reports</CardTitle>
                                 <CardDescription>Curated report templates (red-box selection).</CardDescription>
                             </div>
-                            <Button onClick={saveCurrentReport} disabled={saveReport.isPending}>
-                                {saveReport.isPending ? "Saving..." : "Save current report"}
-                            </Button>
+                            <div className="flex items-center gap-2">
+                                <Button variant="outline" onClick={exportReports}>Export to Excel</Button>
+                                <Button onClick={saveCurrentReport} disabled={saveReport.isPending}>
+                                    {saveReport.isPending ? "Saving..." : "Save current report"}
+                                </Button>
+                            </div>
                         </CardHeader>
                         <CardContent className="overflow-x-auto">
                             <table className="w-full text-sm">
@@ -713,14 +1060,14 @@ export function AdminAnalyticsDashboard() {
                                 <tbody>
                                     {reportRows.map((report) => (
                                         <tr key={report.id} className="border-b">
-                                            <td className="px-2 py-2 font-medium"><Link className="hover:underline" href={`/dashboard/general/analytics/reports/${report.id}`}>{report.name}</Link></td>
+                                            <td className="px-2 py-2 font-medium"><Link className="hover:underline" href={getReportHref(report.id)}>{report.name}</Link></td>
                                             <td className="px-2 py-2"><Badge variant="outline">{report.category}</Badge></td>
                                             <td className="px-2 py-2">{report.createdBy}</td>
                                             <td className="px-2 py-2">{report.lastViewed}</td>
                                             <td className="px-2 py-2">
                                                 <div className="flex justify-end gap-2">
                                                     <Button className="h-7 px-2 text-xs" asChild>
-                                                        <Link href={`/dashboard/general/analytics/reports/${report.id}`}>Open</Link>
+                                                        <Link href={getReportHref(report.id)}>Open</Link>
                                                     </Button>
                                                 </div>
                                             </td>
@@ -732,9 +1079,12 @@ export function AdminAnalyticsDashboard() {
                     </Card>
 
                     <Card className={cn(activeSection !== "all" && activeSection !== "freeform" && "hidden")}>
-                        <CardHeader>
-                            <CardTitle>Freeform report</CardTitle>
-                            <CardDescription>Choose metrics and dimension, then run.</CardDescription>
+                        <CardHeader className="flex-row items-center justify-between gap-3">
+                            <div>
+                                <CardTitle>Freeform report</CardTitle>
+                                <CardDescription>Choose metrics and dimension, then run.</CardDescription>
+                            </div>
+                            <Button variant="outline" onClick={exportFreeform}>Export to Excel</Button>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-3 md:grid-cols-4">
@@ -806,13 +1156,104 @@ export function AdminAnalyticsDashboard() {
                     </Card>
                 </>
             )}
+            <Dialog open={isNotFulfilledDialogOpen} onOpenChange={setIsNotFulfilledDialogOpen}>
+                <DialogContent className="max-w-4xl">
+                    <DialogHeader>
+                        <DialogTitle>Not Fulfilled Orders</DialogTitle>
+                        <DialogDescription>
+                            {notFulfilledRange.startDate && notFulfilledRange.endDate
+                                ? `Orders without delivered shipment from ${notFulfilledRange.startDate} to ${notFulfilledRange.endDate}.`
+                                : "Select a valid date range to view not fulfilled orders."}
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    {!notFulfilledRange.startDate || !notFulfilledRange.endDate ? (
+                        <p className="text-sm text-muted-foreground">
+                            Choose a valid date range first.
+                        </p>
+                    ) : notFulfilledOrders.isLoading ? (
+                        <p className="text-sm text-muted-foreground">Loading not fulfilled orders...</p>
+                    ) : notFulfilledOrders.error ? (
+                        <p className="text-sm text-rose-600">Unable to load not fulfilled orders right now.</p>
+                    ) : (notFulfilledOrders.data?.data.length ?? 0) === 0 ? (
+                        <p className="text-sm text-muted-foreground">No not fulfilled orders found for this date range.</p>
+                    ) : (
+                        <div className="space-y-3">
+                            <div className="text-xs text-muted-foreground">
+                                Showing {(notFulfilledOrders.data?.data.length ?? 0).toLocaleString()} of {(notFulfilledOrders.data?.count ?? 0).toLocaleString()} orders.
+                            </div>
+                            <div className="max-h-[420px] overflow-auto rounded-md border">
+                                <table className="w-full text-sm">
+                                    <thead className="sticky top-0 bg-background">
+                                        <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
+                                            <th className="px-3 py-2">Order ID</th>
+                                            <th className="px-3 py-2">Customer</th>
+                                            <th className="px-3 py-2">Status</th>
+                                            <th className="px-3 py-2">Created</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {(notFulfilledOrders.data?.data ?? []).map((order) => {
+                                            const customer = `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim();
+                                            const status = String(order.status ?? "").replace(/_/g, " ");
+                                            return (
+                                                <tr key={order.id} className="border-b">
+                                                    <td className="px-3 py-2 font-mono text-xs">{order.id}</td>
+                                                    <td className="px-3 py-2">{customer || "N/A"}</td>
+                                                    <td className="px-3 py-2 capitalize">{status || "N/A"}</td>
+                                                    <td className="px-3 py-2">
+                                                        {new Date(order.createdAt).toLocaleDateString("en-IN", {
+                                                            day: "2-digit",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        })}
+                                                    </td>
+                                                </tr>
+                                            );
+                                        })}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
 
-function Kpi({ title, value, change, subtext }: { title: string; value: string; change: number; subtext?: string }) {
+function Kpi({
+    title,
+    value,
+    change,
+    subtext,
+    onClick,
+}: {
+    title: string;
+    value: string;
+    change: number;
+    subtext?: string;
+    onClick?: () => void;
+}) {
+    const interactive = Boolean(onClick);
+
     return (
-        <Card>
+        <Card
+            className={cn(interactive && "cursor-pointer transition-shadow hover:shadow-md")}
+            onClick={onClick}
+            role={interactive ? "button" : undefined}
+            tabIndex={interactive ? 0 : undefined}
+            onKeyDown={
+                interactive
+                    ? (event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              onClick?.();
+                          }
+                      }
+                    : undefined
+            }
+        >
             <CardHeader className="pb-2">
                 <CardDescription>{title}</CardDescription>
                 <CardTitle className="text-2xl">{value}</CardTitle>
@@ -824,7 +1265,6 @@ function Kpi({ title, value, change, subtext }: { title: string; value: string; 
         </Card>
     );
 }
-
 function Breakdown({ label, value, change, negative, strong }: { label: string; value: number; change: number; negative?: boolean; strong?: boolean }) {
     return (
         <div className="flex items-center justify-between gap-3">
@@ -841,7 +1281,7 @@ function SelectBlock({ label, value, onChange, options }: { label: string; value
     return (
         <div className="space-y-1">
             <label className="text-xs font-semibold uppercase text-muted-foreground">{label}</label>
-            <select className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
+            <select className="w-full rounded-md border bg-background px-3 py-2.5 text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
                 {options.map((option) => (
                     <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
@@ -854,16 +1294,10 @@ function InputBlock({ label, value, onChange }: { label: string; value: string; 
     return (
         <div className="space-y-1">
             <label className="text-xs font-semibold uppercase text-muted-foreground">{label}</label>
-            <input type="number" min={1} max={200} className="w-full rounded-md border bg-background px-3 py-2 text-sm" value={value} onChange={(e) => onChange(e.target.value)} />
+            <input type="number" min={1} max={200} className="w-full rounded-md border bg-background px-3 py-2.5 text-sm" value={value} onChange={(e) => onChange(e.target.value)} />
         </div>
     );
 }
-
-
-
-
-
-
 
 
 
