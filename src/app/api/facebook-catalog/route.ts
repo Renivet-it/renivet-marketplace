@@ -1,7 +1,7 @@
 import { productQueries } from "@/lib/db/queries";
 import { NextResponse } from "next/server";
 
-export async function GET(req: Request) {
+export async function GET() {
     try {
         const productsList = await productQueries.getAllProducts({
             isDeleted: false,
@@ -47,7 +47,7 @@ export async function GET(req: Request) {
 
         // Standard Facebook Catalog CSV Headers with Variant Support
         const csvRows = [
-            ["id", "item_group_id", "title", "description", "availability", "condition", "price", "link", "image_link", "brand", "color", "size", "gender", "product_type"]
+            ["id", "item_group_id", "title", "description", "availability", "condition", "price", "link", "image_link", "brand", "color", "size", "gender", "product_type", "custom_label_0"]
         ];
 
         productsList.forEach((product) => {
@@ -61,6 +61,7 @@ export async function GET(req: Request) {
                 product.subcategory?.name ||
                 product.category?.name ||
                 "";
+            const saleLabel = product.isBestSeller ? "yes" : "no";
 
             if (product.productHasVariants && product.variants?.length > 0) {
                 // If product has variants, row for each variant sharing the same item_group_id (parent ID)
@@ -105,7 +106,8 @@ export async function GET(req: Request) {
                             escapeCSV(color),
                             escapeCSV(size),
                             escapeCSV(gender),
-                            escapeCSV(productType)
+                            escapeCSV(productType),
+                            escapeCSV(saleLabel)
                         ]);
                     });
             } else {
@@ -133,7 +135,8 @@ export async function GET(req: Request) {
                     "",
                     "",
                     escapeCSV(gender),
-                    escapeCSV(productType)
+                    escapeCSV(productType),
+                    escapeCSV(saleLabel)
                 ]);
             }
         });
