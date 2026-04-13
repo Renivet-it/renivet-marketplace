@@ -83,6 +83,7 @@
     "enhanced-ms": "^3.1.0",
     "exceljs": "^4.4.0",
     "facebook-nodejs-business-sdk": "^24.0.1",
+    "fast-xml-parser": "^4.4.1",
     "file-saver": "^2.0.5",
     "fuse.js": "^7.1.0",
     "input-otp": "^1.4.2",

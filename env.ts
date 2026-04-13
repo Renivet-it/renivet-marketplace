@@ -67,6 +67,25 @@ export const env = createEnv({
             })
             .min(1, "SHIPROCKET_WEBHOOK_API_KEY is required"),
 
+        UNICOMMERCE_TENANT: z.preprocess(
+            (val) => (val === "" ? undefined : val),
+            z.string().optional()
+        ),
+        UNICOMMERCE_FACILITY_ID: z.preprocess(
+            (val) => (val === "" ? undefined : val),
+            z.string().optional()
+        ),
+        UNICOMMERCE_USERNAME: z.preprocess(
+            (val) => (val === "" ? undefined : val),
+            z.string().optional()
+        ),
+        UNICOMMERCE_PASSWORD: z.preprocess(
+            (val) => (val === "" ? undefined : val),
+            z.string().optional()
+        ),
+        UNICOMMERCE_BASE_URL: z.string().optional(),
+        UNICOMMERCE_CRON_SECRET: z.string().optional(),
+
         POSTHOG_PROJECT_ID: z.string().optional(),
         POSTHOG_PERSONAL_API_KEY: z.string().optional(),
         ANALYTICS_CRON_SECRET: z.string().optional(),
@@ -123,6 +142,12 @@ export const env = createEnv({
         SHIPROCKET_LOGIN_EMAIL: process.env.SHIPROCKET_LOGIN_EMAIL,
         SHIPROCKET_LOGIN_PASSWORD: process.env.SHIPROCKET_LOGIN_PASSWORD,
         SHIPROCKET_WEBHOOK_API_KEY: process.env.SHIPROCKET_WEBHOOK_API_KEY,
+        UNICOMMERCE_TENANT: process.env.UNICOMMERCE_TENANT,
+        UNICOMMERCE_FACILITY_ID: process.env.UNICOMMERCE_FACILITY_ID,
+        UNICOMMERCE_USERNAME: process.env.UNICOMMERCE_USERNAME,
+        UNICOMMERCE_PASSWORD: process.env.UNICOMMERCE_PASSWORD,
+        UNICOMMERCE_BASE_URL: process.env.UNICOMMERCE_BASE_URL,
+        UNICOMMERCE_CRON_SECRET: process.env.UNICOMMERCE_CRON_SECRET,
         POSTHOG_PROJECT_ID: process.env.POSTHOG_PROJECT_ID,
         POSTHOG_PERSONAL_API_KEY: process.env.POSTHOG_PERSONAL_API_KEY,
         ANALYTICS_CRON_SECRET: process.env.ANALYTICS_CRON_SECRET,

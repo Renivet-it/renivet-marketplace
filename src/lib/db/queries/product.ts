@@ -159,6 +159,81 @@ interface UpdateWomenPageFeaturedProduct {
 //     return response as number[];
 // }
 class ProductQuery {
+    async syncInventoryBySku(
+        items: { sku: string; quantity: number }[]
+    ): Promise<{
+        updatedProducts: number;
+        updatedVariants: number;
+        missingSkus: string[];
+    }> {
+        if (!items.length) {
+            return { updatedProducts: 0, updatedVariants: 0, missingSkus: [] };
+        }
+
+        const skus = Array.from(new Set(items.map((i) => i.sku)));
+
+        const [productRows, variantRows] = await Promise.all([
+            db
+                .select({ id: products.id, sku: products.sku })
+                .from(products)
+                .where(inArray(products.sku, skus)),
+            db
+                .select({ id: productVariants.id, sku: productVariants.sku })
+                .from(productVariants)
+                .where(inArray(productVariants.sku, skus)),
+        ]);
+
+        const productMap = new Map<string, string>();
+        const variantMap = new Map<string, string>();
+
+        productRows.forEach((row) => {
+            if (row.sku) productMap.set(row.sku, row.id);
+        });
+        variantRows.forEach((row) => {
+            if (row.sku) variantMap.set(row.sku, row.id);
+        });
+
+        let updatedProducts = 0;
+        let updatedVariants = 0;
+        const missingSkus: string[] = [];
+
+        await db.transaction(async (tx) => {
+            await Promise.all(
+                items.map(async (item) => {
+                    const sku = item.sku;
+                    const quantity = Math.max(0, Math.trunc(item.quantity));
+
+                    if (variantMap.has(sku)) {
+                        await tx
+                            .update(productVariants)
+                            .set({
+                                quantity,
+                                updatedAt: new Date(),
+                            })
+                            .where(eq(productVariants.id, variantMap.get(sku)!));
+                        updatedVariants += 1;
+                        return;
+                    }
+
+                    if (productMap.has(sku)) {
+                        await tx
+                            .update(products)
+                            .set({
+                                quantity,
+                                updatedAt: new Date(),
+                            })
+                            .where(eq(products.id, productMap.get(sku)!));
+                        updatedProducts += 1;
+                        return;
+                    }
+
+                    missingSkus.push(sku);
+                })
+            );
+        });
+
+        return { updatedProducts, updatedVariants, missingSkus };
+    }
     async getProductCount({
         brandId,
         isDeleted,
