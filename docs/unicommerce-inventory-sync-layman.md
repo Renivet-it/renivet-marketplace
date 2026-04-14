@@ -87,6 +87,13 @@ Phase 4: Go live
 - Whether to import all products or only certain brands/categories.
 - Which team member is the final reviewer of the first test sync.
 
+## 14) Multi-brand credential model (now implemented)
+- Each brand has its own Unicommerce credentials in our database.
+- Credentials are saved per brand, not globally, so one brand cannot affect another brand.
+- Passwords are stored in encrypted form.
+- Sync runs brand-wise and updates only that brand's SKUs.
+- We can run sync for one brand or all active brands.
+
 ## 13) What success looks like
 - Inventory shown in Renivet matches Unicommerce.
 - New items in Unicommerce appear in Renivet without manual work.

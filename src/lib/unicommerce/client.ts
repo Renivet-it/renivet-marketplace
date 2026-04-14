@@ -1,6 +1,5 @@
 ﻿import axios from "axios";
 import { XMLParser } from "fast-xml-parser";
-import { env } from "@/../env";
 
 export type UnicommerceInventorySnapshot = {
     itemSku: string;
@@ -11,10 +10,20 @@ export type UnicommerceInventorySnapshot = {
     inventoryBlocked?: number;
 };
 
+export type UnicommerceConnection = {
+    tenant?: string | null;
+    facilityId?: string | null;
+    baseUrl?: string | null;
+    username: string;
+    password: string;
+};
+
 const SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/";
 const SERVICE_NS = "http://uniware.unicommerce.com/services/";
-const WSSE_NS = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
-const WSU_NS = "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd";
+const WSSE_NS =
+    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
+const WSU_NS =
+    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd";
 
 const xmlEscape = (val: string) =>
     val
@@ -24,54 +33,6 @@ const xmlEscape = (val: string) =>
         .replace(/\"/g, "&quot;")
         .replace(/'/g, "&apos;");
 
-const requireEnv = (value: string | undefined, name: string) => {
-    if (!value) {
-        throw new Error(`Unicommerce config missing: ${name}`);
-    }
-    return value;
-};
-
-const buildWsseHeader = () => {
-    const created = new Date().toISOString();
-    const nonce = Buffer.from(`${created}:${Math.random()}`)
-        .toString("base64")
-        .replace(/=+$/g, "");
-
-    return `
-<soapenv:Header>
-  <wsse:Security soapenv:mustUnderstand="1" xmlns:wsse="${WSSE_NS}" xmlns:wsu="${WSU_NS}">
-    <wsse:UsernameToken wsu:Id="UsernameToken-1">
-      <wsse:Username>${xmlEscape(
-          requireEnv(env.UNICOMMERCE_USERNAME, "UNICOMMERCE_USERNAME")
-      )}</wsse:Username>
-      <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${xmlEscape(
-          requireEnv(env.UNICOMMERCE_PASSWORD, "UNICOMMERCE_PASSWORD")
-      )}</wsse:Password>
-      <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">${nonce}</wsse:Nonce>
-      <wsu:Created>${created}</wsu:Created>
-    </wsse:UsernameToken>
-  </wsse:Security>
-</soapenv:Header>`;
-};
-
-const buildEnvelope = (bodyXml: string) => `<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="${SOAP_NS}" xmlns:ser="${SERVICE_NS}">
-${buildWsseHeader()}
-<soapenv:Body>
-${bodyXml}
-</soapenv:Body>
-</soapenv:Envelope>`;
-
-const getEndpoint = () => {
-    if (env.UNICOMMERCE_BASE_URL) return env.UNICOMMERCE_BASE_URL;
-    const tenant = requireEnv(env.UNICOMMERCE_TENANT, "UNICOMMERCE_TENANT");
-    const facility = requireEnv(
-        env.UNICOMMERCE_FACILITY_ID,
-        "UNICOMMERCE_FACILITY_ID"
-    );
-    return `https://${tenant}.unicommerce.com:443/services/soap/?version=1.6&facility=${facility}`;
-};
-
 const parser = new XMLParser({
     ignoreAttributes: false,
     removeNSPrefix: true,
@@ -79,9 +40,51 @@ const parser = new XMLParser({
 
 export class UnicommerceClient {
     private endpoint: string;
+    private connection: UnicommerceConnection;
 
-    constructor() {
-        this.endpoint = getEndpoint();
+    constructor(connection: UnicommerceConnection) {
+        this.connection = connection;
+        this.endpoint = this.getEndpoint();
+    }
+
+    private getEndpoint() {
+        if (this.connection.baseUrl) return this.connection.baseUrl;
+        if (!this.connection.tenant || !this.connection.facilityId) {
+            throw new Error(
+                "Unicommerce endpoint config missing. Provide `baseUrl` or `tenant + facilityId`."
+            );
+        }
+
+        return `https://${this.connection.tenant}.unicommerce.com:443/services/soap/?version=1.6&facility=${this.connection.facilityId}`;
+    }
+
+    private buildWsseHeader() {
+        const created = new Date().toISOString();
+        const nonce = Buffer.from(`${created}:${Math.random()}`)
+            .toString("base64")
+            .replace(/=+$/g, "");
+
+        return `
+<soapenv:Header>
+  <wsse:Security soapenv:mustUnderstand="1" xmlns:wsse="${WSSE_NS}" xmlns:wsu="${WSU_NS}">
+    <wsse:UsernameToken wsu:Id="UsernameToken-1">
+      <wsse:Username>${xmlEscape(this.connection.username)}</wsse:Username>
+      <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${xmlEscape(this.connection.password)}</wsse:Password>
+      <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">${nonce}</wsse:Nonce>
+      <wsu:Created>${created}</wsu:Created>
+    </wsse:UsernameToken>
+  </wsse:Security>
+</soapenv:Header>`;
+    }
+
+    private buildEnvelope(bodyXml: string) {
+        return `<?xml version="1.0" encoding="utf-8"?>
+<soapenv:Envelope xmlns:soapenv="${SOAP_NS}" xmlns:ser="${SERVICE_NS}">
+${this.buildWsseHeader()}
+<soapenv:Body>
+${bodyXml}
+</soapenv:Body>
+</soapenv:Envelope>`;
     }
 
     async getInventorySnapshot(params: {
@@ -92,7 +95,12 @@ export class UnicommerceClient {
 
         const itemsXml = skus.length
             ? `<ser:ItemTypes>${skus
-                  .map((sku) => `<ser:ItemType><ser:ItemSKU>${xmlEscape(sku)}</ser:ItemSKU></ser:ItemType>`)
+                  .map(
+                      (sku) =>
+                          `<ser:ItemType><ser:ItemSKU>${xmlEscape(
+                              sku
+                          )}</ser:ItemSKU></ser:ItemType>`
+                  )
                   .join("")}</ser:ItemTypes>`
             : "";
 
@@ -102,7 +110,7 @@ export class UnicommerceClient {
   <ser:UpdatedSinceInMinutes>${updatedSinceMinutes}</ser:UpdatedSinceInMinutes>
 </ser:GetInventorySnapshotRequest>`;
 
-        const envelope = buildEnvelope(body);
+        const envelope = this.buildEnvelope(body);
 
         const response = await axios.post(this.endpoint, envelope, {
             headers: {
@@ -113,7 +121,9 @@ export class UnicommerceClient {
 
         const parsed = parser.parse(response.data);
         const result = parsed?.Envelope?.Body?.GetInventorySnapshotResponse;
-        if (!result || result.Successful !== "true") return [];
+        if (!result || String(result.Successful).toLowerCase() !== "true") {
+            return [];
+        }
 
         const snapshots = result.InventorySnapshots?.InventorySnapshot;
         if (!snapshots) return [];
@@ -128,6 +138,7 @@ export class UnicommerceClient {
                 putawayPending: Number(s.PutawayPending ?? 0),
                 inventoryBlocked: Number(s.InventoryBlocked ?? 0),
             }))
-            .filter((s: UnicommerceInventorySnapshot) => s.itemSku.length > 0);
+            .filter((s: UnicommerceInventorySnapshot) => s.itemSku.length >
+                0);
     }
 }

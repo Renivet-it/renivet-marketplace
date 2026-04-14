@@ -160,7 +160,8 @@ interface UpdateWomenPageFeaturedProduct {
 // }
 class ProductQuery {
     async syncInventoryBySku(
-        items: { sku: string; quantity: number }[]
+        items: { sku: string; quantity: number }[],
+        brandId?: string
     ): Promise<{
         updatedProducts: number;
         updatedVariants: number;
@@ -176,11 +177,28 @@ class ProductQuery {
             db
                 .select({ id: products.id, sku: products.sku })
                 .from(products)
-                .where(inArray(products.sku, skus)),
+                .where(
+                    and(
+                        inArray(products.sku, skus),
+                        brandId ? eq(products.brandId, brandId) : undefined
+                    )
+                ),
             db
-                .select({ id: productVariants.id, sku: productVariants.sku })
+                .select({
+                    id: productVariants.id,
+                    sku: productVariants.sku,
+                })
                 .from(productVariants)
-                .where(inArray(productVariants.sku, skus)),
+                .innerJoin(
+                    products,
+                    eq(productVariants.productId, products.id)
+                )
+                .where(
+                    and(
+                        inArray(productVariants.sku, skus),
+                        brandId ? eq(products.brandId, brandId) : undefined
+                    )
+                ),
         ]);
 
         const productMap = new Map<string, string>();

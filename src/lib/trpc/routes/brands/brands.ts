@@ -1,6 +1,6 @@
 import { utApi } from "@/app/api/uploadthing/core";
 import { BitFieldBrandPermission } from "@/config/permissions";
-import { brands } from "@/lib/db/schema";
+import { brandUnicommerceIntegrations, brands } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { brandCache } from "@/lib/redis/methods";
 import {
@@ -9,6 +9,8 @@ import {
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
+import { UnicommerceClient } from "@/lib/unicommerce/client";
+import { decryptSecret, encryptSecret } from "@/lib/unicommerce/crypto";
 import { getUploadThingFileKey } from "@/lib/utils";
 import {
     createBrandSubscriptionSchema,
@@ -176,6 +178,145 @@ const brandSubscriptionsRouter = createTRPCRouter({
 
 export const brandsRouter = createTRPCRouter({
     subscriptions: brandSubscriptionsRouter,
+    getUnicommerceIntegration: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .query(async ({ input, ctx }) => {
+            const existingBrand = await brandCache.get(input.brandId);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            const integration =
+                await ctx.db.query.brandUnicommerceIntegrations.findFirst({
+                    where: eq(
+                        brandUnicommerceIntegrations.brandId,
+                        input.brandId
+                    ),
+                });
+
+            return integration
+                ? {
+                      ...integration,
+                      encryptedPassword: undefined,
+                      hasCredentials: true,
+                  }
+                : null;
+        }),
+    upsertUnicommerceIntegration: protectedProcedure
+        .input(
+            z
+                .object({
+                    brandId: z.string().uuid(),
+                    tenant: z.string().trim().optional(),
+                    facilityId: z.string().trim().optional(),
+                    baseUrl: z.string().trim().url().optional(),
+                    username: z.string().trim().min(1),
+                    password: z.string().min(1),
+                    isActive: z.boolean().default(true),
+                })
+                .superRefine((val, ctx) => {
+                    if (!val.baseUrl && (!val.tenant || !val.facilityId)) {
+                        ctx.addIssue({
+                            code: z.ZodIssueCode.custom,
+                            message:
+                                "Provide either baseUrl OR both tenant and facilityId",
+                        });
+                    }
+                })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input, ctx }) => {
+            const existingBrand = await brandCache.get(input.brandId);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            const encryptedPassword = encryptSecret(input.password);
+            const [saved] = await ctx.db
+                .insert(brandUnicommerceIntegrations)
+                .values({
+                    brandId: input.brandId,
+                    tenant: input.baseUrl ? null : input.tenant ?? null,
+                    facilityId: input.baseUrl
+                        ? null
+                        : input.facilityId ?? null,
+                    baseUrl: input.baseUrl ?? null,
+                    username: input.username,
+                    encryptedPassword,
+                    isActive: input.isActive,
+                    updatedAt: new Date(),
+                })
+                .onConflictDoUpdate({
+                    target: brandUnicommerceIntegrations.brandId,
+                    set: {
+                        tenant: input.baseUrl ? null : input.tenant ?? null,
+                        facilityId: input.baseUrl
+                            ? null
+                            : input.facilityId ?? null,
+                        baseUrl: input.baseUrl ?? null,
+                        username: input.username,
+                        encryptedPassword,
+                        isActive: input.isActive,
+                        updatedAt: new Date(),
+                    },
+                })
+                .returning();
+
+            return {
+                ...saved,
+                encryptedPassword: undefined,
+                hasCredentials: true,
+            };
+        }),
+    testUnicommerceIntegration: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid(),
+                updatedSinceMinutes: z.number().int().positive().default(60),
+            })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input, ctx }) => {
+            const integration =
+                await ctx.db.query.brandUnicommerceIntegrations.findFirst({
+                    where: eq(
+                        brandUnicommerceIntegrations.brandId,
+                        input.brandId
+                    ),
+                });
+            if (!integration)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Unicommerce integration not configured",
+                });
+
+            const client = new UnicommerceClient({
+                tenant: integration.tenant,
+                facilityId: integration.facilityId,
+                baseUrl: integration.baseUrl,
+                username: integration.username,
+                password: decryptSecret(integration.encryptedPassword),
+            });
+
+            const snapshots = await client.getInventorySnapshot({
+                updatedSinceMinutes: input.updatedSinceMinutes,
+                skus: [],
+            });
+
+            return {
+                success: true,
+                fetchedSnapshots: snapshots.length,
+            };
+        }),
     getBrandWithConfidential: protectedProcedure
   .input(z.object({ brandId: z.string() }))
   .query(async ({ ctx, input }) => {

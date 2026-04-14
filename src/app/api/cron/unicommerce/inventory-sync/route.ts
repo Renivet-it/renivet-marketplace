@@ -1,5 +1,8 @@
 ﻿import { env } from "@/../env";
-import { syncUnicommerceInventory } from "@/lib/unicommerce/sync";
+import {
+    syncAllActiveBrandUnicommerceInventory,
+    syncBrandUnicommerceInventory,
+} from "@/lib/unicommerce/sync";
 import { NextRequest, NextResponse } from "next/server";
 
 function isAuthorized(request: NextRequest) {
@@ -22,20 +25,34 @@ export async function GET(request: NextRequest) {
     }
 
     const { searchParams } = new URL(request.url);
+    const brandId = searchParams.get("brandId");
     const updatedSince = Number(searchParams.get("updatedSince")) || 60;
     const skusParam = searchParams.get("skus");
     const skus = skusParam ? skusParam.split(",").map((s) => s.trim()) : [];
 
     try {
-        const result = await syncUnicommerceInventory({
+        if (brandId) {
+            const data = await syncBrandUnicommerceInventory(brandId, {
+                updatedSinceMinutes: updatedSince,
+                skus,
+            });
+
+            return NextResponse.json({
+                ok: true,
+                message: "Brand Unicommerce inventory sync completed",
+                data,
+            });
+        }
+
+        const data = await syncAllActiveBrandUnicommerceInventory({
             updatedSinceMinutes: updatedSince,
             skus,
         });
 
         return NextResponse.json({
             ok: true,
-            message: "Unicommerce inventory sync completed",
-            data: result,
+            message: "All active brand Unicommerce inventory sync completed",
+            data,
         });
     } catch (error) {
         return NextResponse.json(
