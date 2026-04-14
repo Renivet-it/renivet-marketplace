@@ -1010,6 +1010,11 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
+                    title: "Unicommerce",
+                    url: `/dashboard/brands/${brandId}/unicommerce`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
                     title: "Product - Packaging Types",
                     url: `/dashboard/brands/${brandId}/packing-rules`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,

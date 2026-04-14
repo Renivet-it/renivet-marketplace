@@ -11,6 +11,7 @@ import {
 } from "@/lib/trpc/trpc";
 import { UnicommerceClient } from "@/lib/unicommerce/client";
 import { decryptSecret, encryptSecret } from "@/lib/unicommerce/crypto";
+import { syncBrandUnicommerceInventory } from "@/lib/unicommerce/sync";
 import { getUploadThingFileKey } from "@/lib/utils";
 import {
     createBrandSubscriptionSchema,
@@ -218,7 +219,7 @@ export const brandsRouter = createTRPCRouter({
                     facilityId: z.string().trim().optional(),
                     baseUrl: z.string().trim().url().optional(),
                     username: z.string().trim().min(1),
-                    password: z.string().min(1),
+                    password: z.string().min(1).optional(),
                     isActive: z.boolean().default(true),
                 })
                 .superRefine((val, ctx) => {
@@ -240,7 +241,26 @@ export const brandsRouter = createTRPCRouter({
                     message: "Brand not found",
                 });
 
-            const encryptedPassword = encryptSecret(input.password);
+            const existingIntegration =
+                await ctx.db.query.brandUnicommerceIntegrations.findFirst({
+                    where: eq(
+                        brandUnicommerceIntegrations.brandId,
+                        input.brandId
+                    ),
+                });
+
+            const encryptedPassword = input.password
+                ? encryptSecret(input.password)
+                : existingIntegration?.encryptedPassword;
+
+            if (!encryptedPassword) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message:
+                        "Password is required for first-time Unicommerce setup",
+                });
+            }
+
             const [saved] = await ctx.db
                 .insert(brandUnicommerceIntegrations)
                 .values({
@@ -316,6 +336,22 @@ export const brandsRouter = createTRPCRouter({
                 success: true,
                 fetchedSnapshots: snapshots.length,
             };
+        }),
+    triggerUnicommerceSync: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid(),
+                updatedSinceMinutes: z.number().int().positive().default(60),
+            })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input }) => {
+            const result = await syncBrandUnicommerceInventory(input.brandId, {
+                updatedSinceMinutes: input.updatedSinceMinutes,
+                skus: [],
+            });
+
+            return result;
         }),
     getBrandWithConfidential: protectedProcedure
   .input(z.object({ brandId: z.string() }))
