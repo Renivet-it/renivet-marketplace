@@ -28,19 +28,24 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
         const updateSearch = useCallback(
             (value: string) => {
                 const baseEntries = Array.from(searchParams.entries()).filter(
-                    ([key]) => key !== "search" && key !== "page"
+                    ([key]) => key !== "search" && key !== "page" && key !== "shopPage"
                 );
+                const nextSearch = value.trim();
+                const currentSearch = (searchParams.get("search") ?? "").trim();
+                const hasChangedSearch = nextSearch !== currentSearch;
 
-                if (value.length > 2) {
+                if (nextSearch.length > 2) {
+                    // Never reset pagination if the search term itself did not change.
+                    if (!hasChangedSearch) return;
                     const params = new URLSearchParams(baseEntries);
-                    params.set("search", value);
+                    params.set("search", nextSearch);
                     // New search should begin from first page.
-                    params.set("page", "1");
+                    params.set("shopPage", "1");
                     router.push(`/shop?${params.toString()}`);
-                } else if (value.length === 0) {
+                } else if (nextSearch.length === 0) {
                     if (searchParams.get("search") !== null) {
                         const params = new URLSearchParams(baseEntries);
-                        params.set("page", "1");
+                        params.set("shopPage", "1");
                         const nextQuery = params.toString();
                         router.push(nextQuery ? `/shop?${nextQuery}` : "/shop");
                     }
