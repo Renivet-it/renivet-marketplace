@@ -30,6 +30,10 @@ export function AnimatedProductLink({
     const router = useRouter();
     const [isRedirecting, setIsRedirecting] = useState(false);
     const timeoutRef = useRef<number | null>(null);
+    const isProductHref = href.startsWith("/products/");
+    const resolvedTarget = target ?? (isProductHref ? "_blank" : undefined);
+    const resolvedRel =
+        resolvedTarget === "_blank" ? rel ?? "noopener noreferrer" : rel;
 
     useEffect(() => {
         return () => {
@@ -52,7 +56,7 @@ export function AnimatedProductLink({
             event.altKey ||
             event.button !== 0;
 
-        if (isModifiedClick || target === "_blank") {
+        if (isModifiedClick || resolvedTarget === "_blank") {
             return;
         }
 
@@ -71,8 +75,8 @@ export function AnimatedProductLink({
     return (
         <Link
             href={href}
-            target={target}
-            rel={rel}
+            target={resolvedTarget}
+            rel={resolvedRel}
             prefetch={prefetch}
             aria-busy={isRedirecting}
             data-redirecting={isRedirecting ? "true" : "false"}
