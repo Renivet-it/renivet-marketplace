@@ -604,7 +604,7 @@ function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
     const [showAllBrands, setShowAllBrands] = useState(false);
     const visibleBrands = showAllBrands ? brandsMeta : brandsMeta.slice(0, 10);
 
@@ -685,7 +685,7 @@ function CategoryFilter({
     const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
         defaultValue: "",
     });
-    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
 
     return (
         <div className="space-y-4">
@@ -820,7 +820,7 @@ function PriceFilter() {
         "maxPrice",
         parseAsInteger.withDefault(1000000)
     );
-    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
     const [priceRange, setPriceRange] = useState<number[]>([
         minPrice,
         maxPrice,
@@ -863,7 +863,7 @@ function DiscountFilter() {
         "minDiscount",
         parseAsInteger
     );
-    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
 
     return (
         <div className="space-y-2">
@@ -908,7 +908,7 @@ function ColorFilter({
         "colors",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
     const [showAllColors, setShowAllColors] = useState(false);
     const INITIAL_VISIBLE_COUNT = 10;
 
@@ -1314,7 +1314,7 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
         "sizes",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
     const [categoryId] = useQueryState(
         "categoryId",
         parseAsString.withDefault("")
@@ -1397,7 +1397,7 @@ export function ShopSortBy() {
         "sortOrder",
         parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
     );
-    const [, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
 
     const handleSort = (value: string) => {
         const [sort, order] = value.split(":");

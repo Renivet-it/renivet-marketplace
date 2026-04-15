@@ -20,6 +20,7 @@ import { SearchableProductTypes } from "./search-component";
 interface PageProps {
     searchParams: Promise<{
         page?: string;
+        shopPage?: string;
         limit?: string;
         search?: string;
         brandIds?: string;
@@ -269,6 +270,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
 
     const {
         page: pageRaw,
+        shopPage: shopPageRaw,
         limit: limitRaw,
         search: searchRaw,
         brandIds: brandIdsRaw,
@@ -286,7 +288,11 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
 
     const limit =
         limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 28;
-    const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
+    const pageCandidate = shopPageRaw ?? pageRaw;
+    const page =
+        pageCandidate && !isNaN(parseInt(pageCandidate))
+            ? parseInt(pageCandidate)
+            : 1;
     const search = !!searchRaw?.length ? searchRaw : undefined;
     const brandIds = !!brandIdsRaw?.length ? brandIdsRaw.split(",") : undefined;
     const minPrice =
@@ -374,7 +380,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
                               !search && !brandIds && minPrice === 0 && maxPrice === 1000000 &&
                               !categoryId && !subCategoryId && !productTypeId &&
                               (!sortByRaw || sortByRaw === "recommended") && !sortOrder && !colors && !sizes;
-                              
+
         if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
         } else {
@@ -409,7 +415,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         : undefined;
 
     // console.log(finalData.data, "data");
-    
+
     return (
         <div className="space-y-5">
             {/* Mobile Product Types */}
@@ -440,6 +446,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
                 }}
                 initialWishlist={userWishlist}
                 userId={userId ?? undefined}
+                initialPage={page}
             />
         </div>
     );
@@ -518,7 +525,7 @@ function ShopProductsSkeleton() {
                 <Skeleton className="h-10 w-24 rounded-lg shrink-0 hidden md:block" />
                 <Skeleton className="h-10 w-24 rounded-lg shrink-0 hidden md:block" />
             </div>
-            
+
             <Separator />
 
             <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">

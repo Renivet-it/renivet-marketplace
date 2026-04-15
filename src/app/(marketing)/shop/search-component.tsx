@@ -38,7 +38,7 @@ export function SearchableProductTypes({
     const allItemsHref = useMemo(() => {
         const params = new URLSearchParams(
             Array.from(searchParams.entries()).filter(
-                ([key]) => key !== "productTypeId" && key !== "page"
+                ([key]) => key !== "productTypeId" && key !== "page" && key !== "shopPage"
             )
         );
         const query = params.toString();
@@ -48,11 +48,11 @@ export function SearchableProductTypes({
     const getTypeHref = (typeId: string) => {
         const params = new URLSearchParams(
             Array.from(searchParams.entries()).filter(
-                ([key]) => key !== "productTypeId" && key !== "page"
+                ([key]) => key !== "productTypeId" && key !== "page" && key !== "shopPage"
             )
         );
         params.set("productTypeId", typeId);
-        params.set("page", "1");
+        params.set("shopPage", "1");
         return `?${params.toString()}`;
     };
 

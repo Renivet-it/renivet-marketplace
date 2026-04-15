@@ -4,7 +4,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -48,6 +48,7 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
 const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
     ({ className, disabled, classNames, ...props }, ref) => {
         const router = useRouter();
+        const searchParams = useSearchParams();
         const [search] = useQueryState("search", {
             defaultValue: "",
         });
@@ -114,15 +115,44 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
         const navigateToShopWithSearch = useCallback(
             (nextSearch: string) => {
-                if (nextSearch.length > 0) {
-                    router.push(
-                        `/shop?search=${encodeURIComponent(nextSearch)}`
+                const trimmed = nextSearch.trim();
+                const currentSearch = (searchParams.get("search") ?? "").trim();
+                const hasChangedSearch = trimmed !== currentSearch;
+
+                if (trimmed.length > 0) {
+                    const params = new URLSearchParams(
+                        Array.from(searchParams.entries()).filter(
+                            ([key]) =>
+                                key !== "search" &&
+                                key !== "page" &&
+                                key !== "shopPage"
+                        )
                     );
+                    params.set("search", trimmed);
+                    if (hasChangedSearch) {
+                        params.set("shopPage", "1");
+                    } else {
+                        const existingShopPage = searchParams.get("shopPage");
+                        if (existingShopPage) {
+                            params.set("shopPage", existingShopPage);
+                        }
+                    }
+                    router.push(`/shop?${params.toString()}`);
                     return;
                 }
-                router.push("/shop");
+                const params = new URLSearchParams(
+                    Array.from(searchParams.entries()).filter(
+                        ([key]) =>
+                            key !== "search" &&
+                            key !== "page" &&
+                            key !== "shopPage"
+                    )
+                );
+                params.set("shopPage", "1");
+                const query = params.toString();
+                router.push(query ? `/shop?${query}` : "/shop");
             },
-            [router]
+            [router, searchParams]
         );
 
         // TRPC mutation for search processing

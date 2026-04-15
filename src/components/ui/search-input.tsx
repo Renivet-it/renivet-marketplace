@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQueryState } from "nuqs";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Icons } from "../icons";
@@ -18,11 +17,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
     ({ className, disabled, type = "search", classNames, ...props }, ref) => {
         const router = useRouter();
         const searchParams = useSearchParams();
-        const [search] = useQueryState("search", {
-            defaultValue: "",
-        });
-        const [localSearch, setLocalSearch] = useState(search);
+        const searchFromUrl = searchParams.get("search") ?? "";
+        const [localSearch, setLocalSearch] = useState(searchFromUrl);
         const hasMountedRef = React.useRef(false);
+        const skipNextUpdateRef = React.useRef(false);
         const debounceTimerRef = React.useRef<ReturnType<
             typeof setTimeout
         > | null>(null);
@@ -30,19 +28,24 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
         const updateSearch = useCallback(
             (value: string) => {
                 const baseEntries = Array.from(searchParams.entries()).filter(
-                    ([key]) => key !== "search" && key !== "page"
+                    ([key]) => key !== "search" && key !== "page" && key !== "shopPage"
                 );
+                const nextSearch = value.trim();
+                const currentSearch = (searchParams.get("search") ?? "").trim();
+                const hasChangedSearch = nextSearch !== currentSearch;
 
-                if (value.length > 2) {
+                if (nextSearch.length > 2) {
+                    // Never reset pagination if the search term itself did not change.
+                    if (!hasChangedSearch) return;
                     const params = new URLSearchParams(baseEntries);
-                    params.set("search", value);
+                    params.set("search", nextSearch);
                     // New search should begin from first page.
-                    params.set("page", "1");
+                    params.set("shopPage", "1");
                     router.push(`/shop?${params.toString()}`);
-                } else if (value.length === 0) {
+                } else if (nextSearch.length === 0) {
                     if (searchParams.get("search") !== null) {
                         const params = new URLSearchParams(baseEntries);
-                        params.set("page", "1");
+                        params.set("shopPage", "1");
                         const nextQuery = params.toString();
                         router.push(nextQuery ? `/shop?${nextQuery}` : "/shop");
                     }
@@ -54,12 +57,17 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
         );
 
         useEffect(() => {
-            setLocalSearch(search);
-        }, [search]);
+            skipNextUpdateRef.current = true;
+            setLocalSearch(searchFromUrl);
+        }, [searchFromUrl]);
 
         useEffect(() => {
             if (!hasMountedRef.current) {
                 hasMountedRef.current = true;
+                return;
+            }
+            if (skipNextUpdateRef.current) {
+                skipNextUpdateRef.current = false;
                 return;
             }
 

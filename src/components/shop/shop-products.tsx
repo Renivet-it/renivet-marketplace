@@ -38,6 +38,7 @@ interface PageProps extends GenericProps {
     };
     initialWishlist?: CachedWishlist[];
     userId?: string;
+    initialPage?: number;
 }
 
 export function ShopProducts({
@@ -45,6 +46,7 @@ export function ShopProducts({
     initialData,
     initialWishlist,
     userId,
+    initialPage = 1,
     ...props
 }: PageProps) {
     const handleProductClick = async (productId: string, brandId: string) => {
@@ -56,8 +58,8 @@ export function ShopProducts({
     };
 
     const [page, setPage] = useQueryState(
-        "page",
-        parseAsInteger.withDefault(1)
+        "shopPage",
+        parseAsInteger.withDefault(initialPage)
     );
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(28));
     const [search] = useQueryState("search", { defaultValue: "" });
@@ -141,40 +143,6 @@ export function ShopProducts({
     });
 
     const isSameAsInitial = initialParams === currentParams;
-
-    const filterParamsKey = useMemo(
-        () =>
-            JSON.stringify({
-                limit,
-                search,
-                brandIds,
-                minPrice,
-                maxPrice,
-                categoryId,
-                subCategoryId: effectiveSubCategoryId,
-                productTypeId,
-                sortBy,
-                sortOrder,
-                colors,
-                sizes,
-                minDiscount,
-            }),
-        [
-            limit,
-            search,
-            brandIds,
-            minPrice,
-            maxPrice,
-            categoryId,
-            effectiveSubCategoryId,
-            productTypeId,
-            sortBy,
-            sortOrder,
-            colors,
-            sizes,
-            minDiscount,
-        ]
-    );
 
     const {
         data: queryData,
@@ -261,7 +229,6 @@ export function ShopProducts({
     );
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const loadedPagesRef = useRef<Set<number>>(new Set([page || 1]));
-    const previousFilterKeyRef = useRef(filterParamsKey);
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
 
     const hasMoreProducts = allProducts.length < totalCount;
@@ -272,20 +239,6 @@ export function ShopProducts({
         setIsLoadingMore(true);
         void setPage((page || 1) + 1);
     }, [hasMoreProducts, isFetching, isLoadingMore, page, setPage]);
-
-    useEffect(() => {
-        if (previousFilterKeyRef.current === filterParamsKey) return;
-
-        previousFilterKeyRef.current = filterParamsKey;
-        loadedPagesRef.current = new Set();
-        setAllProducts([]);
-        setTotalCount(0);
-        setIsLoadingMore(false);
-
-        if (page !== 1) {
-            void setPage(1);
-        }
-    }, [filterParamsKey, page, setPage]);
 
     useEffect(() => {
         if (isFetching) return;
