@@ -2,7 +2,6 @@
 
 import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useQueryState } from "nuqs";
 import * as React from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Icons } from "../icons";
@@ -18,11 +17,10 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
     ({ className, disabled, type = "search", classNames, ...props }, ref) => {
         const router = useRouter();
         const searchParams = useSearchParams();
-        const [search] = useQueryState("search", {
-            defaultValue: "",
-        });
-        const [localSearch, setLocalSearch] = useState(search);
+        const searchFromUrl = searchParams.get("search") ?? "";
+        const [localSearch, setLocalSearch] = useState(searchFromUrl);
         const hasMountedRef = React.useRef(false);
+        const skipNextUpdateRef = React.useRef(false);
         const debounceTimerRef = React.useRef<ReturnType<
             typeof setTimeout
         > | null>(null);
@@ -54,12 +52,17 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
         );
 
         useEffect(() => {
-            setLocalSearch(search);
-        }, [search]);
+            skipNextUpdateRef.current = true;
+            setLocalSearch(searchFromUrl);
+        }, [searchFromUrl]);
 
         useEffect(() => {
             if (!hasMountedRef.current) {
                 hasMountedRef.current = true;
+                return;
+            }
+            if (skipNextUpdateRef.current) {
+                skipNextUpdateRef.current = false;
                 return;
             }
 
