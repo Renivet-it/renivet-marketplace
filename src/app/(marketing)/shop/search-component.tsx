@@ -35,6 +35,26 @@ export function SearchableProductTypes({
 }) {
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get("search") ?? "";
+    const allItemsHref = useMemo(() => {
+        const params = new URLSearchParams(
+            Array.from(searchParams.entries()).filter(
+                ([key]) => key !== "productTypeId" && key !== "page"
+            )
+        );
+        const query = params.toString();
+        return query ? `?${query}` : "/shop";
+    }, [searchParams]);
+
+    const getTypeHref = (typeId: string) => {
+        const params = new URLSearchParams(
+            Array.from(searchParams.entries()).filter(
+                ([key]) => key !== "productTypeId" && key !== "page"
+            )
+        );
+        params.set("productTypeId", typeId);
+        params.set("page", "1");
+        return `?${params.toString()}`;
+    };
 
     // 1) start with whichever prop the parent passed (fallback to [])
     const [products, setProducts] = useState<Product[]>(
@@ -108,7 +128,7 @@ export function SearchableProductTypes({
                 )}
             >
                 <a
-                    href="?productTypeId="
+                    href={allItemsHref}
                     className={cn(
                         "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
                         !productTypeId && "border-black bg-black text-white"
@@ -125,7 +145,7 @@ export function SearchableProductTypes({
                         ).map((type) => (
                             <a
                                 key={type.id}
-                                href={`?productTypeId=${type.id}`}
+                                href={getTypeHref(type.id)}
                                 className={cn(
                                     "whitespace-nowrap rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
                                     productTypeId === type.id &&

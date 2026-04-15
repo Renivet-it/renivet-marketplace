@@ -29,12 +29,22 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
 
         const updateSearch = useCallback(
             (value: string) => {
+                const baseEntries = Array.from(searchParams.entries()).filter(
+                    ([key]) => key !== "search" && key !== "page"
+                );
+
                 if (value.length > 2) {
-                    router.push(`/shop?search=${encodeURIComponent(value)}`);
+                    const params = new URLSearchParams(baseEntries);
+                    params.set("search", value);
+                    // New search should begin from first page.
+                    params.set("page", "1");
+                    router.push(`/shop?${params.toString()}`);
                 } else if (value.length === 0) {
-                    // Preserve existing filters when page has no search param.
                     if (searchParams.get("search") !== null) {
-                        router.push("/shop");
+                        const params = new URLSearchParams(baseEntries);
+                        params.set("page", "1");
+                        const nextQuery = params.toString();
+                        router.push(nextQuery ? `/shop?${nextQuery}` : "/shop");
                     }
                 } else {
                     return;
