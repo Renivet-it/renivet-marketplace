@@ -206,6 +206,8 @@ export const brandsRouter = createTRPCRouter({
                 ? {
                       ...integration,
                       encryptedPassword: undefined,
+                      encryptedAccessToken: undefined,
+                      encryptedRefreshToken: undefined,
                       hasCredentials: true,
                   }
                 : null;
@@ -216,18 +218,18 @@ export const brandsRouter = createTRPCRouter({
                 .object({
                     brandId: z.string().uuid(),
                     tenant: z.string().trim().optional(),
-                    facilityId: z.string().trim().optional(),
+                    facilityId: z.string().trim().min(1),
                     baseUrl: z.string().trim().url().optional(),
                     username: z.string().trim().min(1),
                     password: z.string().min(1).optional(),
                     isActive: z.boolean().default(true),
                 })
                 .superRefine((val, ctx) => {
-                    if (!val.baseUrl && (!val.tenant || !val.facilityId)) {
+                    if (!val.baseUrl && !val.tenant) {
                         ctx.addIssue({
                             code: z.ZodIssueCode.custom,
                             message:
-                                "Provide either baseUrl OR both tenant and facilityId",
+                                "Provide either baseUrl OR tenant",
                         });
                     }
                 })
@@ -272,6 +274,9 @@ export const brandsRouter = createTRPCRouter({
                     baseUrl: input.baseUrl ?? null,
                     username: input.username,
                     encryptedPassword,
+                    encryptedAccessToken: null,
+                    encryptedRefreshToken: null,
+                    accessTokenExpiresAt: null,
                     isActive: input.isActive,
                     updatedAt: new Date(),
                 })
@@ -285,6 +290,9 @@ export const brandsRouter = createTRPCRouter({
                         baseUrl: input.baseUrl ?? null,
                         username: input.username,
                         encryptedPassword,
+                        encryptedAccessToken: null,
+                        encryptedRefreshToken: null,
+                        accessTokenExpiresAt: null,
                         isActive: input.isActive,
                         updatedAt: new Date(),
                     },
@@ -294,6 +302,8 @@ export const brandsRouter = createTRPCRouter({
             return {
                 ...saved,
                 encryptedPassword: undefined,
+                encryptedAccessToken: undefined,
+                encryptedRefreshToken: undefined,
                 hasCredentials: true,
             };
         }),
@@ -325,17 +335,51 @@ export const brandsRouter = createTRPCRouter({
                 baseUrl: integration.baseUrl,
                 username: integration.username,
                 password: decryptSecret(integration.encryptedPassword),
+                initialAccessToken: integration.encryptedAccessToken
+                    ? decryptSecret(integration.encryptedAccessToken)
+                    : null,
+                initialRefreshToken: integration.encryptedRefreshToken
+                    ? decryptSecret(integration.encryptedRefreshToken)
+                    : null,
+                accessTokenExpiresAt: integration.accessTokenExpiresAt,
+                onTokenUpdate: async (token) => {
+                    await ctx.db
+                        .update(brandUnicommerceIntegrations)
+                        .set({
+                            encryptedAccessToken: encryptSecret(
+                                token.accessToken
+                            ),
+                            encryptedRefreshToken: encryptSecret(
+                                token.refreshToken
+                            ),
+                            accessTokenExpiresAt: token.accessTokenExpiresAt,
+                            updatedAt: new Date(),
+                        })
+                        .where(
+                            eq(
+                                brandUnicommerceIntegrations.id,
+                                integration.id
+                            )
+                        );
+                },
             });
 
-            const snapshots = await client.getInventorySnapshot({
-                updatedSinceMinutes: input.updatedSinceMinutes,
-                skus: [],
-            });
+            try {
+                const snapshots = await client.getInventorySnapshot({
+                    updatedSinceMinutes: input.updatedSinceMinutes,
+                    skus: [],
+                });
 
-            return {
-                success: true,
-                fetchedSnapshots: snapshots.length,
-            };
+                return {
+                    success: true,
+                    fetchedSnapshots: snapshots.length,
+                };
+            } catch (error: any) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: error.message || "Test connection failed",
+                });
+            }
         }),
     triggerUnicommerceSync: protectedProcedure
         .input(

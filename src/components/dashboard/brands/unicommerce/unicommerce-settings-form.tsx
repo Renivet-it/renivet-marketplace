@@ -32,7 +32,7 @@ const unicommerceIntegrationSchema = z
     .object({
         baseUrl: z.string().trim().optional(),
         tenant: z.string().trim().optional(),
-        facilityId: z.string().trim().optional(),
+        facilityId: z.string().trim().min(1, "Facility code is required"),
         username: z.string().trim().min(1, "Username is required"),
         password: z.string().optional(),
         isActive: z.boolean().default(true),
@@ -45,13 +45,12 @@ const unicommerceIntegrationSchema = z
     })
     .superRefine((values, ctx) => {
         const hasBaseUrl = Boolean(values.baseUrl?.trim());
-        const hasTenantFacility = Boolean(values.tenant && values.facilityId);
+        const hasTenant = Boolean(values.tenant?.trim());
 
-        if (!hasBaseUrl && !hasTenantFacility) {
+        if (!hasBaseUrl && !hasTenant) {
             ctx.addIssue({
                 code: z.ZodIssueCode.custom,
-                message:
-                    "Provide either Base URL, or both Tenant and Facility ID",
+                message: "Provide either Base URL or Tenant",
                 path: ["baseUrl"],
             });
         }
@@ -175,7 +174,7 @@ export function UnicommerceSettingsForm({
                 <CardTitle>Unicommerce Inventory Integration</CardTitle>
                 <CardDescription>
                     Configure brand-wise Unicommerce credentials to fetch
-                    inventory products into Renivet.
+                    inventory products into Renivet using OAuth authentication.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -238,13 +237,13 @@ export function UnicommerceSettingsForm({
                                         <FormControl>
                                             <Input
                                                 {...field}
-                                                placeholder="https://tenant.unicommerce.com/services/"
+                                                placeholder="https://tenant.unicommerce.com"
                                                 disabled={isUnicommercePending}
                                             />
                                         </FormControl>
                                         <p className="text-xs text-muted-foreground">
-                                            Use Base URL directly, or use Tenant
-                                            + Facility ID below.
+                                            Use your Unicommerce domain, or set
+                                            Tenant below to auto-build it.
                                         </p>
                                         <FormMessage />
                                     </FormItem>
@@ -260,7 +259,7 @@ export function UnicommerceSettingsForm({
                                         <FormControl>
                                             <Input
                                                 {...field}
-                                                placeholder="your-tenant"
+                                                placeholder="your-tenant (without .unicommerce.com)"
                                                 disabled={isUnicommercePending}
                                             />
                                         </FormControl>
@@ -275,12 +274,12 @@ export function UnicommerceSettingsForm({
                                 render={({ field }) => (
                                     <FormItem>
                                         <FormLabel>
-                                            Facility ID (optional)
+                                            Facility Code
                                         </FormLabel>
                                         <FormControl>
                                             <Input
                                                 {...field}
-                                                placeholder="facility-id"
+                                                placeholder="facility-code"
                                                 disabled={isUnicommercePending}
                                             />
                                         </FormControl>
@@ -298,7 +297,7 @@ export function UnicommerceSettingsForm({
                                         <FormControl>
                                             <Input
                                                 {...field}
-                                                placeholder="API username"
+                                                placeholder="Uniware login username"
                                                 disabled={isUnicommercePending}
                                             />
                                         </FormControl>
@@ -325,7 +324,7 @@ export function UnicommerceSettingsForm({
                                                 placeholder={
                                                     unicommerceIntegrationQuery.data
                                                         ? "Leave blank to keep existing password"
-                                                        : "API password"
+                                                        : "Uniware login password"
                                                 }
                                                 disabled={isUnicommercePending}
                                             />

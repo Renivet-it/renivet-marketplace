@@ -1,5 +1,4 @@
-﻿import axios from "axios";
-import { XMLParser } from "fast-xml-parser";
+import axios from "axios";
 
 export type UnicommerceInventorySnapshot = {
     itemSku: string;
@@ -16,75 +15,208 @@ export type UnicommerceConnection = {
     baseUrl?: string | null;
     username: string;
     password: string;
+    initialAccessToken?: string | null;
+    initialRefreshToken?: string | null;
+    accessTokenExpiresAt?: Date | string | null;
+    onTokenUpdate?: (token: {
+        accessToken: string;
+        refreshToken: string;
+        accessTokenExpiresAt: Date;
+        expiresIn: number;
+    }) => Promise<void> | void;
 };
 
-const SOAP_NS = "http://schemas.xmlsoap.org/soap/envelope/";
-const SERVICE_NS = "http://uniware.unicommerce.com/services/";
-const WSSE_NS =
-    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd";
-const WSU_NS =
-    "http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd";
+type UnicommerceTokenResponse = {
+    access_token: string;
+    token_type: string;
+    refresh_token: string;
+    expires_in: number;
+};
 
-const xmlEscape = (val: string) =>
-    val
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
-        .replace(/'/g, "&apos;");
+type UnicommerceApiIssue = {
+    message?: string;
+    description?: string;
+};
 
-const parser = new XMLParser({
-    ignoreAttributes: false,
-    removeNSPrefix: true,
-});
+type UnicommerceInventoryApiSnapshot = {
+    itemTypeSKU?: string;
+    inventory?: number;
+    openSale?: number;
+    openPurchase?: number;
+    putawayPending?: number;
+    inventoryBlocked?: number;
+};
+
+type UnicommerceInventoryApiResponse = {
+    successful?: boolean;
+    message?: string;
+    errors?: UnicommerceApiIssue[];
+    inventorySnapshots?: UnicommerceInventoryApiSnapshot[];
+};
 
 export class UnicommerceClient {
-    private endpoint: string;
+    private baseOrigin: string;
+    private facilityCode: string;
     private connection: UnicommerceConnection;
+    private accessToken: string | null = null;
+    private refreshToken: string | null = null;
+    private accessTokenExpiresAt: number | null = null;
 
     constructor(connection: UnicommerceConnection) {
         this.connection = connection;
-        this.endpoint = this.getEndpoint();
+        const { origin, facilityCode } = this.getConnectionDetails();
+        this.baseOrigin = origin;
+        this.facilityCode = facilityCode;
+        this.accessToken = connection.initialAccessToken ?? null;
+        this.refreshToken = connection.initialRefreshToken ?? null;
+        this.accessTokenExpiresAt = connection.accessTokenExpiresAt
+            ? new Date(connection.accessTokenExpiresAt).getTime()
+            : null;
     }
 
-    private getEndpoint() {
-        if (this.connection.baseUrl) return this.connection.baseUrl;
-        if (!this.connection.tenant || !this.connection.facilityId) {
+    private getConnectionDetails() {
+        const facilityCode = (this.connection.facilityId ?? "").trim();
+        if (!facilityCode) {
             throw new Error(
-                "Unicommerce endpoint config missing. Provide `baseUrl` or `tenant + facilityId`."
+                "Unicommerce facility code is required for REST API calls."
             );
         }
 
-        return `https://${this.connection.tenant}.unicommerce.com:443/services/soap/?version=1.6&facility=${this.connection.facilityId}`;
+        const inputBaseUrl = this.connection.baseUrl?.trim();
+        if (inputBaseUrl) {
+            try {
+                const parsed = new URL(inputBaseUrl);
+                return { origin: parsed.origin, facilityCode };
+            } catch {
+                throw new Error("Invalid Unicommerce base URL.");
+            }
+        }
+
+        const tenant = this.connection.tenant?.trim();
+        if (!tenant) {
+            throw new Error(
+                "Unicommerce endpoint config missing. Provide `baseUrl` or `tenant`."
+            );
+        }
+
+        return {
+            origin: `https://${tenant}.unicommerce.com`,
+            facilityCode,
+        };
     }
 
-    private buildWsseHeader() {
-        const created = new Date().toISOString();
-        const nonce = Buffer.from(`${created}:${Math.random()}`)
-            .toString("base64")
-            .replace(/=+$/g, "");
-
-        return `
-<soapenv:Header>
-  <wsse:Security soapenv:mustUnderstand="1" xmlns:wsse="${WSSE_NS}" xmlns:wsu="${WSU_NS}">
-    <wsse:UsernameToken wsu:Id="UsernameToken-1">
-      <wsse:Username>${xmlEscape(this.connection.username)}</wsse:Username>
-      <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">${xmlEscape(this.connection.password)}</wsse:Password>
-      <wsse:Nonce EncodingType="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-soap-message-security-1.0#Base64Binary">${nonce}</wsse:Nonce>
-      <wsu:Created>${created}</wsu:Created>
-    </wsse:UsernameToken>
-  </wsse:Security>
-</soapenv:Header>`;
+    private get OAuthEndpoint() {
+        return `${this.baseOrigin}/oauth/token`;
     }
 
-    private buildEnvelope(bodyXml: string) {
-        return `<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="${SOAP_NS}" xmlns:ser="${SERVICE_NS}">
-${this.buildWsseHeader()}
-<soapenv:Body>
-${bodyXml}
-</soapenv:Body>
-</soapenv:Envelope>`;
+    private get inventorySnapshotEndpoint() {
+        return `${this.baseOrigin}/services/rest/v1/inventory/inventorySnapshot/get`;
+    }
+
+    private async loginWithPassword() {
+        const response = await axios.get<UnicommerceTokenResponse>(
+            this.OAuthEndpoint,
+            {
+                params: {
+                    grant_type: "password",
+                    client_id: "my-trusted-client",
+                    username: this.connection.username,
+                    password: this.connection.password,
+                },
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                timeout: 30000,
+            }
+        );
+
+        await this.setTokenState(response.data);
+        return response.data.access_token;
+    }
+
+    private async renewAccessToken() {
+        if (!this.refreshToken) return this.loginWithPassword();
+
+        try {
+            const response = await axios.get<UnicommerceTokenResponse>(
+                this.OAuthEndpoint,
+                {
+                    params: {
+                        grant_type: "refresh_token",
+                        client_id: "my-trusted-client",
+                        refresh_token: this.refreshToken,
+                    },
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    timeout: 30000,
+                }
+            );
+
+            await this.setTokenState(response.data);
+            return response.data.access_token;
+        } catch {
+            return this.loginWithPassword();
+        }
+    }
+
+    private async setTokenState(token: UnicommerceTokenResponse) {
+        this.accessToken = token.access_token;
+        this.refreshToken = token.refresh_token;
+        const ttl = Math.max(0, Number(token.expires_in || 0));
+        // Keep a small buffer to avoid race near expiration.
+        this.accessTokenExpiresAt = Date.now() + Math.max(0, ttl - 30) * 1000;
+        if (this.connection.onTokenUpdate) {
+            try {
+                await this.connection.onTokenUpdate({
+                    accessToken: this.accessToken,
+                    refreshToken: this.refreshToken,
+                    accessTokenExpiresAt: new Date(this.accessTokenExpiresAt),
+                    expiresIn: ttl,
+                });
+            } catch (error) {
+                console.error("Failed to persist Unicommerce OAuth tokens", error);
+            }
+        }
+    }
+
+    private async getValidAccessToken() {
+        if (
+            this.accessToken &&
+            this.accessTokenExpiresAt &&
+            Date.now() < this.accessTokenExpiresAt
+        ) {
+            return this.accessToken;
+        }
+
+        if (this.refreshToken) {
+            return this.renewAccessToken();
+        }
+
+        return this.loginWithPassword();
+    }
+
+    private normalizeSnapshots(
+        snapshots: UnicommerceInventoryApiSnapshot[] | undefined
+    ) {
+        return (snapshots ?? [])
+            .map((s) => ({
+                itemSku: String(s.itemTypeSKU || "").trim(),
+                inventory: Number(s.inventory ?? 0),
+                openSale: Number(s.openSale ?? 0),
+                openPurchase: Number(s.openPurchase ?? 0),
+                putawayPending: Number(s.putawayPending ?? 0),
+                inventoryBlocked: Number(s.inventoryBlocked ?? 0),
+            }))
+            .filter((s: UnicommerceInventorySnapshot) => s.itemSku.length > 0);
+    }
+
+    private resolveApiErrorMessage(response: UnicommerceInventoryApiResponse) {
+        const message = (response.errors ?? [])
+            .map((err) => err.message || err.description)
+            .filter(Boolean)
+            .join(", ");
+        return message || response.message || "Unicommerce responded with failure";
     }
 
     async getInventorySnapshot(params: {
@@ -93,52 +225,78 @@ ${bodyXml}
     }): Promise<UnicommerceInventorySnapshot[]> {
         const { skus = [], updatedSinceMinutes = 60 } = params;
 
-        const itemsXml = skus.length
-            ? `<ser:ItemTypes>${skus
-                  .map(
-                      (sku) =>
-                          `<ser:ItemType><ser:ItemSKU>${xmlEscape(
-                              sku
-                          )}</ser:ItemSKU></ser:ItemType>`
-                  )
-                  .join("")}</ser:ItemTypes>`
-            : "";
-
-        const body = `
-<ser:GetInventorySnapshotRequest>
-  ${itemsXml}
-  <ser:UpdatedSinceInMinutes>${updatedSinceMinutes}</ser:UpdatedSinceInMinutes>
-</ser:GetInventorySnapshotRequest>`;
-
-        const envelope = this.buildEnvelope(body);
-
-        const response = await axios.post(this.endpoint, envelope, {
-            headers: {
-                "Content-Type": "text/xml; charset=utf-8",
-            },
-            timeout: 30000,
-        });
-
-        const parsed = parser.parse(response.data);
-        const result = parsed?.Envelope?.Body?.GetInventorySnapshotResponse;
-        if (!result || String(result.Successful).toLowerCase() !== "true") {
-            return [];
+        const requestPayload: {
+            itemTypeSKUs?: string[];
+            updatedSinceInMinutes?: number;
+        } = {};
+        if (skus.length > 0) requestPayload.itemTypeSKUs = skus;
+        if (updatedSinceMinutes > 0) {
+            requestPayload.updatedSinceInMinutes = updatedSinceMinutes;
         }
 
-        const snapshots = result.InventorySnapshots?.InventorySnapshot;
-        if (!snapshots) return [];
+        const accessToken = await this.getValidAccessToken();
 
-        const list = Array.isArray(snapshots) ? snapshots : [snapshots];
-        return list
-            .map((s: any) => ({
-                itemSku: String(s.ItemSKU || "").trim(),
-                inventory: Number(s.Inventory ?? 0),
-                openSale: Number(s.OpenSale ?? 0),
-                openPurchase: Number(s.OpenPurchase ?? 0),
-                putawayPending: Number(s.PutawayPending ?? 0),
-                inventoryBlocked: Number(s.InventoryBlocked ?? 0),
-            }))
-            .filter((s: UnicommerceInventorySnapshot) => s.itemSku.length >
-                0);
+        try {
+            const response = await axios.post<UnicommerceInventoryApiResponse>(
+                this.inventorySnapshotEndpoint,
+                requestPayload,
+                {
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `bearer ${accessToken}`,
+                        Facility: this.facilityCode,
+                    },
+                    timeout: 30000,
+                }
+            );
+            const result = response.data;
+
+            if (!result?.successful) {
+                throw new Error(this.resolveApiErrorMessage(result));
+            }
+
+            return this.normalizeSnapshots(result.inventorySnapshots);
+        } catch (error: unknown) {
+            const axiosError = error as {
+                response?: {
+                    status?: number;
+                    data?: {
+                        message?: string;
+                        error_description?: string;
+                    };
+                };
+                message?: string;
+            };
+
+            if (
+                axiosError?.response?.status === 401 ||
+                axiosError?.response?.status === 403
+            ) {
+                const renewedToken = await this.renewAccessToken();
+                const retry = await axios.post<UnicommerceInventoryApiResponse>(
+                    this.inventorySnapshotEndpoint,
+                    requestPayload,
+                    {
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `bearer ${renewedToken}`,
+                            Facility: this.facilityCode,
+                        },
+                        timeout: 30000,
+                    }
+                );
+                if (!retry.data?.successful) {
+                    throw new Error(this.resolveApiErrorMessage(retry.data));
+                }
+                return this.normalizeSnapshots(retry.data.inventorySnapshots);
+            }
+
+            const errorMessage =
+                axiosError?.response?.data?.message ||
+                axiosError?.response?.data?.error_description ||
+                axiosError?.message ||
+                "Failed to reach Unicommerce Server";
+            throw new Error(errorMessage);
+        }
     }
 }

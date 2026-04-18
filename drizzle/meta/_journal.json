@@ -1555,6 +1555,20 @@
       "when": 1776188861893,
       "tag": "0221_blushing_scarlet_spider",
       "breakpoints": true
+    },
+    {
+      "idx": 222,
+      "version": "7",
+      "when": 1776226200000,
+      "tag": "0222_great_lightspeed",
+      "breakpoints": true
+    },
+    {
+      "idx": 223,
+      "version": "7",
+      "when": 1776540775125,
+      "tag": "0223_yielding_pride",
+      "breakpoints": true
     }
   ]
 }

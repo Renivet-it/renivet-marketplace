@@ -51,6 +51,8 @@ import { OrderProductCard } from "../mycart/Component/payment-stepper/ordered-pr
 
 const MAX_RETRIES = 3;
 const RETRY_DELAY_BASE = 1000;
+const AUTO_COUPON_CODE = "TRYNEW20";
+const AUTO_COUPON_MIN_CART_VALUE = 3000 * 100;
 
 export default function CheckoutContent({ userId }: { userId: string }) {
     const router = useRouter();
@@ -229,6 +231,21 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             items
         );
     }, [availableItems, appliedCoupon]);
+
+    const cartValue = useMemo(
+        () =>
+            availableItems.reduce((acc, item) => {
+                const itemPrice = item.variantId
+                    ? (item.product.variants?.find(
+                          (v) => v.id === item.variantId
+                      )?.price ??
+                      item.product.price ??
+                      0)
+                    : (item.product.price ?? 0);
+                return acc + itemPrice * item.quantity;
+            }, 0),
+        [availableItems]
+    );
 
     const { mutateAsync: createOrderIntent, isPending: isCreatingOrderIntent } =
         trpc.general.orderIntent.createIntent.useMutation();
@@ -420,6 +437,40 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             },
             onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
         });
+
+    const { mutateAsync: validateCouponSilently, isPending: isAutoCouponChecking } =
+        trpc.general.coupons.validateCoupon.useMutation();
+
+    useEffect(() => {
+        const shouldAutoApply = cartValue > AUTO_COUPON_MIN_CART_VALUE;
+        const isTryNewCouponApplied =
+            appliedCoupon?.code?.toUpperCase() === AUTO_COUPON_CODE;
+
+        if (!shouldAutoApply) {
+            if (isTryNewCouponApplied) setAppliedCoupon(null);
+            return;
+        }
+
+        if (appliedCoupon || isAutoCouponChecking) return;
+
+        validateCouponSilently({
+            code: AUTO_COUPON_CODE,
+            totalAmount: cartValue,
+        })
+            .then((data) => {
+                setAppliedCoupon(data);
+                setCouponCode("");
+            })
+            .catch(() => {
+                // Keep checkout smooth even if auto coupon is not available/valid.
+            });
+    }, [
+        appliedCoupon,
+        cartValue,
+        isAutoCouponChecking,
+        setAppliedCoupon,
+        validateCouponSilently,
+    ]);
 
     const { mutate: initPayment, isPending: isPaymentInitializing } =
         useMutation({

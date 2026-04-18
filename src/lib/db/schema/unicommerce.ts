@@ -23,6 +23,9 @@ export const brandUnicommerceIntegrations = pgTable(
         baseUrl: text("base_url"),
         username: text("username").notNull(),
         encryptedPassword: text("encrypted_password").notNull(),
+        encryptedAccessToken: text("encrypted_access_token"),
+        encryptedRefreshToken: text("encrypted_refresh_token"),
+        accessTokenExpiresAt: timestamp("access_token_expires_at"),
         isActive: boolean("is_active").notNull().default(true),
         lastSyncAt: timestamp("last_sync_at"),
         lastSyncStatus: text("last_sync_status", {

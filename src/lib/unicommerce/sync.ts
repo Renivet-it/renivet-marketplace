@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { brandUnicommerceIntegrations } from "@/lib/db/schema";
 import { productQueries } from "@/lib/db/queries";
 import { UnicommerceClient } from "./client";
-import { decryptSecret } from "./crypto";
+import { decryptSecret, encryptSecret } from "./crypto";
 
 type SyncInput = {
     updatedSinceMinutes?: number;
@@ -37,6 +37,24 @@ export async function syncBrandUnicommerceInventory(
         baseUrl: integration.baseUrl,
         username: integration.username,
         password: decryptSecret(integration.encryptedPassword),
+        initialAccessToken: integration.encryptedAccessToken
+            ? decryptSecret(integration.encryptedAccessToken)
+            : null,
+        initialRefreshToken: integration.encryptedRefreshToken
+            ? decryptSecret(integration.encryptedRefreshToken)
+            : null,
+        accessTokenExpiresAt: integration.accessTokenExpiresAt,
+        onTokenUpdate: async (token) => {
+            await db
+                .update(brandUnicommerceIntegrations)
+                .set({
+                    encryptedAccessToken: encryptSecret(token.accessToken),
+                    encryptedRefreshToken: encryptSecret(token.refreshToken),
+                    accessTokenExpiresAt: token.accessTokenExpiresAt,
+                    updatedAt: new Date(),
+                })
+                .where(eq(brandUnicommerceIntegrations.id, integration.id));
+        },
     });
 
     try {
