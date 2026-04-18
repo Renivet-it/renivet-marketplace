@@ -33,6 +33,32 @@ type UnicommerceTokenResponse = {
     expires_in: number;
 };
 
+type UnicommerceDebugStep =
+    | "oauth_password_grant"
+    | "oauth_refresh_grant"
+    | "inventory_snapshot";
+
+type UnicommerceDebugEntry = {
+    step: UnicommerceDebugStep;
+    at: string;
+    request: {
+        method: "GET" | "POST";
+        url: string;
+        params?: Record<string, unknown>;
+        headers?: Record<string, string>;
+        body?: unknown;
+    };
+    response?: {
+        status?: number;
+        data?: unknown;
+    };
+    error?: {
+        status?: number;
+        message?: string;
+        data?: unknown;
+    };
+};
+
 type UnicommerceApiIssue = {
     message?: string;
     description?: string;
@@ -61,6 +87,7 @@ export class UnicommerceClient {
     private accessToken: string | null = null;
     private refreshToken: string | null = null;
     private accessTokenExpiresAt: number | null = null;
+    private debugTrail: UnicommerceDebugEntry[] = [];
 
     constructor(connection: UnicommerceConnection) {
         this.connection = connection;
@@ -113,7 +140,28 @@ export class UnicommerceClient {
         return `${this.baseOrigin}/services/rest/v1/inventory/inventorySnapshot/get`;
     }
 
+    private maskSecret(value?: string | null) {
+        if (!value) return "";
+        if (value.length <= 6) return "***";
+        return `${value.slice(0, 3)}***${value.slice(-3)}`;
+    }
+
+    private pushDebug(entry: UnicommerceDebugEntry) {
+        this.debugTrail.push(entry);
+        console.log("[Unicommerce Debug]", entry);
+    }
+
+    getDebugTrail() {
+        return [...this.debugTrail];
+    }
+
     private async loginWithPassword() {
+        const requestParams = {
+            grant_type: "password",
+            client_id: "my-trusted-client",
+            username: this.connection.username,
+            password: "***",
+        };
         const response = await axios.get<UnicommerceTokenResponse>(
             this.OAuthEndpoint,
             {
@@ -130,6 +178,26 @@ export class UnicommerceClient {
             }
         );
 
+        this.pushDebug({
+            step: "oauth_password_grant",
+            at: new Date().toISOString(),
+            request: {
+                method: "GET",
+                url: this.OAuthEndpoint,
+                params: requestParams,
+                headers: { "Content-Type": "application/json" },
+            },
+            response: {
+                status: response.status,
+                data: {
+                    token_type: response.data.token_type,
+                    expires_in: response.data.expires_in,
+                    access_token: this.maskSecret(response.data.access_token),
+                    refresh_token: this.maskSecret(response.data.refresh_token),
+                },
+            },
+        });
+
         await this.setTokenState(response.data);
         return response.data.access_token;
     }
@@ -138,6 +206,11 @@ export class UnicommerceClient {
         if (!this.refreshToken) return this.loginWithPassword();
 
         try {
+            const requestParams = {
+                grant_type: "refresh_token",
+                client_id: "my-trusted-client",
+                refresh_token: this.maskSecret(this.refreshToken),
+            };
             const response = await axios.get<UnicommerceTokenResponse>(
                 this.OAuthEndpoint,
                 {
@@ -153,9 +226,56 @@ export class UnicommerceClient {
                 }
             );
 
+            this.pushDebug({
+                step: "oauth_refresh_grant",
+                at: new Date().toISOString(),
+                request: {
+                    method: "GET",
+                    url: this.OAuthEndpoint,
+                    params: requestParams,
+                    headers: { "Content-Type": "application/json" },
+                },
+                response: {
+                    status: response.status,
+                    data: {
+                        token_type: response.data.token_type,
+                        expires_in: response.data.expires_in,
+                        access_token: this.maskSecret(
+                            response.data.access_token
+                        ),
+                        refresh_token: this.maskSecret(
+                            response.data.refresh_token
+                        ),
+                    },
+                },
+            });
+
             await this.setTokenState(response.data);
             return response.data.access_token;
-        } catch {
+        } catch (error: unknown) {
+            const axiosError = error as {
+                response?: { status?: number; data?: unknown };
+                message?: string;
+            };
+            this.pushDebug({
+                step: "oauth_refresh_grant",
+                at: new Date().toISOString(),
+                request: {
+                    method: "GET",
+                    url: this.OAuthEndpoint,
+                    params: {
+                        grant_type: "refresh_token",
+                        client_id: "my-trusted-client",
+                        refresh_token: this.maskSecret(this.refreshToken),
+                    },
+                    headers: { "Content-Type": "application/json" },
+                },
+                error: {
+                    status: axiosError.response?.status,
+                    data: axiosError.response?.data,
+                    message: axiosError.message,
+                },
+            });
             return this.loginWithPassword();
         }
     }
@@ -251,6 +371,25 @@ export class UnicommerceClient {
             );
             const result = response.data;
 
+            this.pushDebug({
+                step: "inventory_snapshot",
+                at: new Date().toISOString(),
+                request: {
+                    method: "POST",
+                    url: this.inventorySnapshotEndpoint,
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `bearer ${this.maskSecret(accessToken)}`,
+                        Facility: this.facilityCode,
+                    },
+                    body: requestPayload,
+                },
+                response: {
+                    status: response.status,
+                    data: result,
+                },
+            });
+
             if (!result?.successful) {
                 throw new Error(this.resolveApiErrorMessage(result));
             }
@@ -285,11 +424,49 @@ export class UnicommerceClient {
                         timeout: 30000,
                     }
                 );
+                this.pushDebug({
+                    step: "inventory_snapshot",
+                    at: new Date().toISOString(),
+                    request: {
+                        method: "POST",
+                        url: this.inventorySnapshotEndpoint,
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `bearer ${this.maskSecret(renewedToken)}`,
+                            Facility: this.facilityCode,
+                        },
+                        body: requestPayload,
+                    },
+                    response: {
+                        status: retry.status,
+                        data: retry.data,
+                    },
+                });
                 if (!retry.data?.successful) {
                     throw new Error(this.resolveApiErrorMessage(retry.data));
                 }
                 return this.normalizeSnapshots(retry.data.inventorySnapshots);
             }
+
+            this.pushDebug({
+                step: "inventory_snapshot",
+                at: new Date().toISOString(),
+                request: {
+                    method: "POST",
+                    url: this.inventorySnapshotEndpoint,
+                    headers: {
+                        "Content-Type": "application/json",
+                        Authorization: `bearer ${this.maskSecret(accessToken)}`,
+                        Facility: this.facilityCode,
+                    },
+                    body: requestPayload,
+                },
+                error: {
+                    status: axiosError?.response?.status,
+                    data: axiosError?.response?.data,
+                    message: axiosError?.message,
+                },
+            });
 
             const errorMessage =
                 axiosError?.response?.data?.message ||

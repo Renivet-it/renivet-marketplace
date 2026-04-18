@@ -214,25 +214,14 @@ export const brandsRouter = createTRPCRouter({
         }),
     upsertUnicommerceIntegration: protectedProcedure
         .input(
-            z
-                .object({
-                    brandId: z.string().uuid(),
-                    tenant: z.string().trim().optional(),
-                    facilityId: z.string().trim().min(1),
-                    baseUrl: z.string().trim().url().optional(),
-                    username: z.string().trim().min(1),
-                    password: z.string().min(1).optional(),
-                    isActive: z.boolean().default(true),
-                })
-                .superRefine((val, ctx) => {
-                    if (!val.baseUrl && !val.tenant) {
-                        ctx.addIssue({
-                            code: z.ZodIssueCode.custom,
-                            message:
-                                "Provide either baseUrl OR tenant",
-                        });
-                    }
-                })
+            z.object({
+                brandId: z.string().uuid(),
+                tenant: z.string().trim().min(1),
+                facilityId: z.string().trim().min(1),
+                username: z.string().trim().min(1),
+                password: z.string().min(1).optional(),
+                isActive: z.boolean().default(true),
+            })
         )
         .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
         .mutation(async ({ input, ctx }) => {
@@ -267,11 +256,9 @@ export const brandsRouter = createTRPCRouter({
                 .insert(brandUnicommerceIntegrations)
                 .values({
                     brandId: input.brandId,
-                    tenant: input.baseUrl ? null : input.tenant ?? null,
-                    facilityId: input.baseUrl
-                        ? null
-                        : input.facilityId ?? null,
-                    baseUrl: input.baseUrl ?? null,
+                    tenant: input.tenant,
+                    facilityId: input.facilityId,
+                    baseUrl: null,
                     username: input.username,
                     encryptedPassword,
                     encryptedAccessToken: null,
@@ -283,11 +270,9 @@ export const brandsRouter = createTRPCRouter({
                 .onConflictDoUpdate({
                     target: brandUnicommerceIntegrations.brandId,
                     set: {
-                        tenant: input.baseUrl ? null : input.tenant ?? null,
-                        facilityId: input.baseUrl
-                            ? null
-                            : input.facilityId ?? null,
-                        baseUrl: input.baseUrl ?? null,
+                        tenant: input.tenant,
+                        facilityId: input.facilityId,
+                        baseUrl: null,
                         username: input.username,
                         encryptedPassword,
                         encryptedAccessToken: null,
@@ -369,16 +354,29 @@ export const brandsRouter = createTRPCRouter({
                     updatedSinceMinutes: input.updatedSinceMinutes,
                     skus: [],
                 });
+                const debugTrail = client.getDebugTrail();
+                console.log(
+                    "[Unicommerce Test Debug]",
+                    JSON.stringify(debugTrail, null, 2)
+                );
 
                 return {
                     success: true,
                     fetchedSnapshots: snapshots.length,
+                    debugTrail,
                 };
             } catch (error: any) {
-                throw new TRPCError({
-                    code: "BAD_REQUEST",
-                    message: error.message || "Test connection failed",
-                });
+                const debugTrail = client.getDebugTrail();
+                console.log(
+                    "[Unicommerce Test Debug Error]",
+                    JSON.stringify(debugTrail, null, 2)
+                );
+                return {
+                    success: false,
+                    fetchedSnapshots: 0,
+                    errorMessage: error.message || "Test connection failed",
+                    debugTrail,
+                };
             }
         }),
     triggerUnicommerceSync: protectedProcedure

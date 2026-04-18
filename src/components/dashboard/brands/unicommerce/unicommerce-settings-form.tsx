@@ -23,15 +23,14 @@ import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { z } from "zod";
 
 const unicommerceIntegrationSchema = z
     .object({
-        baseUrl: z.string().trim().optional(),
-        tenant: z.string().trim().optional(),
+        tenant: z.string().trim().min(1, "Tenant is required"),
         facilityId: z.string().trim().min(1, "Facility code is required"),
         username: z.string().trim().min(1, "Username is required"),
         password: z.string().optional(),
@@ -42,18 +41,6 @@ const unicommerceIntegrationSchema = z
             .positive("Sync window must be at least 1 minute")
             .max(1440, "Sync window cannot exceed 1440 minutes")
             .default(60),
-    })
-    .superRefine((values, ctx) => {
-        const hasBaseUrl = Boolean(values.baseUrl?.trim());
-        const hasTenant = Boolean(values.tenant?.trim());
-
-        if (!hasBaseUrl && !hasTenant) {
-            ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Provide either Base URL or Tenant",
-                path: ["baseUrl"],
-            });
-        }
     });
 
 type UnicommerceIntegrationForm = z.infer<typeof unicommerceIntegrationSchema>;
@@ -62,13 +49,24 @@ interface UnicommerceSettingsFormProps {
     brandId: string;
 }
 
+const extractTenantFromBaseUrl = (baseUrl?: string | null) => {
+    if (!baseUrl) return "";
+    try {
+        const parsed = new URL(baseUrl);
+        return parsed.hostname.replace(".unicommerce.com", "");
+    } catch {
+        return "";
+    }
+};
+
 export function UnicommerceSettingsForm({
     brandId,
 }: UnicommerceSettingsFormProps) {
+    const [lastDebugPayload, setLastDebugPayload] = useState<unknown>(null);
+
     const unicommerceForm = useForm<UnicommerceIntegrationForm>({
         resolver: zodResolver(unicommerceIntegrationSchema),
         defaultValues: {
-            baseUrl: "",
             tenant: "",
             facilityId: "",
             username: "",
@@ -88,8 +86,9 @@ export function UnicommerceSettingsForm({
         if (!integration) return;
 
         unicommerceForm.reset({
-            baseUrl: integration.baseUrl ?? "",
-            tenant: integration.tenant ?? "",
+            tenant:
+                integration.tenant ??
+                extractTenantFromBaseUrl(integration.baseUrl),
             facilityId: integration.facilityId ?? "",
             username: integration.username ?? "",
             password: "",
@@ -124,12 +123,32 @@ export function UnicommerceSettingsForm({
                 return { toastId };
             },
             onSuccess: (data, _, ctx) => {
-                toast.success(
-                    `Connection successful. ${data.fetchedSnapshots} inventory records fetched.`,
+                setLastDebugPayload(data);
+                console.group("Unicommerce Test Connection Debug");
+                console.log("Result:", data);
+                if (data?.debugTrail) {
+                    console.log("Request/Response trail:", data.debugTrail);
+                }
+                console.groupEnd();
+
+                if (data.success) {
+                    toast.success(
+                        `Connection successful. ${data.fetchedSnapshots} inventory records fetched.`,
+                        { id: ctx?.toastId }
+                    );
+                    return;
+                }
+
+                toast.error(
+                    data.errorMessage || "Test connection failed",
                     { id: ctx?.toastId }
                 );
             },
-            onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
+            onError: (err, _, ctx) => {
+                setLastDebugPayload({ error: err });
+                console.error("Unicommerce Test Connection Error", err);
+                return handleClientError(err, ctx?.toastId);
+            },
         });
 
     const { mutate: runUnicommerceSync, isPending: isUnicommerceSyncPending } =
@@ -159,9 +178,8 @@ export function UnicommerceSettingsForm({
 
         saveUnicommerceIntegration({
             brandId,
-            baseUrl: values.baseUrl?.trim() || undefined,
-            tenant: values.tenant?.trim() || undefined,
-            facilityId: values.facilityId?.trim() || undefined,
+            tenant: values.tenant.trim(),
+            facilityId: values.facilityId.trim(),
             username: values.username.trim(),
             password: trimmedPassword.length > 0 ? trimmedPassword : undefined,
             isActive: values.isActive,
@@ -174,7 +192,7 @@ export function UnicommerceSettingsForm({
                 <CardTitle>Unicommerce Inventory Integration</CardTitle>
                 <CardDescription>
                     Configure brand-wise Unicommerce credentials to fetch
-                    inventory products into Renivet using OAuth authentication.
+                    inventory products using Unicommerce OAuth defaults.
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -216,6 +234,17 @@ export function UnicommerceSettingsForm({
                     </p>
                 ) : null}
 
+                {lastDebugPayload ? (
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                        <p className="mb-2 text-sm font-semibold text-blue-900">
+                            Last API Debug (Request/Response)
+                        </p>
+                        <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-all text-xs text-blue-900">
+                            {JSON.stringify(lastDebugPayload, null, 2)}
+                        </pre>
+                    </div>
+                ) : null}
+
                 <Separator />
 
                 <Form {...unicommerceForm}>
@@ -228,34 +257,10 @@ export function UnicommerceSettingsForm({
                         <div className="grid gap-4 md:grid-cols-2">
                             <FormField
                                 control={unicommerceForm.control}
-                                name="baseUrl"
-                                render={({ field }) => (
-                                    <FormItem className="md:col-span-2">
-                                        <FormLabel>
-                                            Base URL (optional)
-                                        </FormLabel>
-                                        <FormControl>
-                                            <Input
-                                                {...field}
-                                                placeholder="https://tenant.unicommerce.com"
-                                                disabled={isUnicommercePending}
-                                            />
-                                        </FormControl>
-                                        <p className="text-xs text-muted-foreground">
-                                            Use your Unicommerce domain, or set
-                                            Tenant below to auto-build it.
-                                        </p>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
-
-                            <FormField
-                                control={unicommerceForm.control}
                                 name="tenant"
                                 render={({ field }) => (
                                     <FormItem>
-                                        <FormLabel>Tenant (optional)</FormLabel>
+                                        <FormLabel>Tenant</FormLabel>
                                         <FormControl>
                                             <Input
                                                 {...field}
@@ -263,6 +268,13 @@ export function UnicommerceSettingsForm({
                                                 disabled={isUnicommercePending}
                                             />
                                         </FormControl>
+                                        <p className="text-xs text-muted-foreground">
+                                            We auto-use{" "}
+                                            <code>
+                                                https://{"{tenant}"}
+                                                .unicommerce.com
+                                            </code>
+                                        </p>
                                         <FormMessage />
                                     </FormItem>
                                 )}
