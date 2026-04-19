@@ -36,7 +36,8 @@ type UnicommerceTokenResponse = {
 type UnicommerceDebugStep =
     | "oauth_password_grant"
     | "oauth_refresh_grant"
-    | "inventory_snapshot";
+    | "inventory_snapshot"
+    | "api_request";
 
 type UnicommerceDebugEntry = {
     step: UnicommerceDebugStep;
@@ -314,6 +315,133 @@ export class UnicommerceClient {
         }
 
         return this.loginWithPassword();
+    }
+
+    async authenticate() {
+        await this.getValidAccessToken();
+        return {
+            authenticated: Boolean(this.accessToken),
+            accessTokenExpiresAt: this.accessTokenExpiresAt
+                ? new Date(this.accessTokenExpiresAt)
+                : null,
+            hasRefreshToken: Boolean(this.refreshToken),
+        };
+    }
+
+    async requestApi(params: {
+        method: "GET" | "POST";
+        path: string;
+        query?: Record<string, string | number | boolean | null | undefined>;
+        body?: unknown;
+        headers?: Record<string, string>;
+        includeFacilityHeader?: boolean;
+    }) {
+        const normalizedPath = params.path.trim();
+        if (!normalizedPath.startsWith("/")) {
+            throw new Error("Unicommerce API path must start with `/`.");
+        }
+
+        const accessToken = await this.getValidAccessToken();
+        const url = `${this.baseOrigin}${normalizedPath}`;
+
+        const headers: Record<string, string> = {
+            "Content-Type": "application/json",
+            Authorization: `bearer ${accessToken}`,
+            ...params.headers,
+        };
+
+        if (params.includeFacilityHeader !== false) {
+            headers.Facility = this.facilityCode;
+        }
+
+        const maskedHeaders = {
+            ...headers,
+            Authorization: `bearer ${this.maskSecret(accessToken)}`,
+        };
+
+        try {
+            if (params.method === "GET") {
+                const response = await axios.get(url, {
+                    params: params.query,
+                    headers,
+                    timeout: 30000,
+                });
+
+                this.pushDebug({
+                    step: "api_request",
+                    at: new Date().toISOString(),
+                    request: {
+                        method: "GET",
+                        url,
+                        params: params.query,
+                        headers: maskedHeaders,
+                    },
+                    response: {
+                        status: response.status,
+                        data: response.data,
+                    },
+                });
+
+                return {
+                    status: response.status,
+                    data: response.data,
+                };
+            }
+
+            const response = await axios.post(url, params.body ?? {}, {
+                params: params.query,
+                headers,
+                timeout: 30000,
+            });
+
+            this.pushDebug({
+                step: "api_request",
+                at: new Date().toISOString(),
+                request: {
+                    method: "POST",
+                    url,
+                    params: params.query,
+                    headers: maskedHeaders,
+                    body: params.body ?? {},
+                },
+                response: {
+                    status: response.status,
+                    data: response.data,
+                },
+            });
+
+            return {
+                status: response.status,
+                data: response.data,
+            };
+        } catch (error: unknown) {
+            const axiosError = error as {
+                response?: {
+                    status?: number;
+                    data?: unknown;
+                };
+                message?: string;
+            };
+
+            this.pushDebug({
+                step: "api_request",
+                at: new Date().toISOString(),
+                request: {
+                    method: params.method,
+                    url,
+                    params: params.query,
+                    headers: maskedHeaders,
+                    body: params.method === "POST" ? params.body ?? {} : undefined,
+                },
+                error: {
+                    status: axiosError.response?.status,
+                    data: axiosError.response?.data,
+                    message: axiosError.message,
+                },
+            });
+
+            throw error;
+        }
     }
 
     private normalizeSnapshots(

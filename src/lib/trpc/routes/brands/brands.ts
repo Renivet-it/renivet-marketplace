@@ -177,6 +177,11 @@ const brandSubscriptionsRouter = createTRPCRouter({
         }),
 });
 
+function resolveErrorMessage(error: unknown, fallback: string) {
+    if (error instanceof Error && error.message) return error.message;
+    return fallback;
+}
+
 export const brandsRouter = createTRPCRouter({
     subscriptions: brandSubscriptionsRouter,
     getUnicommerceIntegration: protectedProcedure
@@ -252,6 +257,14 @@ export const brandsRouter = createTRPCRouter({
                 });
             }
 
+            const credentialsChanged = Boolean(
+                existingIntegration &&
+                    (existingIntegration.tenant !== input.tenant ||
+                        existingIntegration.facilityId !== input.facilityId ||
+                        existingIntegration.username !== input.username ||
+                        Boolean(input.password))
+            );
+
             const [saved] = await ctx.db
                 .insert(brandUnicommerceIntegrations)
                 .values({
@@ -275,9 +288,15 @@ export const brandsRouter = createTRPCRouter({
                         baseUrl: null,
                         username: input.username,
                         encryptedPassword,
-                        encryptedAccessToken: null,
-                        encryptedRefreshToken: null,
-                        accessTokenExpiresAt: null,
+                        encryptedAccessToken: credentialsChanged
+                            ? null
+                            : existingIntegration?.encryptedAccessToken ?? null,
+                        encryptedRefreshToken: credentialsChanged
+                            ? null
+                            : existingIntegration?.encryptedRefreshToken ?? null,
+                        accessTokenExpiresAt: credentialsChanged
+                            ? null
+                            : existingIntegration?.accessTokenExpiresAt ?? null,
                         isActive: input.isActive,
                         updatedAt: new Date(),
                     },
@@ -291,6 +310,182 @@ export const brandsRouter = createTRPCRouter({
                 encryptedRefreshToken: undefined,
                 hasCredentials: true,
             };
+        }),
+    authenticateUnicommerceIntegration: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid(),
+            })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input, ctx }) => {
+            const integration =
+                await ctx.db.query.brandUnicommerceIntegrations.findFirst({
+                    where: eq(
+                        brandUnicommerceIntegrations.brandId,
+                        input.brandId
+                    ),
+                });
+            if (!integration)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Unicommerce integration not configured",
+                });
+
+            const client = new UnicommerceClient({
+                tenant: integration.tenant,
+                facilityId: integration.facilityId,
+                baseUrl: integration.baseUrl,
+                username: integration.username,
+                password: decryptSecret(integration.encryptedPassword),
+                initialAccessToken: integration.encryptedAccessToken
+                    ? decryptSecret(integration.encryptedAccessToken)
+                    : null,
+                initialRefreshToken: integration.encryptedRefreshToken
+                    ? decryptSecret(integration.encryptedRefreshToken)
+                    : null,
+                accessTokenExpiresAt: integration.accessTokenExpiresAt,
+                onTokenUpdate: async (token) => {
+                    await ctx.db
+                        .update(brandUnicommerceIntegrations)
+                        .set({
+                            encryptedAccessToken: encryptSecret(
+                                token.accessToken
+                            ),
+                            encryptedRefreshToken: encryptSecret(
+                                token.refreshToken
+                            ),
+                            accessTokenExpiresAt: token.accessTokenExpiresAt,
+                            updatedAt: new Date(),
+                        })
+                        .where(
+                            eq(
+                                brandUnicommerceIntegrations.id,
+                                integration.id
+                            )
+                        );
+                },
+            });
+
+            try {
+                const authResult = await client.authenticate();
+                const debugTrail = client.getDebugTrail();
+
+                return {
+                    success: true,
+                    ...authResult,
+                    debugTrail,
+                };
+            } catch (error: unknown) {
+                return {
+                    success: false,
+                    authenticated: false,
+                    errorMessage: resolveErrorMessage(
+                        error,
+                        "Failed to authenticate Unicommerce"
+                    ),
+                    debugTrail: client.getDebugTrail(),
+                };
+            }
+        }),
+    runUnicommerceApiRequest: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid(),
+                method: z.enum(["GET", "POST"]).default("POST"),
+                path: z.string().trim().min(1),
+                query: z
+                    .record(
+                        z.string(),
+                        z.union([
+                            z.string(),
+                            z.number(),
+                            z.boolean(),
+                            z.null(),
+                        ])
+                    )
+                    .optional(),
+                body: z.unknown().optional(),
+                includeFacilityHeader: z.boolean().default(true),
+            })
+        )
+        .use(isTRPCAuth(BitFieldBrandPermission.ADMINISTRATOR, "all", "brand"))
+        .mutation(async ({ input, ctx }) => {
+            const integration =
+                await ctx.db.query.brandUnicommerceIntegrations.findFirst({
+                    where: eq(
+                        brandUnicommerceIntegrations.brandId,
+                        input.brandId
+                    ),
+                });
+            if (!integration)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Unicommerce integration not configured",
+                });
+
+            const client = new UnicommerceClient({
+                tenant: integration.tenant,
+                facilityId: integration.facilityId,
+                baseUrl: integration.baseUrl,
+                username: integration.username,
+                password: decryptSecret(integration.encryptedPassword),
+                initialAccessToken: integration.encryptedAccessToken
+                    ? decryptSecret(integration.encryptedAccessToken)
+                    : null,
+                initialRefreshToken: integration.encryptedRefreshToken
+                    ? decryptSecret(integration.encryptedRefreshToken)
+                    : null,
+                accessTokenExpiresAt: integration.accessTokenExpiresAt,
+                onTokenUpdate: async (token) => {
+                    await ctx.db
+                        .update(brandUnicommerceIntegrations)
+                        .set({
+                            encryptedAccessToken: encryptSecret(
+                                token.accessToken
+                            ),
+                            encryptedRefreshToken: encryptSecret(
+                                token.refreshToken
+                            ),
+                            accessTokenExpiresAt: token.accessTokenExpiresAt,
+                            updatedAt: new Date(),
+                        })
+                        .where(
+                            eq(
+                                brandUnicommerceIntegrations.id,
+                                integration.id
+                            )
+                        );
+                },
+            });
+
+            try {
+                const response = await client.requestApi({
+                    method: input.method,
+                    path: input.path,
+                    query: input.query,
+                    body: input.body,
+                    includeFacilityHeader: input.includeFacilityHeader,
+                });
+
+                return {
+                    success: true,
+                    status: response.status,
+                    data: response.data,
+                    debugTrail: client.getDebugTrail(),
+                };
+            } catch (error: unknown) {
+                return {
+                    success: false,
+                    status: null,
+                    data: null,
+                    errorMessage: resolveErrorMessage(
+                        error,
+                        "Unicommerce API request failed"
+                    ),
+                    debugTrail: client.getDebugTrail(),
+                };
+            }
         }),
     testUnicommerceIntegration: protectedProcedure
         .input(
@@ -365,7 +560,7 @@ export const brandsRouter = createTRPCRouter({
                     fetchedSnapshots: snapshots.length,
                     debugTrail,
                 };
-            } catch (error: any) {
+            } catch (error: unknown) {
                 const debugTrail = client.getDebugTrail();
                 console.log(
                     "[Unicommerce Test Debug Error]",
@@ -374,7 +569,10 @@ export const brandsRouter = createTRPCRouter({
                 return {
                     success: false,
                     fetchedSnapshots: 0,
-                    errorMessage: error.message || "Test connection failed",
+                    errorMessage: resolveErrorMessage(
+                        error,
+                        "Test connection failed"
+                    ),
                     debugTrail,
                 };
             }
