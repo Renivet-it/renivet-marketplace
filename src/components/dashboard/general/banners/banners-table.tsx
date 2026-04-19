@@ -95,9 +95,7 @@ export function BannersTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: { data: dataRaw, count },
-    } = trpc.general.content.banners.getBanners.useQuery(
+    const bannersQuery = trpc.general.content.banners.getBanners.useQuery(
         { page, limit, search, isActive },
         {
             initialData: {
@@ -106,6 +104,12 @@ export function BannersTable({ initialData }: PageProps) {
             },
         }
     );
+
+    const dataRaw = useMemo(
+        () => bannersQuery.data?.data ?? initialData.data ?? [],
+        [bannersQuery.data?.data, initialData.data]
+    );
+    const count = bannersQuery.data?.count ?? initialData.count ?? 0;
 
     const data = useMemo(
         () =>
