@@ -27,6 +27,9 @@ interface PageProps {
     userId: string;
 }
 
+const AUTO_COUPON_CODE = "TRYNEW20";
+const AUTO_COUPON_MIN_CART_VALUE = 3000 * 100;
+
 export default function CheckoutSection({ userId }: PageProps) {
     const router = useRouter();
     const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
@@ -45,11 +48,6 @@ export default function CheckoutSection({ userId }: PageProps) {
         trpc.general.coupons.getActiveCoupons.useQuery(undefined, {
             enabled: isCouponExpanded,
         });
-
-    const { data: userOrders } = trpc.general.orders.getOrdersByUserId.useQuery(
-        { userId },
-        { enabled: !!userId }
-    );
 
     const availableCart = useMemo(
         () =>
@@ -184,24 +182,51 @@ export default function CheckoutSection({ userId }: PageProps) {
             },
         });
 
-    // Auto-apply RENIVETFIRST for first-time customers
+    const {
+        mutateAsync: validateCouponSilently,
+        isPending: isAutoCouponChecking,
+    } = trpc.general.coupons.validateCoupon.useMutation();
+
     const hasAutoApplied = useRef(false);
 
     useEffect(() => {
-        if (
-            userOrders &&
-            userOrders.length === 0 &&
-            !appliedCoupon &&
-            !hasAutoApplied.current &&
-            totalPrice > 0
-        ) {
-            hasAutoApplied.current = true;
-            validateCoupon({
-                code: "RENIVETFIRST",
-                totalAmount: totalPrice,
-            });
+        const shouldAutoApply = totalPrice > AUTO_COUPON_MIN_CART_VALUE;
+        const isTryNewCouponApplied =
+            appliedCoupon?.code?.toUpperCase() === AUTO_COUPON_CODE;
+
+        if (!shouldAutoApply) {
+            if (isTryNewCouponApplied) {
+                setAppliedCoupon(null);
+                setCouponCode("");
+            }
+            hasAutoApplied.current = false;
+            return;
         }
-    }, [userOrders, appliedCoupon, totalPrice, validateCoupon]);
+
+        if (appliedCoupon || hasAutoApplied.current || isAutoCouponChecking) {
+            return;
+        }
+
+        hasAutoApplied.current = true;
+        validateCouponSilently({
+            code: AUTO_COUPON_CODE,
+            totalAmount: totalPrice,
+        })
+            .then((data) => {
+                setAppliedCoupon(data);
+                setCouponCode("");
+            })
+            .catch(() => {
+                hasAutoApplied.current = false;
+                // Keep checkout smooth even if auto coupon is not available/valid.
+            });
+    }, [
+        appliedCoupon,
+        isAutoCouponChecking,
+        setAppliedCoupon,
+        totalPrice,
+        validateCouponSilently,
+    ]);
 
     return (
         <div className="w-full space-y-4">

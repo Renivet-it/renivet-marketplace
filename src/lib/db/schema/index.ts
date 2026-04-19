@@ -32,4 +32,5 @@ export * from "./types";
 export * from "./capi-logs";
 
 export * from "./analytics";
+export * from "./unicommerce";
 

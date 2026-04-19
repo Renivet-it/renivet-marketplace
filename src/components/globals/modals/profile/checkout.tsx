@@ -25,7 +25,7 @@ import {
 } from "@/lib/utils";
 import { CouponWithCategory } from "@/lib/validations";
 import { useRouter } from "next/navigation";
-import { Dispatch, SetStateAction, useMemo, useState } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -33,6 +33,9 @@ interface PageProps {
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
 }
+
+const AUTO_COUPON_CODE = "TRYNEW20";
+const AUTO_COUPON_MIN_CART_VALUE = 3000 * 100;
 
 export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
     const router = useRouter();
@@ -146,6 +149,46 @@ export function CheckoutModal({ userId, isOpen, setIsOpen }: PageProps) {
                 return handleClientError(err, ctx?.toastId);
             },
         });
+
+    const {
+        mutateAsync: validateCouponSilently,
+        isPending: isAutoCouponChecking,
+    } = trpc.general.coupons.validateCoupon.useMutation();
+
+    useEffect(() => {
+        const shouldAutoApply = totalPrice > AUTO_COUPON_MIN_CART_VALUE;
+        const isTryNewCouponApplied =
+            coupon?.code?.toUpperCase() === AUTO_COUPON_CODE;
+
+        if (!shouldAutoApply) {
+            if (isTryNewCouponApplied) {
+                setCoupon(null);
+                setCouponStatus("idle");
+                setCouponCode("");
+            }
+            return;
+        }
+
+        if (coupon || isAutoCouponChecking) return;
+
+        validateCouponSilently({
+            code: AUTO_COUPON_CODE,
+            totalAmount: totalPrice,
+        })
+            .then((data) => {
+                setCoupon(data);
+                setCouponStatus("valid");
+                setCouponCode("");
+            })
+            .catch(() => {
+                // Keep checkout smooth even if auto coupon is not available/valid.
+            });
+    }, [
+        coupon,
+        isAutoCouponChecking,
+        totalPrice,
+        validateCouponSilently,
+    ]);
 
     const { mutate: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({

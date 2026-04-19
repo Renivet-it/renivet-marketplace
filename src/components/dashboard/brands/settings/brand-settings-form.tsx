@@ -104,12 +104,9 @@ export function BrandSettingsForm({
     const logoInputRef = useRef<HTMLInputElement>(null!);
 
     const [logoPreview, setLogoPreview] = useState<string>(brand.logoUrl);
-    const [logoFile, setLogoFile] = useState<File | null>(null);
-
     const [coverPreview, setCoverPreview] = useState<string | null>(
         brand.coverUrl
     );
-    const [coverFile, setCoverFile] = useState<File | null>(null);
 
     const states = useMemo(() => State.getStatesOfCountry("IN"), []);
 
@@ -231,7 +228,6 @@ export function BrandSettingsForm({
         onSuccess: (appUrl, __, { toastId }) => {
             refetch();
             setCoverPreview(appUrl);
-            setCoverFile(null);
             detailsForm.setValue("coverUrl", appUrl);
             toast.success("Cover uploaded successfully", { id: toastId });
         },
@@ -266,7 +262,6 @@ export function BrandSettingsForm({
         onSuccess: (appUrl, __, { toastId }) => {
             refetch();
             setLogoPreview(appUrl);
-            setLogoFile(null);
             detailsForm.setValue("logoUrl", appUrl);
             toast.success("Logo uploaded successfully", { id: toastId });
         },
@@ -425,7 +420,6 @@ export function BrandSettingsForm({
                                 ).fileTypes.join()}
                                 onChange={(e) => {
                                     if (!e.target.files) return;
-                                    setCoverFile(e.target.files[0]);
                                     updateCover(e.target.files[0]);
                                 }}
                             />
@@ -464,7 +458,6 @@ export function BrandSettingsForm({
                                     ).fileTypes.join()}
                                     onChange={(e) => {
                                         if (!e.target.files) return;
-                                        setLogoFile(e.target.files[0]);
                                         updateLogo(e.target.files[0]);
                                     }}
                                 />
