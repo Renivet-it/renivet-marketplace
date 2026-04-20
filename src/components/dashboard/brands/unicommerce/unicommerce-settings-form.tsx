@@ -21,10 +21,18 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
 import { Separator } from "@/components/ui/separator";
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
-import { handleClientError } from "@/lib/utils";
+import { cn, handleClientError } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
@@ -50,7 +58,111 @@ type UnicommerceIntegrationForm = z.infer<typeof unicommerceIntegrationSchema>;
 
 interface UnicommerceSettingsFormProps {
     brandId: string;
+    showSectionArea?: boolean;
+    forcedMainTab?: "modules" | "api-explorer" | "logs";
+    forcedModuleTab?: ModuleTabKey;
+    hideSectionMenus?: boolean;
 }
+
+type ModuleTabKey =
+    | "authentication"
+    | "inventory"
+    | "orders"
+    | "returns"
+    | "catalog";
+
+type JsonRecord = Record<string, unknown>;
+
+type UnicommerceApiPreset = {
+    method: "GET" | "POST";
+    path: string;
+    query?: Record<string, unknown>;
+    body?: Record<string, unknown>;
+};
+
+const moduleApiPresets: Record<Exclude<ModuleTabKey, "authentication">, UnicommerceApiPreset> =
+    {
+        inventory: {
+            method: "POST",
+            path: "/services/rest/v1/inventory/inventorySnapshot/get",
+            body: { updatedSinceInMinutes: 60 },
+        },
+        orders: {
+            method: "POST",
+            path: "/services/rest/v1/oms/saleOrder/search",
+            body: { saleOrderCode: "", updatedSinceInMinutes: 60 },
+        },
+        returns: {
+            method: "POST",
+            path: "/services/rest/v1/returns/search",
+            body: { updatedSinceInMinutes: 60 },
+        },
+        catalog: {
+            method: "POST",
+            path: "/services/rest/v1/catalog/product/search",
+            body: { updatedSinceInMinutes: 60 },
+        },
+    };
+
+const isJsonRecord = (value: unknown): value is JsonRecord =>
+    typeof value === "object" && value !== null && !Array.isArray(value);
+
+const toTableRows = (value: unknown): JsonRecord[] => {
+    if (Array.isArray(value)) {
+        return value.filter(isJsonRecord).slice(0, 100);
+    }
+
+    if (!isJsonRecord(value)) {
+        return [];
+    }
+
+    const preferredKeys = [
+        "inventorySnapshots",
+        "saleOrders",
+        "returns",
+        "products",
+        "items",
+        "results",
+        "data",
+    ];
+
+    for (const key of preferredKeys) {
+        const candidate = value[key];
+        if (Array.isArray(candidate)) {
+            const rows = candidate.filter(isJsonRecord).slice(0, 100);
+            if (rows.length > 0) return rows;
+        }
+    }
+
+    for (const nestedValue of Object.values(value)) {
+        if (Array.isArray(nestedValue)) {
+            const rows = nestedValue.filter(isJsonRecord).slice(0, 100);
+            if (rows.length > 0) return rows;
+        }
+    }
+
+    return [value];
+};
+
+const getTableColumns = (rows: JsonRecord[]) => {
+    const columns = new Set<string>();
+    for (const row of rows) {
+        for (const key of Object.keys(row)) {
+            columns.add(key);
+            if (columns.size >= 10) break;
+        }
+        if (columns.size >= 10) break;
+    }
+    return Array.from(columns);
+};
+
+const formatCellValue = (value: unknown) => {
+    if (value === null || value === undefined) return "-";
+    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+        return String(value);
+    }
+    return JSON.stringify(value);
+};
 
 const extractTenantFromBaseUrl = (baseUrl?: string | null) => {
     if (!baseUrl) return "";
@@ -64,6 +176,10 @@ const extractTenantFromBaseUrl = (baseUrl?: string | null) => {
 
 export function UnicommerceSettingsForm({
     brandId,
+    showSectionArea = false,
+    forcedMainTab,
+    forcedModuleTab,
+    hideSectionMenus = false,
 }: UnicommerceSettingsFormProps) {
     const [lastDebugPayload, setLastDebugPayload] = useState<unknown>(null);
     const [apiMethod, setApiMethod] = useState<"GET" | "POST">("POST");
@@ -75,8 +191,18 @@ export function UnicommerceSettingsForm({
         "{\n  \"updatedSinceInMinutes\": 60\n}"
     );
     const [apiResponsePayload, setApiResponsePayload] = useState<unknown>(null);
-    const [mainTab, setMainTab] = useState("modules");
-    const [moduleTab, setModuleTab] = useState("authentication");
+    const [mainTab, setMainTab] = useState<"modules" | "api-explorer" | "logs">(
+        forcedMainTab ?? "modules"
+    );
+    const [moduleTab, setModuleTab] = useState<ModuleTabKey>(
+        forcedModuleTab ?? "authentication"
+    );
+    const [moduleResponsePayloads, setModuleResponsePayloads] = useState<
+        Partial<Record<Exclude<ModuleTabKey, "authentication">, unknown>>
+    >({});
+    const [loadingModuleTab, setLoadingModuleTab] = useState<
+        Exclude<ModuleTabKey, "authentication"> | null
+    >(null);
 
     const unicommerceForm = useForm<UnicommerceIntegrationForm>({
         resolver: zodResolver(unicommerceIntegrationSchema),
@@ -110,6 +236,14 @@ export function UnicommerceSettingsForm({
             updatedSinceMinutes: 60,
         });
     }, [unicommerceIntegrationQuery.data, unicommerceForm]);
+
+    useEffect(() => {
+        if (forcedMainTab) setMainTab(forcedMainTab);
+    }, [forcedMainTab]);
+
+    useEffect(() => {
+        if (forcedModuleTab) setModuleTab(forcedModuleTab);
+    }, [forcedModuleTab]);
 
     const {
         mutate: saveUnicommerceIntegration,
@@ -218,6 +352,7 @@ export function UnicommerceSettingsForm({
 
     const {
         mutate: runUnicommerceApiRequest,
+        mutateAsync: runUnicommerceApiRequestAsync,
         isPending: isUnicommerceApiPending,
     } = trpc.brands.brands.runUnicommerceApiRequest.useMutation({
         onMutate: () => {
@@ -323,6 +458,53 @@ export function UnicommerceSettingsForm({
         setApiBodyJson(JSON.stringify(preset.body ?? {}, null, 2));
         setMainTab("api-explorer");
     };
+
+    const handleFetchModuleTable = async (
+        tab: Exclude<ModuleTabKey, "authentication">
+    ) => {
+        const preset = moduleApiPresets[tab];
+        setLoadingModuleTab(tab);
+        try {
+            const response = await runUnicommerceApiRequestAsync({
+                brandId,
+                method: preset.method,
+                path: preset.path,
+                query: preset.query as
+                    | Record<string, string | number | boolean | null>
+                    | undefined,
+                body:
+                    preset.body &&
+                    "updatedSinceInMinutes" in preset.body
+                        ? {
+                              ...preset.body,
+                              updatedSinceInMinutes: unicommerceForm.getValues(
+                                  "updatedSinceMinutes"
+                              ),
+                          }
+                        : preset.body,
+                includeFacilityHeader: true,
+            });
+
+            setModuleResponsePayloads((prev) => ({
+                ...prev,
+                [tab]: response?.data ?? null,
+            }));
+        } finally {
+            setLoadingModuleTab(null);
+        }
+    };
+
+    const authenticationRows: JsonRecord[] = [
+        {
+            status: unicommerceIntegrationQuery.data?.isActive ? "Active" : "Disabled",
+            tokenStatus: isTokenValid ? "Valid" : "Invalid / Missing",
+            tokenExpiresAt: tokenExpiry ? tokenExpiry.toLocaleString() : "Not available",
+            lastSyncStatus: unicommerceIntegrationQuery.data?.lastSyncStatus ?? "idle",
+            lastSyncAt: unicommerceIntegrationQuery.data?.lastSyncAt
+                ? new Date(unicommerceIntegrationQuery.data.lastSyncAt).toLocaleString()
+                : "Never",
+        },
+    ];
 
     const handleUnicommerceSubmit = (values: UnicommerceIntegrationForm) => {
         const trimmedPassword = values.password?.trim() ?? "";
@@ -636,352 +818,398 @@ export function UnicommerceSettingsForm({
                     </form>
                 </Form>
 
-                <Separator />
+                {showSectionArea ? <Separator /> : null}
 
-                <Tabs
-                    value={mainTab}
-                    onValueChange={setMainTab}
-                    className="w-full"
-                >
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="modules">Submenus</TabsTrigger>
-                        <TabsTrigger value="api-explorer">API Explorer</TabsTrigger>
-                        <TabsTrigger value="logs">Response Logs</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="modules" className="mt-4 space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                            Dedicated module submenus for every major Unicommerce
-                            workflow in your brand dashboard.
-                        </p>
-
-                        <Tabs
-                            value={moduleTab}
-                            onValueChange={setModuleTab}
-                            className="w-full"
+                {showSectionArea ? (
+                    <Tabs
+                        value={mainTab}
+                        onValueChange={(value) =>
+                            setMainTab(value as "modules" | "api-explorer" | "logs")
+                        }
+                        className="w-full"
+                    >
+                        <div
+                            className={cn(
+                                "grid gap-4",
+                                hideSectionMenus
+                                    ? "grid-cols-1"
+                                    : "md:grid-cols-[220px_minmax(0,1fr)]"
+                            )}
                         >
-                            <TabsList className="grid h-auto w-full grid-cols-2 gap-2 md:grid-cols-5">
-                                <TabsTrigger value="authentication">
-                                    Authentication
-                                </TabsTrigger>
-                                <TabsTrigger value="inventory">Inventory</TabsTrigger>
-                                <TabsTrigger value="orders">Orders</TabsTrigger>
-                                <TabsTrigger value="returns">Returns</TabsTrigger>
-                                <TabsTrigger value="catalog">Catalog</TabsTrigger>
-                            </TabsList>
+                            {!hideSectionMenus ? (
+                                <TabsList className="grid h-fit w-full grid-cols-1 gap-2 rounded-md border p-2">
+                                    <TabsTrigger value="modules">Submenus</TabsTrigger>
+                                    <TabsTrigger value="api-explorer">
+                                        API Explorer
+                                    </TabsTrigger>
+                                    <TabsTrigger value="logs">Response Logs</TabsTrigger>
+                                </TabsList>
+                            ) : null}
 
-                            <TabsContent
-                                value="authentication"
-                                className="mt-4 rounded-md border p-4"
-                            >
-                                <div className="mb-3 flex items-center justify-between gap-2">
-                                    <p className="text-lg font-semibold">
-                                        Authentication
-                                    </p>
-                                    <Badge
-                                        variant={isTokenValid ? "secondary" : "outline"}
-                                    >
-                                        {isTokenValid ? "Integrated" : "Needs Auth"}
-                                    </Badge>
-                                </div>
-                                <p className="mb-4 text-sm text-muted-foreground">
-                                    Authenticate with Unicommerce and store token in
-                                    your integration record.
+                            <div className="min-w-0">
+                            <TabsContent value="modules" className="mt-0 space-y-3">
+                                <p className="text-sm text-muted-foreground">
+                                    Dedicated module submenus for every major Unicommerce
+                                    workflow in your brand dashboard.
                                 </p>
-                                <div className="grid gap-3 text-sm md:grid-cols-3">
-                                    <div className="rounded-md border p-3">
-                                        <p className="text-muted-foreground">
-                                            Token Status
-                                        </p>
-                                        <p className="font-medium">
-                                            {isTokenValid ? "Valid" : "Invalid / Missing"}
-                                        </p>
+
+                                <Tabs
+                                    value={moduleTab}
+                                    onValueChange={(value) =>
+                                        setModuleTab(value as ModuleTabKey)
+                                    }
+                                    className="w-full"
+                                >
+                                    <div
+                                        className={cn(
+                                            "grid gap-3",
+                                            hideSectionMenus
+                                                ? "grid-cols-1"
+                                                : "md:grid-cols-[220px_minmax(0,1fr)]"
+                                        )}
+                                    >
+                                        {!hideSectionMenus ? (
+                                            <TabsList className="grid h-fit w-full grid-cols-1 gap-2 rounded-md border p-2">
+                                                <TabsTrigger value="authentication">
+                                                    Authentication
+                                                </TabsTrigger>
+                                                <TabsTrigger value="inventory">
+                                                    Inventory
+                                                </TabsTrigger>
+                                                <TabsTrigger value="orders">
+                                                    Orders
+                                                </TabsTrigger>
+                                                <TabsTrigger value="returns">
+                                                    Returns
+                                                </TabsTrigger>
+                                                <TabsTrigger value="catalog">
+                                                    Catalog
+                                                </TabsTrigger>
+                                            </TabsList>
+                                        ) : null}
+
+                                        <div className="min-w-0 space-y-3 rounded-md border p-4">
+                                            <TabsContent value="authentication" className="mt-0 space-y-3">
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <p className="text-lg font-semibold">
+                                                        Authentication
+                                                    </p>
+                                                    <Badge
+                                                        variant={
+                                                            isTokenValid ? "secondary" : "outline"
+                                                        }
+                                                    >
+                                                        {isTokenValid
+                                                            ? "Integrated"
+                                                            : "Needs Auth"}
+                                                    </Badge>
+                                                </div>
+                                                <p className="text-sm text-muted-foreground">
+                                                    Authenticate with Unicommerce and view the
+                                                    latest integration status in table format.
+                                                </p>
+                                                <div className="overflow-hidden rounded-md border">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                {getTableColumns(authenticationRows).map(
+                                                                    (column) => (
+                                                                        <TableHead key={column}>
+                                                                            {column}
+                                                                        </TableHead>
+                                                                    )
+                                                                )}
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {authenticationRows.map((row, rowIndex) => (
+                                                                <TableRow key={`auth-row-${rowIndex}`}>
+                                                                    {getTableColumns(authenticationRows).map(
+                                                                        (column) => (
+                                                                            <TableCell key={column}>
+                                                                                {formatCellValue(row[column])}
+                                                                            </TableCell>
+                                                                        )
+                                                                    )}
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                                <div className="flex justify-end">
+                                                    <Button
+                                                        type="button"
+                                                        variant="outline"
+                                                        disabled={
+                                                            isUnicommercePending ||
+                                                            !unicommerceIntegrationQuery.data
+                                                        }
+                                                        onClick={() =>
+                                                            authenticateUnicommerce({ brandId })
+                                                        }
+                                                    >
+                                                        {isUnicommerceAuthPending ? (
+                                                            <Spinner className="animate-spin" />
+                                                        ) : null}
+                                                        Authenticate & Store Token
+                                                    </Button>
+                                                </div>
+                                            </TabsContent>
+
+                                            {(
+                                                ["inventory", "orders", "returns", "catalog"] as const
+                                            ).map((tabKey) => {
+                                                const moduleRows = toTableRows(
+                                                    moduleResponsePayloads[tabKey]
+                                                );
+                                                const moduleColumns = getTableColumns(moduleRows);
+
+                                                return (
+                                                    <TabsContent
+                                                        key={tabKey}
+                                                        value={tabKey}
+                                                        className="mt-0 space-y-3"
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <p className="text-lg font-semibold capitalize">
+                                                                {tabKey}
+                                                            </p>
+                                                            <Badge variant="outline">
+                                                                Dedicated Submenu
+                                                            </Badge>
+                                                        </div>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Fetch {tabKey} data and view it in
+                                                            table format.
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                disabled={
+                                                                    isUnicommercePending ||
+                                                                    loadingModuleTab === tabKey
+                                                                }
+                                                                onClick={() =>
+                                                                    handleFetchModuleTable(tabKey)
+                                                                }
+                                                            >
+                                                                {loadingModuleTab === tabKey ? (
+                                                                    <Spinner className="animate-spin" />
+                                                                ) : null}
+                                                                Fetch {tabKey} Data
+                                                            </Button>
+                                                            {tabKey === "inventory" ? (
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    disabled={
+                                                                        isUnicommercePending ||
+                                                                        !unicommerceIntegrationQuery.data
+                                                                            ?.isActive
+                                                                    }
+                                                                    onClick={() =>
+                                                                        runUnicommerceSync({
+                                                                            brandId,
+                                                                            updatedSinceMinutes:
+                                                                                unicommerceForm.getValues(
+                                                                                    "updatedSinceMinutes"
+                                                                                ),
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    Run Inventory Sync
+                                                                </Button>
+                                                            ) : null}
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                disabled={isUnicommercePending}
+                                                                onClick={() =>
+                                                                    openApiPreset({
+                                                                        ...moduleApiPresets[tabKey],
+                                                                        body: {
+                                                                            ...moduleApiPresets[tabKey].body,
+                                                                            updatedSinceInMinutes:
+                                                                                unicommerceForm.getValues(
+                                                                                    "updatedSinceMinutes"
+                                                                                ),
+                                                                        },
+                                                                    })
+                                                                }
+                                                            >
+                                                                Open API Preset
+                                                            </Button>
+                                                        </div>
+                                                        <div className="overflow-x-auto rounded-md border">
+                                                            <Table>
+                                                                <TableHeader>
+                                                                    <TableRow>
+                                                                        {moduleColumns.length > 0 ? (
+                                                                            moduleColumns.map(
+                                                                                (column) => (
+                                                                                    <TableHead key={column}>
+                                                                                        {column}
+                                                                                    </TableHead>
+                                                                                )
+                                                                            )
+                                                                        ) : (
+                                                                            <TableHead>Data</TableHead>
+                                                                        )}
+                                                                    </TableRow>
+                                                                </TableHeader>
+                                                                <TableBody>
+                                                                    {moduleRows.length > 0 ? (
+                                                                        moduleRows.map((row, rowIndex) => (
+                                                                            <TableRow
+                                                                                key={`${tabKey}-${rowIndex}`}
+                                                                            >
+                                                                                {moduleColumns.map(
+                                                                                    (column) => (
+                                                                                        <TableCell
+                                                                                            key={column}
+                                                                                            className="max-w-[280px] truncate align-top"
+                                                                                            title={formatCellValue(
+                                                                                                row[column]
+                                                                                            )}
+                                                                                        >
+                                                                                            {formatCellValue(
+                                                                                                row[column]
+                                                                                            )}
+                                                                                        </TableCell>
+                                                                                    )
+                                                                                )}
+                                                                            </TableRow>
+                                                                        ))
+                                                                    ) : (
+                                                                        <TableRow>
+                                                                            <TableCell className="text-muted-foreground">
+                                                                                No data fetched yet.
+                                                                                Click &quot;Fetch{" "}
+                                                                                {tabKey} Data&quot;.
+                                                                            </TableCell>
+                                                                        </TableRow>
+                                                                    )}
+                                                                </TableBody>
+                                                            </Table>
+                                                        </div>
+                                                    </TabsContent>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                    <div className="rounded-md border p-3">
-                                        <p className="text-muted-foreground">
-                                            Expires At
-                                        </p>
-                                        <p className="font-medium">
-                                            {tokenExpiry
-                                                ? tokenExpiry.toLocaleString()
-                                                : "Not available"}
-                                        </p>
+                                </Tabs>
+                            </TabsContent>
+
+                            <TabsContent value="api-explorer" className="mt-0 space-y-3">
+                                <p className="text-sm text-muted-foreground">
+                                    Use this to call any Unicommerce endpoint now. This
+                                    helps us integrate new features quickly without waiting for a
+                                    full UI module build.
+                                </p>
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-1.5">
+                                        <p className="text-sm font-medium">Method</p>
+                                        <div className="flex gap-2">
+                                            <Button
+                                                type="button"
+                                                variant={
+                                                    apiMethod === "GET"
+                                                        ? "default"
+                                                        : "outline"
+                                                }
+                                                disabled={isUnicommercePending}
+                                                onClick={() => setApiMethod("GET")}
+                                            >
+                                                GET
+                                            </Button>
+                                            <Button
+                                                type="button"
+                                                variant={
+                                                    apiMethod === "POST"
+                                                        ? "default"
+                                                        : "outline"
+                                                }
+                                                disabled={isUnicommercePending}
+                                                onClick={() => setApiMethod("POST")}
+                                            >
+                                                POST
+                                            </Button>
+                                        </div>
                                     </div>
-                                    <div className="rounded-md border p-3">
-                                        <p className="text-muted-foreground">
-                                            Refresh Token
-                                        </p>
-                                        <p className="font-medium">
-                                            {unicommerceIntegrationQuery.data
-                                                ?.accessTokenExpiresAt
-                                                ? "Available"
-                                                : "Unknown"}
-                                        </p>
+                                    <div className="space-y-1.5">
+                                        <p className="text-sm font-medium">Path</p>
+                                        <Input
+                                            value={apiPath}
+                                            onChange={(e) => setApiPath(e.target.value)}
+                                            placeholder="/services/rest/v1/..."
+                                            disabled={isUnicommercePending}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <p className="text-sm font-medium">Query JSON</p>
+                                        <Textarea
+                                            value={apiQueryJson}
+                                            onChange={(e) =>
+                                                setApiQueryJson(e.target.value)
+                                            }
+                                            rows={6}
+                                            className="font-mono text-xs"
+                                            disabled={isUnicommercePending}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <p className="text-sm font-medium">Body JSON</p>
+                                        <Textarea
+                                            value={apiBodyJson}
+                                            onChange={(e) =>
+                                                setApiBodyJson(e.target.value)
+                                            }
+                                            rows={6}
+                                            className="font-mono text-xs"
+                                            disabled={
+                                                isUnicommercePending || apiMethod !== "POST"
+                                            }
+                                        />
                                     </div>
                                 </div>
-                                <div className="mt-4 flex justify-end">
+                                <div className="flex justify-end">
                                     <Button
                                         type="button"
                                         variant="outline"
                                         disabled={
                                             isUnicommercePending ||
-                                            !unicommerceIntegrationQuery.data
+                                            !unicommerceIntegrationQuery.data ||
+                                            apiPath.trim().length === 0
                                         }
-                                        onClick={() => authenticateUnicommerce({ brandId })}
+                                        onClick={handleRunApiRequest}
                                     >
-                                        {isUnicommerceAuthPending ? (
+                                        {isUnicommerceApiPending ? (
                                             <Spinner className="animate-spin" />
                                         ) : null}
-                                        Authenticate & Store Token
+                                        Run API Request
                                     </Button>
                                 </div>
                             </TabsContent>
 
-                            <TabsContent
-                                value="inventory"
-                                className="mt-4 rounded-md border p-4"
-                            >
-                                <div className="mb-3 flex items-center justify-between gap-2">
-                                    <p className="text-lg font-semibold">Inventory</p>
-                                    <Badge variant="secondary">Integrated</Badge>
-                                </div>
-                                <p className="mb-4 text-sm text-muted-foreground">
-                                    Inventory sync and snapshot workflows.
-                                </p>
-                                <div className="flex flex-wrap gap-2">
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        disabled={
-                                            isUnicommercePending ||
-                                            !unicommerceIntegrationQuery.data?.isActive
-                                        }
-                                        onClick={() =>
-                                            runUnicommerceSync({
-                                                brandId,
-                                                updatedSinceMinutes:
-                                                    unicommerceForm.getValues(
-                                                        "updatedSinceMinutes"
-                                                    ),
-                                            })
-                                        }
-                                    >
-                                        Run Inventory Sync
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        disabled={isUnicommercePending}
-                                        onClick={() =>
-                                            openApiPreset({
-                                                method: "POST",
-                                                path: "/services/rest/v1/inventory/inventorySnapshot/get",
-                                                body: {
-                                                    updatedSinceInMinutes:
-                                                        unicommerceForm.getValues(
-                                                            "updatedSinceMinutes"
-                                                        ),
-                                                },
-                                            })
-                                        }
-                                    >
-                                        Open Inventory API Preset
-                                    </Button>
+                            <TabsContent value="logs" className="mt-0">
+                                <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                                    <p className="mb-2 text-sm font-semibold text-blue-900">
+                                        Latest API / Auth Response
+                                    </p>
+                                    <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all text-xs text-blue-900">
+                                        {JSON.stringify(
+                                            apiResponsePayload ?? lastDebugPayload,
+                                            null,
+                                            2
+                                        )}
+                                    </pre>
                                 </div>
                             </TabsContent>
-
-                            <TabsContent
-                                value="orders"
-                                className="mt-4 rounded-md border p-4"
-                            >
-                                <div className="mb-3 flex items-center justify-between gap-2">
-                                    <p className="text-lg font-semibold">Orders</p>
-                                    <Badge variant="outline">Dedicated Submenu</Badge>
-                                </div>
-                                <p className="mb-4 text-sm text-muted-foreground">
-                                    Order operations with ready-to-edit endpoint preset.
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    disabled={isUnicommercePending}
-                                    onClick={() =>
-                                        openApiPreset({
-                                            method: "POST",
-                                            path: "/services/rest/v1/oms/saleOrder/search",
-                                            body: {
-                                                saleOrderCode: "",
-                                                updatedSinceInMinutes: 60,
-                                            },
-                                        })
-                                    }
-                                >
-                                    Open Orders API Preset
-                                </Button>
-                            </TabsContent>
-
-                            <TabsContent
-                                value="returns"
-                                className="mt-4 rounded-md border p-4"
-                            >
-                                <div className="mb-3 flex items-center justify-between gap-2">
-                                    <p className="text-lg font-semibold">Returns</p>
-                                    <Badge variant="outline">Dedicated Submenu</Badge>
-                                </div>
-                                <p className="mb-4 text-sm text-muted-foreground">
-                                    Reverse logistics and return-related API operations.
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    disabled={isUnicommercePending}
-                                    onClick={() =>
-                                        openApiPreset({
-                                            method: "POST",
-                                            path: "/services/rest/v1/returns/search",
-                                            body: {
-                                                updatedSinceInMinutes: 60,
-                                            },
-                                        })
-                                    }
-                                >
-                                    Open Returns API Preset
-                                </Button>
-                            </TabsContent>
-
-                            <TabsContent
-                                value="catalog"
-                                className="mt-4 rounded-md border p-4"
-                            >
-                                <div className="mb-3 flex items-center justify-between gap-2">
-                                    <p className="text-lg font-semibold">Catalog</p>
-                                    <Badge variant="outline">Dedicated Submenu</Badge>
-                                </div>
-                                <p className="mb-4 text-sm text-muted-foreground">
-                                    Product and catalog APIs for sync or audit actions.
-                                </p>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    disabled={isUnicommercePending}
-                                    onClick={() =>
-                                        openApiPreset({
-                                            method: "POST",
-                                            path: "/services/rest/v1/catalog/product/search",
-                                            body: {
-                                                updatedSinceInMinutes: 60,
-                                            },
-                                        })
-                                    }
-                                >
-                                    Open Catalog API Preset
-                                </Button>
-                            </TabsContent>
-                        </Tabs>
-                    </TabsContent>
-
-                    <TabsContent value="api-explorer" className="mt-4 space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                            Use this to call any Unicommerce endpoint now. This
-                            helps us integrate new features quickly without waiting for a
-                            full UI module build.
-                        </p>
-                        <div className="grid gap-3 md:grid-cols-2">
-                            <div className="space-y-1.5">
-                                <p className="text-sm font-medium">Method</p>
-                                <div className="flex gap-2">
-                                    <Button
-                                        type="button"
-                                        variant={
-                                            apiMethod === "GET"
-                                                ? "default"
-                                                : "outline"
-                                        }
-                                        disabled={isUnicommercePending}
-                                        onClick={() => setApiMethod("GET")}
-                                    >
-                                        GET
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant={
-                                            apiMethod === "POST"
-                                                ? "default"
-                                                : "outline"
-                                        }
-                                        disabled={isUnicommercePending}
-                                        onClick={() => setApiMethod("POST")}
-                                    >
-                                        POST
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="space-y-1.5">
-                                <p className="text-sm font-medium">Path</p>
-                                <Input
-                                    value={apiPath}
-                                    onChange={(e) => setApiPath(e.target.value)}
-                                    placeholder="/services/rest/v1/..."
-                                    disabled={isUnicommercePending}
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <p className="text-sm font-medium">Query JSON</p>
-                                <Textarea
-                                    value={apiQueryJson}
-                                    onChange={(e) =>
-                                        setApiQueryJson(e.target.value)
-                                    }
-                                    rows={6}
-                                    className="font-mono text-xs"
-                                    disabled={isUnicommercePending}
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <p className="text-sm font-medium">Body JSON</p>
-                                <Textarea
-                                    value={apiBodyJson}
-                                    onChange={(e) =>
-                                        setApiBodyJson(e.target.value)
-                                    }
-                                    rows={6}
-                                    className="font-mono text-xs"
-                                    disabled={
-                                        isUnicommercePending || apiMethod !== "POST"
-                                    }
-                                />
                             </div>
                         </div>
-                        <div className="flex justify-end">
-                            <Button
-                                type="button"
-                                variant="outline"
-                                disabled={
-                                    isUnicommercePending ||
-                                    !unicommerceIntegrationQuery.data ||
-                                    apiPath.trim().length === 0
-                                }
-                                onClick={handleRunApiRequest}
-                            >
-                                {isUnicommerceApiPending ? (
-                                    <Spinner className="animate-spin" />
-                                ) : null}
-                                Run API Request
-                            </Button>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="logs" className="mt-4">
-                        <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
-                            <p className="mb-2 text-sm font-semibold text-blue-900">
-                                Latest API / Auth Response
-                            </p>
-                            <pre className="max-h-80 overflow-auto whitespace-pre-wrap break-all text-xs text-blue-900">
-                                {JSON.stringify(apiResponsePayload ?? lastDebugPayload, null, 2)}
-                            </pre>
-                        </div>
-                    </TabsContent>
-                </Tabs>
+                    </Tabs>
+                ) : null}
             </CardContent>
         </Card>
     );

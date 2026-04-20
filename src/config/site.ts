@@ -1010,8 +1010,43 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
-                    title: "Unicommerce",
+                    title: "Unicommerce Settings",
                     url: `/dashboard/brands/${brandId}/unicommerce`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Unicommerce Authentication",
+                    url: `/dashboard/brands/${brandId}/unicommerce/authentication`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Unicommerce Inventory",
+                    url: `/dashboard/brands/${brandId}/unicommerce/inventory`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Unicommerce Orders",
+                    url: `/dashboard/brands/${brandId}/unicommerce/orders`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Unicommerce Returns",
+                    url: `/dashboard/brands/${brandId}/unicommerce/returns`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Unicommerce Catalog",
+                    url: `/dashboard/brands/${brandId}/unicommerce/catalog`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Unicommerce API Explorer",
+                    url: `/dashboard/brands/${brandId}/unicommerce/api-explorer`,
+                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
+                },
+                {
+                    title: "Unicommerce Response Logs",
+                    url: `/dashboard/brands/${brandId}/unicommerce/logs`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
