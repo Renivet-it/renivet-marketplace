@@ -119,21 +119,25 @@ export function CategoryRequestsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: { data: dataRaw, count },
-    } = trpc.general.categories.requests.getRequests.useQuery(
+    const requestsQuery = trpc.general.categories.requests.getRequests.useQuery(
         { page, limit, status },
         { initialData }
     );
+
+    const dataRaw = useMemo(
+        () => requestsQuery.data?.data ?? initialData.data ?? [],
+        [requestsQuery.data, initialData.data]
+    );
+    const count = requestsQuery.data?.count ?? initialData.count ?? 0;
 
     const data = useMemo(
         () =>
             dataRaw.map((x) => ({
                 ...x,
-                brandName: x.brand.name,
-                brandEmail: x.brand.email,
-                userName: `${x.user.firstName} ${x.user.lastName}`,
-                userEmail: x.user.email,
+                brandName: x.brand?.name ?? "-",
+                brandEmail: x.brand?.email ?? "-",
+                userName: `${x.user?.firstName ?? ""} ${x.user?.lastName ?? ""}`.trim(),
+                userEmail: x.user?.email ?? "-",
             })),
         [dataRaw]
     );

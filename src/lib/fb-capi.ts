@@ -83,7 +83,15 @@ export const sendCapiEvent = async (
     if (safeUserData.client_user_agent)
         user.setClientUserAgent(safeUserData.client_user_agent);
     if (safeUserData.fbp) user.setFbp(safeUserData.fbp);
-    if (safeUserData.fbc) user.setFbc(safeUserData.fbc);
+    
+    console.log(`\n--- CAPI EVENT: ${eventName} ---`);
+    console.log("Original fbc value:", userData.fbc || "MISSING / UNDEFINED");
+    console.log("Sanitized fbc value:", safeUserData.fbc || "MISSING / UNDEFINED");
+    console.log("-----------------------\n");
+
+    if (safeUserData.fbc) {
+        user.setFbc(safeUserData.fbc);
+    }
 
     const custom = new CustomData();
     if (customData.content_name) custom.setContentName(customData.content_name);
