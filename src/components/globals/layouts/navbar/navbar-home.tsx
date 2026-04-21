@@ -318,16 +318,16 @@ export function NavbarHome({
                 data-menu-open={isMenuOpen}
             >
                 {/* 🔵 DISCOUNT STRIP — GLOBALLY ABOVE NAVBAR */}
-                <div className="order-2 w-full overflow-hidden border-t border-sky-100 bg-sky-50 md:order-1 md:border-none">
+                <div className="order-2 w-full overflow-hidden border-t border-primary bg-primary md:order-1 md:border-none">
                     <div
-                        className="text-[11px] tracking-wide text-slate-900 md:text-xs"
+                        className="text-[11px] tracking-wide text-primary-foreground md:text-xs"
                         style={{
                             display: "inline-flex",
                             whiteSpace: "nowrap",
                             gap: "40px",
                             padding: "8px 0",
                             fontWeight: 600,
-                            animation: "discountMarquee 50s linear infinite",
+                            animation: "discountMarquee 120s linear infinite",
                         }}
                     >
                         {Array.from({ length: 8 }).map((_, i) => (
