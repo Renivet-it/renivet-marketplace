@@ -318,34 +318,43 @@ export function NavbarHome({
                 data-menu-open={isMenuOpen}
             >
                 {/* 🔵 DISCOUNT STRIP — GLOBALLY ABOVE NAVBAR */}
-                <div
-                    style={{
-                        width: "100%",
-                        backgroundColor: "#D32F2F", // A bright red similar to the image
-                        overflow: "hidden",
-                    }}
-                >
+                <div className="order-2 w-full overflow-hidden border-t border-sky-100 bg-sky-50 md:order-1 md:border-none">
                     <div
-                        className="text-[11px] md:text-xs tracking-wide"
+                        className="text-[11px] tracking-wide text-slate-900 md:text-xs"
                         style={{
                             display: "inline-flex",
                             whiteSpace: "nowrap",
                             gap: "40px",
                             padding: "8px 0",
                             fontWeight: 600,
-                            color: "#ffffff",
-                            animation: "discountMarquee 25s linear infinite",
+                            animation: "discountMarquee 50s linear infinite",
                         }}
                     >
                         {Array.from({ length: 8 }).map((_, i) => (
                             <span key={i} className="flex items-center gap-[40px]">
-                                <span>Free Delivery on Your 1st Conscious Choice</span>
-                                <span>•</span>
-                                <span>
-                                    Flat 20% Off on Orders Above ₹3,000 – Use <strong>NEW20</strong>
+                                <span className="flex items-center gap-2">
+                                    <Icons.Truck className="size-4" />
+                                    <span>Free Delivery on Your 1st Conscious Choice</span>
                                 </span>
                                 <span>•</span>
-                                <span>Verified Sustainable Brands & Easy Returns</span>
+                                <span className="flex items-center gap-2">
+                                    <Icons.Ticket className="size-4" />
+                                    <span>
+                                        Flat 20% Off on Orders Above ₹3,000 – Use <strong>TRYNEW20</strong>
+                                    </span>
+                                </span>
+                                <span>•</span>
+                                <span className="flex items-center gap-2">
+                                    <Icons.Tag className="size-4" />
+                                    <span>
+                                        Flat 10% Off For Your First Conscious Choice – Use <strong>RENIVET10</strong>
+                                    </span>
+                                </span>
+                                <span>•</span>
+                                <span className="flex items-center gap-2">
+                                    <Icons.Shield className="size-4" />
+                                    <span>Verified Sustainable Brands & Easy Returns</span>
+                                </span>
                                 <span>•</span>
                             </span>
                         ))}
@@ -354,7 +363,7 @@ export function NavbarHome({
 
                 <nav
                     className={cn(
-                        "relative z-10 flex w-full max-w-5xl items-center justify-between gap-5 p-4 md:px-8 xl:max-w-[100rem]",
+                        "order-1 md:order-2 relative z-10 flex w-full max-w-5xl items-center justify-between gap-5 p-4 md:px-8 xl:max-w-[100rem]",
                         isMenuOpen && "border-b"
                     )}
                 >
