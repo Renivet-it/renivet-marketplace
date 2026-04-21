@@ -514,7 +514,7 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
     );
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.brands.products.getProducts.useQuery(
         {
             limit,
@@ -528,6 +528,8 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
         },
         { initialData }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>

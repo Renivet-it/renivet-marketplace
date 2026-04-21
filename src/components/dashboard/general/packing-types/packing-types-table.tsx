@@ -106,7 +106,7 @@ export function PackingTypesTable({ initialData }: PageProps) {
 const [search] = useQueryState("search");
 
 const {
-  data: { data: dataRaw, count },
+  data: queryData,
 } = trpc.general.packingTypes.getAll.useQuery(
   {
     page,
@@ -117,6 +117,8 @@ const {
     initialData,
   }
 );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
 
   const pages = useMemo(

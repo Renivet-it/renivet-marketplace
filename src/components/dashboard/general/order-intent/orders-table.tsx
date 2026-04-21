@@ -137,10 +137,12 @@ export function OrdersTable({ initialData }: PageProps) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
-  const { data: { data: dataRaw, count } } = trpc.general.orders.getAllIntents.useQuery(
+  const { data: queryData } = trpc.general.orders.getAllIntents.useQuery(
     { page, limit, search },
     { initialData }
   );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
   const data = useMemo(() => dataRaw.map((x) => x), [dataRaw]);
   const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);

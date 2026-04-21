@@ -79,11 +79,13 @@ export function BansTable({ brandId, initialData }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.brands.bans.getBannedMembers.useQuery(
         { brandId, limit, page, search },
         { initialData }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>

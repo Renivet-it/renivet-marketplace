@@ -99,11 +99,13 @@ export function UsersTable({ initialData }: PageProps) {
     trpc.general.roles.getRoles.useQuery();
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.general.users.getUsers.useQuery(
         { page, limit, search },
         { initialData }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>

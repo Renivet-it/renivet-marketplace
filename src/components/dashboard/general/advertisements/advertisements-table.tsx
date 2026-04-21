@@ -108,7 +108,7 @@ export function AdvertisementsTable({ initialData }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.general.content.advertisements.getAdvertisements.useQuery(
         { page, limit, search, isPublished },
         {
@@ -118,6 +118,8 @@ export function AdvertisementsTable({ initialData }: PageProps) {
             },
         }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>

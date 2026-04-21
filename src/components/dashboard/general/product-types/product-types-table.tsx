@@ -82,10 +82,12 @@ export function ProductTypesTable({
     const [rowSelection, setRowSelection] = useState({});
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.general.productTypes.getProductTypes.useQuery(undefined, {
         initialData,
     });
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 
