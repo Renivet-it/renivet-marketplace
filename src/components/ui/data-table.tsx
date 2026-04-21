@@ -118,7 +118,7 @@ export function DataTable<T>({
                                             ? "bg-background"
                                             : "bg-muted/20"
                                     }
-                                    data-state={row.getIsSelected() && "selected"}
+                                    data-state={row.getIsSelected() ? "selected" : undefined}
                                 >
                                     {row.getVisibleCells().map((cell) => (
                                         <TableCell key={cell.id}>

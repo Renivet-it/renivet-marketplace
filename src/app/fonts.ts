@@ -5,6 +5,7 @@ import {
     Rubik,
     Work_Sans,
     Inter,
+    Nunito_Sans,
 } from "next/font/google";
 
 export const dmsans = DM_Sans({
@@ -48,3 +49,11 @@ export const inter = Inter({
     display: "swap",
     variable: "--font-inter",
 });
+
+export const nunito_sans = Nunito_Sans({
+    subsets: ["latin"],
+    weight: ["300", "400", "500", "600", "700", "800"],
+    display: "swap",
+    variable: "--font-nunito-sans",
+});
+

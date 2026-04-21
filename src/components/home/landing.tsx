@@ -170,47 +170,6 @@ export function Landing({ className, banners, ...props }: PageProps) {
             {/* ✅ MOBILE STATIC BANNER (NO CAROUSEL) */}
             {/* ✅ MOBILE STATIC BANNER (SQUARE SEARCH BAR + ROUNDED CATEGORY IMAGES WITH BG COLOR) */}
             <div className="relative block w-full bg-[#fbfaf4] md:hidden">
-                {/* 🔵 DISCOUNT STRIP */}
-                {/* 🔵 DISCOUNT STRIP — MOVING LOOP */}
-                {/* 🔵 DISCOUNT STRIP — INLINE ANIMATION */}
-                <div
-                    style={{
-                        width: "100%",
-                        backgroundColor: "#E4EDF7",
-                        overflow: "hidden",
-                    }}
-                >
-                    {/* Inject keyframes inline */}
-                    <style>
-                        {`
-      @keyframes discountMarquee {
-        0% { transform: translateX(0%); }
-        100% { transform: translateX(-50%); }
-      }
-    `}
-                    </style>
-
-                    <div
-                        style={{
-                            display: "inline-flex",
-                            whiteSpace: "nowrap",
-                            gap: "40px",
-                            padding: "6px 0",
-                            fontSize: "11px",
-                            fontWeight: 500,
-                            color: "#000",
-                            animation: "discountMarquee 25s linear infinite", // 🔥 FAST
-                        }}
-                    >
-                        {Array.from({ length: 12 }).map((_, i) => (
-                            <span key={i}>
-                                Flat 10% Off For Your First Conscious Choice –{" "}
-                                <strong>RENIVET10</strong>
-                            </span>
-                        ))}
-                    </div>
-                </div>
-
                 {/* 🔵 SEARCH BAR — NOW SQUARE */}
                 <div className="w-full px-4 pt-4">
                     <div className="relative border border-black">
