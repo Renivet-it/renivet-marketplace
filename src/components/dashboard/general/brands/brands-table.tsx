@@ -115,11 +115,13 @@ export function BrandsTable({ initialData }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.general.brands.getBrands.useQuery(
         { page, limit, search },
         { initialData }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>

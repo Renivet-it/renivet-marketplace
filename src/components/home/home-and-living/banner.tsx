@@ -124,7 +124,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     }}
                 >
                     {categories.map((cat) => {
-                        const isActive = window.location.pathname === cat.href;
+                        const isActive = pathname === cat.href;
 
                         return (
                             <Link

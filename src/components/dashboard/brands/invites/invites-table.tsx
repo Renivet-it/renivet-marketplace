@@ -106,8 +106,10 @@ export function InvitesTable({ initialData, brandId }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.brands.invites.getInvites.useQuery({ brandId }, { initialData });
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 

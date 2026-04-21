@@ -105,6 +105,12 @@ const WelcomeRenivet = dynamic(() =>
     }))
 );
 
+const ScrollReveal = dynamic(() =>
+    import("@/components/ui/scroll-reveal").then((m) => ({
+        default: m.ScrollReveal,
+    }))
+);
+
 export default function Page() {
     return (
         <>
@@ -116,25 +122,25 @@ export default function Page() {
                 <BannersFetch />
             </Suspense>
 
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ShopCategoryFetch />
             </Suspense> */}
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <MobileCategoriesFetch />
             </Suspense>
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <BrandTypesFetch />
             </Suspense> */}
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <CuratedBannerFetch />
             </Suspense> */}
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <SwapSpaceBannerFetch />
             </Suspense>
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductsUnder999Fetch />
             </Suspense>
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <LoveTheseFetch />
             </Suspense>
 
@@ -192,49 +198,49 @@ export default function Page() {
                 </div>
             </div>
 
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
 
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductSwipeCardFetch />
             </Suspense>
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <EventSectionTwoBannerFetch />
             </Suspense>
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <DealMarketingStripFetch />
             </Suspense> */}
 
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <EffortlessEleganceFetch />
             </Suspense> */}
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense> */}
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <MayAlsoLoveTheseFetch />
             </Suspense>
 
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <MatchaBagFetch />
             </Suspense> */}
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <LoveTheseFetch />
             </Suspense> */}
 
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <WelcomeToRenivetFetch />
             </Suspense>
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <BrandPromotionFetch />
             </Suspense>
-            {/* <Suspense>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <HomePageMainProductFetch />
             </Suspense> */}
 
             <div className="hidden md:block">
-                <Suspense>
+                <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                     <ShopByNewCategoriesFetch />
                 </Suspense>
             </div>
@@ -247,15 +253,21 @@ export default function Page() {
 async function ProductNewArrivalsGridFetch() {
     const products = await productQueries.getHomePageFeaturedProducts();
     if (!products.length) return null;
-    //@ts-ignore
-    return <ProductGridNewArrivals products={products} />;
+    return (
+        <ScrollReveal>
+            <ProductGridNewArrivals products={products} />
+        </ScrollReveal>
+    );
 }
 
 async function ProductSwipeCardFetch() {
     const products = await productQueries.getHomePageFeaturedProducts();
     if (!products.length) return null;
-    //@ts-ignore
-    return <SwipeCard products={products} />;
+    return (
+        <ScrollReveal>
+            <SwipeCard products={products} />
+        </ScrollReveal>
+    );
 }
 
 async function EventSectionTwoBannerFetch() {
@@ -263,7 +275,11 @@ async function EventSectionTwoBannerFetch() {
         await WomenHomeSectionQueries.getHomePageEventTwoSections();
     if (!brandProducts.length) return null;
 
-    return <EventSectionTwoBanner banners={brandProducts} />;
+    return (
+        <ScrollReveal>
+            <EventSectionTwoBanner banners={brandProducts} />
+        </ScrollReveal>
+    );
 }
 
 async function CuratedBannerFetch() {
@@ -271,42 +287,66 @@ async function CuratedBannerFetch() {
         await WomenHomeSectionQueries.getHomePageTrustedSections();
     if (!brandProducts.length) return null;
 
-    return <CuratedBanner banners={brandProducts} />;
+    return (
+        <ScrollReveal>
+            <CuratedBanner banners={brandProducts} />
+        </ScrollReveal>
+    );
 }
 
 async function SwapSpaceBannerFetch() {
     const brandProducts = await productQueries.getHomeHeroProducts();
     if (!brandProducts.length) return null;
 
-    return <SwapSpace banners={brandProducts} />;
+    return (
+        <ScrollReveal>
+            <SwapSpace banners={brandProducts} />
+        </ScrollReveal>
+    );
 }
 
 async function LoveTheseFetch() {
     const brandProducts = await productQueries.getHomeLoveTheseProducts();
     if (!brandProducts.length) return null;
 
-    return <LoveThese banners={brandProducts} />;
+    return (
+        <ScrollReveal>
+            <LoveThese banners={brandProducts} />
+        </ScrollReveal>
+    );
 }
 
 async function ProductsUnder999Fetch() {
     const products = await productQueries.getHomeProductsUnder999();
     if (!products.length) return null;
 
-    return <ProductsUnder999 products={products} />;
+    return (
+        <ScrollReveal>
+            <ProductsUnder999 products={products} />
+        </ScrollReveal>
+    );
 }
 
 async function HomePageMainProductFetch() {
     const brandProducts = await productQueries.getHomePageProducts();
     if (!brandProducts.length) return null;
 
-    return <MobileBottom banners={brandProducts} />;
+    return (
+        <ScrollReveal>
+            <MobileBottom banners={brandProducts} />
+        </ScrollReveal>
+    );
 }
 
 async function MayAlsoLoveTheseFetch() {
     const brandProducts = await productQueries.getHomeYouMayAlsoLikeProducts();
     if (!brandProducts.length) return null;
 
-    return <MayAlsoLoveThese banners={brandProducts} />;
+    return (
+        <ScrollReveal>
+            <MayAlsoLoveThese banners={brandProducts} />
+        </ScrollReveal>
+    );
 }
 
 async function BrandPromotionFetch() {
@@ -318,8 +358,11 @@ async function BrandPromotionFetch() {
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
     }
-    //@ts-ignore
-    return <BrandPromotion moodboardItems={sbc} titleData={sbcT} />;
+    return (
+        <ScrollReveal>
+            <BrandPromotion moodboardItems={sbc} titleData={sbcT} />
+        </ScrollReveal>
+    );
 }
 
 async function MatchaBagFetch() {
@@ -331,8 +374,11 @@ async function MatchaBagFetch() {
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
     }
-    //@ts-ignore
-    return <MatchaBag moodboardItems={sbc} titleData={sbcT} />;
+    return (
+        <ScrollReveal>
+            <MatchaBag moodboardItems={sbc} titleData={sbcT} />
+        </ScrollReveal>
+    );
 }
 
 async function EffortlessEleganceFetch() {
@@ -344,28 +390,43 @@ async function EffortlessEleganceFetch() {
     if (!Array.isArray(sbc) || !sbc.length) {
         return null;
     }
-    //@ts-ignore
-    return <EffortlessElegance moodboardItems={sbc} titleData={sbcT} />;
+    return (
+        <ScrollReveal>
+            <EffortlessElegance moodboardItems={sbc} titleData={sbcT} />
+        </ScrollReveal>
+    );
 }
 
 async function ShopCategoryFetch() {
-    //@ts-ignore
-    return <ShopCategories />;
+    return (
+        <ScrollReveal>
+            <ShopCategories />
+        </ScrollReveal>
+    );
 }
 
 async function BrandTypesFetch() {
-    //@ts-ignore
-    return <BrandTypes />;
+    return (
+        <ScrollReveal>
+            <BrandTypes />
+        </ScrollReveal>
+    );
 }
 
 async function MobileCategoriesFetch() {
-    //@ts-ignore
-    return <MobileCategories />;
+    return (
+        <ScrollReveal>
+            <MobileCategories />
+        </ScrollReveal>
+    );
 }
 
 async function WelcomeToRenivetFetch() {
-    //@ts-ignore
-    return <WelcomeRenivet />;
+    return (
+        <ScrollReveal>
+            <WelcomeRenivet />
+        </ScrollReveal>
+    );
 }
 
 async function ShopByNewCategoriesFetch() {
@@ -380,7 +441,11 @@ async function ShopByNewCategoriesFetch() {
         );
         return null;
     }
-    return <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />;
+    return (
+        <ScrollReveal>
+            <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />
+        </ScrollReveal>
+    );
 }
 
 async function BannersFetch() {
@@ -404,5 +469,9 @@ async function DealMarketingStripFetch() {
             new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     );
 
-    return <DealofTheMonthStrip marketingStrip={sorted} />;
+    return (
+        <ScrollReveal>
+            <DealofTheMonthStrip marketingStrip={sorted} />
+        </ScrollReveal>
+    );
 }

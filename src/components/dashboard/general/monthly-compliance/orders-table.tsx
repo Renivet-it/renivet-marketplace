@@ -174,7 +174,7 @@ const [applyShipmentFlag, setApplyShipmentFlag] = useState(false);
         }
     }, [startDate, endDate, setStartDate, setEndDate]);
 
-    const { data: { data: dataRaw, count }, refetch: refetchOrderData, isLoading } = trpc.general.orders.getOrders.useQuery(
+    const { data: queryData, refetch: refetchOrderData, isLoading } = trpc.general.orders.getOrders.useQuery(
         {
             page,
             limit: perPage,
@@ -191,6 +191,8 @@ const [applyShipmentFlag, setApplyShipmentFlag] = useState(false);
             refetchOnReconnect: false,
         }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const { data: brandsData } = trpc.general.brands.getBrands.useQuery(
         {

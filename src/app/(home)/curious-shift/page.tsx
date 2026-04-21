@@ -1,5 +1,5 @@
 "use client";
-
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 import { GeneralShell } from "@/components/globals/layouts";
 import Image from "next/image";
 
@@ -36,6 +36,7 @@ export default function CuriousShiftPage() {
         >
             <main className="min-h-screen bg-[#fcfbf4] py-10 font-sans">
                 {/* TEXT SECTION */}
+                <ScrollReveal>
                 <section
                     className="
                         text-[#1A1A1A]
@@ -86,8 +87,10 @@ export default function CuriousShiftPage() {
                         </p>
                     </div>
                 </section>
+                </ScrollReveal>
 
                 {/* VISUAL COMPARISON */}
+                <ScrollReveal>
                 <section className="relative mx-auto mt-16 md:mt-40 max-w-[1400px]">
 
                 <div className="relative flex flex-col md:flex-row items-center md:items-end justify-center gap-12 md:gap-[140px]">
@@ -191,8 +194,10 @@ export default function CuriousShiftPage() {
 
                     </div>
                 </section>
+                </ScrollReveal>
 
                 {/* FACT TAGS */}
+<ScrollReveal>
 <section className="mt-10 w-full flex justify-center px-4 md:hidden">
     <div className="grid grid-cols-2 gap-4">
         {[
@@ -217,8 +222,10 @@ export default function CuriousShiftPage() {
         ))}
     </div>
 </section>
+</ScrollReveal>
 
 {/* ---------- DESKTOP: ORIGINAL SECTION 1 ---------- */}
+<ScrollReveal>
 <section className="hidden md:flex mt-32 w-full justify-center px-4">
     <div className="md:flex md:flex-nowrap md:justify-center md:gap-0">
         {[
@@ -240,8 +247,10 @@ export default function CuriousShiftPage() {
         ))}
     </div>
 </section>
+</ScrollReveal>
 
 {/* ---------- DESKTOP: ORIGINAL SECTION 2 ---------- */}
+<ScrollReveal>
 <section className="hidden md:flex mt-10 w-full justify-center px-4">
     <div className="md:flex md:flex-nowrap md:justify-center md:gap-0">
         {[
@@ -263,6 +272,7 @@ export default function CuriousShiftPage() {
         ))}
     </div>
 </section>
+</ScrollReveal>
             </main>
         </GeneralShell>
     );

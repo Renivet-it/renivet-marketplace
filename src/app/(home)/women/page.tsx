@@ -1,7 +1,4 @@
-"use client";
-
-
-import { useQuery } from "@tanstack/react-query";
+export const dynamic = "force-dynamic";
 import { AdvertisementPage, Blogs, MarketingStrip } from "@/components/home";
 import { DealofTheMonthStrip } from "@/components/home/new-home-page/deal-of-month";
 import { ShopByNewCategories } from "@/components/home/new-home-page/shop-by-new-category";
@@ -34,111 +31,177 @@ import {
   fetchAdvertisements, fetchNewAdvertisements, fetchDiscountPage, fetchMoodBoard, fetchTopCollection
 } from "@/actions/women";
 import { Suspense } from "react";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
-export default function Page() {
-  const { data: banners } = useQuery({ queryKey: ["banners"], queryFn: fetchBanners });
-  const { data: styleWithSubstance } = useQuery({ queryKey: ["styleWithSubstance"], queryFn: fetchStyleWithSubstance });
-  const { data: productGrid } = useQuery({ queryKey: ["productGrid"], queryFn: fetchProductGrid });
-  const { data: shopByCategories } = useQuery({ queryKey: ["shopByCategories"], queryFn: fetchShopByCategories });
-  const { data: shopByNewCategories } = useQuery({ queryKey: ["shopByNewCategories"], queryFn: fetchShopByNewCategories });
-  const { data: elevateYourLooks } = useQuery({ queryKey: ["elevateYourLooks"], queryFn: fetchElevateYourLooks });
-  const { data: blogs } = useQuery({ queryKey: ["blogs"], queryFn: fetchBlogs });
-  const { data: brandProducts } = useQuery({ queryKey: ["brandProducts"], queryFn: fetchBrandProducts });
-  const { data: womenSkincare } = useQuery({ queryKey: ["womenSkincare"], queryFn: fetchWomenSkincare });
-  const { data: middleAnimationSection } = useQuery({ queryKey: ["middleAnimationSection"], queryFn: fetchMiddleAnimationSection });
-  const { data: brandStoryTelling } = useQuery({ queryKey: ["brandStoryTelling"], queryFn: fetchBrandStoryTelling });
-  const { data: newCollectionMiddle } = useQuery({ queryKey: ["newCollectionMiddle"], queryFn: fetchNewCollectionMiddle });
-  const { data: specialOffer } = useQuery({ queryKey: ["specialOffer"], queryFn: fetchSpecialOffer });
-  const { data: findYourStyle } = useQuery({ queryKey: ["findYourStyle"], queryFn: fetchFindYourStyle });
-  const { data: getReady } = useQuery({ queryKey: ["getReady"], queryFn: fetchGetReady });
-  const { data: newCollectionDiscount } = useQuery({ queryKey: ["newCollectionDiscount"], queryFn: fetchNewCollectionDiscount });
-  const { data: styleDirectory } = useQuery({ queryKey: ["styleDirectory"], queryFn: fetchStyleDirectory });
-  const { data: suggestedLook } = useQuery({ queryKey: ["suggestedLook"], queryFn: fetchSuggestedLook });
-  const { data: marketingStrip } = useQuery({ queryKey: ["marketingStrip"], queryFn: fetchMarketingStrip });
-  const { data: dealMarketingStrip } = useQuery({ queryKey: ["dealMarketingStrip"], queryFn: fetchDealMarketingStrip });
-  const { data: advertisements } = useQuery({ queryKey: ["advertisements"], queryFn: fetchAdvertisements });
-  const { data: newAdvertisements } = useQuery({ queryKey: ["newAdvertisements"], queryFn: fetchNewAdvertisements });
-  const { data: discountPage } = useQuery({ queryKey: ["discountPage"], queryFn: fetchDiscountPage });
-  const { data: moodBoard } = useQuery({ queryKey: ["moodBoard"], queryFn: fetchMoodBoard });
-  const { data: topCollection } = useQuery({ queryKey: ["topCollection"], queryFn: fetchTopCollection });
-
-  return (
+export default async function Page() {
+return (
     <>
-      <Suspense fallback={<div className="h-[calc(100vh-20vh)] w-full bg-background" />}>
 {/*@ts-ignore*/}
-        {banners && <Landing banners={banners} />}
-      </Suspense>
-      <Suspense>
-{/*@ts-ignore*/}
-        {shopByNewCategories && ( <ExploreCategories shopByCategories={shopByNewCategories.shopByCategories} titleData={shopByNewCategories.titleData} />
-        )}
-      </Suspense>
-      {/* <Suspense>
-        {elevateYourLooks && ( <ElevateYourLooks shopByCategories={elevateYourLooks.shopByCategories} titleData={elevateYourLooks.titleData} />
-        )}
-      </Suspense> */}
-      <Suspense>
-{/*@ts-ignore*/}
-        {middleAnimationSection && <MiddleAnimationSection banners={middleAnimationSection} />}
-      </Suspense>
-      {/* <Suspense>
-        {styleDirectory && ( <StyleDirectory shopByCategories={styleDirectory.shopByCategories} titleData={styleDirectory.titleData} />
-        )}
-      </Suspense> */}
-            <Suspense>
-{/*@ts-ignore*/}
-        {styleWithSubstance && <StyleWithSubstance products={styleWithSubstance} />}
-      </Suspense>
-      <Suspense>
-{/*@ts-ignore*/}
-        {moodBoard && ( <MoodboardItem moodboardItems={moodBoard.moodboardItems} titleData={moodBoard.titleData} />
-        )}
-      </Suspense>
-      <Suspense>
-{/*@ts-ignore*/}
-        {discountPage && <DiscountOffer advertisements={discountPage} />}
-      </Suspense>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><BannersSection /></Suspense>{/*@ts-ignore*/}
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><ShopByNewCategoriesSection /></Suspense>
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><ElevateYourLooksSection /></Suspense> */}{/*@ts-ignore*/}
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><MiddleAnimationSectionSection /></Suspense>
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><StyleDirectorySection /></Suspense> */}{/*@ts-ignore*/}
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><StyleWithSubstanceSection /></Suspense>{/*@ts-ignore*/}
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><MoodBoardSection /></Suspense>{/*@ts-ignore*/}
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><DiscountPageSection /></Suspense>
 
-      {/* <Suspense>
-        {topCollection && ( <TopCollection collections={topCollection.collections} titleData={topCollection.titleData} />
-        )}
-      </Suspense> */}
-      {/* <Suspense>
-        {newCollectionDiscount && <GetNewDiscountCollection banners={newCollectionDiscount} />}
-      </Suspense> */}
-            <Suspense>
-{/*@ts-ignore*/}
-        {getReady && <GetReadySection banners={getReady} />}
-      </Suspense>
-      <Suspense>
-{/*@ts-ignore*/}
-        {specialOffer && <SpecialOffer banners={specialOffer} />}
-      </Suspense>
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><TopCollectionSection /></Suspense> */}
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><NewCollectionDiscountSection /></Suspense> */}{/*@ts-ignore*/}
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><GetReadyFetchSection /></Suspense>{/*@ts-ignore*/}
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><SpecialOfferSection /></Suspense>
 
-      {/* <Suspense>
-        {suggestedLook && <SuggestedLook banners={suggestedLook} />}
-      </Suspense> */}
-      {/* <Suspense>
-        {newCollectionMiddle && <NewCollection banners={newCollectionMiddle} />}
-      </Suspense> */}
-      {/* <Suspense>
-        {brandStoryTelling && <BrandStoryTelling banners={brandStoryTelling} />}
-      </Suspense> */}
-      {/* <Suspense>
-        {findYourStyle && <FindYourStyle advertisements={findYourStyle} />}
-      </Suspense> */}
-      {/* <Suspense>
-        {brandProducts && <WomenBrandProducts brandProducts={brandProducts} />}
-      </Suspense> */}
-      {/* <Suspense>
-        {womenSkincare && <WomenSkincare banners={womenSkincare} />}
-      </Suspense> */}
-      <div className="block md:hidden">
-        <Suspense>
-{/*@ts-ignore*/}
-          {productGrid && <ProductGrid products={productGrid} />}
-        </Suspense>
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><SuggestedLookSection /></Suspense> */}
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><NewCollectionMiddleSection /></Suspense> */}
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><BrandStoryTellingSection /></Suspense> */}
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><FindYourStyleSection /></Suspense> */}
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><BrandProductsSection /></Suspense> */}
+      {/* }>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><WomenSkincareSection /></Suspense> */}
+      <div className="block md:hidden">{/*@ts-ignore*/}
+          <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}><ProductGridSection /></Suspense>
       </div>
     </>
   );
+}
+
+async function BannersSection() {
+    const banners = await fetchBanners();
+    if (!banners) return null;
+    return ( <Landing banners={banners} /> );
+}
+
+
+async function StyleWithSubstanceSection() {
+    const styleWithSubstance = await fetchStyleWithSubstance();
+    if (!styleWithSubstance) return null;
+    return ( <ScrollReveal><StyleWithSubstance products={styleWithSubstance} /></ScrollReveal> );
+}
+
+
+async function ProductGridSection() {
+    const productGrid = await fetchProductGrid();
+    if (!productGrid) return null;
+    return ( <ScrollReveal><ProductGrid products={productGrid} /></ScrollReveal> );
+}
+
+
+async function ShopByNewCategoriesSection() {
+    const shopByNewCategories = await fetchShopByNewCategories();
+    if (!shopByNewCategories) return null;
+    return ( ( <ScrollReveal><ExploreCategories shopByCategories={shopByNewCategories.shopByCategories} titleData={shopByNewCategories.titleData} /></ScrollReveal>  ) );
+}
+
+
+async function ElevateYourLooksSection() {
+    const elevateYourLooks = await fetchElevateYourLooks();
+    if (!elevateYourLooks) return null;
+    return ( ( <ScrollReveal><ElevateYourLooks shopByCategories={elevateYourLooks.shopByCategories} titleData={elevateYourLooks.titleData} /></ScrollReveal>  ) );
+}
+
+
+async function BrandProductsSection() {
+    const brandProducts = await fetchBrandProducts();
+    if (!brandProducts) return null;
+    return ( <ScrollReveal><WomenBrandProducts brandProducts={brandProducts} /></ScrollReveal> );
+}
+
+
+async function WomenSkincareSection() {
+    const womenSkincare = await fetchWomenSkincare();
+    if (!womenSkincare) return null;
+    return ( <ScrollReveal><WomenSkincare banners={womenSkincare} /></ScrollReveal> );
+}
+
+
+async function MiddleAnimationSectionSection() {
+    const middleAnimationSection = await fetchMiddleAnimationSection();
+    if (!middleAnimationSection) return null;
+    return ( <ScrollReveal><MiddleAnimationSection banners={middleAnimationSection} /></ScrollReveal> );
+}
+
+
+async function BrandStoryTellingSection() {
+    const brandStoryTelling = await fetchBrandStoryTelling();
+    if (!brandStoryTelling) return null;
+    return ( <ScrollReveal><BrandStoryTelling banners={brandStoryTelling} /></ScrollReveal> );
+}
+
+
+async function NewCollectionMiddleSection() {
+    const newCollectionMiddle = await fetchNewCollectionMiddle();
+    if (!newCollectionMiddle) return null;
+    return ( <ScrollReveal><NewCollection banners={newCollectionMiddle} /></ScrollReveal> );
+}
+
+
+async function SpecialOfferSection() {
+    const specialOffer = await fetchSpecialOffer();
+    if (!specialOffer) return null;
+    return ( <ScrollReveal><SpecialOffer banners={specialOffer} /></ScrollReveal> );
+}
+
+
+async function FindYourStyleSection() {
+    const findYourStyle = await fetchFindYourStyle();
+    if (!findYourStyle) return null;
+    return ( <ScrollReveal><FindYourStyle advertisements={findYourStyle} /></ScrollReveal> );
+}
+
+
+async function GetReadyFetchSection() {
+    const getReady = await fetchGetReady();
+    if (!getReady) return null;
+    return ( <ScrollReveal><GetReadySection banners={getReady} /></ScrollReveal> );
+}
+
+
+async function NewCollectionDiscountSection() {
+    const newCollectionDiscount = await fetchNewCollectionDiscount();
+    if (!newCollectionDiscount) return null;
+    return ( <ScrollReveal><GetNewDiscountCollection banners={newCollectionDiscount} /></ScrollReveal> );
+}
+
+
+async function StyleDirectorySection() {
+    const styleDirectory = await fetchStyleDirectory();
+    if (!styleDirectory) return null;
+    return ( <ScrollReveal><StyleDirectory shopByCategories={styleDirectory.shopByCategories} titleData={styleDirectory.titleData} /></ScrollReveal> );
+}
+
+
+async function SuggestedLookSection() {
+    const suggestedLook = await fetchSuggestedLook();
+    if (!suggestedLook) return null;
+    return ( <ScrollReveal><SuggestedLook banners={suggestedLook} /></ScrollReveal> );
+}
+
+
+async function DiscountPageSection() {
+    const discountPage = await fetchDiscountPage();
+    if (!discountPage) return null;
+    return ( <ScrollReveal><DiscountOffer advertisements={discountPage} /></ScrollReveal> );
+}
+
+
+async function MoodBoardSection() {
+    const moodBoard = await fetchMoodBoard();
+    if (!moodBoard) return null;
+    return ( ( <ScrollReveal><MoodboardItem moodboardItems={moodBoard.moodboardItems} titleData={moodBoard.titleData} /></ScrollReveal>  ) );
+}
+
+
+async function TopCollectionSection() {
+    const topCollection = await fetchTopCollection();
+    if (!topCollection) return null;
+    return ( ( <ScrollReveal><TopCollection collections={topCollection.collections} titleData={topCollection.titleData} /></ScrollReveal>  ) );
 }

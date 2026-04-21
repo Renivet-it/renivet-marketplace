@@ -244,7 +244,7 @@ export function OrdersTable({
         }
     );
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
         refetch: refetchOrderData,
         isLoading,
         error,
@@ -267,6 +267,8 @@ export function OrdersTable({
             refetchOnReconnect: false,
         }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
     const { data: brandsData } = trpc.general.brands.getBrands.useQuery(
         {
             page: 1, // Always fetch from first page

@@ -96,7 +96,7 @@ export function MarketingStripsTable({ initialData }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.general.content.marketingStrips.getMarketingStrips.useQuery(
         { page, limit, search, isActive },
         {
@@ -106,6 +106,8 @@ export function MarketingStripsTable({ initialData }: PageProps) {
             },
         }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>

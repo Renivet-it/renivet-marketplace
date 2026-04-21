@@ -118,11 +118,13 @@ export function MembersTable({ brandId, initialData }: PageProps) {
     trpc.brands.roles.getRoles.useQuery({ id: brandId });
 
     const {
-        data: { data: dataRaw, count },
+        data: queryData,
     } = trpc.brands.members.getMembers.useQuery(
         { brandId, limit, page, search },
         { initialData }
     );
+    const dataRaw = queryData?.data ?? [];
+    const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>

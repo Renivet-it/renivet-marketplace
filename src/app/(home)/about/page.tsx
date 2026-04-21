@@ -13,6 +13,8 @@ export const metadata: Metadata = {
     description: "Learn more about us.",
 };
 
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
+
 export default function Page() {
     return (
         <GeneralShell
@@ -23,9 +25,9 @@ export default function Page() {
         >
             <div className="bg-[#F9F6F1]">
                 <AboutHero />
-                <AboutFrustration />
-                <AboutCoreValues />
-                <AboutMissionVision />
+                <ScrollReveal><AboutFrustration /></ScrollReveal>
+                <ScrollReveal><AboutCoreValues /></ScrollReveal>
+                <ScrollReveal><AboutMissionVision /></ScrollReveal>
                 {/* <Team className="container mx-auto py-20" /> */}
             </div>
         </GeneralShell>
