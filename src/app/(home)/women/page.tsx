@@ -34,6 +34,7 @@ import {
   fetchAdvertisements, fetchNewAdvertisements, fetchDiscountPage, fetchMoodBoard, fetchTopCollection
 } from "@/actions/women";
 import { Suspense } from "react";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 
 export default function Page() {
   const { data: banners } = useQuery({ queryKey: ["banners"], queryFn: fetchBanners });
@@ -66,77 +67,72 @@ export default function Page() {
     <>
       <Suspense fallback={<div className="h-[calc(100vh-20vh)] w-full bg-background" />}>
 {/*@ts-ignore*/}
-        {banners && <Landing banners={banners} />}
+        {banners && <ScrollReveal><Landing banners={banners} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {shopByNewCategories && ( <ExploreCategories shopByCategories={shopByNewCategories.shopByCategories} titleData={shopByNewCategories.titleData} />
-        )}
+        {shopByNewCategories && ( <ScrollReveal><ExploreCategories shopByCategories={shopByNewCategories.shopByCategories} titleData={shopByNewCategories.titleData} /></ScrollReveal> )}
       </Suspense>
-      {/* <Suspense>
-        {elevateYourLooks && ( <ElevateYourLooks shopByCategories={elevateYourLooks.shopByCategories} titleData={elevateYourLooks.titleData} />
-        )}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {elevateYourLooks && ( <ScrollReveal><ElevateYourLooks shopByCategories={elevateYourLooks.shopByCategories} titleData={elevateYourLooks.titleData} /></ScrollReveal> )}
       </Suspense> */}
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {middleAnimationSection && <MiddleAnimationSection banners={middleAnimationSection} />}
+        {middleAnimationSection && <ScrollReveal><MiddleAnimationSection banners={middleAnimationSection} /></ScrollReveal>}
       </Suspense>
-      {/* <Suspense>
-        {styleDirectory && ( <StyleDirectory shopByCategories={styleDirectory.shopByCategories} titleData={styleDirectory.titleData} />
-        )}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {styleDirectory && ( <ScrollReveal><StyleDirectory shopByCategories={styleDirectory.shopByCategories} titleData={styleDirectory.titleData} /></ScrollReveal> )}
       </Suspense> */}
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {styleWithSubstance && <StyleWithSubstance products={styleWithSubstance} />}
+        {styleWithSubstance && <ScrollReveal><StyleWithSubstance products={styleWithSubstance} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {moodBoard && ( <MoodboardItem moodboardItems={moodBoard.moodboardItems} titleData={moodBoard.titleData} />
-        )}
+        {moodBoard && ( <ScrollReveal><MoodboardItem moodboardItems={moodBoard.moodboardItems} titleData={moodBoard.titleData} /></ScrollReveal> )}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {discountPage && <DiscountOffer advertisements={discountPage} />}
+        {discountPage && <ScrollReveal><DiscountOffer advertisements={discountPage} /></ScrollReveal>}
       </Suspense>
 
-      {/* <Suspense>
-        {topCollection && ( <TopCollection collections={topCollection.collections} titleData={topCollection.titleData} />
-        )}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {topCollection && ( <ScrollReveal><TopCollection collections={topCollection.collections} titleData={topCollection.titleData} /></ScrollReveal> )}
       </Suspense> */}
-      {/* <Suspense>
-        {newCollectionDiscount && <GetNewDiscountCollection banners={newCollectionDiscount} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {newCollectionDiscount && <ScrollReveal><GetNewDiscountCollection banners={newCollectionDiscount} /></ScrollReveal>}
       </Suspense> */}
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {getReady && <GetReadySection banners={getReady} />}
+        {getReady && <ScrollReveal><GetReadySection banners={getReady} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {specialOffer && <SpecialOffer banners={specialOffer} />}
+        {specialOffer && <ScrollReveal><SpecialOffer banners={specialOffer} /></ScrollReveal>}
       </Suspense>
 
-      {/* <Suspense>
-        {suggestedLook && <SuggestedLook banners={suggestedLook} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {suggestedLook && <ScrollReveal><SuggestedLook banners={suggestedLook} /></ScrollReveal>}
       </Suspense> */}
-      {/* <Suspense>
-        {newCollectionMiddle && <NewCollection banners={newCollectionMiddle} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {newCollectionMiddle && <ScrollReveal><NewCollection banners={newCollectionMiddle} /></ScrollReveal>}
       </Suspense> */}
-      {/* <Suspense>
-        {brandStoryTelling && <BrandStoryTelling banners={brandStoryTelling} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {brandStoryTelling && <ScrollReveal><BrandStoryTelling banners={brandStoryTelling} /></ScrollReveal>}
       </Suspense> */}
-      {/* <Suspense>
-        {findYourStyle && <FindYourStyle advertisements={findYourStyle} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {findYourStyle && <ScrollReveal><FindYourStyle advertisements={findYourStyle} /></ScrollReveal>}
       </Suspense> */}
-      {/* <Suspense>
-        {brandProducts && <WomenBrandProducts brandProducts={brandProducts} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {brandProducts && <ScrollReveal><WomenBrandProducts brandProducts={brandProducts} /></ScrollReveal>}
       </Suspense> */}
-      {/* <Suspense>
-        {womenSkincare && <WomenSkincare banners={womenSkincare} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {womenSkincare && <ScrollReveal><WomenSkincare banners={womenSkincare} /></ScrollReveal>}
       </Suspense> */}
       <div className="block md:hidden">
-        <Suspense>
+        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-          {productGrid && <ProductGrid products={productGrid} />}
+          {productGrid && <ScrollReveal><ProductGrid products={productGrid} /></ScrollReveal>}
         </Suspense>
       </div>
     </>

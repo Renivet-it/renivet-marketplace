@@ -9,6 +9,7 @@
 // import { advertisementQueries, blogQueries, homeBrandProductQueries, WomenHomeSectionQueries, homeShopByCategoryQueries, productQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 // import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 // import { Suspense } from "react";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 // import { Landing } from "@/components/home/kids/banner";
 // import { DiscountOffer } from "@/components/home/kids/discount-offer";
 // import { ExploreCategories } from "@/components/home/kids/explore-categories";
@@ -27,27 +28,27 @@
 //             >
 //                 <BannersFetch />
 //             </Suspense>
-//                         <Suspense>
+//                         <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <ExploreCategoryFetch />
 //             </Suspense>
 
-//                         <Suspense>
+//                         <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <SpecialCareSection />
 //             </Suspense>
-//                                           <Suspense>
+//                                           <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <SustanableBatchFetch />
 //             </Suspense>
-//                               <Suspense>
+//                               <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                     <DollBannerSection />
 //                   </Suspense>
-//                                                <Suspense>
+//                                                <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <DiscountOfferSectionFetch />
 //             </Suspense>
-//                           <Suspense>
+//                           <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <ProductGridFetch />
 //               </Suspense>
 
-//                                                 <Suspense>
+//                                                 <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                     <KidTwiningFetch />
 //                   </Suspense>
 
@@ -219,35 +220,34 @@ export default function Page() {
       <Suspense fallback={<div className="h-[calc(100vh-20vh)] w-full bg-background" />}>
 
 {/*@ts-ignore*/}
-        {banners && <Landing banners={banners} />}
+        {banners && <ScrollReveal><Landing banners={banners} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {exploreCategory && ( <ExploreCategories shopByCategories={exploreCategory.shopByCategories} titleData={exploreCategory.titleData} />
-        )}
+        {exploreCategory && ( <ScrollReveal><ExploreCategories shopByCategories={exploreCategory.shopByCategories} titleData={exploreCategory.titleData} /></ScrollReveal> )}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {specialCare && <SpecialCare banners={specialCare} />}
+        {specialCare && <ScrollReveal><SpecialCare banners={specialCare} /></ScrollReveal>}
       </Suspense>
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {productGrid && <ProductGrid products={productGrid} />}
+        {productGrid && <ScrollReveal><ProductGrid products={productGrid} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
-        {sustainableBatch && <ElavateLooksPage />}
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {sustainableBatch && <ScrollReveal><ElavateLooksPage /></ScrollReveal>}
       </Suspense>
-      {/* <Suspense>
-        {dollBanner && <DollBanner banners={dollBanner} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {dollBanner && <ScrollReveal><DollBanner banners={dollBanner} /></ScrollReveal>}
       </Suspense> */}
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {discountOffer && <DiscountOffer advertisements={discountOffer} />}
+        {discountOffer && <ScrollReveal><DiscountOffer advertisements={discountOffer} /></ScrollReveal>}
       </Suspense>
 
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 {/*@ts-ignore*/}
-        {kidTwining && <TwiningSection banners={kidTwining} />}
+        {kidTwining && <ScrollReveal><TwiningSection banners={kidTwining} /></ScrollReveal>}
       </Suspense>
     </>
   );

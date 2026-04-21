@@ -9,6 +9,7 @@
 // import { advertisementQueries, blogQueries, homeBrandProductQueries, WomenHomeSectionQueries, homeShopByCategoryQueries, productQueries, homeShopByCategoryTitleQueries } from "@/lib/db/queries";
 // import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 // import { Suspense } from "react";
+import { ScrollReveal } from "@/components/ui/scroll-reveal";
 // import { Landing } from "@/components/home/beauty-personal/banner";
 // import { BeautyCareSection } from "@/components/home/beauty-personal/beauty-care";
 // import { BestSellerBanner } from "@/components/home/beauty-personal/best-seller-banner";
@@ -33,41 +34,41 @@
 //             >
 //                 <BannersFetch />
 //             </Suspense>
-//                         <Suspense>
+//                         <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <ExploreCategoryFetch />
 //             </Suspense>
 
-//                         <Suspense>
+//                         <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <BeautySkinCareBanner />
 //             </Suspense>
 
-//                         <Suspense>
+//                         <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <BeautyCareRoutineFetch />
 //             </Suspense>
 
 
-//                                      <Suspense>
+//                                      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <ProductGridFetchNewArrivals />
 //               </Suspense>
-//                                                            <Suspense>
+//                                                            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <NurtureBannerFetch />
 //             </Suspense>
-//                               <Suspense>
+//                               <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                     <BeautyDiscountFetch />
 //                   </Suspense>
-//                        <Suspense>
+//                        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <BestSellerBannnerFetch />
 //             </Suspense>
-//                        <Suspense>
+//                        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <BeautyMindFulFetch />
 //             </Suspense>
-//                                                    <Suspense>
+//                                                    <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                             <SustanableBatchFetch />
 //                         </Suspense>
-//                                                               <Suspense>
+//                                                               <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <ProductGridFetchTopPicks />
 //               </Suspense>
-//                        <Suspense>
+//                        <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
 //                 <BeautySkinQuizFetch />
 //             </Suspense>
 //         </>
@@ -287,47 +288,46 @@ export default function Page() {
     <>
       <Suspense fallback={<div className="h-[calc(100vh-20vh)] w-full bg-background" />}>
         {/*@ts-ignore*/}
-        {banners && <Landing banners={banners} />}
+        {banners && <ScrollReveal><Landing banners={banners} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
         {/*@ts-ignore*/}
-        {exploreCategory && ( <ExploreCategories shopByCategories={exploreCategory.shopByCategories} titleData={exploreCategory.titleData} />
-        )}
+        {exploreCategory && ( <ScrollReveal><ExploreCategories shopByCategories={exploreCategory.shopByCategories} titleData={exploreCategory.titleData} /></ScrollReveal> )}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
         {/*@ts-ignore*/}
-        {beautySkinCareBanner && <SkinCareBanner banners={beautySkinCareBanner} />}
+        {beautySkinCareBanner && <ScrollReveal><SkinCareBanner banners={beautySkinCareBanner} /></ScrollReveal>}
       </Suspense>
-      {/* <Suspense>
-        {beautyCareRoutine && <BeautyCareSection shopByCategories={beautyCareRoutine} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {beautyCareRoutine && <ScrollReveal><BeautyCareSection shopByCategories={beautyCareRoutine} /></ScrollReveal>}
       </Suspense> */}
-            <Suspense>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
         {/*@ts-ignore*/}
-        {productGridTopPicks && <ProductGrid products={productGridTopPicks} />}
+        {productGridTopPicks && <ScrollReveal><ProductGrid products={productGridTopPicks} /></ScrollReveal>}
       </Suspense>
-      {/* <Suspense>
-        {productGridNewArrivals && <ProductGridNewArrivals products={productGridNewArrivals} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {productGridNewArrivals && <ScrollReveal><ProductGridNewArrivals products={productGridNewArrivals} /></ScrollReveal>}
       </Suspense> */}
-      {/* <Suspense>
-        {nurtureBanner && <NurtureBanner banners={nurtureBanner} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {nurtureBanner && <ScrollReveal><NurtureBanner banners={nurtureBanner} /></ScrollReveal>}
       </Suspense> */}
-      {/* <Suspense>
-        {beautyDiscount && <DiscountOffer advertisements={beautyDiscount} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {beautyDiscount && <ScrollReveal><DiscountOffer advertisements={beautyDiscount} /></ScrollReveal>}
       </Suspense> */}
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
         {/*@ts-ignore*/}
-        {bestSellerBanner && <BestSellerBanner banners={bestSellerBanner} />}
+        {bestSellerBanner && <ScrollReveal><BestSellerBanner banners={bestSellerBanner} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
         {/*@ts-ignore*/}
-        {beautyMindful && <MindFullStarter banners={beautyMindful} />}
+        {beautyMindful && <ScrollReveal><MindFullStarter banners={beautyMindful} /></ScrollReveal>}
       </Suspense>
-      <Suspense>
-        {sustainableBatch && <ElavateLooksPage />}
+      <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {sustainableBatch && <ScrollReveal><ElavateLooksPage /></ScrollReveal>}
       </Suspense>
 
-      {/* <Suspense>
-        {beautySkinQuiz && <SkinQuizBanner banners={beautySkinQuiz} />}
+      {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50 my-4 rounded-xl" />}>
+        {beautySkinQuiz && <ScrollReveal><SkinQuizBanner banners={beautySkinQuiz} /></ScrollReveal>}
       </Suspense> */}
     </>
   );
