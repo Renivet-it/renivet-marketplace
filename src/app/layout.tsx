@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
-import { dmsans, josefin, playfair, rubik, worksans } from "./fonts";
+import { dmsans, josefin, playfair, rubik, worksans, nunito_sans } from "./fonts";
 import "./globals.css";
 import { env } from "@/../env";
 import { GuestAddToCartPopup } from "@/components/globals/modals/guest-add-to-cart-popup";
@@ -113,11 +113,12 @@ export default function RootLayout({ children }: LayoutProps) {
             lang="en"
             suppressHydrationWarning
             className={cn(
-                josefin.variable,
-                dmsans.variable,
-                rubik.variable,
-                playfair.variable,
-                worksans.variable
+                // josefin.variable,
+                // dmsans.variable,
+                // rubik.variable,
+                // playfair.variable,
+                // worksans.variable,
+                nunito_sans.variable
             )}
         >
             <head>

@@ -230,9 +230,7 @@ export function BrandMediaTable({ brandId, initialData }: PageProps) {
                                 table.getRowModel().rows.map((row) => (
                                     <TableRow
                                         key={row.id}
-                                        data-state={
-                                            row.getIsSelected() && "selected"
-                                        }
+                                        data-state={row.getIsSelected() ? "selected" : undefined}
                                     >
                                         {row.getVisibleCells().map((cell) => (
                                             <TableCell key={cell.id}>

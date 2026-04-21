@@ -71,7 +71,7 @@ export function DataTable<T>({
                             table.getRowModel().rows.map((row) => (
                                 <TableRow
                                     key={row.id}
-                                    data-state={row.getIsSelected() && "selected"}
+                                    data-state={row.getIsSelected() ? "selected" : undefined}
                                     className={rowClassName}
                                 >
                                     {row.getVisibleCells().map((cell) => (
