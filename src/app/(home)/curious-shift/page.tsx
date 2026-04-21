@@ -86,7 +86,6 @@ export default function CuriousShiftPage() {
                             But consumer behaviour?
                         </p>
                     </div>
-                    </div>
                 </section>
                 </ScrollReveal>
 
@@ -193,7 +192,6 @@ export default function CuriousShiftPage() {
 </div>
 
 
-                    </div>
                     </div>
                 </section>
                 </ScrollReveal>
