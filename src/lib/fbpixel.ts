@@ -38,10 +38,18 @@ export const sanitizeFbUserData = (data: Record<string, any> = {}) => {
 
     const sanitized: Record<string, any> = {};
 
+    const rawValueKeys = new Set(["fbc", "fbp", "fbclid"]);
+
     for (const [key, value] of Object.entries(data)) {
         if (value === undefined || value === null || value === "") continue;
 
         if (typeof value === "string") {
+            // Meta requires click/cookie IDs to be sent exactly as received.
+            if (rawValueKeys.has(key)) {
+                sanitized[key] = value;
+                continue;
+            }
+
             const cleanVal = value.trim().toLowerCase();
             if (
                 cleanVal === "" ||

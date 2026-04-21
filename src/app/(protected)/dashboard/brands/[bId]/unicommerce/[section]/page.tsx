@@ -1,5 +1,4 @@
 import { UnicommerceSettingsForm } from "@/components/dashboard/brands/unicommerce";
-import { DashShell } from "@/components/globals/layouts";
 import { brandCache } from "@/lib/redis/methods";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -66,11 +65,9 @@ export const metadata: Metadata = {
 
 export default function Page(props: PageProps) {
     return (
-        <DashShell className="max-w-4xl">
-            <Suspense fallback={<UnicommerceSectionLoadingSkeleton />}>
-                <UnicommerceSectionFetch {...props} />
-            </Suspense>
-        </DashShell>
+        <Suspense fallback={<UnicommerceSectionLoadingSkeleton />}>
+            <UnicommerceSectionFetch {...props} />
+        </Suspense>
     );
 }
 
@@ -117,4 +114,3 @@ function UnicommerceSectionLoadingSkeleton() {
         </div>
     );
 }
-
