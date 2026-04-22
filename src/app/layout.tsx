@@ -122,6 +122,7 @@ export default function RootLayout({ children }: LayoutProps) {
             )}
         >
             <head>
+                <meta charSet="utf-8" />
                 {/* Preload the mobile banner LCP image to eliminate resource load delay.
                     Without this, the browser waits for the Suspense boundary to resolve
                     before discovering the image (~2.5s delay). */}
