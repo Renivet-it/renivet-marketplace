@@ -133,6 +133,18 @@ export async function sendPromoOfferMessage({
             contentSid: "HXccde2ac426a9787bc2a8a04900bb7bd7",
             parameterCount: 1,
         },
+        campaign_launch: {
+            contentSid: "HX5683df47a3a2da437b7cf8301af073f3",
+            parameterCount: 0,
+        },
+        campaign_reminder: {
+            contentSid: "HX7bed86f4a2fbae21ada05766132b0f6d",
+            parameterCount: 0,
+        },
+        campaign_last_call: {
+            contentSid: "HX7bded402d15ce941a93de1f590754dd5",
+            parameterCount: 0,
+        },
     };
     // @ts-ignore
     if (!templates[templateName]) {

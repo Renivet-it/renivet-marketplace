@@ -30,7 +30,9 @@ export function MarketingEmailForm() {
   const [step, setStep] = useState(1);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [emailContent, setEmailContent] = useState("");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(
+    "Trying a new brand shouldn't feel risky — here's ₹1000 OFF"
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
   const [sentCount, setSentCount] = useState<number | null>(null);
@@ -247,6 +249,22 @@ const onSubmit = async () => {
           <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
             <Mail className="w-5 h-5 text-indigo-600" /> Compose Your Email
           </h2>
+
+          {/* Default template notice */}
+          <div className="mb-4 bg-indigo-50 border border-indigo-100 rounded-lg p-4 text-sm text-indigo-700">
+            <p className="font-semibold mb-1">✨ Default Template Active</p>
+            <p className="text-indigo-600 leading-relaxed">
+              If you leave the editor below empty, the email will use the
+              pre-built campaign template:
+              <br />
+              <strong>Headline:</strong> "Trying a new brand shouldn't feel risky." →{" "}
+              <strong>₹1000 OFF offer block</strong> →{" "}
+              <strong>"Explore Renivet" CTA</strong> → Footer line.
+              <br />
+              You can also write custom content in the editor to override it.
+            </p>
+          </div>
+
           <input
             type="text"
             placeholder="Enter Email Subject"
