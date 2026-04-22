@@ -5,7 +5,7 @@ import { Metadata } from "next";
 
 export const metadata: Metadata = {
     title: {
-        default: siteConfig.description + " | " + siteConfig.name,
+        default: siteConfig.name + " | Sustainable Marketplace",
         template: "%s | " + siteConfig.name,
     },
 };

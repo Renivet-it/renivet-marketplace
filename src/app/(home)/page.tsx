@@ -7,9 +7,27 @@ import {
     WomenHomeSectionQueries,
 } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
+import { getAbsoluteURL } from "@/lib/utils";
+import type { Metadata } from "next";
 import { Leaf, Lock, RefreshCcw, Truck } from "lucide-react";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
+
+export const metadata: Metadata = {
+    title: "Renivet | Sustainable Marketplace for Quality Products",
+    description:
+        "Renivet is India's sustainable online marketplace connecting conscious consumers with high-quality, eco-friendly brands. Discover verified sellers, transparent pricing, and responsibly sourced products.",
+    alternates: {
+        canonical: getAbsoluteURL("/"),
+    },
+    openGraph: {
+        title: "Renivet | Sustainable Marketplace for Quality Products",
+        description:
+            "Shop responsibly with Renivet — your trusted sustainable marketplace featuring eco-conscious brands, verified sellers, and ethically sourced products.",
+        url: getAbsoluteURL("/"),
+        type: "website",
+    },
+};
 
 // Dynamically import all below-the-fold components to reduce initial JS bundle
 const BrandPromotion = dynamic(() =>
