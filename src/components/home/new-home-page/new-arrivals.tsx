@@ -56,22 +56,22 @@ export function ProductGridNewArrivals({ className, products, userId, ...props }
     return (
         <section className={cn("w-full bg-white py-10 md:py-14", className)} {...props}>
             <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-                <div className="mb-10 flex justify-center">
-                    <div className="flex items-center gap-10 border-b border-gray-200 px-4">
+                <div className="mb-8 flex flex-col items-start px-2">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
+                        Curated For You
+                    </span>
+                    <div className="mt-2 flex items-center gap-6 md:gap-10">
                         {availableTabs.map(tab => {
                             const isActive = activeTab === tab;
                             return (
                                 <button key={tab} onClick={() => setActiveTab(tab)}
                                     className={cn(
-                                        "relative pb-3 text-[12px] md:text-[13px] uppercase tracking-[0.2em] transition-colors duration-300",
+                                        "font-playfair text-[28px] font-normal leading-[1.3] uppercase transition-colors duration-300 md:text-[36px]",
                                         isActive 
-                                            ? "text-[#7A6338] font-bold" 
-                                            : "text-gray-400 font-medium hover:text-gray-800"
+                                            ? "text-gray-900" 
+                                            : "text-gray-300 hover:text-gray-500"
                                     )}>
                                     {tab}
-                                    {isActive && (
-                                        <span className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-[#7A6338]" />
-                                    )}
                                 </button>
                             );
                         })}
