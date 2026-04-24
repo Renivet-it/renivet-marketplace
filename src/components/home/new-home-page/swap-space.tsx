@@ -412,17 +412,17 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                             </button>
                         </DialogTrigger>
                     </div>
-                    <DialogContent className="max-h-[90vh] w-[95vw] max-w-5xl overflow-hidden rounded-md p-0 sm:h-[85vh]">
+                    <DialogContent className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-md p-0 md:h-[85vh]">
                         <DialogTitle className="sr-only">{product.title}</DialogTitle>
                         {/* 2-Column Grid for Desktop, Stacked for Mobile */}
-                        <div className="flex h-full flex-col md:flex-row bg-white">
+                        <div className="flex h-full flex-col md:flex-row bg-white overflow-y-auto md:overflow-hidden">
                             {/* Left Side: Image Slider */}
-                            <div className="relative h-[300px] w-full shrink-0 bg-[#F5F5F5] md:h-full md:w-1/2 group/slider">
+                            <div className="relative h-[320px] sm:h-[380px] w-full shrink-0 bg-[#F5F5F5] md:h-full md:w-1/2 group/slider">
                                 <Image
                                     src={quickViewImages[quickViewImageIndex] || imageUrl}
                                     alt={product.title}
                                     fill
-                                    className="object-cover"
+                                    className="object-contain md:object-cover md:object-center"
                                     sizes="(max-width: 768px) 100vw, 50vw"
                                 />
                                 {/* Bestseller Badge */}
@@ -456,13 +456,13 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                             </div>
 
                             {/* Right Side: Details */}
-                            <div className="flex flex-col p-6 md:w-1/2 md:p-12 overflow-y-auto scrollbar-hide relative">
-                                <h2 className="font-serif text-3xl md:text-[32px] font-light text-gray-900 leading-tight pr-8">
+                            <div className="flex flex-col p-4 md:p-12 md:w-1/2 md:overflow-y-auto scrollbar-hide relative">
+                                <h2 className="font-serif text-xl sm:text-2xl md:text-[32px] font-light text-gray-900 leading-tight pr-8">
                                     {product.title}
                                 </h2>
                                 
-                                <div className="mt-5 flex items-baseline gap-3">
-                                    <span className="text-xl font-medium text-gray-900">
+                                <div className="mt-2 md:mt-5 flex items-baseline gap-3">
+                                    <span className="text-lg md:text-xl font-medium text-gray-900">
                                         Rs. {formatPriceTag(parseFloat(convertPaiseToRupees(selectedVariant?.price || rawPrice)), true)}
                                     </span>
                                     {originalPrice && (
@@ -474,22 +474,22 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
                                 {product.description && (
                                     <div 
-                                        className="mt-6 text-sm text-gray-500 leading-relaxed line-clamp-3"
+                                        className="mt-2 md:mt-6 text-xs md:text-sm text-gray-500 leading-relaxed line-clamp-2 md:line-clamp-3"
                                         dangerouslySetInnerHTML={{ __html: product.description }}
                                     />
                                 )}
 
-                                <div className="mt-8 space-y-6">
+                                <div className="mt-4 md:mt-8 space-y-3 md:space-y-6">
                                     {/* Options (Size, etc) */}
                                     {product.options?.map(opt => {
                                         const selectedVal = selectedOptions[opt.id] || opt.values[0]?.id;
                                         return (
                                             <div key={opt.id}>
-                                                <div className="mb-3 text-sm flex items-center gap-2">
+                                                <div className="mb-2 text-xs md:text-sm flex items-center gap-2">
                                                     <span className="font-medium text-gray-900">{opt.name} :</span>
                                                     <span className="text-gray-500">{opt.values.find(v => v.id === selectedVal)?.name}</span>
                                                 </div>
-                                                <div className="flex flex-wrap gap-2.5">
+                                                <div className="flex flex-wrap gap-1.5 md:gap-2.5">
                                                     {opt.values.map(val => {
                                                         const isSelected = selectedVal === val.id;
                                                         return (
@@ -497,7 +497,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                                                                 key={val.id}
                                                                 onClick={() => setSelectedOptions(prev => ({...prev, [opt.id]: val.id}))}
                                                                 className={cn(
-                                                                    "h-10 px-4 border text-sm font-medium flex items-center justify-center transition-colors min-w-[44px]",
+                                                                    "h-8 md:h-10 px-3 md:px-4 border text-xs md:text-sm font-medium flex items-center justify-center transition-colors min-w-[36px]",
                                                                     isSelected ? "border-gray-900 text-gray-900" : "border-gray-300 text-gray-600 hover:border-gray-400"
                                                                 )}
                                                             >
@@ -511,30 +511,30 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                                     })}
 
                                     {/* Quantity & Cart Row */}
-                                    <div className="flex flex-col sm:flex-row items-stretch gap-3 mt-10">
-                                        <div className="flex items-center border border-gray-300 h-12 w-full sm:w-28 shrink-0">
-                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex-1 h-full text-gray-500 hover:text-gray-900 flex items-center justify-center">-</button>
+                                    <div className="flex items-stretch gap-2 mt-4 md:mt-10">
+                                        <div className="flex items-center border border-gray-300 h-11 w-24 shrink-0">
+                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex-1 h-full text-gray-500 hover:text-gray-900 flex items-center justify-center text-lg">−</button>
                                             <span className="flex-1 text-center text-sm font-medium">{quantity}</span>
-                                            <button onClick={() => setQuantity(quantity + 1)} className="flex-1 h-full text-gray-500 hover:text-gray-900 flex items-center justify-center">+</button>
+                                            <button onClick={() => setQuantity(quantity + 1)} className="flex-1 h-full text-gray-500 hover:text-gray-900 flex items-center justify-center text-lg">+</button>
                                         </div>
                                         <button 
                                             onClick={handleQuickAddCart}
                                             disabled={isLoading || !product.isAvailable}
-                                            className="flex-1 border-2 border-[#222222] text-[#222222] bg-white text-xs sm:text-sm font-semibold tracking-[0.05em] sm:tracking-[0.1em] hover:bg-gray-50 transition-colors h-12 flex items-center justify-center"
+                                            className="flex-1 border border-[#222222] text-[#222222] bg-white text-[10px] md:text-sm font-semibold tracking-[0.08em] hover:bg-gray-50 transition-colors h-11 flex items-center justify-center"
                                         >
-                                            {isLoading ? <Spinner className="w-5 h-5 animate-spin" /> : "ADD TO CART"}
+                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "ADD TO CART"}
                                         </button>
                                         <button 
                                             onClick={handleBuyNow}
                                             disabled={isLoading || !product.isAvailable}
-                                            className="flex-1 bg-[#222222] text-white text-xs sm:text-sm font-semibold tracking-[0.05em] sm:tracking-[0.1em] hover:bg-black transition-colors h-12 flex items-center justify-center"
+                                            className="flex-1 bg-[#222222] text-white text-[10px] md:text-sm font-semibold tracking-[0.08em] hover:bg-black transition-colors h-11 flex items-center justify-center"
                                         >
-                                            {isLoading ? <Spinner className="w-5 h-5 animate-spin" /> : "BUY NOW"}
+                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "BUY NOW"}
                                         </button>
                                     </div>
 
                                     {/* Trust / Payment */}
-                                    <div className="mt-6 pt-5 border-t border-gray-100">
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
                                         <p className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-medium mb-3">100% Secure Checkout</p>
                                         <div className="flex items-center gap-2 flex-wrap">
                                             {/* Visa */}
