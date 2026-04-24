@@ -121,6 +121,7 @@ interface PageProps {
     setEstimatedDelivery: (date: string) => void;
     /** When true, hides pricing section & delivery check (used in mobile quick-add drawer) */
     compact?: boolean;
+    hideWishlist?: boolean;
 }
 
 export function ProductCartAddForm({
@@ -136,6 +137,7 @@ export function ProductCartAddForm({
     setZipCode,
     setEstimatedDelivery,
     compact = false,
+    hideWishlist = false,
 }: PageProps) {
     const { trackAddToCartEvent } = useAddToCartTracking();
     const { guestCart, addToGuestCart } = useGuestCart();
@@ -723,47 +725,44 @@ export function ProductCartAddForm({
                                 )}
                             </Button>
 
-                            {userId && (
-                                <Button
-                                    type="submit"
-                                    size="lg"
-                                    className="h-12 flex-1 rounded-full bg-gray-900 text-sm font-semibold text-white hover:bg-gray-800 md:hidden"
-                                    disabled={
-                                        !product.isAvailable ||
-                                        (!!selectedVariant &&
-                                            (selectedVariant.isDeleted ||
-                                                selectedVariant?.quantity ===
-                                                    0)) ||
-                                        (product.productHasVariants &&
-                                            !selectedVariant) ||
-                                        isPending
+                            <Button
+                                type="submit"
+                                size="lg"
+                                className="h-12 flex-1 rounded-full bg-gray-900 text-sm font-semibold text-white hover:bg-gray-800"
+                                disabled={
+                                    !product.isAvailable ||
+                                    (!!selectedVariant &&
+                                        (selectedVariant.isDeleted ||
+                                            selectedVariant?.quantity === 0)) ||
+                                    (product.productHasVariants &&
+                                        !selectedVariant) ||
+                                    isPending
+                                }
+                                onClick={(e) => {
+                                    if (isAddedToCart) {
+                                        e.preventDefault();
+                                        router.push("/checkout");
+                                        return;
                                     }
-                                    onClick={(e) => {
-                                        if (isAddedToCart) {
-                                            e.preventDefault();
-                                            router.push("/checkout");
-                                            return;
-                                        }
-                                        setIsBuyNow(true);
-                                        isBuyNowRef.current = true;
-                                        handleAddProductCart(
-                                            product.id,
-                                            product.brandId
-                                        );
-                                    }}
-                                >
-                                    {isPending && isBuyNow ? (
-                                        <>
-                                            <Spinner className="mr-2 size-5 animate-spin" />
-                                            Wait...
-                                        </>
-                                    ) : (
-                                        "Buy Now"
-                                    )}
-                                </Button>
-                            )}
+                                    setIsBuyNow(true);
+                                    isBuyNowRef.current = true;
+                                    handleAddProductCart(
+                                        product.id,
+                                        product.brandId
+                                    );
+                                }}
+                            >
+                                {isPending && isBuyNow ? (
+                                    <>
+                                        <Spinner className="mr-2 size-5 animate-spin" />
+                                        Wait...
+                                    </>
+                                ) : (
+                                    "Buy Now"
+                                )}
+                            </Button>
 
-                            {userId ? (
+                            {!hideWishlist && (userId ? (
                                 <WishlistButton
                                     type="button"
                                     variant="outline"
@@ -823,7 +822,7 @@ export function ProductCartAddForm({
                                     />
                                     Wishlist
                                 </Button>
-                            )}
+                            ))}
                         </div>
                         {/* Size & fit */}
                         <div>
