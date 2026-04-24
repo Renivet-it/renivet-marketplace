@@ -56,17 +56,26 @@ export function ProductGridNewArrivals({ className, products, userId, ...props }
     return (
         <section className={cn("w-full bg-white py-10 md:py-14", className)} {...props}>
             <div className="mx-auto max-w-screen-2xl px-4 sm:px-6 lg:px-8">
-                <div className="mb-8 flex flex-col items-center gap-4">
-                    <div className="flex items-center border border-gray-200 overflow-hidden">
-                        {availableTabs.map(tab => (
-                            <button key={tab} onClick={() => setActiveTab(tab)}
-                                className={cn("px-8 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200",
-                                    activeTab === tab ? "bg-[#222] text-white" : "bg-white text-gray-400 hover:text-gray-700")}>
-                                {tab}
-                            </button>
-                        ))}
+                <div className="mb-10 flex justify-center">
+                    <div className="flex items-center gap-10 border-b border-gray-200 px-4">
+                        {availableTabs.map(tab => {
+                            const isActive = activeTab === tab;
+                            return (
+                                <button key={tab} onClick={() => setActiveTab(tab)}
+                                    className={cn(
+                                        "relative pb-3 text-[12px] md:text-[13px] uppercase tracking-[0.2em] transition-colors duration-300",
+                                        isActive 
+                                            ? "text-[#7A6338] font-bold" 
+                                            : "text-gray-400 font-medium hover:text-gray-800"
+                                    )}>
+                                    {tab}
+                                    {isActive && (
+                                        <span className="absolute bottom-[-1px] left-0 w-full h-[2px] bg-[#7A6338]" />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </div>
-                    <div className="h-px w-12 bg-gray-300" />
                 </div>
                 <div className="grid grid-cols-3 gap-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">
                     {sectionProducts.map(({ product }) => (
