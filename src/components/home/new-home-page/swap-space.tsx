@@ -391,23 +391,23 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                 {/* Floating Wishlist Button */}
                 <button
                     onClick={handleAddToWishlist}
-                    className="absolute right-3 top-3 z-20 flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-md transition-all hover:scale-110"
+                    className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all hover:scale-110 hover:bg-white"
                 >
-                    <Icons.Heart className={cn("h-5 w-5 transition-colors", isWishlisted ? "fill-red-500 text-red-500" : "text-gray-900 hover:text-red-500")} />
+                    <Icons.Heart className={cn("h-4 w-4 transition-colors", isWishlisted ? "fill-red-500 text-red-500" : "text-gray-700 hover:text-red-500")} />
                 </button>
 
                 {/* QUICK VIEW MODAL & TRIGGER */}
                 <Dialog open={isQuickViewOpen} onOpenChange={setIsQuickViewOpen}>
                     <div 
-                        className="absolute bottom-3 right-3 z-20 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300"
+                        className="absolute bottom-2.5 right-2.5 z-20 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300"
                         onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
                     >
                         <DialogTrigger asChild>
                             <button
-                                className="flex h-10 items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 hover:scale-105 active:scale-95 px-3 md:px-4"
+                                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all duration-300 hover:scale-105 active:scale-95 hover:bg-white md:h-9 md:w-auto md:px-4 md:rounded-full"
                             >
                                 {/* Cart icon — mobile only */}
-                                <svg className="w-4 h-4 text-gray-900 md:hidden" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 text-gray-700 md:hidden" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 21a1 1 0 100-2 1 1 0 000 2zm7 0a1 1 0 100-2 1 1 0 000 2z"/>
                                 </svg>
                                 {/* Text — desktop only */}
