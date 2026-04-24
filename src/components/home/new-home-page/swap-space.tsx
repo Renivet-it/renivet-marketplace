@@ -663,7 +663,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
             </div>
 
             {/* DESKTOP */}
-            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
+            <div className="mx-auto hidden max-w-screen-3xl px-4 sm:px-6 lg:px-8">
                 <button
                     onClick={() => scroll(desktopRef, "left")}
                     className="absolute left-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 hover:bg-gray-50"
