@@ -404,14 +404,14 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                     >
                         <DialogTrigger asChild>
                             <button
-                                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all duration-300 hover:scale-105 active:scale-95 hover:bg-white md:h-9 md:w-auto md:px-4 md:rounded-full"
+                                className="flex h-8 w-8 items-center justify-center rounded-full btn-liquid btn-liquid-secondary shadow-sm transition-all duration-300 hover:scale-105 active:scale-95 md:h-9 md:w-auto md:px-4 md:rounded-full group/btn"
                             >
                                 {/* Cart icon — mobile only */}
-                                <svg className="w-4 h-4 text-gray-700 md:hidden" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                                <svg className="w-4 h-4 md:hidden text-inherit" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 21a1 1 0 100-2 1 1 0 000 2zm7 0a1 1 0 100-2 1 1 0 000 2z"/>
                                 </svg>
                                 {/* Text — desktop only */}
-                                <span className="hidden md:block whitespace-nowrap text-[11px] font-bold tracking-wider text-gray-900">
+                                <span className="hidden md:block whitespace-nowrap text-[11px] font-bold tracking-wider text-inherit">
                                     QUICK BUY
                                 </span>
                             </button>
@@ -525,16 +525,16 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                                         <button 
                                             onClick={handleQuickAddCart}
                                             disabled={isLoading || !product.isAvailable}
-                                            className="flex-1 border border-[#222222] text-[#222222] bg-white text-[10px] md:text-sm font-semibold tracking-[0.08em] hover:bg-gray-50 transition-colors h-11 flex items-center justify-center"
+                                            className="flex-1 btn-liquid btn-liquid-secondary text-[10px] md:text-sm font-semibold tracking-[0.08em] h-11 flex items-center justify-center rounded-sm"
                                         >
-                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "ADD TO CART"}
+                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin text-gray-700" /> : "ADD TO CART"}
                                         </button>
                                         <button 
                                             onClick={handleBuyNow}
                                             disabled={isLoading || !product.isAvailable}
-                                            className="flex-1 bg-[#222222] text-white text-[10px] md:text-sm font-semibold tracking-[0.08em] hover:bg-black transition-colors h-11 flex items-center justify-center"
+                                            className="flex-1 btn-liquid btn-liquid-primary text-[10px] md:text-sm font-semibold tracking-[0.08em] h-11 flex items-center justify-center rounded-sm"
                                         >
-                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "BUY NOW"}
+                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin text-white group-hover/btn:text-black" /> : "BUY NOW"}
                                         </button>
                                     </div>
 

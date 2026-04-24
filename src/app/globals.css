@@ -219,3 +219,65 @@ h3.tiptap-heading + h2.tiptap-heading {
     100% { transform: translateX(-50%); }
 }
 
+/* ========================================================
+   LIQUID SLIDING FILL BUTTON ANIMATION (BROWN LIVING STYLE)
+======================================================== */
+
+.btn-liquid {
+    position: relative;
+    overflow: hidden;
+    z-index: 1;
+    isolation: isolate; /* ensures new stacking context */
+}
+
+/* Ensure text/icons stay above the liquid */
+.btn-liquid > * {
+    position: relative;
+    z-index: 10;
+}
+
+.btn-liquid::before {
+    content: '';
+    position: absolute;
+    display: block;
+    border-radius: 50%;
+    width: 150%;
+    height: 200%;
+    top: -50%;
+    left: -25%;
+    transform: translate3d(0, -76%, 0);
+    transition: transform 0.6s cubic-bezier(.7, 0, .2, 1);
+    z-index: -1;
+}
+
+.btn-liquid:hover::before {
+    transform: translate3d(0, 0, 0);
+}
+
+/* Variant: Black button, fills with White (text becomes black) */
+.btn-liquid-primary {
+    background-color: #222222;
+    color: white !important;
+    transition: color 0.4s cubic-bezier(.7, 0, .2, 1);
+}
+.btn-liquid-primary::before {
+    background-color: #f5f5f5; /* off-white fill */
+}
+.btn-liquid-primary:hover {
+    color: #222222 !important;
+}
+
+/* Variant: White button, fills with Black (text becomes white) */
+.btn-liquid-secondary {
+    background-color: white;
+    color: #222222 !important;
+    border: 1px solid #e5e7eb; /* tailwind gray-200 */
+    transition: color 0.4s cubic-bezier(.7, 0, .2, 1);
+}
+.btn-liquid-secondary::before {
+    background-color: #222222;
+}
+.btn-liquid-secondary:hover {
+    color: white !important;
+    border-color: #222222;
+}

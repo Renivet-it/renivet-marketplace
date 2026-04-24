@@ -165,8 +165,8 @@ function ProductCard({ product, userId }: { product: Product; userId?: string })
                     <Dialog open={isQuickViewOpen} onOpenChange={setIsQuickViewOpen}>
                         <div className="absolute bottom-2 right-2 z-20 md:hidden" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
                             <DialogTrigger asChild>
-                                <button className="flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-sm hover:bg-white">
-                                    <svg className="w-3.5 h-3.5 text-gray-700" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                                <button className="flex h-7 w-7 items-center justify-center rounded-full btn-liquid btn-liquid-secondary shadow-sm group/btn">
+                                    <svg className="w-3.5 h-3.5 text-inherit" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 21a1 1 0 100-2 1 1 0 000 2zm7 0a1 1 0 100-2 1 1 0 000 2z"/>
                                     </svg>
                                 </button>
@@ -175,7 +175,7 @@ function ProductCard({ product, userId }: { product: Product; userId?: string })
                         {/* Desktop hover pill */}
                         <div className="absolute inset-x-0 bottom-0 hidden md:block translate-y-full group-hover/card:translate-y-0 transition-transform duration-300 ease-out z-20" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>
                             <DialogTrigger asChild>
-                                <button className="w-full py-2.5 bg-[#222] text-white text-[10px] font-bold tracking-[0.12em] uppercase hover:bg-black transition-colors flex items-center justify-center">
+                                <button className="w-full py-2.5 btn-liquid btn-liquid-primary text-[10px] font-bold tracking-[0.12em] uppercase flex items-center justify-center">
                                     QUICK BUY
                                 </button>
                             </DialogTrigger>
@@ -239,11 +239,11 @@ function ProductCard({ product, userId }: { product: Product; userId?: string })
                                                 <span className="flex-1 text-center text-sm font-medium">{quantity}</span>
                                                 <button onClick={() => setQuantity(quantity + 1)} className="flex-1 h-full text-gray-500 hover:text-gray-900 flex items-center justify-center text-lg">+</button>
                                             </div>
-                                            <button onClick={handleQuickAddCart} disabled={isLoading} className="flex-1 border border-[#222] text-[#222] bg-white text-[10px] md:text-sm font-semibold tracking-[0.08em] hover:bg-gray-50 transition-colors h-11 flex items-center justify-center">
-                                                {isLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "ADD TO CART"}
+                                            <button onClick={handleQuickAddCart} disabled={isLoading} className="flex-1 btn-liquid btn-liquid-secondary text-[10px] md:text-sm font-semibold tracking-[0.08em] h-11 flex items-center justify-center rounded-sm">
+                                                {isLoading ? <Spinner className="w-4 h-4 animate-spin text-gray-700" /> : "ADD TO CART"}
                                             </button>
-                                            <button onClick={handleBuyNow} disabled={isLoading} className="flex-1 bg-[#222] text-white text-[10px] md:text-sm font-semibold tracking-[0.08em] hover:bg-black transition-colors h-11 flex items-center justify-center">
-                                                {isLoading ? <Spinner className="w-4 h-4 animate-spin" /> : "BUY NOW"}
+                                            <button onClick={handleBuyNow} disabled={isLoading} className="flex-1 btn-liquid btn-liquid-primary text-[10px] md:text-sm font-semibold tracking-[0.08em] h-11 flex items-center justify-center rounded-sm group/btn">
+                                                {isLoading ? <Spinner className="w-4 h-4 animate-spin text-white group-hover/btn:text-black" /> : "BUY NOW"}
                                             </button>
                                         </div>
 
