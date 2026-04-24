@@ -653,7 +653,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
 
     return (
         <section className={cn("w-full bg-white py-12", className)}>
-            <div className="mx-auto max-w-screen-3xl px-6 mb-8 flex flex-col items-start">
+            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
                 <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
                     Loved by Many
                 </span>
@@ -663,7 +663,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
             </div>
 
             {/* DESKTOP */}
-            <div className="relative mx-auto hidden px-6 md:block max-w-screen-2.5xl">
+            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
                 <button
                     onClick={() => scroll(desktopRef, "left")}
                     className="absolute left-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 hover:bg-gray-50"
