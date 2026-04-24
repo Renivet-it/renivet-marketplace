@@ -404,9 +404,14 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                     >
                         <DialogTrigger asChild>
                             <button
-                                className="flex h-10 items-center justify-center rounded-full bg-white px-4 shadow-md transition-all duration-300 hover:scale-105 active:scale-95"
+                                className="flex h-10 items-center justify-center rounded-full bg-white shadow-md transition-all duration-300 hover:scale-105 active:scale-95 px-3 md:px-4"
                             >
-                                <span className="whitespace-nowrap text-[11px] font-bold tracking-wider text-gray-900">
+                                {/* Cart icon — mobile only */}
+                                <svg className="w-4 h-4 text-gray-900 md:hidden" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 21a1 1 0 100-2 1 1 0 000 2zm7 0a1 1 0 100-2 1 1 0 000 2z"/>
+                                </svg>
+                                {/* Text — desktop only */}
+                                <span className="hidden md:block whitespace-nowrap text-[11px] font-bold tracking-wider text-gray-900">
                                     QUICK BUY
                                 </span>
                             </button>
