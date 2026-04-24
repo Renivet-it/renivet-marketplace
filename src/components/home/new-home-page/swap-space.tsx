@@ -533,6 +533,21 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                                         </button>
                                     </div>
 
+                                    {/* Specifications */}
+                                    {product.specifications && product.specifications.length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-gray-100">
+                                            <p className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-medium mb-3">Specifications</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {product.specifications.map((spec, i) => (
+                                                    <div key={i} className="bg-gray-50 rounded px-3 py-2">
+                                                        <span className="block text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">{spec.key}</span>
+                                                        <span className="block text-[11px] font-semibold text-gray-800 leading-tight">{spec.value}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Trust / Payment */}
                                     <div className="mt-4 pt-4 border-t border-gray-100">
                                         <p className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-medium mb-3">100% Secure Checkout</p>
