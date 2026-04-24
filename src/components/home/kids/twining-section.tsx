@@ -15,7 +15,7 @@ interface PageProps extends GenericProps {
 export function TwiningSection({ className, banners, ...props }: PageProps) {
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] pb-4 md:pt-12", className)}
+            className={cn("w-full bg-white pb-4 md:pt-12", className)}
             {...props}
         >
             <h2 className="mb-4 pt-4 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">

@@ -77,7 +77,7 @@ function StripLoaderLink({ href, children, className }: StripLoaderLinkProps) {
             <span
                 aria-hidden="true"
                 className={cn(
-                    "pointer-events-none absolute inset-0 z-[2] rounded-[inherit] bg-[#FCFBF4]/55 opacity-0 transition duration-200",
+                    "pointer-events-none absolute inset-0 z-[2] rounded-[inherit] bg-white/55 opacity-0 transition duration-200",
                     isRedirecting && "opacity-100"
                 )}
             />
@@ -153,7 +153,7 @@ export function MobileCategories() {
     return (
         <>
             {/* Mobile: 4-col grid */}
-            <section className="block w-full bg-[#FCFBF4] px-4 py-6 md:hidden">
+            <section className="block w-full bg-white px-4 py-6 md:hidden">
                 <div className="grid grid-cols-4 gap-x-2 gap-y-6">
                     {categories.map((item, index) => (
                         <StripLoaderLink
@@ -203,7 +203,7 @@ export function MobileCategories() {
             </section>
 
             {/* Desktop: full-width grid, minimal padding */}
-            <section className="hidden w-full bg-[#FCFBF4] px-4 py-8 md:block">
+            <section className="hidden w-full bg-white px-4 py-8 md:block">
                 <div className="mx-auto grid max-w-screen-2xl grid-cols-8 gap-4 lg:gap-6">
                     {categories.map((item, index) => (
                         <StripLoaderLink

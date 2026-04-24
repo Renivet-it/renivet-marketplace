@@ -1,9 +1,9 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
+import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -87,6 +87,8 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [isAdded, setIsAdded] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
     /* CART MUTATION (UNCHANGED) */
     const { mutateAsync: addToCart, isLoading } =
@@ -129,8 +131,38 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
               )
             : null;
 
-    const imageUrl =
-        product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
+    const mediaUrls =
+        Array.from(
+            new Set(
+                product.media
+                    ?.filter((media) => media.mediaItem?.url)
+                    .map((media) => media.mediaItem?.url || "")
+            )
+        ) || [];
+
+    useEffect(() => {
+        if (!isHovered) {
+            setCurrentImageIndex(0);
+        }
+    }, [isHovered]);
+
+    useEffect(() => {
+        let slideshowInterval: number | undefined = undefined;
+        if (isHovered && mediaUrls.length > 1) {
+            slideshowInterval = window.setInterval(() => {
+                setCurrentImageIndex((prevIndex) =>
+                    prevIndex === mediaUrls.length - 1 ? 0 : prevIndex + 1
+                );
+            }, 800);
+        }
+        return () => {
+            if (slideshowInterval !== undefined) {
+                window.clearInterval(slideshowInterval);
+            }
+        };
+    }, [isHovered, mediaUrls.length]);
+
+    const imageUrl = mediaUrls[0] || PLACEHOLDER_IMAGE_URL;
 
     const variantId = product.variants?.[0]?.id || null;
     const productUrl = product.slug ? `/products/${product.slug}` : "/shop";
@@ -215,21 +247,50 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
     };
 
     return (
-        <div className="product-card-container group w-[146px] flex-shrink-0 cursor-pointer md:flex md:w-[260px] md:flex-col">
+        <div
+            className="product-card-container group w-[146px] flex-shrink-0 cursor-pointer bg-white md:flex md:w-[260px] md:flex-col"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
             <AnimatedProductLink href={productUrl}>
-                <div className="product-image-container relative h-[223px] w-[156px] overflow-hidden bg-gray-50 md:h-[350px] md:w-full">
-                    {/* (Icons Removed from Image) */}
-                    <Image
-                        src={imageUrl}
-                        alt={product.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 146px, 350px"
-                    />
+                <div className="product-image-container relative h-[223px] w-[156px] overflow-hidden bg-[#F5F5F5] md:h-[350px] md:w-full">
+                    {mediaUrls.length === 0 && (
+                        <Image
+                            src={PLACEHOLDER_IMAGE_URL}
+                            alt={product.title}
+                            fill
+                            className={cn(
+                                "object-cover transition-all duration-300 ease-in-out",
+                                isHovered ? "scale-105" : "scale-100"
+                            )}
+                            sizes="(max-width: 768px) 146px, 350px"
+                        />
+                    )}
+                    {mediaUrls.map((url, index) => {
+                        const isActive = isHovered
+                            ? index === currentImageIndex
+                            : index === 0;
+                        return (
+                            <Image
+                                key={url}
+                                src={url}
+                                alt={`${product.title} ${index + 1}`}
+                                fill
+                                className={cn(
+                                    "absolute inset-0 object-cover transition-all duration-300 ease-in-out",
+                                    isActive
+                                        ? "z-10 opacity-100"
+                                        : "z-0 opacity-0",
+                                    isHovered ? "scale-105" : "scale-100"
+                                )}
+                                sizes="(max-width: 768px) 146px, 350px"
+                            />
+                        );
+                    })}
 
                     {/* 🏷️ Discount badge */}
                     {discount && discount > 0 && (
-                        <span className="absolute left-0 top-2.5 z-10 rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-2.5 md:py-1 md:text-xs">
+                        <span className="absolute left-2 top-2 z-10 rounded-sm bg-[#FF5722] px-2 py-1 text-[10px] font-bold tracking-wide text-white shadow-sm md:text-xs">
                             {discount}% OFF
                         </span>
                     )}
@@ -241,9 +302,9 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                 href={productUrl}
                 className="block h-[42px] overflow-hidden pb-2 pt-3 text-left md:h-[48px]"
             >
-                    <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[14px]">
-                        {product.title}
-                    </h3>
+                <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[14px]">
+                    {product.title}
+                </h3>
             </AnimatedProductLink>
 
             {/* PRICE ROW */}
@@ -339,7 +400,7 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
     };
 
     return (
-        <section className={cn("w-full bg-[#FCFBF4] py-6", className)}>
+        <section className={cn("w-full bg-white py-6", className)}>
             <h2 className="mb-6 text-center font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Best Sellers
             </h2>

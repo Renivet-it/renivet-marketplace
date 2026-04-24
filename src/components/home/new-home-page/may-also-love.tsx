@@ -297,7 +297,7 @@ export function MayAlsoLoveThese({
     const items = banners.slice(0, 18);
 
     return (
-        <section className="w-full bg-[#FCFBF4] py-8">
+        <section className="w-full bg-white py-8">
             <h2 className="mb-6 text-center font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 You&apos;ll Love These
             </h2>

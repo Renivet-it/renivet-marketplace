@@ -15,7 +15,7 @@ interface PageProps extends GenericProps {
 export function DollBanner({ className, banners, ...props }: PageProps) {
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] lg:pb-20", className)}
+            className={cn("w-full bg-white lg:pb-20", className)}
             {...props}
         >
             <Carousel
@@ -28,7 +28,7 @@ export function DollBanner({ className, banners, ...props }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="w-full bg-[#FCFBF4] lg:h-[600px]"
+                className="w-full bg-white lg:h-[600px]"
             >
                 <CarouselContent className="h-full">
                     {banners.map((item, index) => (

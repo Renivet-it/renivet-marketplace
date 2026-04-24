@@ -6,7 +6,7 @@ import Link from "next/link";
 
 export function WelcomeRenivet() {
     return (
-        <section className="w-full bg-[#FCFBF4] px-0 py-4 md:px-4">
+        <section className="w-full bg-white px-0 py-4 md:px-4">
             {/* ⬇️ BORDER ONLY ON DESKTOP */}
             <div className="mx-auto max-w-[1600px] bg-[#fbfaf4] px-6 py-6 md:border md:border-[#D8D2C7] md:px-16">
                 {/* ---------------- DESKTOP ---------------- */}

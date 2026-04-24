@@ -14,7 +14,7 @@ interface PageProps {
 
 export function TopCollectionBanner({ className, advertisements }: PageProps) {
   return (
-    <section className={cn("w-full bg-[#FCFBF4]", className)}>
+    <section className={cn("w-full bg-white", className)}>
                       <h2 className="text-center font-[400] text-[18px] md:text-[26px] leading-[1.3] tracking-[0.5px] text-[#7A6338] font-playfair mb-4">
 Latest From the Atelier
 </h2>

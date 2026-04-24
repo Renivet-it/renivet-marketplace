@@ -12,7 +12,7 @@ export function FindYourStyle({ advertisements }: PageProps) {
     if (!advertisements.length) return null;
 
     return (
-        <div className="relative w-full bg-[#FCFBF4] px-0 py-8 sm:px-4 md:py-12 lg:px-8 lg:py-16">
+        <div className="relative w-full bg-white px-0 py-8 sm:px-4 md:py-12 lg:px-8 lg:py-16">
             {advertisements.map((ad) => (
                 <div
                     key={ad.id}

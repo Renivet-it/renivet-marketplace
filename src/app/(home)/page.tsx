@@ -134,7 +134,7 @@ export default function Page() {
         <>
             <Suspense
                 fallback={
-                    <div className="h-[calc(100vh-20vh)] w-full bg-[#FCFBF4]" />
+                    <div className="h-[calc(100vh-20vh)] w-full bg-white" />
                 }
             >
                 <BannersFetch />

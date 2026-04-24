@@ -303,7 +303,7 @@ export function LoveThese({
     const shownProducts = banners.slice(0, 18);
 
     return (
-        <section className="w-full bg-[#FCFBF4] py-4">
+        <section className="w-full bg-white py-4">
             <h2 className="mb-6 text-center font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Basic Collection
             </h2>

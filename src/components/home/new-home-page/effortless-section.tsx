@@ -44,7 +44,7 @@ export function EffortlessElegance({ moodboardItems, className }: PageProps) {
     if (!moodboardItems.length) return null;
 
     return (
-        <section className={cn("w-full bg-[#FCFBF4]", className)}>
+        <section className={cn("w-full bg-white", className)}>
             <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* ===================== DESKTOP (unchanged) ===================== */}
                 <div

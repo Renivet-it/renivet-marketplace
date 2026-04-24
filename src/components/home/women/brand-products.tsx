@@ -22,7 +22,7 @@ export function WomenBrandProducts({ className, brandProducts }: PageProps) {
     return (
         <section
             className={cn(
-                "flex w-full justify-center bg-[#FCFBF4] py-5 md:px-8 md:py-10",
+                "flex w-full justify-center bg-white py-5 md:px-8 md:py-10",
                 className
             )}
             style={{ backgroundColor: "#FCFBF4" }}

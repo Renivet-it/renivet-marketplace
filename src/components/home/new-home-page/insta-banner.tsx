@@ -19,7 +19,7 @@ interface PageProps {
 
 export function InstaBanner({ className, banners }: PageProps) {
   return (
-    <section className={cn("w-full bg-[#FCFBF4]", className)}>
+    <section className={cn("w-full bg-white", className)}>
       <div className="max-w-[1509px] mx-auto px-4">
         {/* ========================================================== */}
         {/* 🔹 UNIFIED & LEFT-ALIGNED VIEW                            */}

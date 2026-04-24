@@ -131,7 +131,7 @@ export function HomeRouteClickLoader() {
                 isVisible ? "opacity-100" : "opacity-0"
             )}
         >
-            <div className="absolute inset-0 bg-[#FCFBF4]/45 backdrop-blur-[1.5px]" />
+            <div className="absolute inset-0 bg-white/45 backdrop-blur-[1.5px]" />
 
             <div
                 className={cn(

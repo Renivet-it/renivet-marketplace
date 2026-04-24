@@ -25,7 +25,7 @@ export function BrandPromotion({ moodboardItems, className }: PageProps) {
     if (!moodboardItems?.length) return null;
 
     return (
-        <section className={cn("w-full bg-[#FCFBF4] px-4 py-4", className)}>
+        <section className={cn("w-full bg-white px-4 py-4", className)}>
             <div className="mx-auto max-w-[1600px]">
                 {/* ========================= TITLE ========================= */}
                 <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">

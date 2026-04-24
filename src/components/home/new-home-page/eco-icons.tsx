@@ -22,7 +22,7 @@ export function EcoIcons() {
     ];
 
     return (
-        <section className="w-full bg-[#FCFBF4]">
+        <section className="w-full bg-white">
             <div className="mx-auto max-w-screen-xl px-4 sm:px-6">
                 {/* Benefits Grid */}
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 md:gap-8">
@@ -57,7 +57,7 @@ export function EcoIcons() {
 
 export function Page() {
     return (
-        <div className="bg-[#FCFBF4]">
+        <div className="bg-white">
             <EcoIcons />
         </div>
     );

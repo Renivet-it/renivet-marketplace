@@ -17,7 +17,7 @@ export function ShopByCategories({
     return (
         <section
             className={cn(
-                "bg-[#FCFBF4] flex w-full justify-center py-5 md:px-8 md:py-10",
+                "bg-white flex w-full justify-center py-5 md:px-8 md:py-10",
                 className
             )}
             {...props}

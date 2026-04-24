@@ -15,7 +15,7 @@ interface PageProps extends GenericProps {
 export function EcoBannerSection({ className, banners, ...props }: PageProps) {
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] pt-8 md:pt-12", className)}
+            className={cn("w-full bg-white pt-8 md:pt-12", className)}
             {...props}
         >
             <Carousel

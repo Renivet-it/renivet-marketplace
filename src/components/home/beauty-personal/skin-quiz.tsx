@@ -15,7 +15,7 @@ interface PageProps extends GenericProps {
 export function SkinQuizBanner({ className, banners, ...props }: PageProps) {
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] pb-10", className)}
+            className={cn("w-full bg-white pb-10", className)}
             {...props}
         >
             <div className="mx-auto w-full max-w-[1400px]">

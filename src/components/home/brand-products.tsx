@@ -70,7 +70,7 @@ export function BrandProducts({
     return (
         <section
             className={cn(
-                "w-full bg-[#FCFBF4] py-8 md:py-16",
+                "w-full bg-white py-8 md:py-16",
                 className
             )}
             {...props}

@@ -120,7 +120,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
     ];
 
     return (
-        <section className={cn("bg-[#FCFBF4]", className)} {...props}>
+        <section className={cn("bg-white", className)} {...props}>
             {/* ✅ DESKTOP CAROUSEL */}
             <div className="hidden md:block">
                 <Carousel
@@ -199,7 +199,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                 href={category.href}
                                 className="flex min-w-[60px] flex-col items-center"
                             >
-                                <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[#FCFBF4] shadow-sm">
+                                <div className="relative h-16 w-16 overflow-hidden rounded-full bg-white shadow-sm">
                                     <Image
                                         src={category.imageUrl}
                                         alt={category.name}

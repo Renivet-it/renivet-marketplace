@@ -4,7 +4,7 @@ import React from "react";
 
 const EveryDayEssential = () => {
     return (
-        <div className="relative overflow-hidden bg-[#FCFBF4]">
+        <div className="relative overflow-hidden bg-white">
             <div className="w-full px-4 py-8 md:px-8 md:py-16">
                 {/* Header */}
                 <div className="mb-8 text-center md:mb-12">

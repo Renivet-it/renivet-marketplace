@@ -290,7 +290,7 @@ export function ProductsUnder999({
     return (
         <section
             className={cn(
-                "relative w-full overflow-hidden bg-[#FCFBF4] py-4 md:py-6",
+                "relative w-full overflow-hidden bg-white py-4 md:py-6",
                 className
             )}
             {...props}
