@@ -65,9 +65,9 @@ export function ShopCategories() {
                                         <Button
                                             asChild
                                             variant="outline"
-                                            className="rounded-none border-gray-300 px-4 py-1.5 text-xs font-normal text-gray-700 hover:bg-white hover:text-black"
+                                            className="rounded-none border-gray-300 px-4 py-1.5 text-xs font-normal btn-liquid btn-liquid-secondary"
                                         >
-                                            <Link href="/shop">
+                                            <Link href="/shop" className="text-inherit">
                                                 › SHOP NEW IN
                                             </Link>
                                         </Button>

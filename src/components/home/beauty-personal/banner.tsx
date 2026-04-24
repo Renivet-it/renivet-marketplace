@@ -96,7 +96,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Button
                                             size="lg"
-                                            className="border-2 border-black bg-transparent px-8 py-3 text-sm uppercase tracking-wide text-black hover:bg-black hover:text-white"
+                                            className="border border-black px-8 py-3 text-sm uppercase tracking-wide btn-liquid btn-liquid-secondary"
                                             asChild
                                         >
                                             <Link href={item.url || pathname}>
@@ -193,13 +193,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
                     {/* CTA */}
                     <div className="absolute bottom-16 flex w-full justify-center">
                         <Link
-                            href="https://renivet.com/shop?categoryId=08ce51fe-adb8-4086-acfd-759772767ec8"
-                            className="group relative inline-flex items-center justify-center overflow-hidden border border-black px-8 py-3 text-sm font-medium text-black"
+                            href="https://renivet.com/shop?categoryId=7c3f8753-48b4-4b52-96db-90de25f441dd"
+                            className="group inline-flex items-center justify-center px-8 py-3 text-sm font-medium btn-liquid btn-liquid-secondary"
                         >
-                            <span className="relative z-10 transition group-hover:text-white">
-                                Shop With Purpose
-                            </span>
-                            <span className="absolute inset-0 translate-y-full bg-black transition-transform duration-300 group-hover:translate-y-0" />
+                            Shop With Purpose
                         </Link>
                     </div>
                 </div>

@@ -252,18 +252,18 @@ function Under999ProductCard({
                     onClick={handleAddToCart}
                     disabled={isLoading || isAdded}
                     className={cn(
-                        "flex h-9 flex-1 items-center justify-center gap-1.5 rounded border text-[12px] font-medium transition-all duration-300 disabled:opacity-50 md:h-10 md:text-sm",
+                        "flex h-9 flex-1 items-center justify-center gap-1.5 rounded border text-[12px] font-medium transition-all duration-300 disabled:opacity-50 md:h-10 md:text-sm group/btn",
                         isAdded
                             ? "border-emerald-600 bg-emerald-600 text-white"
-                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50 hover:shadow-sm"
+                            : "btn-liquid btn-liquid-secondary"
                     )}
                 >
                     {isLoading ? (
-                        <Spinner className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
+                        <Spinner className="h-4 w-4 shrink-0 animate-spin text-inherit md:h-5 md:w-5" />
                     ) : isAdded ? (
-                        <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
+                        <Check className="h-4 w-4 shrink-0 text-inherit md:h-5 md:w-5" />
                     ) : (
-                        <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
+                        <ShoppingCart className="h-4 w-4 shrink-0 text-inherit md:h-5 md:w-5" />
                     )}
                 </button>
                 </div>

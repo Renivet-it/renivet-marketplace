@@ -135,7 +135,7 @@ export function ProductGrid({
             {hasMoreProducts && (
                 <div className="mt-4 text-center">
                     <Link href="/products">
-                        <Button className="rounded-md bg-blue-500 px-6 py-2 text-white hover:bg-blue-600">
+                        <Button className="rounded-md px-6 py-2 btn-liquid btn-liquid-primary">
                             Explore More Products
                         </Button>
                     </Link>

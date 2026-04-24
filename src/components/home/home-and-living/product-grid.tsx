@@ -114,6 +114,7 @@ export function ProductGrid({
             </div>
 
             {/* ================= DESKTOP ================= */}
+
             <div className="relative mx-auto hidden w-full px-4 md:block">
                 <Carousel
                     opts={{ align: "start", loop: true }}

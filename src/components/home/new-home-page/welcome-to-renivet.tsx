@@ -60,7 +60,7 @@ export function WelcomeRenivet() {
 
                         <Link
                             href="/about"
-                            className="mt-8 border border-gray-500 px-6 py-2 text-sm text-gray-700 transition hover:bg-gray-100"
+                            className="mt-8 border border-gray-500 px-6 py-2 text-sm btn-liquid btn-liquid-secondary"
                         >
                             → Discover Our Story
                         </Link>
@@ -117,7 +117,7 @@ export function WelcomeRenivet() {
 
                         <Link
                             href="/about"
-                            className="mt-auto border border-[#8C8C8C] px-4 py-1.5 text-[12px] text-[#3B3B3B] transition hover:bg-gray-100"
+                            className="mt-auto border border-[#8C8C8C] px-4 py-1.5 text-[12px] btn-liquid btn-liquid-secondary"
                         >
                             → Discover Our Story
                         </Link>

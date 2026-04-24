@@ -151,7 +151,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Button
                                             size="lg"
-                                            className="group gap-3 bg-white/95 px-8 py-6 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white hover:shadow-2xl"
+                                            className="group gap-3 btn-liquid btn-liquid-secondary px-8 py-6 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                                             asChild
                                         >
                                             <Link href={item.url || "/shop"}>
@@ -248,7 +248,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             <div className="pointer-events-auto">
                                                 <Link
                                                     href={item.link}
-                                                    className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
+                                                    className="group relative inline-flex items-center gap-2 overflow-hidden btn-liquid btn-liquid-secondary px-8 py-3 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
                                                 >
                                                     <span>
                                                         Shop With Purpose
