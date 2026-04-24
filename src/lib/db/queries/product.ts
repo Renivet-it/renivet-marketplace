@@ -3387,6 +3387,7 @@ class ProductQuery {
                     with: {
                         brand: true,
                         variants: true,
+                        options: true,
                         returnExchangePolicy: true,
                         specifications: true,
                     },
