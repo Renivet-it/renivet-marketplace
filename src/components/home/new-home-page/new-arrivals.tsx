@@ -60,16 +60,20 @@ export function ProductGridNewArrivals({ className, products, userId, ...props }
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
                         Curated For You
                     </span>
-                    <div className="mt-2 flex items-center gap-6 md:gap-10">
+                    <h2 className="mt-2 font-playfair text-[28px] font-normal leading-[1.3] text-gray-900 md:text-[36px] uppercase">
+                        New Arrivals
+                    </h2>
+                    
+                    <div className="mt-6 flex items-center border border-gray-200 overflow-hidden w-fit">
                         {availableTabs.map(tab => {
                             const isActive = activeTab === tab;
                             return (
                                 <button key={tab} onClick={() => setActiveTab(tab)}
                                     className={cn(
-                                        "font-playfair text-[28px] font-normal leading-[1.3] uppercase transition-colors duration-300 md:text-[36px]",
+                                        "px-8 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200",
                                         isActive 
-                                            ? "text-gray-900" 
-                                            : "text-gray-300 hover:text-gray-500"
+                                            ? "bg-[#222] text-white" 
+                                            : "bg-white text-gray-500 hover:text-gray-900"
                                     )}>
                                     {tab}
                                 </button>
