@@ -49,7 +49,7 @@ export function ShopByNewCategories({
                             Explore
                         </span>
                         <h2 className="mt-1.5 font-playfair text-[26px] font-normal text-gray-900 md:text-[34px]">
-                            {titleData?.title || "Shop by Category"}
+                            {titleData?.title || "Curated Collections"}
                         </h2>
                     </div>
 
@@ -89,31 +89,34 @@ export function ShopByNewCategories({
                 </div>
 
                 {/* ── MOBILE: two-row horizontal scroll ── */}
-                <div className="flex flex-col gap-3 md:hidden">
+                <div className="flex flex-col gap-4 md:hidden">
                     {[firstRowItems, secondRowItems].map((row, ri) => (
-                        <div key={ri} className="scrollbar-hide flex gap-3 overflow-x-auto">
+                        <div key={ri} className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 px-4 -mx-4">
                             {row.map((cat, i) => (
                                 <Link
                                     key={i}
                                     href={cat.url || "/shop"}
-                                    className="group relative block shrink-0 overflow-hidden"
-                                    style={{ width: "120px", aspectRatio: "2/3" }}
+                                    className="group relative block shrink-0 snap-center overflow-hidden rounded-md bg-gray-100 shadow-sm transition-transform active:scale-95"
+                                    style={{ width: "140px", aspectRatio: "2/3" }}
                                 >
                                     <Image
-                                        src={cat.imageUrl}
+                                        src={cat.imageUrl || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
                                         alt={cat.title || "Category"}
                                         fill
-                                        sizes="120px"
+                                        sizes="140px"
                                         quality={80}
-                                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                        className="object-cover"
                                     />
-                                    <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-black/65 to-transparent" />
-                                    <div className="absolute inset-x-0 bottom-0 p-2.5">
-                                        <p className="font-playfair text-[13px] font-normal leading-tight text-white">
+                                    <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                    <div className="absolute inset-x-0 bottom-0 p-3">
+                                        <p className="font-playfair text-[15px] font-normal leading-tight text-white drop-shadow-md">
                                             {cat.title || "Category"}
                                         </p>
-                                        <p className="mt-0.5 text-[9px] font-bold uppercase tracking-[0.15em] text-white/60">
-                                            Shop
+                                        <p className="mt-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-[#c8a96e]">
+                                            Shop Now
+                                            <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                            </svg>
                                         </p>
                                     </div>
                                 </Link>
@@ -125,41 +128,41 @@ export function ShopByNewCategories({
                 {/* ── DESKTOP: editorial portrait strip ── */}
                 <div
                     ref={scrollRef}
-                    className="scrollbar-hide hidden md:flex md:gap-4 lg:gap-5 overflow-x-auto pb-4 scroll-smooth"
+                    className="group/container scrollbar-hide hidden md:flex md:gap-5 lg:gap-6 overflow-x-auto pb-10 pt-4 px-4 -mx-4 scroll-smooth"
                 >
                     {shopByCategories.map((cat, i) => (
                         <Link
                             key={i}
                             href={cat.url || "/shop"}
-                            className="group relative block shrink-0 overflow-hidden bg-gray-100"
-                            style={{ width: "260px", height: "420px" }}
+                            className="group/card relative block shrink-0 overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] hover:z-20 hover:-translate-y-3 hover:scale-[1.03] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] group-hover/container:opacity-40 hover:!opacity-100 group-hover/container:blur-[2px] hover:!blur-none"
+                            style={{ width: "280px", height: "440px" }}
                         >
                             {/* Image */}
                             <Image
                                 src={cat.imageUrl || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
                                 alt={cat.title || "Category"}
                                 fill
-                                sizes="260px"
+                                sizes="280px"
                                 quality={90}
-                                className="object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                className="object-cover transition-transform duration-1000 ease-out group-hover/card:scale-110"
                             />
 
                             {/* Gradient overlay */}
-                            <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+                            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/90 via-black/40 to-transparent transition-all duration-500 group-hover/card:h-2/3" />
 
                             {/* Hover tint */}
-                            <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover:bg-black/15" />
+                            <div className="absolute inset-0 bg-black/0 transition-all duration-500 group-hover/card:bg-black/20" />
 
                             {/* Text */}
-                            <div className="absolute inset-x-0 bottom-0 p-5">
-                                <h3 className="font-playfair text-[20px] font-normal leading-tight text-white md:text-[22px]">
+                            <div className="absolute inset-x-0 bottom-0 p-6 transition-transform duration-500 group-hover/card:-translate-y-2">
+                                <h3 className="font-playfair text-[22px] font-normal leading-tight text-white md:text-[28px]">
                                     {cat.title || "Category"}
                                 </h3>
                                 {/* Animated CTA */}
-                                <div className="mt-2 flex items-center gap-2 overflow-hidden">
-                                    <span className="h-px w-0 bg-white transition-all duration-500 ease-out group-hover:w-5" />
-                                    <span className="translate-x-[-4px] text-[9px] font-bold uppercase tracking-[0.2em] text-white/0 opacity-0 transition-all duration-500 ease-out group-hover:translate-x-0 group-hover:text-white group-hover:opacity-100">
-                                        Shop
+                                <div className="mt-3 flex items-center gap-2 overflow-hidden">
+                                    <span className="h-px w-0 bg-[#c8a96e] transition-all duration-500 ease-out group-hover/card:w-8" />
+                                    <span className="translate-x-[-8px] text-[10px] font-bold uppercase tracking-[0.2em] text-[#c8a96e]/0 opacity-0 transition-all duration-500 ease-out group-hover/card:translate-x-0 group-hover/card:text-[#c8a96e] group-hover/card:opacity-100">
+                                        Explore Collection
                                     </span>
                                 </div>
                             </div>
