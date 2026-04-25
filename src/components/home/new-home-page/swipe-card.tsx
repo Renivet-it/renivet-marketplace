@@ -181,7 +181,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     if (!filteredProducts.length) return null;
 
     return (
-        <section className="w-full overflow-hidden bg-[#f9f7f4] py-12 md:py-20">
+        <section className="w-full bg-white py-10 md:py-14">
             <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
 
                 {/* — Header — */}
@@ -190,7 +190,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                         Curated For You
                     </span>
                     <h2 className="mt-2 font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
-                        Swipe & Discover
+                        Swipe &amp; Discover
                     </h2>
                 </div>
 
@@ -337,86 +337,84 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                     </div>
 
                     {/* ======= RIGHT PANEL ======= */}
-                    <div className="flex w-full flex-col gap-5">
-                        {/* Editorial CTA */}
-                        <Link
-                            href="/shop"
-                            className="group relative block overflow-hidden rounded-xl bg-gray-900 p-8 md:p-10 transition-all duration-500 hover:shadow-2xl"
-                        >
-                            {/* Background image tint */}
-                            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-gray-800 to-[#c8a96e]/30 opacity-90" />
+                    <div className="flex w-full flex-col gap-4">
 
-                            <div className="relative z-10">
-                                <span className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#c8a96e]">
-                                    Renivet Originals
-                                </span>
-                                <h3 className="mt-3 font-playfair text-3xl font-normal leading-tight text-white md:text-4xl">
-                                    The Collections
-                                    <br />
-                                    <em className="not-italic text-[#c8a96e]">Worth Keeping</em>
+                        {/* Got Curiosity Card */}
+                        <Link
+                            href="/curious-shift"
+                            className="group relative flex flex-col justify-between overflow-hidden border border-gray-100 bg-[#fdf8f2] p-7 transition-all duration-300 hover:border-[#d4b896] hover:shadow-lg md:p-8"
+                            style={{ minHeight: "220px" }}
+                        >
+                            <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#b8965e]">
+                                Renivet Exclusives
+                            </span>
+                            <div className="my-4">
+                                <h3 className="font-playfair text-[32px] font-normal leading-[1.15] text-gray-900 md:text-[38px]">
+                                    Got<br />
+                                    <em className="not-italic text-gray-400">curiosity?</em>
                                 </h3>
-                                <p className="mt-4 max-w-xs text-sm leading-relaxed text-gray-400">
-                                    Thoughtfully curated pieces from India&apos;s finest independent brands. Explore the full catalogue.
+                                <p className="mt-2 text-sm italic text-gray-400">
+                                    We&apos;ve Got Secrets.
                                 </p>
-                                <div className="mt-8 inline-flex items-center gap-2 rounded-sm border border-[#c8a96e] px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.14em] text-[#c8a96e] transition-all group-hover:bg-[#c8a96e] group-hover:text-gray-900">
-                                    Browse All
-                                    <svg className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                    </svg>
-                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700 transition-all group-hover:text-gray-900">
+                                Explore
+                                <svg className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                </svg>
                             </div>
                         </Link>
 
-                        {/* Swipe stats / guide */}
-                        <div className="grid grid-cols-3 gap-3">
-                            <div className="rounded-xl border border-gray-100 bg-white p-4 text-center shadow-sm">
-                                <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
-                                    <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                        {/* Swipe guide — compact 3-column */}
+                        <div className="flex items-stretch gap-3">
+                            <div className="flex flex-1 flex-col items-center gap-1.5 border border-gray-100 bg-white py-4">
+                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100">
+                                    <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
                                 </div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">Skip</p>
-                                <p className="mt-0.5 text-[9px] text-gray-400">Swipe left</p>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Skip</p>
+                                <p className="text-[8px] text-gray-300">swipe left</p>
                             </div>
-                            <div className="rounded-xl border border-[#c8a96e]/30 bg-[#c8a96e]/5 p-4 text-center shadow-sm">
-                                <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-[#c8a96e]/15">
-                                    <Icons.Heart className="h-4 w-4 text-[#c8a96e]" />
+                            <div className="flex flex-1 flex-col items-center gap-1.5 border border-[#e8d5b0] bg-[#fdf8f2] py-4">
+                                <div className="flex h-8 w-8 items-center justify-center bg-[#f5e8d0]">
+                                    <Icons.Heart className="h-3.5 w-3.5 text-[#b8965e]" />
                                 </div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-[#c8a96e]">Save</p>
-                                <p className="mt-0.5 text-[9px] text-gray-400">Swipe right</p>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-[#b8965e]">Save</p>
+                                <p className="text-[8px] text-gray-400">swipe right</p>
                             </div>
-                            <div className="rounded-xl border border-gray-100 bg-white p-4 text-center shadow-sm">
-                                <div className="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-full bg-gray-100">
-                                    <svg className="h-4 w-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <div className="flex flex-1 flex-col items-center gap-1.5 border border-gray-100 bg-white py-4">
+                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100">
+                                    <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                     </svg>
                                 </div>
-                                <p className="text-[10px] font-bold uppercase tracking-wider text-gray-400">View</p>
-                                <p className="mt-0.5 text-[9px] text-gray-400">Tap the eye</p>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">View</p>
+                                <p className="text-[8px] text-gray-300">tap icon</p>
                             </div>
                         </div>
 
-                        {/* Wishlist link */}
+                        {/* Wishlist tracker */}
                         <Link
                             href="/wishlist"
                             className={cn(
-                                "flex items-center justify-between rounded-xl border border-gray-100 bg-white px-5 py-4 shadow-sm transition-all hover:border-gray-300 hover:shadow-md",
-                                goneCards.size === 0 && "opacity-50 pointer-events-none"
+                                "group flex items-center justify-between border border-gray-100 bg-white px-4 py-3.5 transition-all hover:border-gray-300",
+                                goneCards.size === 0 && "pointer-events-none opacity-35"
                             )}
                         >
-                            <div className="flex items-center gap-3">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#c8a96e]/10">
-                                    <Icons.Heart className="h-4 w-4 text-[#c8a96e]" />
-                                </div>
+                            <div className="flex items-center gap-2.5">
+                                <Icons.Heart className="h-3.5 w-3.5 text-[#b8965e]" />
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-900">Your Saved Items</p>
-                                    <p className="text-[10px] text-gray-400">
-                                        {goneCards.size > 0 ? `${[...goneCards].filter(i => swipeDir[i] === "right").length} saved · ${[...goneCards].filter(i => swipeDir[i] === "left").length} skipped` : "Start swiping to save"}
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-700">Saved Items</p>
+                                    <p className="text-[9px] text-gray-400">
+                                        {goneCards.size > 0
+                                            ? `${[...goneCards].filter(i => swipeDir[i] === "right").length} saved · ${[...goneCards].filter(i => swipeDir[i] === "left").length} skipped`
+                                            : "Start swiping"}
                                     </p>
                                 </div>
                             </div>
-                            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg className="h-3.5 w-3.5 text-gray-300 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
                         </Link>
