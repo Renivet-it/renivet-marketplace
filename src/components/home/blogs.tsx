@@ -55,7 +55,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
                     {/* Prev Button */}
                     <button
                         onClick={() => scroll("left")}
-                        className="absolute -left-6 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-all hover:scale-105 hover:border-gray-900 group-hover/carousel:opacity-100 md:flex md:opacity-0"
+                        className="absolute -left-6 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-all hover:scale-105 hover:border-gray-900 group-hover/carousel:opacity-100 md:flex md:opacity-0 btn-liquid btn-liquid-secondary"
                         aria-label="Previous"
                     >
                         <ChevronLeft className="h-6 w-6 text-gray-900" />
@@ -108,7 +108,7 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
                     {/* Next Button */}
                     <button
                         onClick={() => scroll("right")}
-                        className="absolute -right-6 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-all hover:scale-105 hover:border-gray-900 group-hover/carousel:opacity-100 md:flex md:opacity-0"
+                        className="absolute -right-6 top-1/2 z-10 hidden h-12 w-12 -translate-y-1/2 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-all hover:scale-105 hover:border-gray-900 group-hover/carousel:opacity-100 md:flex md:opacity-0 btn-liquid btn-liquid-secondary"
                         aria-label="Next"
                     >
                         <ChevronRight className="h-6 w-6 text-gray-900" />
