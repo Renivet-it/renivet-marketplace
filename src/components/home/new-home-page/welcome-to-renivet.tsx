@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 export function WelcomeRenivet() {
     return (
-        <section className="relative w-full overflow-hidden bg-white py-10 md:py-24">
+        <section className="relative w-full overflow-hidden bg-white py-8 md:py-16">
             {/* Background Decorative Element */}
             <div className="absolute right-0 top-0 -z-10 hidden translate-x-1/2 -translate-y-1/2 opacity-[0.03] lg:block">
                 <Icons.Leaf size={600} />

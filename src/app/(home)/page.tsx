@@ -231,7 +231,9 @@ export default function Page() {
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+                <WelcomeToRenivetFetch />
+            </Suspense>
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductSwipeCardFetch />
             </Suspense>
@@ -252,22 +254,9 @@ export default function Page() {
                 <MayAlsoLoveTheseFetch />
             </Suspense>
 
-            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <MatchaBagFetch />
-            </Suspense> */}
-            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <LoveTheseFetch />
-            </Suspense> */}
-
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <WelcomeToRenivetFetch />
-            </Suspense>
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <BrandPromotionFetch />
             </Suspense>
-            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <HomePageMainProductFetch />
-            </Suspense> */}
 
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <BlogsFetch />
