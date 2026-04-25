@@ -32,7 +32,7 @@ function useGuestCart() {
     return { guestCart, addToGuestCart };
 }
 
-interface Product {
+export interface Product {
     slug: any; id: string; title: string; description?: string; isAvailable?: boolean;
     media: { mediaItem: { url: string } }[];
     brand?: { name: string }; brandId?: string;
@@ -95,7 +95,7 @@ export function ProductGridNewArrivals({ className, products, userId, ...props }
     );
 }
 
-function ProductCard({ product, userId }: { product: Product; userId?: string }) {
+export function ProductCard({ product, userId }: { product: Product; userId?: string }) {
     const { trackAddToCartEvent } = useAddToCartTracking();
     const router = useRouter();
     const { addToGuestCart } = useGuestCart();
