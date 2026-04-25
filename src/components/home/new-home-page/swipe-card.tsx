@@ -339,25 +339,31 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                     {/* ======= RIGHT PANEL ======= */}
                     <div className="flex w-full flex-col gap-4">
 
-                        {/* Got Curiosity Card */}
+                        {/* Got Curiosity Card — primary palette + animated shimmer */}
                         <Link
                             href="/curious-shift"
-                            className="group relative flex flex-col justify-between overflow-hidden border border-gray-100 bg-[#fdf8f2] p-7 transition-all duration-300 hover:border-[#d4b896] hover:shadow-lg md:p-8"
+                            className="group relative flex flex-col justify-between overflow-hidden border border-[#e8edd8] bg-[#f4f6ec] p-7 transition-all duration-500 hover:border-[#c5d08a] hover:shadow-lg md:p-8"
                             style={{ minHeight: "220px" }}
                         >
-                            <span className="text-[9px] font-bold uppercase tracking-[0.22em] text-[#b8965e]">
+                            {/* Shimmer sweep on hover */}
+                            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
+
+                            {/* Subtle background orb */}
+                            <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-[#d6e29a]/30 blur-2xl transition-all duration-500 group-hover:scale-125 group-hover:bg-[#d6e29a]/50" />
+
+                            <span className="relative text-[9px] font-bold uppercase tracking-[0.22em] text-[#4a5a1a]">
                                 Renivet Exclusives
                             </span>
-                            <div className="my-4">
+                            <div className="relative my-4">
                                 <h3 className="font-playfair text-[32px] font-normal leading-[1.15] text-gray-900 md:text-[38px]">
                                     Got<br />
-                                    <em className="not-italic text-gray-400">curiosity?</em>
+                                    <em className="not-italic text-[#5a7020]">curiosity?</em>
                                 </h3>
-                                <p className="mt-2 text-sm italic text-gray-400">
+                                <p className="mt-2 text-sm italic text-gray-500">
                                     We&apos;ve Got Secrets.
                                 </p>
                             </div>
-                            <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700 transition-all group-hover:text-gray-900">
+                            <div className="relative flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700 transition-all duration-300 group-hover:gap-3 group-hover:text-gray-900">
                                 Explore
                                 <svg className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -365,10 +371,11 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                             </div>
                         </Link>
 
-                        {/* Swipe guide — compact 3-column */}
+                        {/* Swipe guide — 3-column with primary accent */}
                         <div className="flex items-stretch gap-3">
-                            <div className="flex flex-1 flex-col items-center gap-1.5 border border-gray-100 bg-white py-4">
-                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100">
+                            {/* Skip */}
+                            <div className="group/tile flex flex-1 cursor-default flex-col items-center gap-1.5 border border-gray-100 bg-white py-4 transition-all duration-200 hover:border-gray-300 hover:shadow-sm">
+                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100 transition-colors duration-200 group-hover/tile:bg-gray-200">
                                     <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                                     </svg>
@@ -376,15 +383,23 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                                 <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Skip</p>
                                 <p className="text-[8px] text-gray-300">swipe left</p>
                             </div>
-                            <div className="flex flex-1 flex-col items-center gap-1.5 border border-[#e8d5b0] bg-[#fdf8f2] py-4">
-                                <div className="flex h-8 w-8 items-center justify-center bg-[#f5e8d0]">
-                                    <Icons.Heart className="h-3.5 w-3.5 text-[#b8965e]" />
+
+                            {/* Save — primary color highlight + pulse ring */}
+                            <div className="group/tile relative flex flex-1 cursor-default flex-col items-center gap-1.5 border border-[#c5d08a] bg-[#f4f6ec] py-4 transition-all duration-200 hover:border-[#a0b84a] hover:shadow-sm">
+                                {/* Pulse ring on the icon */}
+                                <div className="relative flex items-center justify-center">
+                                    <div className="absolute h-8 w-8 animate-ping rounded-full bg-[#5a7020]/10" />
+                                    <div className="relative flex h-8 w-8 items-center justify-center bg-[#e8f0c4]">
+                                        <Icons.Heart className="h-3.5 w-3.5 text-[#4a5a1a]" />
+                                    </div>
                                 </div>
-                                <p className="text-[9px] font-bold uppercase tracking-wider text-[#b8965e]">Save</p>
-                                <p className="text-[8px] text-gray-400">swipe right</p>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-[#4a5a1a]">Save</p>
+                                <p className="text-[8px] text-[#7a9030]">swipe right</p>
                             </div>
-                            <div className="flex flex-1 flex-col items-center gap-1.5 border border-gray-100 bg-white py-4">
-                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100">
+
+                            {/* View */}
+                            <div className="group/tile flex flex-1 cursor-default flex-col items-center gap-1.5 border border-gray-100 bg-white py-4 transition-all duration-200 hover:border-gray-300 hover:shadow-sm">
+                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100 transition-colors duration-200 group-hover/tile:bg-gray-200">
                                     <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
@@ -395,16 +410,36 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                             </div>
                         </div>
 
+                        {/* Progress bar — shows how many cards swiped */}
+                        {filteredProducts.length > 0 && (
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                        Progress
+                                    </span>
+                                    <span className="text-[9px] text-gray-400">
+                                        {goneCards.size} / {filteredProducts.length}
+                                    </span>
+                                </div>
+                                <div className="h-0.5 w-full overflow-hidden bg-gray-100">
+                                    <div
+                                        className="h-full bg-[#5a7020] transition-all duration-500 ease-out"
+                                        style={{ width: `${(goneCards.size / filteredProducts.length) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
                         {/* Wishlist tracker */}
                         <Link
                             href="/wishlist"
                             className={cn(
-                                "group flex items-center justify-between border border-gray-100 bg-white px-4 py-3.5 transition-all hover:border-gray-300",
+                                "group flex items-center justify-between border border-gray-100 bg-white px-4 py-3.5 transition-all duration-200 hover:border-[#c5d08a] hover:bg-[#f9fbf3]",
                                 goneCards.size === 0 && "pointer-events-none opacity-35"
                             )}
                         >
                             <div className="flex items-center gap-2.5">
-                                <Icons.Heart className="h-3.5 w-3.5 text-[#b8965e]" />
+                                <Icons.Heart className="h-3.5 w-3.5 text-[#5a7020] transition-transform duration-200 group-hover:scale-125" />
                                 <div>
                                     <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-700">Saved Items</p>
                                     <p className="text-[9px] text-gray-400">
@@ -414,7 +449,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                                     </p>
                                 </div>
                             </div>
-                            <svg className="h-3.5 w-3.5 text-gray-300 transition-transform duration-200 group-hover:translate-x-1 group-hover:text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                            <svg className="h-3.5 w-3.5 text-gray-300 transition-all duration-200 group-hover:translate-x-1 group-hover:text-[#5a7020]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                                 <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
                             </svg>
                         </Link>
@@ -424,3 +459,4 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
         </section>
     );
 }
+
