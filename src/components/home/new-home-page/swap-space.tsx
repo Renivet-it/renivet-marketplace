@@ -417,7 +417,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                             </button>
                         </DialogTrigger>
                     </div>
-                    <DialogContent className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-md p-0 md:h-[85vh]">
+                    <DialogContent className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-md p-0 md:h-[85vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
                         <DialogTitle className="sr-only">{product.title}</DialogTitle>
                         {/* 2-Column Grid for Desktop, Stacked for Mobile */}
                         <div className="flex h-full flex-col md:flex-row bg-white overflow-y-auto md:overflow-hidden">
