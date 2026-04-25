@@ -64,23 +64,25 @@ export function ProductGridNewArrivals({ className, products, userId, ...props }
                         New Arrivals
                     </h2>
                     
-                    <div className="mt-6 flex items-center border border-gray-200 overflow-hidden w-fit rounded-md">
-                        {availableTabs.map(tab => {
-                            const isActive = activeTab === tab;
-                            const IconComponent = tab === "Most Ordered" ? Icons.Sparkles : tab === "Basic Collection" ? Layers : Icons.Sun;
-                            return (
-                                <button key={tab} onClick={() => setActiveTab(tab)}
-                                    className={cn(
-                                        "flex items-center gap-2 px-8 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200",
-                                        isActive 
-                                            ? "bg-[#222] text-white" 
-                                            : "bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                                    )}>
-                                    <IconComponent className="w-3.5 h-3.5" />
-                                    {tab}
-                                </button>
-                            );
-                        })}
+                    <div className="mt-6 w-full max-w-full overflow-x-auto scrollbar-hide">
+                        <div className="flex w-max items-center border border-gray-200 overflow-hidden rounded-md">
+                            {availableTabs.map(tab => {
+                                const isActive = activeTab === tab;
+                                const IconComponent = tab === "Most Ordered" ? Icons.Sparkles : tab === "Basic Collection" ? Layers : Icons.Sun;
+                                return (
+                                    <button key={tab} onClick={() => setActiveTab(tab)}
+                                        className={cn(
+                                            "flex items-center gap-2 px-6 py-2.5 text-[11px] font-semibold uppercase tracking-[0.15em] transition-all duration-200 md:px-8",
+                                            isActive 
+                                                ? "bg-[#222] text-white" 
+                                                : "bg-white text-gray-500 hover:text-gray-900 hover:bg-gray-50"
+                                        )}>
+                                        <IconComponent className="w-3.5 h-3.5 shrink-0" />
+                                        <span className="shrink-0">{tab}</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
                     </div>
                 </div>
                 <div className="grid grid-cols-3 gap-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">

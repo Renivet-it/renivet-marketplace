@@ -29,7 +29,10 @@ export function ShopByNewCategories({
             const { scrollLeft, clientWidth } = scrollRef.current;
             const scrollAmount = clientWidth * 0.8;
             scrollRef.current.scrollTo({
-                left: direction === "left" ? scrollLeft - scrollAmount : scrollLeft + scrollAmount,
+                left:
+                    direction === "left"
+                        ? scrollLeft - scrollAmount
+                        : scrollLeft + scrollAmount,
                 behavior: "smooth",
             });
         }
@@ -40,8 +43,7 @@ export function ShopByNewCategories({
             className={cn("w-full bg-white py-12 md:py-16", className)}
             {...props}
         >
-            <div className="mx-auto w-full max-w-screen-3xl px-4 sm:px-6 lg:px-8">
-
+            <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
                 {/* ── Header ── */}
                 <div className="mb-8 flex items-end justify-between md:mb-10">
                     <div>
@@ -61,8 +63,18 @@ export function ShopByNewCategories({
                                 className="group flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 transition-all hover:border-gray-900"
                                 aria-label="Previous categories"
                             >
-                                <svg className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                                <svg
+                                    className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-900"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M15 19l-7-7 7-7"
+                                    />
                                 </svg>
                             </button>
                             <button
@@ -70,8 +82,18 @@ export function ShopByNewCategories({
                                 className="group flex h-9 w-9 items-center justify-center rounded-full border border-gray-200 transition-all hover:border-gray-900"
                                 aria-label="Next categories"
                             >
-                                <svg className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-900" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                <svg
+                                    className="h-4 w-4 text-gray-400 transition-colors group-hover:text-gray-900"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                    strokeWidth={2}
+                                >
+                                    <path
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        d="M9 5l7 7-7 7"
+                                    />
                                 </svg>
                             </button>
                         </div>
@@ -81,8 +103,18 @@ export function ShopByNewCategories({
                             className="hidden items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-gray-400 transition-colors hover:text-gray-900 md:flex"
                         >
                             View All
-                            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            <svg
+                                className="h-3 w-3"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                                strokeWidth={2.5}
+                            >
+                                <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M17 8l4 4m0 0l-4 4m4-4H3"
+                                />
                             </svg>
                         </Link>
                     </div>
@@ -91,16 +123,25 @@ export function ShopByNewCategories({
                 {/* ── MOBILE: two-row horizontal scroll ── */}
                 <div className="flex flex-col gap-4 md:hidden">
                     {[firstRowItems, secondRowItems].map((row, ri) => (
-                        <div key={ri} className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 px-4 -mx-4">
+                        <div
+                            key={ri}
+                            className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-4"
+                        >
                             {row.map((cat, i) => (
                                 <Link
                                     key={i}
                                     href={cat.url || "/shop"}
                                     className="group relative block shrink-0 snap-center overflow-hidden rounded-md bg-gray-100 shadow-sm transition-transform active:scale-95"
-                                    style={{ width: "140px", aspectRatio: "2/3" }}
+                                    style={{
+                                        width: "140px",
+                                        aspectRatio: "2/3",
+                                    }}
                                 >
                                     <Image
-                                        src={cat.imageUrl || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
+                                        src={
+                                            cat.imageUrl ||
+                                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                        }
                                         alt={cat.title || "Category"}
                                         fill
                                         sizes="140px"
@@ -114,8 +155,18 @@ export function ShopByNewCategories({
                                         </p>
                                         <p className="mt-1 flex items-center gap-1 text-[9px] font-bold uppercase tracking-[0.15em] text-[#c8a96e]">
                                             Shop Now
-                                            <svg className="h-2.5 w-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                                            <svg
+                                                className="h-2.5 w-2.5"
+                                                fill="none"
+                                                viewBox="0 0 24 24"
+                                                stroke="currentColor"
+                                                strokeWidth={2.5}
+                                            >
+                                                <path
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    d="M9 5l7 7-7 7"
+                                                />
                                             </svg>
                                         </p>
                                     </div>
@@ -128,18 +179,21 @@ export function ShopByNewCategories({
                 {/* ── DESKTOP: editorial portrait strip ── */}
                 <div
                     ref={scrollRef}
-                    className="group/container scrollbar-hide hidden md:flex md:gap-5 lg:gap-6 overflow-x-auto pb-10 pt-4 px-4 -mx-4 scroll-smooth"
+                    className="group/container scrollbar-hide -mx-4 hidden overflow-x-auto scroll-smooth px-4 pb-10 pt-4 md:flex md:gap-5 lg:gap-6"
                 >
                     {shopByCategories.map((cat, i) => (
                         <Link
                             key={i}
                             href={cat.url || "/shop"}
-                            className="group/card relative block shrink-0 overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 ease-[cubic-bezier(0.25,1,0.5,1)] hover:z-20 hover:-translate-y-3 hover:scale-[1.03] hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] group-hover/container:opacity-40 hover:!opacity-100 group-hover/container:blur-[2px] hover:!blur-none"
+                            className="group/card ease-[cubic-bezier(0.25,1,0.5,1)] relative block shrink-0 overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 hover:z-20 hover:-translate-y-3 hover:scale-[1.03] hover:!opacity-100 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] hover:!blur-none group-hover/container:opacity-40 group-hover/container:blur-[2px]"
                             style={{ width: "280px", height: "440px" }}
                         >
                             {/* Image */}
                             <Image
-                                src={cat.imageUrl || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
+                                src={
+                                    cat.imageUrl ||
+                                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                }
                                 alt={cat.title || "Category"}
                                 fill
                                 sizes="280px"
