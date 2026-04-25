@@ -56,7 +56,7 @@ export function ProductGridNewArrivals({ className, products, userId, ...props }
     return (
         <section className={cn("w-full bg-white py-10 md:py-14", className)} {...props}>
             <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
-                <div className="mb-8 flex flex-col items-start px-2">
+                <div className="mb-8 flex flex-col items-start">
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
                         Curated For You
                     </span>

@@ -98,52 +98,67 @@ function StripLoaderLink({ href, children, className }: StripLoaderLinkProps) {
     );
 }
 
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
+
 export function MobileCategories() {
+    const scrollRef = useRef<HTMLDivElement>(null);
+
+    const scroll = (direction: "left" | "right") => {
+        if (scrollRef.current) {
+            scrollRef.current.scrollBy({
+                left: direction === "left" ? -350 : 350,
+                behavior: "smooth",
+            });
+        }
+    };
+
     const categories = [
         {
             title: "Indian Wear",
+            subtitle: "Elegant ethnic styles for every occasion.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNzQ7NO8wvAfHxUCD4uo0de9jTMakKRhw8ctYL",
             link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=0cb0f01f-4c17-47ff-8251-4ea5a7a65a09&productTypeId=0f13d48d-50de-43ec-8bab-a7bfbbcf8773",
         },
         {
             title: "Western Wear",
+            subtitle: "Modern and comfortable everyday fashion.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNdhPFJaWb4imNMJ6l9SbIRxWLcDyX3vTqk2UV",
             link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=f050d1bc-f435-45fc-ac22-47942a4d4a74",
         },
         {
             title: "Foot Wear",
+            subtitle: "Step out in style with premium quality.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN8g1QARjj1qpSPZJEOTHVgaenl2yArM78zCkm",
             link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=4489ecbd-cb3e-47f0-aced-defcf134629b",
         },
-        {
-            title: "Sale",
-            imageUrl:
-                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmKiAnjNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
-        },
+
         {
             title: "Shirts",
+            subtitle: "Classic cuts and contemporary designs.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNvWCA90dPZsh5fuDbkAelMyqICmp3NU7X4nHY",
             link: "https://renivet.com/shop?categoryId=0b7046fc-6962-4469-81c2-412ed6949c02&subcategoryId=7f1e41e3-e7a9-46ef-aaf6-f0e0a37a971d&productTypeId=e027b0df-5287-4114-849d-1f3bfc05e594",
         },
         {
             title: "Accessories",
+            subtitle: "Buy Any 2, Get 15% Off. The perfect finish.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNawKqqt9B8YEoL1wGJl0ZibnpvNAMuVzCFqKc",
             link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=32674fe3-d167-4b48-914b-0819b17a2292",
         },
         {
             title: "Home Decor",
+            subtitle: "Beautiful pieces for your personal space.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNeqhEsg0rgXZuWwadPABUqnljV5RbJMFsx1v",
             link: "https://renivet.com/shop?categoryId=173e1e71-e298-4301-b542-caa29d3950bf",
         },
         {
             title: "Kids",
+            subtitle: "Comfortable and cute outfits.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjgHih7umPpnZoHc5f2E4rFNLugdK3ty9ObjY",
             link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
@@ -151,159 +166,82 @@ export function MobileCategories() {
     ];
 
     return (
-        <>
-            {/* Mobile: 4-col grid */}
-            <section className="block w-full bg-white px-4 py-6 md:hidden">
-                <div className="grid grid-cols-4 gap-x-2 gap-y-6">
-                    {categories.map((item, index) => (
-                        <StripLoaderLink
-                            key={`mobile-${index}`}
-                            href={item.link}
-                            className="flex flex-col items-center"
-                        >
-                            {item.title === "Accessories" ? (
-                                <div className="perspective aspect-square w-full max-w-[78px]">
-                                    <div className="flip-card">
-                                        <div className="card-face card-front relative h-full w-full overflow-hidden">
-                                            <Image
-                                                src={item.imageUrl}
-                                                alt={item.title}
-                                                fill
-                                                sizes="78px"
-                                                className="object-cover"
-                                            />
+        <section className="w-full bg-white pt-8 pb-0 md:pt-10 md:pb-0">
+            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
+                {/* Header Section */}
+                <div className="mb-5 flex flex-col items-start md:mb-6">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
+                        Discover products you can trust
+                    </span>
+                    <div className="mt-2 flex w-full items-center justify-between">
+                        <h2 className="font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
+                            SHOP BY <span className="text-[#a46e5b]">CATEGORY</span>
+                        </h2>
+
+                        {/* Desktop Navigation Arrows */}
+                        <div className="hidden gap-2 md:flex">
+                            <button
+                                onClick={() => scroll("left")}
+                                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                            >
+                                <ChevronLeft className="h-5 w-5 text-gray-600" />
+                            </button>
+                            <button
+                                onClick={() => scroll("right")}
+                                className="flex h-10 w-10 items-center justify-center rounded-full border border-gray-200 bg-white shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 active:scale-95"
+                            >
+                                <ChevronRight className="h-5 w-5 text-gray-600" />
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Cards Carousel */}
+                <div className="relative -mx-4 px-4 md:mx-0 md:px-0">
+                    <div
+                        ref={scrollRef}
+                        className="scrollbar-hide flex snap-x snap-mandatory gap-2 overflow-x-auto pb-4 md:gap-3 md:pb-6"
+                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                    >
+                        {categories.map((item, index) => (
+                            <StripLoaderLink
+                                key={index}
+                                href={item.link}
+                                className="group relative flex aspect-[4/5] w-[140px] shrink-0 snap-center flex-col justify-end overflow-hidden rounded-md md:w-[220px] md:snap-start lg:w-[240px]"
+                            >
+                                {/* Background Image */}
+                                <Image
+                                    src={item.imageUrl}
+                                    alt={item.title}
+                                    fill
+                                    sizes="(max-width: 768px) 140px, (max-width: 1024px) 220px, 240px"
+                                    className="object-cover transition-transform duration-700 ease-in-out group-hover:scale-105"
+                                />
+
+                                {/* Dark Gradient Overlay */}
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-90 transition-opacity duration-500 group-hover:opacity-100" />
+
+                                {/* Content */}
+                                <div className="relative z-10 flex w-full flex-col p-3 md:p-5">
+                                    <div className="flex items-end justify-between">
+                                        <div className="flex flex-col text-white">
+                                            <h3 className="mb-0.5 font-playfair text-[15px] font-medium tracking-wide md:text-[22px]">
+                                                {item.title}
+                                            </h3>
+                                            <p className="max-w-[100px] text-[9px] italic leading-snug text-white/80 transition-opacity duration-300 md:max-w-[140px] md:text-[12px]">
+                                                {item.subtitle}
+                                            </p>
                                         </div>
-                                        <div className="card-face card-back">
-                                            <p className="text-[10px] leading-tight text-[#333]">
-                                                Buy Any 2
-                                            </p>
-                                            <p className="text-[11px] font-semibold text-[#000]">
-                                                Get 15% Off
-                                            </p>
+                                        <div className="flex h-6 w-6 shrink-0 -translate-x-2 items-center justify-center rounded-full bg-white/20 opacity-0 backdrop-blur-sm transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100 md:h-8 md:w-8">
+                                            <ArrowRight className="h-3 w-3 text-white md:h-4 md:w-4" />
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
-                                <div className="relative aspect-square w-full max-w-[78px] overflow-hidden">
-                                    <Image
-                                        src={item.imageUrl}
-                                        alt={item.title}
-                                        fill
-                                        sizes="78px"
-                                        className="object-cover"
-                                    />
-                                </div>
-                            )}
-                            <p className="mt-2 text-center text-[10px] leading-tight text-[#333] sm:text-[12px]">
-                                {item.title}
-                            </p>
-                        </StripLoaderLink>
-                    ))}
+                            </StripLoaderLink>
+                        ))}
+                    </div>
                 </div>
-            </section>
-
-            {/* Desktop: full-width grid, minimal padding */}
-            <section className="hidden w-full bg-white px-4 py-8 md:block">
-                <div className="mx-auto grid max-w-screen-2xl grid-cols-8 gap-4 lg:gap-6">
-                    {categories.map((item, index) => (
-                        <StripLoaderLink
-                            key={index}
-                            href={item.link}
-                            className="group flex flex-col items-center"
-                        >
-                            {item.title === "Accessories" ? (
-                                <div className="perspective aspect-square w-full">
-                                    <div className="flip-card">
-                                        <div className="card-face card-front relative h-full w-full overflow-hidden">
-                                            <Image
-                                                src={item.imageUrl}
-                                                alt={item.title}
-                                                fill
-                                                sizes="(max-width: 1024px) 12.5vw, 170px"
-                                                className="object-cover"
-                                            />
-                                        </div>
-                                        <div className="card-face card-back">
-                                            <p className="text-xs leading-tight text-[#333]">
-                                                Buy Any 2
-                                            </p>
-                                            <p className="text-sm font-semibold text-black">
-                                                Get 15% Off
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            ) : (
-                                <div className="relative aspect-square w-full overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                                    <Image
-                                        src={item.imageUrl}
-                                        alt={item.title}
-                                        fill
-                                        sizes="(max-width: 1024px) 12.5vw, 170px"
-                                        className="object-cover"
-                                    />
-                                </div>
-                            )}
-                            <p className="mt-2.5 text-center text-sm font-medium text-[#333] transition-colors group-hover:text-[#6B7A5E]">
-                                {item.title}
-                            </p>
-                        </StripLoaderLink>
-                    ))}
-                </div>
-            </section>
-
-            {/* ✅ CSS INSIDE SAME FILE */}
-            <style jsx>{`
-                .perspective {
-                    perspective: 1000px;
-                }
-
-                .flip-card {
-                    width: 100%;
-                    height: 100%;
-                    position: relative;
-                    transform-style: preserve-3d;
-                    animation: flip 4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-                }
-
-                @keyframes flip {
-                    0% {
-                        transform: rotateY(0deg);
-                    }
-                    25% {
-                        transform: rotateY(0deg);
-                    }
-                    50% {
-                        transform: rotateY(180deg);
-                    }
-                    75% {
-                        transform: rotateY(180deg);
-                    }
-                    100% {
-                        transform: rotateY(0deg);
-                    }
-                }
-
-                .card-face {
-                    position: absolute;
-                    inset: 0;
-                    backface-visibility: hidden;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    text-align: center;
-                }
-
-                .card-front {
-                    background: transparent;
-                }
-
-                .card-back {
-                    background: #efe7da;
-                    transform: rotateY(180deg);
-                    flex-direction: column;
-                }
-            `}</style>
-        </>
+            </div>
+        </section>
     );
 }
