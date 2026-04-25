@@ -216,6 +216,12 @@ export default function Page() {
                 </div>
             </div>
 
+            <div className="hidden md:block">
+                <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+                    <ShopByNewCategoriesFetch />
+                </Suspense>
+            </div>
+
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
@@ -257,11 +263,6 @@ export default function Page() {
                 <HomePageMainProductFetch />
             </Suspense> */}
 
-            <div className="hidden md:block">
-                <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                    <ShopByNewCategoriesFetch />
-                </Suspense>
-            </div>
 
             <FloatingLoginButton />
         </>

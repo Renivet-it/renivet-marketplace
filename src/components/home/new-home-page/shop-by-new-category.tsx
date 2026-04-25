@@ -40,7 +40,7 @@ export function ShopByNewCategories({
 
     return (
         <section
-            className={cn("w-full bg-white py-12 md:py-16", className)}
+            className={cn("w-full bg-white py-8 md:py-10", className)}
             {...props}
         >
             <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
@@ -51,7 +51,7 @@ export function ShopByNewCategories({
                             Explore
                         </span>
                         <h2 className="mt-1.5 font-playfair text-[26px] font-normal text-gray-900 md:text-[34px]">
-                            {titleData?.title || "Curated Collections"}
+                            {titleData?.title || "Shop by Collection"}
                         </h2>
                     </div>
 
