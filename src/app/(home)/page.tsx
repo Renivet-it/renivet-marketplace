@@ -5,6 +5,7 @@ import {
     homeShopByCategoryTitleQueries,
     productQueries,
     WomenHomeSectionQueries,
+    blogQueries,
 } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { getAbsoluteURL } from "@/lib/utils";
@@ -30,6 +31,11 @@ export const metadata: Metadata = {
 };
 
 // Dynamically import all below-the-fold components to reduce initial JS bundle
+const Blogs = dynamic(() =>
+    import("@/components/home/blogs").then((m) => ({
+        default: m.Blogs,
+    }))
+);
 const BrandPromotion = dynamic(() =>
     import("@/components/home/new-home-page/brand-promotion").then((m) => ({
         default: m.BrandPromotion,
@@ -263,6 +269,9 @@ export default function Page() {
                 <HomePageMainProductFetch />
             </Suspense> */}
 
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+                <BlogsFetch />
+            </Suspense>
 
             <FloatingLoginButton />
         </>
@@ -476,6 +485,16 @@ async function ShopByNewCategoriesFetch() {
             <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />
         </ScrollReveal>
     );
+}
+
+async function BlogsFetch() {
+    const blogs = await blogQueries.getBlogs({
+        isPublished: true,
+        limit: 6,
+        page: 1,
+    });
+    if (!blogs.data?.length) return null;
+    return <Blogs blogs={blogs.data} />;
 }
 
 async function BannersFetch() {
