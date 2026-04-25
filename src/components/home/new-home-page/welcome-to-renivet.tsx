@@ -3,124 +3,150 @@
 import { Icons } from "@/components/icons";
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "motion/react";
+import { cn } from "@/lib/utils";
 
 export function WelcomeRenivet() {
     return (
-        <section className="w-full bg-white px-0 py-4 md:px-4">
-            {/* ⬇️ BORDER ONLY ON DESKTOP */}
-            <div className="mx-auto max-w-[1600px] bg-[#fbfaf4] px-6 py-6 md:border md:border-[#D8D2C7] md:px-16">
-                {/* ---------------- DESKTOP ---------------- */}
-                <div className="hidden items-start gap-12 md:flex">
-                    {/* LEFT IMAGE */}
-                    <div className="relative h-[430px] w-[480px] overflow-hidden rounded-md">
+        <section className="relative w-full overflow-hidden bg-white py-12 md:py-24">
+            {/* Background Decorative Element */}
+            <div className="absolute right-0 top-0 -z-10 hidden translate-x-1/2 -translate-y-1/2 opacity-[0.03] lg:block">
+                <Icons.Leaf size={600} />
+            </div>
+
+            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
+                <div className="relative grid items-center gap-12 lg:grid-cols-2 lg:gap-24">
+                    {/* LEFT IMAGE - Interactive with Hover Effect */}
+                    <motion.div
+                        initial={{ opacity: 0, x: -50 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="group relative aspect-[4/5] w-full overflow-hidden rounded-2xl bg-[#fbfaf4] shadow-2xl md:aspect-[1.1/1]"
+                    >
                         <Image
                             src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQX1mcOvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT"
                             alt="Renivet Circle"
                             fill
-                            sizes="(max-width: 768px) 100vw, 480px"
-                            className="object-cover"
+                            sizes="(max-width: 1024px) 100vw, 50vw"
+                            className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                            priority
                         />
-                    </div>
+                        <div className="absolute inset-0 bg-black/10 transition-opacity group-hover:opacity-0" />
+
+                        {/* Decorative Badge on Image */}
+                        <div className="absolute bottom-8 left-8 right-8 md:bottom-12 md:left-12">
+                            <motion.p
+                                initial={{ opacity: 0, y: 20 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                transition={{ delay: 0.5 }}
+                                className="font-serif text-xl italic leading-tight text-white drop-shadow-lg md:text-3xl lg:text-4xl"
+                            >
+                                "One Thread. <br /> Many Conscious Brands."
+                            </motion.p>
+                        </div>
+                    </motion.div>
 
                     {/* RIGHT CONTENT */}
-                    <div className="flex flex-1 flex-col items-center text-center">
-                        <h2 className="mb-5 text-[26px] font-light tracking-wide text-[#3B3B3B]">
-                            Welcome to the Renivet Circle
-                        </h2>
+                    <div className="flex flex-col items-start text-left lg:pr-12">
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 0.6 }}
+                        >
+                            <span className="text-[11px] font-bold uppercase tracking-[0.4em] text-[#7A6338] opacity-80">
+                                Our Collective
+                            </span>
 
-                        <div className="mb-6 flex gap-5 text-[#3B3B3B]">
-                            <Icons.Leaf size={28} strokeWidth={1.25} />
-                            <Icons.Recycle size={28} strokeWidth={1.25} />
-                            <Icons.Footprints size={28} strokeWidth={1.25} />
-                            <Icons.Heart size={28} strokeWidth={1.25} />
-                            <Icons.Globe size={28} strokeWidth={1.25} />
-                        </div>
+                            <h2 className="mt-4 font-serif text-4xl font-light leading-tight text-gray-900 md:text-5xl lg:text-6xl xl:text-7xl">
+                                Welcome to the <br />
+                                <span className="italic underline decoration-[#7A6338]/20 underline-offset-8 text-[#7A6338]">
+                                    Renivet Circle
+                                </span>
+                            </h2>
+                        </motion.div>
 
-                        <div className="max-w-[620px] space-y-4 text-[16px] leading-relaxed text-[#474747]">
-                            <p>
+                        {/* Interactive Icons */}
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            whileInView={{ opacity: 1 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.4, duration: 1 }}
+                            className="mt-10 flex flex-wrap gap-8 text-gray-400"
+                        >
+                            {[
+                                { Icon: Icons.Leaf, label: "Sustainable" },
+                                { Icon: Icons.Recycle, label: "Eco-Friendly" },
+                                { Icon: Icons.Footprints, label: "Ethical" },
+                                { Icon: Icons.Heart, label: "Handmade" },
+                                { Icon: Icons.Globe, label: "Conscious" },
+                            ].map((item, i) => (
+                                <motion.div
+                                    key={i}
+                                    whileHover={{ y: -8, color: "#7A6338" }}
+                                    className="group/icon cursor-pointer transition-colors flex flex-col items-center gap-2"
+                                >
+                                    <item.Icon
+                                        size={28}
+                                        strokeWidth={1.25}
+                                        className="transition-transform group-hover/icon:scale-110"
+                                    />
+                                    <span className="translate-y-0 text-[10px] font-bold uppercase tracking-widest opacity-0 transition-all group-hover/icon:-translate-y-1 group-hover/icon:opacity-100">
+                                        {item.label}
+                                    </span>
+                                </motion.div>
+                            ))}
+                        </motion.div>
+
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.5, duration: 0.6 }}
+                            className="mt-12 space-y-8 text-lg leading-relaxed text-gray-600 md:text-xl"
+                        >
+                            <p className="border-l-2 border-[#7A6338]/30 pl-6 italic font-medium text-gray-900">
                                 Renivet isn’t just a marketplace — it’s a
                                 curated space of discovery.
                             </p>
-                            <p>
+                            <p className="max-w-[580px]">
                                 We connect you with brands that are sustainable,
                                 homegrown, and crafted with intention. Every
                                 piece here tells a story — of craft, culture,
                                 and conscious creation.
                             </p>
-                            <p>
-                                We believe in the stories behind products, the
-                                meaning behind making, and the people behind
-                                brands.
+                            <p className="font-serif italic text-gray-900">
+                                Thoughtful creation meets{" "}
+                                <span className="font-sans font-bold not-italic text-[#7A6338]">
+                                    thoughtful living.
+                                </span>
                             </p>
-                            <p>
-                                Renivet is where thoughtful creation meets
-                                thoughtful living.
-                            </p>
-                        </div>
+                        </motion.div>
 
-                        <Link
-                            href="/about"
-                            className="mt-8 border border-gray-500 px-6 py-2 text-sm btn-liquid btn-liquid-secondary"
+                        <motion.div
+                            initial={{ opacity: 0, y: 20 }}
+                            whileInView={{ opacity: 1, y: 0 }}
+                            viewport={{ once: true }}
+                            transition={{ delay: 0.6, duration: 0.6 }}
+                            className="mt-14 w-full md:w-auto"
                         >
-                            → Discover Our Story
-                        </Link>
-                    </div>
-                </div>
+                            <Link
+                                href="/about"
+                                className="group relative inline-flex w-full items-center justify-center gap-4 overflow-hidden rounded-full bg-gray-900 px-10 py-5 text-[12px] font-bold tracking-[0.2em] text-white shadow-lg transition-all active:scale-95 md:w-auto hover:bg-[#7A6338] hover:pr-14"
+                            >
+                                <span className="relative z-10">
+                                    DISCOVER OUR STORY
+                                </span>
+                                <Icons.ArrowRight
+                                    className="absolute right-6 translate-x-4 opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100"
+                                    size={20}
+                                />
 
-                {/* ---------------- MOBILE ---------------- */}
-                {/* ---------------- MOBILE ---------------- */}
-                <div className="flex justify-center md:hidden">
-                    <div className="flex h-[417px] w-full max-w-[420px] flex-col items-center border border-[#D8D2C7] bg-[#fbfaf4] px-8 py-5 text-center">
-                        <h2 className="mb-2 text-[15.5px] font-light tracking-wide text-[#3B3B3B]">
-                            Welcome to the Renivet Circle
-                        </h2>
-
-                        <div className="mb-3 flex gap-2.5 text-[#3B3B3B]">
-                            <Icons.Leaf size={15} strokeWidth={1.2} />
-                            <Icons.Recycle size={15} strokeWidth={1.2} />
-                            <Icons.Footprints size={15} strokeWidth={1.2} />
-                            <Icons.Heart size={15} strokeWidth={1.2} />
-                            <Icons.Globe size={15} strokeWidth={1.2} />
-                        </div>
-
-                        <div className="mb-3 w-full space-y-2.5 text-[11px] leading-[1.5] text-[#4A4A4A]">
-                            <p>
-                                Renivet isn’t just a marketplace — it’s a
-                                curated space of discovery.
-                            </p>
-                            <p>
-                                We connect you with brands that are sustainable,
-                                homegrown, and crafted with intention. Every
-                                piece here tells a story — of craft, culture,
-                                and conscious creation.
-                            </p>
-                            <p>
-                                We believe in the stories behind products, the
-                                meaning behind making, and the people behind
-                                brands.
-                            </p>
-                            <p>
-                                Renivet is where thoughtful creation meets
-                                thoughtful living.
-                            </p>
-                        </div>
-
-                        <div className="relative mb-3 h-[96px] w-[110px] overflow-hidden">
-                            <Image
-                                src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNQX1mcOvbyYEoZ78eJzNIKWdcxq1Of9wlHtAT"
-                                alt="Renivet Circle"
-                                fill
-                                sizes="(max-width: 768px) 120px, 480px"
-                                className="object-cover"
-                            />
-                        </div>
-
-                        <Link
-                            href="/about"
-                            className="mt-auto border border-[#8C8C8C] px-4 py-1.5 text-[12px] btn-liquid btn-liquid-secondary"
-                        >
-                            → Discover Our Story
-                        </Link>
+                                {/* Button Hover Background Effect */}
+                                <div className="absolute inset-0 z-0 translate-y-full bg-white/10 transition-transform duration-300 group-hover:translate-y-0" />
+                            </Link>
+                        </motion.div>
                     </div>
                 </div>
             </div>
