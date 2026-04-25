@@ -1,6 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -85,8 +86,10 @@ function StripLoaderLink({ href, children, className }: StripLoaderLinkProps) {
             <span
                 aria-hidden="true"
                 className={cn(
-                    "pointer-events-none absolute left-1/2 top-1/2 z-[3] flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/75 bg-white/92 shadow-sm transition duration-200",
-                    isRedirecting ? "scale-100 opacity-100" : "scale-90 opacity-0"
+                    "bg-white/92 pointer-events-none absolute left-1/2 top-1/2 z-[3] flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full border border-white/75 shadow-sm transition duration-200",
+                    isRedirecting
+                        ? "scale-100 opacity-100"
+                        : "scale-90 opacity-0"
                 )}
             >
                 <span className="relative block size-4">
@@ -97,8 +100,6 @@ function StripLoaderLink({ href, children, className }: StripLoaderLinkProps) {
         </Link>
     );
 }
-
-import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 
 export function MobileCategories() {
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -163,11 +164,18 @@ export function MobileCategories() {
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNjgHih7umPpnZoHc5f2E4rFNLugdK3ty9ObjY",
             link: "https://renivet.com/shop?categoryId=22816fa3-d57e-4e3b-bc0e-72edf4635124",
         },
+        {
+            title: "Sale",
+            subtitle: "The best deals of the season.",
+            imageUrl:
+                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmKiAnjNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
+            link: "https://renivet.com/shop?sortBy=best-sellers",
+        },
     ];
 
     return (
-        <section className="w-full bg-white pt-8 pb-0 md:pt-10 md:pb-0">
-            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
+        <section className="w-full bg-white pb-0 pt-8 md:pb-0 md:pt-10">
+            <div className="max-w-screen-3xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Header Section */}
                 <div className="mb-5 flex flex-col items-start md:mb-6">
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
@@ -175,7 +183,8 @@ export function MobileCategories() {
                     </span>
                     <div className="mt-2 flex w-full items-center justify-between">
                         <h2 className="font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
-                            SHOP BY <span className="text-[#a46e5b]">CATEGORY</span>
+                            SHOP BY{" "}
+                            <span className="text-[#a46e5b]">CATEGORY</span>
                         </h2>
 
                         {/* Desktop Navigation Arrows */}
@@ -201,7 +210,10 @@ export function MobileCategories() {
                     <div
                         ref={scrollRef}
                         className="scrollbar-hide flex snap-x snap-mandatory gap-2 overflow-x-auto pb-4 md:gap-3 md:pb-6"
-                        style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+                        style={{
+                            scrollbarWidth: "none",
+                            msOverflowStyle: "none",
+                        }}
                     >
                         {categories.map((item, index) => (
                             <StripLoaderLink

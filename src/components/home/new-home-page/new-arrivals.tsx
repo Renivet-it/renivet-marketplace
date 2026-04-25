@@ -8,7 +8,7 @@ import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Layers } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog-general";
@@ -44,7 +44,7 @@ interface Product {
 interface ProductWrapper { id: string; category: string; product: Product; }
 interface ProductGridProps extends React.HTMLAttributes<HTMLDivElement> { products: ProductWrapper[]; userId?: string; }
 
-const SECTIONS = ["Most Ordered", "In Season"] as const;
+const SECTIONS = ["Most Ordered", "In Season", "Basic Collection"] as const;
 type Section = (typeof SECTIONS)[number];
 
 export function ProductGridNewArrivals({ className, products, userId, ...props }: ProductGridProps) {
@@ -67,7 +67,7 @@ export function ProductGridNewArrivals({ className, products, userId, ...props }
                     <div className="mt-6 flex items-center border border-gray-200 overflow-hidden w-fit rounded-md">
                         {availableTabs.map(tab => {
                             const isActive = activeTab === tab;
-                            const IconComponent = tab === "Most Ordered" ? Icons.Sparkles : Icons.Sun;
+                            const IconComponent = tab === "Most Ordered" ? Icons.Sparkles : tab === "Basic Collection" ? Layers : Icons.Sun;
                             return (
                                 <button key={tab} onClick={() => setActiveTab(tab)}
                                     className={cn(

@@ -158,9 +158,9 @@ export default function Page() {
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductsUnder999Fetch />
             </Suspense>
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <LoveTheseFetch />
-            </Suspense>
+            </Suspense> */}
 
             {/* Mobile-only Trust Badges Marquee */}
             <div className="block w-full overflow-hidden bg-[#E4EDF7] md:hidden">
@@ -269,11 +269,22 @@ export default function Page() {
 }
 
 async function ProductNewArrivalsGridFetch() {
-    const products = await productQueries.getHomePageFeaturedProducts();
+    const [featuredProducts, loveTheseProducts] = await Promise.all([
+        productQueries.getHomePageFeaturedProducts(),
+        productQueries.getHomeLoveTheseProducts(),
+    ]);
+
+    const mappedLoveThese = loveTheseProducts.map((item) => ({
+        ...item,
+        category: "Basic Collection",
+    }));
+
+    const products = [...featuredProducts, ...mappedLoveThese];
+
     if (!products.length) return null;
     return (
         <ScrollReveal>
-            <ProductGridNewArrivals products={products} />
+            <ProductGridNewArrivals products={products as any} />
         </ScrollReveal>
     );
 }
