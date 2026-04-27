@@ -364,6 +364,7 @@ class ProductQuery {
         const mediaIds = new Set<string>();
         for (const product of data) {
             product.media.forEach((media) => mediaIds.add(media.id));
+            product.sizeChartMedia?.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
             });
@@ -379,6 +380,10 @@ class ProductQuery {
         const enhancedData = data.map((product) => ({
             ...product,
             media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sizeChartMedia: (product.sizeChartMedia ?? []).map((media) => ({
                 ...media,
                 mediaItem: mediaMap.get(media.id),
             })),
@@ -1565,6 +1570,9 @@ class ProductQuery {
         if (!data) return null;
         const mediaKeys = new Set<string>();
         data.media.forEach((media) => mediaKeys.add(`media:${media.id}:${data.brandId}`));
+        data.sizeChartMedia?.forEach((media) =>
+            mediaKeys.add(`media:${media.id}:${data.brandId}`)
+        );
         data.variants.forEach((variant) => {
             if (variant.image) mediaKeys.add(`media:${variant.image}:${data.brandId}`);
         });
@@ -1579,6 +1587,10 @@ class ProductQuery {
         const enhancedData = {
             ...data,
             media: data.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sizeChartMedia: (data.sizeChartMedia ?? []).map((media) => ({
                 ...media,
                 mediaItem: mediaMap.get(media.id),
             })),
@@ -1776,6 +1788,7 @@ class ProductQuery {
 
         const mediaIds = new Set<string>();
         data.media.forEach((media) => mediaIds.add(media.id));
+        data.sizeChartMedia?.forEach((media) => mediaIds.add(media.id));
         data.variants.forEach((variant) => {
             if (variant.image) mediaIds.add(variant.image);
         });
@@ -1790,6 +1803,10 @@ class ProductQuery {
         const enhancedData = {
             ...data,
             media: data.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sizeChartMedia: (data.sizeChartMedia ?? []).map((media) => ({
                 ...media,
                 mediaItem: mediaMap.get(media.id),
             })),

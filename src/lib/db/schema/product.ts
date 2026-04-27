@@ -82,6 +82,10 @@ export const products = pgTable(
         //additional info
         sizeAndFit: text("size_and_fit"),
         materialAndCare: text("material_and_care"),
+        sizeChartMedia: jsonb("size_chart_media")
+            .$type<ProductMedia[]>()
+            .default([])
+            .notNull(),
 
         // OTHER
         verificationStatus: text("verification_status", {

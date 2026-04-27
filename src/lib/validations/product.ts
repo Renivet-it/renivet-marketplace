@@ -162,6 +162,7 @@ export const productSchema = z.object({
         .min(3, "Material & Care must be at least 3 characters long")
         .or(z.literal("").transform(() => null))
         .nullable(),
+    sizeChartMedia: z.array(productMediaSchema).default([]),
     slug: z
         .string({
             required_error: "Slug is required",
@@ -780,6 +781,7 @@ export const productWithBrandSchema = productSchema.extend({
     variants: z.array(enhancedProductVariantSchema),
     returnExchangePolicy: returnExchangePolicySchema.nullable().optional(),
     media: z.array(enhancedProductMediaSchema),
+    sizeChartMedia: z.array(enhancedProductMediaSchema).default([]),
     sustainabilityCertificate: cachedBrandMediaItemSchema.nullish(),
     category: categorySchema,
     subcategory: subCategorySchema,

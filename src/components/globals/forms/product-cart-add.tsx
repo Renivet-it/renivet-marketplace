@@ -2,6 +2,12 @@
 import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-general";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import {
@@ -28,6 +34,7 @@ import {
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -194,6 +201,7 @@ export function ProductCartAddForm({
     });
     const [isAddedToCart, setIsAddedToCart] = useState(false);
     const [isBuyNow, setIsBuyNow] = useState(false);
+    const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
     const isBuyNowRef = useRef(false);
 
     // User cart
@@ -335,6 +343,26 @@ export function ProductCartAddForm({
             return aIndex - bIndex;
         });
     }, [product.options]);
+
+    const sizeGuideImages = useMemo(() => {
+        return (product.sizeChartMedia ?? [])
+            .map((media) => ({
+                id: media.id,
+                url:
+                    media.mediaItem?.url ??
+                    ((media as unknown as { url?: string }).url ?? ""),
+                alt: media.mediaItem?.alt ?? "Size guide image",
+                position: media.position,
+            }))
+            .filter((item) => !!item.url)
+            .sort((a, b) => a.position - b.position);
+    }, [product.sizeChartMedia]);
+
+    const hasSizeAndFitContent = useMemo(() => {
+        if (!product.sizeAndFit) return false;
+        const plainText = product.sizeAndFit.replace(/<[^>]*>/g, "").trim();
+        return plainText.length > 0;
+    }, [product.sizeAndFit]);
 
     // Mutation for logged in users
     const { mutate: addToCart, isPending } =
@@ -503,9 +531,26 @@ export function ProductCartAddForm({
                                     render={({ field }) => (
                                         <FormItem className="space-y-0">
                                             <div className="mb-3 flex items-center justify-between">
-                                            <FormLabel className="text-[13px] font-semibold uppercase tracking-[0.1em] text-neutral-900">
-                                                {option.name}
-                                            </FormLabel>
+                                                <FormLabel className="text-[13px] font-semibold uppercase tracking-[0.1em] text-neutral-900">
+                                                    {option.name}
+                                                </FormLabel>
+                                                {["size", "sizes"].includes(
+                                                    option.name.toLowerCase()
+                                                ) &&
+                                                    (sizeGuideImages.length > 0 ||
+                                                        hasSizeAndFitContent) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setIsSizeChartOpen(
+                                                                    true
+                                                                )
+                                                            }
+                                                            className="text-[12px] font-semibold uppercase tracking-[0.08em] text-neutral-700 underline underline-offset-4 hover:text-neutral-900"
+                                                        >
+                                                            Size Chart
+                                                        </button>
+                                                    )}
                                             </div>
                                             <FormControl>
                                                 <RadioGroup
@@ -846,7 +891,62 @@ export function ProductCartAddForm({
                     )}
                 </form>
             </Form>
+
+            <Dialog open={isSizeChartOpen} onOpenChange={setIsSizeChartOpen}>
+                <DialogContent className="max-h-[90vh] max-w-[960px] overflow-y-auto rounded-sm">
+                    <DialogHeader>
+                        <DialogTitle className="text-[18px] font-semibold uppercase tracking-[0.08em] text-neutral-900">
+                            Size Chart
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-5">
+                        {sizeGuideImages.length > 0 && (
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+                                    Size Guide Images
+                                </p>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {sizeGuideImages.map((img) => (
+                                        <div
+                                            key={img.id}
+                                            className="relative overflow-hidden rounded-sm border border-neutral-200 bg-white p-2"
+                                        >
+                                            <Image
+                                                src={img.url}
+                                                alt={img.alt}
+                                                width={1200}
+                                                height={1200}
+                                                className="h-auto max-h-[72vh] w-full object-contain"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {hasSizeAndFitContent && (
+                            <div>
+                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+                                    Fit Guidance
+                                </p>
+                                <RichTextViewer
+                                    content={product.sizeAndFit ?? "<p></p>"}
+                                    customClasses={{
+                                        orderedList:
+                                            "text-[13px] leading-[1.75] text-neutral-700",
+                                        bulletList:
+                                            "text-[13px] leading-[1.75] text-neutral-700",
+                                        heading:
+                                            "text-[13px] leading-[1.75] text-neutral-700",
+                                    }}
+                                    editorClasses="pt-1"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
-

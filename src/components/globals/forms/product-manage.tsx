@@ -67,6 +67,16 @@ export function ProductManageForm({
     const [isMediaSelectorOpen, setIsMediaSelectorOpen] = useState(false);
     const [selectedMedia, setSelectedMedia] =
         useState<BrandMediaItem[]>(uniqueMedia);
+    const sizeChartMediaItems = product?.sizeChartMedia
+        ? product.sizeChartMedia.map((m) => m.mediaItem!).filter(Boolean)
+        : [];
+    const uniqueSizeChartMedia = Array.from(
+        new Map(sizeChartMediaItems.map((m) => [m.id, m])).values()
+    );
+    const [isSizeChartMediaSelectorOpen, setIsSizeChartMediaSelectorOpen] =
+        useState(false);
+    const [selectedSizeChartMedia, setSelectedSizeChartMedia] =
+        useState<BrandMediaItem[]>(uniqueSizeChartMedia);
     const [isSusCertificateSelectorOpen, setIsSusCertificateSelectorOpen] =
         useState(false);
     const [selectedSusCertificate, setSelectedSusCertificate] =
@@ -147,6 +157,7 @@ export function ProductManageForm({
 
             // SIZE & FIT
             sizeAndFit: product?.sizeAndFit ?? "",
+            sizeChartMedia: product?.sizeChartMedia ?? [],
             materialAndCare: product?.materialAndCare ?? "",
 
             // SPECIFICATIONS
@@ -1482,7 +1493,73 @@ export function ProductManageForm({
                         <CardTitle className="text-lg font-medium">Size & Fit</CardTitle>
                     </CardHeader>
 
-                    <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+                    <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
+                        <FormField
+                            control={form.control}
+                            name="sizeChartMedia"
+                            render={() => (
+                                <FormItem>
+                                    <FormLabel>Size Chart Images</FormLabel>
+
+                                    <FormControl>
+                                        {selectedSizeChartMedia.length > 0 ? (
+                                            <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+                                                {selectedSizeChartMedia.map(
+                                                    (media) => (
+                                                        <div
+                                                            key={media.id}
+                                                            className="aspect-square overflow-hidden rounded-md border p-2 transition-all ease-in-out hover:bg-muted"
+                                                        >
+                                                            <Image
+                                                                src={media.url}
+                                                                alt={
+                                                                    media.alt ||
+                                                                    media.name
+                                                                }
+                                                                height={500}
+                                                                width={500}
+                                                                className="size-full rounded-sm object-cover"
+                                                            />
+                                                        </div>
+                                                    )
+                                                )}
+
+                                                <div className="aspect-square">
+                                                    <button
+                                                        type="button"
+                                                        className="flex size-full items-center justify-center rounded-md border bg-muted p-2 transition-all ease-in-out hover:bg-muted/60"
+                                                        onClick={() =>
+                                                            setIsSizeChartMediaSelectorOpen(
+                                                                true
+                                                            )
+                                                        }
+                                                        disabled={isPending}
+                                                    >
+                                                        <Icons.Plus />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                className="flex h-24 w-full items-center justify-center rounded-md border border-dashed bg-muted/40 text-sm text-muted-foreground transition hover:bg-muted"
+                                                onClick={() =>
+                                                    setIsSizeChartMediaSelectorOpen(
+                                                        true
+                                                    )
+                                                }
+                                                disabled={isPending}
+                                            >
+                                                Upload / Select Size Chart Images
+                                            </button>
+                                        )}
+                                    </FormControl>
+
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
                         <FormField
                         control={form.control}
                           name="sizeAndFit"
@@ -1810,6 +1887,30 @@ export function ProductManageForm({
                             media: mediaWithPosition,
                         });
                     }
+                }}
+            />
+
+            <MediaSelectModal
+                brandId={brandId}
+                allMedia={media}
+                selectedMedia={selectedSizeChartMedia}
+                isOpen={isSizeChartMediaSelectorOpen}
+                setIsOpen={setIsSizeChartMediaSelectorOpen}
+                accept="image/*"
+                multiple
+                onSelectionComplete={(items) => {
+                    const uniqueMedia = Array.from(
+                        new Map(items.map((m) => [m.id, m])).values()
+                    );
+                    const mediaWithPosition = uniqueMedia.map((item, i) => ({
+                        id: item.id,
+                        position: i + 1,
+                    }));
+
+                    form.setValue("sizeChartMedia", mediaWithPosition, {
+                        shouldDirty: true,
+                    });
+                    setSelectedSizeChartMedia(uniqueMedia);
                 }}
             />
 
