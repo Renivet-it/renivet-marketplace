@@ -1,91 +1,55 @@
 "use client";
 
+import { ProductCard as HomeProductCard } from "@/components/home/new-home-page/new-arrivals";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees } from "@/lib/utils";
-import { ShoppingBag } from "lucide-react";
-import Image from "next/image";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 import React from "react";
 
 type YouMayAlsoLikeProps = React.HTMLAttributes<HTMLDivElement> & {
     categoryId: string;
     excludeProductId: string;
+    userId?: string;
 };
 
 const YOU_MAY_LIKE_COUNT = 14;
 const PEOPLE_ALSO_LIKED_COUNT = 14;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-const ProductCard = ({ product }: { product: any }) => {
-    const sellingPricePaise = product.price ?? 0;
-    const mrpPaise = product.compare_at_price ?? product.compareAtPrice ?? 0;
+type RecommendationProduct = {
+    id: string;
+    slug?: string;
+    title: string;
+    price?: number;
+    compareAtPrice?: number;
+    compare_at_price?: number;
+    brand?: string | { name?: string };
+    media?: Array<{ url?: string; mediaItem?: { url?: string } }>;
+    variants?: unknown[];
+    options?: unknown[];
+    specifications?: unknown[];
+    [key: string]: unknown;
+};
 
-    const sellingPrice = convertPaiseToRupees(sellingPricePaise);
-    const mrp = mrpPaise ? convertPaiseToRupees(mrpPaise) : null;
+const adaptRecommendationProduct = (product: RecommendationProduct) => {
+    const media =
+        product?.media?.map((item) => {
+            const url = item?.mediaItem?.url ?? item?.url;
+            return url ? { mediaItem: { url } } : null;
+        })?.filter(Boolean) ?? [];
 
-    const discountPercent =
-        mrpPaise && mrpPaise > sellingPricePaise
-            ? Math.round(((mrpPaise - sellingPricePaise) / mrpPaise) * 100)
-            : 0;
+    const brandName =
+        typeof product?.brand === "string"
+            ? product.brand
+            : product?.brand?.name;
 
-    return (
-        <Link
-            href={`/products/${product.slug ?? product.id}`}
-            className="group block"
-        >
-            {/* Image */}
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-sm bg-[#F5F5F5]">
-                {product?.media?.[0]?.url ? (
-                    <Image
-                        src={product.media[0].url}
-                        alt={product?.title ?? "Product Image"}
-                        fill
-                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105"
-                    />
-                ) : (
-                    <div className="flex size-full items-center justify-center">
-                        <ShoppingBag className="size-8 text-stone-300" />
-                    </div>
-                )}
-
-                {discountPercent > 0 && (
-                    <span className="absolute left-0 top-2 rounded-r-sm bg-[#E95123] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                        -{discountPercent}%
-                    </span>
-                )}
-            </div>
-
-            {/* Info */}
-            <div className="mt-2 space-y-0.5">
-                {product.brand && (
-                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
-                        {product.brand}
-                    </p>
-                )}
-
-                <h3 className="line-clamp-1 text-xs font-normal text-gray-800 transition-colors group-hover:text-gray-600 sm:text-sm">
-                    {product.title}
-                </h3>
-
-                <div className="flex items-baseline gap-1.5 pt-0.5">
-                    <span className="text-sm font-semibold text-gray-900">
-                        Rs. {sellingPrice.toLocaleString("en-IN")}
-                    </span>
-                    {mrp && mrpPaise > sellingPricePaise && (
-                        <>
-                            <span className="text-xs text-gray-400 line-through">
-                                Rs. {mrp.toLocaleString("en-IN")}
-                            </span>
-                            <span className="text-xs font-medium text-green-600">
-                                ({discountPercent}% off)
-                            </span>
-                        </>
-                    )}
-                </div>
-            </div>
-        </Link>
-    );
+    return {
+        ...product,
+        compareAtPrice: product?.compareAtPrice ?? product?.compare_at_price,
+        brand: brandName ? { name: brandName } : undefined,
+        media,
+        variants: product?.variants ?? [],
+        options: product?.options ?? [],
+        specifications: product?.specifications ?? [],
+    };
 };
 
 const SectionHeader = ({ title }: { title: string }) => (
@@ -103,6 +67,7 @@ const YouMayAlsoLike = ({
     className,
     categoryId,
     excludeProductId,
+    userId,
     ...props
 }: YouMayAlsoLikeProps) => {
     void categoryId;
@@ -152,7 +117,11 @@ const YouMayAlsoLike = ({
                         <SectionHeader title="You May Like" />
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">
                             {youMayLike.map((product) => (
-                                <ProductCard key={product.id} product={product} />
+                                <HomeProductCard
+                                    key={product.id}
+                                    product={adaptRecommendationProduct(product)}
+                                    userId={userId}
+                                />
                             ))}
                         </div>
                     </div>
@@ -166,7 +135,11 @@ const YouMayAlsoLike = ({
                         <SectionHeader title="People Also Liked" />
                         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">
                             {peopleAlsoLikedTotal.map((product) => (
-                                <ProductCard key={product.id} product={product} />
+                                <HomeProductCard
+                                    key={product.id}
+                                    product={adaptRecommendationProduct(product)}
+                                    userId={userId}
+                                />
                             ))}
                         </div>
                     </div>

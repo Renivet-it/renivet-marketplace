@@ -272,6 +272,7 @@ export function ProductPage({
                 <YouMayAlsoLike
                     categoryId={product.categoryId}
                     excludeProductId={product.id}
+                    userId={userId}
                 />
             </div>
 
