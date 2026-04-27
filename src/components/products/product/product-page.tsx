@@ -170,13 +170,24 @@ export function ProductPage({
                 <div className="flex flex-col lg:flex-row lg:items-start">
                     {/* ── LEFT: 2-column image grid (60%) ── */}
                     <div className="w-full lg:w-[60%]">
-                        {/* Desktop 2-col image grid */}
-                        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-3">
+                        {/* Desktop image layout: centered single image, 2-col for multiple */}
+                        <div
+                            className={cn(
+                                "hidden lg:grid lg:gap-3",
+                                displayImages.length === 1
+                                    ? "lg:grid-cols-1 lg:place-items-center"
+                                    : "lg:grid-cols-2"
+                            )}
+                        >
                             {displayImages.map((image, i) => (
                                 <div
                                     key={image.id}
                                     id={i === 0 ? "pdp-main-image" : undefined}
-                                    className="group relative aspect-[3/4] cursor-zoom-in overflow-hidden bg-[#f5f5f0]"
+                                    className={cn(
+                                        "group relative aspect-[3/4] w-full cursor-zoom-in overflow-hidden bg-[#f5f5f0]",
+                                        displayImages.length === 1 &&
+                                            "max-w-[620px]"
+                                    )}
                                     onClick={() => openModal(i)}
                                 >
                                     <Image
@@ -186,7 +197,11 @@ export function ProductPage({
                                             `Product image ${i + 1}`
                                         }
                                         fill
-                                        sizes="(max-width: 1440px) 30vw, 432px"
+                                        sizes={
+                                            displayImages.length === 1
+                                                ? "(max-width: 1440px) 52vw, 620px"
+                                                : "(max-width: 1440px) 30vw, 432px"
+                                        }
                                         className="object-contain object-center transition-transform duration-500 group-hover:scale-[1.03]"
                                         priority={i < 2}
                                     />
