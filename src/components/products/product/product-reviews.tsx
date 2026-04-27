@@ -92,7 +92,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
     }
 
     return (
-        <section className="bg-white py-16">
+        <section className="bg-white pt-16 pb-4">
             <div className="mx-auto w-full max-w-[1440px] px-4 md:px-8">
                 {/* ── Header & Main Actions ── */}
                 <div className="mb-8 flex flex-col items-start justify-between gap-6 md:flex-row md:items-end">
@@ -259,7 +259,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
 
                 {/* ── Pagination / Load More ── */}
                 {!isLoading && filteredReviews.length > 0 && (
-                    <div className="mt-16 flex justify-center border-t border-neutral-200 pt-10">
+                    <div className="mt-8 flex justify-center border-t border-neutral-200 pt-10">
                         <button className="rounded-full border border-neutral-200 px-8 py-3 text-sm font-semibold text-neutral-900 transition-colors hover:border-neutral-900 hover:bg-neutral-50">
                             Load More Reviews
                         </button>
