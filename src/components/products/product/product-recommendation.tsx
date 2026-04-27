@@ -1,8 +1,15 @@
 "use client";
 
 import { ProductCard as HomeProductCard } from "@/components/home/new-home-page/new-arrivals";
+import {
+    Carousel,
+    type CarouselApi,
+    CarouselContent,
+    CarouselItem,
+} from "@/components/ui/carousel";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import { ArrowLeft, ArrowRight } from "lucide-react";
 import React from "react";
 
 type YouMayAlsoLikeProps = React.HTMLAttributes<HTMLDivElement> & {
@@ -50,6 +57,78 @@ const adaptRecommendationProduct = (product: RecommendationProduct) => {
         options: product?.options ?? [],
         specifications: product?.specifications ?? [],
     };
+};
+
+const RecommendationCarousel = ({
+    products,
+    userId,
+}: {
+    products: RecommendationProduct[];
+    userId?: string;
+}) => {
+    const [api, setApi] = React.useState<CarouselApi>();
+    const [canScrollPrev, setCanScrollPrev] = React.useState(false);
+    const [canScrollNext, setCanScrollNext] = React.useState(false);
+
+    React.useEffect(() => {
+        if (!api) return;
+        const onSelect = () => {
+            setCanScrollPrev(api.canScrollPrev());
+            setCanScrollNext(api.canScrollNext());
+        };
+        onSelect();
+        api.on("select", onSelect);
+        api.on("reInit", onSelect);
+        return () => {
+            api.off("select", onSelect);
+            api.off("reInit", onSelect);
+        };
+    }, [api]);
+
+    return (
+        <div className="relative">
+            <div className="mb-4 hidden justify-end gap-2 md:flex">
+                <button
+                    type="button"
+                    onClick={() => api?.scrollPrev()}
+                    disabled={!canScrollPrev}
+                    className="flex size-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-black shadow-sm transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Previous products"
+                >
+                    <ArrowLeft className="size-4" />
+                </button>
+                <button
+                    type="button"
+                    onClick={() => api?.scrollNext()}
+                    disabled={!canScrollNext}
+                    className="flex size-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-black shadow-sm transition hover:bg-neutral-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Next products"
+                >
+                    <ArrowRight className="size-4" />
+                </button>
+            </div>
+
+            <Carousel
+                setApi={setApi}
+                opts={{ align: "start", containScroll: "trimSnaps" }}
+                className="w-full"
+            >
+                <CarouselContent className="-ml-3 md:-ml-5">
+                    {products.map((product) => (
+                        <CarouselItem
+                            key={product.id}
+                            className="basis-1/2 pl-3 sm:basis-1/3 md:basis-1/4 md:pl-5 lg:basis-1/5 xl:basis-1/6"
+                        >
+                            <HomeProductCard
+                                product={adaptRecommendationProduct(product)}
+                                userId={userId}
+                            />
+                        </CarouselItem>
+                    ))}
+                </CarouselContent>
+            </Carousel>
+        </div>
+    );
 };
 
 const SectionHeader = ({ title }: { title: string }) => (
@@ -115,15 +194,10 @@ const YouMayAlsoLike = ({
                 <section>
                     <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
                         <SectionHeader title="You May Like" />
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">
-                            {youMayLike.map((product) => (
-                                <HomeProductCard
-                                    key={product.id}
-                                    product={adaptRecommendationProduct(product)}
-                                    userId={userId}
-                                />
-                            ))}
-                        </div>
+                        <RecommendationCarousel
+                            products={youMayLike}
+                            userId={userId}
+                        />
                     </div>
                 </section>
             )}
@@ -133,15 +207,10 @@ const YouMayAlsoLike = ({
                 <section>
                     <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
                         <SectionHeader title="People Also Liked" />
-                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">
-                            {peopleAlsoLikedTotal.map((product) => (
-                                <HomeProductCard
-                                    key={product.id}
-                                    product={adaptRecommendationProduct(product)}
-                                    userId={userId}
-                                />
-                            ))}
-                        </div>
+                        <RecommendationCarousel
+                            products={peopleAlsoLikedTotal}
+                            userId={userId}
+                        />
                     </div>
                 </section>
             )}
