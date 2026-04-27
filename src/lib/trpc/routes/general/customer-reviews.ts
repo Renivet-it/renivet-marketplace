@@ -1,13 +1,13 @@
 import { TRPCError } from "@trpc/server";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
-import { reviews } from "../../db/schema/review";
+import { reviews } from "@/lib/db/schema/review";
 import {
     adminProcedure,
     createTRPCRouter,
     protectedProcedure,
     publicProcedure,
-} from "../../trpc/trpc";
+} from "@/lib/trpc/trpc";
 
 export const customerReviewsRouter = createTRPCRouter({
     getReviewsByProduct: publicProcedure

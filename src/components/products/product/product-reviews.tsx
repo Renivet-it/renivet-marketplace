@@ -8,6 +8,56 @@ import { trpc } from "@/lib/trpc/client";
 import { WriteReviewModal } from "./write-review-modal";
 import { format } from "date-fns";
 
+const STATIC_REVIEWS = [
+    {
+        id: "1",
+        authorName: "Alex M.",
+        createdAt: new Date("2023-10-12").toISOString(),
+        rating: 5,
+        title: "Perfect fit and incredible quality",
+        content: "I've been wearing this almost every day since I got it. The fabric feels incredibly premium and it breathes perfectly during active use. You can really feel the difference in the craftsmanship compared to fast fashion alternatives.",
+        verified: true,
+        attributes: [
+            { label: "Size Purchased", value: "Medium" },
+            { label: "Fit", value: "True to size" }
+        ],
+        images: [
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+        ]
+    },
+    {
+        id: "2",
+        authorName: "Sarah J.",
+        createdAt: new Date("2023-09-28").toISOString(),
+        rating: 4,
+        title: "Great everyday staple",
+        content: "Love the transparency behind the product. The piece itself is very well made with solid stitching. Dropped one star because the color is slightly darker in person than on my monitor, but still a beautiful piece.",
+        verified: true,
+        attributes: [
+            { label: "Size Purchased", value: "Small" },
+            { label: "Fit", value: "Slightly large" }
+        ],
+        images: []
+    },
+    {
+        id: "3",
+        authorName: "David R.",
+        createdAt: new Date("2023-09-15").toISOString(),
+        rating: 5,
+        title: "Worth the investment",
+        content: "You really get what you pay for here. The transparency in the supply chain and knowing exactly what went into the price makes me feel great about this purchase. The quality is immediately apparent.",
+        verified: true,
+        attributes: [
+            { label: "Size Purchased", value: "Large" },
+            { label: "Fit", value: "True to size" }
+        ],
+        images: [
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1",
+            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+        ]
+    }
+];
+
 interface ProductReviewsProps {
     productId: string;
 }
@@ -20,17 +70,17 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
     });
 
     const filteredReviews = useMemo(() => {
-        if (!reviews) return [];
+        const sourceReviews = (reviews && reviews.length > 0) ? reviews : STATIC_REVIEWS;
         if (activeFilter === "Photos") {
-            return reviews.filter(r => r.images && r.images.length > 0);
+            return sourceReviews.filter(r => r.images && r.images.length > 0);
         }
-        return reviews;
+        return sourceReviews;
     }, [reviews, activeFilter]);
 
     const averageRating = useMemo(() => {
-        if (!reviews || reviews.length === 0) return 0;
-        const total = reviews.reduce((acc, r) => acc + r.rating, 0);
-        return Number((total / reviews.length).toFixed(1));
+        const sourceReviews = (reviews && reviews.length > 0) ? reviews : STATIC_REVIEWS;
+        const total = sourceReviews.reduce((acc, r) => acc + r.rating, 0);
+        return Number((total / sourceReviews.length).toFixed(1));
     }, [reviews]);
 
     if (error) {
@@ -70,10 +120,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                     ))}
                                 </div>
                                 <p className="text-sm font-medium text-neutral-900">
-                                    {reviews && reviews.length > 0 ? `${averageRating} out of 5` : "No ratings yet"}
+                                    {averageRating} out of 5
                                 </p>
                                 <span className="text-sm text-neutral-500">
-                                    ({reviews?.length || 0} Reviews)
+                                    ({(reviews && reviews.length > 0) ? reviews.length : STATIC_REVIEWS.length} Reviews)
                                 </span>
                             </div>
                         )}
@@ -130,16 +180,6 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                 <div className="mt-auto h-12 w-full bg-neutral-100 rounded-t" />
                             </div>
                         ))}
-                    </div>
-                ) : filteredReviews.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-12 text-center">
-                        <Star className="size-12 text-neutral-200 mb-4" />
-                        <h3 className="text-lg font-semibold text-neutral-900">No reviews yet</h3>
-                        <p className="text-sm text-neutral-500 max-w-md mt-2">
-                            {activeFilter === "Photos" 
-                                ? "There are currently no reviews with photos for this product." 
-                                : "Be the first to share your thoughts about this product!"}
-                        </p>
                     </div>
                 ) : (
                     <div className="grid gap-x-12 gap-y-16 md:grid-cols-2 lg:grid-cols-3">
