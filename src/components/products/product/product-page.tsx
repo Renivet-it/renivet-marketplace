@@ -6,6 +6,12 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog-general";
+import {
+    Carousel,
+    CarouselContent,
+    CarouselItem,
+    type CarouselApi,
+} from "@/components/ui/carousel";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -44,6 +50,16 @@ export function ProductPage({
     const [selectedSku] = useQueryState("sku");
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
     const [modalImageIndex, setModalImageIndex] = useState(0);
+    const [api, setApi] = useState<CarouselApi>();
+    const [current, setCurrent] = useState(0);
+
+    useEffect(() => {
+        if (!api) return;
+        setCurrent(api.selectedScrollSnap() + 1);
+        api.on("select", () => {
+            setCurrent(api.selectedScrollSnap() + 1);
+        });
+    }, [api]);
 
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
         { userId: userId! },
@@ -181,28 +197,41 @@ export function ProductPage({
                             ))}
                         </div>
 
-                        {/* Mobile: single-column images */}
-                        <div className="flex flex-col gap-[2px] lg:hidden">
-                            {displayImages.map((image, i) => (
-                                <div
-                                    key={image.id}
-                                    id={i === 0 ? "pdp-main-image" : undefined}
-                                    className="relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0]"
-                                    onClick={() => openModal(i)}
-                                >
-                                    <Image
-                                        src={image.url}
-                                        alt={
-                                            image.alt ||
-                                            `Product image ${i + 1}`
-                                        }
-                                        fill
-                                        sizes="100vw"
-                                        className="object-contain object-center"
-                                        priority={i === 0}
-                                    />
-                                </div>
-                            ))}
+                        {/* Mobile: carousel images */}
+                        <div className="lg:hidden">
+                            <Carousel setApi={setApi} className="w-full">
+                                <CarouselContent className="ml-0">
+                                    {displayImages.map((image, i) => (
+                                        <CarouselItem
+                                            key={image.id}
+                                            className="pl-0"
+                                            onClick={() => openModal(i)}
+                                        >
+                                            <div
+                                                id={i === 0 ? "pdp-main-image" : undefined}
+                                                className="relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0]"
+                                            >
+                                                <Image
+                                                    src={image.url}
+                                                    alt={
+                                                        image.alt ||
+                                                        `Product image ${i + 1}`
+                                                    }
+                                                    fill
+                                                    sizes="100vw"
+                                                    className="object-contain object-center"
+                                                    priority={i === 0}
+                                                />
+                                            </div>
+                                        </CarouselItem>
+                                    ))}
+                                </CarouselContent>
+                                {displayImages.length > 1 && (
+                                    <div className="absolute bottom-4 right-4 z-10 rounded-full bg-black/50 px-3 py-1 text-[10px] font-bold tracking-widest text-white backdrop-blur-sm">
+                                        {current} / {displayImages.length}
+                                    </div>
+                                )}
+                            </Carousel>
                         </div>
                     </div>
 
