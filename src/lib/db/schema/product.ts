@@ -21,6 +21,7 @@ import { brands } from "./brand";
 import { categories, productTypes, subCategories } from "./category";
 import { orderItems } from "./order";
 import { users } from "./user";
+import { reviews } from "./review";
 
 export const products = pgTable(
     "products",
@@ -557,6 +558,7 @@ export const productsRelations = relations(products, ({ one, many }) => ({
         references: [returnExchangePolicy.productId],
     }),
     specifications: many(productSpecifications),
+    reviews: many(reviews),
 }));
 
 export const productOptionsRelations = relations(productOptions, ({ one }) => ({

@@ -8,6 +8,7 @@ import { carts } from "./cart";
 import { categoryRequests } from "./category";
 import { roles } from "./role";
 import { wishlists } from "./wishlist";
+import { reviews } from "./review";
 
 export const users = pgTable("users", {
     id: text("id").primaryKey().notNull().unique(),
@@ -85,6 +86,7 @@ export const userRelations = relations(users, ({ one, many }) => ({
     wishlists: many(wishlists),
     carts: many(carts),
     categoryRequests: many(categoryRequests),
+    reviews: many(reviews),
 }));
 
 export const userRoleRelations = relations(userRoles, ({ one }) => ({

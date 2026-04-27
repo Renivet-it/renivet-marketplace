@@ -235,7 +235,7 @@ export function ProductPage({
 
             {/* ── Customer Reviews ── */}
             <div className="mx-auto w-full max-w-[1440px] border-t border-neutral-200">
-                <ProductReviews />
+                <ProductReviews productId={product.id} />
             </div>
 
             {/* ── You May Also Like ── */}
