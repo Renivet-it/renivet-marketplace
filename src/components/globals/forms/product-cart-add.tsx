@@ -728,62 +728,47 @@ export function ProductCartAddForm({
                                 <WishlistButton
                                     type="button"
                                     variant="outline"
-                                    size="sm"
-                                    className="hidden h-12 flex-1 items-center justify-center rounded-none border border-neutral-400 px-5 text-sm font-semibold uppercase tracking-[0.07em] md:flex"
+                                    size="lg"
+                                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 hover:border-neutral-500 hover:text-neutral-900 transition-colors"
                                     userId={userId}
                                     productId={product.id}
                                     isProductWishlisted={isProductWishlisted}
-                                    setIsProductWishlisted={
-                                        setIsProductWishlisted
-                                    }
+                                    setIsProductWishlisted={setIsProductWishlisted}
                                     iconClassName={cn(
-                                        isProductWishlisted &&
-                                            "fill-primary stroke-primary"
+                                        "size-4",
+                                        isProductWishlisted && "fill-red-500 stroke-red-500"
                                     )}
                                 />
                             ) : (
-                                <Button
+                                <button
                                     type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="hidden h-12 flex-1 items-center justify-center rounded-none border border-neutral-400 px-5 text-sm font-semibold uppercase tracking-[0.07em] md:flex"
+                                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 hover:border-neutral-500 hover:text-neutral-900 transition-colors"
                                     onClick={() => {
                                         addToGuestWishlist({
                                             productId: product.id,
-                                            variantId:
-                                                selectedVariant?.id || null,
+                                            variantId: selectedVariant?.id || null,
                                             title: product.title,
                                             brand: product.brand?.name,
                                             price: productPrice,
-                                            image:
-                                                selectedVariant?.image ??
-                                                product.thumbnail ??
-                                                null,
-                                            sku:
-                                                selectedVariant?.nativeSku ??
-                                                null,
+                                            image: selectedVariant?.image ?? product.thumbnail ?? null,
+                                            sku: selectedVariant?.nativeSku ?? null,
                                             fullProduct: product,
                                         });
                                     }}
                                 >
                                     <Icons.Heart
                                         className={cn(
+                                            "size-4",
                                             guestWishlist.some(
                                                 (w) =>
-                                                    w.productId ===
-                                                        product.id &&
-                                                    String(
-                                                        w.variantId ?? ""
-                                                    ) ===
-                                                        String(
-                                                            selectedVariant?.id ??
-                                                                ""
-                                                        )
-                                            ) && "fill-primary stroke-primary"
+                                                    w.productId === product.id &&
+                                                    String(w.variantId ?? "") ===
+                                                        String(selectedVariant?.id ?? "")
+                                            ) && "fill-red-500 stroke-red-500"
                                         )}
                                     />
-                                    Wishlist
-                                </Button>
+                                    Save to Wishlist
+                                </button>
                             ))}</div>
                         </div>
 

@@ -13,10 +13,10 @@ import {
     CachedWishlist,
     ProductWithBrand,
 } from "@/lib/validations";
-import { ZoomIn, X } from "lucide-react";
+import { X, ZoomIn } from "lucide-react";
 import Image from "next/image";
 import { useQueryState } from "nuqs";
-import { useCallback, useMemo, useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductContent } from "./product-content";
 import { ProductDetails } from "./product-detais";
 import YouMayAlsoLike from "./product-recommendation";
@@ -99,12 +99,24 @@ export function ProductPage({
         const newImages = [...images];
         const [variantImage] = newImages.splice(variantImageIndex, 1);
         return [variantImage, ...newImages];
-    }, [images, selectedVariant?.image, selectedVariant?.mediaItem, product.title]);
+    }, [
+        images,
+        selectedVariant?.image,
+        selectedVariant?.mediaItem,
+        product.title,
+    ]);
 
     const displayImages =
         sortedImages.length > 0
             ? sortedImages
-            : [{ id: "fallback", url: FALLBACK_IMAGE_URL, alt: "Default Product Image", position: -1 }];
+            : [
+                  {
+                      id: "fallback",
+                      url: FALLBACK_IMAGE_URL,
+                      alt: "Default Product Image",
+                      position: -1,
+                  },
+              ];
 
     const openModal = useCallback((index: number) => {
         setModalImageIndex(index);
@@ -114,8 +126,12 @@ export function ProductPage({
     useEffect(() => {
         if (!isImageModalOpen) return;
         const handleKey = (e: KeyboardEvent) => {
-            if (e.key === "ArrowRight") setModalImageIndex((i) => Math.min(i + 1, displayImages.length - 1));
-            if (e.key === "ArrowLeft") setModalImageIndex((i) => Math.max(i - 1, 0));
+            if (e.key === "ArrowRight")
+                setModalImageIndex((i) =>
+                    Math.min(i + 1, displayImages.length - 1)
+                );
+            if (e.key === "ArrowLeft")
+                setModalImageIndex((i) => Math.max(i - 1, 0));
             if (e.key === "Escape") setIsImageModalOpen(false);
         };
         window.addEventListener("keydown", handleKey);
@@ -126,16 +142,18 @@ export function ProductPage({
         <>
             {/* ══ Main PDP wrapper ══ */}
             <div
-                className={cn("mx-auto w-full max-w-[1440px] bg-white", className)}
+                className={cn(
+                    "mx-auto w-full max-w-[1440px] bg-white",
+                    className
+                )}
                 {...props}
             >
                 {/* ══ Two-column layout ══ */}
                 <div className="flex flex-col lg:flex-row lg:items-start">
-
                     {/* ── LEFT: 2-column image grid (60%) ── */}
                     <div className="w-full lg:w-[60%]">
                         {/* Desktop 2-col image grid */}
-                        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-[2px] lg:bg-neutral-200">
+                        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-3">
                             {displayImages.map((image, i) => (
                                 <div
                                     key={image.id}
@@ -145,7 +163,10 @@ export function ProductPage({
                                 >
                                     <Image
                                         src={image.url}
-                                        alt={image.alt || `Product image ${i + 1}`}
+                                        alt={
+                                            image.alt ||
+                                            `Product image ${i + 1}`
+                                        }
                                         fill
                                         sizes="(max-width: 1440px) 30vw, 432px"
                                         className="object-contain object-center transition-transform duration-500 group-hover:scale-[1.03]"
@@ -169,7 +190,10 @@ export function ProductPage({
                                 >
                                     <Image
                                         src={image.url}
-                                        alt={image.alt || `Product image ${i + 1}`}
+                                        alt={
+                                            image.alt ||
+                                            `Product image ${i + 1}`
+                                        }
                                         fill
                                         sizes="100vw"
                                         className="object-contain object-center"
@@ -180,20 +204,23 @@ export function ProductPage({
                         </div>
                     </div>
 
-                    {/* ── RIGHT: product panel (40%) — NO sticky, NO overflow/scrollbar ── */}
+                    {/* ── RIGHT: sticky product panel (40%) ── */}
                     <div className="w-full border-l border-neutral-200 lg:w-[40%]">
-                        {/* Product info (title, price, selectors, buttons, service icons) */}
-                        <ProductContent
-                            className="px-6 py-8 md:px-8 md:py-10"
-                            product={product}
-                            initialCart={initialCart}
-                            isWishlisted={isWishlisted}
-                            userId={userId}
-                        />
+                        {/* sticky wrapper — no scrollbar, no max-height */}
+                        <div className="lg:sticky lg:top-0">
+                            {/* Product info */}
+                            <ProductContent
+                                className="px-6 py-8 md:px-8 md:py-10"
+                                product={product}
+                                initialCart={initialCart}
+                                isWishlisted={isWishlisted}
+                                userId={userId}
+                            />
 
-                        {/* Product Detail Accordions — right inside the right panel */}
-                        <div className="border-t border-neutral-200 px-6 md:px-8">
-                            <ProductDetails product={product} />
+                            {/* Accordions — sit below product info inside the sticky panel */}
+                            <div className="border-t border-neutral-200 px-6 md:px-8">
+                                <ProductDetails product={product} />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -209,7 +236,7 @@ export function ProductPage({
 
             {/* ── Lightbox Modal ── */}
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
-                <DialogContent className="flex h-screen max-h-screen w-screen max-w-screen items-center justify-center bg-black/95 p-0">
+                <DialogContent className="max-w-screen flex h-screen max-h-screen w-screen items-center justify-center bg-black/95 p-0">
                     <DialogHeader className="sr-only">
                         <DialogTitle>Product Images</DialogTitle>
                     </DialogHeader>
@@ -244,8 +271,14 @@ export function ProductPage({
 
                     <div className="relative h-full w-full">
                         <Image
-                            src={displayImages[modalImageIndex]?.url ?? FALLBACK_IMAGE_URL}
-                            alt={displayImages[modalImageIndex]?.alt || "Product image"}
+                            src={
+                                displayImages[modalImageIndex]?.url ??
+                                FALLBACK_IMAGE_URL
+                            }
+                            alt={
+                                displayImages[modalImageIndex]?.alt ||
+                                "Product image"
+                            }
                             fill
                             className="object-contain"
                             sizes="100vw"

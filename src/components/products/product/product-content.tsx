@@ -1,11 +1,8 @@
 "use client";
 
 import { getEstimatedDelivery } from "@/actions/shiprocket/get-estimate-delivery";
-import { WishlistButton } from "@/components/globals/buttons";
 import { ProductCartAddForm } from "@/components/globals/forms";
 import { ProductShareModal } from "@/components/globals/modals";
-import { Icons } from "@/components/icons";
-import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedCart, ProductWithBrand } from "@/lib/validations";
@@ -53,7 +50,6 @@ export function ProductContent({
     const [, startTransition] = useTransition();
     const [, setZipCode] = useState<string | null>(null);
     const [estimatedDelivery, setEstimatedDelivery] = useState<string>("");
-    const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
 
     const { data: brandDetails } =
         trpc.general.addresses.getBrandConfidential.useQuery({
@@ -168,15 +164,7 @@ export function ProductContent({
                 {/* ── Divider ── */}
                 <div className="mb-6 border-t border-neutral-200" />
 
-                {/* ── Shop New / Shop Used tabs (Patagonia-style) ── */}
-                <div className="mb-6 flex overflow-hidden rounded-full border border-neutral-300 bg-neutral-100">
-                    <button className="flex-1 rounded-full bg-neutral-900 py-2.5 text-[13px] font-semibold text-white transition-all duration-200">
-                        Shop New
-                    </button>
-                    <button className="flex-1 rounded-full py-2.5 text-[13px] font-semibold text-neutral-500 transition-all duration-200 hover:text-neutral-900">
-                        Shop Used
-                    </button>
-                </div>
+
 
                 {/* ── Cart add form (prices + selectors + buttons) ── */}
                 <ProductCartAddForm
@@ -221,65 +209,6 @@ export function ProductContent({
                             </span>
                         </div>
                     ))}
-                </div>
-
-                {/* ── Share + Wishlist row (desktop) ── */}
-                <div className="flex items-center justify-between">
-                    {/* Wishlist */}
-                    <div className="hidden items-center gap-1.5 md:flex">
-                        {userId ? (
-                            <WishlistButton
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="gap-1.5 p-0 text-[13px] font-medium text-neutral-600 hover:text-neutral-900"
-                                userId={userId}
-                                productId={product.id}
-                                isProductWishlisted={isProductWishlisted}
-                                setIsProductWishlisted={setIsProductWishlisted}
-                                iconClassName={cn(
-                                    "size-4",
-                                    isProductWishlisted && "fill-red-500 stroke-red-500"
-                                )}
-                            />
-                        ) : (
-                            <button
-                                type="button"
-                                className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
-                                onClick={() => {
-                                    addToGuestWishlist({
-                                        productId: product.id,
-                                        variantId: null,
-                                        title: product.title,
-                                        brand: product.brand?.name,
-                                        price: product.price,
-                                        image: product.thumbnail ?? null,
-                                        sku: null,
-                                        fullProduct: product,
-                                    });
-                                }}
-                            >
-                                <Icons.Heart
-                                    className={cn(
-                                        guestWishlist.some(
-                                            (w) => w.productId === product.id
-                                        ) && "fill-red-500 stroke-red-500",
-                                        "size-4"
-                                    )}
-                                />
-                                Save to Wishlist
-                            </button>
-                        )}
-                    </div>
-
-                    {/* Share button */}
-                    <button
-                        className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
-                        onClick={() => setIsProductShareModalOpen(true)}
-                    >
-                        <Icons.Share className="size-4" />
-                        Share
-                    </button>
                 </div>
 
                 {/* ── Sustainability badge strip ── */}
