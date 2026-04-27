@@ -34,14 +34,14 @@ const ProductCard = ({ product }: { product: any }) => {
             className="group block"
         >
             {/* Image */}
-            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-lg bg-stone-100">
+            <div className="relative aspect-[3/4] w-full overflow-hidden rounded-sm bg-[#F5F5F5]">
                 {product?.media?.[0]?.url ? (
                     <Image
                         src={product.media[0].url}
                         alt={product?.title ?? "Product Image"}
                         fill
-                        sizes="(max-width: 640px) 33vw, (max-width: 768px) 25vw, (max-width: 1024px) 20vw, 14vw"
-                        className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1280px) 20vw, 16vw"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                 ) : (
                     <div className="flex size-full items-center justify-center">
@@ -50,32 +50,32 @@ const ProductCard = ({ product }: { product: any }) => {
                 )}
 
                 {discountPercent > 0 && (
-                    <span className="absolute left-2 top-2 rounded-sm bg-red-500 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                        {discountPercent}% off
+                    <span className="absolute left-0 top-2 rounded-r-sm bg-[#E95123] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                        -{discountPercent}%
                     </span>
                 )}
             </div>
 
             {/* Info */}
-            <div className="mt-2.5 space-y-0.5">
+            <div className="mt-2 space-y-0.5">
                 {product.brand && (
-                    <p className="truncate text-[10px] font-medium uppercase tracking-wider text-stone-400">
+                    <p className="truncate text-[10px] font-medium uppercase tracking-[0.14em] text-gray-400">
                         {product.brand}
                     </p>
                 )}
 
-                <h3 className="line-clamp-1 text-[13px] font-medium text-stone-800 transition-colors group-hover:text-stone-600">
+                <h3 className="line-clamp-1 text-xs font-normal text-gray-800 transition-colors group-hover:text-gray-600 sm:text-sm">
                     {product.title}
                 </h3>
 
                 <div className="flex items-baseline gap-1.5 pt-0.5">
-                    <span className="text-sm font-semibold text-stone-900">
-                        ₹{sellingPrice.toLocaleString("en-IN")}
+                    <span className="text-sm font-semibold text-gray-900">
+                        Rs. {sellingPrice.toLocaleString("en-IN")}
                     </span>
                     {mrp && mrpPaise > sellingPricePaise && (
                         <>
-                            <span className="text-xs text-stone-400 line-through">
-                                ₹{mrp.toLocaleString("en-IN")}
+                            <span className="text-xs text-gray-400 line-through">
+                                Rs. {mrp.toLocaleString("en-IN")}
                             </span>
                             <span className="text-xs font-medium text-green-600">
                                 ({discountPercent}% off)
@@ -89,21 +89,23 @@ const ProductCard = ({ product }: { product: any }) => {
 };
 
 const SectionHeader = ({ title }: { title: string }) => (
-    <div className="mb-6 flex items-center gap-3">
-        <h2 className="text-lg font-semibold tracking-tight text-stone-800">
+    <div className="mb-8 flex flex-col items-start">
+        <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-xs">
+            Our Recommendations
+        </span>
+        <h2 className="mt-2 font-playfair text-[24px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[32px]">
             {title}
         </h2>
-        <div className="h-px flex-1 bg-stone-200" />
     </div>
 );
 
 const YouMayAlsoLike = ({
     className,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    categoryId: _categoryId,
+    categoryId,
     excludeProductId,
     ...props
 }: YouMayAlsoLikeProps) => {
+    void categoryId;
     const {
         data: allProducts = [],
         isLoading,
@@ -121,7 +123,7 @@ const YouMayAlsoLike = ({
                 )}
                 {...props}
             >
-                Loading recommendations…
+                Loading recommendations...
             </div>
         );
     }
@@ -136,27 +138,37 @@ const YouMayAlsoLike = ({
     );
 
     return (
-        <div className={cn("w-full space-y-12 py-10", className)} {...props}>
+        <div
+            className={cn(
+                "w-full space-y-10 bg-white py-10 md:space-y-14 md:py-14",
+                className
+            )}
+            {...props}
+        >
             {/* Section 1: You May Like (Always 14 - 2 rows of 7) */}
             {youMayLike.length > 0 && (
-                <section className="px-4 md:px-6">
-                    <SectionHeader title="You May Like" />
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
-                        {youMayLike.map((product) => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
+                <section>
+                    <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+                        <SectionHeader title="You May Like" />
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">
+                            {youMayLike.map((product) => (
+                                <ProductCard key={product.id} product={product} />
+                            ))}
+                        </div>
                     </div>
                 </section>
             )}
 
             {/* Section 2: People Also Liked (7 -> 14) */}
             {peopleAlsoLikedTotal.length > 0 && (
-                <section className="px-4 md:px-6">
-                    <SectionHeader title="People Also Liked" />
-                    <div className="grid grid-cols-2 gap-x-3 gap-y-8 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-7">
-                        {peopleAlsoLikedTotal.map((product) => (
-                            <ProductCard key={product.id} product={product} />
-                        ))}
+                <section>
+                    <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+                        <SectionHeader title="People Also Liked" />
+                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 md:gap-5 lg:grid-cols-5 xl:grid-cols-7">
+                            {peopleAlsoLikedTotal.map((product) => (
+                                <ProductCard key={product.id} product={product} />
+                            ))}
+                        </div>
                     </div>
                 </section>
             )}
