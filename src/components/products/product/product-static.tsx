@@ -119,6 +119,32 @@ const locationHeadline = (value: string) => {
     return titleCase(firstChunk.toLowerCase());
 };
 
+const fallbackDecodeX = {
+    certifications: "GOTS, OEKO-TEX",
+    rawMaterialSupplierLocation: "Coimbatore, India",
+    manufacturingLocation: "Tiruppur, India",
+    packingDispatchLocation: "Mumbai, India",
+    mainMaterial: "Organic Cotton",
+    rawMaterialSupplierName: "Eco Threads Pvt Ltd",
+    manufacturerName: "GreenWear Factory",
+    packingDispatchSource: "Renivet Fulfillment",
+    virginPlasticUsed: false,
+    supplierDeclarationAvailable: true,
+    productPetaApproved: true,
+    animalDerivedMaterialsUsed: false,
+    brandNgoPartnerships: "Save The Children, Local Artisans Trust",
+    brandCertifications: "Fair Trade, B Corp",
+    manufacturingWagesAndCompliance: "Fair wages paid. Compliance with all labor laws.",
+    storyBehindProduct: "We wanted to create a staple piece that feels good and does good.",
+    storyWhyWeMadeThis: "Because fast fashion is harming the planet.",
+    storyPriceBreakdown: "Raw Materials: 25%, Manufacturing: 20%, Logistics: 10%, Operations: 45%",
+    certificationShareable: true,
+    storyHuman: "Our skilled artisans pour their heart into every stitch.",
+    storyTruth: "We use 100% organic cotton grown without harmful pesticides.",
+    storyImpact: "By choosing this, you save 50 liters of water.",
+    storyWhy: "We created this because sustainable fashion should be accessible to everyone."
+};
+
 export const ProductCard = ({ product }: ProductCardProps) => {
     const [expandedStories, setExpandedStories] = useState<
         Record<string, boolean>
@@ -132,7 +158,8 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         });
 
     const pricePoints = useMemo(() => {
-        const lines = decodeX ? splitList(decodeX.storyPriceBreakdown) : [];
+        const activeDecodeX = decodeX || fallbackDecodeX;
+        const lines = activeDecodeX ? splitList(activeDecodeX.storyPriceBreakdown) : [];
         return buildPricePoints(lines);
     }, [decodeX]);
     const donutBackground = useMemo(() => buildDonut(pricePoints), [pricePoints]);
@@ -152,126 +179,12 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         );
     }
 
-    if (!decodeX) {
-        return (
-            <div className="relative mt-6 overflow-hidden rounded-3xl border border-[#d7dde6] bg-[#fcfbf4] text-[#1e2b3f]">
-                {/* Sharp Overlay Text */}
-                <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/40 p-6 text-center">
-                    <h3 className="font-playfair text-[32px] md:text-[40px] font-bold leading-tight text-[#111827]">
-                        Decode X <br />
-                        Behind The Product
-                    </h3>
-                    <p className="mt-4 text-sm md:text-[15px] font-bold uppercase tracking-widest text-[#374151]">
-                        Coming Soon
-                    </p>
-                </div>
+    const activeDecodeX = decodeX || fallbackDecodeX;
 
-                {/* Blurred Fake Background Content */}
-                <div className="pointer-events-none p-6 opacity-50 blur-[5px] select-none">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="flex size-7 items-center justify-center rounded-full bg-green-200/60">
-                            <Leaf className="size-3.5 text-green-600" />
-                        </div>
-                        <h4 className="text-xl font-bold tracking-tight text-[#111827]">Decodex - Behind The Product</h4>
-                    </div>
-                    <p className="mb-8 text-[13px] font-medium leading-[1.6] text-[#6b7280]">
-                        With Total Transparency, We Want To Tell Our Community The Story And The Impact Behind Every Single Product To Help You Make Better And Conscious Decisions.
-                    </p>
-
-                    <div className="mb-8">
-                        <div className="flex justify-between items-center mb-6">
-                            <h5 className="text-lg font-bold text-[#111827]">Product Values</h5>
-                            <span className="text-xl text-gray-400">+</span>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8 mb-10">
-                            {/* Fake circular charts */}
-                            <div className="flex items-center gap-4">
-                                <div className="flex size-16 items-center justify-center rounded-full border-[6px] border-green-100 relative">
-                                    <svg className="absolute inset-0 size-full -rotate-90" viewBox="0 0 36 36">
-                                        <path
-                                            className="text-green-400 stroke-current"
-                                            strokeWidth="4"
-                                            strokeDasharray="64, 100"
-                                            fill="none"
-                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                        />
-                                    </svg>
-                                    <span className="font-bold text-sm">64%</span>
-                                </div>
-                                <div>
-                                    <p className="font-bold text-sm">Water Saved</p>
-                                    <p className="text-[10px] text-gray-400 mt-1 leading-tight">68 L Compared<br/>To Fast Fashion</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-4">
-                                <div className="flex size-16 items-center justify-center rounded-full border-[6px] border-green-50 relative">
-                                    <svg className="absolute inset-0 size-full -rotate-90" viewBox="0 0 36 36">
-                                        <path
-                                            className="text-green-300 stroke-current"
-                                            strokeWidth="4"
-                                            strokeDasharray="81, 100"
-                                            fill="none"
-                                            d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                                        />
-                                    </svg>
-                                    <span className="font-bold text-sm">81%</span>
-                                </div>
-                                <div>
-                                    <p className="font-bold text-sm leading-tight">Fossil Fuels<br/>Conserved</p>
-                                    <p className="text-[10px] text-gray-400 mt-1 leading-tight">264 times Vs<br/>Baseline</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Fake Progress Bars */}
-                        <div className="space-y-4">
-                            <div className="flex items-center text-xs">
-                                <span className="w-24 font-medium text-gray-500">Softness</span>
-                                <div className="flex-1 h-2 bg-gray-100 rounded-full mx-4 overflow-hidden">
-                                    <div className="h-full bg-[#d6ad8e] w-[75%]" />
-                                </div>
-                                <span className="w-8 text-right font-medium text-gray-500">6/8</span>
-                            </div>
-                            <div className="flex items-center text-xs">
-                                <span className="w-24 font-medium text-gray-500">Breathability</span>
-                                <div className="flex-1 h-2 bg-gray-100 rounded-full mx-4 overflow-hidden">
-                                    <div className="h-full bg-[#d6ad8e] w-[75%]" />
-                                </div>
-                                <span className="w-8 text-right font-medium text-gray-500">6/8</span>
-                            </div>
-                            <div className="flex items-center text-xs">
-                                <span className="w-24 font-medium text-gray-500">Transparency</span>
-                                <div className="flex-1 h-2 bg-gray-100 rounded-full mx-4 overflow-hidden">
-                                    <div className="h-full bg-[#d6ad8e] w-[37.5%]" />
-                                </div>
-                                <span className="w-8 text-right font-medium text-gray-500">3/8</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="pt-2">
-                        <div className="flex justify-between items-center mb-6">
-                            <h5 className="text-lg font-bold text-[#111827]">Product Journey</h5>
-                            <span className="text-xl text-gray-400">+</span>
-                        </div>
-                        <div className="space-y-5 px-1 relative before:absolute before:inset-y-2 before:left-3 before:w-px before:bg-gray-200">
-                            {[1, 2, 3].map((i) => (
-                                <div key={i} className="flex items-center gap-5 relative z-10">
-                                    <div className="border-[3px] border-white rounded-full bg-gray-200 size-[18px]" />
-                                    <div className="h-2 w-3/4 max-w-[150px] bg-[#fcfbf4] rounded-full" />
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    const certifications = splitList(decodeX.certifications).map(normalizeText);
-    const rawLocation = normalizeText(decodeX.rawMaterialSupplierLocation);
-    const mfgLocation = normalizeText(decodeX.manufacturingLocation);
-    const packLocation = normalizeText(decodeX.packingDispatchLocation);
+    const certifications = splitList(activeDecodeX.certifications).map(normalizeText);
+    const rawLocation = normalizeText(activeDecodeX.rawMaterialSupplierLocation);
+    const mfgLocation = normalizeText(activeDecodeX.manufacturingLocation);
+    const packLocation = normalizeText(activeDecodeX.packingDispatchLocation);
     const locations = [rawLocation, mfgLocation, packLocation].filter(Boolean);
     const uniqueLocations = Array.from(new Set(locations));
 
@@ -280,10 +193,10 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             id: "raw",
             title: "Raw Material",
             icon: Leaf,
-            headline: normalizeText(decodeX.mainMaterial) || "Not specified",
+            headline: normalizeText(activeDecodeX.mainMaterial) || "Not specified",
             details: [
-                decodeX.rawMaterialSupplierName
-                    ? `Supplier: ${normalizeText(decodeX.rawMaterialSupplierName)}`
+                activeDecodeX.rawMaterialSupplierName
+                    ? `Supplier: ${normalizeText(activeDecodeX.rawMaterialSupplierName)}`
                     : "",
                 rawLocation ? `Origin: ${rawLocation}` : "",
                 "Certified sourcing",
@@ -293,7 +206,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             id: "make",
             title: "Manufacturing",
             icon: Factory,
-            headline: normalizeText(decodeX.manufacturerName) || "Not specified",
+            headline: normalizeText(activeDecodeX.manufacturerName) || "Not specified",
             details: [
                 mfgLocation ? `Facility: ${mfgLocation}` : "",
                 "In-house production unit",
@@ -305,16 +218,16 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             title: "Packaging",
             icon: PackageCheck,
             headline:
-                normalizeText(decodeX.packingDispatchSource) || "Not specified",
+                normalizeText(activeDecodeX.packingDispatchSource) || "Not specified",
             details: [
                 packLocation ? `Dispatch: ${packLocation}` : "",
-                `Virgin plastic: ${toBooleanLabel(decodeX.virginPlasticUsed, {
+                `Virgin plastic: ${toBooleanLabel(activeDecodeX.virginPlasticUsed, {
                     true: "Used",
                     false: "Not used",
                     unknown: "N/A",
                 })}`,
                 `Supplier declaration: ${toBooleanLabel(
-                    decodeX.supplierDeclarationAvailable
+                    activeDecodeX.supplierDeclarationAvailable
                 )}`,
             ],
         },
@@ -326,7 +239,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 ? certifications.join(", ")
                 : "Not specified",
             details: [
-                `Shareable proofs: ${toBooleanLabel(decodeX.certificationShareable)}`,
+                `Shareable proofs: ${toBooleanLabel(activeDecodeX.certificationShareable)}`,
                 "Renivet verified",
             ],
         },
@@ -337,26 +250,26 @@ export const ProductCard = ({ product }: ProductCardProps) => {
             id: "human",
             title: "The Human",
             icon: Users,
-            content: normalizeParagraph(decodeX.storyHuman),
+            content: normalizeParagraph(activeDecodeX.storyHuman),
         },
         {
             id: "truth",
             title: "The Truth",
             icon: ShieldCheck,
-            content: normalizeParagraph(decodeX.storyTruth),
+            content: normalizeParagraph(activeDecodeX.storyTruth),
         },
         {
             id: "impact",
             title: "The Impact",
             icon: Leaf,
-            content: normalizeParagraph(decodeX.storyImpact),
+            content: normalizeParagraph(activeDecodeX.storyImpact),
         },
     ].filter((item) => item.content.length > 0);
 
     const highlight =
-        decodeX.virginPlasticUsed === false
+        activeDecodeX.virginPlasticUsed === false
             ? "No virgin plastic used. Fabric scraps are redirected for upcycling."
-            : decodeX.supplierDeclarationAvailable
+            : activeDecodeX.supplierDeclarationAvailable
               ? "Supplier declaration has been provided for this profile."
               : "Journey details are mapped from supplier and manufacturing inputs.";
 
@@ -372,7 +285,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
         role: locationRoles[index] ?? "Supply chain milestone",
     }));
 
-    const whyText = normalizeParagraph(decodeX.storyWhy);
+    const whyText = normalizeParagraph(activeDecodeX.storyWhy);
     const whySentences = whyText
         ? whyText.split(/(?<=[.!?])\s+/).filter(Boolean)
         : [];
@@ -417,7 +330,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 />
                 <StatItem
                     icon={PackageCheck}
-                    value={toBooleanLabel(decodeX.virginPlasticUsed, {
+                    value={toBooleanLabel(activeDecodeX.virginPlasticUsed, {
                         true: "Yes",
                         false: "0%",
                         unknown: "N/A",
@@ -564,7 +477,7 @@ export const ProductCard = ({ product }: ProductCardProps) => {
                 </div>
             )}
 
-            {(decodeX.storyWhy || pricePoints.length > 0) && (
+            {(activeDecodeX.storyWhy || pricePoints.length > 0) && (
                 <div className="border-t border-[#d7dde6] bg-[#fcfbf4] p-6">
                     {whyText && (
                         <article className="mb-4 rounded-2xl border border-[#dce4ee] bg-white p-5">
