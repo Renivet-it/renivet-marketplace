@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductContent } from "./product-content";
 import { ProductDetails } from "./product-detais";
 import YouMayAlsoLike from "./product-recommendation";
+import { ProductCard } from "./product-static";
 
 interface PageProps extends GenericProps {
     product: ProductWithBrand;
@@ -224,6 +225,11 @@ export function ProductPage({
                         </div>
                     </div>
                 </div>
+            </div>
+
+            {/* ── Decode X / Story Section ── */}
+            <div className="mx-auto w-full max-w-[1440px]">
+                <ProductCard product={product} />
             </div>
 
             {/* ── You May Also Like ── */}
