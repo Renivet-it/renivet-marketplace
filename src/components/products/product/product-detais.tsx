@@ -21,20 +21,46 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
         : product.specifications?.slice(0, 8);
 
     return (
-        <div className={cn("space-y-3", className)}>
+        <div className={cn("", className)} {...props}>
             <Accordion
-                type="single"
-                collapsible
+                type="multiple"
+                defaultValue={["details"]}
                 className="w-full"
-                defaultValue="specifications"
             >
-                {/* Specifications */}
-                <AccordionItem value="specifications">
-                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
-                        Specifications
+                {/* ── Product Details ── */}
+                <AccordionItem
+                    value="details"
+                    className="border-b border-neutral-200"
+                >
+                    <AccordionTrigger className="py-5 text-left text-[13px] font-semibold uppercase tracking-[0.12em] text-neutral-900 hover:no-underline [&[data-state=open]>svg]:rotate-45">
+                        Product Details
                     </AccordionTrigger>
-                    <AccordionContent>
-                        <div className="spec-list grid grid-cols-1 gap-y-3 md:grid-cols-2 md:gap-x-[10%]">
+                    <AccordionContent className="pb-6">
+                        <RichTextViewer
+                            content={product.description ?? "<p></p>"}
+                            customClasses={{
+                                orderedList:
+                                    "text-[14px] leading-[1.8] text-neutral-700",
+                                bulletList:
+                                    "text-[14px] leading-[1.8] text-neutral-700",
+                                heading:
+                                    "text-[14px] leading-[1.8] text-neutral-700",
+                            }}
+                            editorClasses="pt-1"
+                        />
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* ── Specifications ── */}
+                <AccordionItem
+                    value="specifications"
+                    className="border-b border-neutral-200"
+                >
+                    <AccordionTrigger className="py-5 text-left text-[13px] font-semibold uppercase tracking-[0.12em] text-neutral-900 hover:no-underline [&[data-state=open]>svg]:rotate-45">
+                        Specs &amp; Features
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-6">
+                        <div className="grid grid-cols-1 gap-y-2 md:grid-cols-2 md:gap-x-10">
                             {hasItems(visibleSpecifications) &&
                                 visibleSpecifications.map(
                                     (
@@ -57,7 +83,7 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                                 !showAllSpecifications
                                             )
                                         }
-                                        className="cursor-pointer text-base font-bold capitalize text-accent"
+                                        className="cursor-pointer text-[13px] font-semibold uppercase tracking-[0.08em] text-neutral-900 underline underline-offset-4 hover:text-neutral-600 transition-colors"
                                     >
                                         {showAllSpecifications
                                             ? "See Less"
@@ -68,58 +94,67 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* Product Details */}
-                <AccordionItem value="details">
-                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
-                        Product Details
+                {/* ── Material & Care ── */}
+                <AccordionItem
+                    value="material-care"
+                    className="border-b border-neutral-200"
+                >
+                    <AccordionTrigger className="py-5 text-left text-[13px] font-semibold uppercase tracking-[0.12em] text-neutral-900 hover:no-underline [&[data-state=open]>svg]:rotate-45">
+                        Materials &amp; Care
                     </AccordionTrigger>
-                    <AccordionContent>
-                        <RichTextViewer
-                            content={product.description ?? "<p></p>"}
-                            customClasses={{
-                                orderedList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                                bulletList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                                heading:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
-                            }}
-                            editorClasses="pt-3"
-                        />
-                    </AccordionContent>
-                </AccordionItem>
-
-                {/* Material & Care */}
-                <AccordionItem value="material-care">
-                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
-                        Material & Care
-                    </AccordionTrigger>
-                    <AccordionContent>
+                    <AccordionContent className="pb-6">
                         <RichTextViewer
                             content={product.materialAndCare ?? "<p></p>"}
                             customClasses={{
                                 orderedList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                                    "text-[14px] leading-[1.8] text-neutral-700",
                                 bulletList:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                                    "text-[14px] leading-[1.8] text-neutral-700",
                                 heading:
-                                    "text-base leading-[1.7] text-myntra-primary text-opacity-90",
+                                    "text-[14px] leading-[1.8] text-neutral-700",
                             }}
-                            editorClasses="pt-3"
+                            editorClasses="pt-1"
                         />
                     </AccordionContent>
                 </AccordionItem>
 
-                {/* Return & Exchange */}
-                <AccordionItem value="return-exchange">
-                    <AccordionTrigger className="mt-2 py-4 text-lg font-bold hover:no-underline">
-                        Return & Exchange
+                {/* ── Fit ── */}
+                <AccordionItem
+                    value="fit"
+                    className="border-b border-neutral-200"
+                >
+                    <AccordionTrigger className="py-5 text-left text-[13px] font-semibold uppercase tracking-[0.12em] text-neutral-900 hover:no-underline [&[data-state=open]>svg]:rotate-45">
+                        Fit
                     </AccordionTrigger>
-                    <AccordionContent>
+                    <AccordionContent className="pb-6">
+                        <RichTextViewer
+                            content={product.sizeAndFit ?? "<p></p>"}
+                            customClasses={{
+                                orderedList:
+                                    "text-[14px] leading-[1.8] text-neutral-700",
+                                bulletList:
+                                    "text-[14px] leading-[1.8] text-neutral-700",
+                                heading:
+                                    "text-[14px] leading-[1.8] text-neutral-700",
+                            }}
+                            editorClasses="pt-1"
+                        />
+                    </AccordionContent>
+                </AccordionItem>
+
+                {/* ── Returns & Exchange ── */}
+                <AccordionItem
+                    value="return-exchange"
+                    className="border-b border-neutral-200"
+                >
+                    <AccordionTrigger className="py-5 text-left text-[13px] font-semibold uppercase tracking-[0.12em] text-neutral-900 hover:no-underline [&[data-state=open]>svg]:rotate-45">
+                        Returns &amp; Exchange
+                    </AccordionTrigger>
+                    <AccordionContent className="pb-6">
                         <div className="space-y-5">
                             <div>
-                                <span className="block text-base font-bold">
-                                    Return
+                                <span className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-500 mb-2">
+                                    Return Policy
                                 </span>
                                 <RichTextViewer
                                     content={
@@ -129,18 +164,18 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                     }
                                     customClasses={{
                                         orderedList:
-                                            "text-base leading-[1.7] text-[#2F2F2F]",
+                                            "text-[14px] leading-[1.8] text-neutral-700",
                                         bulletList:
-                                            "text-base leading-[1.7] text-[#2F2F2F]",
+                                            "text-[14px] leading-[1.8] text-neutral-700",
                                         heading:
-                                            "text-base leading-[1.7] text-[#2F2F2F]",
+                                            "text-[14px] leading-[1.8] text-neutral-700",
                                     }}
-                                    editorClasses="pt-2"
+                                    editorClasses="pt-1"
                                 />
                             </div>
                             <div>
-                                <span className="block text-base font-bold">
-                                    Exchange
+                                <span className="block text-[11px] font-semibold uppercase tracking-[0.1em] text-neutral-500 mb-2">
+                                    Exchange Policy
                                 </span>
                                 <RichTextViewer
                                     content={
@@ -150,13 +185,13 @@ export function ProductDetails({ className, product, ...props }: PageProps) {
                                     }
                                     customClasses={{
                                         orderedList:
-                                            "text-base leading-[1.7] text-[#2F2F2F]",
+                                            "text-[14px] leading-[1.8] text-neutral-700",
                                         bulletList:
-                                            "text-base leading-[1.7] text-[#2F2F2F]",
+                                            "text-[14px] leading-[1.8] text-neutral-700",
                                         heading:
-                                            "text-base leading-[1.7] text-[#2F2F2F]",
+                                            "text-[14px] leading-[1.8] text-neutral-700",
                                     }}
-                                    editorClasses="pt-2"
+                                    editorClasses="pt-1"
                                 />
                             </div>
                         </div>

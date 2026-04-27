@@ -5,13 +5,12 @@ import { WishlistButton } from "@/components/globals/buttons";
 import { ProductCartAddForm } from "@/components/globals/forms";
 import { ProductShareModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
-import { Separator } from "@/components/ui/separator";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedCart, ProductWithBrand } from "@/lib/validations";
+import { Leaf, Package2, RefreshCw, ShieldCheck, Truck } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
-import { ProductCard } from "../product/product-static";
 
 interface PageProps extends GenericProps {
     initialCart?: CachedCart[];
@@ -20,13 +19,11 @@ interface PageProps extends GenericProps {
     userId?: string;
 }
 
-// 🔹 Simple seeded random generator
 function seededRandom(seed: number) {
     const x = Math.sin(seed) * 10000;
     return x - Math.floor(x);
 }
 
-// 🔹 Convert string (id/title) into numeric seed
 function stringToSeed(str: string) {
     let hash = 0;
     for (let i = 0; i < str.length; i++) {
@@ -35,10 +32,9 @@ function stringToSeed(str: string) {
     return Math.abs(hash);
 }
 
-// 🔹 Generate random rating & reviews per product (consistent per product)
 function getRandomRatingAndReviews(seed: number) {
-    const rating = Math.round((4.0 + seededRandom(seed) * 0.6) * 10) / 10; // 4.0–4.6
-    const reviews = Math.floor(seededRandom(seed + 1) * 71) + 10; // 10–80
+    const rating = Math.round((4.0 + seededRandom(seed) * 0.6) * 10) / 10;
+    const reviews = Math.floor(seededRandom(seed + 1) * 71) + 10;
     return { rating, reviews };
 }
 
@@ -54,9 +50,8 @@ export function ProductContent({
         useState(false);
     const [isProductWishlisted, setIsProductWishlisted] =
         useState(isWishlisted);
-    const [isPending, startTransition] = useTransition();
-    const [error, setError] = useState("");
-    const [zipCode, setZipCode] = useState<string | null>(null);
+    const [, startTransition] = useTransition();
+    const [, setZipCode] = useState<string | null>(null);
     const [estimatedDelivery, setEstimatedDelivery] = useState<string>("");
     const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
 
@@ -67,53 +62,32 @@ export function ProductContent({
 
     const { data: user } = trpc.general.users.currentUser.useQuery();
 
-    // 🔹 Generate unique seed from product.id or title
     const seed = stringToSeed(product.id || product.title);
     const { rating, reviews } = getRandomRatingAndReviews(seed);
 
-    // 🔹 Fetch estimated delivery date
     useEffect(() => {
         if (user?.addresses[0]?.zip && brandDetails?.warehousePostalCode) {
             startTransition(async () => {
                 try {
-                    setError(""); // Reset error state
                     const result = await getEstimatedDelivery({
-                        pickupPostcode: Number(
-                            brandDetails.warehousePostalCode
-                        ),
+                        pickupPostcode: Number(brandDetails.warehousePostalCode),
                         deliveryPostcode: Number(user.addresses[0].zip),
                     });
 
                     if (
-                        result?.data?.data?.available_courier_companies
-                            ?.length > 0
+                        result?.data?.data?.available_courier_companies?.length >
+                        0
                     ) {
                         const estimatedDateStr =
                             result.data.data.available_courier_companies[0].etd;
 
-                        if (!estimatedDateStr) {
-                            setError(
-                                "Unable to retrieve estimated delivery date."
-                            );
-                            return;
-                        }
+                        if (!estimatedDateStr) return;
 
                         const estimatedDate = new Date(estimatedDateStr);
                         const today = new Date();
 
-                        if (isNaN(estimatedDate.getTime())) {
-                            setError(
-                                "Invalid estimated delivery date received."
-                            );
-                            return;
-                        }
-
-                        if (estimatedDate <= today) {
-                            setError(
-                                "Estimated delivery date must be in the future."
-                            );
-                            return;
-                        }
+                        if (isNaN(estimatedDate.getTime())) return;
+                        if (estimatedDate <= today) return;
 
                         const formattedDate = estimatedDate.toLocaleDateString(
                             "en-US",
@@ -125,139 +99,86 @@ export function ProductContent({
                         );
                         setZipCode(user.addresses[0].zip);
                         setEstimatedDelivery(formattedDate);
-                    } else {
-                        setError(
-                            result.message ||
-                                "No delivery options available for this pincode."
-                        );
                     }
-                } catch (err) {
-                    console.error("Failed to fetch delivery estimate:", err);
-                    setError(
-                        "Failed to fetch delivery estimate. Please try again."
-                    );
+                } catch {
+                    // Silent fail
                 }
             });
         }
-    }, [user, brandDetails]);
+    }, [user, brandDetails, startTransition]);
 
     return (
         <>
             <div className={cn("", className)} {...props}>
-                <div className="space-y-3 border-b border-gray-200 pb-4">
-                    {/* Title + Share */}
-                    <div className="flex items-start justify-between gap-4">
-                        <h2 className="text-lg font-semibold text-gray-900 md:text-3xl">
-                            {product.title}
-                        </h2>
-                        <div className="flex shrink-0 items-center gap-3 pt-1">
-                            {/* Wishlist Button (Mobile Only) */}
-                            <div className="flex items-center md:hidden">
-                                {userId ? (
-                                    <WishlistButton
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-auto w-auto p-0 text-gray-600 hover:text-gray-900"
-                                        userId={userId}
-                                        productId={product.id}
-                                        isProductWishlisted={
-                                            isProductWishlisted
-                                        }
-                                        setIsProductWishlisted={
-                                            setIsProductWishlisted
-                                        }
-                                        iconClassName={cn(
-                                            "w-5 h-5",
-                                            isProductWishlisted &&
-                                                "fill-primary stroke-primary"
-                                        )}
-                                        hideText
-                                    />
-                                ) : (
-                                    <button
-                                        type="button"
-                                        className="text-gray-600 hover:text-gray-900"
-                                        onClick={() => {
-                                            addToGuestWishlist({
-                                                productId: product.id,
-                                                variantId: null,
-                                                title: product.title,
-                                                brand: product.brand?.name,
-                                                price: product.price,
-                                                image:
-                                                    product.thumbnail ?? null,
-                                                sku: null,
-                                                fullProduct: product,
-                                            });
-                                        }}
-                                    >
-                                        <Icons.Heart
-                                            className={cn(
-                                                guestWishlist.some(
-                                                    (w) =>
-                                                        w.productId ===
-                                                        product.id
-                                                ) &&
-                                                    "fill-primary stroke-primary",
-                                                "h-5 w-5"
-                                            )}
-                                        />
-                                    </button>
-                                )}
-                            </div>
-                            <button
-                                className="text-gray-600 hover:text-gray-900"
-                                onClick={() => setIsProductShareModalOpen(true)}
-                            >
-                                <span className="sr-only">Share</span>
-                                <Icons.Share className="h-5 w-5" />
-                            </button>
-                        </div>
+                {/* ── Brand name (small caps) ── */}
+                <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                    {product.brand.name}
+                </p>
+
+                {/* ── Product title ── */}
+                <h1 className="mb-2 font-sans text-[1.6rem] font-semibold leading-tight text-neutral-900 md:text-[1.85rem]">
+                    {product.title}
+                </h1>
+
+                {/* ── Style number ── */}
+                <p className="mb-4 text-[11px] uppercase tracking-[0.1em] text-neutral-400">
+                    Style #{product.id.slice(0, 8).toUpperCase()}
+                </p>
+
+                {/* ── Star rating ── */}
+                <div className="mb-5 flex items-center gap-2">
+                    <div className="flex items-center gap-0.5">
+                        {[...Array(5)].map((_, i) => {
+                            const starValue = i + 1;
+                            return (
+                                <svg
+                                    key={i}
+                                    viewBox="0 0 24 24"
+                                    className="size-4"
+                                    fill={
+                                        rating >= starValue
+                                            ? "#1a1a1a"
+                                            : rating >= starValue - 0.5
+                                              ? "url(#half)"
+                                              : "none"
+                                    }
+                                    stroke={
+                                        rating >= starValue - 0.5
+                                            ? "#1a1a1a"
+                                            : "#d1d5db"
+                                    }
+                                    strokeWidth={1.5}
+                                >
+                                    <defs>
+                                        <linearGradient id="half">
+                                            <stop offset="50%" stopColor="#1a1a1a" />
+                                            <stop offset="50%" stopColor="transparent" />
+                                        </linearGradient>
+                                    </defs>
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                                </svg>
+                            );
+                        })}
                     </div>
-
-                    {/* ⭐ Rating + Reviews + Brand */}
-                    <div className="flex items-center gap-4">
-                        {/* Stars */}
-                        <div className="flex items-center text-yellow-500">
-                            {[...Array(5)].map((_, i) => {
-                                const starValue = i + 1;
-                                if (rating >= starValue) {
-                                    return (
-                                        <Icons.Star
-                                            key={i}
-                                            className="h-4 w-4 fill-current"
-                                        />
-                                    ); // full star
-                                } else if (rating >= starValue - 0.5) {
-                                    return (
-                                        <Icons.StarHalf
-                                            key={i}
-                                            className="h-4 w-4 fill-current"
-                                        />
-                                    ); // half star
-                                } else {
-                                    return (
-                                        <Icons.Star
-                                            key={i}
-                                            className="h-4 w-4 text-gray-300"
-                                        />
-                                    ); // empty star
-                                }
-                            })}
-                        </div>
-
-                        {/* Rating & Reviews */}
-                        <span className="text-sm text-gray-700">{rating}</span>
-
-                        {/* Brand */}
-                        <span className="rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-medium text-green-700 md:text-sm">
-                            {product.brand.name}
-                        </span>
-                    </div>
+                    <button className="text-[13px] font-medium text-neutral-500 underline underline-offset-2 hover:text-neutral-800 transition-colors">
+                        {reviews} Reviews
+                    </button>
                 </div>
 
-                {/* Cart Add Form */}
+                {/* ── Divider ── */}
+                <div className="mb-6 border-t border-neutral-200" />
+
+                {/* ── Shop New / Shop Used tabs (Patagonia-style) ── */}
+                <div className="mb-6 flex overflow-hidden rounded-full border border-neutral-300 bg-neutral-100">
+                    <button className="flex-1 rounded-full bg-neutral-900 py-2.5 text-[13px] font-semibold text-white transition-all duration-200">
+                        Shop New
+                    </button>
+                    <button className="flex-1 rounded-full py-2.5 text-[13px] font-semibold text-neutral-500 transition-all duration-200 hover:text-neutral-900">
+                        Shop Used
+                    </button>
+                </div>
+
+                {/* ── Cart add form (prices + selectors + buttons) ── */}
                 <ProductCartAddForm
                     product={product}
                     isWishlisted={isWishlisted}
@@ -272,8 +193,111 @@ export function ProductContent({
                     setEstimatedDelivery={setEstimatedDelivery}
                 />
 
-                <Separator />
-                <ProductCard product={product} />
+                {/* ── Divider ── */}
+                <div className="my-7 border-t border-neutral-200" />
+
+                {/* ── Service promises (Patagonia icons row) ── */}
+                <div className="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                    {[
+                        { icon: Truck, label: "Free Shipping", sub: "Orders ₹999+" },
+                        {
+                            icon: RefreshCw,
+                            label: "Easy Returns",
+                            sub: "15-day window",
+                        },
+                        { icon: ShieldCheck, label: "Genuine", sub: "100% Authentic" },
+                        { icon: Leaf, label: "Mindful", sub: "Eco materials" },
+                    ].map(({ icon: Icon, label, sub }) => (
+                        <div
+                            key={label}
+                            className="flex flex-col items-center gap-1.5 rounded-xl border border-neutral-200 bg-neutral-50 px-2 py-3 text-center"
+                        >
+                            <Icon className="size-5 text-neutral-700" strokeWidth={1.5} />
+                            <span className="block text-[11px] font-semibold uppercase tracking-[0.06em] text-neutral-800">
+                                {label}
+                            </span>
+                            <span className="block text-[10px] text-neutral-400">
+                                {sub}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Share + Wishlist row (desktop) ── */}
+                <div className="flex items-center justify-between">
+                    {/* Wishlist */}
+                    <div className="hidden items-center gap-1.5 md:flex">
+                        {userId ? (
+                            <WishlistButton
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="gap-1.5 p-0 text-[13px] font-medium text-neutral-600 hover:text-neutral-900"
+                                userId={userId}
+                                productId={product.id}
+                                isProductWishlisted={isProductWishlisted}
+                                setIsProductWishlisted={setIsProductWishlisted}
+                                iconClassName={cn(
+                                    "size-4",
+                                    isProductWishlisted && "fill-red-500 stroke-red-500"
+                                )}
+                            />
+                        ) : (
+                            <button
+                                type="button"
+                                className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+                                onClick={() => {
+                                    addToGuestWishlist({
+                                        productId: product.id,
+                                        variantId: null,
+                                        title: product.title,
+                                        brand: product.brand?.name,
+                                        price: product.price,
+                                        image: product.thumbnail ?? null,
+                                        sku: null,
+                                        fullProduct: product,
+                                    });
+                                }}
+                            >
+                                <Icons.Heart
+                                    className={cn(
+                                        guestWishlist.some(
+                                            (w) => w.productId === product.id
+                                        ) && "fill-red-500 stroke-red-500",
+                                        "size-4"
+                                    )}
+                                />
+                                Save to Wishlist
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Share button */}
+                    <button
+                        className="flex items-center gap-1.5 text-[13px] font-medium text-neutral-600 hover:text-neutral-900 transition-colors"
+                        onClick={() => setIsProductShareModalOpen(true)}
+                    >
+                        <Icons.Share className="size-4" />
+                        Share
+                    </button>
+                </div>
+
+                {/* ── Sustainability badge strip ── */}
+                <div className="mt-7 flex flex-wrap gap-2">
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-[11px] font-semibold text-green-800">
+                        <Leaf className="size-3" />
+                        Regenerative Materials
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-neutral-50 px-3 py-1 text-[11px] font-semibold text-neutral-700">
+                        <Package2 className="size-3" />
+                        Conscious Brand
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-100 bg-blue-50 px-3 py-1 text-[11px] font-semibold text-blue-800">
+                        <ShieldCheck className="size-3" />
+                        Renivet Verified
+                    </span>
+                </div>
+
             </div>
 
             <ProductShareModal

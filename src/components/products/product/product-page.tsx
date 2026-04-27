@@ -1,19 +1,11 @@
 "use client";
 
 import {
-    Carousel,
-    CarouselContent,
-    CarouselItem,
-    CarouselNext,
-    CarouselPrevious,
-} from "@/components/ui/carousel";
-import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog-general";
-import { Separator } from "@/components/ui/separator";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -21,11 +13,10 @@ import {
     CachedWishlist,
     ProductWithBrand,
 } from "@/lib/validations";
-import Autoplay from "embla-carousel-autoplay";
-import { ZoomIn } from "lucide-react";
+import { ZoomIn, X } from "lucide-react";
 import Image from "next/image";
 import { useQueryState } from "nuqs";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState, useEffect } from "react";
 import { ProductContent } from "./product-content";
 import { ProductDetails } from "./product-detais";
 import YouMayAlsoLike from "./product-recommendation";
@@ -50,7 +41,7 @@ export function ProductPage({
 }: PageProps) {
     const [selectedSku] = useQueryState("sku");
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(0);
+    const [modalImageIndex, setModalImageIndex] = useState(0);
 
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
         { userId: userId! },
@@ -89,14 +80,11 @@ export function ProductPage({
 
     const sortedImages = useMemo(() => {
         if (!selectedVariant?.image || !images?.length) return images;
-
         const variantMediaItem = selectedVariant?.mediaItem;
         if (!variantMediaItem?.url) return images;
-
         const variantImageIndex = images.findIndex(
             (img) => img.id === selectedVariant.image
         );
-
         if (variantImageIndex === -1) {
             return [
                 {
@@ -108,263 +96,184 @@ export function ProductPage({
                 ...images,
             ];
         }
-
         const newImages = [...images];
         const [variantImage] = newImages.splice(variantImageIndex, 1);
         return [variantImage, ...newImages];
-    }, [
-        images,
-        selectedVariant?.image,
-        selectedVariant?.mediaItem,
-        product.title,
-    ]);
+    }, [images, selectedVariant?.image, selectedVariant?.mediaItem, product.title]);
 
-    const selectedImageData =
-        sortedImages[selectedImage] ?? sortedImages[0] ?? null;
+    const displayImages =
+        sortedImages.length > 0
+            ? sortedImages
+            : [{ id: "fallback", url: FALLBACK_IMAGE_URL, alt: "Default Product Image", position: -1 }];
 
-    function isEmptyArray(arr: Array<any> | undefined): boolean {
-        return !arr?.length;
-    }
+    const openModal = useCallback((index: number) => {
+        setModalImageIndex(index);
+        setIsImageModalOpen(true);
+    }, []);
+
+    useEffect(() => {
+        if (!isImageModalOpen) return;
+        const handleKey = (e: KeyboardEvent) => {
+            if (e.key === "ArrowRight") setModalImageIndex((i) => Math.min(i + 1, displayImages.length - 1));
+            if (e.key === "ArrowLeft") setModalImageIndex((i) => Math.max(i - 1, 0));
+            if (e.key === "Escape") setIsImageModalOpen(false);
+        };
+        window.addEventListener("keydown", handleKey);
+        return () => window.removeEventListener("keydown", handleKey);
+    }, [isImageModalOpen, displayImages.length]);
 
     return (
         <>
+            {/* ══ Main PDP wrapper ══ */}
             <div
-                className={cn("flex flex-col gap-5 lg:flex-row", className)}
+                className={cn("mx-auto w-full max-w-[1440px] bg-white", className)}
                 {...props}
             >
-                {/* Desktop Layout */}
-                <div className="hidden w-1/2 lg:block">
-                    <div className="flex justify-center gap-12 rounded-md border border-gray-300 bg-white p-4">
-                        {/* Robustly Fixed Thumbnails Carousel */}
-                        <div className="relative flex w-28 flex-col items-center py-6">
-                            <Carousel
-                                orientation="vertical"
-                                opts={{
-                                    align: "start",
-                                    loop: true,
-                                }}
-                                className="h-[435px] w-full"
-                            >
-                                <CarouselContent
-                                    classNames={{
-                                        wrapper: "h-full overflow-hidden",
-                                    }}
-                                    className="-mt-4 h-full"
+                {/* ══ Two-column layout ══ */}
+                <div className="flex flex-col lg:flex-row lg:items-start">
+
+                    {/* ── LEFT: 2-column image grid (60%) ── */}
+                    <div className="w-full lg:w-[60%]">
+                        {/* Desktop 2-col image grid */}
+                        <div className="hidden lg:grid lg:grid-cols-2 lg:gap-[2px] lg:bg-neutral-200">
+                            {displayImages.map((image, i) => (
+                                <div
+                                    key={image.id}
+                                    id={i === 0 ? "pdp-main-image" : undefined}
+                                    className="group relative aspect-[3/4] cursor-zoom-in overflow-hidden bg-[#f5f5f0]"
+                                    onClick={() => openModal(i)}
                                 >
-                                    {isEmptyArray(sortedImages) ? (
-                                        <CarouselItem className="basis-1/5 pt-4">
-                                            <div className="overflow-hidden rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
-                                                <Image
-                                                    src={FALLBACK_IMAGE_URL}
-                                                    alt="Default Thumbnail"
-                                                    width={80}
-                                                    height={80}
-                                                    className="aspect-square w-full object-contain"
-                                                />
-                                            </div>
-                                        </CarouselItem>
-                                    ) : (
-                                        sortedImages.map((image, i) => (
-                                            <CarouselItem
-                                                key={image.id}
-                                                className="basis-1/5 pt-4"
-                                            >
-                                                <div
-                                                    className={cn(
-                                                        "aspect-square cursor-pointer overflow-hidden rounded-lg border-2 bg-white transition-all duration-200",
-                                                        i === selectedImage
-                                                            ? "border-gray-800"
-                                                            : "border-transparent hover:border-gray-300"
-                                                    )}
-                                                    onClick={() =>
-                                                        setSelectedImage(i)
-                                                    }
-                                                >
-                                                    <Image
-                                                        src={image.url}
-                                                        alt={
-                                                            image.alt ||
-                                                            `Thumbnail ${i + 1}`
-                                                        }
-                                                        width={100}
-                                                        height={100}
-                                                        className="size-full object-contain p-1"
-                                                    />
-                                                </div>
-                                            </CarouselItem>
-                                        ))
-                                    )}
-                                </CarouselContent>
-                                {sortedImages.length > 5 && (
-                                    <>
-                                        <CarouselPrevious className="absolute -top-6 left-1/2 z-10 size-10 -translate-x-1/2 rotate-90 border-gray-200 bg-white shadow-md hover:bg-gray-50 focus:ring-0 active:scale-95" />
-                                        <CarouselNext className="absolute -bottom-6 left-1/2 z-10 size-10 -translate-x-1/2 rotate-90 border-gray-200 bg-white shadow-md hover:bg-gray-50 focus:ring-0 active:scale-95" />
-                                    </>
-                                )}
-                            </Carousel>
-                        </div>
-
-                        {/* Main Image */}
-                        <div
-                            id="pdp-main-image"
-                            className="group relative flex cursor-pointer items-center justify-center bg-transparent transition-all duration-300"
-                            style={{ width: "485px", height: "485px" }}
-                            onClick={() => setIsImageModalOpen(true)}
-                        >
-                            <div className="flex size-full items-center justify-center">
-                                <Image
-                                    src={
-                                        selectedImageData?.url ??
-                                        FALLBACK_IMAGE_URL
-                                    }
-                                    alt={
-                                        selectedImageData?.alt ||
-                                        "Default Product Image"
-                                    }
-                                    width={485}
-                                    height={485}
-                                    className="mx-auto object-contain transition-transform duration-300 group-hover:scale-[1.02]"
-                                    style={{
-                                        maxWidth: "100%",
-                                        maxHeight: "100%",
-                                        height: "auto",
-                                        width: "auto",
-                                    }}
-                                />
-                            </div>
-                            {/* Zoom Indicator */}
-                            <div className="absolute bottom-4 right-4 rounded-full bg-black/60 p-2 opacity-0 transition-opacity duration-300 group-hover:opacity-100">
-                                <ZoomIn className="size-5 text-white" />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bottom Info Strip */}
-                    <div className="mt-3 flex justify-around rounded-b-md border-t border-gray-300 bg-[#C2CDD0] py-3 text-sm text-gray-700">
-                        <span>100% Genuine Products</span>
-                        <span>Easy Return Policy</span>
-                        <span>Mindful Materials</span>
-                    </div>
-                    <ProductDetails product={product} />
-                </div>
-
-                {/* Mobile Carousel */}
-                <Carousel
-                    plugins={[
-                        Autoplay({
-                            delay: 5000,
-                        }),
-                    ]}
-                    opts={{
-                        loop: true,
-                        align: "start",
-                    }}
-                    className="md:hidden"
-                >
-                    <CarouselContent className="m-0 flex flex-row gap-4">
-                        {(sortedImages.length
-                            ? sortedImages
-                            : [
-                                  {
-                                      id: "fallback",
-                                      url: FALLBACK_IMAGE_URL,
-                                      alt: "Default Product Image",
-                                      position: -1,
-                                  },
-                              ]
-                        ).map((image, i) => (
-                            <CarouselItem
-                                key={image.id}
-                                className="p-0 text-center md:basis-1/2 lg:basis-1/4"
-                            >
-                                <div className="aspect-[3/4] size-full overflow-hidden">
                                     <Image
                                         src={image.url}
-                                        alt={
-                                            image.alt ||
-                                            `Product image ${i + 1}`
-                                        }
-                                        width={1000}
-                                        height={1000}
-                                        className="size-full object-contain"
+                                        alt={image.alt || `Product image ${i + 1}`}
+                                        fill
+                                        sizes="(max-width: 1440px) 30vw, 432px"
+                                        className="object-contain object-center transition-transform duration-500 group-hover:scale-[1.03]"
+                                        priority={i < 2}
+                                    />
+                                    <div className="absolute bottom-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 opacity-0 shadow-sm backdrop-blur-sm transition-opacity duration-200 group-hover:opacity-100">
+                                        <ZoomIn className="size-4 text-neutral-700" />
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Mobile: single-column images */}
+                        <div className="flex flex-col gap-[2px] lg:hidden">
+                            {displayImages.map((image, i) => (
+                                <div
+                                    key={image.id}
+                                    id={i === 0 ? "pdp-main-image" : undefined}
+                                    className="relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0]"
+                                    onClick={() => openModal(i)}
+                                >
+                                    <Image
+                                        src={image.url}
+                                        alt={image.alt || `Product image ${i + 1}`}
+                                        fill
+                                        sizes="100vw"
+                                        className="object-contain object-center"
+                                        priority={i === 0}
                                     />
                                 </div>
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                </Carousel>
+                            ))}
+                        </div>
+                    </div>
 
-                <div className="w-px bg-border" />
+                    {/* ── RIGHT: product panel (40%) — NO sticky, NO overflow/scrollbar ── */}
+                    <div className="w-full border-l border-neutral-200 lg:w-[40%]">
+                        {/* Product info (title, price, selectors, buttons, service icons) */}
+                        <ProductContent
+                            className="px-6 py-8 md:px-8 md:py-10"
+                            product={product}
+                            initialCart={initialCart}
+                            isWishlisted={isWishlisted}
+                            userId={userId}
+                        />
 
-                <ProductContent
-                    className="basis-2/5 space-y-3 md:space-y-5"
-                    product={product}
-                    initialCart={initialCart}
-                    isWishlisted={isWishlisted}
-                    userId={userId}
-                />
-                <div className="block md:hidden">
-                    <ProductDetails product={product} />
+                        {/* Product Detail Accordions — right inside the right panel */}
+                        <div className="border-t border-neutral-200 px-6 md:px-8">
+                            <ProductDetails product={product} />
+                        </div>
+                    </div>
                 </div>
             </div>
-            <Separator />
-            <YouMayAlsoLike
-                categoryId={product.categoryId}
-                excludeProductId={product.id}
-                className="mt-12"
-            />
-            {/* Modal */}
+
+            {/* ── You May Also Like ── */}
+            <div className="mx-auto mt-16 w-full max-w-[1440px] border-t border-neutral-200 pt-12">
+                <YouMayAlsoLike
+                    categoryId={product.categoryId}
+                    excludeProductId={product.id}
+                />
+            </div>
+
+            {/* ── Lightbox Modal ── */}
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
-                <DialogContent className="p-0">
-                    <DialogHeader className="hidden">
-                        <DialogTitle>Images of {product.title}</DialogTitle>
+                <DialogContent className="flex h-screen max-h-screen w-screen max-w-screen items-center justify-center bg-black/95 p-0">
+                    <DialogHeader className="sr-only">
+                        <DialogTitle>Product Images</DialogTitle>
                     </DialogHeader>
 
-                    <Carousel
-                        plugins={[
-                            Autoplay({
-                                delay: 5000,
-                            }),
-                        ]}
-                        opts={{
-                            loop: true,
-                            align: "start",
-                        }}
+                    <button
+                        className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                        onClick={() => setIsImageModalOpen(false)}
                     >
-                        <CarouselContent className="m-0">
-                            {(sortedImages.length
-                                ? sortedImages
-                                : [
-                                      {
-                                          id: "fallback-modal",
-                                          url: FALLBACK_IMAGE_URL,
-                                          alt: "Default Product Image",
-                                          position: -1,
-                                      },
-                                  ]
-                            ).map((image, i) => (
-                                <CarouselItem
-                                    key={image.id}
-                                    className="p-0 text-center"
-                                >
-                                    <div className="aspect-[3/4] size-full overflow-hidden">
-                                        <Image
-                                            src={image.url}
-                                            alt={
-                                                image.alt ||
-                                                `Product image ${i + 1}`
-                                            }
-                                            width={1000}
-                                            height={1000}
-                                            className="size-full object-contain"
-                                        />
-                                    </div>
-                                </CarouselItem>
-                            ))}
-                        </CarouselContent>
-                        <CarouselPrevious />
-                        <CarouselNext />
-                    </Carousel>
+                        <X className="size-5" />
+                    </button>
+
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-white/10 px-4 py-1.5 text-sm text-white backdrop-blur-sm">
+                        {modalImageIndex + 1} / {displayImages.length}
+                    </div>
+
+                    {modalImageIndex > 0 && (
+                        <button
+                            className="absolute left-4 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                            onClick={() => setModalImageIndex((i) => i - 1)}
+                        >
+                            ‹
+                        </button>
+                    )}
+                    {modalImageIndex < displayImages.length - 1 && (
+                        <button
+                            className="absolute right-4 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20"
+                            onClick={() => setModalImageIndex((i) => i + 1)}
+                        >
+                            ›
+                        </button>
+                    )}
+
+                    <div className="relative h-full w-full">
+                        <Image
+                            src={displayImages[modalImageIndex]?.url ?? FALLBACK_IMAGE_URL}
+                            alt={displayImages[modalImageIndex]?.alt || "Product image"}
+                            fill
+                            className="object-contain"
+                            sizes="100vw"
+                        />
+                    </div>
+
+                    <div className="absolute bottom-16 left-1/2 flex -translate-x-1/2 gap-2 overflow-x-auto px-4 py-2">
+                        {displayImages.map((img, i) => (
+                            <button
+                                key={img.id}
+                                onClick={() => setModalImageIndex(i)}
+                                className={cn(
+                                    "relative h-14 w-11 flex-shrink-0 overflow-hidden border-2 transition-all",
+                                    i === modalImageIndex
+                                        ? "border-white"
+                                        : "border-white/30 opacity-60 hover:opacity-100"
+                                )}
+                            >
+                                <Image
+                                    src={img.url}
+                                    alt={img.alt || `Thumb ${i + 1}`}
+                                    fill
+                                    className="object-cover"
+                                    sizes="44px"
+                                />
+                            </button>
+                        ))}
+                    </div>
                 </DialogContent>
             </Dialog>
         </>
