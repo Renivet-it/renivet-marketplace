@@ -326,6 +326,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         sortOrder: sortOrderRaw,
         colors: colorsRaw,
         sizes: sizesRaw,
+        minDiscount: minDiscountRaw,
     } = await searchParams;
 
     const limit =
@@ -368,6 +369,10 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
             : undefined;
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
+    const minDiscount =
+        minDiscountRaw && !isNaN(parseInt(minDiscountRaw))
+            ? parseInt(minDiscountRaw)
+            : undefined;
 
     // Check if we should use personalized recommendations
     // Only apply on first page with no specific filters
@@ -378,6 +383,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         !subCategoryId &&
         !productTypeId &&
         !brandIds?.length &&
+        !minDiscount &&
         (!sortByRaw || sortByRaw === "recommended") &&
         !!userId;
 
@@ -421,7 +427,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         const isDefaultView = page === 1 && limit === 28 &&
                               !search && !brandIds && minPrice === 0 && maxPrice === 1000000 &&
                               !categoryId && !subCategoryId && !productTypeId &&
-                              (!sortByRaw || sortByRaw === "recommended") && !sortOrder && !colors && !sizes;
+                              (!sortByRaw || sortByRaw === "recommended") && !sortOrder && !colors && !sizes && !minDiscount;
 
         if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
@@ -445,6 +451,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
                 sortOrder,
                 colors,
                 sizes,
+                minDiscount,
                 prioritizeBestSellers:
                     !search && (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,

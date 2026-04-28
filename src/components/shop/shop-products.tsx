@@ -170,13 +170,19 @@ export function ShopProducts({
             sortOrder: sortBy === "recommended" ? undefined : sortOrder,
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
+            minDiscount: minDiscount ?? undefined,
             // Don't boost best sellers when search is active; search relevance should win.
             prioritizeBestSellers:
-                !search && page === 1 && (!sortBy || sortBy === "recommended"),
+                !search &&
+                page === 1 &&
+                (!sortBy || sortBy === "recommended") &&
+                !minDiscount,
             requireMedia: true,
             // Only enable recommendations for the default "recommended" sort.
             useRecommendations:
-                !search && (!sortBy || sortBy === "recommended"),
+                !search &&
+                (!sortBy || sortBy === "recommended") &&
+                !minDiscount,
         },
         {
             // Prevent a duplicate client fetch on first render when server data already matches.

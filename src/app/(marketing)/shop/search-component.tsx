@@ -186,7 +186,7 @@ export function SearchableProductTypes({
                 <a
                     href={allItemsHref}
                     className={cn(
-                        "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-base font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
+                        "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-xs font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
                         !productTypeId &&
                             "border-[#1f3553] bg-[#1f3553] text-white shadow-[0_4px_14px_rgba(31,53,83,0.24)] hover:bg-[#1a2f49]"
                     )}
@@ -204,7 +204,7 @@ export function SearchableProductTypes({
                                 key={type.id}
                                 href={getTypeHref(type.id)}
                                 className={cn(
-                                    "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-base font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
+                                    "whitespace-nowrap rounded-full border border-[#cfdae7] bg-white px-5 py-2.5 text-xs font-medium text-[#2f4968] shadow-[0_1px_0_rgba(0,0,0,0.02)] transition-all duration-200 hover:-translate-y-[1px] hover:border-[#aebed1] hover:bg-[#f5f8fc]",
                                     productTypeId === type.id &&
                                         "border-[#1f3553] bg-[#1f3553] text-white shadow-[0_4px_14px_rgba(31,53,83,0.24)] hover:bg-[#1a2f49]"
                                 )}
@@ -215,7 +215,7 @@ export function SearchableProductTypes({
                         {isDesktop && activeTypes.length > 6 && (
                             <button
                                 onClick={() => setShowAll(!showAll)}
-                                className="whitespace-nowrap rounded-full border border-dashed border-[#b9c7d6] px-5 py-2.5 text-base font-medium text-[#48617f] transition-colors hover:bg-[#f5f8fc]"
+                                className="whitespace-nowrap rounded-full border border-dashed border-[#b9c7d6] px-5 py-2.5 text-xs font-medium text-[#48617f] transition-colors hover:bg-[#f5f8fc]"
                             >
                                 {showAll ? "Show Less" : "Show More"}
                             </button>
