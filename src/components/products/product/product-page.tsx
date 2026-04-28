@@ -19,7 +19,7 @@ import {
     CachedWishlist,
     ProductWithBrand,
 } from "@/lib/validations";
-import { X, ZoomIn } from "lucide-react";
+import { Lock, X, ZoomIn } from "lucide-react";
 import Image from "next/image";
 import { useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -263,6 +263,38 @@ export function ProductPage({
                                 userId={userId}
                             />
 
+                            <div className="border-t border-neutral-200 px-6 py-6 md:px-8">
+                                <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                                    100% Secure Checkout
+                                </p>
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex flex-wrap items-center gap-2.5">
+                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-5 py-2 text-[28px] font-black italic leading-none text-[#1a2e8a]">
+                                            VISA
+                                        </span>
+                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2">
+                                            <span className="inline-flex items-center">
+                                                <span className="h-5 w-5 rounded-full bg-[#eb001b]" />
+                                                <span className="-ml-2 h-5 w-5 rounded-full bg-[#f79e1b]" />
+                                            </span>
+                                        </span>
+                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2 text-xl font-bold leading-none text-[#097939]">
+                                            UPI
+                                        </span>
+                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2 text-xl font-semibold leading-none text-[#1858b9]">
+                                            RuPay
+                                        </span>
+                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2 text-sm font-semibold tracking-wide text-neutral-600">
+                                            COD
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2 text-sm text-neutral-400">
+                                        <Lock className="size-4" />
+                                        <span>SSL Encrypted</span>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Accordions — sit below product info inside the sticky panel */}
                             <div className="border-t border-neutral-200 px-6 md:px-8">
                                 <ProductDetails product={product} />
@@ -274,7 +306,25 @@ export function ProductPage({
 
             {/* ── Decode X / Story Section ── */}
             <div className="mx-auto w-full max-w-[1440px]">
-                <ProductCard product={product} />
+                <div className="relative h-[420px] overflow-hidden rounded-[34px] border border-neutral-200 bg-[#fcfbf4] md:h-[520px]">
+                    <div className="pointer-events-none absolute inset-0 select-none opacity-55 blur-[4px]">
+                        <ProductCard product={product} />
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-[#fcfbf4]/58">
+                        <div className="px-4 text-center text-[#162038]">
+                            <p className="text-[52px] font-semibold leading-[1.05] tracking-tight md:text-[64px]">
+                                Decode X
+                            </p>
+                            <p className="mt-1 text-[44px] font-semibold leading-[1.06] tracking-tight md:text-[56px]">
+                                Behind The Product
+                            </p>
+                            <div className="mx-auto mt-5 h-[2px] w-52 bg-[#efe4d0]" />
+                            <p className="mt-3 text-[28px] font-medium tracking-[0.2em] text-[#28476b] md:text-[34px]">
+                                COMING SOON
+                            </p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             {/* ── Customer Reviews ── */}
