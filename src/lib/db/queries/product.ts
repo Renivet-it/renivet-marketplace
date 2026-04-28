@@ -4877,17 +4877,35 @@ class ProductQuery {
             const whereConditions = [
                 eq(products.isDeleted, false),
                 eq(products.isActive, true),
+                eq(products.isAvailable, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
                 eq(brands.isActive, true),
+                hasMedia(products, "media"),
                 filters?.search?.length
                     ? ilike(products.title, `%${filters.search}%`)
                     : undefined,
                 filters?.minPrice !== undefined
-                    ? sql`COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}`
+                    ? sql`(
+                        COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
                     : undefined,
                 filters?.maxPrice !== undefined
-                    ? sql`COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}`
+                    ? sql`(
+                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
                     : undefined,
                 filters?.minDiscount !== undefined
                     ? sql`(

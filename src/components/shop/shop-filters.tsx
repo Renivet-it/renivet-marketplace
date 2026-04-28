@@ -365,6 +365,8 @@ type ActiveFilter =
     | "discount"
     | "color";
 
+const serverFacetQueryOptions = { shallow: false };
+
 interface GenericProps {
     className?: string;
     [key: string]: any;
@@ -721,6 +723,21 @@ function BrandFilter({
             }),
         [brandsMeta]
     );
+    const validBrandIds = useMemo(
+        () => new Set(brandsWithProducts.map((brand) => brand.id)),
+        [brandsWithProducts]
+    );
+
+    useEffect(() => {
+        const nextBrandIds = brandIds.filter((brandId) =>
+            validBrandIds.has(brandId)
+        );
+
+        if (nextBrandIds.length !== brandIds.length) {
+            void setBrandIds(nextBrandIds);
+        }
+    }, [brandIds, setBrandIds, validBrandIds]);
+
     const visibleBrands = showAllBrands
         ? brandsWithProducts
         : brandsWithProducts.slice(0, 10);
@@ -791,14 +808,17 @@ function CategoryFilter({
     const [showAllTypes, setShowAllTypes] = useState(false);
     const [categoryId, setCategoryId] = useQueryState("categoryId", {
         defaultValue: "",
+        ...serverFacetQueryOptions,
     });
     const [subCategoryId, setSubCategoryId] = useQueryState("subCategoryId", {
         defaultValue: "",
+        ...serverFacetQueryOptions,
     });
     const [legacySubCategoryId, setLegacySubCategoryId] = useQueryState(
         "subcategoryId",
         {
             defaultValue: "",
+            ...serverFacetQueryOptions,
         }
     );
     const effectiveSubCategoryId = subCategoryId || legacySubCategoryId;
@@ -815,6 +835,7 @@ function CategoryFilter({
     };
     const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
         defaultValue: "",
+        ...serverFacetQueryOptions,
     });
     const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
     const categoryCountMap = useMemo(() => {
