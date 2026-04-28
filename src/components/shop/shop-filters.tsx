@@ -18,6 +18,7 @@ import {
     parseAsString,
     parseAsStringLiteral,
     useQueryState,
+    useQueryStates,
 } from "nuqs";
 import { useEffect, useMemo, useState } from "react";
 import { findBestMatch } from "string-similarity";
@@ -365,8 +366,6 @@ type ActiveFilter =
     | "discount"
     | "color";
 
-const serverFacetQueryOptions = { shallow: false };
-
 interface GenericProps {
     className?: string;
     [key: string]: any;
@@ -546,7 +545,6 @@ export function ShopFilters({
                                     categories={categories}
                                     subCategories={availableSubCategories}
                                     productTypes={availableProductTypes}
-                                    setSearch={setSearch}
                                 />
                             )}
                             {activeFilter === "price" && <PriceFilter />}
@@ -623,7 +621,6 @@ function ShopFiltersSection({
     productTypes,
     colors,
     allSizes,
-    setSearch,
     ...props
 }: {
     className?: string;
@@ -634,7 +631,6 @@ function ShopFiltersSection({
     colors: { name: string; count: number }[];
     allSizes: string[];
     search?: string;
-    setSearch?: (value: string | null) => void;
     [key: string]: any;
 }) {
     const hasCategories = categories.length > 0;
@@ -671,7 +667,6 @@ function ShopFiltersSection({
                             categories={categories}
                             subCategories={subCategories}
                             productTypes={productTypes}
-                            setSearch={setSearch}
                         />
                         <Separator />
                     </>
@@ -793,51 +788,52 @@ function CategoryFilter({
     categories,
     subCategories,
     productTypes,
-    setSearch,
     showCategoryHeading = true,
 }: {
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
-    setSearch?: (value: string | null) => void;
     showCategoryHeading?: boolean;
 }) {
     const INITIAL_VISIBLE_SUBCATEGORIES = 5;
     const INITIAL_VISIBLE_TYPES = 5;
     const [showAllSubCategories, setShowAllSubCategories] = useState(false);
     const [showAllTypes, setShowAllTypes] = useState(false);
-    const [categoryId, setCategoryId] = useQueryState("categoryId", {
-        defaultValue: "",
-        ...serverFacetQueryOptions,
+    const [filterState, setFilterState] = useQueryStates({
+        categoryId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        subCategoryId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        subcategoryId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        productTypeId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        shopPage: parseAsInteger.withDefault(1),
+        search: parseAsString.withDefault(""),
     });
-    const [subCategoryId, setSubCategoryId] = useQueryState("subCategoryId", {
-        defaultValue: "",
-        ...serverFacetQueryOptions,
-    });
-    const [legacySubCategoryId, setLegacySubCategoryId] = useQueryState(
-        "subcategoryId",
-        {
-            defaultValue: "",
-            ...serverFacetQueryOptions,
-        }
-    );
+    const {
+        categoryId,
+        subCategoryId,
+        subcategoryId: legacySubCategoryId,
+        productTypeId,
+    } = filterState;
     const effectiveSubCategoryId = subCategoryId || legacySubCategoryId;
-    const updateSubCategoryId = (id: string) => {
-        void setSubCategoryId(id);
-        // Clear legacy key once we write the canonical one.
-        void setLegacySubCategoryId(null);
-    };
-    const clearSubCategoryId = () => {
-        updateSubCategoryId("");
-    };
+    const updateSubCategoryId = (id: string) =>
+        setFilterState({
+            subCategoryId: id,
+            // Clear legacy key once we write the canonical one.
+            subcategoryId: null,
+            productTypeId: "",
+            shopPage: 1,
+            search: "",
+        });
     const toggleSubCategoryId = (id: string) => {
-        updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
+        return updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
     };
-    const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
-        defaultValue: "",
-        ...serverFacetQueryOptions,
-    });
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
     const categoryCountMap = useMemo(() => {
         const map = new Map<string, number>();
         for (const subCategory of subCategories) {
@@ -886,11 +882,14 @@ function CategoryFilter({
                 <RadioGroup
                     value={categoryId}
                     onValueChange={(id) => {
-                        setCategoryId(id === categoryId ? "" : id);
-                        clearSubCategoryId();
-                        setProductTypeId("");
-                        setPage(1);
-                        if (setSearch) setSearch("");
+                        void setFilterState({
+                            categoryId: id === categoryId ? "" : id,
+                            subCategoryId: "",
+                            subcategoryId: null,
+                            productTypeId: "",
+                            shopPage: 1,
+                            search: "",
+                        });
                     }}
                     className="space-y-2"
                 >
@@ -929,10 +928,7 @@ function CategoryFilter({
                 <RadioGroup
                     value={effectiveSubCategoryId}
                     onValueChange={(id) => {
-                        toggleSubCategoryId(id);
-                        setProductTypeId("");
-                        setPage(1);
-                        if (setSearch) setSearch("");
+                        void toggleSubCategoryId(id);
                     }}
                     className="space-y-2"
                 >
@@ -982,11 +978,12 @@ function CategoryFilter({
                         <RadioGroup
                             value={productTypeId}
                             onValueChange={(id) => {
-                                setProductTypeId(
-                                    id === productTypeId ? "" : id
-                                );
-                                setPage(1);
-                                if (setSearch) setSearch("");
+                                void setFilterState({
+                                    productTypeId:
+                                        id === productTypeId ? "" : id,
+                                    shopPage: 1,
+                                    search: "",
+                                });
                             }}
                             className="space-y-2"
                         >
