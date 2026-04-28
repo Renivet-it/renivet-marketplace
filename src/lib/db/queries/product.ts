@@ -4859,14 +4859,69 @@ class ProductQuery {
         categoryId?: string;
         subcategoryId?: string;
         productTypeId?: string;
+        search?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        colors?: string[];
+        sizes?: string[];
+        minDiscount?: number;
     }): Promise<{ id: string; name: string; slug: string; count: number }[]> {
         try {
+            const normalizedColors = filters?.colors?.map((c) =>
+                c.toLowerCase()
+            );
+            const normalizedSizes = filters?.sizes?.map((s) => s.toLowerCase());
+            const colorOptionNames = ["colour", "color"];
+            const sizeOptionNames = ["sizes", "size"];
+
             const whereConditions = [
                 eq(products.isDeleted, false),
                 eq(products.isActive, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
                 eq(brands.isActive, true),
+                filters?.search?.length
+                    ? ilike(products.title, `%${filters.search}%`)
+                    : undefined,
+                filters?.minPrice !== undefined
+                    ? sql`COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}`
+                    : undefined,
+                filters?.maxPrice !== undefined
+                    ? sql`COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}`
+                    : undefined,
+                filters?.minDiscount !== undefined
+                    ? sql`(
+                        CASE
+                            WHEN COALESCE(${products.compareAtPrice}, 0) > 0 AND COALESCE(${products.price}, 0) > 0
+                                THEN ((${products.compareAtPrice} - ${products.price}) * 100.0 / ${products.compareAtPrice})
+                            ELSE 0
+                        END
+                    ) >= ${filters.minDiscount}`
+                    : undefined,
+                normalizedColors?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(colorOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedColors, sql`, `)})
+                        )
+                    `
+                    : undefined,
+                normalizedSizes?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(sizeOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedSizes, sql`, `)})
+                        )
+                    `
+                    : undefined,
             ];
 
             if (filters?.categoryId) {

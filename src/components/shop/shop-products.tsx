@@ -315,7 +315,7 @@ export function ShopProducts({
         <>
             <div
                 className={cn(
-                    "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4",
+                    "grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-4",
                     className
                 )}
                 {...props}
@@ -344,7 +344,7 @@ export function ShopProducts({
                 })}
             </div>
 
-            <div className="flex flex-col items-center gap-3 py-8">
+            <div className="mt-1 flex flex-col items-center gap-3 border-t border-[#e4e9ef] py-8">
                 {hasMoreProducts ? (
                     <Button
                         ref={
@@ -352,7 +352,7 @@ export function ShopProducts({
                         }
                         onClick={loadMoreProducts}
                         disabled={isFetching || isLoadingMore}
-                        className="min-w-[160px]"
+                        className="min-w-[180px] rounded-full border border-[#d2dbe5] bg-white px-7 text-[#243754] shadow-none hover:bg-[#f5f8fc]"
                     >
                         {isFetching || isLoadingMore ? (
                             <span className="inline-flex items-center gap-2">
