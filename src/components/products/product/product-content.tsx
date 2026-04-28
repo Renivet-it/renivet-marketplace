@@ -133,21 +133,21 @@ export function ProductContent({
                                     className="size-4"
                                     fill={
                                         rating >= starValue
-                                            ? "#1a1a1a"
+                                            ? "#facc15"
                                             : rating >= starValue - 0.5
                                               ? "url(#half)"
                                               : "none"
                                     }
                                     stroke={
                                         rating >= starValue - 0.5
-                                            ? "#1a1a1a"
+                                            ? "#facc15"
                                             : "#d1d5db"
                                     }
                                     strokeWidth={1.5}
                                 >
                                     <defs>
                                         <linearGradient id="half">
-                                            <stop offset="50%" stopColor="#1a1a1a" />
+                                            <stop offset="50%" stopColor="#facc15" />
                                             <stop offset="50%" stopColor="transparent" />
                                         </linearGradient>
                                     </defs>

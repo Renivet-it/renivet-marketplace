@@ -132,7 +132,7 @@ const RecommendationCarousel = ({
 };
 
 const SectionHeader = ({ title }: { title: string }) => (
-    <div className="mb-8 flex flex-col items-start">
+    <div className="mb-5 flex flex-col items-start">
         <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-xs">
             Our Recommendations
         </span>
@@ -184,7 +184,7 @@ const YouMayAlsoLike = ({
     return (
         <div
             className={cn(
-                "w-full space-y-10 bg-white py-10 md:space-y-14 md:py-14",
+                "w-full space-y-7 bg-white py-5 md:space-y-9 md:py-7",
                 className
             )}
             {...props}

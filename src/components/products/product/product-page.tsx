@@ -333,7 +333,7 @@ export function ProductPage({
             </div>
 
             {/* ── You May Also Like ── */}
-            <div className="mx-auto mt-4 w-full max-w-[1440px] border-t border-neutral-200 pt-8">
+            <div className="mx-auto mt-0 w-full max-w-[1440px] border-t border-neutral-200 pt-3">
                 <YouMayAlsoLike
                     categoryId={product.categoryId}
                     excludeProductId={product.id}
