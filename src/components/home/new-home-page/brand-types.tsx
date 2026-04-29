@@ -32,7 +32,7 @@ export function BrandTypes() {
     ];
 
     return (
-        <section className="w-full bg-[#FCFBF4] px-4 py-2">
+        <section className="w-full bg-white px-4 py-2">
             {/* Heading */}
             <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Type of Brands we collaborate with

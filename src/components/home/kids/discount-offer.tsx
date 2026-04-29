@@ -14,7 +14,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
     if (!advertisements.length) return null;
 
     return (
-        <section className="w-full bg-[#FCFBF4]">
+        <section className="w-full bg-white">
             <h2 className="mb-2 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Tradition, Tailored for Children
             </h2>
@@ -28,7 +28,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
                         delay: 5000,
                     }),
                 ]}
-                className="aspect-[1440/700] w-full bg-[#FCFBF4] sm:min-h-[400px] lg:min-h-[700px]"
+                className="aspect-[1440/700] w-full bg-white sm:min-h-[400px] lg:min-h-[700px]"
             >
                 <CarouselContent className="ml-0">
                     {advertisements.map((ad, index) => (

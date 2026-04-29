@@ -25,7 +25,7 @@ export function MatchaBag({
     if (!moodboardItems.length) return null;
 
     return (
-        <section className={cn("mb-0 w-full bg-[#FCFBF4] pb-0", className)}>
+        <section className={cn("mb-0 w-full bg-white pb-0", className)}>
             <div className="mx-auto max-w-screen-2xl px-4">
                 {/* Title */}
                 <h2 className="mb-3 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">

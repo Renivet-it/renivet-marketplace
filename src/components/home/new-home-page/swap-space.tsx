@@ -1,17 +1,20 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
+import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { Banner } from "@/lib/validations";
-import { Check, ShoppingCart } from "lucide-react";
+import { Check, ShoppingCart, X, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog-general";
+import { ProductCartAddForm } from "@/components/globals/forms";
 import React, { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -80,6 +83,7 @@ interface ProductCardProps {
 
 const ProductCard = ({ banner, userId }: ProductCardProps) => {
     const { trackAddToCartEvent } = useAddToCartTracking();
+    const router = useRouter();
     const { product } = banner;
 
     const { addToGuestCart } = useGuestCart();
@@ -87,6 +91,14 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [isAdded, setIsAdded] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
+    const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+    // Quick View State
+    const [quantity, setQuantity] = useState(1);
+    const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+    const [quickViewImageIndex, setQuickViewImageIndex] = useState(0);
+    const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
 
     /* CART MUTATION (UNCHANGED) */
     const { mutateAsync: addToCart, isLoading } =
@@ -129,8 +141,121 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
               )
             : null;
 
-    const imageUrl =
-        product.media?.[0]?.mediaItem?.url || PLACEHOLDER_IMAGE_URL;
+    const mediaUrls =
+        Array.from(
+            new Set(
+                product.media
+                    ?.filter((media) => media.mediaItem?.url)
+                    .map((media) => media.mediaItem?.url || "")
+            )
+        ) || [];
+
+    const imageUrl = mediaUrls[0] || PLACEHOLDER_IMAGE_URL;
+    const quickViewImages = Array.from(new Set([imageUrl, ...mediaUrls])).filter(Boolean);
+
+    const selectedVariant = React.useMemo(() => {
+        if (!product.variants || product.variants.length === 0) return null;
+        const opts = (product as any).options as any[] | undefined;
+        // If no options loaded yet, just return first variant
+        if (!opts || opts.length === 0) return product.variants[0];
+        // If user hasn't picked anything yet, auto-init selectedOptions from first variant
+        if (Object.keys(selectedOptions).length === 0) return product.variants[0];
+        const match = product.variants.find(v =>
+            Object.entries(selectedOptions).every(([optId, valId]) => (v.combinations as any)?.[optId] === valId)
+        );
+        return match || product.variants[0];
+    }, [product.variants, (product as any).options, selectedOptions]);
+
+    const handleQuickAddCart = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (userId) {
+            handleCartFlyAnimation(e, quickViewImages[quickViewImageIndex] || imageUrl, "#pdp-main-image");
+            await addToCart({
+                productId: product.id,
+                variantId: selectedVariant?.id || null,
+                quantity: quantity,
+                userId: userId,
+            });
+            showAddToCartToast(product, selectedVariant, "Item added to cart!");
+        } else {
+            handleCartFlyAnimation(e, quickViewImages[quickViewImageIndex] || imageUrl, "#pdp-main-image");
+            addToGuestCart({
+                productId: product.id,
+                variantId: selectedVariant?.id || null,
+                quantity: quantity,
+                price: selectedVariant ? selectedVariant.price : rawPrice,
+                image: selectedVariant?.image || quickViewImages[quickViewImageIndex] || imageUrl,
+                fullProduct: product,
+            });
+        }
+    };
+
+    const handleBuyNow = async (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        if (userId) {
+            await addToCart({
+                productId: product.id,
+                variantId: selectedVariant?.id || null,
+                quantity: quantity,
+                userId: userId,
+            });
+            router.push(`/checkout?buy_now=true&item=${product.id}&variant=${selectedVariant?.id || ""}&qty=${quantity}`);
+        } else {
+            addToGuestCart({
+                productId: product.id,
+                variantId: selectedVariant?.id || null,
+                quantity: quantity,
+                price: selectedVariant ? selectedVariant.price : rawPrice,
+                image: selectedVariant?.image || quickViewImages[quickViewImageIndex] || imageUrl,
+                fullProduct: product,
+            });
+            router.push(`/checkout?buy_now=true&item=${product.id}&variant=${selectedVariant?.id || ""}&qty=${quantity}`);
+        }
+    };
+
+    useEffect(() => {
+        if (!isHovered) {
+            setCurrentImageIndex(0);
+        }
+    }, [isHovered]);
+
+    useEffect(() => {
+        let slideshowInterval: number | undefined = undefined;
+        if (isHovered && mediaUrls.length > 1) {
+            slideshowInterval = window.setInterval(() => {
+                setCurrentImageIndex((prevIndex) =>
+                    prevIndex === mediaUrls.length - 1 ? 0 : prevIndex + 1
+                );
+            }, 800);
+        }
+        return () => {
+            if (slideshowInterval !== undefined) {
+                window.clearInterval(slideshowInterval);
+            }
+        };
+    }, [isHovered, mediaUrls.length]);
+
+    useEffect(() => {
+        let quickViewInterval: number | undefined = undefined;
+        if (isQuickViewOpen && quickViewImages.length > 1) {
+            quickViewInterval = window.setInterval(() => {
+                setQuickViewImageIndex((prevIndex) =>
+                    prevIndex === quickViewImages.length - 1 ? 0 : prevIndex + 1
+                );
+            }, 3000);
+        }
+        return () => {
+            if (quickViewInterval !== undefined) {
+                window.clearInterval(quickViewInterval);
+            }
+        };
+    }, [isQuickViewOpen, quickViewImages.length]);
+
+
 
     const variantId = product.variants?.[0]?.id || null;
     const productUrl = product.slug ? `/products/${product.slug}` : "/shop";
@@ -215,100 +340,288 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
     };
 
     return (
-        <div className="product-card-container group w-[146px] flex-shrink-0 cursor-pointer md:flex md:w-[260px] md:flex-col">
+        <div
+            className="product-card-container group flex h-full w-[146px] flex-shrink-0 flex-col cursor-pointer bg-white md:w-[300px]"
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+        >
             <AnimatedProductLink href={productUrl}>
-                <div className="product-image-container relative h-[223px] w-[156px] overflow-hidden bg-gray-50 md:h-[350px] md:w-full">
-                    {/* (Icons Removed from Image) */}
-                    <Image
-                        src={imageUrl}
-                        alt={product.title}
-                        fill
-                        className="object-cover"
-                        sizes="(max-width: 768px) 146px, 350px"
-                    />
-
-                    {/* 🏷️ Discount badge */}
-                    {discount && discount > 0 && (
-                        <span className="absolute left-0 top-2.5 z-10 rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-2.5 md:py-1 md:text-xs">
-                            {discount}% OFF
-                        </span>
+                <div className="product-image-container relative h-[223px] w-[156px] overflow-hidden bg-[#F5F5F5] md:h-[400px] md:w-full">
+                    {mediaUrls.length === 0 && (
+                        <Image
+                            src={PLACEHOLDER_IMAGE_URL}
+                            alt={product.title}
+                            fill
+                            className={cn(
+                                "object-cover transition-all duration-300 ease-in-out",
+                                isHovered ? "scale-105" : "scale-100"
+                            )}
+                            sizes="(max-width: 768px) 146px, 350px"
+                        />
                     )}
+                    {mediaUrls.map((url, index) => {
+                        const isActive = isHovered
+                            ? index === currentImageIndex
+                            : index === 0;
+                        return (
+                            <Image
+                                key={url}
+                                src={url}
+                                alt={`${product.title} ${index + 1}`}
+                                fill
+                                className={cn(
+                                    "absolute inset-0 object-cover transition-all duration-300 ease-in-out",
+                                    isActive
+                                        ? "z-10 opacity-100"
+                                        : "z-0 opacity-0",
+                                    isHovered ? "scale-105" : "scale-100"
+                                )}
+                                sizes="(max-width: 768px) 146px, 350px"
+                            />
+                        );
+                    })}
+
+                {/* 🏷️ Discount badge */}
+                {discount && discount > 0 && (
+                    <span className="absolute left-3 top-3 z-10 rounded-sm bg-[#E95123] px-2 py-0.5 text-[10px] font-bold tracking-wide text-white shadow-sm md:text-xs">
+                        Sale -{discount}%
+                    </span>
+                )}
+
+                {/* Floating Wishlist Button */}
+                <button
+                    onClick={handleAddToWishlist}
+                    className="absolute right-2.5 top-2.5 z-20 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all hover:scale-110 hover:bg-white"
+                >
+                    <Icons.Heart className={cn("h-4 w-4 transition-colors", isWishlisted ? "fill-red-500 text-red-500" : "text-gray-700 hover:text-red-500")} />
+                </button>
+
+                {/* QUICK VIEW MODAL & TRIGGER */}
+                <Dialog open={isQuickViewOpen} onOpenChange={setIsQuickViewOpen}>
+                    <div 
+                        className="absolute bottom-2.5 right-2.5 z-20 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300"
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+                    >
+                        <DialogTrigger asChild>
+                            <button
+                                className="flex h-8 w-8 items-center justify-center rounded-full btn-liquid btn-liquid-secondary shadow-sm transition-all duration-300 hover:scale-105 active:scale-95 md:h-9 md:w-auto md:px-4 md:rounded-full group/btn"
+                            >
+                                {/* Cart icon — mobile only */}
+                                <svg className="w-4 h-4 md:hidden text-inherit" fill="none" stroke="currentColor" strokeWidth="1.75" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-1.5 6h11M10 21a1 1 0 100-2 1 1 0 000 2zm7 0a1 1 0 100-2 1 1 0 000 2z"/>
+                                </svg>
+                                {/* Text — desktop only */}
+                                <span className="hidden md:block whitespace-nowrap text-[11px] font-bold tracking-wider text-inherit">
+                                    QUICK BUY
+                                </span>
+                            </button>
+                        </DialogTrigger>
+                    </div>
+                    <DialogContent className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-md p-0 md:h-[85vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
+                        <DialogTitle className="sr-only">{product.title}</DialogTitle>
+                        {/* 2-Column Grid for Desktop, Stacked for Mobile */}
+                        <div className="flex h-full flex-col md:flex-row bg-white overflow-y-auto md:overflow-hidden">
+                            {/* Left Side: Image Slider */}
+                            <div className="relative h-[320px] sm:h-[380px] w-full shrink-0 bg-[#F5F5F5] md:h-full md:w-1/2 group/slider">
+                                <Image
+                                    src={quickViewImages[quickViewImageIndex] || imageUrl}
+                                    alt={product.title}
+                                    fill
+                                    className="object-contain md:object-cover md:object-center"
+                                    sizes="(max-width: 768px) 100vw, 50vw"
+                                />
+                                {/* Bestseller Badge */}
+                                <div className="absolute top-6 left-6 bg-[#009688] text-white text-xs font-semibold px-3 py-1 tracking-wide z-10">
+                                    Bestseller
+                                </div>
+                                
+                                {/* Arrows */}
+                                {quickViewImages.length > 1 && (
+                                    <>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setQuickViewImageIndex(prev => prev === 0 ? quickViewImages.length - 1 : prev - 1); }}
+                                            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/slider:opacity-100 transition-opacity z-10 hover:bg-white"
+                                        >
+                                            <ChevronLeft className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); setQuickViewImageIndex(prev => prev === quickViewImages.length - 1 ? 0 : prev + 1); }}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/90 rounded-full flex items-center justify-center shadow-sm opacity-0 group-hover/slider:opacity-100 transition-opacity z-10 hover:bg-white"
+                                        >
+                                            <ChevronRight className="w-5 h-5 text-gray-600" />
+                                        </button>
+                                        {/* Dots */}
+                                        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                                            {quickViewImages.map((_, i) => (
+                                                <div key={i} className={cn("w-1.5 h-1.5 rounded-full transition-colors", i === quickViewImageIndex ? "bg-gray-800" : "bg-gray-300")} />
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+
+                            {/* Right Side: Details */}
+                            <div className="flex flex-col p-4 md:p-12 md:w-1/2 md:overflow-y-auto scrollbar-hide relative">
+                                <h2 className="font-serif text-xl sm:text-2xl md:text-[32px] font-light text-gray-900 leading-tight pr-8">
+                                    {product.title}
+                                </h2>
+                                
+                                <div className="mt-2 md:mt-5 flex items-baseline gap-3">
+                                    <span className="text-lg md:text-xl font-medium text-gray-900">
+                                        Rs. {formatPriceTag(parseFloat(convertPaiseToRupees(selectedVariant?.price || rawPrice)), true)}
+                                    </span>
+                                    {originalPrice && (
+                                        <span className="text-sm font-medium text-gray-400 line-through">
+                                            Rs. {formatPriceTag(parseFloat(convertPaiseToRupees(originalPrice)), true)}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {product.description && (
+                                    <div 
+                                        className="mt-2 md:mt-6 text-xs md:text-sm text-gray-500 leading-relaxed line-clamp-2 md:line-clamp-3"
+                                        dangerouslySetInnerHTML={{ __html: product.description }}
+                                    />
+                                )}
+
+                                <div className="mt-4 md:mt-8 space-y-3 md:space-y-6">
+                                    {/* Options (Size, etc) */}
+                                    {product.options?.map(opt => {
+                                        const selectedVal = selectedOptions[opt.id] || opt.values[0]?.id;
+                                        return (
+                                            <div key={opt.id}>
+                                                <div className="mb-2 text-xs md:text-sm flex items-center gap-2">
+                                                    <span className="font-medium text-gray-900">{opt.name} :</span>
+                                                    <span className="text-gray-500">{opt.values.find(v => v.id === selectedVal)?.name}</span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5 md:gap-2.5">
+                                                    {opt.values.map(val => {
+                                                        const isSelected = selectedVal === val.id;
+                                                        return (
+                                                            <button 
+                                                                key={val.id}
+                                                                onClick={() => setSelectedOptions(prev => ({...prev, [opt.id]: val.id}))}
+                                                                className={cn(
+                                                                    "h-8 md:h-10 px-3 md:px-4 border text-xs md:text-sm font-medium flex items-center justify-center transition-colors min-w-[36px]",
+                                                                    isSelected ? "border-gray-900 text-gray-900" : "border-gray-300 text-gray-600 hover:border-gray-400"
+                                                                )}
+                                                            >
+                                                                {val.name}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        );
+                                    })}
+
+                                    {/* Quantity & Cart Row */}
+                                    <div className="flex items-stretch gap-2 mt-4 md:mt-10">
+                                        <div className="flex items-center border border-gray-300 h-11 w-24 shrink-0">
+                                            <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="flex-1 h-full text-gray-500 hover:text-gray-900 flex items-center justify-center text-lg">−</button>
+                                            <span className="flex-1 text-center text-sm font-medium">{quantity}</span>
+                                            <button onClick={() => setQuantity(quantity + 1)} className="flex-1 h-full text-gray-500 hover:text-gray-900 flex items-center justify-center text-lg">+</button>
+                                        </div>
+                                        <button 
+                                            onClick={handleQuickAddCart}
+                                            disabled={isLoading || !product.isAvailable}
+                                            className="flex-1 btn-liquid btn-liquid-secondary text-[10px] md:text-sm font-semibold tracking-[0.08em] h-11 flex items-center justify-center rounded-sm"
+                                        >
+                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin text-gray-700" /> : "ADD TO CART"}
+                                        </button>
+                                        <button 
+                                            onClick={handleBuyNow}
+                                            disabled={isLoading || !product.isAvailable}
+                                            className="flex-1 btn-liquid btn-liquid-primary text-[10px] md:text-sm font-semibold tracking-[0.08em] h-11 flex items-center justify-center rounded-sm"
+                                        >
+                                            {isLoading ? <Spinner className="w-4 h-4 animate-spin text-white group-hover/btn:text-black" /> : "BUY NOW"}
+                                        </button>
+                                    </div>
+
+                                    {/* Specifications */}
+                                    {product.specifications && product.specifications.length > 0 && (
+                                        <div className="mt-4 pt-4 border-t border-gray-100">
+                                            <p className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-medium mb-3">Specifications</p>
+                                            <div className="grid grid-cols-2 gap-2">
+                                                {product.specifications.map((spec, i) => (
+                                                    <div key={i} className="bg-gray-50 rounded px-3 py-2">
+                                                        <span className="block text-[8px] uppercase tracking-widest text-gray-400 mb-0.5">{spec.key}</span>
+                                                        <span className="block text-[11px] font-semibold text-gray-800 leading-tight">{spec.value}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Trust / Payment */}
+                                    <div className="mt-4 pt-4 border-t border-gray-100">
+                                        <p className="text-[9px] uppercase tracking-[0.18em] text-gray-400 font-medium mb-3">100% Secure Checkout</p>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                            {/* Visa */}
+                                            <div className="h-8 px-3 border border-gray-200 rounded flex items-center justify-center bg-white">
+                                                <span className="font-black text-[11px] italic tracking-tight text-[#1A1F71]">VISA</span>
+                                            </div>
+                                            {/* Mastercard */}
+                                            <div className="h-8 px-2.5 border border-gray-200 rounded flex items-center justify-center bg-white gap-0.5">
+                                                <div className="w-[14px] h-[14px] rounded-full bg-[#EB001B]" />
+                                                <div className="w-[14px] h-[14px] rounded-full bg-[#F79E1B] -ml-[7px]" />
+                                            </div>
+                                            {/* UPI */}
+                                            <div className="h-8 px-3 border border-gray-200 rounded flex items-center justify-center bg-white">
+                                                <span className="font-black text-[11px] tracking-tight" style={{background:"linear-gradient(90deg,#097939 40%,#ed752e 100%)",WebkitBackgroundClip:"text",WebkitTextFillColor:"transparent"}}>UPI</span>
+                                            </div>
+                                            {/* RuPay */}
+                                            <div className="h-8 px-3 border border-gray-200 rounded flex items-center justify-center bg-white">
+                                                <span className="font-black text-[10px] tracking-tight text-[#1a6dd4]">RuPay</span>
+                                            </div>
+                                            {/* COD */}
+                                            <div className="h-8 px-3 border border-gray-200 rounded flex items-center justify-center bg-white">
+                                                <span className="font-bold text-[9px] tracking-widest text-gray-500">COD</span>
+                                            </div>
+                                            {/* SSL lock */}
+                                            <div className="ml-auto flex items-center gap-1.5 text-[10px] text-gray-400">
+                                                <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                                                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                                                    <path d="M7 11V7a5 5 0 0110 0v4"/>
+                                                </svg>
+                                                SSL Encrypted
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
                 </div>
             </AnimatedProductLink>
 
             {/* TITLE */}
             <AnimatedProductLink
                 href={productUrl}
-                className="block h-[42px] overflow-hidden pb-2 pt-3 text-left md:h-[48px]"
+                className="mt-4 block px-2 text-center min-h-[36px]"
             >
-                    <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[14px]">
-                        {product.title}
-                    </h3>
+                <h3 className="line-clamp-2 text-[12px] font-normal leading-tight text-gray-800 sm:text-[13px]">
+                    {product.title}
+                </h3>
             </AnimatedProductLink>
 
             {/* PRICE ROW */}
             <AnimatedProductLink
                 href={productUrl}
-                className="flex h-[26px] items-center gap-1 sm:gap-1.5"
+                className="mt-1 flex items-center justify-center gap-2 px-2 pb-3"
             >
-                <span className="text-[13px] font-semibold text-gray-900 sm:text-[15px]">
-                    ₹{price}
+                <span className="text-[13px] font-semibold text-gray-900 sm:text-[14px]">
+                    Rs. {price}
                 </span>
 
-                {displayPrice ? (
+                {displayPrice && (
                     <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
-                        ₹{displayPrice}
-                    </span>
-                ) : (
-                    <span className="text-[11px] opacity-0 sm:text-[12px]">
-                        ₹0000
+                        Rs. {displayPrice}
                     </span>
                 )}
             </AnimatedProductLink>
 
-            {/* BUTTONS ROW (CART + WISHLIST) */}
-            <div className="mt-2.5 flex items-center gap-2">
-                <button
-                    onClick={handleAddToWishlist}
-                    className="group flex h-9 flex-1 items-center justify-center rounded border border-gray-300 bg-white transition-all duration-300 hover:border-red-500 hover:bg-red-50 hover:shadow-sm md:h-10"
-                >
-                    {isWishlisted ? (
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="h-4 w-4 scale-110 text-red-500 md:h-5 md:w-5"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                        >
-                            <path
-                                d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42
-            4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81
-            14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0
-            3.78-3.4 6.86-8.55 11.54L12 21.35z"
-                            />
-                        </svg>
-                    ) : (
-                        <Icons.Heart className="h-4 w-4 text-gray-500 transition-colors duration-300 group-hover:text-red-500 md:h-5 md:w-5" />
-                    )}
-                </button>
-
-                <button
-                    onClick={handleAddToCart}
-                    disabled={isLoading || isAdded}
-                    className={`flex h-9 flex-1 items-center justify-center rounded border transition-all duration-300 disabled:opacity-50 md:h-10 ${
-                        isAdded
-                            ? "border-green-600 bg-green-600 text-white"
-                            : "border-gray-300 bg-white hover:bg-gray-50 hover:shadow-sm"
-                    }`}
-                >
-                    {isLoading ? (
-                        <Spinner className="h-4 w-4 shrink-0 animate-spin text-gray-700 md:h-5 md:w-5" />
-                    ) : isAdded ? (
-                        <Check className="h-4 w-4 shrink-0 text-white md:h-5 md:w-5" />
-                    ) : (
-                        <ShoppingCart className="h-4 w-4 shrink-0 text-gray-500 transition-colors duration-300 md:h-5 md:w-5" />
-                    )}
-                </button>
-            </div>
         </div>
     );
 };
@@ -339,18 +652,23 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
     };
 
     return (
-        <section className={cn("w-full bg-[#FCFBF4] py-6", className)}>
-            <h2 className="mb-6 text-center font-playfair text-[18px] font-normal leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
-                Best Sellers
-            </h2>
+        <section className={cn("w-full bg-white py-12", className)}>
+            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
+                <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
+                    Loved by Many
+                </span>
+                <h2 className="mt-2 font-playfair text-[28px] font-normal leading-[1.3] text-gray-900 md:text-[36px] uppercase">
+                    Best Sellers
+                </h2>
+            </div>
 
             {/* DESKTOP */}
-            <div className="max-w-screen-3xl relative mx-auto hidden px-6 md:block">
+            <div className="relative mx-auto hidden max-w-screen-3xl md:block px-4 sm:px-6 lg:px-8">
                 <button
                     onClick={() => scroll(desktopRef, "left")}
-                    className="absolute left-0 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-white shadow-md"
+                    className="absolute left-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 hover:bg-gray-50"
                 >
-                    <Icons.ChevronLeft className="h-6 w-6 text-gray-700" />
+                    <Icons.ChevronLeft className="h-5 w-5 text-gray-700" />
                 </button>
 
                 <div
@@ -370,15 +688,15 @@ export function SwapSpace({ banners, userId, className }: SwapSpaceProps) {
 
                 <button
                     onClick={() => scroll(desktopRef, "right")}
-                    className="absolute right-0 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center bg-white shadow-md"
+                    className="absolute right-2 top-1/2 z-20 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white shadow-md border border-gray-100 hover:bg-gray-50"
                 >
-                    <Icons.ChevronRight className="h-6 w-6 text-gray-700" />
+                    <Icons.ChevronRight className="h-5 w-5 text-gray-700" />
                 </button>
             </div>
 
             {/* MOBILE */}
             <div className="scrollbar-hide overflow-x-auto px-4 md:hidden">
-                <div ref={mobileRef} className="flex space-x-6">
+                <div ref={mobileRef} className="flex space-x-4">
                     {banners.map((item) => (
                         <ProductCard
                             key={item.id}

@@ -120,7 +120,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
     ];
 
     return (
-        <section className={cn("bg-[#FCFBF4]", className)} {...props}>
+        <section className={cn("bg-white", className)} {...props}>
             {/* ✅ DESKTOP CAROUSEL */}
             <div className="hidden md:block">
                 <Carousel
@@ -151,7 +151,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Button
                                             size="lg"
-                                            className="group gap-3 bg-white/95 px-8 py-6 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:bg-white hover:shadow-2xl"
+                                            className="group gap-3 btn-liquid btn-liquid-secondary px-8 py-6 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                                             asChild
                                         >
                                             <Link href={item.url || "/shop"}>
@@ -199,7 +199,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                 href={category.href}
                                 className="flex min-w-[60px] flex-col items-center"
                             >
-                                <div className="relative h-16 w-16 overflow-hidden rounded-full bg-[#FCFBF4] shadow-sm">
+                                <div className="relative h-16 w-16 overflow-hidden rounded-full bg-white shadow-sm">
                                     <Image
                                         src={category.imageUrl}
                                         alt={category.name}
@@ -248,7 +248,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             <div className="pointer-events-auto">
                                                 <Link
                                                     href={item.link}
-                                                    className="group relative inline-flex items-center gap-2 overflow-hidden bg-white/95 px-8 py-3 text-sm font-bold uppercase tracking-widest text-black shadow-xl backdrop-blur-sm transition-all duration-300 hover:bg-black hover:text-white hover:shadow-2xl"
+                                                    className="group relative inline-flex items-center gap-2 overflow-hidden btn-liquid btn-liquid-secondary px-8 py-3 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
                                                 >
                                                     <span>
                                                         Shop With Purpose

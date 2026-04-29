@@ -14,7 +14,7 @@ export function DiscountOffer({ advertisements }: PageProps) {
     if (!advertisements.length) return null;
 
     return (
-        <section className="w-full bg-[#FCFBF4]">
+        <section className="w-full bg-white">
             <h2 className="mb-4 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Discover Conscious, Comfortable fashion
             </h2>

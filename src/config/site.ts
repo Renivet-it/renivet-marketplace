@@ -226,6 +226,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions: BitFieldSitePermission.MANAGE_CONTENT,
             },
             {
+                title: "Product Reviews",
+                url: "/dashboard/general/reviews",
+                permissions: BitFieldSitePermission.MANAGE_PRODUCTS,
+            },
+            {
                 title: "Shop by Category",
                 url: "/dashboard/general/shop-by-category",
                 permissions: BitFieldSitePermission.MANAGE_CONTENT,

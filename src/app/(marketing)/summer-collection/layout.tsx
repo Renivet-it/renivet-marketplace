@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 
 export default function Layout({ children }: LayoutProps) {
     return (
-        <div className="relative flex min-h-screen flex-col bg-[#FCFBF4]">
+        <div className="relative flex min-h-screen flex-col bg-white">
             <NavbarHome />
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer />

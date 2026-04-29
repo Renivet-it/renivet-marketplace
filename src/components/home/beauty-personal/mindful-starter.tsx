@@ -15,7 +15,7 @@ interface PageProps extends GenericProps {
 export function MindFullStarter({ className, banners, ...props }: PageProps) {
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] pb-4 pt-2 md:pt-2", className)}
+            className={cn("w-full bg-white pb-4 pt-2 md:pt-2", className)}
             {...props}
         >
             <h2 className="mb-2 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">

@@ -16,7 +16,7 @@ export function CurateConcious({ banners, className }: PageProps) {
     const banner = banners[0];
 
     return (
-        <section className={cn("w-full bg-[#FCFBF4] pb-2 md:pb-2", className)}>
+        <section className={cn("w-full bg-white pb-2 md:pb-2", className)}>
             <div className="mx-auto max-w-screen-2xl">
                 {/* TITLE */}
                 <div className="mb-4 px-2 pt-2 text-center">
@@ -26,7 +26,7 @@ export function CurateConcious({ banners, className }: PageProps) {
                 </div>
 
                 {/* IMAGE — FULLY VISIBLE */}
-                <div className="relative w-full bg-[#FCFBF4]">
+                <div className="relative w-full bg-white">
                     <Link href={banner.url || "/shop"} className="block w-full">
                         <Image
                             src={banner.imageUrl}

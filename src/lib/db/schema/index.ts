@@ -33,4 +33,4 @@ export * from "./capi-logs";
 
 export * from "./analytics";
 export * from "./unicommerce";
-
+export * from "./review";

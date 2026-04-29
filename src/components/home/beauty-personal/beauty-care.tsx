@@ -23,7 +23,7 @@ export function BeautyCareSection({
     return (
         <section
             className={cn(
-                "flex w-full justify-center bg-[#FCFBF4] py-6",
+                "flex w-full justify-center bg-white py-6",
                 className
             )}
             {...props}

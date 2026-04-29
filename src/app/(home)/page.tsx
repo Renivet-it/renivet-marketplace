@@ -5,6 +5,7 @@ import {
     homeShopByCategoryTitleQueries,
     productQueries,
     WomenHomeSectionQueries,
+    blogQueries,
 } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { getAbsoluteURL } from "@/lib/utils";
@@ -30,6 +31,11 @@ export const metadata: Metadata = {
 };
 
 // Dynamically import all below-the-fold components to reduce initial JS bundle
+const Blogs = dynamic(() =>
+    import("@/components/home/blogs").then((m) => ({
+        default: m.Blogs,
+    }))
+);
 const BrandPromotion = dynamic(() =>
     import("@/components/home/new-home-page/brand-promotion").then((m) => ({
         default: m.BrandPromotion,
@@ -134,7 +140,7 @@ export default function Page() {
         <>
             <Suspense
                 fallback={
-                    <div className="h-[calc(100vh-20vh)] w-full bg-[#FCFBF4]" />
+                    <div className="h-[calc(100vh-20vh)] w-full bg-white" />
                 }
             >
                 <BannersFetch />
@@ -158,9 +164,9 @@ export default function Page() {
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductsUnder999Fetch />
             </Suspense>
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <LoveTheseFetch />
-            </Suspense>
+            </Suspense> */}
 
             {/* Mobile-only Trust Badges Marquee */}
             <div className="block w-full overflow-hidden bg-[#E4EDF7] md:hidden">
@@ -216,10 +222,18 @@ export default function Page() {
                 </div>
             </div>
 
+            <div className="hidden md:block">
+                <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+                    <ShopByNewCategoriesFetch />
+                </Suspense>
+            </div>
+
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+                <WelcomeToRenivetFetch />
+            </Suspense>
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductSwipeCardFetch />
             </Suspense>
@@ -240,28 +254,13 @@ export default function Page() {
                 <MayAlsoLoveTheseFetch />
             </Suspense>
 
-            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <MatchaBagFetch />
-            </Suspense> */}
-            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <LoveTheseFetch />
-            </Suspense> */}
-
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <WelcomeToRenivetFetch />
-            </Suspense>
             <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <BrandPromotionFetch />
             </Suspense>
-            {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                <HomePageMainProductFetch />
-            </Suspense> */}
 
-            <div className="hidden md:block">
-                <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
-                    <ShopByNewCategoriesFetch />
-                </Suspense>
-            </div>
+            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+                <BlogsFetch />
+            </Suspense>
 
             <FloatingLoginButton />
         </>
@@ -269,11 +268,22 @@ export default function Page() {
 }
 
 async function ProductNewArrivalsGridFetch() {
-    const products = await productQueries.getHomePageFeaturedProducts();
+    const [featuredProducts, loveTheseProducts] = await Promise.all([
+        productQueries.getHomePageFeaturedProducts(),
+        productQueries.getHomeLoveTheseProducts(),
+    ]);
+
+    const mappedLoveThese = loveTheseProducts.map((item) => ({
+        ...item,
+        category: "Basic Collection",
+    }));
+
+    const products = [...featuredProducts, ...mappedLoveThese];
+
     if (!products.length) return null;
     return (
         <ScrollReveal>
-            <ProductGridNewArrivals products={products} />
+            <ProductGridNewArrivals products={products as any} />
         </ScrollReveal>
     );
 }
@@ -464,6 +474,16 @@ async function ShopByNewCategoriesFetch() {
             <ShopByNewCategories shopByCategories={sbc} titleData={sbcT} />
         </ScrollReveal>
     );
+}
+
+async function BlogsFetch() {
+    const blogs = await blogQueries.getBlogs({
+        isPublished: true,
+        limit: 6,
+        page: 1,
+    });
+    if (!blogs.data?.length) return null;
+    return <Blogs blogs={blogs.data} />;
 }
 
 async function BannersFetch() {

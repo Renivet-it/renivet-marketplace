@@ -19,7 +19,7 @@ export function GetNewDiscountCollection({
 }: PageProps) {
     return (
         <section
-            className={cn("bg-[#FCFBF4] pt-8 md:pt-12", className)}
+            className={cn("bg-white pt-8 md:pt-12", className)}
             {...props}
         >
             <Carousel

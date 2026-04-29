@@ -60,7 +60,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
     ];
 
     return (
-        <section className={cn("bg-[#FCFBF4]", className)} {...props}>
+        <section className={cn("bg-white", className)} {...props}>
             {/* ======================================================
          🖥 DESKTOP — CAROUSEL
       ====================================================== */}
@@ -93,7 +93,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Button
                                             size="lg"
-                                            className="border-2 border-black bg-transparent px-8 py-3 text-sm uppercase tracking-wide text-black hover:bg-black hover:text-white"
+                                            className="border border-black px-8 py-3 text-sm uppercase tracking-wide btn-liquid btn-liquid-secondary"
                                             asChild
                                         >
                                             <Link href={item.url || pathname}>
@@ -137,7 +137,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                             >
                                 <div
                                     className={cn(
-                                        "relative h-14 w-14 overflow-hidden rounded-full bg-[#FCFBF4] transition",
+                                        "relative h-14 w-14 overflow-hidden rounded-full bg-white transition",
                                         isActive &&
                                             "scale-105 ring-2 ring-black"
                                     )}
@@ -204,12 +204,9 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Link
                                             href="https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&brandIds=4f6efe94-0f57-4d9e-b61d-2da7aa9743e3,56b9f87d-fbbb-4ae7-8a43-fe19686968cf,cb6b330e-131c-4fd8-9d8a-ae997a02676b"
-                                            className="group relative inline-flex items-center justify-center overflow-hidden border border-black bg-white px-8 py-3 text-sm font-medium text-black"
+                                            className="group inline-flex items-center justify-center px-8 py-3 text-sm font-medium btn-liquid btn-liquid-secondary"
                                         >
-                                            <span className="relative z-10 transition group-hover:text-white">
-                                                Shop With Purpose
-                                            </span>
-                                            <span className="absolute inset-0 translate-y-full bg-black transition-transform duration-300 group-hover:translate-y-0" />
+                                            Shop With Purpose
                                         </Link>
                                     </div>
                                 </div>

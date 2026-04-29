@@ -41,7 +41,7 @@ export function ShopCategories() {
     return (
         // This wrapper will hide the entire section on screens smaller than 'xl' (1280px )
         <div className="hidden xl:block">
-            <section className="w-full bg-[#FCFBF4] py-8">
+            <section className="w-full bg-white py-8">
                 <div className="flex justify-center">
                     <div
                         className="overflow-hidden rounded-lg border border-gray-200 shadow-sm"
@@ -65,9 +65,9 @@ export function ShopCategories() {
                                         <Button
                                             asChild
                                             variant="outline"
-                                            className="rounded-none border-gray-300 px-4 py-1.5 text-xs font-normal text-gray-700 hover:bg-[#FCFBF4] hover:text-black"
+                                            className="rounded-none border-gray-300 px-4 py-1.5 text-xs font-normal btn-liquid btn-liquid-secondary"
                                         >
-                                            <Link href="/shop">
+                                            <Link href="/shop" className="text-inherit">
                                                 › SHOP NEW IN
                                             </Link>
                                         </Button>

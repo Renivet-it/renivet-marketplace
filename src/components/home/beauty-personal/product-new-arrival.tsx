@@ -42,7 +42,7 @@ export function ProductGridNewArrivals({
 
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] px-4 py-8", className)}
+            className={cn("w-full bg-white px-4 py-8", className)}
             {...props}
         >
             <div className="mx-auto max-w-[1360px]">
@@ -147,7 +147,7 @@ function ProductCard({ product }: { product: Product }) {
                     {/* Full-width View Button */}
                     <Button
                         variant="outline"
-                        className="h-12 w-full border border-black px-3 py-2 text-base hover:bg-[#FCFBF4] hover:text-black"
+                        className="h-12 w-full border border-black px-3 py-2 text-base hover:bg-white hover:text-black"
                     >
                         View
                     </Button>

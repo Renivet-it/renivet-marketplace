@@ -86,7 +86,7 @@ export function StyleWithSubstance({ products, userId, className }: Props) {
     }
 
     return (
-        <section className={cn("bg-[#FCFBF4] py-2 pt-4", className)}>
+        <section className={cn("bg-white py-2 pt-4", className)}>
             {/* TITLE */}
             <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Best Sellers

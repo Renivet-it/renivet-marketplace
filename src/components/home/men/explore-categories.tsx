@@ -40,7 +40,7 @@ export function ExploreCategories({
 
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] py-4 pt-4", className)}
+            className={cn("w-full bg-white py-4 pt-4", className)}
             {...props}
         >
             <div className="relative mx-auto max-w-screen-2xl">
@@ -81,7 +81,7 @@ export function ExploreCategories({
                             className="flex-shrink-0"
                         >
                             {/* CARD */}
-                            <div className="flex h-[150px] w-[110px] flex-col border border-gray-300 bg-[#FCFBF4] sm:h-[260px] sm:w-[200px] md:h-[300px] md:w-[240px]">
+                            <div className="flex h-[150px] w-[110px] flex-col border border-gray-300 bg-white sm:h-[260px] sm:w-[200px] md:h-[300px] md:w-[240px]">
                                 {/* IMAGE */}
                                 <div className="relative h-[110px] w-full border-b border-gray-300 sm:h-[200px] md:h-[240px]">
                                     <Image

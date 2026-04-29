@@ -132,7 +132,7 @@ export function ProductCard({
                 setCurrentImageIndex((prevIndex) =>
                     prevIndex === mediaUrls.length - 1 ? 0 : prevIndex + 1
                 );
-            }, 1500); // Change image every 1.5 seconds
+            }, 800); // Faster image cycling
         }
 
         return () => {
@@ -236,40 +236,29 @@ export function ProductCard({
                                 fill
                                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                                 className={cn(
-                                    "object-cover transition-all duration-500 ease-in-out",
-                                    isProductHovered ? "scale-105" : "scale-100"
-                                )}
-                            />
-                        )}
-                        {mediaUrls.length > 0 && (
-                            <Image
-                                src={mediaUrls[currentImageIndex]}
-                                alt={product.title}
-                                fill
-                                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                                className={cn(
-                                    "object-cover transition-all duration-500 ease-in-out",
+                                    "object-cover transition-all duration-300 ease-in-out",
                                     isProductHovered ? "scale-105" : "scale-100"
                                 )}
                             />
                         )}
 
-                        {/* Image indicators for slideshow */}
-                        {mediaUrls.length > 1 && (
-                            <div className="absolute inset-x-0 bottom-10 z-10 flex justify-center gap-1.5">
-                                {mediaUrls.map((_, index) => (
-                                    <div
-                                        key={index}
-                                        className={cn(
-                                            "h-1.5 rounded-full transition-all duration-300",
-                                            currentImageIndex === index
-                                                ? "w-3 bg-primary"
-                                                : "w-1.5 bg-background/70"
-                                        )}
-                                    />
-                                ))}
-                            </div>
-                        )}
+                        {mediaUrls.map((url, index) => {
+                            const isActive = isProductHovered ? index === currentImageIndex : index === 0;
+                            return (
+                                <Image
+                                    key={url}
+                                    src={url}
+                                    alt={`${product.title} ${index + 1}`}
+                                    fill
+                                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                                    className={cn(
+                                        "object-cover absolute inset-0 transition-all duration-300 ease-in-out",
+                                        isActive ? "opacity-100 z-10" : "opacity-0 z-0",
+                                        isProductHovered ? "scale-105" : "scale-100"
+                                    )}
+                                />
+                            );
+                        })}
 
                         <div
                             className={cn(

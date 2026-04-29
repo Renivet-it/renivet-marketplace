@@ -15,7 +15,7 @@ interface PageProps extends GenericProps {
 export function SpecialCare({ className, banners, ...props }: PageProps) {
     return (
         <section
-            className={cn("bg-[#FCFBF4] md:pt-4 lg:pt-4", className)}
+            className={cn("bg-white md:pt-4 lg:pt-4", className)}
             {...props}
         >
             <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">

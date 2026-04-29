@@ -49,6 +49,8 @@ export function ShopProducts({
     initialPage = 1,
     ...props
 }: PageProps) {
+    const utils = trpc.useUtils();
+
     const handleProductClick = async (productId: string, brandId: string) => {
         try {
             await trackProductClick(productId, brandId);
@@ -143,13 +145,8 @@ export function ShopProducts({
     });
 
     const isSameAsInitial = initialParams === currentParams;
-
-    const {
-        data: queryData,
-        isFetching,
-        isError,
-    } = trpc.brands.products.getProducts.useQuery(
-        {
+    const queryInput = useMemo(
+        () => ({
             page,
             limit,
             search,
@@ -157,7 +154,7 @@ export function ShopProducts({
             isAvailable: true,
             isActive: true,
             isDeleted: false,
-            verificationStatus: "approved",
+            verificationStatus: "approved" as const,
             brandIds,
             minPrice: minPrice < 0 ? 0 : minPrice,
             maxPrice: maxPrice,
@@ -170,14 +167,42 @@ export function ShopProducts({
             sortOrder: sortBy === "recommended" ? undefined : sortOrder,
             colors: colors.length ? colors : undefined,
             sizes: sizes.length ? sizes : undefined,
-            // Don't boost best sellers when search is active; search relevance should win.
+            minDiscount: minDiscount ?? undefined,
             prioritizeBestSellers:
-                !search && page === 1 && (!sortBy || sortBy === "recommended"),
+                !search &&
+                page === 1 &&
+                (!sortBy || sortBy === "recommended") &&
+                !minDiscount,
             requireMedia: true,
-            // Only enable recommendations for the default "recommended" sort.
             useRecommendations:
-                !search && (!sortBy || sortBy === "recommended"),
-        },
+                !search &&
+                (!sortBy || sortBy === "recommended") &&
+                !minDiscount,
+        }),
+        [
+            page,
+            limit,
+            search,
+            brandIds,
+            minPrice,
+            maxPrice,
+            categoryId,
+            effectiveSubCategoryId,
+            productTypeId,
+            sortBy,
+            sortOrder,
+            colors,
+            sizes,
+            minDiscount,
+        ]
+    );
+
+    const {
+        data: queryData,
+        isFetching,
+        isError,
+    } = trpc.brands.products.getProducts.useQuery(
+        queryInput,
         {
             // Prevent a duplicate client fetch on first render when server data already matches.
             enabled: !isSameAsInitial,
@@ -194,7 +219,6 @@ export function ShopProducts({
                 !search &&
                 !categoryId.length &&
                 !effectiveSubCategoryId.length &&
-
                 !productTypeId.length &&
                 !brandIds?.length &&
                 !colors.length &&
@@ -202,6 +226,8 @@ export function ShopProducts({
                 !minDiscount
                     ? 60 * 1000
                     : 0,
+            keepPreviousData: true,
+            refetchOnWindowFocus: false,
         }
     );
 
@@ -232,6 +258,7 @@ export function ShopProducts({
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
 
     const hasMoreProducts = allProducts.length < totalCount;
+    const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
     const loadMoreProducts = useCallback(() => {
         if (isFetching || isLoadingMore || !hasMoreProducts) return;
@@ -271,6 +298,36 @@ export function ShopProducts({
         setIsLoadingMore(false);
     }, [count, isFetching, page, visibleProducts]);
 
+    useEffect(() => {
+        if (isFetching || isError || !hasMoreProducts) return;
+
+        const currentPage = page || 1;
+        const nextPage = currentPage + 1;
+
+        if (nextPage > totalPages) return;
+
+        void utils.brands.products.getProducts.prefetch({
+            ...queryInput,
+            page: nextPage,
+            prioritizeBestSellers:
+                !search &&
+                nextPage === 1 &&
+                (!sortBy || sortBy === "recommended") &&
+                !minDiscount,
+        });
+    }, [
+        utils,
+        queryInput,
+        page,
+        totalPages,
+        hasMoreProducts,
+        isFetching,
+        isError,
+        search,
+        sortBy,
+        minDiscount,
+    ]);
+
     // The "Show more" button IS the sentinel — when it scrolls into view it
     // auto-fires loadMoreProducts, so no extra invisible div is needed.
     useEffect(() => {
@@ -284,8 +341,8 @@ export function ShopProducts({
                 }
             },
             {
-                // Start loading as soon as the button is 200px away from entering view
-                rootMargin: "0px 0px 200px 0px",
+                // Start loading earlier so the next page is ready before the user reaches the end.
+                rootMargin: "0px 0px 500px 0px",
                 threshold: 0,
             }
         );
@@ -315,7 +372,7 @@ export function ShopProducts({
         <>
             <div
                 className={cn(
-                    "grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-20 lg:grid-cols-3 xl:grid-cols-4",
+                    "grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-4",
                     className
                 )}
                 {...props}
@@ -344,7 +401,7 @@ export function ShopProducts({
                 })}
             </div>
 
-            <div className="flex flex-col items-center gap-3 py-8">
+            <div className="mt-1 flex flex-col items-center gap-3 border-t border-[#e4e9ef] py-8">
                 {hasMoreProducts ? (
                     <Button
                         ref={
@@ -352,7 +409,7 @@ export function ShopProducts({
                         }
                         onClick={loadMoreProducts}
                         disabled={isFetching || isLoadingMore}
-                        className="min-w-[160px]"
+                        className="min-w-[180px] rounded-full border border-[#d2dbe5] bg-white px-7 text-[#243754] shadow-none hover:bg-[#f5f8fc]"
                     >
                         {isFetching || isLoadingMore ? (
                             <span className="inline-flex items-center gap-2">

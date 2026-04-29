@@ -34,6 +34,7 @@ interface PageProps {
         sortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
         sortOrder?: "asc" | "desc";
         sizes?: string;
+        minDiscount?: string;
     }>;
 }
 
@@ -44,32 +45,30 @@ export default async function Page({ searchParams }: PageProps) {
 
     return (
         <GeneralShell>
-            <div className="flex flex-col gap-5 md:flex-row">
-                {/* Desktop filters - Fixed sidebar */}
-                <aside className="hidden md:sticky md:top-4 md:block md:max-h-[calc(100vh-2rem)] md:basis-1/5 md:self-start md:overflow-y-auto">
+            <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
+                <aside className="hidden md:sticky md:top-5 md:block md:max-h-[calc(100vh-2.5rem)] md:w-[335px] md:flex-shrink-0 md:overflow-y-auto">
                     <Suspense fallback={<ShopFiltersSkeleton />}>
                         <ShopFiltersFetch
-                            className="space-y-4 pr-2"
                             categoryId={params.categoryId}
                             subCategoryId={subCategoryId}
                             productTypeId={params.productTypeId}
+                            search={params.search}
+                            minPrice={params.minPrice}
+                            maxPrice={params.maxPrice}
+                            colors={params.colors}
+                            sizes={params.sizes}
+                            minDiscount={params.minDiscount}
                         />
                     </Suspense>
                 </aside>
 
-                {/* Divider */}
-                <div className="hidden w-px bg-border md:inline-block" />
-
-                {/* Main content */}
-                <main className="w-full space-y-5 md:basis-4/5">
-                    {/* Mobile search, filters, and sort */}
-                    <div className="block space-y-4 md:hidden">
+                <main className="w-full space-y-4 md:flex-1 md:space-y-5">
+                    <div className="space-y-4 rounded-2xl border border-[#e2e8f0] bg-white p-4 md:hidden">
                         <SearchInput
                             type="search"
-                            placeholder="Search for a product..."
-                            className="h-12 text-base"
+                            placeholder="Search products"
+                            className="h-11 border-[#d7e0ea] text-base"
                         />
-                        {/* --- MODIFIED SECTION --- */}
                         <div className="grid grid-cols-2 gap-2">
                             <Suspense
                                 fallback={<Skeleton className="h-10 w-full" />}
@@ -79,27 +78,30 @@ export default async function Page({ searchParams }: PageProps) {
                                     categoryId={params.categoryId}
                                     subCategoryId={subCategoryId}
                                     productTypeId={params.productTypeId}
+                                    search={params.search}
+                                    minPrice={params.minPrice}
+                                    maxPrice={params.maxPrice}
+                                    colors={params.colors}
+                                    sizes={params.sizes}
+                                    minDiscount={params.minDiscount}
                                 />
                             </Suspense>
                             <ShopSortBy />
                         </div>
-                        {/* --- END MODIFICATION --- */}
                     </div>
 
-                    {/* Desktop search and sort */}
-                    <div className="hidden md:flex md:items-center md:justify-between md:gap-4">
-                        {/* This div will now take up all available space */}
-                        <div className="flex-1">
-                            {/* Your Search Input component would go here */}
-                            {/* e.g., <ShopSearch /> */}
-                        </div>
-
-                        {/* This component will be pushed to the right */}
+                    <div className="hidden items-center justify-between rounded-2xl border border-[#dce5ee] bg-[#f9fbfd] px-5 py-3.5 md:flex">
+                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
+                            Refine By Category, Color, Size And Fit
+                        </p>
                         <ShopSortBy />
                     </div>
 
                     <Suspense fallback={<ShopProductsSkeleton />}>
-                        <ShopProductsFetch searchParams={searchParams} productTypes={productTypes} />
+                        <ShopProductsFetch
+                            searchParams={searchParams}
+                            productTypes={productTypes}
+                        />
                     </Suspense>
                 </main>
             </div>
@@ -192,9 +194,43 @@ async function ShopFiltersFetch(
         categoryId?: string;
         subCategoryId?: string;
         productTypeId?: string;
+        search?: string;
+        minPrice?: string;
+        maxPrice?: string;
+        colors?: string;
+        sizes?: string;
+        minDiscount?: string;
     }
 ) {
-    const { categoryId, subCategoryId, productTypeId, ...rest } = props;
+    const {
+        categoryId,
+        subCategoryId,
+        productTypeId,
+        search,
+        minPrice,
+        maxPrice,
+        colors: colorsParam,
+        sizes,
+        minDiscount,
+        ...rest
+    } = props;
+
+    const minPriceValue =
+        minPrice && !isNaN(parseInt(minPrice, 10))
+            ? parseInt(minPrice, 10)
+            : undefined;
+    const maxPriceValue =
+        maxPrice && !isNaN(parseInt(maxPrice, 10))
+            ? parseInt(maxPrice, 10)
+            : undefined;
+    const colorsValue = colorsParam?.length
+        ? colorsParam.split(",")
+        : undefined;
+    const sizesValue = sizes?.length ? sizes.split(",") : undefined;
+    const minDiscountValue =
+        minDiscount && !isNaN(parseInt(minDiscount, 10))
+            ? parseInt(minDiscount, 10)
+            : undefined;
     const [
         categories,
         subCategories,
@@ -211,6 +247,12 @@ async function ShopFiltersFetch(
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
+            search: search?.trim() || undefined,
+            minPrice: minPriceValue,
+            maxPrice: maxPriceValue,
+            colors: colorsValue,
+            sizes: sizesValue,
+            minDiscount: minDiscountValue,
         }),
         productQueries.getUniqueColors({
             categoryId,
@@ -284,6 +326,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         sortOrder: sortOrderRaw,
         colors: colorsRaw,
         sizes: sizesRaw,
+        minDiscount: minDiscountRaw,
     } = await searchParams;
 
     const limit =
@@ -326,6 +369,10 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
             : undefined;
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
+    const minDiscount =
+        minDiscountRaw && !isNaN(parseInt(minDiscountRaw))
+            ? parseInt(minDiscountRaw)
+            : undefined;
 
     // Check if we should use personalized recommendations
     // Only apply on first page with no specific filters
@@ -336,6 +383,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         !subCategoryId &&
         !productTypeId &&
         !brandIds?.length &&
+        !minDiscount &&
         (!sortByRaw || sortByRaw === "recommended") &&
         !!userId;
 
@@ -379,7 +427,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         const isDefaultView = page === 1 && limit === 28 &&
                               !search && !brandIds && minPrice === 0 && maxPrice === 1000000 &&
                               !categoryId && !subCategoryId && !productTypeId &&
-                              (!sortByRaw || sortByRaw === "recommended") && !sortOrder && !colors && !sizes;
+                              (!sortByRaw || sortByRaw === "recommended") && !sortOrder && !colors && !sizes && !minDiscount;
 
         if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
@@ -403,6 +451,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
                 sortOrder,
                 colors,
                 sizes,
+                minDiscount,
                 prioritizeBestSellers:
                     !search && (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
@@ -414,14 +463,56 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         ? await userWishlistCache.get(userId)
         : undefined;
 
-    // console.log(finalData.data, "data");
+    const productTypeById = new Map(
+        productTypes.map((type: any) => [String(type.id), type])
+    );
+    const productTypesForPills = Array.from(
+        new Map(
+            (finalData?.data ?? [])
+                .map((product: any) => {
+                    const typeId = String(
+                        product?.productType?.id ?? product?.productTypeId ?? ""
+                    );
+                    if (!typeId) return null;
+
+                    const fallbackType = productTypeById.get(typeId);
+                    const typeName =
+                        product?.productType?.name ?? fallbackType?.name;
+                    const typeSubCategoryName =
+                        product?.productType?.subCategory?.name ??
+                        product?.subcategory?.name ??
+                        fallbackType?.subCategory?.name;
+
+                    if (!typeName) return null;
+
+                    return [
+                        typeId,
+                        {
+                            id: typeId,
+                            name: String(typeName),
+                            subCategory: typeSubCategoryName
+                                ? { name: String(typeSubCategoryName) }
+                                : undefined,
+                        },
+                    ] as const;
+                })
+                .filter(
+                    (
+                        item
+                    ): item is readonly [
+                        string,
+                        { id: string; name: string; subCategory?: { name: string } }
+                    ] => item !== null
+                )
+        ).values()
+    );
 
     return (
         <div className="space-y-5">
             {/* Mobile Product Types */}
             <div className="block md:hidden">
                 <SearchableProductTypes
-                    productTypes={productTypes}
+                    productTypes={productTypesForPills}
                     productTypeId={productTypeIdRaw ?? ""}
                     initialProducts={finalData?.data ?? []}
                 />
@@ -430,7 +521,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
             {/* Desktop Product Types */}
             <div className="hidden md:block">
                 <SearchableProductTypes
-                    productTypes={productTypes.slice(0, 10)}
+                    productTypes={productTypesForPills}
                     productTypeId={productTypeIdRaw ?? ""}
                     initialProducts={finalData?.data ?? []}
                     isDesktop

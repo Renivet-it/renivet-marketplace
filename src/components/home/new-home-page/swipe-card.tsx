@@ -3,6 +3,7 @@
 import { Icons } from "@/components/icons";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
+import { cn, convertPaiseToRupees } from "@/lib/utils";
 import { animated, to as interpolate, useSprings } from "@react-spring/web";
 import Image from "next/image";
 import Link from "next/link";
@@ -20,6 +21,8 @@ interface Product {
     title: string;
     price: number;
     brand?: { name: string };
+    variants?: { price: number; compareAtPrice?: number }[];
+    compareAtPrice?: number;
 }
 
 interface SwipeableProductCardProps {
@@ -31,14 +34,39 @@ interface SwipeableProductCardProps {
 }
 
 /* --------------------------------------------------------
-   SWIPE GUIDE
+   SWIPE HINT OVERLAY (shown on first card until interacted)
 -------------------------------------------------------- */
-const AnimatedSwipeGuide = () => (
-    <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
-        <div className="flex animate-pulse items-center gap-2 rounded-full bg-black/60 px-4 py-2 text-sm text-white">
-            <Icons.MoreHorizontal className="size-4" />
-            Swipe left or right
+const SwipeHint = () => (
+    <div className="pointer-events-none absolute inset-0 z-30 flex flex-col items-center justify-center gap-3">
+        <div className="flex items-center gap-6">
+            {/* Left arrow */}
+            <div className="flex flex-col items-center gap-1 opacity-80">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/60 bg-black/40 backdrop-blur-sm">
+                    <svg className="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </div>
+                <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/70">Skip</span>
+            </div>
+
+            {/* Hand swipe icon */}
+            <div className="flex h-14 w-14 animate-bounce items-center justify-center rounded-full border-2 border-white/40 bg-white/20 backdrop-blur-md shadow-lg">
+                <svg className="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0V11" />
+                </svg>
+            </div>
+
+            {/* Right arrow */}
+            <div className="flex flex-col items-center gap-1 opacity-80">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white/60 bg-[#c8a96e]/60 backdrop-blur-sm">
+                    <Icons.Heart className="h-4 w-4 text-white fill-white" />
+                </div>
+                <span className="text-[9px] font-bold uppercase tracking-[0.15em] text-white/70">Save</span>
+            </div>
         </div>
+        <span className="rounded-full bg-black/50 px-4 py-1.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-white/90 backdrop-blur-sm">
+            Swipe to discover
+        </span>
     </div>
 );
 
@@ -55,16 +83,19 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
 
     const [goneCards, setGoneCards] = useState<Set<number>>(new Set());
     const [hasInteracted, setHasInteracted] = useState(false);
+    const [swipeDir, setSwipeDir] = useState<Record<number, "left" | "right">>({});
 
+    // Spring config: slight tilt, stacked cards
     const to = (i: number) => ({
         x: 0,
-        y: i * -4,
-        scale: 1,
-        rot: -10 + Math.random() * 20,
-        delay: i * 100,
+        y: i * -6,
+        scale: 1 - i * 0.04,
+        rot: -5 + Math.random() * 10,
+        delay: i * 80,
+        opacity: 1,
     });
 
-    const from = (_i: number) => ({ x: 0, rot: 0, scale: 1.2, y: -1000 });
+    const from = (_i: number) => ({ x: 0, rot: 0, scale: 1.1, y: -800, opacity: 0 });
 
     const [springs, api] = useSprings(filteredProducts.length, (i) => ({
         ...to(i),
@@ -74,13 +105,13 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
     const { mutateAsync: addToWishlist } =
         trpc.general.users.wishlist.addProductInWishlist.useMutation({
             onSuccess: () => toast.success("Added to Wishlist!"),
-            onError: (err) =>
-                toast.error(err.message || "Could not add to wishlist."),
+            onError: (err) => toast.error(err.message || "Could not add to wishlist."),
         });
 
     const handleSwipe = async (index: number, dir: number) => {
         if (goneCards.has(index)) return;
         setHasInteracted(true);
+        setSwipeDir((prev) => ({ ...prev, [index]: dir === 1 ? "right" : "left" }));
         setGoneCards((prev) => new Set(prev).add(index));
 
         const product = filteredProducts[index]?.product;
@@ -89,10 +120,11 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
         api.start((i) =>
             i === index
                 ? {
-                      x: (window.innerWidth + 200) * dir,
-                      rot: dir * 20,
+                      x: (window.innerWidth + 300) * dir,
+                      rot: dir * 25,
                       scale: 1,
-                      config: { tension: 200, friction: 40 },
+                      opacity: 0,
+                      config: { tension: 220, friction: 30 },
                   }
                 : {}
         );
@@ -116,221 +148,315 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
         }
 
         setTimeout(() => {
-            api.start((i) =>
-                i === index ? { display: "none", immediate: true } : {}
-            );
-        }, 400);
+            api.start((i) => (i === index ? { display: "none", immediate: true } : {}));
+        }, 350);
     };
 
-    const bind = useDrag(
-        ({
-            args: [index],
-            down,
-            movement: [mx],
-            direction: [xDir],
-            velocity,
-        }) => {
-            if (goneCards.has(index)) return;
-            setHasInteracted(true);
+    const bind = useDrag(({ args: [index], down, movement: [mx], direction: [xDir], velocity }) => {
+        if (goneCards.has(index)) return;
+        setHasInteracted(true);
 
-            const trigger = velocity > 0.2;
-            const dir = xDir < 0 ? -1 : 1;
+        const trigger = velocity > 0.25;
+        const dir = xDir < 0 ? -1 : 1;
 
-            if (!down && trigger) {
-                handleSwipe(index, dir);
-                return;
-            }
-
-            api.start((i) =>
-                i === index
-                    ? {
-                          x: down ? mx : 0,
-                          rot: mx / 15,
-                          scale: down ? 1.05 : 1,
-                      }
-                    : {}
-            );
+        if (!down && trigger) {
+            handleSwipe(index, dir);
+            return;
         }
-    );
 
-    const showGuide =
-        !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
+        api.start((i) =>
+            i === index
+                ? {
+                      x: down ? mx : 0,
+                      rot: mx / 12,
+                      scale: down ? 1.04 : 1,
+                  }
+                : {}
+        );
+    });
+
+    const allGone = goneCards.size === filteredProducts.length && filteredProducts.length > 0;
+    const showGuide = !hasInteracted && goneCards.size === 0 && filteredProducts.length > 0;
+
+    if (!filteredProducts.length) return null;
 
     return (
-        <section className="w-full bg-[#FCFBF4] px-4 py-2 md:px-16">
-            <h2 className="mb-6 py-4 text-center font-serif text-xl text-[#7A6A3A] md:mb-10 md:text-3xl">
-                Select What Matters
-            </h2>
+        <section className="w-full bg-white py-10 md:py-14">
+            <div className="mx-auto max-w-screen-3xl px-4 sm:px-6 lg:px-8">
 
-            {/* ================= MOBILE ================= */}
-            <div className="grid grid-cols-2 items-start justify-center gap-4 md:hidden">
-                {/* --- MOBILE SWIPE CARD --- */}
-                <div className="relative mx-auto h-[203px] w-[139px]">
-                    {showGuide && <AnimatedSwipeGuide />}
-
-                    {springs.map(({ x, y, rot, scale }, i) => {
-                        const product = filteredProducts[i]?.product;
-                        if (!product || goneCards.has(i)) return null;
-
-                        return (
-                            <animated.div
-                                key={product.id}
-                                {...bind(i)}
-                                className="absolute h-[203px] w-[139px] rounded-xl bg-white shadow-lg"
-                                style={{
-                                    transform: interpolate(
-                                        [x, y, rot, scale],
-                                        (x, y, r, s) =>
-                                            `translate3d(${x}px,${y}px,0) rotate(${r}deg) scale(${s})`
-                                    ),
-                                }}
-                            >
-                                {/* Image */}
-                                <div className="relative h-[120px] w-full overflow-hidden">
-                                    <Image
-                                        src={
-                                            product.media?.[0]?.mediaItem
-                                                ?.url ||
-                                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                                        }
-                                        alt={product.title}
-                                        fill
-                                        sizes="(max-width: 768px) 140px, 140px"
-                                        className="object-cover"
-                                    />
-                                </div>
-
-                                {/* Content */}
-                                <div className="p-2">
-                                    <h3 className="text-[10px] font-medium leading-tight tracking-tight text-muted-foreground">
-                                        {product.title}
-                                    </h3>
-
-                                    <div className="mt-2 flex items-center justify-between">
-                                        <button
-                                            onClick={() => handleSwipe(i, -1)}
-                                            className="flex size-6 items-center justify-center rounded-full bg-red-500 text-white"
-                                        >
-                                            <Icons.X className="size-3" />
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleSwipe(i, 1)}
-                                            className="flex size-6 items-center justify-center rounded-full bg-green-500 text-white"
-                                        >
-                                            <Icons.Heart className="size-3" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </animated.div>
-                        );
-                    })}
+                {/* — Header — */}
+                <div className="mb-10 md:mb-14">
+                    <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
+                        Curated For You
+                    </span>
+                    <h2 className="mt-2 font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
+                        Swipe &amp; Discover
+                    </h2>
                 </div>
 
-                {/* --- MOBILE CTA CARD --- */}
+                {/* — Two-column layout — */}
+                <div className="flex flex-col items-center gap-10 md:flex-row md:items-center md:gap-16">
 
-                <Link
-                    href="/curious-shift" // ✅ redirect changed here
-                    className="block h-[193px] w-[169px] border border-white/40 bg-gradient-to-br from-[#B7D3EA] to-[#F7F6E7] px-5 pt-6 shadow-lg transition [-webkit-tap-highlight-color:transparent] hover:scale-[1.03] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2 active:scale-[0.98]"
-                >
-                    {/* Title */}
-                    <h2 className="font-serif text-xl font-semibold leading-tight text-gray-900">
-                        Got <br />
-                        curiosity?
-                    </h2>
+                    {/* ======= SWIPE STACK ======= */}
+                    <div className="relative flex h-[420px] w-full max-w-[340px] shrink-0 items-center justify-center self-center md:h-[500px] md:max-w-[400px]">
 
-                    <br />
+                        {/* Direction Labels */}
+                        <div className="pointer-events-none absolute inset-x-0 top-1/2 z-40 flex -translate-y-1/2 items-center justify-between px-3">
+                            <span className="rounded-full bg-black/70 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-white opacity-0 transition-opacity duration-150 data-[show=true]:opacity-100" data-show={String(hasInteracted)}>
+                                Skip
+                            </span>
+                            <span className="rounded-full bg-[#c8a96e]/90 px-3 py-1 text-[9px] font-bold uppercase tracking-widest text-white opacity-0 transition-opacity duration-150 data-[show=true]:opacity-100" data-show={String(hasInteracted)}>
+                                Save ♡
+                            </span>
+                        </div>
 
-                    {/* Subtitle + arrow */}
-                    <div className="flex items-center gap-3">
-                        <p className="text-sm italic leading-snug text-gray-600">
-                            We’ve Got <br /> Secrets.
-                        </p>
+                        {showGuide && <SwipeHint />}
 
-                        <Icons.ArrowRight className="size-5 text-gray-800" />
+                        {/* Empty state */}
+                        {allGone && (
+                            <div className="flex flex-col items-center gap-4 text-center">
+                                <div className="flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-white">
+                                    <Icons.Heart className="h-7 w-7 text-[#c8a96e]" />
+                                </div>
+                                <p className="text-sm font-medium text-gray-600">You&apos;ve seen everything!</p>
+                                <p className="text-xs text-gray-400">Check your wishlist for saved items</p>
+                                <Link href="/wishlist" className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-gray-900 bg-gray-900 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition hover:bg-transparent hover:text-gray-900">
+                                    View Wishlist
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Cards */}
+                        {springs.map(({ x, y, rot, scale }, i) => {
+                            const item = filteredProducts[i];
+                            const product = item?.product;
+                            if (!product || goneCards.has(i)) return null;
+
+                            const imageUrl = product.media?.[0]?.mediaItem?.url || "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
+                            const rawPrice = product.variants?.[0]?.price ?? product.price ?? 0;
+                            const price = Math.round(Number(convertPaiseToRupees(rawPrice)));
+                            const originalPrice = product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
+                            const comparePrice = originalPrice && originalPrice > rawPrice ? Math.round(Number(convertPaiseToRupees(originalPrice))) : null;
+                            const isTop = i === filteredProducts.length - 1 - goneCards.size;
+
+                            return (
+                                <animated.div
+                                    key={product.id}
+                                    {...bind(i)}
+                                    style={{
+                                        transform: interpolate(
+                                            [x, y, rot, scale],
+                                            (x, y, r, s) => `translate3d(${x}px,${y}px,0) rotate(${r}deg) scale(${s})`
+                                        ),
+                                        zIndex: i,
+                                        touchAction: "none",
+                                    }}
+                                    className="absolute h-full w-full max-w-[340px] cursor-grab overflow-hidden rounded-xl bg-white shadow-xl active:cursor-grabbing md:max-w-[400px]"
+                                >
+                                    {/* Product image — tall */}
+                                    <div className="relative h-[75%] w-full overflow-hidden bg-[#F5F5F5]">
+                                        <Image
+                                            src={imageUrl}
+                                            alt={product.title}
+                                            fill
+                                            sizes="(max-width: 768px) 340px, 400px"
+                                            className="object-cover"
+                                            draggable={false}
+                                        />
+                                        {/* Gradient overlay at bottom */}
+                                        <div className="absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/50 to-transparent" />
+
+                                        {/* Brand tag */}
+                                        {product.brand?.name && (
+                                            <div className="absolute left-3 top-3 rounded-sm bg-white/90 px-2 py-0.5 text-[8px] font-bold uppercase tracking-[0.15em] text-gray-700 backdrop-blur-sm">
+                                                {product.brand.name}
+                                            </div>
+                                        )}
+
+                                        {/* Price on image */}
+                                        <div className="absolute bottom-3 left-3 flex items-baseline gap-2">
+                                            <span className="text-lg font-semibold text-white">₹{price.toLocaleString()}</span>
+                                            {comparePrice && (
+                                                <span className="text-xs text-white/60 line-through">₹{comparePrice.toLocaleString()}</span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Card bottom: title + actions */}
+                                    <div className="flex items-center justify-between px-4 py-3.5">
+                                        <div className="flex-1 pr-4">
+                                            <h3 className="truncate text-sm font-medium leading-snug text-gray-900">
+                                                {product.title}
+                                            </h3>
+                                            {isTop && (
+                                                <p className="mt-0.5 text-[10px] font-medium uppercase tracking-[0.12em] text-gray-400">
+                                                    Swipe to decide
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Action buttons */}
+                                        <div className="flex items-center gap-2.5">
+                                            {/* Skip */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleSwipe(i, -1); }}
+                                                className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-200 bg-white text-gray-500 shadow-sm transition-all hover:border-gray-900 hover:text-gray-900 hover:scale-110 active:scale-95"
+                                                title="Skip"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                                </svg>
+                                            </button>
+
+                                            {/* View */}
+                                            <Link
+                                                href={`/products/${product.slug}`}
+                                                onClick={(e) => e.stopPropagation()}
+                                                className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-gray-200 bg-white text-gray-500 shadow-sm transition-all hover:border-gray-900 hover:text-gray-900 hover:scale-110 active:scale-95"
+                                                title="View product"
+                                            >
+                                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                                </svg>
+                                            </Link>
+
+                                            {/* Wishlist / Save */}
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); handleSwipe(i, 1); }}
+                                                className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#c8a96e] bg-[#c8a96e] text-white shadow-sm transition-all hover:bg-[#b8965e] hover:scale-110 active:scale-95"
+                                                title="Save to wishlist"
+                                            >
+                                                <Icons.Heart className="h-4 w-4 fill-white text-white" />
+                                            </button>
+                                        </div>
+                                    </div>
+                                </animated.div>
+                            );
+                        })}
                     </div>
-                </Link>
-            </div>
 
-            {/* ================= DESKTOP ================= */}
-            <div className="hidden grid-cols-2 items-center gap-12 md:grid">
-                {/* Desktop Swipe Cards */}
-                <div className="relative mx-auto flex h-[450px] w-full max-w-md items-center justify-center">
-                    {showGuide && <AnimatedSwipeGuide />}
+                    {/* ======= RIGHT PANEL ======= */}
+                    <div className="flex w-full flex-col gap-4">
 
-                    {springs.map(({ x, y, rot, scale }, i) => {
-                        const product = filteredProducts[i]?.product;
-                        if (!product || goneCards.has(i)) return null;
+                        {/* Got Curiosity Card — primary palette + animated shimmer */}
+                        <Link
+                            href="/curious-shift"
+                            className="group relative flex flex-col justify-between overflow-hidden border border-[#e8edd8] bg-[#f4f6ec] p-7 transition-all duration-500 hover:border-[#c5d08a] hover:shadow-lg md:p-8"
+                            style={{ minHeight: "220px" }}
+                        >
+                            {/* Shimmer sweep on hover */}
+                            <div className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-full" />
 
-                        return (
-                            <animated.div
-                                key={product.id}
-                                {...bind(i)}
-                                className="absolute flex size-full max-w-sm cursor-grab flex-col rounded-2xl bg-white shadow-lg"
-                                style={{
-                                    transform: interpolate(
-                                        [x, y, rot, scale],
-                                        (x, y, r, s) =>
-                                            `translate3d(${x}px,${y}px,0) rotate(${r}deg) scale(${s})`
-                                    ),
-                                }}
-                            >
-                                <div className="relative h-[65%] w-full overflow-hidden rounded-t-2xl">
-                                    <Image
-                                        src={
-                                            product.media?.[0]?.mediaItem
-                                                ?.url ||
-                                            "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
-                                        }
-                                        alt={product.title}
-                                        fill
-                                        sizes="(max-width: 768px) 100vw, 400px"
-                                        className="object-cover"
-                                    />
+                            {/* Subtle background orb */}
+                            <div className="pointer-events-none absolute -right-8 -top-8 h-36 w-36 rounded-full bg-[#d6e29a]/30 blur-2xl transition-all duration-500 group-hover:scale-125 group-hover:bg-[#d6e29a]/50" />
+
+                            <span className="relative text-[9px] font-bold uppercase tracking-[0.22em] text-[#4a5a1a]">
+                                Renivet Exclusives
+                            </span>
+                            <div className="relative my-4">
+                                <h3 className="font-playfair text-[32px] font-normal leading-[1.15] text-gray-900 md:text-[38px]">
+                                    Got<br />
+                                    <em className="not-italic text-[#5a7020]">curiosity?</em>
+                                </h3>
+                                <p className="mt-2 text-sm italic text-gray-500">
+                                    We&apos;ve Got Secrets.
+                                </p>
+                            </div>
+                            <div className="relative flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-gray-700 transition-all duration-300 group-hover:gap-3 group-hover:text-gray-900">
+                                Explore
+                                <svg className="h-3 w-3 transition-transform duration-300 group-hover:translate-x-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                </svg>
+                            </div>
+                        </Link>
+
+                        {/* Swipe guide — 3-column with primary accent */}
+                        <div className="flex items-stretch gap-3">
+                            {/* Skip */}
+                            <div className="group/tile flex flex-1 cursor-default flex-col items-center gap-1.5 border border-gray-100 bg-white py-4 transition-all duration-200 hover:border-gray-300 hover:shadow-sm">
+                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100 transition-colors duration-200 group-hover/tile:bg-gray-200">
+                                    <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
                                 </div>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">Skip</p>
+                                <p className="text-[8px] text-gray-300">swipe left</p>
+                            </div>
 
-                                <div className="p-6">
-                                    <h3 className="text-2xl font-bold capitalize">
-                                        {product.title}
-                                    </h3>
-
-                                    <div className="mt-4 flex justify-between">
-                                        <button
-                                            onClick={() => handleSwipe(i, -1)}
-                                            className="size-10 rounded-full bg-red-500 text-white"
-                                        >
-                                            <Icons.X className="mx-auto size-5" />
-                                        </button>
-
-                                        <button
-                                            onClick={() => handleSwipe(i, 1)}
-                                            className="size-10 rounded-full bg-green-500 text-white"
-                                        >
-                                            <Icons.Heart className="mx-auto size-5" />
-                                        </button>
+                            {/* Save — primary color highlight + pulse ring */}
+                            <div className="group/tile relative flex flex-1 cursor-default flex-col items-center gap-1.5 border border-[#c5d08a] bg-[#f4f6ec] py-4 transition-all duration-200 hover:border-[#a0b84a] hover:shadow-sm">
+                                {/* Pulse ring on the icon */}
+                                <div className="relative flex items-center justify-center">
+                                    <div className="absolute h-8 w-8 animate-ping rounded-full bg-[#5a7020]/10" />
+                                    <div className="relative flex h-8 w-8 items-center justify-center bg-[#e8f0c4]">
+                                        <Icons.Heart className="h-3.5 w-3.5 text-[#4a5a1a]" />
                                     </div>
                                 </div>
-                            </animated.div>
-                        );
-                    })}
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-[#4a5a1a]">Save</p>
+                                <p className="text-[8px] text-[#7a9030]">swipe right</p>
+                            </div>
+
+                            {/* View */}
+                            <div className="group/tile flex flex-1 cursor-default flex-col items-center gap-1.5 border border-gray-100 bg-white py-4 transition-all duration-200 hover:border-gray-300 hover:shadow-sm">
+                                <div className="flex h-8 w-8 items-center justify-center bg-gray-100 transition-colors duration-200 group-hover/tile:bg-gray-200">
+                                    <svg className="h-3.5 w-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                    </svg>
+                                </div>
+                                <p className="text-[9px] font-bold uppercase tracking-wider text-gray-400">View</p>
+                                <p className="text-[8px] text-gray-300">tap icon</p>
+                            </div>
+                        </div>
+
+                        {/* Progress bar — shows how many cards swiped */}
+                        {filteredProducts.length > 0 && (
+                            <div className="space-y-1.5">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-[9px] font-bold uppercase tracking-[0.14em] text-gray-400">
+                                        Progress
+                                    </span>
+                                    <span className="text-[9px] text-gray-400">
+                                        {goneCards.size} / {filteredProducts.length}
+                                    </span>
+                                </div>
+                                <div className="h-0.5 w-full overflow-hidden bg-gray-100">
+                                    <div
+                                        className="h-full bg-[#5a7020] transition-all duration-500 ease-out"
+                                        style={{ width: `${(goneCards.size / filteredProducts.length) * 100}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Wishlist tracker */}
+                        <Link
+                            href="/wishlist"
+                            className={cn(
+                                "group flex items-center justify-between border border-gray-100 bg-white px-4 py-3.5 transition-all duration-200 hover:border-[#c5d08a] hover:bg-[#f9fbf3]",
+                                goneCards.size === 0 && "pointer-events-none opacity-35"
+                            )}
+                        >
+                            <div className="flex items-center gap-2.5">
+                                <Icons.Heart className="h-3.5 w-3.5 text-[#5a7020] transition-transform duration-200 group-hover:scale-125" />
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-700">Saved Items</p>
+                                    <p className="text-[9px] text-gray-400">
+                                        {goneCards.size > 0
+                                            ? `${[...goneCards].filter(i => swipeDir[i] === "right").length} saved · ${[...goneCards].filter(i => swipeDir[i] === "left").length} skipped`
+                                            : "Start swiping"}
+                                    </p>
+                                </div>
+                            </div>
+                            <svg className="h-3.5 w-3.5 text-gray-300 transition-all duration-200 group-hover:translate-x-1 group-hover:text-[#5a7020]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                        </Link>
+                    </div>
                 </div>
-
-                {/* Desktop CTA */}
-                <Link
-                    href="/curious-shift"
-                    className="mx-auto block w-full max-w-md rounded-2xl border bg-gradient-to-r from-[#B7D3EA] to-[#F7F6E7] p-8 shadow-lg transition [-webkit-tap-highlight-color:transparent] hover:scale-[1.02] hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
-                >
-                    <h2 className="font-serif text-3xl text-gray-900">
-                        Got curiosity?
-                    </h2>
-
-                    <p className="mt-6 italic text-gray-600">
-                        We’ve Got Secrets.
-                    </p>
-
-                    <Icons.ArrowRight className="mt-4 size-7" />
-                </Link>
             </div>
         </section>
     );
 }
+

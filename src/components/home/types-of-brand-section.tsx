@@ -27,7 +27,7 @@ export function BrandsCollaboration() {
     ];
 
     return (
-        <section className="mb-10 w-full bg-[#FCFBF4]">
+        <section className="mb-10 w-full bg-white">
             <div className="mx-auto max-w-screen-2xl px-4 sm:px-6">
                 {/* Section Title */}
                 <div className="mb-10 text-center">
@@ -69,7 +69,7 @@ export function BrandsCollaboration() {
 
 export function Page() {
     return (
-        <div className="bg-[#FCFBF4]">
+        <div className="bg-white">
             <BrandsCollaboration />
         </div>
     );

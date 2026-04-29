@@ -407,6 +407,29 @@ export const uploadRouter = {
                     message: "You're not authorized",
                 });
 
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            return {
+                uploaderId: metadata.userId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                url: file.url,
+            };
+        }),
+    reviewImageUploader: f({
+        "image/jpeg": { maxFileSize: "8MB", maxFileCount: 4 },
+        "image/png": { maxFileSize: "8MB", maxFileCount: 4 },
+        "image/webp": { maxFileSize: "8MB", maxFileCount: 4 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
 
             return { userId: auth.userId };
         })

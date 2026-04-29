@@ -364,6 +364,7 @@ class ProductQuery {
         const mediaIds = new Set<string>();
         for (const product of data) {
             product.media.forEach((media) => mediaIds.add(media.id));
+            product.sizeChartMedia?.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
             });
@@ -379,6 +380,10 @@ class ProductQuery {
         const enhancedData = data.map((product) => ({
             ...product,
             media: product.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sizeChartMedia: (product.sizeChartMedia ?? []).map((media) => ({
                 ...media,
                 mediaItem: mediaMap.get(media.id),
             })),
@@ -1565,6 +1570,9 @@ class ProductQuery {
         if (!data) return null;
         const mediaKeys = new Set<string>();
         data.media.forEach((media) => mediaKeys.add(`media:${media.id}:${data.brandId}`));
+        data.sizeChartMedia?.forEach((media) =>
+            mediaKeys.add(`media:${media.id}:${data.brandId}`)
+        );
         data.variants.forEach((variant) => {
             if (variant.image) mediaKeys.add(`media:${variant.image}:${data.brandId}`);
         });
@@ -1579,6 +1587,10 @@ class ProductQuery {
         const enhancedData = {
             ...data,
             media: data.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sizeChartMedia: (data.sizeChartMedia ?? []).map((media) => ({
                 ...media,
                 mediaItem: mediaMap.get(media.id),
             })),
@@ -1776,6 +1788,7 @@ class ProductQuery {
 
         const mediaIds = new Set<string>();
         data.media.forEach((media) => mediaIds.add(media.id));
+        data.sizeChartMedia?.forEach((media) => mediaIds.add(media.id));
         data.variants.forEach((variant) => {
             if (variant.image) mediaIds.add(variant.image);
         });
@@ -1790,6 +1803,10 @@ class ProductQuery {
         const enhancedData = {
             ...data,
             media: data.media.map((media) => ({
+                ...media,
+                mediaItem: mediaMap.get(media.id),
+            })),
+            sizeChartMedia: (data.sizeChartMedia ?? []).map((media) => ({
                 ...media,
                 mediaItem: mediaMap.get(media.id),
             })),
@@ -3387,6 +3404,7 @@ class ProductQuery {
                     with: {
                         brand: true,
                         variants: true,
+                        options: true,
                         returnExchangePolicy: true,
                         specifications: true,
                     },
@@ -3474,6 +3492,8 @@ class ProductQuery {
                     with: {
                         brand: true,
                         variants: true,
+                        options: true,
+                        productType: true,
                         returnExchangePolicy: true,
                         specifications: true,
                     },
@@ -4839,14 +4859,87 @@ class ProductQuery {
         categoryId?: string;
         subcategoryId?: string;
         productTypeId?: string;
+        search?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        colors?: string[];
+        sizes?: string[];
+        minDiscount?: number;
     }): Promise<{ id: string; name: string; slug: string; count: number }[]> {
         try {
+            const normalizedColors = filters?.colors?.map((c) =>
+                c.toLowerCase()
+            );
+            const normalizedSizes = filters?.sizes?.map((s) => s.toLowerCase());
+            const colorOptionNames = ["colour", "color"];
+            const sizeOptionNames = ["sizes", "size"];
+
             const whereConditions = [
                 eq(products.isDeleted, false),
                 eq(products.isActive, true),
+                eq(products.isAvailable, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
                 eq(brands.isActive, true),
+                hasMedia(products, "media"),
+                filters?.search?.length
+                    ? ilike(products.title, `%${filters.search}%`)
+                    : undefined,
+                filters?.minPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.maxPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.minDiscount !== undefined
+                    ? sql`(
+                        CASE
+                            WHEN COALESCE(${products.compareAtPrice}, 0) > 0 AND COALESCE(${products.price}, 0) > 0
+                                THEN ((${products.compareAtPrice} - ${products.price}) * 100.0 / ${products.compareAtPrice})
+                            ELSE 0
+                        END
+                    ) >= ${filters.minDiscount}`
+                    : undefined,
+                normalizedColors?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(colorOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedColors, sql`, `)})
+                        )
+                    `
+                    : undefined,
+                normalizedSizes?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(sizeOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedSizes, sql`, `)})
+                        )
+                    `
+                    : undefined,
             ];
 
             if (filters?.categoryId) {

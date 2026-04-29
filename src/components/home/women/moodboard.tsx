@@ -25,7 +25,7 @@ export function MoodboardItem({
     if (!moodboardItems.length) return null;
 
     return (
-        <section className={cn("w-full bg-[#FCFBF4] pb-6 md:pb-10", className)}>
+        <section className={cn("w-full bg-white pb-6 md:pb-10", className)}>
             <div className="mx-auto max-w-screen-2xl">
                 {/* Title & Subtitle */}
                 <div className="mb-4 px-4 pt-6 text-center sm:px-6 md:mb-10 md:pt-8 lg:px-8">

@@ -43,7 +43,7 @@ export function ProductGrid({
         });
 
     return (
-        <div className={cn("bg-[#FCFBF4] py-8", className)} {...props}>
+        <div className={cn("bg-white py-8", className)} {...props}>
             <div className="mx-auto max-w-screen-2xl px-6">
                 {/* Header */}
                 <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">

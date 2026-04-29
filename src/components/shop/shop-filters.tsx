@@ -18,8 +18,9 @@ import {
     parseAsString,
     parseAsStringLiteral,
     useQueryState,
+    useQueryStates,
 } from "nuqs";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { findBestMatch } from "string-similarity";
 import { Icons } from "../icons";
 import { Button } from "../ui/button-general";
@@ -363,8 +364,7 @@ type ActiveFilter =
     | "brand"
     | "price"
     | "discount"
-    | "color"
-    | "size";
+    | "color";
 
 interface GenericProps {
     className?: string;
@@ -382,6 +382,24 @@ interface PageProps extends GenericProps {
     sizes?: string[];
 }
 
+const getBrandProductCount = (brand: any): number | null => {
+    const possibleValues = [
+        brand?.productCount,
+        brand?.count,
+        brand?.productsCount,
+        brand?.totalCount,
+        brand?.total,
+    ];
+
+    for (const value of possibleValues) {
+        if (value === null || value === undefined) continue;
+        const parsed = Number(value);
+        if (Number.isFinite(parsed)) return parsed;
+    }
+
+    return null;
+};
+
 // --- MAIN COMPONENT ---
 export function ShopFilters({
     className,
@@ -397,7 +415,6 @@ export function ShopFilters({
 }: PageProps) {
     const isMobile = useMediaQuery("(max-width: 768px)");
     const [search, setSearch] = useQueryState("search", { defaultValue: "" });
-    const [activeFilter, setActiveFilter] = useState<ActiveFilter>("brand");
 
     // Use useMemo to prevent re-calculating on every render
     const allSizes = useMemo(
@@ -410,6 +427,58 @@ export function ShopFilters({
         ],
         [alphaSize, numSize, sizes]
     );
+    const availableSubCategories = useMemo(
+        () =>
+            subCategories.filter(
+                (subCategory) => (subCategory.productCount ?? 0) > 0
+            ),
+        [subCategories]
+    );
+    const availableProductTypes = useMemo(
+        () => productTypes.filter((type) => (type.productCount ?? 0) > 0),
+        [productTypes]
+    );
+    const availableColors = useMemo(
+        () => colors.filter((color) => color.count > 0),
+        [colors]
+    );
+    const availableBrands = useMemo(
+        () =>
+            brandsMeta.filter((brand: any) => {
+                const count = getBrandProductCount(brand);
+                return count === null ? true : count > 0;
+            }),
+        [brandsMeta]
+    );
+    const hasBrands = availableBrands.length > 0;
+    const hasCategoryTree =
+        categories.length > 0 || availableSubCategories.length > 0;
+    const hasPrice = true;
+    const hasDiscount = true;
+    const hasColors = availableColors.length > 0;
+
+    const availableMobileFilters = useMemo(
+        () => [
+            ...(hasBrands ? (["brand"] as ActiveFilter[]) : []),
+            ...(hasCategoryTree ? (["category"] as ActiveFilter[]) : []),
+            ...(hasPrice ? (["price"] as ActiveFilter[]) : []),
+            ...(hasColors ? (["color"] as ActiveFilter[]) : []),
+            ...(hasDiscount ? (["discount"] as ActiveFilter[]) : []),
+        ],
+        [hasBrands, hasCategoryTree, hasPrice, hasColors, hasDiscount]
+    );
+    const [activeFilter, setActiveFilter] = useState<ActiveFilter>(
+        availableMobileFilters[0] ?? "price"
+    );
+
+    useEffect(() => {
+        if (
+            availableMobileFilters.length > 0 &&
+            !availableMobileFilters.includes(activeFilter)
+        ) {
+            setActiveFilter(availableMobileFilters[0]);
+        }
+    }, [activeFilter, availableMobileFilters]);
 
     return isMobile ? (
         <>
@@ -428,61 +497,60 @@ export function ShopFilters({
                     className="flex h-screen flex-col p-0"
                     style={{ scrollbarWidth: "none" }}
                 >
-                    <SheetHeader className="border-b p-4">
-                        <SheetTitle className="text-start">Filters</SheetTitle>
+                    <SheetHeader className="border-b border-[#e3e8ef] bg-[#f8fafd] p-4">
+                        <SheetTitle className="text-start text-base font-semibold text-[#20304a]">
+                            Filters
+                        </SheetTitle>
                     </SheetHeader>
                     <div className="flex flex-1 overflow-hidden">
-                        <nav className="w-1/3 overflow-y-auto border-r bg-gray-50">
-                            <FilterNavButton
-                                label="Brand"
-                                isActive={activeFilter === "brand"}
-                                onClick={() => setActiveFilter("brand")}
-                            />
-                            <FilterNavButton
-                                label="Category"
-                                isActive={activeFilter === "category"}
-                                onClick={() => setActiveFilter("category")}
-                            />
+                        <nav className="w-1/3 overflow-y-auto border-r border-[#e4e9f0] bg-[#f6f8fb]">
+                            {hasBrands && (
+                                <FilterNavButton
+                                    label="Brand"
+                                    isActive={activeFilter === "brand"}
+                                    onClick={() => setActiveFilter("brand")}
+                                />
+                            )}
+                            {hasCategoryTree && (
+                                <FilterNavButton
+                                    label="Category"
+                                    isActive={activeFilter === "category"}
+                                    onClick={() => setActiveFilter("category")}
+                                />
+                            )}
                             <FilterNavButton
                                 label="Price"
                                 isActive={activeFilter === "price"}
                                 onClick={() => setActiveFilter("price")}
                             />
-                            <FilterNavButton
-                                label="Color"
-                                isActive={activeFilter === "color"}
-                                onClick={() => setActiveFilter("color")}
-                            />
+                            {hasColors && (
+                                <FilterNavButton
+                                    label="Color"
+                                    isActive={activeFilter === "color"}
+                                    onClick={() => setActiveFilter("color")}
+                                />
+                            )}
                             <FilterNavButton
                                 label="Discount"
                                 isActive={activeFilter === "discount"}
                                 onClick={() => setActiveFilter("discount")}
                             />
-                            <FilterNavButton
-                                label="Size"
-                                isActive={activeFilter === "size"}
-                                onClick={() => setActiveFilter("size")}
-                            />
                         </nav>
                         <div className="w-2/3 overflow-y-auto p-4">
-                            {activeFilter === "brand" && (
-                                <BrandFilter brandsMeta={brandsMeta} />
+                            {activeFilter === "brand" && hasBrands && (
+                                <BrandFilter brandsMeta={availableBrands} />
                             )}
-                            {activeFilter === "category" && (
+                            {activeFilter === "category" && hasCategoryTree && (
                                 <CategoryFilter
                                     categories={categories}
-                                    subCategories={subCategories}
-                                    productTypes={productTypes}
-                                    setSearch={setSearch}
+                                    subCategories={availableSubCategories}
+                                    productTypes={availableProductTypes}
                                 />
                             )}
                             {activeFilter === "price" && <PriceFilter />}
                             {activeFilter === "discount" && <DiscountFilter />}
-                            {activeFilter === "color" && (
-                                <ColorFilter colors={colors} />
-                            )}
-                            {activeFilter === "size" && (
-                                <SizeFilter allSizes={allSizes} />
+                            {activeFilter === "color" && hasColors && (
+                                <ColorFilter colors={availableColors} />
                             )}
                         </div>
                     </div>
@@ -500,11 +568,11 @@ export function ShopFilters({
     ) : (
         <ShopFiltersSection
             className={className}
-            brandsMeta={brandsMeta}
+            brandsMeta={availableBrands}
             categories={categories}
-            subCategories={subCategories}
-            productTypes={productTypes}
-            colors={colors}
+            subCategories={availableSubCategories}
+            productTypes={availableProductTypes}
+            colors={availableColors}
             allSizes={allSizes}
             search={search}
             setSearch={setSearch}
@@ -528,10 +596,10 @@ function FilterNavButton({
         <button
             onClick={onClick}
             className={cn(
-                "w-full p-4 text-left text-sm font-medium",
+                "w-full border-l-2 border-transparent px-3 py-3 text-left text-sm font-medium transition-colors",
                 isActive
-                    ? "bg-white font-bold text-black"
-                    : "text-gray-600 hover:bg-gray-100"
+                    ? "border-[#1f334e] bg-white font-semibold text-[#1f334e]"
+                    : "text-[#607289] hover:bg-[#eef3f9]"
             )}
         >
             {label}
@@ -553,7 +621,6 @@ function ShopFiltersSection({
     productTypes,
     colors,
     allSizes,
-    setSearch,
     ...props
 }: {
     className?: string;
@@ -564,56 +631,126 @@ function ShopFiltersSection({
     colors: { name: string; count: number }[];
     allSizes: string[];
     search?: string;
-    setSearch?: (value: string | null) => void;
     [key: string]: any;
 }) {
+    const hasCategories = categories.length > 0;
+    const hasBrands = brandsMeta.length > 0;
+    const hasColors = colors.length > 0;
+
     return (
-        <div className={cn("space-y-6", className)} {...props}>
-            <div className="flex items-center justify-between">
-                <h4 className="text-lg font-semibold">Filters</h4>
-                <Button size="sm" variant="outline" onClick={handleResetAll}>
-                    <Icons.History className="mr-1" />
-                    Reset All
+        <div
+            className={cn(
+                "overflow-hidden rounded-[26px] border border-[#dbe3ec] bg-white",
+                className
+            )}
+            {...props}
+        >
+            <div className="flex items-center justify-between border-b border-[#e6ecf3] bg-[#f2f6fb] px-5 py-5">
+                <h4 className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#223f62]">
+                    Refine Results
+                </h4>
+                <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleResetAll}
+                    className="h-11 rounded-full border-[#bfd0e2] bg-white px-5 text-xs font-semibold uppercase tracking-[0.12em] text-[#28476b] hover:bg-[#f6f9fd]"
+                >
+                    <Icons.History className="mr-2 size-4" />
+                    Reset
                 </Button>
             </div>
-            <Separator />
-            <CategoryFilter
-                categories={categories}
-                subCategories={subCategories}
-                productTypes={productTypes}
-                setSearch={setSearch}
-            />
-            <Separator />
-            <BrandFilter brandsMeta={brandsMeta} />
-            <Separator />
-            <PriceFilter />
-            <Separator />
-            <DiscountFilter />
-            <Separator />
-            <ColorFilter colors={colors} />
-            <Separator />
-            <SizeFilter allSizes={allSizes} />
+
+            <div className="max-h-[calc(100vh-11rem)] space-y-5 overflow-y-auto px-5 py-5">
+                {hasCategories && (
+                    <>
+                        <CategoryFilter
+                            categories={categories}
+                            subCategories={subCategories}
+                            productTypes={productTypes}
+                        />
+                        <Separator />
+                    </>
+                )}
+
+                {hasBrands && (
+                    <>
+                        <BrandFilter brandsMeta={brandsMeta} />
+                        <Separator />
+                    </>
+                )}
+
+                <PriceFilter />
+                <Separator />
+                <DiscountFilter />
+
+                {hasColors && (
+                    <>
+                        <Separator />
+                        <ColorFilter colors={colors} />
+                    </>
+                )}
+
+            </div>
         </div>
     );
 }
 
 // --- INDIVIDUAL FILTER COMPONENTS ---
 
-function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
+function BrandFilter({
+    brandsMeta,
+    showHeading = true,
+}: {
+    brandsMeta: BrandMeta[];
+    showHeading?: boolean;
+}) {
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
     const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
     const [showAllBrands, setShowAllBrands] = useState(false);
-    const visibleBrands = showAllBrands ? brandsMeta : brandsMeta.slice(0, 10);
+    const brandsWithProducts = useMemo(
+        () =>
+            brandsMeta.filter((brand) => {
+                const count = getBrandProductCount(brand);
+                return count === null ? true : count > 0;
+            }),
+        [brandsMeta]
+    );
+    const validBrandIds = useMemo(
+        () => new Set(brandsWithProducts.map((brand) => brand.id)),
+        [brandsWithProducts]
+    );
+
+    useEffect(() => {
+        const nextBrandIds = brandIds.filter((brandId) =>
+            validBrandIds.has(brandId)
+        );
+
+        if (nextBrandIds.length !== brandIds.length) {
+            void setBrandIds(nextBrandIds);
+        }
+    }, [brandIds, setBrandIds, validBrandIds]);
+
+    const visibleBrands = showAllBrands
+        ? brandsWithProducts
+        : brandsWithProducts.slice(0, 10);
 
     return (
-        <div className="space-y-2">
-            <Label className="font-semibold uppercase">Brands</Label>
-            <div className="space-y-2">
+        <div className="space-y-2.5">
+            {showHeading && (
+                <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                    Brands
+                </Label>
+            )}
+            <div className="space-y-1">
                 {visibleBrands.map((brand) => (
-                    <div key={brand.id} className="flex items-center space-x-2">
+                    <label
+                        key={brand.id}
+                        htmlFor={`brand-${brand.id}`}
+                        className="flex cursor-pointer items-center space-x-2 rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
+                    >
                         <Checkbox
                             id={`brand-${brand.id}`}
                             checked={brandIds.includes(brand.id)}
@@ -628,16 +765,16 @@ function BrandFilter({ brandsMeta }: { brandsMeta: BrandMeta[] }) {
                         />
                         <Label
                             htmlFor={`brand-${brand.id}`}
-                            className="font-normal"
+                            className="cursor-pointer text-sm font-normal text-[#30455f]"
                         >
                             {brand.name}
                         </Label>
-                    </div>
+                    </label>
                 ))}
             </div>
-            {brandsMeta.length > 10 && (
+            {brandsWithProducts.length > 10 && (
                 <button
-                    className="mt-2 text-sm text-blue-600 hover:underline"
+                    className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#3b5f89] hover:underline"
                     onClick={() => setShowAllBrands(!showAllBrands)}
                 >
                     {showAllBrands ? "View Less -" : "View More +"}
@@ -651,159 +788,240 @@ function CategoryFilter({
     categories,
     subCategories,
     productTypes,
-    setSearch,
+    showCategoryHeading = true,
 }: {
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
-    setSearch?: (value: string | null) => void;
+    showCategoryHeading?: boolean;
 }) {
-    const [categoryId, setCategoryId] = useQueryState("categoryId", {
-        defaultValue: "",
+    const INITIAL_VISIBLE_SUBCATEGORIES = 5;
+    const INITIAL_VISIBLE_TYPES = 5;
+    const [showAllSubCategories, setShowAllSubCategories] = useState(false);
+    const [showAllTypes, setShowAllTypes] = useState(false);
+    const [filterState, setFilterState] = useQueryStates({
+        categoryId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        subCategoryId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        subcategoryId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        productTypeId: parseAsString.withDefault("").withOptions({
+            shallow: false,
+        }),
+        shopPage: parseAsInteger.withDefault(1),
+        search: parseAsString.withDefault(""),
     });
-    const [subCategoryId, setSubCategoryId] = useQueryState("subCategoryId", {
-        defaultValue: "",
-    });
-    const [legacySubCategoryId, setLegacySubCategoryId] = useQueryState(
-        "subcategoryId",
-        {
-            defaultValue: "",
-        }
-    );
+    const {
+        categoryId,
+        subCategoryId,
+        subcategoryId: legacySubCategoryId,
+        productTypeId,
+    } = filterState;
     const effectiveSubCategoryId = subCategoryId || legacySubCategoryId;
-    const updateSubCategoryId = (id: string) => {
-        void setSubCategoryId(id);
-        // Clear legacy key once we write the canonical one.
-        void setLegacySubCategoryId(null);
-    };
-    const clearSubCategoryId = () => {
-        updateSubCategoryId("");
-    };
+    const updateSubCategoryId = (id: string) =>
+        setFilterState({
+            subCategoryId: id,
+            // Clear legacy key once we write the canonical one.
+            subcategoryId: null,
+            productTypeId: "",
+            shopPage: 1,
+            search: "",
+        });
     const toggleSubCategoryId = (id: string) => {
-        updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
+        return updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
     };
-    const [productTypeId, setProductTypeId] = useQueryState("productTypeId", {
-        defaultValue: "",
-    });
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const categoryCountMap = useMemo(() => {
+        const map = new Map<string, number>();
+        for (const subCategory of subCategories) {
+            const key = String(subCategory.categoryId);
+            const next =
+                (map.get(key) ?? 0) + Math.max(subCategory.productCount ?? 0, 0);
+            map.set(key, next);
+        }
+        return map;
+    }, [subCategories]);
+    const filteredSubCategories = useMemo(
+        () =>
+            subCategories.filter(
+                (s) =>
+                    s.productCount > 0 &&
+                    (categoryId
+                        ? String(s.categoryId) === String(categoryId)
+                        : true)
+            ),
+        [subCategories, categoryId]
+    );
+    const visibleSubCategories = showAllSubCategories
+        ? filteredSubCategories
+        : filteredSubCategories.slice(0, INITIAL_VISIBLE_SUBCATEGORIES);
+    const filteredTypes = useMemo(
+        () =>
+            productTypes.filter(
+                (t) =>
+                    (t.productCount ?? 0) > 0 &&
+                    String(t.subCategoryId) === String(effectiveSubCategoryId)
+            ),
+        [productTypes, effectiveSubCategoryId]
+    );
+    const visibleTypes = showAllTypes
+        ? filteredTypes
+        : filteredTypes.slice(0, INITIAL_VISIBLE_TYPES);
 
     return (
         <div className="space-y-4">
             <div className="space-y-2">
-                <Label className="font-semibold uppercase">Category</Label>
+                {showCategoryHeading && (
+                    <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                        Category
+                    </Label>
+                )}
                 <RadioGroup
                     value={categoryId}
                     onValueChange={(id) => {
-                        setCategoryId(id === categoryId ? "" : id);
-                        clearSubCategoryId();
-                        setProductTypeId("");
-                        setPage(1);
-                        if (setSearch) setSearch("");
+                        void setFilterState({
+                            categoryId: id === categoryId ? "" : id,
+                            subCategoryId: "",
+                            subcategoryId: null,
+                            productTypeId: "",
+                            shopPage: 1,
+                            search: "",
+                        });
                     }}
                     className="space-y-2"
                 >
                     {categories.map((cat) => (
-                        <div
+                        <label
                             key={cat.id}
-                            className="flex items-center space-x-2"
+                            htmlFor={`cat-${cat.id}`}
+                            className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
                         >
-                            <RadioGroupItem
-                                value={cat.id}
-                                id={`cat-${cat.id}`}
-                            />
-                            <Label
-                                htmlFor={`cat-${cat.id}`}
-                                className="font-normal"
-                            >
-                                {cat.name}
-                            </Label>
-                        </div>
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem
+                                    value={cat.id}
+                                    id={`cat-${cat.id}`}
+                                />
+                                <Label
+                                    htmlFor={`cat-${cat.id}`}
+                                    className="cursor-pointer text-sm font-normal text-[#30455f]"
+                                >
+                                    {cat.name}
+                                </Label>
+                            </div>
+                            <span className="text-xs text-[#8ba0bb]">
+                                {cat.productCount ??
+                                    categoryCountMap.get(String(cat.id)) ??
+                                    0}
+                            </span>
+                        </label>
                     ))}
                 </RadioGroup>
             </div>
             <Separator />
             <div className="space-y-2">
-                <Label className="font-semibold uppercase">Subcategory</Label>
+                <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                    Subcategory
+                </Label>
                 <RadioGroup
                     value={effectiveSubCategoryId}
                     onValueChange={(id) => {
-                        toggleSubCategoryId(id);
-                        setProductTypeId("");
-                        setPage(1);
-                        if (setSearch) setSearch("");
+                        void toggleSubCategoryId(id);
                     }}
-                    className="max-h-48 space-y-2 overflow-y-auto"
+                    className="space-y-2"
                 >
-                    {subCategories
-                        .filter(
-                            (s) =>
-                                s.productCount > 0 &&
-                                (categoryId
-                                    ? String(s.categoryId) ===
-                                      String(categoryId)
-                                    : true)
-                        )
-                        .map((sub) => (
-                            <div
+                    {visibleSubCategories.map((sub) => (
+                            <label
                                 key={sub.id}
-                                className="flex items-center space-x-2"
+                                htmlFor={`sub-${sub.id}`}
+                                className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
                             >
-                                <RadioGroupItem
-                                    value={sub.id}
-                                    id={`sub-${sub.id}`}
-                                />
-                                <Label
-                                    htmlFor={`sub-${sub.id}`}
-                                    className="font-normal"
-                                >
-                                    {sub.name}
-                                </Label>
-                            </div>
+                                <div className="flex items-center space-x-2">
+                                    <RadioGroupItem
+                                        value={sub.id}
+                                        id={`sub-${sub.id}`}
+                                    />
+                                    <Label
+                                        htmlFor={`sub-${sub.id}`}
+                                        className="cursor-pointer text-sm font-normal text-[#30455f]"
+                                    >
+                                        {sub.name}
+                                    </Label>
+                                </div>
+                                <span className="text-xs text-[#8ba0bb]">
+                                    {sub.productCount ?? 0}
+                                </span>
+                            </label>
                         ))}
                 </RadioGroup>
+                {filteredSubCategories.length > INITIAL_VISIBLE_SUBCATEGORIES && (
+                    <button
+                        type="button"
+                        onClick={() => setShowAllSubCategories((prev) => !prev)}
+                        className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#3b5f89] hover:underline"
+                    >
+                        {showAllSubCategories
+                            ? "View less"
+                            : `View more (${filteredSubCategories.length - INITIAL_VISIBLE_SUBCATEGORIES})`}
+                    </button>
+                )}
             </div>
-            <Separator />
             {effectiveSubCategoryId && (
                 <>
                     <Separator />
                     <div className="space-y-2">
-                        <Label className="font-semibold uppercase">Type</Label>
+                        <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                            Type
+                        </Label>
                         <RadioGroup
                             value={productTypeId}
                             onValueChange={(id) => {
-                                setProductTypeId(
-                                    id === productTypeId ? "" : id
-                                );
-                                setPage(1);
-                                if (setSearch) setSearch("");
+                                void setFilterState({
+                                    productTypeId:
+                                        id === productTypeId ? "" : id,
+                                    shopPage: 1,
+                                    search: "",
+                                });
                             }}
-                            className="max-h-48 space-y-2 overflow-y-auto"
+                            className="space-y-2"
                         >
-                            {productTypes
-                                .filter(
-                                    (t) =>
-                                        (t.productCount ?? 0) > 0 &&
-                                        String(t.subCategoryId) ===
-                                            String(effectiveSubCategoryId)
-                                )
-                                .map((t) => (
-                                    <div
+                            {visibleTypes.map((t) => (
+                                    <label
                                         key={t.id}
-                                        className="flex items-center space-x-2"
+                                        htmlFor={`type-${t.id}`}
+                                        className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
                                     >
-                                        <RadioGroupItem
-                                            value={t.id}
-                                            id={`type-${t.id}`}
-                                        />
-                                        <Label
-                                            htmlFor={`type-${t.id}`}
-                                            className="font-normal"
-                                        >
-                                            {t.name}
-                                        </Label>
-                                    </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem
+                                                value={t.id}
+                                                id={`type-${t.id}`}
+                                            />
+                                            <Label
+                                                htmlFor={`type-${t.id}`}
+                                                className="cursor-pointer text-sm font-normal text-[#30455f]"
+                                            >
+                                                {t.name}
+                                            </Label>
+                                        </div>
+                                        <span className="text-xs text-[#8ba0bb]">
+                                            {t.productCount ?? 0}
+                                        </span>
+                                    </label>
                                 ))}
                         </RadioGroup>
+                        {filteredTypes.length > INITIAL_VISIBLE_TYPES && (
+                            <button
+                                type="button"
+                                onClick={() => setShowAllTypes((prev) => !prev)}
+                                className="mt-1 text-xs font-semibold uppercase tracking-[0.12em] text-[#3b5f89] hover:underline"
+                            >
+                                {showAllTypes
+                                    ? "View less"
+                                    : `View more (${filteredTypes.length - INITIAL_VISIBLE_TYPES})`}
+                            </button>
+                        )}
                     </div>
                 </>
             )}
@@ -811,7 +1029,7 @@ function CategoryFilter({
     );
 }
 
-function PriceFilter() {
+function PriceFilter({ showHeading = true }: { showHeading?: boolean }) {
     const [minPrice, setMinPrice] = useQueryState(
         "minPrice",
         parseAsInteger.withDefault(0)
@@ -828,7 +1046,11 @@ function PriceFilter() {
 
     return (
         <div className="space-y-3">
-            <Label className="font-semibold uppercase">Price</Label>
+            {showHeading && (
+                <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                    Price
+                </Label>
+            )}
             <Slider
                 value={priceRange}
                 step={100}
@@ -841,7 +1063,7 @@ function PriceFilter() {
                     setPage(1);
                 }}
             />
-            <p className="text-sm tabular-nums">
+            <p className="text-sm tabular-nums text-[#30455f]">
                 {formatPriceTag(priceRange[0])} -{" "}
                 {formatPriceTag(priceRange[1])}
                 {priceRange[1] === 1000000 && "+"}
@@ -858,7 +1080,7 @@ const DISCOUNT_OPTIONS = [
     { value: 50, label: "50% and above" },
 ];
 
-function DiscountFilter() {
+function DiscountFilter({ showHeading = true }: { showHeading?: boolean }) {
     const [minDiscount, setMinDiscount] = useQueryState(
         "minDiscount",
         parseAsInteger
@@ -867,7 +1089,11 @@ function DiscountFilter() {
 
     return (
         <div className="space-y-2">
-            <Label className="font-semibold uppercase">Discount Range</Label>
+            {showHeading && (
+                <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                    Discount Range
+                </Label>
+            )}
             <RadioGroup
                 value={minDiscount?.toString() || ""}
                 onValueChange={(value) => {
@@ -878,9 +1104,10 @@ function DiscountFilter() {
                 className="space-y-2"
             >
                 {DISCOUNT_OPTIONS.map((option) => (
-                    <div
+                    <label
                         key={option.value}
-                        className="flex items-center space-x-2"
+                        htmlFor={`discount-${option.value}`}
+                        className="flex cursor-pointer items-center space-x-2 rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
                     >
                         <RadioGroupItem
                             value={option.value.toString()}
@@ -888,11 +1115,11 @@ function DiscountFilter() {
                         />
                         <Label
                             htmlFor={`discount-${option.value}`}
-                            className="font-normal"
+                            className="cursor-pointer text-sm font-normal text-[#30455f]"
                         >
                             {option.label}
                         </Label>
-                    </div>
+                    </label>
                 ))}
             </RadioGroup>
         </div>
@@ -901,8 +1128,10 @@ function DiscountFilter() {
 
 function ColorFilter({
     colors,
+    showHeading = true,
 }: {
     colors: { name: string; count: number }[];
+    showHeading?: boolean;
 }) {
     const [colorFilters, setColorFilters] = useQueryState(
         "colors",
@@ -1172,6 +1401,7 @@ function ColorFilter({
             {};
 
         for (const color of colors) {
+            if (color.count <= 0) continue;
             const category = getMainCategory(color.name);
             if (!groups[category]) {
                 groups[category] = { rawColors: [], count: 0 };
@@ -1220,14 +1450,18 @@ function ColorFilter({
 
     return (
         <div className="space-y-3">
-            <Label className="font-semibold uppercase">Color</Label>
+            {showHeading && (
+                <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                    Color
+                </Label>
+            )}
             <div className="space-y-2">
                 {visibleColors.map((category) => {
                     const isSelected = isCategorySelected(category.rawColors);
                     return (
                         <div
                             key={category.name}
-                            className="flex cursor-pointer items-center gap-3"
+                            className="flex cursor-pointer items-center gap-3 rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
                             onClick={() => toggleCategory(category.rawColors)}
                         >
                             <Checkbox
@@ -1261,7 +1495,7 @@ function ColorFilter({
             </div>
             {groupedColors.length > INITIAL_VISIBLE_COUNT && (
                 <button
-                    className="text-sm font-medium text-accent hover:underline"
+                    className="text-xs font-semibold uppercase tracking-[0.12em] text-[#3b5f89] hover:underline"
                     onClick={() => setShowAllColors(!showAllColors)}
                 >
                     {showAllColors ? "Show less" : `+${remainingCount} more`}
@@ -1309,7 +1543,13 @@ const categorizeSizes = (sizes: string[]) => {
 };
 
 // +++ UPDATED: SizeFilter component +++
-function SizeFilter({ allSizes }: { allSizes: string[] }) {
+function SizeFilter({
+    allSizes,
+    showHeading = true,
+}: {
+    allSizes: string[];
+    showHeading?: boolean;
+}) {
     const [sizeFilters, setSizeFilters] = useQueryState(
         "sizes",
         parseAsArrayOf(parseAsString, ",").withDefault([])
@@ -1319,9 +1559,25 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
         "categoryId",
         parseAsString.withDefault("")
     );
+    const [subCategoryId] = useQueryState(
+        "subCategoryId",
+        parseAsString.withDefault("")
+    );
+    const [productTypeId] = useQueryState(
+        "productTypeId",
+        parseAsString.withDefault("")
+    );
 
     // Categorize sizes
     const categorized = useMemo(() => categorizeSizes(allSizes), [allSizes]);
+    const validSizeSet = useMemo(() => new Set(allSizes), [allSizes]);
+
+    useEffect(() => {
+        const invalidSelected = sizeFilters.filter((size) => !validSizeSet.has(size));
+        if (invalidSelected.length > 0) {
+            setSizeFilters(sizeFilters.filter((size) => validSizeSet.has(size)));
+        }
+    }, [sizeFilters, setSizeFilters, validSizeSet]);
 
     const handleSizeClick = (size: string) => {
         setSizeFilters(
@@ -1337,7 +1593,7 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
         if (sizes.length === 0) return null;
         return (
             <div className="space-y-2">
-                <Label className="font-semibold uppercase text-gray-600">
+                <Label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#6a7f99]">
                     {title}
                 </Label>
                 <div className="flex flex-wrap gap-2">
@@ -1347,10 +1603,10 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
                             type="button"
                             onClick={() => handleSizeClick(size)}
                             className={cn(
-                                "rounded-md border px-3 py-1 text-sm",
+                                "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
                                 sizeFilters.includes(size)
-                                    ? "border-black bg-black text-white"
-                                    : "bg-white text-black hover:bg-gray-100"
+                                    ? "border-[#1f334e] bg-[#1f334e] text-white"
+                                    : "border-[#cfd9e4] bg-white text-[#30455f] hover:bg-[#f4f8fc]"
                             )}
                         >
                             {size}
@@ -1363,6 +1619,16 @@ function SizeFilter({ allSizes }: { allSizes: string[] }) {
 
     return (
         <div className="space-y-4">
+            {showHeading && (
+                <Label className="text-xs font-semibold uppercase tracking-[0.14em] text-[#5a6f8c]">
+                    Size
+                </Label>
+            )}
+            {(categoryId || subCategoryId || productTypeId) && (
+                <p className="text-xs text-[#6c7f97]">
+                    Showing sizes for current filters
+                </p>
+            )}
             {renderSizeGroup("Standard Sizes", categorized.standard)}
             {categoryId && renderSizeGroup("Age-Based", categorized.age)}
             {categoryId && renderSizeGroup("Other Sizes", categorized.other)}

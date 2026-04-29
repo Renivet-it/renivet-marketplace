@@ -87,7 +87,7 @@ export function ProductGrid({
     };
 
     return (
-        <section className={cn("bg-[#FCFBF4] py-4", className)}>
+        <section className={cn("bg-white py-4", className)}>
             {/* TITLE */}
             <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 {title}
@@ -114,6 +114,7 @@ export function ProductGrid({
             </div>
 
             {/* ================= DESKTOP ================= */}
+
             <div className="relative mx-auto hidden w-full px-4 md:block">
                 <Carousel
                     opts={{ align: "start", loop: true }}

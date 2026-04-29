@@ -11,14 +11,14 @@ interface PageProps extends GenericProps {
 export function NewCollection({ className, banners, ...props }: PageProps) {
     return (
         <section
-            className={cn(className, "bg-[#FCFBF4] py-4 md:py-12")}
+            className={cn(className, "bg-white py-4 md:py-12")}
             {...props}
         >
             <div className="mx-auto space-y-4 px-0 md:container md:space-y-6">
                 {banners.map((item, index) => (
                     <div
                         key={index}
-                        className="relative h-auto w-full overflow-hidden rounded-none bg-[#FCFBF4] md:h-[400px] md:rounded-lg"
+                        className="relative h-auto w-full overflow-hidden rounded-none bg-white md:h-[400px] md:rounded-lg"
                     >
                         {/* Mobile - full image without cropping */}
                         <div className="block w-full md:hidden">

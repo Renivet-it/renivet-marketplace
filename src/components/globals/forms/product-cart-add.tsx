@@ -2,6 +2,12 @@
 import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-general";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import {
@@ -28,6 +34,7 @@ import {
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -37,7 +44,7 @@ import { DeliveryOption } from "../../products/product/product-delivery";
 import { WishlistButton } from "../buttons";
 
 //
-// 🔹 Guest cart hook
+// ðŸ”¹ Guest cart hook
 //
 function useGuestCart() {
     const [guestCart, setGuestCart] = useState<any[]>([]);
@@ -48,7 +55,7 @@ function useGuestCart() {
         if (stored) setGuestCart(JSON.parse(stored));
     }, []);
 
-    // 🔥 Listen for custom events to update cart
+    // ðŸ”¥ Listen for custom events to update cart
     useEffect(() => {
         const handleCartUpdate = () => {
             const stored = localStorage.getItem("guest_cart");
@@ -89,7 +96,7 @@ function useGuestCart() {
         localStorage.setItem("guest_cart", JSON.stringify(updated));
         setGuestCart(updated);
 
-        // ✅ Defer event so Navbar updates safely
+        // âœ… Defer event so Navbar updates safely
         setTimeout(() => {
             window.dispatchEvent(new Event("guestCartUpdated"));
         }, 0);
@@ -105,7 +112,7 @@ function useGuestCart() {
 }
 
 //
-// 🔹 ProductCartAddForm
+// ðŸ”¹ ProductCartAddForm
 //
 interface PageProps {
     initialCart?: CachedCart[];
@@ -121,6 +128,7 @@ interface PageProps {
     setEstimatedDelivery: (date: string) => void;
     /** When true, hides pricing section & delivery check (used in mobile quick-add drawer) */
     compact?: boolean;
+    hideWishlist?: boolean;
 }
 
 export function ProductCartAddForm({
@@ -136,6 +144,7 @@ export function ProductCartAddForm({
     setZipCode,
     setEstimatedDelivery,
     compact = false,
+    hideWishlist = false,
 }: PageProps) {
     const { trackAddToCartEvent } = useAddToCartTracking();
     const { guestCart, addToGuestCart } = useGuestCart();
@@ -192,6 +201,7 @@ export function ProductCartAddForm({
     });
     const [isAddedToCart, setIsAddedToCart] = useState(false);
     const [isBuyNow, setIsBuyNow] = useState(false);
+    const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
     const isBuyNowRef = useRef(false);
 
     // User cart
@@ -334,6 +344,26 @@ export function ProductCartAddForm({
         });
     }, [product.options]);
 
+    const sizeGuideImages = useMemo(() => {
+        return (product.sizeChartMedia ?? [])
+            .map((media) => ({
+                id: media.id,
+                url:
+                    media.mediaItem?.url ??
+                    ((media as unknown as { url?: string }).url ?? ""),
+                alt: media.mediaItem?.alt ?? "Size guide image",
+                position: media.position,
+            }))
+            .filter((item) => !!item.url)
+            .sort((a, b) => a.position - b.position);
+    }, [product.sizeChartMedia]);
+
+    const hasSizeAndFitContent = useMemo(() => {
+        if (!product.sizeAndFit) return false;
+        const plainText = product.sizeAndFit.replace(/<[^>]*>/g, "").trim();
+        return plainText.length > 0;
+    }, [product.sizeAndFit]);
+
     // Mutation for logged in users
     const { mutate: addToCart, isPending } =
         trpc.general.users.cart.addProductToCart.useMutation({
@@ -360,11 +390,11 @@ export function ProductCartAddForm({
     //
     return (
         <div className="space-y-6">
-            {/* Price — hidden in compact mode (drawer shows its own price) */}
+            {/* Price â€” hidden in compact mode (drawer shows its own price) */}
             {!compact && (
                 <div>
                     <div className="flex items-end gap-2">
-                        <p className="text-3xl font-semibold text-gray-900">
+                        <p className="text-4xl font-semibold tracking-tight text-neutral-900">
                             {formatPriceTag(
                                 parseFloat(convertPaiseToRupees(productPrice)),
                                 true
@@ -383,7 +413,7 @@ export function ProductCartAddForm({
                                             true
                                         )}
                                     </p>
-                                    <p className="text-lg font-semibold text-green-700">
+                                    <span className="rounded-full bg-green-100 px-2.5 py-0.5 text-[12px] font-semibold text-green-700">
                                         {Math.round(
                                             ((parseFloat(
                                                 convertPaiseToRupees(
@@ -401,25 +431,13 @@ export function ProductCartAddForm({
                                                     )
                                                 )) *
                                                 100
-                                        )}
-                                        % OFF
-                                    </p>
+                                        )}% OFF
+                                    </span>
                                 </>
                             )}
                     </div>
-                    {productCompareAtPrice &&
-                        productCompareAtPrice > productPrice && (
-                            <p className="mt-1 text-sm font-medium text-green-700">
-                                You save{" "}
-                                {formatPriceTag(
-                                    (productCompareAtPrice - productPrice) /
-                                        100,
-                                    true
-                                )}
-                            </p>
-                        )}
-                    <p className="text-sm text-gray-500">
-                        inclusive of all taxes
+                    <p className="mt-0.5 text-[13px] text-neutral-400">
+                        Inclusive of all taxes
                     </p>
                 </div>
             )}
@@ -441,7 +459,7 @@ export function ProductCartAddForm({
                         }
 
                         if (userId) {
-                            // Trigger flying animation (safe – e.currentTarget may be null in Sheet drawer)
+                            // Trigger flying animation (safe â€“ e.currentTarget may be null in Sheet drawer)
                             if (e?.currentTarget) {
                                 handleCartFlyAnimation(
                                     e as unknown as React.MouseEvent,
@@ -472,10 +490,10 @@ export function ProductCartAddForm({
                                     ? selectedVariant.price
                                     : product.price,
                                 image: selectedVariant?.image,
-                                fullProduct: product, // 👈 quick fix: insert full product object
+                                fullProduct: product, // ðŸ‘ˆ quick fix: insert full product object
                             };
 
-                            // Trigger flying animation (safe – e.currentTarget may be null in Sheet drawer)
+                            // Trigger flying animation (safe â€“ e.currentTarget may be null in Sheet drawer)
                             if (e?.currentTarget) {
                                 handleCartFlyAnimation(
                                     e as unknown as React.MouseEvent,
@@ -511,10 +529,29 @@ export function ProductCartAddForm({
                                     control={form.control}
                                     name="variantId"
                                     render={({ field }) => (
-                                        <FormItem className="space-y-3">
-                                            <FormLabel className="text-base font-semibold">
-                                                {option.name}
-                                            </FormLabel>
+                                        <FormItem className="space-y-0">
+                                            <div className="mb-3 flex items-center justify-between">
+                                                <FormLabel className="text-[13px] font-semibold uppercase tracking-[0.1em] text-neutral-900">
+                                                    {option.name}
+                                                </FormLabel>
+                                                {["size", "sizes"].includes(
+                                                    option.name.toLowerCase()
+                                                ) &&
+                                                    (sizeGuideImages.length > 0 ||
+                                                        hasSizeAndFitContent) && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                setIsSizeChartOpen(
+                                                                    true
+                                                                )
+                                                            }
+                                                            className="text-[12px] font-semibold uppercase tracking-[0.08em] text-neutral-700 underline underline-offset-4 hover:text-neutral-900"
+                                                        >
+                                                            Size Chart
+                                                        </button>
+                                                    )}
+                                            </div>
                                             <FormControl>
                                                 <RadioGroup
                                                     value={
@@ -553,7 +590,10 @@ export function ProductCartAddForm({
                                                                 variant.id
                                                             );
                                                     }}
-                                                    className="flex flex-wrap gap-2"
+                                                    className={cn(
+                                                        "flex flex-wrap",
+                                                        option.name.toLowerCase() === "color" ? "gap-3" : "gap-2"
+                                                    )}
                                                 >
                                                     {option.values.map(
                                                         (value) => {
@@ -595,42 +635,33 @@ export function ProductCartAddForm({
                                                                                 0
                                                                         }
                                                                     />
-                                                                    <Label
-                                                                        htmlFor={
-                                                                            value.id
-                                                                        }
-                                                                        className={cn(
-                                                                            option.name.toLowerCase() ===
-                                                                                "color"
-                                                                                ? "h-8 w-8 rounded-full border"
-                                                                                : "flex cursor-pointer items-center justify-center rounded-full border px-5 py-3 text-sm font-medium",
-                                                                            currentSelections[
-                                                                                option
-                                                                                    .id
-                                                                            ] ===
-                                                                                value.id &&
-                                                                                "border-black bg-gray-100",
-                                                                            (!isAvailable ||
-                                                                                stockCount ===
-                                                                                    0) &&
-                                                                                "cursor-not-allowed opacity-50"
-                                                                        )}
-                                                                        style={
-                                                                            option.name.toLowerCase() ===
-                                                                            "color"
-                                                                                ? {
-                                                                                      backgroundColor:
-                                                                                          getColorHex(
-                                                                                              value.name
-                                                                                          ),
-                                                                                  }
-                                                                                : {}
-                                                                        }
-                                                                    >
-                                                                        {option.name.toLowerCase() !==
-                                                                            "color" &&
-                                                                            value.name}
-                                                                    </Label>
+                                                                    {option.name.toLowerCase() === "color" ? (
+                                                                        <Label
+                                                                            htmlFor={value.id}
+                                                                            title={value.name}
+                                                                            className={cn(
+                                                                                "relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-150",
+                                                                                currentSelections[option.id] === value.id
+                                                                                    ? "ring-2 ring-neutral-900 ring-offset-2"
+                                                                                    : "ring-1 ring-neutral-300 ring-offset-1 hover:ring-neutral-500",
+                                                                                (!isAvailable || stockCount === 0) && "cursor-not-allowed opacity-40"
+                                                                            )}
+                                                                            style={{ backgroundColor: getColorHex(value.name) }}
+                                                                        />
+                                                                    ) : (
+                                                                        <Label
+                                                                            htmlFor={value.id}
+                                                                            className={cn(
+                                                                                "flex h-10 min-w-[3rem] cursor-pointer items-center justify-center border px-3 text-[13px] font-medium transition-all duration-150",
+                                                                                currentSelections[option.id] === value.id
+                                                                                    ? "border-neutral-900 bg-neutral-900 text-white"
+                                                                                    : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-600",
+                                                                                (!isAvailable || stockCount === 0) && "cursor-not-allowed opacity-40"
+                                                                            )}
+                                                                        >
+                                                                            {value.name}
+                                                                        </Label>
+                                                                    )}
                                                                     {lowStock && (
                                                                         <span className="text-xs text-red-500">
                                                                             Only{" "}
@@ -659,7 +690,7 @@ export function ProductCartAddForm({
                                     )}
                                 />
                             ))}
-                        {/* Delivery — hidden in compact/drawer mode */}
+                        {/* Delivery â€” hidden in compact/drawer mode */}
                         {!compact && (
                             <DeliveryOption
                                 initialZipCode={initialZipCode}
@@ -670,18 +701,13 @@ export function ProductCartAddForm({
                             />
                         )}
 
-                        {/* Inline buttons (normal flow) */}
-                        <div
-                            ref={buttonsRef}
-                            className="flex items-center gap-2 sm:gap-4"
-                        >
+                        {/* Inline buttons — Patagonia-style pill buttons */}
+                        <div ref={buttonsRef} className="flex flex-col gap-3">
+                            {/* Add to Bag — full-width solid black pill */}
                             <Button
                                 type="submit"
-                                size="sm"
-                                className={cn(
-                                    "h-12 rounded-full border border-gray-300 bg-white px-5 text-sm font-semibold text-gray-900 hover:bg-gray-50",
-                                    userId ? "flex-1" : "flex-1"
-                                )}
+                                size="lg"
+                                className="h-14 w-full rounded-full bg-neutral-900 text-[15px] font-semibold tracking-wide text-white transition-all hover:bg-black active:scale-[0.98] disabled:opacity-50"
                                 disabled={
                                     !product.isAvailable ||
                                     (!!selectedVariant &&
@@ -699,166 +725,111 @@ export function ProductCartAddForm({
                                     }
                                     setIsBuyNow(false);
                                     isBuyNowRef.current = false;
-                                    handleAddProductCart(
-                                        product.id,
-                                        product.brandId
-                                    );
+                                    handleAddProductCart(product.id, product.brandId);
                                 }}
                             >
-                                {isPending ? (
-                                    <>
-                                        <Spinner className="mr-2 size-5 animate-spin" />
-                                        Adding...
-                                    </>
+                                {isPending && !isBuyNow ? (
+                                    <><Spinner className="mr-2 size-5 animate-spin" />Adding...</>
                                 ) : isAddedToCart ? (
-                                    <>
-                                        Go to Cart{" "}
-                                        <Icons.ArrowRight className="ml-2 size-5" />
-                                    </>
+                                    <>Go to Bag <Icons.ArrowRight className="ml-2 size-5" /></>
                                 ) : (
-                                    <>
-                                        <Icons.ShoppingCart className="mr-2 size-5" />{" "}
-                                        Add to Cart
-                                    </>
+                                    "Add to Bag"
                                 )}
                             </Button>
 
-                            {userId && (
-                                <Button
-                                    type="submit"
-                                    size="lg"
-                                    className="h-12 flex-1 rounded-full bg-gray-900 text-sm font-semibold text-white hover:bg-gray-800 md:hidden"
-                                    disabled={
-                                        !product.isAvailable ||
-                                        (!!selectedVariant &&
-                                            (selectedVariant.isDeleted ||
-                                                selectedVariant?.quantity ===
-                                                    0)) ||
-                                        (product.productHasVariants &&
-                                            !selectedVariant) ||
-                                        isPending
+                            {/* Buy Now — outline pill */}
+                            <Button
+                                type="submit"
+                                size="lg"
+                                className="h-14 w-full rounded-full border-2 border-neutral-900 bg-transparent text-[15px] font-semibold tracking-wide text-neutral-900 transition-all hover:bg-neutral-100 active:scale-[0.98] disabled:opacity-50"
+                                disabled={
+                                    !product.isAvailable ||
+                                    (!!selectedVariant &&
+                                        (selectedVariant.isDeleted ||
+                                            selectedVariant?.quantity === 0)) ||
+                                    (product.productHasVariants &&
+                                        !selectedVariant) ||
+                                    isPending
+                                }
+                                onClick={(e) => {
+                                    if (isAddedToCart) {
+                                        e.preventDefault();
+                                        router.push("/checkout");
+                                        return;
                                     }
-                                    onClick={(e) => {
-                                        if (isAddedToCart) {
-                                            e.preventDefault();
-                                            router.push("/checkout");
-                                            return;
-                                        }
-                                        setIsBuyNow(true);
-                                        isBuyNowRef.current = true;
-                                        handleAddProductCart(
-                                            product.id,
-                                            product.brandId
-                                        );
-                                    }}
-                                >
-                                    {isPending && isBuyNow ? (
-                                        <>
-                                            <Spinner className="mr-2 size-5 animate-spin" />
-                                            Wait...
-                                        </>
-                                    ) : (
-                                        "Buy Now"
-                                    )}
-                                </Button>
-                            )}
+                                    setIsBuyNow(true);
+                                    isBuyNowRef.current = true;
+                                    handleAddProductCart(product.id, product.brandId);
+                                }}
+                            >
+                                {isPending && isBuyNow ? (
+                                    <><Spinner className="mr-2 size-5 animate-spin" />Wait...</>
+                                ) : (
+                                    "Buy Now"
+                                )}
+                            </Button>
 
-                            {userId ? (
+                            {!hideWishlist && (userId ? (
                                 <WishlistButton
                                     type="button"
                                     variant="outline"
-                                    size="sm"
-                                    className="hidden h-12 flex-1 items-center justify-center rounded-full px-5 text-sm font-semibold md:flex"
+                                    size="lg"
+                                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 hover:border-neutral-500 hover:text-neutral-900 transition-colors"
                                     userId={userId}
                                     productId={product.id}
                                     isProductWishlisted={isProductWishlisted}
-                                    setIsProductWishlisted={
-                                        setIsProductWishlisted
-                                    }
+                                    setIsProductWishlisted={setIsProductWishlisted}
                                     iconClassName={cn(
-                                        isProductWishlisted &&
-                                            "fill-primary stroke-primary"
+                                        "size-4",
+                                        isProductWishlisted && "fill-red-500 stroke-red-500"
                                     )}
                                 />
                             ) : (
-                                <Button
+                                <button
                                     type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="hidden h-12 flex-1 items-center justify-center rounded-full px-5 text-sm font-semibold md:flex"
+                                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 hover:border-neutral-500 hover:text-neutral-900 transition-colors"
                                     onClick={() => {
                                         addToGuestWishlist({
                                             productId: product.id,
-                                            variantId:
-                                                selectedVariant?.id || null,
+                                            variantId: selectedVariant?.id || null,
                                             title: product.title,
                                             brand: product.brand?.name,
                                             price: productPrice,
-                                            image:
-                                                selectedVariant?.image ??
-                                                product.thumbnail ??
-                                                null,
-                                            sku:
-                                                selectedVariant?.nativeSku ??
-                                                null,
+                                            image: selectedVariant?.image ?? product.thumbnail ?? null,
+                                            sku: selectedVariant?.nativeSku ?? null,
                                             fullProduct: product,
                                         });
                                     }}
                                 >
                                     <Icons.Heart
                                         className={cn(
+                                            "size-4",
                                             guestWishlist.some(
                                                 (w) =>
-                                                    w.productId ===
-                                                        product.id &&
-                                                    String(
-                                                        w.variantId ?? ""
-                                                    ) ===
-                                                        String(
-                                                            selectedVariant?.id ??
-                                                                ""
-                                                        )
-                                            ) && "fill-primary stroke-primary"
+                                                    w.productId === product.id &&
+                                                    String(w.variantId ?? "") ===
+                                                        String(selectedVariant?.id ?? "")
+                                            ) && "fill-red-500 stroke-red-500"
                                         )}
                                     />
-                                    Wishlist
-                                </Button>
-                            )}
+                                    Save to Wishlist
+                                </button>
+                            ))}</div>
                         </div>
-                        {/* Size & fit */}
-                        <div>
-                            <RichTextViewer
-                                content={product.sizeAndFit ?? "<p></p>"}
-                                customClasses={{
-                                    orderedList:
-                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
-                                    bulletList:
-                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
-                                    heading:
-                                        "text-16 leading-[1.6] text-myntra-primary text-opacity-90",
-                                }}
-                                editorClasses="pt-3"
-                            />
-                        </div>
-                    </div>
 
-                    {/* Floating bottom bar — mobile only, visible when inline buttons are scrolled past */}
+                    {/* Floating bottom bar — mobile only */}
                     {showFloatingBar && (
-                        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gray-200 bg-white px-4 py-3 shadow-[0_-4px_12px_rgba(0,0,0,0.1)] md:hidden">
-                            <div className="flex gap-3">
+                        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] md:hidden">
+                            <div className="flex gap-2">
                                 <Button
                                     type="submit"
                                     size="lg"
-                                    className={cn(
-                                        "rounded-full bg-[#E0E2E1] text-base font-semibold text-black hover:bg-[#E0E2E1]",
-                                        userId ? "flex-1" : "flex-1"
-                                    )}
+                                    className="h-12 flex-1 rounded-full bg-neutral-900 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
                                     disabled={
                                         !product.isAvailable ||
                                         (!!selectedVariant &&
                                             (selectedVariant.isDeleted ||
-                                                selectedVariant?.quantity ===
-                                                    0)) ||
+                                                selectedVariant?.quantity === 0)) ||
                                         (product.productHasVariants &&
                                             !selectedVariant) ||
                                         isPending
@@ -871,27 +842,15 @@ export function ProductCartAddForm({
                                         }
                                         setIsBuyNow(false);
                                         isBuyNowRef.current = false;
-                                        handleAddProductCart(
-                                            product.id,
-                                            product.brandId
-                                        );
+                                        handleAddProductCart(product.id, product.brandId);
                                     }}
                                 >
                                     {isPending && !isBuyNow ? (
-                                        <>
-                                            <Spinner className="mr-2 size-4 animate-spin" />
-                                            Wait...
-                                        </>
+                                        <><Spinner className="mr-2 size-4 animate-spin" />Adding...</>
                                     ) : isAddedToCart ? (
-                                        <>
-                                            Go to Cart
-                                            <Icons.ArrowRight className="ml-2 size-4" />
-                                        </>
+                                        <>Go to Bag <Icons.ArrowRight className="ml-2 size-4" /></>
                                     ) : (
-                                        <>
-                                            <Icons.ShoppingCart className="mr-2 size-4" />
-                                            Add to Cart
-                                        </>
+                                        "Add to Bag"
                                     )}
                                 </Button>
 
@@ -899,13 +858,12 @@ export function ProductCartAddForm({
                                     <Button
                                         type="submit"
                                         size="lg"
-                                        className="flex-1 rounded-full bg-black text-base font-semibold text-white hover:bg-gray-800"
+                                        className="h-12 flex-1 rounded-full border-2 border-neutral-900 bg-transparent text-[14px] font-semibold text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
                                         disabled={
                                             !product.isAvailable ||
                                             (!!selectedVariant &&
                                                 (selectedVariant.isDeleted ||
-                                                    selectedVariant?.quantity ===
-                                                        0)) ||
+                                                    selectedVariant?.quantity === 0)) ||
                                             (product.productHasVariants &&
                                                 !selectedVariant) ||
                                             isPending
@@ -918,17 +876,11 @@ export function ProductCartAddForm({
                                             }
                                             setIsBuyNow(true);
                                             isBuyNowRef.current = true;
-                                            handleAddProductCart(
-                                                product.id,
-                                                product.brandId
-                                            );
+                                            handleAddProductCart(product.id, product.brandId);
                                         }}
                                     >
                                         {isPending && isBuyNow ? (
-                                            <>
-                                                <Spinner className="mr-2 size-4 animate-spin" />
-                                                Wait...
-                                            </>
+                                            <><Spinner className="mr-2 size-4 animate-spin" />Wait...</>
                                         ) : (
                                             "Buy Now"
                                         )}
@@ -939,6 +891,62 @@ export function ProductCartAddForm({
                     )}
                 </form>
             </Form>
+
+            <Dialog open={isSizeChartOpen} onOpenChange={setIsSizeChartOpen}>
+                <DialogContent className="max-h-[90vh] max-w-[960px] overflow-y-auto rounded-sm">
+                    <DialogHeader>
+                        <DialogTitle className="text-[18px] font-semibold uppercase tracking-[0.08em] text-neutral-900">
+                            Size Chart
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-5">
+                        {sizeGuideImages.length > 0 && (
+                            <div className="space-y-2">
+                                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+                                    Size Guide Images
+                                </p>
+                                <div className="grid grid-cols-1 gap-4">
+                                    {sizeGuideImages.map((img) => (
+                                        <div
+                                            key={img.id}
+                                            className="relative overflow-hidden rounded-sm border border-neutral-200 bg-white p-2"
+                                        >
+                                            <Image
+                                                src={img.url}
+                                                alt={img.alt}
+                                                width={1200}
+                                                height={1200}
+                                                className="h-auto max-h-[72vh] w-full object-contain"
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {hasSizeAndFitContent && (
+                            <div>
+                                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-neutral-500">
+                                    Fit Guidance
+                                </p>
+                                <RichTextViewer
+                                    content={product.sizeAndFit ?? "<p></p>"}
+                                    customClasses={{
+                                        orderedList:
+                                            "text-[13px] leading-[1.75] text-neutral-700",
+                                        bulletList:
+                                            "text-[13px] leading-[1.75] text-neutral-700",
+                                        heading:
+                                            "text-[13px] leading-[1.75] text-neutral-700",
+                                    }}
+                                    editorClasses="pt-1"
+                                />
+                            </div>
+                        )}
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

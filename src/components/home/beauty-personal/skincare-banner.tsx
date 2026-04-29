@@ -13,7 +13,7 @@ interface PageProps extends GenericProps {
 
 export function SkinCareBanner({ className, banners, ...props }: PageProps) {
     return (
-        <section className={cn("w-full bg-[#FCFBF4]", className)} {...props}>
+        <section className={cn("w-full bg-white", className)} {...props}>
             <div className="container mx-auto px-0">
                 <Carousel
                     opts={{

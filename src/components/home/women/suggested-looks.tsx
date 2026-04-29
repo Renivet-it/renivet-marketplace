@@ -15,7 +15,7 @@ interface PageProps {
 export function SuggestedLook({ className, banners }: PageProps) {
     return (
         <section
-            className={cn("w-full bg-[#FCFBF4] pt-10 lg:pt-20", className)}
+            className={cn("w-full bg-white pt-10 lg:pt-20", className)}
             style={{ backgroundColor: "#FCFBF4" }}
         >
             {/* Centered Title Section */}

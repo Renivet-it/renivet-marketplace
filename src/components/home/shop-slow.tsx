@@ -4,9 +4,9 @@ import Image from "next/image";
 
 const SustainableBadges = () => {
   return (
-    <div className="bg-[#FCFBF4]">
+    <div className="bg-white">
       {/* Header Section */}
-      <div className="text-center py-8 md:py-12 bg-[#FCFBF4]">
+      <div className="text-center py-8 md:py-12 bg-white">
         <h1 className="text-3xl md:text-4xl lg:text-5xl font-light text-gray-800 mb-4 md:mb-6 tracking-tight">
           Conscious. Effortless. Everyday.
         </h1>

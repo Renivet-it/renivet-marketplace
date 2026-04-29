@@ -45,6 +45,7 @@ import {
     usersRouter,
     userSupportRouter,
 } from "./routes/general";
+import { customerReviewsRouter } from "./routes/general/customer-reviews";
 import { addressesRouter } from "./routes/general/address";
 import { capiLogsRouter } from "./routes/general/capi";
 import { createTRPCRouter } from "./trpc";
@@ -62,6 +63,7 @@ export const appRouter = createTRPCRouter({
         orders: ordersRouter,
         orderIntent: orderIntentRouter,
         plans: plansRouter,
+        customerReviews: customerReviewsRouter,
         productReviews: productReviewsRouter,
         productTypes: productTypesRouter,
         roles: rolesRouter,
