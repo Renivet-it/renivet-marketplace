@@ -11,10 +11,21 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
         wrapper?: string;
         input?: string;
     };
+    clearKeysOnSearch?: string[];
 };
 
 const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
-    ({ className, disabled, type = "search", classNames, ...props }, ref) => {
+    (
+        {
+            className,
+            disabled,
+            type = "search",
+            classNames,
+            clearKeysOnSearch = [],
+            ...props
+        },
+        ref
+    ) => {
         const router = useRouter();
         const searchParams = useSearchParams();
         const searchFromUrl = searchParams.get("search") ?? "";
@@ -27,8 +38,14 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
 
         const updateSearch = useCallback(
             (value: string) => {
+                const clearKeys = new Set([
+                    "search",
+                    "page",
+                    "shopPage",
+                    ...clearKeysOnSearch,
+                ]);
                 const baseEntries = Array.from(searchParams.entries()).filter(
-                    ([key]) => key !== "search" && key !== "page" && key !== "shopPage"
+                    ([key]) => !clearKeys.has(key)
                 );
                 const nextSearch = value.trim();
                 const currentSearch = (searchParams.get("search") ?? "").trim();
@@ -53,7 +70,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
                     return;
                 }
             },
-            [router, searchParams]
+            [clearKeysOnSearch, router, searchParams]
         );
 
         useEffect(() => {

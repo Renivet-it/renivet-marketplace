@@ -244,7 +244,10 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         // Handle suggestion click
         const handleSuggestionClick = (keyword: string) => {
             setLocalSearch(keyword);
-            handleSearch(keyword);
+            setShowSuggestions(false);
+            setSelectedIndex(-1);
+            setIsSheetOpen(false);
+            navigateToShopWithSearch(keyword);
         };
 
         // Handle keyboard navigation

@@ -68,6 +68,18 @@ export default async function Page({ searchParams }: PageProps) {
                             type="search"
                             placeholder="Search products"
                             className="h-11 border-[#d7e0ea] text-base"
+                            clearKeysOnSearch={[
+                                "brandIds",
+                                "colors",
+                                "minPrice",
+                                "maxPrice",
+                                "categoryId",
+                                "subCategoryId",
+                                "subcategoryId",
+                                "productTypeId",
+                                "sizes",
+                                "minDiscount",
+                            ]}
                         />
                         <div className="grid grid-cols-2 gap-2">
                             <Suspense
