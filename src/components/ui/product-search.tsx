@@ -180,6 +180,14 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     setIsSearching(false);
                     setShowSuggestions(false);
                     setIsSheetOpen(false);
+                    if (
+                        result.intentType &&
+                        result.intentType !== "UNKNOWN" &&
+                        result.redirectUrl
+                    ) {
+                        router.push(result.redirectUrl);
+                        return;
+                    }
                     navigateToShopWithSearch(result.originalQuery);
                 },
                 onError: (error) => {

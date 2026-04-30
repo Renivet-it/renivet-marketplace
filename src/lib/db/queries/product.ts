@@ -774,6 +774,7 @@ class ProductQuery {
             distance: number;
         } | null = null;
 
+        let processedSearch: string | undefined;
         let searchQuery = undefined;
         let ragProductIds: string[] = [];
         let isRagSearchActive = false;
@@ -782,7 +783,7 @@ class ProductQuery {
         if (search?.length) {
             isRagSearchActive = true;
             // Preprocess query for better matching
-            const processedSearch = preprocessSearchQuery(search);
+            processedSearch = preprocessSearchQuery(search);
 
             try {
                 // Generate 384-dim embedding for brand matching (brands still use 384-dim)
@@ -821,7 +822,7 @@ class ProductQuery {
                     `http://localhost:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
                     { next: { revalidate: 60 } }
                 );
-                
+
                 if (response.ok) {
                     const data = await response.json();
                     if (Array.isArray(data)) {
@@ -833,12 +834,48 @@ class ProductQuery {
                 console.error("[getProducts] RAG Engine failed:", error);
             }
 
+            const localSearchPattern = `%${processedSearch}%`;
+            const localSearchFallbackQuery = or(
+                ilike(products.title, localSearchPattern),
+                ilike(products.description, localSearchPattern),
+                ilike(products.metaTitle, localSearchPattern),
+                ilike(products.metaDescription, localSearchPattern),
+                sql`EXISTS (
+                    SELECT 1
+                    FROM brands b
+                    WHERE b.id = ${products.brandId}
+                      AND LOWER(b.name) LIKE ${localSearchPattern}
+                )`,
+                sql`EXISTS (
+                    SELECT 1
+                    FROM categories c
+                    WHERE c.id = ${products.categoryId}
+                      AND LOWER(c.name) LIKE ${localSearchPattern}
+                )`,
+                sql`EXISTS (
+                    SELECT 1
+                    FROM sub_categories sc
+                    WHERE sc.id = ${products.subcategoryId}
+                      AND LOWER(sc.name) LIKE ${localSearchPattern}
+                )`,
+                sql`EXISTS (
+                    SELECT 1
+                    FROM product_types pt
+                    WHERE pt.id = ${products.productTypeId}
+                      AND LOWER(pt.name) LIKE ${localSearchPattern}
+                )`
+            );
+
             // Apply search filter
             if (ragProductIds.length > 0) {
-                searchQuery = inArray(products.id, ragProductIds);
+                searchQuery = or(
+                    inArray(products.id, ragProductIds),
+                    localSearchFallbackQuery
+                );
             } else {
-                // If RAG returns no products, ensure no products match to prevent junk results
-                searchQuery = sql`false`;
+                // Fall back to the local catalogue when the external RAG engine
+                // is connected to a different product copy or returns no ids.
+                searchQuery = localSearchFallbackQuery;
             }
         }
 
