@@ -621,6 +621,8 @@ function ShopFiltersSection({
     productTypes,
     colors,
     allSizes,
+    search,
+    setSearch,
     ...props
 }: {
     className?: string;

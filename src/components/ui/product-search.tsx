@@ -13,6 +13,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { TrendingUp, Sparkles, ArrowRight, Shirt, Home, Gift, ShoppingBag, Droplets, Lamp, Gem } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icons } from "../icons";
 
@@ -188,6 +189,27 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     navigateToShopWithSearch(localSearch);
                 },
             });
+
+        // Fetch sub-categories for the discover section
+        const { data: subCategoriesData } = trpc.general.subCategories.getSubCategories.useQuery();
+        const subCategories = subCategoriesData?.data || [];
+        
+        const targetSubCategories = [
+            { title: "Skincare, Bath & Body", searchPattern: "skincare", bg: "bg-rose-50", icon: Droplets },
+            { title: "Home Decor", searchPattern: "decor", bg: "bg-amber-50", icon: Lamp },
+            { title: "Western Wear", searchPattern: "western", bg: "bg-emerald-50", icon: Gem },
+            { title: "Top Wear", searchPattern: "topwear", bg: "bg-[#e8f4f8]", icon: Shirt },
+        ];
+        
+        const discoverCategories = targetSubCategories.map(target => {
+            const found = subCategories.find(sub => 
+                sub.name.toLowerCase().replace(/\s+/g, '').includes(target.searchPattern.replace(/\s+/g, ''))
+            );
+            return {
+                ...target,
+                link: found ? `/shop?subCategoryId=${found.id}` : `/shop?search=${encodeURIComponent(target.title)}`
+            };
+        });
 
         // Handle input change
         const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -416,6 +438,64 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                              
                              {!isFetchingSuggestions && localSearch.length > 2 && suggestions.length === 0 && products.length === 0 && (
                                 <div className="text-center text-[15px] text-gray-400 mt-10">No results found for "{localSearch}"</div>
+                             )}
+                             
+                             {/* EMPTY STATE (DEFAULT VIEW) */}
+                             {!isFetchingSuggestions && localSearch.length < 2 && (
+                                <div className="space-y-12 animate-in fade-in slide-in-from-bottom-2 duration-500 pt-2">
+                                    {/* Popular Searches */}
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-4 pl-1">
+                                            <TrendingUp className="size-[15px] text-[#30453c]" />
+                                            <h3 className="text-[11px] font-bold tracking-[0.15em] text-[#30453c] uppercase">Popular Searches</h3>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2.5">
+                                            {["Sarees", "Dresses", "Skincare", "Home Decor", "Gifts", "Kurtas"].map((term) => (
+                                                <button
+                                                    key={term}
+                                                    onClick={() => handleSuggestionClick(term)}
+                                                    className="px-4 py-2.5 rounded-full border border-gray-200 bg-white text-[13px] font-medium text-gray-600 transition-all hover:border-[#30453c] hover:text-[#30453c] hover:bg-[#faf9f5] hover:-translate-y-0.5 shadow-sm hover:shadow-md"
+                                                >
+                                                    {term}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Discover */}
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-4 pl-1">
+                                            <Sparkles className="size-[15px] text-[#30453c]" />
+                                            <h3 className="text-[11px] font-bold tracking-[0.15em] text-[#30453c] uppercase">Discover</h3>
+                                        </div>
+                                        <div className="flex flex-col gap-3">
+                                            {discoverCategories.map((cat, idx) => {
+                                                const Icon = cat.icon;
+                                                return (
+                                                    <button
+                                                        key={cat.title}
+                                                        onClick={() => {
+                                                            setIsSheetOpen(false);
+                                                            router.push(cat.link);
+                                                        }}
+                                                        className={cn("group flex items-center justify-between p-4.5 py-4 sm:py-5 rounded-2xl border border-transparent hover:border-gray-200 transition-all relative overflow-hidden", cat.bg)}
+                                                    >
+                                                        <div className="flex flex-1 min-w-0 items-center gap-2.5 sm:gap-3 relative z-10 pr-2">
+                                                            <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/60 shadow-sm backdrop-blur-sm group-hover:bg-white group-hover:shadow-md transition-all">
+                                                                <Icon className="size-[14px] sm:size-[15px] text-gray-700 group-hover:text-[#30453c] transition-colors" strokeWidth={2.5} />
+                                                            </div>
+                                                            <span className="text-[12px] sm:text-[13px] font-bold text-gray-800 tracking-wide group-hover:text-[#30453c] transition-colors text-left line-clamp-2 leading-snug">{cat.title}</span>
+                                                        </div>
+                                                        <ArrowRight className="size-4 shrink-0 text-gray-400 group-hover:text-[#30453c] group-hover:translate-x-1 transition-all relative z-10" />
+                                                        
+                                                        {/* Decorative subtle background icon */}
+                                                        <Icon className="absolute -right-2 -bottom-2 size-12 text-black/[0.03] rotate-12 group-hover:scale-110 group-hover:-rotate-12 transition-transform duration-500" />
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </div>
                              )}
                              
                              {(suggestions.length > 0 || products.length > 0) && !isFetchingSuggestions && (
