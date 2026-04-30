@@ -1,7 +1,7 @@
 "use server";
 
 import axios from "axios";
-
+import { productQueries } from "@/lib/db/queries";
 export async function fetchSuggestions(query: string): Promise<string[]> {
     try {
         console.log(
@@ -10,8 +10,8 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
         );
         const embeddingServiceUrl = process.env.EMBEDDING_SERVICE_URL;
         const response = await axios.get(
-            `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
-            // `${"http://localhost:8000"}/suggestions/ai-suggestions`,
+            // `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
+            `${"http://localhost:8000"}/suggestions/ai-suggestions`,
             {
                 params: { query }, // Pass the query as a URL parameter
                 headers: {
@@ -49,5 +49,35 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
         const errorMessage =
             error.response?.data?.detail || "Failed to fetch suggestions";
         throw new Error(errorMessage);
+    }
+}
+
+export async function fetchSearchProducts(query: string) {
+    try {
+        const res = await productQueries.getProducts({
+            search: query,
+            limit: 3,
+            isAvailable: true,
+            isActive: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            requireMedia: true,
+        });
+
+        return res.data.map((p) => {
+            const rawPrice = p.variants?.[0]?.price || p.price || 0;
+            return {
+                id: p.id,
+                slug: p.slug,
+                name: p.name || p.title || "Unknown Product",
+                price: rawPrice,
+                brand: { name: p.brand?.name },
+                media: p.media?.[0]?.mediaItem?.url ? { url: p.media[0].mediaItem.url } : null,
+            };
+        });
+    } catch (error) {
+        console.error("Error fetching search products:", error);
+        return [];
     }
 }

@@ -7,6 +7,12 @@ import { cn } from "@/lib/utils";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
+import {
+    Sheet,
+    SheetContent,
+    SheetTitle,
+    SheetTrigger,
+} from "@/components/ui/sheet";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Icons } from "../icons";
 
@@ -78,29 +84,40 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
         // State for suggestions
         const [suggestions, setSuggestions] = useState<string[]>([]);
+        const [products, setProducts] = useState<any[]>([]);
         const [isFetchingSuggestions, setIsFetchingSuggestions] =
             useState(false);
+        const [isSheetOpen, setIsSheetOpen] = useState(false);
 
         // Fetch suggestions when search term changes
         useEffect(() => {
             const fetchAISuggestions = async () => {
                 if (localSearch.length < 2) {
                     setSuggestions([]);
+                    setProducts([]);
                     return;
                 }
 
                 setIsFetchingSuggestions(true);
                 try {
-                    const { fetchSuggestions } = await import(
+                    const { fetchSuggestions, fetchSearchProducts } = await import(
                         "@/lib/python/ai-suggestion"
                     );
-                    const results = await fetchSuggestions(localSearch);
-                    if (Array.isArray(results)) {
-                        setSuggestions(results);
+                    const [suggestionsResult, productsResult] = await Promise.all([
+                        fetchSuggestions(localSearch),
+                        fetchSearchProducts(localSearch)
+                    ]);
+                    
+                    if (Array.isArray(suggestionsResult)) {
+                        setSuggestions(suggestionsResult);
+                    }
+                    if (Array.isArray(productsResult)) {
+                        setProducts(productsResult);
                     }
                 } catch (error) {
                     console.error("Error fetching suggestions:", error);
                     setSuggestions([]);
+                    setProducts([]);
                 } finally {
                     setIsFetchingSuggestions(false);
                 }
@@ -161,11 +178,13 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 onSuccess: (result) => {
                     setIsSearching(false);
                     setShowSuggestions(false);
+                    setIsSheetOpen(false);
                     navigateToShopWithSearch(result.originalQuery);
                 },
                 onError: (error) => {
                     setIsSearching(false);
                     console.error("Search error:", error);
+                    setIsSheetOpen(false);
                     navigateToShopWithSearch(localSearch);
                 },
             });
@@ -237,8 +256,11 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const handleClear = () => {
             setLocalSearch("");
             setSuggestions([]);
+            setProducts([]);
             setShowSuggestions(false);
-            navigateToShopWithSearch("");
+            if (inputRef.current) {
+                inputRef.current.focus();
+            }
         };
 
         // Close suggestions when clicking outside
@@ -322,111 +344,159 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         };
 
         return (
-            <div ref={wrapperRef} className="relative w-full">
-                <div
-                    className={cn(
-                        "relative flex w-full items-center gap-1 rounded-none bg-[#fbfaf4] shadow-md",
-                        disabled && "cursor-not-allowed opacity-50",
-                        classNames?.wrapper
-                    )}
-                >
-                    <div className="bg-[#fbfaf4] p-2 pl-3">
-                        {isSearching || isFetchingSuggestions ? (
-                            <Spinner className="size-5 animate-spin opacity-60" />
-                        ) : (
-                            <Icons.Search className="size-5 bg-[#fbfaf4] opacity-60" />
-                        )}
-                    </div>
-
-                    <input
-                        type="text"
-                        className={cn(
-                            "flex h-9 w-full bg-[#fbfaf4] pr-10 text-sm text-gray-700 placeholder-gray-500 focus:outline-none",
-                            className,
-                            classNames?.input
-                        )}
-                        disabled={disabled || isSearching}
-                        ref={setRefs}
-                        value={localSearch}
-                        onChange={handleChange}
-                        onKeyDown={handleKeyDown}
-                        onFocus={() =>
-                            localSearch.length >= 2 && setShowSuggestions(true)
+            <div className={cn("relative w-full", classNames?.wrapper)}>
+                <Sheet 
+                    open={isSheetOpen} 
+                    onOpenChange={(open) => {
+                        setIsSheetOpen(open);
+                        if (open) {
+                            setTimeout(() => {
+                                if (inputRef.current) inputRef.current.focus();
+                            }, 100);
                         }
-                        placeholder="Search for products, brands, categories..."
-                        autoComplete="off"
-                        {...props}
-                    />
-
-                    <div className="absolute right-2 flex items-center gap-1">
-                        {isVoiceSupported && (
-                            <button
-                                type="button"
-                                className={cn(
-                                    "rounded p-1 transition-colors",
-                                    isListening
-                                        ? "bg-red-100 text-red-600"
-                                        : "text-gray-500 hover:text-gray-700"
-                                )}
-                                onClick={handleVoiceSearch}
-                                disabled={disabled || isSearching}
-                                aria-label={
-                                    isListening
-                                        ? "Stop voice search"
-                                        : "Start voice search"
-                                }
-                                title={
-                                    isListening
-                                        ? "Stop voice search"
-                                        : "Search by voice"
-                                }
-                            >
-                                <Icons.AudioWaveform className="size-5" />
-                            </button>
-                        )}
-
-                        {localSearch && !isSearching && (
-                            <button
-                                type="button"
-                                className="p-1"
-                                onClick={handleClear}
-                                aria-label="Clear search"
-                            >
-                                <Icons.X className="size-5 opacity-60 hover:opacity-100" />
-                            </button>
-                        )}
-                    </div>
-                </div>
-
-                {/* Suggestions Dropdown - Myntra Style */}
-                {showSuggestions && suggestions.length > 0 && (
-                    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-80 overflow-auto rounded-md border border-gray-200 bg-white shadow-lg">
-                        {suggestions.map((suggestion, index) => (
-                            <button
-                                key={`${suggestion}-${index}`}
-                                type="button"
-                                className={cn(
-                                    "flex w-full cursor-pointer select-none items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-gray-50",
-                                    selectedIndex === index && "bg-gray-100"
-                                )}
-                                style={{ userSelect: "none" }}
-                                onClick={() => {
-                                    handleSuggestionClick(suggestion);
-                                }}
-                                onMouseDown={(e) => e.preventDefault()}
-                                onMouseEnter={() => setSelectedIndex(index)}
-                            >
-                                <Icons.Search className="pointer-events-none size-4 shrink-0 text-gray-400" />
-                                <span
-                                    className="pointer-events-none flex-1 select-none truncate text-sm text-gray-700"
-                                    style={{ userSelect: "none" }}
+                    }}
+                >
+                    <SheetTrigger asChild>
+                        <div
+                            className={cn(
+                                "flex h-[42px] w-full cursor-text items-center gap-3 rounded-md bg-[#f7f7f7] px-4 text-sm text-gray-500 transition-colors hover:bg-[#efefef] border border-transparent hover:border-gray-200",
+                                className,
+                                classNames?.input
+                            )}
+                        >
+                            <Icons.Search className="size-[18px] text-gray-400" />
+                            <span className="flex-1 truncate text-left text-[13px] tracking-wide text-gray-400">Search for products, brands...</span>
+                        </div>
+                    </SheetTrigger>
+                    
+                    <SheetContent side="right" className="w-full sm:max-w-[500px] border-l-0 p-0 shadow-2xl flex flex-col bg-white">
+                        <SheetTitle className="sr-only">Search</SheetTitle>
+                        
+                        {/* Premium Search Input Area */}
+                        <div className="flex items-center gap-3 border-b border-gray-100 bg-[#faf9f5] px-6 py-5">
+                            <Icons.Search className="size-[20px] text-gray-400" />
+                            <input
+                                ref={setRefs}
+                                type="text"
+                                className="flex h-10 w-full bg-transparent text-[17px] font-medium text-gray-800 placeholder-gray-400 focus:outline-none"
+                                value={localSearch}
+                                onChange={handleChange}
+                                onKeyDown={handleKeyDown}
+                                placeholder="Search here..."
+                                autoComplete="off"
+                            />
+                            
+                            {isVoiceSupported && (
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        "rounded p-2 transition-colors",
+                                        isListening
+                                            ? "bg-red-100 text-red-600"
+                                            : "text-gray-400 hover:text-gray-700"
+                                    )}
+                                    onClick={handleVoiceSearch}
                                 >
-                                    {suggestion}
-                                </span>
-                            </button>
-                        ))}
-                    </div>
-                )}
+                                    <Icons.AudioWaveform className="size-5" />
+                                </button>
+                            )}
+
+                            {localSearch && (
+                                <button type="button" onClick={handleClear} className="p-2">
+                                    <Icons.X className="size-5 text-gray-400 hover:text-gray-700" />
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Premium Results Area */}
+                        <div className="flex-1 overflow-y-auto px-6 py-8">
+                             {isFetchingSuggestions && (
+                                <div className="flex justify-center py-10"><Spinner className="size-6 text-gray-300 opacity-70" /></div>
+                             )}
+                             
+                             {!isFetchingSuggestions && localSearch.length > 2 && suggestions.length === 0 && products.length === 0 && (
+                                <div className="text-center text-[15px] text-gray-400 mt-10">No results found for "{localSearch}"</div>
+                             )}
+                             
+                             {(suggestions.length > 0 || products.length > 0) && !isFetchingSuggestions && (
+                                <div className="space-y-10">
+                                    {/* SUGGESTIONS */}
+                                    {suggestions.length > 0 && (
+                                        <div>
+                                            <div className="text-[11px] font-bold tracking-[0.1em] text-gray-400 uppercase mb-4 pl-1">Suggestions</div>
+                                            <div className="space-y-1">
+                                                {suggestions.map((suggestion, index) => (
+                                                    <button
+                                                        key={`${suggestion}-${index}`}
+                                                        type="button"
+                                                        className={cn(
+                                                            "flex w-full items-center gap-4 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-gray-50/80",
+                                                            selectedIndex === index && "bg-gray-50/80"
+                                                        )}
+                                                        onClick={() => handleSuggestionClick(suggestion)}
+                                                        onMouseEnter={() => setSelectedIndex(index)}
+                                                    >
+                                                        <Icons.Search className="size-[15px] shrink-0 text-gray-300" />
+                                                        <span className="truncate text-[15px] text-gray-600 font-medium tracking-wide">
+                                                            {suggestion}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* PRODUCTS */}
+                                    {products.length > 0 && (
+                                        <div>
+                                            <div className="text-[11px] font-bold tracking-[0.1em] text-gray-400 uppercase mb-4 pl-1">Products</div>
+                                            <div className="grid grid-cols-2 gap-x-4 gap-y-6">
+                                                {products.map((product) => (
+                                                    <div
+                                                        key={product.id}
+                                                        onClick={() => {
+                                                            setIsSheetOpen(false);
+                                                            router.push(`/products/${product.slug || product.id}`);
+                                                        }}
+                                                        className="group flex gap-3 cursor-pointer p-1"
+                                                    >
+                                                        {product.media ? (
+                                                            <div className="relative h-[85px] w-[75px] shrink-0 overflow-hidden rounded-[4px] bg-gray-50">
+                                                                <img 
+                                                                    src={product.media.url} 
+                                                                    alt={product.name} 
+                                                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" 
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="h-[85px] w-[75px] shrink-0 rounded-[4px] bg-gray-100 border border-gray-100" />
+                                                        )}
+                                                        <div className="flex flex-col flex-1 min-w-0 pt-1">
+                                                            {product.brand?.name && (
+                                                                <span className="text-[10px] font-bold tracking-wider text-gray-400 uppercase truncate mb-1">{product.brand.name}</span>
+                                                            )}
+                                                            <span className="text-[13px] font-medium text-gray-800 line-clamp-2 leading-tight group-hover:text-[#30453c] transition-colors">{product.name}</span>
+                                                            <span className="text-[13px] font-semibold text-gray-900 mt-1.5">
+                                                                ₹{(product.price / 100).toLocaleString("en-IN")}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <button
+                                                onClick={() => handleSearch()}
+                                                className="w-full mt-8 py-3.5 text-[12px] font-bold tracking-[0.15em] text-white bg-[#2a3c34] hover:bg-[#1a2520] transition-colors rounded-sm flex items-center justify-center gap-2 uppercase shadow-md"
+                                            >
+                                                See All Results
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+                             )}
+                        </div>
+                    </SheetContent>
+                </Sheet>
             </div>
         );
     }
