@@ -54,30 +54,27 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
 
 export async function fetchSearchProducts(query: string) {
     try {
-        const res = await productQueries.getProducts({
-            search: query,
-            limit: 3,
-            isAvailable: true,
-            isActive: true,
-            isPublished: true,
-            isDeleted: false,
-            verificationStatus: "approved",
-            requireMedia: true,
-        });
+        console.log("Fetching RAG search results for query:", query);
+        const response = await axios.get(
+            `${"http://localhost:8000"}/search/advanced-rag`,
+            {
+                params: { query, limit: 3 },
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        );
 
-        return res.data.map((p) => {
-            const rawPrice = p.variants?.[0]?.price || p.price || 0;
-            return {
-                id: p.id,
-                slug: p.slug,
-                name: p.name || p.title || "Unknown Product",
-                price: rawPrice,
-                brand: { name: p.brand?.name },
-                media: p.media?.[0]?.mediaItem?.url ? { url: p.media[0].mediaItem.url } : null,
-            };
-        });
+        const productsData = response.data;
+        if (!Array.isArray(productsData)) {
+            return [];
+        }
+
+        // The python backend already formats this correctly: id, name, slug, price, brand, media
+        return productsData;
+
     } catch (error) {
-        console.error("Error fetching search products:", error);
+        console.error("Error fetching RAG search products:", error);
         return [];
     }
 }
