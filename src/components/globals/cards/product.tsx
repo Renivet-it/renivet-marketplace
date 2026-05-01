@@ -191,6 +191,15 @@ export function ProductCard({
         };
     }, [isQuickViewOpen, quickViewImages.length]);
 
+    useEffect(() => {
+        if (!isQuickViewOpen || typeof window === "undefined") return;
+
+        quickViewImages.slice(0, 4).forEach((src) => {
+            const preloadedImage = new window.Image();
+            preloadedImage.src = src;
+        });
+    }, [isQuickViewOpen, quickViewImages]);
+
     const handleQuickViewChange = (open: boolean) => {
         setIsQuickViewOpen(open);
 
@@ -385,15 +394,15 @@ export function ProductCard({
                     </div>
 
                     <DialogContent
-                        className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-[24px] border border-[#efe4d0] p-0 shadow-[0_30px_90px_rgba(29,24,18,0.24)] md:h-[85vh]"
+                        className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-[24px] border border-[#ebe7df] bg-white p-0 shadow-[0_24px_70px_rgba(29,24,18,0.14)] md:h-[85vh]"
                         onCloseAutoFocus={(e) => e.preventDefault()}
                     >
                         <DialogTitle className="sr-only">
                             {product.title}
                         </DialogTitle>
 
-                        <div className="flex h-full flex-col overflow-y-auto bg-[linear-gradient(180deg,#fffdf9_0%,#fbf7f0_100%)] md:flex-row md:overflow-hidden">
-                            <div className="group/slider relative h-[320px] w-full shrink-0 bg-[#F5F5F5] sm:h-[380px] md:h-full md:w-1/2">
+                        <div className="flex h-full flex-col overflow-y-auto bg-white md:flex-row md:overflow-hidden">
+                            <div className="group/slider relative h-[320px] w-full shrink-0 bg-[#f7f7f7] sm:h-[380px] md:h-full md:w-1/2">
                                 <Image
                                     src={
                                         quickViewImages[quickViewImageIndex] ||
@@ -401,6 +410,11 @@ export function ProductCard({
                                     }
                                     alt={product.title}
                                     fill
+                                    priority={isQuickViewOpen}
+                                    fetchPriority={
+                                        isQuickViewOpen ? "high" : undefined
+                                    }
+                                    quality={90}
                                     className="object-contain md:object-cover md:object-center"
                                     sizes="(max-width: 768px) 100vw, 50vw"
                                 />
@@ -454,20 +468,6 @@ export function ProductCard({
                             </div>
 
                             <div className="scrollbar-hide flex flex-col p-4 md:w-1/2 md:overflow-y-auto md:p-12">
-                                <div className="mb-4 flex items-center justify-between border-b border-[#efe7d6] pb-4 md:mb-6">
-                                    <div>
-                                        <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#8f866f]">
-                                            Quick Buy
-                                        </p>
-                                        <p className="mt-1 text-xs text-[#736a55]">
-                                            Same experience as home quick buy
-                                        </p>
-                                    </div>
-                                    <div className="rounded-full border border-[#e9dfcc] bg-[#fbf7ef] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">
-                                        Ready to Ship
-                                    </div>
-                                </div>
-
                                 <h2 className="pr-8 font-serif text-xl font-light leading-tight text-gray-900 sm:text-2xl md:text-[32px]">
                                     {product.title}
                                 </h2>
@@ -499,7 +499,7 @@ export function ProductCard({
                                         </span>
                                     ) : null}
                                     {discount ? (
-                                        <span className="rounded-full bg-[#f3ead7] px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
+                                        <span className="rounded-full border border-[#ebe7df] bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-primary">
                                             Save {discount}%
                                         </span>
                                     ) : null}
