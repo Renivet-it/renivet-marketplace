@@ -114,6 +114,10 @@ export function ProductCard({
         ) || [];
 
     const imageUrl = mediaUrls[0] || PLACEHOLDER_IMAGE_URL;
+    const activeCardImage =
+        isProductHovered && mediaUrls.length > 1
+            ? mediaUrls[currentImageIndex] || imageUrl
+            : imageUrl;
     const quickViewImages = Array.from(
         new Set([imageUrl, ...mediaUrls])
     ).filter(Boolean);
@@ -302,10 +306,9 @@ export function ProductCard({
                 >
                     <AnimatedProductLink href={`/products/${product.slug}`}>
                         <div className="relative aspect-[3/4] overflow-hidden bg-[#f5f5f5]">
-                        {mediaUrls.length === 0 && (
                             <Image
-                                src={PLACEHOLDER_IMAGE_URL}
-                                alt="default image"
+                                src={activeCardImage}
+                                alt={product.title || "Product image"}
                                 fill
                                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                                 className={cn(
@@ -313,32 +316,6 @@ export function ProductCard({
                                     isProductHovered ? "scale-105" : "scale-100"
                                 )}
                             />
-                        )}
-
-                        {mediaUrls.map((url, index) => {
-                            const isActive = isProductHovered
-                                ? index === currentImageIndex
-                                : index === 0;
-
-                            return (
-                                <Image
-                                    key={url}
-                                    src={url}
-                                    alt={`${product.title} ${index + 1}`}
-                                    fill
-                                    sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-                                    className={cn(
-                                        "absolute inset-0 object-cover transition-all duration-300 ease-in-out",
-                                        isActive
-                                            ? "z-10 opacity-100"
-                                            : "z-0 opacity-0",
-                                        isProductHovered
-                                            ? "scale-105"
-                                            : "scale-100"
-                                    )}
-                                />
-                            );
-                        })}
 
                         {discount ? (
                             <span className="absolute left-0 top-2 z-20 rounded-r-sm bg-[#E95123] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">

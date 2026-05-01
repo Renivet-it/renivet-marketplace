@@ -1118,29 +1118,33 @@ class ProductQuery {
         }
 
         // --- Query the DB ---
-        const data = await db.query.products.findMany({
-            with: {
-                brand: true,
-                variants: true,
-                category: true,
-                subcategory: true,
-                productType: true,
-                options: true,
-                journey: true,
-                values: true,
-                returnExchangePolicy: true,
-                specifications: {
-                    columns: { key: true, value: true },
+        const whereClause = and(...filters);
+        const [data, totalRows] = await Promise.all([
+            db.query.products.findMany({
+                with: {
+                    brand: true,
+                    variants: true,
+                    category: true,
+                    subcategory: true,
+                    productType: true,
+                    options: true,
+                    journey: true,
+                    values: true,
+                    returnExchangePolicy: true,
+                    specifications: {
+                        columns: { key: true, value: true },
+                    },
                 },
-            },
-            where: and(...filters),
-            limit,
-            offset: (page - 1) * limit,
-            orderBy,
-            extras: {
-                count: db.$count(products, and(...filters)).as("product_count"),
-            },
-        });
+                where: whereClause,
+                limit,
+                offset: (page - 1) * limit,
+                orderBy,
+            }),
+            db
+                .select({ count: count() })
+                .from(products)
+                .where(whereClause),
+        ]);
 
         // --- Media mapping ---
         const mediaKeys = new Set<string>();
@@ -1214,7 +1218,7 @@ class ProductQuery {
 
         return {
             data: filteredData,
-            count: +data?.[0]?.count || 0,
+            count: Number(totalRows?.[0]?.count ?? 0),
             topBrandMatch, // optional — can show in frontend
         };
     }

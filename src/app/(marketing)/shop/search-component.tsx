@@ -1,9 +1,8 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { trpc } from "@/lib/trpc/client";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
 type Product = {
     id?: string;
@@ -36,57 +35,7 @@ export function SearchableProductTypes({
 }) {
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get("search") ?? "";
-    const sortBy =
-        (searchParams.get("sortBy") as
-            | "price"
-            | "createdAt"
-            | "recommended"
-            | "best-sellers") ?? "recommended";
-    const sortOrder =
-        (searchParams.get("sortOrder") as "asc" | "desc") ?? "desc";
 
-    const brandIdsParam = searchParams.get("brandIds");
-    const colorsParam = searchParams.get("colors");
-    const sizesParam = searchParams.get("sizes");
-    const minPriceParam = searchParams.get("minPrice");
-    const maxPriceParam = searchParams.get("maxPrice");
-    const minDiscountParam = searchParams.get("minDiscount");
-    const categoryIdParam = searchParams.get("categoryId");
-    const subCategoryIdParam =
-        searchParams.get("subCategoryId") ?? searchParams.get("subcategoryId");
-
-    const { data: liveProducts } = trpc.brands.products.getProducts.useQuery(
-        {
-            page: 1,
-            limit: 80,
-            search: searchTerm || undefined,
-            isPublished: true,
-            isAvailable: true,
-            isActive: true,
-            isDeleted: false,
-            verificationStatus: "approved",
-            brandIds: brandIdsParam ? brandIdsParam.split(",") : undefined,
-            minPrice: minPriceParam ? Number(minPriceParam) : 0,
-            maxPrice: maxPriceParam ? Number(maxPriceParam) : 1000000,
-            categoryId: categoryIdParam || undefined,
-            subcategoryId: subCategoryIdParam || undefined,
-            productTypeId: productTypeId || undefined,
-            sortBy: sortBy === "recommended" ? undefined : sortBy,
-            sortOrder: sortBy === "recommended" ? undefined : sortOrder,
-            colors: colorsParam ? colorsParam.split(",") : undefined,
-            sizes: sizesParam ? sizesParam.split(",") : undefined,
-            minDiscount: minDiscountParam ? Number(minDiscountParam) : undefined,
-            prioritizeBestSellers:
-                !searchTerm && (!sortBy || sortBy === "recommended"),
-            requireMedia: true,
-            useRecommendations:
-                !searchTerm && (!sortBy || sortBy === "recommended"),
-        },
-        {
-            staleTime: 0,
-            refetchOnWindowFocus: false,
-        }
-    );
     const allItemsHref = useMemo(() => {
         const params = new URLSearchParams(
             Array.from(searchParams.entries()).filter(
@@ -108,20 +57,13 @@ export function SearchableProductTypes({
         return `?${params.toString()}`;
     };
 
-    // 1) start with whichever prop the parent passed (fallback to [])
-    const [products, setProducts] = useState<Product[]>(
-        productsProp ?? initialProducts ?? []
+    // The server already passes products for the current URL. Using those props
+    // avoids duplicate client fetches from both mobile and desktop pills.
+    const products = useMemo(
+        () => productsProp ?? initialProducts ?? [],
+        [productsProp, initialProducts]
     );
     const [showAll, setShowAll] = useState(false);
-
-    // 2) sync when parent updates the prop (e.g. full page navigation / SSR)
-    useEffect(() => {
-        if (liveProducts?.data?.length) {
-            setProducts(liveProducts.data as Product[]);
-            return;
-        }
-        setProducts(productsProp ?? initialProducts ?? []);
-    }, [productsProp, initialProducts, liveProducts?.data]);
 
     // 3) compute active types from the products state
     const activeTypes = useMemo(() => {
