@@ -497,7 +497,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                         </SheetHeader>
 
                         {/* Premium Search Input Area */}
-                        <div className="border-b border-[#ebe3d4] bg-[linear-gradient(180deg,#f8f3e8_0%,#fffdf9_55%,#ffffff_100%)] px-6 pb-5 pt-12">
+                        <div className="border-b border-[#ebe7df] bg-white px-6 pb-5 pt-12">
                             <div className="mb-4 pr-10">
                                 <p className="text-11 font-bold uppercase tracking-[0.24em] text-[#7f745d]">
                                     Shop Search
@@ -509,7 +509,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                     Search by product, category, occasion, or brand.
                                 </p>
                             </div>
-                            <div className="flex items-center gap-3 rounded-2xl border border-[#d8cfbf] bg-white px-4 py-3 shadow-[0_16px_40px_rgba(51,47,38,0.10)]">
+                            <div className="flex items-center gap-3 rounded-2xl border border-[#e4dfd5] bg-white px-4 py-3 shadow-[0_14px_34px_rgba(51,47,38,0.08)]">
                                 <Icons.Search className="size-[20px] text-primary" />
                                 <input
                                     ref={setRefs}
@@ -574,7 +574,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                     <button
                                                         key={term}
                                                         onClick={() => handleSuggestionClick(term)}
-                                                        className="rounded-full border border-[#d8cfbf] bg-[#f7f3ea] px-4 py-2.5 text-13 font-medium text-[#5d5649] transition-all hover:border-primary hover:bg-white hover:text-primary"
+                                                        className="rounded-full border border-[#e4dfd5] bg-white px-4 py-2.5 text-13 font-medium text-[#5d5649] transition-all hover:border-primary hover:bg-[#fafafa] hover:text-primary"
                                                     >
                                                         {term}
                                                     </button>
@@ -594,7 +594,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                 <button
                                                     key={term}
                                                     onClick={() => handleSuggestionClick(term)}
-                                                    className="rounded-full border border-[#d8cfbf] bg-white px-4 py-2.5 text-13 font-medium text-[#5f574a] shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary hover:bg-[#faf6ee] hover:text-primary hover:shadow-md"
+                                                    className="rounded-full border border-[#e4dfd5] bg-white px-4 py-2.5 text-13 font-medium text-[#5f574a] shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary hover:bg-[#fafafa] hover:text-primary hover:shadow-md"
                                                 >
                                                     {term}
                                                 </button>
@@ -618,7 +618,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                             setIsSheetOpen(false);
                                                             router.push(cat.link);
                                                         }}
-                                                        className={cn("p-4.5 group relative flex items-center justify-between overflow-hidden rounded-2xl border border-[#e9e0d0] py-4 transition-all hover:border-[#c8bda8] sm:py-5", cat.bg)}
+                                                        className={cn("p-4.5 group relative flex items-center justify-between overflow-hidden rounded-2xl border border-[#ebe7df] bg-white py-4 transition-all hover:border-[#d5cfc4] sm:py-5", cat.bg)}
                                                     >
                                                         <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2.5 pr-2 sm:gap-3">
                                                             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/75 shadow-sm backdrop-blur-sm transition-all group-hover:bg-white group-hover:shadow-md">
@@ -640,7 +640,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
                              {(suggestions.length > 0 || products.length > 0) && !isFetchingSuggestions && (
                                 <div className="space-y-10">
-                                    <div className="rounded-2xl border border-[#e6dccd] bg-[#faf7f1] px-4 py-3 text-12 text-[#6a614f]">
+                                    <div className="rounded-2xl border border-[#ebe7df] bg-white px-4 py-3 text-12 text-[#6a614f]">
                                         {products.length > 0
                                             ? `Showing ${products.length} quick matches for "${localSearch.trim()}"`
                                             : `Refining ideas for "${localSearch.trim()}"`}
@@ -656,8 +656,8 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                         key={`${suggestion}-${index}`}
                                                         type="button"
                                                         className={cn(
-                                                            "flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[#f6f2ea]",
-                                                            selectedIndex === index && "bg-[#f6f2ea]"
+                                                            "flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[#fafafa]",
+                                                            selectedIndex === index && "bg-[#fafafa]"
                                                         )}
                                                         onClick={() => handleSuggestionClick(suggestion)}
                                                         onMouseEnter={() => setSelectedIndex(index)}
@@ -684,10 +684,10 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                             setIsSheetOpen(false);
                                                             router.push(`/products/${product.slug || product.id}`);
                                                         }}
-                                                        className="group flex cursor-pointer gap-3 rounded-xl p-2 transition-colors hover:bg-[#faf6ee]"
+                                                        className="group flex cursor-pointer gap-3 rounded-xl p-2 transition-colors hover:bg-[#fafafa]"
                                                     >
                                                         {product.media ? (
-                                                            <div className="relative h-[85px] w-[75px] shrink-0 overflow-hidden rounded-[8px] bg-[#f6f2ea]">
+                                                            <div className="relative h-[85px] w-[75px] shrink-0 overflow-hidden rounded-[8px] bg-[#f7f7f7]">
                                                                 <img
                                                                     src={product.media.url}
                                                                     alt={product.name}
@@ -695,7 +695,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                                 />
                                                             </div>
                                                         ) : (
-                                                            <div className="h-[85px] w-[75px] shrink-0 rounded-[8px] border border-[#ebe3d6] bg-[#f6f2ea]" />
+                                                            <div className="h-[85px] w-[75px] shrink-0 rounded-[8px] border border-[#ebe7df] bg-[#f7f7f7]" />
                                                         )}
                                                         <div className="flex min-w-0 flex-1 flex-col pt-1">
                                                             {product.brand?.name && (
@@ -721,7 +721,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                 </div>
                              )}
                         </div>
-                        <div className="border-t border-[#ebe3d6] bg-[#fffdf9]/95 px-6 py-4 backdrop-blur-sm">
+                        <div className="border-t border-[#ebe7df] bg-white px-6 py-4">
                             <div className="flex items-center justify-between gap-4">
                                 <p className="text-xs text-[#7b725f]">
                                     Tip: try terms like &ldquo;saree&rdquo;, &ldquo;gift&rdquo;, or a brand name.
