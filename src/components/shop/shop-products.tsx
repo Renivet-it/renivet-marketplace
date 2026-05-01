@@ -1,6 +1,5 @@
 "use client";
 
-import { trackProductClick } from "@/actions/track-product";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
@@ -51,9 +50,24 @@ export function ShopProducts({
 }: PageProps) {
     const utils = trpc.useUtils();
 
-    const handleProductClick = async (productId: string, brandId: string) => {
+    const handleProductClick = (productId: string, brandId: string) => {
         try {
-            await trackProductClick(productId, brandId);
+            const payload = JSON.stringify({ productId, brandId });
+
+            if (typeof navigator !== "undefined" && navigator.sendBeacon) {
+                const blob = new Blob([payload], {
+                    type: "application/json",
+                });
+                navigator.sendBeacon("/api/products/track-click", blob);
+                return;
+            }
+
+            void fetch("/api/products/track-click", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: payload,
+                keepalive: true,
+            });
         } catch (error) {
             console.error("Failed to track click:", error);
         }
@@ -254,10 +268,13 @@ export function ShopProducts({
         initialData?.count ?? 0
     );
     const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [hasReachedEnd, setHasReachedEnd] = useState(
+        () => (initialData?.data?.length ?? 0) < limit
+    );
     const loadedPagesRef = useRef<Set<number>>(new Set([page || 1]));
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
 
-    const hasMoreProducts = allProducts.length < totalCount;
+    const hasMoreProducts = !hasReachedEnd && allProducts.length < totalCount;
     const totalPages = Math.max(1, Math.ceil(totalCount / limit));
 
     const loadMoreProducts = useCallback(() => {
@@ -276,11 +293,17 @@ export function ShopProducts({
             loadedPagesRef.current = new Set([1]);
             setAllProducts(visibleProducts);
             setTotalCount(count);
+            setHasReachedEnd(
+                visibleProducts.length < limit || visibleProducts.length >= count
+            );
             setIsLoadingMore(false);
             return;
         }
 
         if (loadedPagesRef.current.has(currentPage)) {
+            if (visibleProducts.length < limit) {
+                setHasReachedEnd(true);
+            }
             setIsLoadingMore(false);
             return;
         }
@@ -292,11 +315,20 @@ export function ShopProducts({
             const uniqueNewProducts = visibleProducts.filter(
                 (p) => !existingIds.has(p.id)
             );
+            const nextProducts = [...previousProducts, ...uniqueNewProducts];
 
-            return [...previousProducts, ...uniqueNewProducts];
+            if (
+                visibleProducts.length < limit ||
+                uniqueNewProducts.length === 0 ||
+                nextProducts.length >= count
+            ) {
+                setHasReachedEnd(true);
+            }
+
+            return nextProducts;
         });
         setIsLoadingMore(false);
-    }, [count, isFetching, page, visibleProducts]);
+    }, [count, isFetching, limit, page, visibleProducts]);
 
     useEffect(() => {
         if (isFetching || isError || !hasMoreProducts) return;
