@@ -96,7 +96,7 @@ function useUnifiedCart() {
   };
 
   // Handle userCart being an array directly
-  const cartItems = userId 
+  const cartItems = userId
     ? (Array.isArray(userCart) ? userCart : userCart?.items ?? [])
     : guestCart;
   // Show number of unique items, not total quantity
@@ -127,28 +127,60 @@ export function MobileBottomNav() {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 z-50 w-full bg-transparent md:hidden">
-      <div className="mx-auto mb-2 mt-1 w-[90%] max-w-sm rounded-full bg-neutral-900 text-white shadow-lg">
-        <div className="flex h-16 items-center justify-around">
-          {navItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={cn(
-                "flex h-full w-full flex-col items-center justify-center gap-1 text-xs font-medium transition-colors",
-                pathname === item.href ? "text-white" : "text-neutral-400 hover:text-white"
-              )}
-            >
-              <div className="relative">
-                <item.icon className="h-6 w-6" />
-                {item.label === "Cart" && item.count > 0 && (
-                  <span className="absolute -right-2 -top-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                    {item.count}
-                  </span>
+    <nav className="fixed inset-x-0 bottom-0 z-50 md:hidden">
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f6efe1] via-[#f6efe1]/85 to-transparent" />
+      <div className="relative mx-auto mb-3 mt-1 w-[92%] max-w-sm px-1 pb-[max(env(safe-area-inset-bottom),0px)]">
+        <div className="rounded-[34px] border border-[#efe5d2] bg-[linear-gradient(180deg,rgba(255,250,242,0.96)_0%,rgba(244,234,214,0.98)_100%)] p-2 shadow-[0_20px_45px_rgba(62,52,33,0.18)] ring-1 ring-white/70 backdrop-blur-xl">
+          <div className="mb-2 h-[3px] w-16 rounded-full bg-[linear-gradient(90deg,rgba(64,72,41,0)_0%,rgba(64,72,41,0.85)_50%,rgba(64,72,41,0)_100%)] mx-auto" />
+          <div className="grid h-[78px] grid-cols-4 gap-1">
+            {navItems.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className={cn(
+                  "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[24px] px-1.5 py-2 text-[10px] font-semibold tracking-[0.08em] transition-all duration-200",
+                  pathname === item.href
+                    ? "bg-[linear-gradient(180deg,#31401f_0%,#263018_100%)] text-white shadow-[0_14px_26px_rgba(49,64,31,0.28)]"
+                    : item.label === "Cart"
+                      ? "text-primary"
+                      : "text-[#726a58]"
                 )}
-              </div>
-            </Link>
-          ))}
+              >
+                {pathname === item.href && (
+                  <span className="absolute inset-x-6 top-1 h-[3px] rounded-full bg-[#f0e0b6]" />
+                )}
+                <div
+                  className={cn(
+                    "relative flex size-11 items-center justify-center rounded-full border transition-all",
+                    pathname === item.href
+                      ? "border-white/15 bg-white/10 shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                      : item.label === "Cart"
+                        ? "border-[#e7d9bb] bg-[linear-gradient(180deg,#fffdf8_0%,#f3ead7_100%)] text-primary shadow-[0_12px_26px_rgba(184,160,115,0.24)]"
+                        : "border-[#efe5d2] bg-white/60 text-[#5e584b]"
+                  )}
+                >
+                  <item.icon className="size-[21px]" />
+                  {item.label === "Cart" && item.count > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border-2 border-[#fbf6ec] bg-[#ff5a52] px-1 text-[10px] font-bold text-white shadow-sm">
+                      {item.count}
+                    </span>
+                  )}
+                </div>
+                <span
+                  className={cn(
+                    "truncate leading-none",
+                    pathname === item.href
+                      ? "text-white"
+                      : item.label === "Cart"
+                        ? "text-primary"
+                        : "text-[#726a58]"
+                  )}
+                >
+                  {item.label}
+                </span>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </nav>
