@@ -102,6 +102,22 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [isSheetOpen, setIsSheetOpen] = useState(false);
         const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
+        useEffect(() => {
+            if (typeof window === "undefined") return;
+
+            const warmSearchModule = () => {
+                void import("@/lib/python/ai-suggestion");
+            };
+
+            if ("requestIdleCallback" in window) {
+                const idleId = window.requestIdleCallback(warmSearchModule);
+                return () => window.cancelIdleCallback(idleId);
+            }
+
+            const timer = window.setTimeout(warmSearchModule, 800);
+            return () => window.clearTimeout(timer);
+        }, []);
+
         // Fetch suggestions when search term changes
         useEffect(() => {
             const fetchAISuggestions = async () => {
@@ -438,9 +454,12 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     onOpenChange={(open) => {
                         setIsSheetOpen(open);
                         if (open) {
-                            setTimeout(() => {
-                                if (inputRef.current) inputRef.current.focus();
-                            }, 100);
+                            requestAnimationFrame(() => {
+                                inputRef.current?.focus();
+                            });
+                        } else {
+                            setShowSuggestions(false);
+                            setSelectedIndex(-1);
                         }
                     }}
                 >
@@ -462,7 +481,17 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                         </button>
                     </SheetTrigger>
 
-                    <SheetContent side="right" className="flex w-full flex-col border-l-0 bg-white p-0 shadow-2xl sm:max-w-[500px]">
+                    <SheetContent
+                        forceMount
+                        side="right"
+                        onOpenAutoFocus={(event) => {
+                            event.preventDefault();
+                            requestAnimationFrame(() => {
+                                inputRef.current?.focus();
+                            });
+                        }}
+                        className="flex w-full flex-col border-l-0 bg-white p-0 shadow-[0_20px_60px_rgba(31,24,17,0.18)] data-[state=closed]:duration-200 data-[state=open]:duration-300 sm:max-w-[500px]"
+                    >
                         <SheetHeader className="sr-only">
                             <SheetTitle>Search products</SheetTitle>
                         </SheetHeader>

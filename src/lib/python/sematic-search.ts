@@ -8,7 +8,7 @@ import axios from "axios";
 export async function getEmbedding(text: string): Promise<number[]> {
     try {
         const response = await axios.post(
-            `${"http://localhost:8000"}/embeddings/generate`,
+            `${"http://64.227.137.174:8000"}/embeddings/generate`,
             { text },
             {
                 headers: {
@@ -39,7 +39,7 @@ export async function getEmbedding(text: string): Promise<number[]> {
 export async function getEmbedding768(text: string): Promise<number[]> {
     try {
         const response = await axios.post(
-            `${"http://localhost:8000"}/embeddings/generate-768`,
+            `${"http://64.227.137.174:8000"}/embeddings/generate-768`,
             // `${"http://64.227.137.174:8000"}/embeddings/generate-768`,
             { text },
             {

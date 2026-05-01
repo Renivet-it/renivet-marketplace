@@ -819,7 +819,7 @@ class ProductQuery {
             try {
                 console.log("[getProducts] Hitting Advanced RAG Engine for query:", processedSearch);
                 const response = await fetch(
-                    `http://localhost:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
+                    `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
                     { next: { revalidate: 60 } }
                 );
 
