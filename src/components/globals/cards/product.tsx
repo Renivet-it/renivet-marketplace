@@ -17,7 +17,7 @@ import { ProductWithBrand } from "@/lib/validations";
 import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 function useGuestCart() {
@@ -104,23 +104,27 @@ export function ProductCard({
                 toast.error(err.message || "Could not add to cart."),
         });
 
-    const mediaUrls =
-        Array.from(
+    const mediaUrls = useMemo(
+        () =>
+            Array.from(
             new Set(
                 product.media
                     ?.filter((media) => media.mediaItem?.url)
                     .map((media) => media.mediaItem?.url || "")
             )
-        ) || [];
+            ) || [],
+        [product.media]
+    );
 
     const imageUrl = mediaUrls[0] || PLACEHOLDER_IMAGE_URL;
     const activeCardImage =
         isProductHovered && mediaUrls.length > 1
             ? mediaUrls[currentImageIndex] || imageUrl
             : imageUrl;
-    const quickViewImages = Array.from(
-        new Set([imageUrl, ...mediaUrls])
-    ).filter(Boolean);
+    const quickViewImages = useMemo(
+        () => Array.from(new Set([imageUrl, ...mediaUrls])).filter(Boolean),
+        [imageUrl, mediaUrls]
+    );
 
     const rawPrice = product.variants?.[0]?.price || product.price || 0;
     const originalPrice =
@@ -204,11 +208,22 @@ export function ProductCard({
         });
     }, [isQuickViewOpen, quickViewImages]);
 
+    const preloadQuickViewImages = useCallback(() => {
+        if (typeof window === "undefined") return;
+
+        quickViewImages.slice(0, 3).forEach((src) => {
+            const preloadedImage = new window.Image();
+            preloadedImage.decoding = "async";
+            preloadedImage.src = src;
+        });
+    }, [quickViewImages]);
+
     const handleQuickViewChange = (open: boolean) => {
         setIsQuickViewOpen(open);
 
         if (open) {
             setQuickViewImageIndex(0);
+            preloadQuickViewImages();
         }
     };
 
@@ -339,7 +354,10 @@ export function ProductCard({
                                 }}
                             >
                                 <DialogTrigger asChild>
-                                    <button className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]">
+                                    <button
+                                        className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]"
+                                        onPointerDown={preloadQuickViewImages}
+                                    >
                                         Quick Buy
                                     </button>
                                 </DialogTrigger>
@@ -363,6 +381,7 @@ export function ProductCard({
                                         "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
                                 )}
                                 aria-label="Quick buy"
+                                onPointerDown={preloadQuickViewImages}
                             >
                                 <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_68%)] opacity-70" />
                                 <ShoppingCart className="size-[18px]" />
@@ -371,14 +390,14 @@ export function ProductCard({
                     </div>
 
                     <DialogContent
-                        className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-[24px] border border-[#ebe7df] bg-white p-0 shadow-[0_24px_70px_rgba(29,24,18,0.14)] md:h-[85vh]"
+                        className="block h-[92dvh] w-[96vw] max-w-5xl gap-0 overflow-hidden rounded-[24px] border border-[#ebe7df] bg-white p-0 shadow-[0_24px_70px_rgba(29,24,18,0.14)] md:h-[85vh]"
                         onCloseAutoFocus={(e) => e.preventDefault()}
                     >
                         <DialogTitle className="sr-only">
                             {product.title}
                         </DialogTitle>
 
-                        <div className="flex h-full flex-col overflow-y-auto bg-white md:flex-row md:overflow-hidden">
+                        <div className="flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain bg-white [-webkit-overflow-scrolling:touch] md:flex-row md:overflow-hidden">
                             <div className="group/slider relative h-[320px] w-full shrink-0 bg-[#f7f7f7] sm:h-[380px] md:h-full md:w-1/2">
                                 <Image
                                     src={
