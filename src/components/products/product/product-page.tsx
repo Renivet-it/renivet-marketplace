@@ -263,33 +263,33 @@ export function ProductPage({
                                 userId={userId}
                             />
 
-                            <div className="border-t border-neutral-200 px-6 py-6 md:px-8">
-                                <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-neutral-500">
+                            <div className="border-t border-neutral-200 px-6 py-4 md:px-8">
+                                <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-neutral-500">
                                     100% Secure Checkout
                                 </p>
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <div className="flex flex-wrap items-center gap-2.5">
-                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-5 py-2 text-[28px] font-black italic leading-none text-[#1a2e8a]">
+                                <div className="flex flex-wrap items-center justify-between gap-2.5">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <span className="rounded border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-lg font-black italic leading-none text-[#1a2e8a]">
                                             VISA
                                         </span>
-                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2">
+                                        <span className="rounded border border-neutral-300 bg-neutral-50 px-3 py-1.5">
                                             <span className="inline-flex items-center">
-                                                <span className="h-5 w-5 rounded-full bg-[#eb001b]" />
-                                                <span className="-ml-2 h-5 w-5 rounded-full bg-[#f79e1b]" />
+                                                <span className="size-3.5 rounded-full bg-[#eb001b]" />
+                                                <span className="-ml-1.5 size-3.5 rounded-full bg-[#f79e1b]" />
                                             </span>
                                         </span>
-                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2 text-xl font-bold leading-none text-[#097939]">
+                                        <span className="rounded border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-base font-bold leading-none text-[#097939]">
                                             UPI
                                         </span>
-                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2 text-xl font-semibold leading-none text-[#1858b9]">
+                                        <span className="rounded border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-base font-semibold leading-none text-[#1858b9]">
                                             RuPay
                                         </span>
-                                        <span className="rounded-md border border-neutral-300 bg-neutral-50 px-4 py-2 text-sm font-semibold tracking-wide text-neutral-600">
+                                        <span className="rounded border border-neutral-300 bg-neutral-50 px-3 py-1.5 text-xs font-semibold tracking-wide text-neutral-600">
                                             COD
                                         </span>
                                     </div>
-                                    <div className="flex items-center gap-2 text-sm text-neutral-400">
-                                        <Lock className="size-4" />
+                                    <div className="flex items-center gap-1.5 text-xs text-neutral-400">
+                                        <Lock className="size-3.5" />
                                         <span>SSL Encrypted</span>
                                     </div>
                                 </div>
