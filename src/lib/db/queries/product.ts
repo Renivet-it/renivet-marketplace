@@ -768,115 +768,115 @@ class ProductQuery {
         // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
 
-        let searchEmbedding: number[] | null = null;
-        let searchEmbedding768: number[] | null = null;
         let topBrandMatch: {
             id: string;
             name: string;
             distance: number;
         } | null = null;
 
+        let processedSearch: string | undefined;
+        let searchQuery = undefined;
+        let ragProductIds: string[] = [];
+        let isRagSearchActive = false;
+
         // --- Search embedding (semantic) ---
         if (search?.length) {
+            isRagSearchActive = true;
             // Preprocess query for better matching
-            const processedSearch = preprocessSearchQuery(search);
+            processedSearch = preprocessSearchQuery(search);
 
-            // Generate 384-dim embedding for brand matching (brands still use 384-dim)
-            searchEmbedding = await getEmbedding(processedSearch);
-
-            // Generate 768-dim embedding for advanced semantic product search
             try {
-                searchEmbedding768 = await getEmbedding768(processedSearch);
-            } catch (_error) {
-                console.warn(
-                    "⚠️ Failed to generate 768-dim embedding, falling back to 384-dim"
-                );
-                searchEmbedding768 = null;
+                // Generate 384-dim embedding for brand matching (brands still use 384-dim)
+                const searchEmbedding = await getEmbedding(processedSearch);
+
+                // 🔍 Detect brand intent
+                const brandResult = await db.execute(sql`
+                    SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
+                    FROM brands
+                    WHERE embeddings IS NOT NULL
+                    ORDER BY distance ASC
+                    LIMIT 1
+                `);
+
+                const brandRow = Array.isArray(brandResult)
+                    ? brandResult[0]
+                    : brandResult?.rows?.[0];
+                if (brandRow && Number(brandRow.distance) < BRAND_MATCH_THRESHOLD) {
+                    topBrandMatch = {
+                        id: brandRow.id,
+                        name: brandRow.name,
+                        distance: Number(brandRow.distance),
+                    };
+                    console.log(
+                        `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
+                    );
+                }
+            } catch (e) {
+                console.warn("Brand intent matching skipped/failed", e);
             }
 
-            // 🔍 Detect brand intent
-            const brandResult = await db.execute(sql`
-                SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
-                FROM brands
-                WHERE embeddings IS NOT NULL
-                ORDER BY distance ASC
-                LIMIT 1
-            `);
-
-            const brandRow = Array.isArray(brandResult)
-                ? brandResult[0]
-                : brandResult?.rows?.[0];
-            if (brandRow && Number(brandRow.distance) < BRAND_MATCH_THRESHOLD) {
-                topBrandMatch = {
-                    id: brandRow.id,
-                    name: brandRow.name,
-                    distance: Number(brandRow.distance),
-                };
-                console.log(
-                    `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
+            // Fetch absolute best products from the Advanced RAG Python backend
+            try {
+                console.log("[getProducts] Hitting Advanced RAG Engine for query:", processedSearch);
+                const response = await fetch(
+                    `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
+                    { next: { revalidate: 60 } }
                 );
+
+                if (response.ok) {
+                    const data = await response.json();
+                    if (Array.isArray(data)) {
+                        ragProductIds = data.map((d: any) => String(d.id));
+                        console.log(`[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`);
+                    }
+                }
+            } catch (error) {
+                console.error("[getProducts] RAG Engine failed:", error);
             }
 
-            // NOTE: Category intent detection is disabled because the categories
-            // table doesn't have an embeddings column. To enable it, add an
-            // embeddings column to the categories table and generate embeddings.
-        }
+            const localSearchPattern = `%${processedSearch}%`;
+            const localSearchFallbackQuery = or(
+                ilike(products.title, localSearchPattern),
+                ilike(products.description, localSearchPattern),
+                ilike(products.metaTitle, localSearchPattern),
+                ilike(products.metaDescription, localSearchPattern),
+                sql`EXISTS (
+                    SELECT 1
+                    FROM brands b
+                    WHERE b.id = ${products.brandId}
+                      AND LOWER(b.name) LIKE ${localSearchPattern}
+                )`,
+                sql`EXISTS (
+                    SELECT 1
+                    FROM categories c
+                    WHERE c.id = ${products.categoryId}
+                      AND LOWER(c.name) LIKE ${localSearchPattern}
+                )`,
+                sql`EXISTS (
+                    SELECT 1
+                    FROM sub_categories sc
+                    WHERE sc.id = ${products.subcategoryId}
+                      AND LOWER(sc.name) LIKE ${localSearchPattern}
+                )`,
+                sql`EXISTS (
+                    SELECT 1
+                    FROM product_types pt
+                    WHERE pt.id = ${products.productTypeId}
+                      AND LOWER(pt.name) LIKE ${localSearchPattern}
+                )`
+            );
 
-        // --- Search relevance filters (using 768-dim if available) ---
-        let searchQuery;
-        if (searchEmbedding768) {
-            // Use 768-dim embeddings for better semantic matching
-            // Tightened: only include products within a relevant distance range
-            const highRelevanceThreshold = 0.5;
-            const lowRelevanceThreshold = 0.65; // was 0.85 — too loose, caused irrelevant results
-            const highRelevanceQuery = sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector < ${highRelevanceThreshold}`;
-            const lowRelevanceQuery = sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-            const semanticQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
-            // Also include exact text matches (title/description) so literal brand/product searches always work
-            const searchPattern = `%${search}%`;
-            const textQuery = or(
-                ilike(products.title, searchPattern),
-                ilike(products.description, searchPattern),
-                ilike(products.nativeSku, searchPattern),
-                ilike(products.sku, searchPattern),
-                sql`EXISTS (
-                    SELECT 1
-                    FROM ${productVariants} pv
-                    WHERE pv.product_id = ${products.id}
-                      AND pv.is_deleted = false
-                      AND (
-                          pv.native_sku ILIKE ${searchPattern}
-                          OR pv.sku ILIKE ${searchPattern}
-                      )
-                )`
-            );
-            searchQuery = or(semanticQuery, textQuery);
-        } else if (searchEmbedding) {
-            // Fallback to 384-dim embeddings
-            const highRelevanceThreshold = 0.6;
-            const lowRelevanceThreshold = 0.8; // was 0.99 — too loose
-            const highRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector < ${highRelevanceThreshold}`;
-            const lowRelevanceQuery = sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector BETWEEN ${highRelevanceThreshold} AND ${lowRelevanceThreshold}`;
-            const semanticQuery = sql`(${highRelevanceQuery}) OR (${lowRelevanceQuery})`;
-            // Also include exact text matches
-            const searchPattern = `%${search}%`;
-            const textQuery = or(
-                ilike(products.title, searchPattern),
-                ilike(products.description, searchPattern),
-                ilike(products.nativeSku, searchPattern),
-                ilike(products.sku, searchPattern),
-                sql`EXISTS (
-                    SELECT 1
-                    FROM ${productVariants} pv
-                    WHERE pv.product_id = ${products.id}
-                      AND pv.is_deleted = false
-                      AND (
-                          pv.native_sku ILIKE ${searchPattern}
-                          OR pv.sku ILIKE ${searchPattern}
-                      )
-                )`
-            );
-            searchQuery = or(semanticQuery, textQuery);
+            // Apply search filter
+            if (ragProductIds.length > 0) {
+                searchQuery = or(
+                    inArray(products.id, ragProductIds),
+                    localSearchFallbackQuery
+                );
+            } else {
+                // Fall back to the local catalogue when the external RAG engine
+                // is connected to a different product copy or returns no ids.
+                searchQuery = localSearchFallbackQuery;
+            }
         }
 
         // --- Build filters ---
@@ -1049,15 +1049,12 @@ class ProductQuery {
             );
         }
 
-        // 🟩 Step 2: semantic relevance (using 768-dim if available, fallback to 384-dim)
-        if (searchEmbedding768) {
+        // 🟩 Step 2: semantic relevance (using Advanced RAG order)
+        if (isRagSearchActive && ragProductIds.length > 0) {
+            // Sort exactly by the relevance order determined by the AI engine
+            const cases = ragProductIds.map((id, index) => `WHEN products.id::text = '${id}' THEN ${index}`).join(' ');
             orderBy.push(
-                sql`${products.semanticSearchEmbeddings} <=> ${JSON.stringify(searchEmbedding768)}::vector ASC`
-            );
-        } else if (searchEmbedding) {
-            // Fallback to 384-dim embeddings
-            orderBy.push(
-                sql`${products.embeddings} <=> ${JSON.stringify(searchEmbedding)}::vector ASC`
+                sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`
             );
         }
 

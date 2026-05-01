@@ -221,7 +221,8 @@ export async function detectCategoryIntentFallback(
         const ptNameLower = pt.name.toLowerCase();
         if (
             normalizedQuery === ptNameLower ||
-            normalizedQuery.includes(ptNameLower)
+            normalizedQuery.includes(ptNameLower) ||
+            ptNameLower.includes(normalizedQuery)
         ) {
             return { matched: true, type: "PRODUCT_TYPE", data: pt };
         }
@@ -232,7 +233,8 @@ export async function detectCategoryIntentFallback(
         const scNameLower = sc.name.toLowerCase();
         if (
             normalizedQuery === scNameLower ||
-            normalizedQuery.includes(scNameLower)
+            normalizedQuery.includes(scNameLower) ||
+            scNameLower.includes(normalizedQuery)
         ) {
             return { matched: true, type: "SUBCATEGORY", data: sc };
         }
@@ -243,7 +245,8 @@ export async function detectCategoryIntentFallback(
         const catNameLower = cat.name.toLowerCase();
         if (
             normalizedQuery === catNameLower ||
-            normalizedQuery.includes(catNameLower)
+            normalizedQuery.includes(catNameLower) ||
+            catNameLower.includes(normalizedQuery)
         ) {
             return { matched: true, type: "CATEGORY", data: cat };
         }

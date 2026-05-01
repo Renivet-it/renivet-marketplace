@@ -1,7 +1,7 @@
 import { GeneralShell } from "@/components/globals/layouts";
 import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
+import { ProductSearch } from "@/components/ui/product-search";
 import { Label } from "@/components/ui/label";
-import { SearchInput } from "@/components/ui/search-input";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries, recommendationQueries } from "@/lib/db/queries";
@@ -63,12 +63,8 @@ export default async function Page({ searchParams }: PageProps) {
                 </aside>
 
                 <main className="w-full space-y-4 md:flex-1 md:space-y-5">
-                    <div className="space-y-4 rounded-2xl border border-[#e2e8f0] bg-white p-4 md:hidden">
-                        <SearchInput
-                            type="search"
-                            placeholder="Search products"
-                            className="h-11 border-[#d7e0ea] text-base"
-                        />
+                    <div className="space-y-4 rounded-[28px] border border-[#e5dccd] bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4 shadow-[0_18px_40px_rgba(59,52,39,0.06)] md:hidden">
+                        <ProductSearch className="h-11 text-base" />
                         <div className="grid grid-cols-2 gap-2">
                             <Suspense
                                 fallback={<Skeleton className="h-10 w-full" />}

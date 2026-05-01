@@ -1,7 +1,7 @@
 "use server";
 
 import axios from "axios";
-
+import { productQueries } from "@/lib/db/queries";
 export async function fetchSuggestions(query: string): Promise<string[]> {
     try {
         console.log(
@@ -10,8 +10,8 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
         );
         const embeddingServiceUrl = process.env.EMBEDDING_SERVICE_URL;
         const response = await axios.get(
+            // `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
             `${"http://64.227.137.174:8000"}/suggestions/ai-suggestions`,
-            // `${"http://localhost:8000"}/suggestions/ai-suggestions`,
             {
                 params: { query }, // Pass the query as a URL parameter
                 headers: {
@@ -49,5 +49,32 @@ export async function fetchSuggestions(query: string): Promise<string[]> {
         const errorMessage =
             error.response?.data?.detail || "Failed to fetch suggestions";
         throw new Error(errorMessage);
+    }
+}
+
+export async function fetchSearchProducts(query: string) {
+    try {
+        console.log("Fetching RAG search results for query:", query);
+        const response = await axios.get(
+            `${"http://64.227.137.174:8000"}/search/advanced-rag`,
+            {
+                params: { query, limit: 3 },
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        );
+
+        const productsData = response.data;
+        if (!Array.isArray(productsData)) {
+            return [];
+        }
+
+        // The python backend already formats this correctly: id, name, slug, price, brand, media
+        return productsData;
+
+    } catch (error) {
+        console.error("Error fetching RAG search products:", error);
+        return [];
     }
 }
