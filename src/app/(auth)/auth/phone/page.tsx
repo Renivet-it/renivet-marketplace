@@ -1,22 +1,11 @@
-import { PhoneAuthForm } from "@/components/globals/forms/phone-auth";
-import { GeneralShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-    title: "Continue with Phone",
-    description: "Sign in or create an account with phone OTP",
+    title: "Email Sign In",
+    description: "Phone sign-in is currently disabled",
 };
 
 export default function Page() {
-    return (
-        <GeneralShell
-            classNames={{
-                innerWrapper: "max-w-lg xl:max-w-xl",
-            }}
-        >
-            <div className="flex items-center justify-center">
-                <PhoneAuthForm />
-            </div>
-        </GeneralShell>
-    );
+    redirect("/auth/signin");
 }
