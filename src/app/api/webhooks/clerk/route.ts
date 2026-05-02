@@ -75,8 +75,25 @@ export async function POST(req: NextRequest) {
                             createdAt: webhookUser.created_at,
                             updatedAt: webhookUser.updated_at,
                         })
+                        .onConflictDoUpdate({
+                            target: users.id,
+                            set: {
+                                firstName,
+                                lastName,
+                                email: email?.email_address ?? null,
+                                phone: phone?.phone_number ?? null,
+                                avatarUrl: webhookUser.image_url,
+                                isEmailVerified:
+                                    email?.verification?.status === "verified",
+                                isPhoneVerified:
+                                    phone?.verification?.status === "verified",
+                                updatedAt: webhookUser.updated_at,
+                            },
+                        })
                         .returning()
                         .then((res) => res[0]);
+
+                    await userCache.remove(webhookUser.id);
 
                     let addCode = false;
 
@@ -88,10 +105,11 @@ export async function POST(req: NextRequest) {
 
                     if (newUser.email) {
                         await resend.emails.send({
-                        from: env.RESEND_EMAIL_FROM,
-                        to: newUser.email,
-                        subject: "🎉 Welcome Aboard the Renivet Express! 🎉",
-                        react: AccountCreated({ user: newUser, addCode }),
+                            from: env.RESEND_EMAIL_FROM,
+                            to: newUser.email,
+                            subject:
+                                "🎉 Welcome Aboard the Renivet Express! 🎉",
+                            react: AccountCreated({ user: newUser, addCode }),
                         });
                     }
                 }
@@ -125,8 +143,9 @@ export async function POST(req: NextRequest) {
 
                     await Promise.all([
                         db
-                            .update(users)
-                            .set({
+                            .insert(users)
+                            .values({
+                                id: webhookUser.id,
                                 firstName,
                                 lastName,
                                 email: email?.email_address ?? null,
@@ -136,9 +155,26 @@ export async function POST(req: NextRequest) {
                                     email?.verification?.status === "verified",
                                 isPhoneVerified:
                                     phone?.verification?.status === "verified",
+                                createdAt: webhookUser.created_at,
                                 updatedAt: webhookUser.updated_at,
                             })
-                            .where(eq(users.id, webhookUser.id)),
+                            .onConflictDoUpdate({
+                                target: users.id,
+                                set: {
+                                    firstName,
+                                    lastName,
+                                    email: email?.email_address ?? null,
+                                    phone: phone?.phone_number ?? null,
+                                    avatarUrl: webhookUser.image_url,
+                                    isEmailVerified:
+                                        email?.verification?.status ===
+                                        "verified",
+                                    isPhoneVerified:
+                                        phone?.verification?.status ===
+                                        "verified",
+                                    updatedAt: webhookUser.updated_at,
+                                },
+                            }),
                         userCache.remove(webhookUser.id),
                     ]);
                 }

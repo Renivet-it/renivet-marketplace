@@ -8,7 +8,11 @@ export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
     const res = NextResponse.next();
 
-    if (url.pathname === "/api/webhooks/clerk") return NextResponse.next();
+    if (
+        url.pathname === "/api/webhooks/clerk" ||
+        url.pathname === "/api/permission"
+    )
+        return NextResponse.next();
 
     if (url.pathname === "/support")
         return NextResponse.redirect(new URL("https://dsc.gg/drvgo"), {
@@ -36,7 +40,12 @@ export default clerkMiddleware(async (auth, req) => {
             new URL(
                 `/api/permission?${searchParams.toString()}`,
                 url
-            ).toString()
+            ).toString(),
+            {
+                headers: {
+                    cookie: req.headers.get("cookie") ?? "",
+                },
+            }
         );
         if (res.error) return NextResponse.redirect(new URL("/", url));
 

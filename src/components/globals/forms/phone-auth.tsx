@@ -40,6 +40,17 @@ const getErrorMessage = (error: unknown) => {
     return DEFAULT_MESSAGES.ERRORS.GENERIC;
 };
 
+const getMissingRequirementMessage = (missingFields: string[]) => {
+    const needsEmail = missingFields.includes("email_address");
+    const needsPassword = missingFields.includes("password");
+
+    if (needsEmail || needsPassword) {
+        return "Phone OTP is enabled, but Clerk still requires email/password for new sign-ups. In Clerk Dashboard, make email optional/disabled for sign-up and disable Password to allow phone-only accounts.";
+    }
+
+    return `Clerk still requires: ${missingFields.join(", ")}. Make those optional in Clerk, or collect them before OTP.`;
+};
+
 export function PhoneAuthForm() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -103,6 +114,8 @@ export function PhoneAuthForm() {
                 }
 
                 await signUp.create({
+                    firstName: "Renivet",
+                    lastName: "Customer",
                     phoneNumber: formattedPhone,
                 });
 
@@ -152,13 +165,37 @@ export function PhoneAuthForm() {
                     await signUp.attemptPhoneNumberVerification({
                         code,
                     });
+                let completedSignUp = signUpAttempt;
 
-                if (signUpAttempt.status !== "complete") {
-                    throw new Error("Missing requirements or verification aborted");
+                const needsNameFields = signUpAttempt.missingFields?.some(
+                    (field) =>
+                        ["first_name", "firstName", "last_name", "lastName"].includes(
+                            field
+                        )
+                );
+
+                if (
+                    signUpAttempt.status === "missing_requirements" &&
+                    needsNameFields
+                ) {
+                    completedSignUp = await signUp.update({
+                        firstName: signUpAttempt.firstName ?? "Renivet",
+                        lastName: signUpAttempt.lastName ?? "Customer",
+                    });
+                }
+
+                if (completedSignUp.status !== "complete") {
+                    const missingFields = completedSignUp.missingFields ?? [];
+
+                    throw new Error(
+                        missingFields.length > 0
+                            ? getMissingRequirementMessage(missingFields)
+                            : "Missing requirements or verification aborted"
+                    );
                 }
 
                 await setActiveSignUp?.({
-                    session: signUpAttempt.createdSessionId,
+                    session: completedSignUp.createdSessionId,
                 });
             }
 
