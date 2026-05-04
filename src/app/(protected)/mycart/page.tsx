@@ -4,6 +4,7 @@ import {
     NavbarHome,
     NavbarMob,
 } from "@/components/globals/layouts";
+import { Icons } from "@/components/icons";
 import { ProfileNav } from "@/components/profile";
 import { siteConfig } from "@/config/site";
 import { auth } from "@clerk/nextjs/server";
@@ -42,10 +43,88 @@ export default async function CartPage({
     const step = Math.max(0, Math.min(currentStep, 2));
 
     return (
-        <div className="relative flex min-h-screen flex-col bg-[#fcfcf5]">
+        <div className="relative flex min-h-screen flex-col bg-[linear-gradient(180deg,#fbfbf8_0%,#f3f1ea_100%)]">
             <NavbarHome />
             <main className="flex flex-1 flex-col">
                 <GeneralShell>
+                    <div className="flex flex-col gap-6">
+                        {step === 0 && (
+                            <section className="overflow-hidden rounded-[28px] border border-[#e6e0d4] bg-[linear-gradient(135deg,#ffffff_0%,#f7f4ed_52%,#eef3ee_100%)] shadow-[0_30px_80px_-50px_rgba(27,39,33,0.28)]">
+                                <div className="grid gap-6 px-5 py-6 md:p-8 xl:grid-cols-[1.25fr_0.75fr]">
+                                    <div className="space-y-5">
+                                        <div className="inline-flex items-center gap-2 rounded-full border border-[#d9e5dc] bg-white/80 px-3 py-1.5 text-11 font-semibold uppercase tracking-[0.18em] text-[#516457]">
+                                            <Icons.Sparkles className="size-3.5" />
+                                            Almost yours
+                                        </div>
+                                        <div className="space-y-3">
+                                            <h1 className="max-w-[14ch] text-[30px] font-semibold leading-[1.02] tracking-[-0.03em] text-[#1d2b23] md:text-[42px]">
+                                                Your cart is one calm, easy step
+                                                away from checkout.
+                                            </h1>
+                                            <p className="max-w-[62ch] text-sm leading-6 text-[#667267] md:text-[15px]">
+                                                We kept everything you loved in
+                                                one place. Review your picks,
+                                                enjoy your welcome savings, and
+                                                complete your order with secure
+                                                delivery and thoughtful support.
+                                            </p>
+                                        </div>
+                                        <div className="grid gap-3 sm:grid-cols-3">
+                                            {[
+                                                {
+                                                    icon: Icons.Truck,
+                                                    title: "Fast dispatch",
+                                                    copy: "Delivery updates at every step",
+                                                },
+                                                {
+                                                    icon: Icons.Shield,
+                                                    title: "Secure checkout",
+                                                    copy: "Protected payments and trusted fulfilment",
+                                                },
+                                                {
+                                                    icon: Icons.Leaf,
+                                                    title: "Better choices",
+                                                    copy: "Curated homegrown brands worth keeping",
+                                                },
+                                            ].map((item) => (
+                                                <div
+                                                    key={item.title}
+                                                    className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-[0_20px_40px_-34px_rgba(40,56,45,0.35)] backdrop-blur-sm"
+                                                >
+                                                    <item.icon className="size-4 text-[#5f7866]" />
+                                                    <p className="mt-3 text-sm font-semibold text-[#1f2b24]">
+                                                        {item.title}
+                                                    </p>
+                                                    <p className="mt-1 text-xs leading-5 text-[#708071]">
+                                                        {item.copy}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <div className="grid gap-3 self-start sm:grid-cols-3 xl:grid-cols-1">
+                                        {[
+                                            "Best value is auto-applied where eligible",
+                                            "Selected items stay grouped for faster checkout",
+                                            "Wishlist and pairing suggestions keep momentum high",
+                                        ].map((point, index) => (
+                                            <div
+                                                key={point}
+                                                className="flex items-start gap-3 rounded-2xl border border-[#e6e1d7] bg-[#fffdfa] p-4"
+                                            >
+                                                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#1f3328] text-xs font-bold text-white">
+                                                    {index + 1}
+                                                </div>
+                                                <p className="text-sm leading-6 text-[#556257]">
+                                                    {point}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </section>
+                        )}
+
                     <div className="flex flex-col gap-6 md:flex-row">
                         {step === 0 && (
                             <ProfileNav
@@ -58,7 +137,7 @@ export default async function CartPage({
                             {step === 0 && (
                                 <div className="flex flex-col gap-6 lg:flex-row">
                                     {/* Center content — Cart items */}
-                                    <div className="flex-1 space-y-4">
+                                    <div className="flex-1 space-y-5">
                                         <CheckoutStepper currentStep={step} />
                                         <Suspense
                                             fallback={<CartLoadingSkeleton />}
@@ -75,8 +154,8 @@ export default async function CartPage({
                                     </div>
 
                                     {/* Right sidebar — Order Summary (desktop: sticky sidebar, mobile: full-width at bottom) */}
-                                    <div className="w-full lg:w-80 lg:shrink-0">
-                                        <div className="lg:sticky lg:top-24">
+                                    <div className="w-full lg:w-[360px] lg:shrink-0">
+                                        <div className="lg:sticky lg:top-28">
                                             <CheckoutSection userId={userId} />
                                         </div>
                                     </div>
@@ -130,6 +209,7 @@ export default async function CartPage({
                                 </div>
                             )}
                         </div>
+                    </div>
                     </div>
                 </GeneralShell>
             </main>

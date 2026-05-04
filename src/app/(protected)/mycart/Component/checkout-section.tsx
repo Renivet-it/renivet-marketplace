@@ -2,7 +2,6 @@
 import { Spinner } from "@/components/ui/spinner";
 // src/app/(protected)/mycart/Component/checkout-section.tsx
 
-import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
@@ -32,8 +31,7 @@ const AUTO_COUPON_MIN_CART_VALUE = 3000 * 100;
 
 export default function CheckoutSection({ userId }: PageProps) {
     const router = useRouter();
-    const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
-        useCartStore();
+    const { appliedCoupon, setAppliedCoupon } = useCartStore();
 
     const [isCouponExpanded, setIsCouponExpanded] = useState(false);
     const [couponCode, setCouponCode] = useState<string>("");
@@ -188,6 +186,11 @@ export default function CheckoutSection({ userId }: PageProps) {
     } = trpc.general.coupons.validateCoupon.useMutation();
 
     const hasAutoApplied = useRef(false);
+    const amountUntilAutoCoupon = Math.max(
+        0,
+        AUTO_COUPON_MIN_CART_VALUE - totalPrice
+    );
+    const isWelcomeOfferUnlocked = amountUntilAutoCoupon === 0;
 
     useEffect(() => {
         const shouldAutoApply = totalPrice > AUTO_COUPON_MIN_CART_VALUE;
@@ -230,6 +233,62 @@ export default function CheckoutSection({ userId }: PageProps) {
 
     return (
         <div className="w-full space-y-4">
+            <div className="overflow-hidden rounded-[24px] border border-[#dce8df] bg-[linear-gradient(135deg,#1f3328_0%,#30493b_100%)] text-white shadow-[0_28px_65px_-36px_rgba(22,34,29,0.55)]">
+                <div className="space-y-4 p-4">
+                    <div className="flex items-start gap-3">
+                        <div className="bg-white/12 flex size-10 shrink-0 items-center justify-center rounded-full">
+                            <Truck className="size-4 text-[#e5f3e8]" />
+                        </div>
+                        <div>
+                            <p className="text-11 font-semibold uppercase tracking-[0.18em] text-[#c9dccf]">
+                                Checkout perks
+                            </p>
+                            <h2 className="mt-1 text-lg font-semibold leading-tight text-white">
+                                {isWelcomeOfferUnlocked
+                                    ? "Your best available cart offer is ready."
+                                    : "You are close to unlocking your welcome offer."}
+                            </h2>
+                            <p className="mt-1 text-sm leading-6 text-white/75">
+                                {isWelcomeOfferUnlocked
+                                    ? "Complimentary delivery and your eligible savings are already working in your favor."
+                                    : `Add ${formatPriceTag(+convertPaiseToRupees(amountUntilAutoCoupon))} more to unlock ${AUTO_COUPON_CODE} automatically.`}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
+                        <div className="bg-white/8 rounded-2xl border border-white/10 p-3">
+                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-white/60">
+                                Selected items
+                            </p>
+                            <p className="mt-2 text-2xl font-semibold text-white">
+                                {itemsCount}
+                            </p>
+                        </div>
+                        <div className="bg-white/8 rounded-2xl border border-white/10 p-3">
+                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-white/60">
+                                Current total
+                            </p>
+                            <p className="mt-2 text-2xl font-semibold text-white">
+                                {formatPriceTag(
+                                    +convertPaiseToRupees(priceList.total)
+                                )}
+                            </p>
+                        </div>
+                        <div className="bg-white/8 rounded-2xl border border-white/10 p-3">
+                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-white/60">
+                                Status
+                            </p>
+                            <p className="mt-2 text-sm font-semibold text-[#e7f5ea]">
+                                {isWelcomeOfferUnlocked
+                                    ? "Offer unlocked"
+                                    : "Almost there"}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Complimentary delivery banner */}
             <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
                 <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100">
@@ -300,10 +359,20 @@ export default function CheckoutSection({ userId }: PageProps) {
             </div>
 
             {/* Order Summary Card — hidden card border on mobile, shown on desktop */}
-            <div className="border-0 bg-transparent p-0 md:rounded-xl md:border md:border-gray-200 md:bg-white md:p-5">
-                <h2 className="mb-4 text-base font-semibold text-gray-900 md:text-lg">
-                    Order Summary
-                </h2>
+            <div className="border-0 bg-transparent p-0 md:rounded-[26px] md:border md:border-[#e6e1d7] md:bg-white md:p-5 md:shadow-[0_22px_55px_-42px_rgba(22,34,29,0.24)]">
+                <div className="mb-4 flex items-start justify-between gap-3">
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-900 md:text-lg">
+                            Order Summary
+                        </h2>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Final review before secure payment
+                        </p>
+                    </div>
+                    <div className="rounded-full bg-[#eef3ee] px-3 py-1 text-11 font-semibold uppercase tracking-[0.14em] text-[#577061]">
+                        Secure
+                    </div>
+                </div>
 
                 {/* Sustainability line items — desktop only */}
                 <div className="hidden space-y-2.5 text-sm md:block">
@@ -377,9 +446,9 @@ export default function CheckoutSection({ userId }: PageProps) {
                     <Separator />
 
                     {/* Your Impact section — desktop only */}
-                    <div className="hidden rounded-lg bg-blue-50/70 p-3 md:block">
+                    <div className="hidden rounded-2xl bg-[linear-gradient(135deg,#f5f8ff_0%,#edf5ff_100%)] p-3 md:block">
                         <p className="mb-2 text-xs font-semibold text-blue-800">
-                            Your Impact
+                            Purchase value
                         </p>
                         <div className="space-y-1.5 text-xs text-blue-700">
                             <div className="flex items-center gap-1.5">
@@ -574,7 +643,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                                                                 }
                                                             </p>
                                                         )}
-                                                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-gray-400">
+                                                        <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-11 text-gray-400">
                                                             {coupon.minOrderAmount >
                                                                 0 && (
                                                                 <span className="flex items-center gap-0.5">
@@ -649,7 +718,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                 <div className="mt-5">
                     <Button
                         size="sm"
-                        className="w-full rounded-lg bg-[#95b6da] text-sm font-semibold text-white hover:bg-[#82a3c7]"
+                        className="w-full rounded-xl bg-[linear-gradient(135deg,#1f3328_0%,#315242_100%)] py-6 text-sm font-semibold text-white shadow-[0_24px_50px_-28px_rgba(31,51,40,0.55)] hover:bg-[linear-gradient(135deg,#1b2d23_0%,#28473a_100%)]"
                         disabled={
                             isUserFetching ||
                             isValidating ||
@@ -671,6 +740,9 @@ export default function CheckoutSection({ userId }: PageProps) {
                     >
                         Proceed to Checkout
                     </Button>
+                    <p className="mt-2 text-center text-11 text-gray-500">
+                        Secure payments, address confirmation, and final review next
+                    </p>
                 </div>
             </div>
         </div>
