@@ -336,7 +336,7 @@ export function NavbarHome({
                 data-menu-open={isMenuOpen}
             >
                 {/* 🔵 DISCOUNT STRIP — GLOBALLY ABOVE NAVBAR */}
-                <div className="order-2 w-full overflow-hidden border-t border-[#cbd5e1] bg-[#374151] md:order-1 md:border-none">
+                <div className="order-2 w-full overflow-hidden border-t border-[#244136] bg-[#244136] md:order-1 md:border-none">
                     <div
                         className="text-11 tracking-[0.08em] text-[#f8fafc] md:text-xs"
                         style={{
