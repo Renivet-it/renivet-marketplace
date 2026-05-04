@@ -83,6 +83,10 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const wrapperRef = useRef<HTMLDivElement>(null);
         const inputRef = useRef<HTMLInputElement | null>(null);
         const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
+        const suggestionRequestIdRef = useRef(0);
+        const suggestionModulePromiseRef = useRef<
+            Promise<typeof import("@/lib/python/ai-suggestion")> | null
+        >(null);
 
         // Merge refs
         const setRefs = useCallback(
@@ -102,6 +106,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [products, setProducts] = useState<any[]>([]);
         const [isFetchingSuggestions, setIsFetchingSuggestions] =
             useState(false);
+        const [lastSuggestionQuery, setLastSuggestionQuery] = useState("");
         const [isSheetOpen, setIsSheetOpen] = useState(false);
         const [isSearchLoading, setIsSearchLoading] = useState(false);
         const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
@@ -111,7 +116,9 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             if (typeof window === "undefined") return;
 
             const warmSearchModule = () => {
-                void import("@/lib/python/ai-suggestion");
+                suggestionModulePromiseRef.current ??= import(
+                    "@/lib/python/ai-suggestion"
+                );
             };
 
             if ("requestIdleCallback" in window) {
@@ -125,22 +132,32 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
         // Fetch suggestions when search term changes
         useEffect(() => {
+            const query = localSearch.trim();
+            const requestId = suggestionRequestIdRef.current + 1;
+            suggestionRequestIdRef.current = requestId;
+            setLastSuggestionQuery("");
+
             const fetchAISuggestions = async () => {
-                if (localSearch.length < 2) {
+                if (query.length < 2) {
                     setSuggestions([]);
                     setProducts([]);
+                    setIsFetchingSuggestions(false);
                     return;
                 }
 
                 setIsFetchingSuggestions(true);
                 try {
-                    const { fetchSuggestions, fetchSearchProducts } = await import(
+                    suggestionModulePromiseRef.current ??= import(
                         "@/lib/python/ai-suggestion"
                     );
+                    const { fetchSuggestions, fetchSearchProducts } =
+                        await suggestionModulePromiseRef.current;
                     const [suggestionsResult, productsResult] = await Promise.all([
-                        fetchSuggestions(localSearch),
-                        fetchSearchProducts(localSearch)
+                        fetchSuggestions(query),
+                        fetchSearchProducts(query)
                     ]);
+
+                    if (requestId !== suggestionRequestIdRef.current) return;
 
                     if (Array.isArray(suggestionsResult)) {
                         setSuggestions(suggestionsResult);
@@ -148,18 +165,23 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     if (Array.isArray(productsResult)) {
                         setProducts(productsResult);
                     }
+                    setLastSuggestionQuery(query);
                 } catch (error) {
+                    if (requestId !== suggestionRequestIdRef.current) return;
                     console.error("Error fetching suggestions:", error);
                     setSuggestions([]);
                     setProducts([]);
+                    setLastSuggestionQuery(query);
                 } finally {
-                    setIsFetchingSuggestions(false);
+                    if (requestId === suggestionRequestIdRef.current) {
+                        setIsFetchingSuggestions(false);
+                    }
                 }
             };
 
             const debounceTimer = setTimeout(() => {
                 fetchAISuggestions();
-            }, 300);
+            }, 120);
 
             return () => clearTimeout(debounceTimer);
         }, [localSearch]);
@@ -177,14 +199,20 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 const trimmed = nextSearch.trim();
                 const currentSearch = (searchParams.get("search") ?? "").trim();
                 const hasChangedSearch = trimmed !== currentSearch;
+                const clearedSearchKeys = new Set([
+                    "search",
+                    "page",
+                    "shopPage",
+                    "categoryId",
+                    "subCategoryId",
+                    "subcategoryId",
+                    "productTypeId",
+                ]);
 
                 if (trimmed.length > 0) {
                     const params = new URLSearchParams(
                         Array.from(searchParams.entries()).filter(
-                            ([key]) =>
-                                key !== "search" &&
-                                key !== "page" &&
-                                key !== "shopPage"
+                            ([key]) => !clearedSearchKeys.has(key)
                         )
                     );
                     params.set("search", trimmed);
@@ -201,10 +229,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 }
                 const params = new URLSearchParams(
                     Array.from(searchParams.entries()).filter(
-                        ([key]) =>
-                            key !== "search" &&
-                            key !== "page" &&
-                            key !== "shopPage"
+                        ([key]) => !clearedSearchKeys.has(key)
                     )
                 );
                 params.set("shopPage", "1");
@@ -224,21 +249,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 onSuccess: (result) => {
                     setShowSuggestions(false);
                     setIsSheetOpen(false);
-                    if (
-                        result.intentType === "BRAND" ||
-                        result.intentType === "PRODUCT_TYPE"
-                    ) {
-                        navigateToShopWithSearch(result.originalQuery);
-                        return;
-                    }
-                    if (
-                        result.intentType &&
-                        result.intentType !== "UNKNOWN" &&
-                        result.redirectUrl
-                    ) {
-                        router.push(result.redirectUrl);
-                        return;
-                    }
                     navigateToShopWithSearch(result.originalQuery);
                 },
                 onError: (error, variables) => {
@@ -608,7 +618,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                 <div className="flex justify-center py-10"><Spinner className="size-6 text-gray-300 opacity-70" /></div>
                              )}
 
-                             {!isFetchingSuggestions && localSearch.length > 0 && suggestions.length === 0 && products.length === 0 && (
+                             {!isFetchingSuggestions && localSearch.trim().length >= 2 && lastSuggestionQuery === localSearch.trim() && suggestions.length === 0 && products.length === 0 && (
                                 <div className="mt-10 text-center text-[15px] text-[#8c816f]">
                                     No results found for{" "}
                                     <span>&ldquo;{localSearch}&rdquo;</span>
@@ -616,7 +626,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                              )}
 
                              {/* EMPTY STATE (DEFAULT VIEW) */}
-                             {!isFetchingSuggestions && localSearch.length < 2 && (
+                             {!isFetchingSuggestions && localSearch.trim().length < 2 && (
                                 <div className="space-y-12 pt-2 duration-500 animate-in fade-in slide-in-from-bottom-2">
                                     {recentSearches.length > 0 && (
                                         <div>
