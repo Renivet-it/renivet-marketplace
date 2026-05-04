@@ -1,7 +1,8 @@
 "use server";
 
-import axios from "axios";
 import { productQueries } from "@/lib/db/queries";
+import axios from "axios";
+
 export async function fetchSuggestions(query: string): Promise<string[]> {
     try {
         console.log(
@@ -72,7 +73,6 @@ export async function fetchSearchProducts(query: string) {
 
         // The python backend already formats this correctly: id, name, slug, price, brand, media
         return productsData;
-
     } catch (error) {
         console.error("Error fetching RAG search products:", error);
         return [];

@@ -4,6 +4,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
+import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryState } from "nuqs";
 import * as React from "react";
@@ -64,6 +65,31 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
     };
 };
 
+type SearchProduct = {
+    id: string;
+    name: string;
+    slug?: string | null;
+    price: number;
+    brand?: {
+        name?: string | null;
+    } | null;
+    media?: {
+        url?: string | null;
+    } | null;
+};
+
+const POPULAR_SEARCHES = [
+    "Sarees",
+    "Dresses",
+    "Skincare",
+    "Home Decor",
+    "Gifts",
+    "Kurtas",
+];
+
+const SUGGESTION_DEBOUNCE_MS = 35;
+const PRODUCT_PREVIEW_DEBOUNCE_MS = 320;
+
 const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
     ({ className, disabled, classNames }, ref) => {
         const RECENT_SEARCHES_KEY = "renivet-recent-searches";
@@ -84,9 +110,13 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const inputRef = useRef<HTMLInputElement | null>(null);
         const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
         const suggestionRequestIdRef = useRef(0);
-        const suggestionModulePromiseRef = useRef<
-            Promise<typeof import("@/lib/python/ai-suggestion")> | null
-        >(null);
+        const searchLoadingTimerRef = useRef<ReturnType<
+            typeof setTimeout
+        > | null>(null);
+        const suggestionsAbortRef = useRef<AbortController | null>(null);
+        const productsAbortRef = useRef<AbortController | null>(null);
+        const suggestionsCacheRef = useRef(new Map<string, string[]>());
+        const productsCacheRef = useRef(new Map<string, SearchProduct[]>());
 
         // Merge refs
         const setRefs = useCallback(
@@ -103,88 +133,159 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
         // State for suggestions
         const [suggestions, setSuggestions] = useState<string[]>([]);
-        const [products, setProducts] = useState<any[]>([]);
+        const [products, setProducts] = useState<SearchProduct[]>([]);
         const [isFetchingSuggestions, setIsFetchingSuggestions] =
             useState(false);
+        const [isFetchingProducts, setIsFetchingProducts] = useState(false);
         const [lastSuggestionQuery, setLastSuggestionQuery] = useState("");
         const [isSheetOpen, setIsSheetOpen] = useState(false);
         const [isSearchLoading, setIsSearchLoading] = useState(false);
         const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
         const [recentSearches, setRecentSearches] = useState<string[]>([]);
 
-        useEffect(() => {
-            if (typeof window === "undefined") return;
-
-            const warmSearchModule = () => {
-                suggestionModulePromiseRef.current ??= import(
-                    "@/lib/python/ai-suggestion"
-                );
-            };
-
-            if ("requestIdleCallback" in window) {
-                const idleId = window.requestIdleCallback(warmSearchModule);
-                return () => window.cancelIdleCallback(idleId);
-            }
-
-            const timer = window.setTimeout(warmSearchModule, 800);
-            return () => window.clearTimeout(timer);
-        }, []);
-
         // Fetch suggestions when search term changes
         useEffect(() => {
             const query = localSearch.trim();
+            const cacheKey = query.toLowerCase();
             const requestId = suggestionRequestIdRef.current + 1;
             suggestionRequestIdRef.current = requestId;
             setLastSuggestionQuery("");
+            suggestionsAbortRef.current?.abort();
+            productsAbortRef.current?.abort();
 
-            const fetchAISuggestions = async () => {
-                if (query.length < 2) {
-                    setSuggestions([]);
-                    setProducts([]);
-                    setIsFetchingSuggestions(false);
-                    return;
-                }
+            if (query.length < 2) {
+                setSuggestions([]);
+                setProducts([]);
+                setIsFetchingSuggestions(false);
+                setIsFetchingProducts(false);
+                return;
+            }
 
-                setIsFetchingSuggestions(true);
-                try {
-                    suggestionModulePromiseRef.current ??= import(
-                        "@/lib/python/ai-suggestion"
+            const instantSuggestions = [...recentSearches, ...POPULAR_SEARCHES]
+                .filter((term, index, terms) => {
+                    const normalizedTerm = term.toLowerCase();
+                    return (
+                        normalizedTerm.includes(cacheKey) &&
+                        terms.findIndex(
+                            (item) => item.toLowerCase() === normalizedTerm
+                        ) === index
                     );
-                    const { fetchSuggestions, fetchSearchProducts } =
-                        await suggestionModulePromiseRef.current;
-                    const [suggestionsResult, productsResult] = await Promise.all([
-                        fetchSuggestions(query),
-                        fetchSearchProducts(query)
-                    ]);
+                })
+                .slice(0, 6);
 
-                    if (requestId !== suggestionRequestIdRef.current) return;
+            setSuggestions(instantSuggestions);
+            setProducts([]);
 
-                    if (Array.isArray(suggestionsResult)) {
-                        setSuggestions(suggestionsResult);
-                    }
-                    if (Array.isArray(productsResult)) {
-                        setProducts(productsResult);
-                    }
-                    setLastSuggestionQuery(query);
-                } catch (error) {
-                    if (requestId !== suggestionRequestIdRef.current) return;
-                    console.error("Error fetching suggestions:", error);
-                    setSuggestions([]);
-                    setProducts([]);
-                    setLastSuggestionQuery(query);
-                } finally {
-                    if (requestId === suggestionRequestIdRef.current) {
-                        setIsFetchingSuggestions(false);
-                    }
-                }
+            const cachedSuggestions = suggestionsCacheRef.current.get(cacheKey);
+            const cachedProducts = productsCacheRef.current.get(cacheKey);
+
+            if (cachedSuggestions) {
+                setSuggestions(cachedSuggestions);
+                setLastSuggestionQuery(query);
+                setIsFetchingSuggestions(false);
+            } else {
+                setIsFetchingSuggestions(true);
+            }
+
+            if (cachedProducts) {
+                setProducts(cachedProducts);
+                setIsFetchingProducts(false);
+            } else {
+                setIsFetchingProducts(true);
+            }
+
+            const suggestionTimer = cachedSuggestions
+                ? null
+                : setTimeout(async () => {
+                      const controller = new AbortController();
+                      suggestionsAbortRef.current = controller;
+
+                      try {
+                          const response = await fetch(
+                              `/api/search/suggestions?query=${encodeURIComponent(query)}`,
+                              { signal: controller.signal }
+                          );
+                          const suggestionsResult = await response.json();
+
+                          if (requestId !== suggestionRequestIdRef.current) {
+                              return;
+                          }
+
+                          const nextSuggestions = Array.isArray(
+                              suggestionsResult
+                          )
+                              ? suggestionsResult
+                              : [];
+                          suggestionsCacheRef.current.set(
+                              cacheKey,
+                              nextSuggestions
+                          );
+                          setSuggestions(
+                              nextSuggestions.length > 0
+                                  ? nextSuggestions
+                                  : instantSuggestions
+                          );
+                          setLastSuggestionQuery(query);
+                      } catch {
+                          if (
+                              controller.signal.aborted ||
+                              requestId !== suggestionRequestIdRef.current
+                          ) {
+                              return;
+                          }
+                          setSuggestions(instantSuggestions);
+                          setLastSuggestionQuery(query);
+                      } finally {
+                          if (requestId === suggestionRequestIdRef.current) {
+                              setIsFetchingSuggestions(false);
+                          }
+                      }
+                  }, SUGGESTION_DEBOUNCE_MS);
+
+            const productsTimer = cachedProducts
+                ? null
+                : setTimeout(async () => {
+                      const controller = new AbortController();
+                      productsAbortRef.current = controller;
+
+                      try {
+                          const response = await fetch(
+                              `/api/search/products?query=${encodeURIComponent(query)}`,
+                              { signal: controller.signal }
+                          );
+                          const productsResult = await response.json();
+
+                          if (requestId !== suggestionRequestIdRef.current) {
+                              return;
+                          }
+
+                          const nextProducts = Array.isArray(productsResult)
+                              ? productsResult
+                              : [];
+                          productsCacheRef.current.set(cacheKey, nextProducts);
+                          setProducts(nextProducts);
+                      } catch {
+                          if (
+                              controller.signal.aborted ||
+                              requestId !== suggestionRequestIdRef.current
+                          ) {
+                              return;
+                          }
+                          setProducts([]);
+                      } finally {
+                          if (requestId === suggestionRequestIdRef.current) {
+                              setIsFetchingProducts(false);
+                          }
+                      }
+                  }, PRODUCT_PREVIEW_DEBOUNCE_MS);
+
+            return () => {
+                if (suggestionTimer) clearTimeout(suggestionTimer);
+                if (productsTimer) clearTimeout(productsTimer);
+                suggestionsAbortRef.current?.abort();
+                productsAbortRef.current?.abort();
             };
-
-            const debounceTimer = setTimeout(() => {
-                fetchAISuggestions();
-            }, 120);
-
-            return () => clearTimeout(debounceTimer);
-        }, [localSearch]);
+        }, [localSearch, recentSearches]);
 
         const showMainPageSearchLoader = useCallback((query: string) => {
             setLoadingSearchQuery(query.trim());
@@ -192,6 +293,13 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             setIsSheetOpen(false);
             setShowSuggestions(false);
             setSelectedIndex(-1);
+
+            if (searchLoadingTimerRef.current) {
+                clearTimeout(searchLoadingTimerRef.current);
+            }
+            searchLoadingTimerRef.current = setTimeout(() => {
+                setIsSearchLoading(false);
+            }, 3000);
         }, []);
 
         const navigateToShopWithSearch = useCallback(
@@ -224,7 +332,13 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                             params.set("shopPage", existingShopPage);
                         }
                     }
-                    router.push(`/shop?${params.toString()}`);
+                    const nextUrl = `/shop?${params.toString()}`;
+                    const currentUrl = `${pathname}${searchParamsString ? `?${searchParamsString}` : ""}`;
+                    if (nextUrl === currentUrl) {
+                        setIsSearchLoading(false);
+                        return;
+                    }
+                    router.push(nextUrl);
                     return;
                 }
                 const params = new URLSearchParams(
@@ -234,14 +348,28 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 );
                 params.set("shopPage", "1");
                 const query = params.toString();
-                router.push(query ? `/shop?${query}` : "/shop");
+                const nextUrl = query ? `/shop?${query}` : "/shop";
+                const currentUrl = `${pathname}${searchParamsString ? `?${searchParamsString}` : ""}`;
+                if (nextUrl === currentUrl) {
+                    setIsSearchLoading(false);
+                    return;
+                }
+                router.push(nextUrl);
             },
-            [router, searchParams]
+            [pathname, router, searchParams, searchParamsString]
         );
 
         useEffect(() => {
             setIsSearchLoading(false);
         }, [pathname, searchParamsString]);
+
+        useEffect(() => {
+            return () => {
+                if (searchLoadingTimerRef.current) {
+                    clearTimeout(searchLoadingTimerRef.current);
+                }
+            };
+        }, []);
 
         // TRPC mutation for search processing
         const processSearchMutation =
@@ -614,11 +742,14 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
                         {/* Premium Results Area */}
                         <div className="flex-1 overflow-y-auto px-6 py-8">
-                             {isFetchingSuggestions && (
-                                <div className="flex justify-center py-10"><Spinner className="size-6 text-gray-300 opacity-70" /></div>
+                             {(isFetchingSuggestions || isFetchingProducts) && localSearch.trim().length >= 2 && (
+                                <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#eee8dc] bg-[#fbfaf6] px-3 py-2 text-12 font-medium text-[#7b725f]">
+                                    <Spinner className="size-3.5 text-primary" />
+                                    <span>Searching for &ldquo;{localSearch.trim()}&rdquo;</span>
+                                </div>
                              )}
 
-                             {!isFetchingSuggestions && localSearch.trim().length >= 2 && lastSuggestionQuery === localSearch.trim() && suggestions.length === 0 && products.length === 0 && (
+                             {!isFetchingSuggestions && !isFetchingProducts && localSearch.trim().length >= 2 && lastSuggestionQuery === localSearch.trim() && suggestions.length === 0 && products.length === 0 && (
                                 <div className="mt-10 text-center text-[15px] text-[#8c816f]">
                                     No results found for{" "}
                                     <span>&ldquo;{localSearch}&rdquo;</span>
@@ -626,7 +757,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                              )}
 
                              {/* EMPTY STATE (DEFAULT VIEW) */}
-                             {!isFetchingSuggestions && localSearch.trim().length < 2 && (
+                             {localSearch.trim().length < 2 && (
                                 <div className="space-y-12 pt-2 duration-500 animate-in fade-in slide-in-from-bottom-2">
                                     {recentSearches.length > 0 && (
                                         <div>
@@ -657,7 +788,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                             <h3 className="text-11 font-bold uppercase tracking-[0.15em] text-primary">Popular Searches</h3>
                                         </div>
                                         <div className="flex flex-wrap gap-2.5">
-                                            {["Sarees", "Dresses", "Skincare", "Home Decor", "Gifts", "Kurtas"].map((term) => (
+                                            {POPULAR_SEARCHES.map((term) => (
                                                 <button
                                                     key={term}
                                                     onClick={() => handleSuggestionClick(term)}
@@ -705,12 +836,10 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                 </div>
                              )}
 
-                             {(suggestions.length > 0 || products.length > 0) && !isFetchingSuggestions && (
+                             {(suggestions.length > 0 || products.length > 0) && (
                                 <div className="space-y-10">
                                     <div className="rounded-2xl border border-[#ebe7df] bg-white px-4 py-3 text-12 text-[#6a614f]">
-                                        {products.length > 0
-                                            ? `Showing ${products.length} quick matches for "${localSearch.trim()}"`
-                                            : `Refining ideas for "${localSearch.trim()}"`}
+                                        Suggestions for &ldquo;{localSearch.trim()}&rdquo;
                                     </div>
 
                                     {/* SUGGESTIONS */}
@@ -742,7 +871,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                     {/* PRODUCTS */}
                                     {products.length > 0 && (
                                         <div>
-                                            <div className="mb-4 pl-1 text-11 font-bold uppercase tracking-widest text-[#8c816f]">Products</div>
+                                            <div className="mb-4 pl-1 text-11 font-bold uppercase tracking-widest text-[#8c816f]">Top Products</div>
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                                                 {products.map((product) => (
                                                     <div
@@ -755,9 +884,11 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                     >
                                                         {product.media ? (
                                                             <div className="relative h-[85px] w-[75px] shrink-0 overflow-hidden rounded-[8px] bg-[#f7f7f7]">
-                                                                <img
+                                                                <Image
                                                                     src={product.media.url}
                                                                     alt={product.name}
+                                                                    fill
+                                                                    sizes="75px"
                                                                     className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
                                                                 />
                                                             </div>
