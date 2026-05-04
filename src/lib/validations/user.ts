@@ -22,12 +22,10 @@ export const userSchema = z.object({
             invalid_type_error: "Last name must be a string",
         })
         .min(1, "Last name is required"),
-    email: z
-        .string({
-            required_error: "Email is required",
-            invalid_type_error: "Email must be a string",
-        })
-        .nullable(),
+    email: z.string({
+        required_error: "Email is required",
+        invalid_type_error: "Email must be a string",
+    }),
     phone: z
         .string({
             required_error: "Phone is required",
@@ -95,13 +93,8 @@ export const updateUserGeneralSchema = userSchema
     })
     .partial();
 
-export const updateUserEmailSchema = z.object({
-    email: z
-        .string({
-            required_error: "Email is required",
-            invalid_type_error: "Email must be a string",
-        })
-        .email("Email is invalid"),
+export const updateUserEmailSchema = userSchema.pick({
+    email: true,
 });
 export const updateUserPhoneSchema = z.object({
     phone: z

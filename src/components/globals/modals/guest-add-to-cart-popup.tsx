@@ -13,8 +13,8 @@ import {
 import { useGuestPopupStore } from "@/lib/store/use-guest-popup-store";
 import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 
-const NOISE_SVG =
-    "url(\"data:image/svg+xml,%3Csvg viewBox=%270 0 200 200%27 xmlns=%27http://www.w3.org/2000/svg%27%3E%3Cfilter id=%27noiseFilter%27%3E%3CfeTurbulence type=%27fractalNoise%27 baseFrequency=%270.65%27 numOctaves=%273%27 stitchTiles=%27stitch%27/%3E%3C/filter%3E%3Crect width=%27100%25%27 height=%27100%25%27 filter=%27url(%23noiseFilter)%27/%3E%3C/svg%3E\")";
+// eslint-disable-next-line quotes
+const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`;
 
 export function GuestAddToCartPopup() {
     const { isOpen, closePopup, mode } = useGuestPopupStore();
@@ -24,50 +24,50 @@ export function GuestAddToCartPopup() {
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && closePopup()}>
-            <DialogContent className="max-h-[calc(100dvh-24px)] overflow-y-auto border-none bg-transparent p-0 shadow-[0_28px_90px_rgba(45,54,38,0.22)] sm:max-w-[760px] sm:overflow-hidden md:max-w-[720px] [&>button:last-child]:right-4 [&>button:last-child]:top-4 [&>button:last-child]:z-50 [&>button:last-child]:rounded-full [&>button:last-child]:bg-[#f8f6ed]/90 [&>button:last-child]:p-2 [&>button:last-child]:text-[#566149] hover:[&>button:last-child]:bg-white">
-                <div className="flex w-full flex-col overflow-hidden rounded-[26px] border border-[#dcd2bf] bg-[#fffdf7] sm:min-h-[440px] sm:flex-row">
-                    <div className="relative flex flex-col bg-[#87966f] px-5 pb-5 pt-6 text-white sm:w-[44%] sm:p-8 md:p-9">
-                        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(145deg,rgba(255,255,255,0.2)_0%,rgba(255,255,255,0.05)_36%,rgba(72,84,57,0.28)_100%)]" />
+            <DialogContent className="overflow-hidden border-none bg-transparent p-0 shadow-[0_0_80px_-15px_rgba(0,0,0,0.5)] sm:max-w-[800px] md:max-w-[700px] lg:max-w-[800px] [&>button:last-child]:text-white hover:[&>button:last-child]:bg-white/10 sm:[&>button:last-child]:text-muted-foreground sm:hover:[&>button:last-child]:bg-accent">
+                <div className="flex max-h-[85vh] w-full flex-col overflow-y-auto bg-background sm:max-h-[90vh] sm:min-h-[480px] sm:flex-row sm:overflow-visible">
+                    {/* Top/Left Half: Brand & Offer Image Section */}
+                    <div className="relative flex flex-col bg-[#8AA4C8] p-6 text-white sm:h-auto sm:w-[45%] sm:p-12 md:w-1/2 lg:w-[45%]">
+                        {/* Subtle Background Elements */}
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/15 to-transparent mix-blend-overlay"></div>
                         <div
-                            className="pointer-events-none absolute inset-0 opacity-10 mix-blend-soft-light"
+                            className="pointer-events-none absolute inset-0 opacity-[0.03] mix-blend-plus-lighter"
                             style={{ backgroundImage: NOISE_SVG }}
-                        />
+                        ></div>
 
                         <div className="relative z-10 flex items-center duration-700 animate-in fade-in slide-in-from-top-4">
-                            <RenivetFull className="h-[28px] w-[96px] text-[#26301f] drop-shadow-sm sm:h-[31px] sm:w-[108px]" />
+                            <RenivetFull className="h-[26px] w-[90px] text-white drop-shadow-sm sm:h-[34px] sm:w-[116px]" />
                         </div>
 
-                        <div className="relative z-10 mt-5 flex flex-1 flex-col justify-center delay-200 duration-700 animate-in fade-in slide-in-from-bottom-8 fill-mode-both sm:mt-0">
-                            <span className="mb-3 w-fit rounded-full border border-white/45 bg-white/25 px-3 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#26301f] shadow-sm backdrop-blur-sm sm:text-[10px]">
-                                Conscious cart benefit
-                            </span>
-                            <h2 className="font-playfair text-[28px] leading-none text-[#fffaf0] drop-shadow-sm sm:text-[40px]">
-                                Your greener cart
-                                <br />
-                                just got lighter.
+                        <div className="relative z-10 mt-6 flex flex-1 flex-col justify-center delay-200 duration-700 animate-in fade-in slide-in-from-bottom-8 fill-mode-both sm:mt-0">
+                            <h2 className="font-playfair text-[28px] uppercase tracking-wide text-[#4A6B9C] sm:text-[42px] md:text-5xl">
+                                WELCOME
                             </h2>
-                            <p className="font-outfit mt-3 max-w-[270px] text-13 leading-relaxed text-[#f8f5e8] sm:text-[15px]">
-                                Save on mindful finds from homegrown brands and
-                                keep your checkout beautifully simple.
+                            <p className="font-outfit mt-1.5 text-14 leading-relaxed text-white sm:mt-4 sm:text-16">
+                                Where homegrown brands meet conscious
+                                craftsmanship.
                             </p>
-
-                            <div className="mt-4 rounded-[20px] border border-white/60 bg-[#fff1bd] p-3.5 text-[#2f3a28] shadow-[0_16px_32px_rgba(72,84,57,0.18)] sm:p-4">
-                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#766735] sm:text-11">
-                                    First order reward
+                            <div className="mt-5 sm:mt-10">
+                                <p className="font-outfit text-[18px] font-bold text-[#F6EE9A] sm:text-[26px]">
+                                    Get flat 20% off
                                 </p>
-                                <div className="mt-2 flex items-center justify-between gap-2">
-                                    <span className="font-outfit text-xl font-black tracking-wide sm:text-[22px]">
-                                        TRYNEW20
-                                    </span>
-                                    <span className="rounded-full bg-[#65734f] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] text-white">
-                                        20% off
-                                    </span>
-                                </div>
+                                <p className="font-outfit text-[18px] font-bold text-[#F6EE9A] sm:text-[26px]">
+                                    CODE:{" "}
+                                    <span className="italic">TRYNEW20</span>
+                                </p>
                             </div>
                         </div>
                     </div>
 
-                    <div className="relative flex flex-col justify-center overflow-hidden bg-[#fffdf7] px-5 pb-6 pt-5 sm:w-[56%] sm:px-10 sm:py-9">
+                    {/* Bottom/Right Half: Actions & Details */}
+                    <div className="relative flex flex-col justify-center overflow-hidden bg-background p-6 sm:w-[55%] sm:px-12 sm:py-10 md:w-1/2 lg:w-[55%]">
+                        {/* Decorative subtle blurred shapes on the right panel */}
+                        <div className="absolute right-0 top-0 -mr-20 -mt-20 size-64 animate-pulse rounded-full bg-[#8AA4C8]/5 blur-[80px]"></div>
+                        <div
+                            className="absolute bottom-0 left-0 -mb-20 -ml-20 size-64 animate-pulse rounded-full bg-[#8AA4C8]/5 blur-[80px]"
+                            style={{ animationDelay: "1s" }}
+                        ></div>
+
                         <DialogHeader className="sr-only">
                             <DialogTitle>Welcome to Renivet</DialogTitle>
                             <DialogDescription>
@@ -76,38 +76,34 @@ export function GuestAddToCartPopup() {
                             </DialogDescription>
                         </DialogHeader>
 
-                        <div className="relative z-10 mx-auto w-full max-w-[360px]">
-                            <div className="mb-4 text-center delay-300 duration-700 animate-in fade-in slide-in-from-right-8 fill-mode-both sm:mb-5 sm:text-left">
-                                {mode === "cart" && (
-                                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#d8d0bf] bg-[#f8f4e8] px-3 py-1.5 text-xs font-semibold text-[#5f6b4f] shadow-sm">
-                                        <span className="size-2 rounded-full bg-[#8ea166]" />
-                                        Cart updated
-                                    </div>
-                                )}
-                                <h3 className="font-playfair text-2xl font-medium leading-tight text-[#252b21] sm:text-[32px]">
-                                    Keep the offer
+                        <div className="relative z-10 mx-auto w-full max-w-[340px]">
+                            <div className="mb-6 text-center delay-300 duration-700 animate-in fade-in slide-in-from-right-8 fill-mode-both sm:mb-8 sm:text-left">
+                                <h3 className="font-playfair text-[24px] font-medium text-[#1a1a1a] sm:text-[26px] md:text-[30px]">
+                                    Stay in the loop 🌱
                                 </h3>
-                                <p className="font-outfit mt-2 text-13 leading-relaxed text-[#66705f] sm:mt-3 sm:text-[15px]">
-                                    Sign in to save your cart, apply the reward,
-                                    and check out faster next time.
+                                <p className="font-outfit mt-2 text-14 leading-normal text-[#555555] sm:mt-4 sm:text-base">
+                                    Curated products that makes you want to
+                                    share the story straight to your inbox
                                 </p>
                             </div>
 
-                            <div className="flex flex-col gap-2 delay-500 duration-700 animate-in fade-in slide-in-from-bottom-4 fill-mode-both">
+                            <div className="flex flex-col gap-1 delay-500 duration-700 animate-in fade-in slide-in-from-bottom-4 fill-mode-both sm:gap-2">
                                 <SignInButton
                                     mode="modal"
                                     signUpFallbackRedirectUrl="/mycart"
                                     forceRedirectUrl="/mycart"
                                 >
-                                    <Button
-                                        size="lg"
-                                        className="font-outfit group relative h-11 w-full overflow-hidden rounded-xl bg-[#71815a] text-sm font-bold tracking-wide text-white shadow-[0_14px_28px_rgba(113,129,90,0.28)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#65734f] sm:h-[52px]"
-                                    >
-                                        <span className="relative">
-                                            Login and claim 20% off
-                                        </span>
-                                        <Icons.ArrowRight className="relative ml-2 size-4 transition-transform group-hover:translate-x-1" />
-                                    </Button>
+                                    <div className="rounded-[16px] border border-[#a8a8a8] p-[2px] transition-transform duration-300 hover:scale-[1.02] sm:p-[3px]">
+                                        <Button
+                                            size="lg"
+                                            className="font-outfit group relative h-[44px] w-full overflow-hidden rounded-[12px] border border-[#8AA4C8]/20 bg-[#8AA4C8] text-14 font-semibold tracking-wide text-white shadow-sm transition-all duration-300 hover:bg-[#7896be] sm:h-[50px] sm:text-[15px]"
+                                        >
+                                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 ease-out group-hover:translate-x-full"></div>
+                                            <span className="relative">
+                                                Login to Claim the Offer
+                                            </span>
+                                        </Button>
+                                    </div>
                                 </SignInButton>
 
                                 <SignUpButton
@@ -116,30 +112,32 @@ export function GuestAddToCartPopup() {
                                     forceRedirectUrl="/mycart"
                                 >
                                     <Button
+                                        variant="ghost"
                                         size="lg"
-                                        className="font-outfit h-11 w-full rounded-xl border border-[#d8d0bf] bg-white text-sm font-semibold text-[#4f5b44] shadow-sm transition-all duration-300 hover:border-[#b7aa91] hover:bg-[#f5f0e5] sm:h-[52px]"
+                                        className="font-outfit mt-1 h-[46px] w-full rounded-[14px] text-14 font-semibold text-[#1a1a1a] transition-all duration-300 hover:bg-black/5 hover:text-[#1a1a1a] sm:h-[52px] sm:text-[15px]"
                                     >
-                                        Create free account
+                                        Create Free Account
                                     </Button>
                                 </SignUpButton>
                             </div>
 
-                            <div className="relative mt-3 flex items-center py-2.5 delay-700 duration-700 animate-in fade-in fill-mode-both sm:mt-4 sm:py-3">
-                                <div className="grow border-t border-[#ded6c8]" />
-                                <span className="font-outfit mx-4 shrink-0 text-[10px] uppercase tracking-[0.15em] text-[#9a9182]">
+                            <div className="relative mt-3 flex items-center py-3 delay-700 duration-700 animate-in fade-in fill-mode-both sm:mt-6 sm:py-5">
+                                <div className="grow border-t border-[#e2e2e2]"></div>
+                                <span className="font-outfit mx-4 shrink-0 text-11 uppercase tracking-[0.15em] text-[#8e8e8e]">
                                     or
                                 </span>
-                                <div className="grow border-t border-[#ded6c8]" />
+                                <div className="grow border-t border-[#e2e2e2]"></div>
                             </div>
 
-                            <div className="delay-[800ms] rounded-2xl border border-[#e3ddcf] bg-[#faf7ee] p-3.5 text-center duration-700 animate-in fade-in slide-in-from-bottom-2 fill-mode-both sm:p-4">
-                                <p className="font-outfit text-xs leading-relaxed text-[#70685c]">
-                                    Prefer not to sign in right now? You can
-                                    still finish your order as a guest.
-                                </p>
+                            <div className="delay-[800ms] flex flex-col items-center gap-2.5 text-center duration-700 animate-in fade-in slide-in-from-bottom-2 fill-mode-both">
+                                {mode === "cart" && (
+                                    <p className="font-outfit text-13 font-semibold text-[#1a1a1a]">
+                                        Item was successfully added to cart.
+                                    </p>
+                                )}
                                 <button
                                     onClick={closePopup}
-                                    className="font-outfit group mt-2.5 inline-flex items-center justify-center gap-2 text-sm font-semibold leading-none text-[#5f6b4f] transition-colors hover:text-[#7a8d58] sm:mt-3"
+                                    className="font-outfit group inline-flex items-center gap-2 text-14 leading-none text-[#555555] transition-colors hover:text-[#1a1a1a]"
                                 >
                                     {mode === "cart"
                                         ? "Continue to checkout as guest"

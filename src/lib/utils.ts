@@ -356,10 +356,7 @@ export function getUserPermissions(
     };
 }
 
-export function hideEmail(email?: string | null) {
-    if (!email) return "No email added";
-    if (!email.includes("@")) return email;
-
+export function hideEmail(email: string) {
     const [username, domain] = email.split("@");
     const hiddenUsername = `${username.slice(0, 3)}${"*".repeat(5)}`;
     return `${hiddenUsername}@${domain}`;

@@ -9,8 +9,8 @@ export const clerkWebhookSchema = z.object({
 export const userWebhookSchema = z.object({
     id: z.string(),
     image_url: z.string(),
-    first_name: z.string().nullable(),
-    last_name: z.string().nullable(),
+    first_name: z.string(),
+    last_name: z.string(),
     email_addresses: z.array(
         z.object({
             id: z.string(),
@@ -23,17 +23,19 @@ export const userWebhookSchema = z.object({
         })
     ),
     phone_numbers: z.array(
-        z.object({
-            id: z.string(),
-            phone_number: z.string(),
-            verification: z
-                .object({
-                    status: z.string(),
-                })
-                .nullable(),
-        })
+        z
+            .object({
+                id: z.string(),
+                phone_number: z.string(),
+                verification: z
+                    .object({
+                        status: z.string(),
+                    })
+                    .nullable(),
+            })
+            .optional()
     ),
-    primary_email_address_id: z.string().nullable(),
+    primary_email_address_id: z.string(),
     primary_phone_number_id: z.string().nullable(),
     created_at: z.number().transform((val) => new Date(val)),
     updated_at: z.number().transform((val) => new Date(val)),
