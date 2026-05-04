@@ -201,28 +201,28 @@ export function GuestAddToCartPopup() {
                                 </div>
                             </div>
 
-                            <div className="grid gap-4 sm:grid-cols-[1.2fr_0.8fr]">
-                                <div className="border-white/12 rounded-[24px] border bg-white/10 p-5 backdrop-blur-md">
+                            <div className="grid gap-3 sm:grid-cols-[1.06fr_0.94fr]">
+                                <div className="border-white/12 rounded-[20px] border bg-white/10 p-4 backdrop-blur-md">
                                     <p className="font-outfit text-12 font-semibold uppercase tracking-[0.2em] text-[#d7e8d7]">
                                         Welcome offer
                                     </p>
-                                    <p className="mt-3 font-playfair text-[42px] leading-none text-[#f3e5b7]">
+                                    <p className="mt-2 font-playfair text-[32px] leading-none text-[#f3e5b7]">
                                         20% OFF
                                     </p>
-                                    <p className="font-outfit text-white/78 mt-3 text-sm leading-6">
+                                    <p className="font-outfit text-white/78 mt-2 text-sm leading-5">
                                         Use this code at checkout on your first
                                         order.
                                     </p>
                                 </div>
 
-                                <div className="rounded-[24px] border border-[#f3e5b7]/20 bg-[#f3e5b7]/10 p-5">
+                                <div className="rounded-[20px] border border-[#f3e5b7]/20 bg-[#f3e5b7]/10 p-4">
                                     <p className="font-outfit text-12 font-semibold uppercase tracking-[0.2em] text-[#f6ebc7]">
                                         Code
                                     </p>
-                                    <p className="font-outfit mt-3 text-[26px] font-bold tracking-[0.08em] text-white">
+                                    <p className="font-outfit mt-2 text-[22px] font-bold tracking-[0.06em] text-white">
                                         TRYNEW20
                                     </p>
-                                    <p className="font-outfit text-white/72 mt-2 text-sm">
+                                    <p className="font-outfit text-white/72 mt-1.5 text-sm leading-5">
                                         Crafted to welcome you in.
                                     </p>
                                 </div>
