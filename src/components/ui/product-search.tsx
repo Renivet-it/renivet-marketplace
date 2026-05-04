@@ -241,10 +241,10 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     }
                     navigateToShopWithSearch(result.originalQuery);
                 },
-                onError: (error) => {
+                onError: (error, variables) => {
                     console.error("Search error:", error);
                     setIsSheetOpen(false);
-                    navigateToShopWithSearch(localSearch);
+                    navigateToShopWithSearch(variables.query);
                 },
             });
 
@@ -282,7 +282,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const handleSearch = (query?: string) => {
             const searchQuery = (query || localSearch).trim();
 
-            if (searchQuery.length > 2) {
+            if (searchQuery.length > 0) {
                 showMainPageSearchLoader(searchQuery);
                 setRecentSearches((current) => {
                     const next = [
@@ -608,7 +608,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                 <div className="flex justify-center py-10"><Spinner className="size-6 text-gray-300 opacity-70" /></div>
                              )}
 
-                             {!isFetchingSuggestions && localSearch.length > 2 && suggestions.length === 0 && products.length === 0 && (
+                             {!isFetchingSuggestions && localSearch.length > 0 && suggestions.length === 0 && products.length === 0 && (
                                 <div className="mt-10 text-center text-[15px] text-[#8c816f]">
                                     No results found for{" "}
                                     <span>&ldquo;{localSearch}&rdquo;</span>
