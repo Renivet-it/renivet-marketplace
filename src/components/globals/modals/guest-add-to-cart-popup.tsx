@@ -88,10 +88,10 @@ export function GuestAddToCartPopup() {
                         </div>
                     </div>
 
-                    <div className="relative flex min-h-0 flex-1 flex-col px-5 pb-4 pt-3">
+                    <div className="scrollbar-hide relative min-h-0 flex-1 overflow-y-auto px-5 pb-8 pt-3">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(166,198,179,0.18),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(222,204,169,0.18),_transparent_24%)]" />
 
-                        <div className="relative z-10 flex h-full flex-col">
+                        <div className="relative z-10 flex min-h-full flex-col">
                             <p className="font-outfit max-w-[30ch] text-14 leading-5 text-[#58655d]">
                                 Create your account to claim the offer and get
                                 product updates that are actually worth opening.
@@ -111,7 +111,7 @@ export function GuestAddToCartPopup() {
                                 ))}
                             </div>
 
-                            <div className="mt-auto space-y-2.5 pt-3">
+                            <div className="mt-4 space-y-2.5">
                                 <SignInButton
                                     mode="modal"
                                     signUpFallbackRedirectUrl="/mycart"
@@ -141,15 +141,15 @@ export function GuestAddToCartPopup() {
                                 </SignUpButton>
                             </div>
 
-                            <div className="flex items-center gap-4 py-2">
+                            <div className="flex items-center gap-4 py-3">
                                 <div className="bg-[#234236]/12 h-px flex-1" />
-                                <span className="font-outfit text-11 uppercase tracking-[0.18em] text-[#8b8d84]">
+                                <span className="font-outfit text-11 uppercase tracking-[0.18em] text-[#6d736c]">
                                     or
                                 </span>
                                 <div className="bg-[#234236]/12 h-px flex-1" />
                             </div>
 
-                            <div className="space-y-2">
+                            <div className="space-y-2 pb-1">
                                 {mode === "cart" && (
                                     <p className="font-outfit bg-[#234236]/6 w-fit rounded-full px-3 py-1.5 text-13 font-semibold text-[#234236]">
                                         Your item is already in the cart.
