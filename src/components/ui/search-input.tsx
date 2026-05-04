@@ -94,7 +94,7 @@ const SearchInput = React.forwardRef<HTMLInputElement, InputProps>(
 
             debounceTimerRef.current = setTimeout(() => {
                 updateSearch(localSearch);
-            }, 500);
+            }, 250);
 
             return () => {
                 if (debounceTimerRef.current) {
