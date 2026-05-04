@@ -40,8 +40,6 @@ import { useMutation } from "@tanstack/react-query";
 import {
     AnimatePresence,
     motion,
-    useMotionValueEvent,
-    useScroll,
 } from "motion/react";
 import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
@@ -105,17 +103,37 @@ function useGuestCart() {
 
     return { guestCart, addToGuestCart, clearGuestCart };
 }
+
+function NavbarActionButton({
+    children,
+    href,
+    className,
+}: {
+    children: React.ReactNode;
+    href: string;
+    className?: string;
+}) {
+    return (
+        <Link
+            href={href}
+            className={cn(
+                "relative flex size-10 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2937] transition-all duration-200 hover:border hover:bg-[#f3f4f6] hover:text-[#111827]",
+                className
+            )}
+        >
+            {children}
+        </Link>
+    );
+}
 export function NavbarHome({
     customLogo,
 }: { customLogo?: React.ReactNode } = {}) {
-    const [isMenuHidden, setIsMenuHidden] = useState(false);
+    const [isMenuHidden] = useState(false);
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
     const setIsMenuOpen = useNavbarStore((state) => state.setIsOpen);
     const { guestCart } = useGuestCart();
     const { guestWishlist } = useGuestWishlist();
-    const { scrollY } = useScroll();
-
     // useMotionValueEvent(scrollY, "change", (latest) => {
     //     const previous = scrollY.getPrevious() ?? 0;
 
@@ -314,13 +332,13 @@ export function NavbarHome({
                     duration: 0.35,
                     ease: "easeInOut",
                 }}
-                className="sticky inset-x-0 top-0 z-50 flex h-auto w-full flex-col items-center justify-center border-b border-white/20 bg-white/60 backdrop-blur-lg"
+                className="sticky inset-x-0 top-0 z-50 flex h-auto w-full flex-col items-center justify-center border bg-[rgba(255,255,255,0.96)] shadow-[0_10px_30px_-28px_rgba(15,23,42,0.18)] backdrop-blur-xl"
                 data-menu-open={isMenuOpen}
             >
                 {/* 🔵 DISCOUNT STRIP — GLOBALLY ABOVE NAVBAR */}
-                <div className="order-2 w-full overflow-hidden border-t border-primary bg-primary md:order-1 md:border-none">
+                <div className="order-2 w-full overflow-hidden border-t border-[#cbd5e1] bg-[#374151] md:order-1 md:border-none">
                     <div
-                        className="text-[11px] tracking-wide text-primary-foreground md:text-xs"
+                        className="text-11 tracking-[0.08em] text-[#f8fafc] md:text-xs"
                         style={{
                             display: "inline-flex",
                             whiteSpace: "nowrap",
@@ -363,8 +381,8 @@ export function NavbarHome({
 
                 <nav
                     className={cn(
-                        "order-1 md:order-2 relative z-10 flex w-full max-w-5xl items-center justify-between gap-5 p-4 md:px-8 xl:max-w-[100rem]",
-                        isMenuOpen && "border-b"
+                        "relative z-10 order-1 flex w-full max-w-[100rem] items-center justify-between gap-4 px-4 py-3 md:order-2 md:px-8 xl:px-10",
+                        isMenuOpen && "border"
                     )}
                 >
                     <button
@@ -376,14 +394,14 @@ export function NavbarHome({
                         <Icons.Menu className="size-6" />
                     </button>
 
-                    <div className="flex items-center gap-20">
+                    <div className="flex items-center gap-8 xl:gap-12">
                         {customLogo ? (
                             customLogo
                         ) : (
                             <Link
                                 href="/"
                                 title="Home"
-                                className="flex items-center gap-2 text-2xl font-bold hover:opacity-100 active:opacity-100"
+                                className="flex items-center gap-2 text-2xl font-bold transition-opacity duration-200 hover:opacity-85"
                             >
                                 <RenivetFull width={120} height={36} />
                             </Link>
@@ -525,7 +543,7 @@ export function NavbarHome({
                                                         "Beauty and Personal Care" ? (
                                                         <>
                                                             <NavigationMenuTrigger
-                                                                className="relative bg-transparent hover:bg-transparent"
+                                                                className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-13 font-semibold uppercase tracking-[0.08em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary"
                                                                 onClick={(
                                                                     e
                                                                 ) => {
@@ -551,8 +569,35 @@ export function NavbarHome({
                                                             >
                                                                 {category.name}
                                                             </NavigationMenuTrigger>
-                                                            <NavigationMenuContent>
-                                                                <div className="grid w-[1200px] max-w-[95vw] grid-cols-5 border border-gray-100 bg-white font-dmsans shadow-2xl">
+                                                            <NavigationMenuContent className="pt-3">
+                                                                <div className="overflow-hidden rounded-[24px] border bg-[#ffffff] shadow-[0_30px_80px_-42px_rgba(15,23,42,0.18)]">
+                                                                    <div className="flex items-center justify-between border-b border-[#eef2f7] bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] px-8 py-4">
+                                                                        <div>
+                                                                            <p className="font-outfit text-11 font-semibold uppercase tracking-[0.18em] text-[#94a3b8]">
+                                                                                Explore
+                                                                            </p>
+                                                                            <h3 className="mt-1 font-dmsans text-[24px] font-semibold tracking-[0.01em] text-[#111827]">
+                                                                                {category.name}
+                                                                            </h3>
+                                                                        </div>
+                                                                        <Link
+                                                                            href={
+                                                                                category.name ===
+                                                                                "Home and Living"
+                                                                                    ? "/home-living"
+                                                                                    : category.name ===
+                                                                                        "Beauty and Personal Care"
+                                                                                      ? "/beauty-personal"
+                                                                                      : `/${category.name.toLowerCase()}`
+                                                                            }
+                                                                            className="font-outfit inline-flex items-center gap-2 rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-12 font-semibold uppercase tracking-[0.12em] text-[#374151] transition-colors hover:border-[#9ca3af] hover:text-[#111827]"
+                                                                        >
+                                                                            Shop all
+                                                                            <Icons.ArrowRight className="size-3.5" />
+                                                                        </Link>
+                                                                    </div>
+
+                                                                    <div className="grid w-[1180px] max-w-[95vw] grid-cols-4 font-dmsans">
                                                                     {(() => {
                                                                         const filteredSubCategories =
                                                                             subcategories.data
@@ -604,10 +649,9 @@ export function NavbarHome({
                                                                                     }
                                                                                 );
 
-                                                                        // Split into 5 columns
+                                                                        // Split into 4 denser columns for a cleaner mega menu
                                                                         const columns: (typeof filteredSubCategories)[] =
                                                                             [
-                                                                                [],
                                                                                 [],
                                                                                 [],
                                                                                 [],
@@ -620,7 +664,7 @@ export function NavbarHome({
                                                                             ) => {
                                                                                 columns[
                                                                                     i %
-                                                                                        5
+                                                                                        4
                                                                                 ].push(
                                                                                     sub
                                                                                 );
@@ -637,12 +681,12 @@ export function NavbarHome({
                                                                                         colIdx
                                                                                     }
                                                                                     className={cn(
-                                                                                        "flex flex-col gap-10 px-7 pb-10 pt-5",
+                                                                                        "flex min-h-[250px] flex-col gap-7 px-8 pb-8 pt-7",
                                                                                         colIdx %
                                                                                             2 ===
                                                                                             1
-                                                                                            ? "bg-gray-50/40"
-                                                                                            : "bg-white"
+                                                                                            ? "bg-[#f8fafc]"
+                                                                                            : "bg-[#ffffff]"
                                                                                     )}
                                                                                 >
                                                                                     {col.map(
@@ -653,19 +697,19 @@ export function NavbarHome({
                                                                                                 key={
                                                                                                     subcategory.id
                                                                                                 }
-                                                                                                className="space-y-2.5"
+                                                                                                className="space-y-3"
                                                                                             >
                                                                                                 <Link
                                                                                                     href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
-                                                                                                    className="block border-b border-gray-100 pb-1 transition-opacity hover:opacity-80"
+                                                                                                    className="block border-b border-[#eef2f7] pb-2 transition-colors hover:text-[#111827]"
                                                                                                 >
-                                                                                                    <h3 className="font-lato text-13 font-bold uppercase tracking-wide text-myntra-primary">
+                                                                                                    <h3 className="font-lato text-[15px] font-bold uppercase tracking-[0.06em] text-[#1f2937]">
                                                                                                         {
                                                                                                             subcategory.name
                                                                                                         }
                                                                                                     </h3>
                                                                                                 </Link>
-                                                                                                <ul className="space-y-1.5">
+                                                                                                <ul className="space-y-2">
                                                                                                     {productTypes.data
                                                                                                         .filter(
                                                                                                             (
@@ -704,7 +748,7 @@ export function NavbarHome({
                                                                                                                                 subcategory.id,
                                                                                                                                 productType.id
                                                                                                                             )}
-                                                                                                                            className="block text-13 font-normal text-myntra-label transition-all [transition-duration:0ms] hover:font-bold hover:text-myntra-primary"
+                                                                                                                            className="block text-[15px] font-normal leading-6 text-[#6b7280] transition-colors [transition-duration:0ms] hover:text-[#111827]"
                                                                                                                         >
                                                                                                                             {
                                                                                                                                 productType.name
@@ -722,12 +766,13 @@ export function NavbarHome({
                                                                             )
                                                                         );
                                                                     })()}
+                                                                    </div>
                                                                 </div>
                                                             </NavigationMenuContent>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <NavigationMenuTrigger className="bg-transparent">
+                                                            <NavigationMenuTrigger className="h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-13 font-semibold uppercase tracking-[0.08em] text-[#33413a] transition-colors duration-200 hover:bg-transparent hover:text-primary data-[state=open]:border-primary data-[state=open]:text-primary">
                                                                 {category.name}
                                                             </NavigationMenuTrigger>
                                                             <NavigationMenuContent>
@@ -743,30 +788,30 @@ export function NavbarHome({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-5">
+                    <div className="flex items-center gap-3 xl:gap-4">
                         <ProductSearch
-                            placeholder="Search for products and brands..."
-                            classNames={{ wrapper: "min-w-80 hidden xl:flex" }}
+                            placeholder="Search products, brands, categories..."
+                            classNames={{
+                                wrapper:
+                                    "hidden min-w-[280px] xl:flex xl:min-w-[360px] [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
+                            }}
                         />
                         {/* ✅ Guest-only Wishlist & Cart */}
                         {!user && (
                             <>
-                                <Link
-                                    href="/guestWishlist"
-                                    className="relative"
-                                >
+                                <NavbarActionButton href="/guestWishlist">
                                     {wishlistCount > 0 && (
-                                        <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                        <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                                             {wishlistCount}
                                         </div>
                                     )}
                                     <Icons.Heart className="size-5" />
                                     <span className="sr-only">Wishlist</span>
-                                </Link>
+                                </NavbarActionButton>
 
-                                <Link
+                                <NavbarActionButton
                                     href="/mycart"
-                                    className="global-cart-icon relative flex items-center justify-center"
+                                    className="global-cart-icon"
                                 >
                                     <motion.div
                                         animate={{
@@ -780,14 +825,14 @@ export function NavbarHome({
                                         className="relative flex items-center justify-center"
                                     >
                                         {cartCount > 0 && (
-                                            <div className="absolute right-[-6px] top-[-6px] flex size-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                            <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                                                 {cartCount}
                                             </div>
                                         )}
                                         <Icons.ShoppingCart className="size-5" />
                                     </motion.div>
                                     <span className="sr-only">Cart</span>
-                                </Link>
+                                </NavbarActionButton>
                             </>
                         )}
 
@@ -819,10 +864,10 @@ export function NavbarHome({
                                     </motion.div>
                                 </Link>
 
-                                <div className="hidden items-center gap-5 md:flex">
+                                <div className="hidden items-center gap-2 md:flex">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <button>
+                                            <button className="flex size-10 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2b24] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary">
                                                 <Icons.UserCircle className="size-5" />
                                                 <span className="sr-only">
                                                     User menu
@@ -830,8 +875,8 @@ export function NavbarHome({
                                             </button>
                                         </DropdownMenuTrigger>
 
-                                        <DropdownMenuContent className="min-w-56 rounded-none">
-                                            <DropdownMenuLabel className="space-y-1">
+                                        <DropdownMenuContent className="min-w-56 rounded-xl border bg-white p-2 shadow-[0_18px_45px_-30px_rgba(15,23,42,0.16)]">
+                                            <DropdownMenuLabel className="space-y-1 rounded-lg bg-[#f9fafb] p-3">
                                                 <p>
                                                     Hello,{" "}
                                                     <span className="font-semibold">
@@ -848,7 +893,7 @@ export function NavbarHome({
                                             <DropdownMenuGroup>
                                                 <DropdownMenuItem
                                                     className={cn(
-                                                        "rounded-none",
+                                                        "rounded-xl",
                                                         isAuthorized && "hidden"
                                                     )}
                                                     asChild
@@ -864,7 +909,7 @@ export function NavbarHome({
 
                                                 <DropdownMenuItem
                                                     className={cn(
-                                                        "rounded-none",
+                                                        "rounded-xl",
                                                         isAuthorized && "hidden"
                                                     )}
                                                     asChild
@@ -880,7 +925,7 @@ export function NavbarHome({
 
                                                 <DropdownMenuItem
                                                     className={cn(
-                                                        "rounded-none",
+                                                        "rounded-xl",
                                                         !isAuthorized &&
                                                             "hidden"
                                                     )}
@@ -896,7 +941,7 @@ export function NavbarHome({
                                                 </DropdownMenuItem>
 
                                                 <DropdownMenuItem
-                                                    className="rounded-none"
+                                                    className="rounded-xl"
                                                     asChild
                                                 >
                                                     <Link href="/contact">
@@ -911,7 +956,7 @@ export function NavbarHome({
                                             <DropdownMenuGroup>
                                                 <DropdownMenuItem
                                                     className={cn(
-                                                        "rounded-none",
+                                                        "rounded-xl",
                                                         isAuthorized && "hidden"
                                                     )}
                                                     asChild
@@ -923,7 +968,7 @@ export function NavbarHome({
                                                 </DropdownMenuItem>
 
                                                 <DropdownMenuItem
-                                                    className="rounded-none"
+                                                    className="rounded-xl"
                                                     asChild
                                                 >
                                                     <Link href="/profile">
@@ -936,7 +981,7 @@ export function NavbarHome({
                                             <DropdownMenuSeparator />
 
                                             <DropdownMenuItem
-                                                className="rounded-none"
+                                                className="rounded-xl"
                                                 disabled={isLoggingOut}
                                                 onClick={() => handleLogout()}
                                             >
@@ -946,13 +991,10 @@ export function NavbarHome({
                                         </DropdownMenuContent>
                                     </DropdownMenu>
 
-                                    <Link
-                                        href="/profile/wishlist"
-                                        className="relative"
-                                    >
+                                    <NavbarActionButton href="/profile/wishlist">
                                         {userWishlist?.length
                                             ? userWishlist.length > 0 && (
-                                                  <div className="absolute right-0 top-0 flex size-4 -translate-y-1/2 translate-x-1/2 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                                  <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                                                       {userWishlist.length}
                                                   </div>
                                               )
@@ -962,11 +1004,11 @@ export function NavbarHome({
                                         <span className="sr-only">
                                             Wishlist
                                         </span>
-                                    </Link>
+                                    </NavbarActionButton>
 
-                                    <Link
+                                    <NavbarActionButton
                                         href="/mycart"
-                                        className="global-cart-icon relative flex items-center justify-center"
+                                        className="global-cart-icon"
                                     >
                                         <motion.div
                                             animate={{
@@ -981,21 +1023,21 @@ export function NavbarHome({
                                         >
                                             {availableCart?.length &&
                                             availableCart.length > 0 ? (
-                                                <div className="absolute right-[-6px] top-[-6px] flex size-4 items-center justify-center rounded-full bg-primary text-xs text-primary-foreground">
+                                                <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
                                                     {availableCart.length}
                                                 </div>
                                             ) : null}
                                             <Icons.ShoppingCart className="size-5" />
                                         </motion.div>
                                         <span className="sr-only">Cart</span>
-                                    </Link>
+                                    </NavbarActionButton>
                                 </div>
                             </div>
                         ) : (
                             <>
                                 <Button
                                     variant="ghost"
-                                    className="hidden border-accent text-primary md:flex"
+                                    className="hidden h-10 rounded-lg border border-[#d9d9d9] px-4 text-[#1f2b24] hover:bg-[#f5f5f5] hover:text-primary md:flex"
                                     size="sm"
                                     asChild
                                 >
@@ -1007,7 +1049,7 @@ export function NavbarHome({
                                 <div className="flex items-center gap-1 md:hidden">
                                     <Button
                                         variant="ghost"
-                                        className="border-accent text-accent"
+                                        className="h-10 rounded-lg border border-[#d9d9d9] px-4 text-primary hover:bg-[#f5f5f5]"
                                         size="sm"
                                         asChild
                                     >
