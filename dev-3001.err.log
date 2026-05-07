@@ -5,19 +5,70 @@
 [1m[33mwarn[39m[22m - The class `ease-[cubic-bezier(0.25,1,0.5,1)]` is ambiguous and matches multiple utilities.
 [1m[33mwarn[39m[22m - If this is content and not a class, replace it with `ease-&lsqb;cubic-bezier(0.25,1,0.5,1)&rsqb;` to silence this warning.
 React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
-React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
-React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
-React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
-React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
-React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
-(node:7772) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 uncaughtException listeners added to [process]. Use emitter.setMaxListeners() to increase limit
-(Use `node --trace-warnings ...` to show where the warning was created)
-Error fetching unique brands: [Error [PostgresError]: canceling statement due to statement timeout] {
+[Error [PostgresError]: canceling statement due to statement timeout] {
   severity_local: 'ERROR',
   severity: 'ERROR',
   code: '57014',
   file: 'postgres.c',
   line: '3330',
   routine: 'ProcessInterrupts'
+}
+ ⨯ unhandledRejection: [Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts'
+}
+ ⨯ unhandledRejection:  [Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts'
+}
+[Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts'
+}
+ ⨯ unhandledRejection: [Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts'
+}
+ ⨯ unhandledRejection:  [Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts'
+}
+ ⨯ [Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts',
+  digest: '1394315279'
+}
+ ⨯ [Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts',
+  digest: '1394315279'
 }
 React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.

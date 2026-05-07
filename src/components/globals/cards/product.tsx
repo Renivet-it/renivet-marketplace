@@ -1,7 +1,9 @@
 "use client";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { ProductShareModal } from "@/components/globals/modals";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
+import { Icons } from "@/components/icons";
 import {
     Dialog,
     DialogContent,
@@ -96,6 +98,7 @@ export function ProductCard({
     >({});
     const [quickViewImageIndex, setQuickViewImageIndex] = useState(0);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
 
     const { mutateAsync: addToCart, isLoading } =
         trpc.general.users.cart.addProductToCart.useMutation({
@@ -398,7 +401,7 @@ export function ProductCard({
                         </DialogTitle>
 
                         <div className="flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain bg-white [-webkit-overflow-scrolling:touch] md:flex-row md:overflow-hidden">
-                            <div className="group/slider relative h-[320px] w-full shrink-0 bg-[#f7f7f7] sm:h-[380px] md:h-full md:w-1/2">
+                            <div className="group/slider relative mt-3 h-[320px] w-[calc(100%-1.5rem)] shrink-0 self-center overflow-hidden rounded-t-lg bg-[#f7f7f7] sm:h-[380px] md:mt-0 md:h-full md:w-1/2 md:rounded-none">
                                 <Image
                                     src={
                                         quickViewImages[quickViewImageIndex] ||
@@ -464,9 +467,19 @@ export function ProductCard({
                             </div>
 
                             <div className="scrollbar-hide flex flex-col p-4 md:w-1/2 md:overflow-y-auto md:p-12">
-                                <h2 className="pr-8 font-serif text-xl font-light leading-tight text-gray-900 sm:text-2xl md:text-[32px]">
-                                    {product.title}
-                                </h2>
+                                <div className="flex items-start justify-between gap-3">
+                                    <h2 className="font-serif text-xl font-light leading-tight text-gray-900 sm:text-2xl md:text-[32px]">
+                                        {product.title}
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsShareOpen(true)}
+                                        className="flex h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                                    >
+                                        <Icons.Share className="size-3.5" />
+                                        Share
+                                    </button>
+                                </div>
 
                                 <div className="mt-2 flex items-baseline gap-3 md:mt-5">
                                     <span className="text-lg font-medium text-gray-900 md:text-xl">
@@ -708,6 +721,12 @@ export function ProductCard({
                         </div>
                     </DialogContent>
                 </Dialog>
+
+                <ProductShareModal
+                    isOpen={isShareOpen}
+                    setIsOpen={setIsShareOpen}
+                    product={product}
+                />
 
                 <div className="min-h-[4.5rem] space-y-1.5 pb-1 pt-2">
                     <p className="truncate text-[11px] font-normal leading-tight text-gray-800 sm:text-xs">

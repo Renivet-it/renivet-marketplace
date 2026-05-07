@@ -1,6 +1,7 @@
 "use client";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { ProductShareModal } from "@/components/globals/modals";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
 import { Spinner } from "@/components/ui/spinner";
@@ -79,6 +80,7 @@ function Under999ProductCard({ product, userId }: { product: ProductWithBrand; u
     const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
     const [quickViewImageIndex, setQuickViewImageIndex] = useState(0);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
 
     const { mutateAsync: addToCart, isLoading } = trpc.general.users.cart.addProductToCart.useMutation({
         onSuccess: () => {}, onError: (err) => toast.error(err.message || "Could not add to cart"),
@@ -179,7 +181,7 @@ function Under999ProductCard({ product, userId }: { product: ProductWithBrand; u
                         <DialogTitle className="sr-only">{product.title}</DialogTitle>
                         <div className="flex h-full flex-col md:flex-row bg-white overflow-y-auto md:overflow-hidden">
                             {/* Image side */}
-                            <div className="relative h-[320px] sm:h-[380px] w-full shrink-0 bg-[#F5F5F5] md:h-full md:w-1/2 group/slider">
+                            <div className="relative mt-3 h-[320px] w-[calc(100%-1.5rem)] shrink-0 self-center overflow-hidden rounded-t-lg bg-[#F5F5F5] sm:h-[380px] md:mt-0 md:h-full md:w-1/2 md:rounded-none group/slider">
                                 <Image src={quickViewImages[quickViewImageIndex] || imageUrl} alt={product.title} fill className="object-contain md:object-cover md:object-center" sizes="(max-width: 768px) 100vw, 50vw" />
                                 {quickViewImages.length > 1 && (
                                     <>
@@ -198,7 +200,13 @@ function Under999ProductCard({ product, userId }: { product: ProductWithBrand; u
 
                             {/* Details side */}
                             <div className="flex flex-col p-4 md:p-12 md:w-1/2 md:overflow-y-auto scrollbar-hide">
-                                <h2 className="font-serif text-xl sm:text-2xl md:text-[32px] font-light text-gray-900 leading-tight pr-8">{product.title}</h2>
+                                <div className="flex items-start justify-between gap-3">
+                                    <h2 className="font-serif text-xl sm:text-2xl md:text-[32px] font-light text-gray-900 leading-tight">{product.title}</h2>
+                                    <button type="button" onClick={() => setIsShareOpen(true)} className="flex h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50">
+                                        <Icons.Share className="size-3.5" />
+                                        Share
+                                    </button>
+                                </div>
                                 <div className="mt-2 md:mt-5 flex items-baseline gap-3">
                                     <span className="text-lg md:text-xl font-medium text-gray-900">Rs. {formatPriceTag(parseFloat(convertPaiseToRupees(selectedVariant?.price || rawPrice)), true)}</span>
                                     {originalPrice && <span className="text-sm font-medium text-gray-400 line-through">Rs. {formatPriceTag(parseFloat(convertPaiseToRupees(originalPrice)), true)}</span>}
@@ -274,6 +282,7 @@ function Under999ProductCard({ product, userId }: { product: ProductWithBrand; u
                         </div>
                     </DialogContent>
                 </Dialog>
+                <ProductShareModal isOpen={isShareOpen} setIsOpen={setIsShareOpen} product={product as any} />
             </div>
 
             <AnimatedProductLink href={productUrl} className="block pt-2 pb-1 relative z-10">

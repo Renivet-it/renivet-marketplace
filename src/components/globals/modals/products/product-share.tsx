@@ -20,16 +20,19 @@ import { toast } from "sonner";
 interface PageProps {
     isOpen: boolean;
     setIsOpen: Dispatch<SetStateAction<boolean>>;
-    product: ProductWithBrand;
+    product: ProductWithBrand | any;
 }
 
 const FALLBACK_IMAGE_URL =
     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
 export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
-    const productUrl = getAbsoluteURL(`/products/${product.slug}`);
+    const productUrl = getAbsoluteURL(
+        product?.slug ? `/products/${product.slug}` : "/shop"
+    );
     const primaryMediaUrl =
         product?.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL;
+    const brandName = product?.brand?.name ?? siteConfig.name;
 
     const facebookShareUrl = new URLBuilder(
         "https://www.facebook.com/dialog/share"
@@ -40,7 +43,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
         .addQueryParam("href", productUrl)
         .addQueryParam(
             "hashtag",
-            `#${product.title} #${product.brand.name} #${siteConfig.name}`
+            `#${product.title} #${brandName} #${siteConfig.name}`
         )
         .build();
 
@@ -49,7 +52,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
         .addQueryParam("url", productUrl)
         .addQueryParam(
             "hashtags",
-            `${product.title},${product.brand.name},${siteConfig.name}`
+            `${product.title},${brandName},${siteConfig.name}`
         )
         .build();
 

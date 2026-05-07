@@ -9,47 +9,19 @@
 
  ✓ Starting...
 Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', testMode: true }
- ✓ Compiled in 770ms
- ✓ Ready in 1967ms
- ○ Compiling /shop ...
- ✓ Compiled /shop in 24.4s
-[getProducts] search: undefined requireMedia: true
- GET /shop 200 in 26982ms
- ✓ Compiled in 751ms
- ✓ Compiled /shop in 116ms
-[getProducts] search: undefined requireMedia: true
- GET /shop 200 in 2198ms
- ✓ Compiled in 2.6s
- ✓ Compiled /shop in 439ms
-[getProducts] search: undefined requireMedia: true
- GET /shop 200 in 5900ms
- ✓ Compiled in 2.7s
- ✓ Compiled /shop in 323ms
-[getProducts] search: undefined requireMedia: true
- GET /shop 200 in 5745ms
- ✓ Compiled in 2.6s
- ○ Compiling /shop ...
- ✓ Compiled /shop in 1667ms
-[getProducts] search: undefined requireMedia: true
- GET /shop 200 in 4148ms
-[getProducts] search: undefined requireMedia: true
- GET /shop 200 in 6625ms
- ○ Compiling /products/[slug] ...
- GET /auth/signin 200 in 46667ms
- ✓ Compiled /products/[slug] in 46.6s
- GET /products/sample-t-shirt 200 in 49873ms
  ✓ Compiled in 2.2s
- ✓ Compiled /shop in 324ms
-[getProducts] search: undefined requireMedia: true
- GET /products/sample-t-shirt 200 in 1515ms
- GET /shop 200 in 3062ms
- ✓ Compiled in 1492ms
- ○ Compiling /shop ...
- ✓ Compiled /shop in 823ms
-[getProducts] search: undefined requireMedia: true
- GET /shop 200 in 6155ms
- ✓ Compiled in 1078ms
+ ✓ Ready in 5.4s
  ○ Compiling / ...
- ✓ Compiled / in 27.4s
 [getProducts] search: undefined requireMedia: true
- GET / 200 in 32163ms
+ ✓ Compiled / in 41.5s
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 50589ms
+ GET /shop 200 in 108922ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 5341ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 13614ms
+[getProducts] search: undefined requireMedia: true
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 5094ms
+ GET /shop 200 in 109682ms
