@@ -16,6 +16,7 @@ import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { Suspense } from "react";
 import { SearchableProductTypes } from "./search-component";
+import { ShopMobileActions } from "./shop-mobile-actions";
 
 interface PageProps {
     searchParams: Promise<{
@@ -62,15 +63,30 @@ export default async function Page({ searchParams }: PageProps) {
                     </Suspense>
                 </aside>
 
-                <main className="w-full space-y-4 md:flex-1 md:space-y-5">
-                    <div className="space-y-4 rounded-[28px] border border-[#e5dccd] bg-[linear-gradient(180deg,#fffdf8_0%,#ffffff_100%)] p-4 shadow-[0_18px_40px_rgba(59,52,39,0.06)] md:hidden">
-                        <ProductSearch className="h-11 text-base" />
-                        <div className="grid grid-cols-2 gap-2">
+                <main className="w-full space-y-4 pb-40 md:flex-1 md:space-y-5 md:pb-0">
+                    <div className="md:hidden">
+                        <ProductSearch className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]" />
+                    </div>
+
+                    <ShopMobileActions
+                        filters={
                             <Suspense
-                                fallback={<Skeleton className="h-10 w-full" />}
+                                fallback={
+                                    <button
+                                        type="button"
+                                        disabled
+                                        className="flex h-full w-full items-center justify-center gap-2 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d]"
+                                    >
+                                        <span className="relative h-4 w-4">
+                                            <span className="absolute left-1 top-0 h-4 w-2 border-x-2 border-t-2 border-[#25321d]" />
+                                            <span className="absolute bottom-0 left-[7px] h-1.5 w-0.5 bg-[#25321d]" />
+                                        </span>
+                                        Filters
+                                    </button>
+                                }
                             >
                                 <ShopFiltersFetch
-                                    isMobileFullWidth={true}
+                                    className="h-full w-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
                                     categoryId={params.categoryId}
                                     subCategoryId={subCategoryId}
                                     productTypeId={params.productTypeId}
@@ -82,9 +98,8 @@ export default async function Page({ searchParams }: PageProps) {
                                     minDiscount={params.minDiscount}
                                 />
                             </Suspense>
-                            <ShopSortBy />
-                        </div>
-                    </div>
+                        }
+                    />
 
                     <div className="hidden items-center justify-between rounded-2xl border border-[#dce5ee] bg-[#f9fbfd] px-5 py-3.5 md:flex">
                         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">

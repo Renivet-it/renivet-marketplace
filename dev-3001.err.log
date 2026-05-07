@@ -1,0 +1,11 @@
+
+[1m[33mwarn[39m[22m - The class `duration-[1200ms]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `duration-&lsqb;1200ms&rsqb;` to silence this warning.
+
+[1m[33mwarn[39m[22m - The class `ease-[cubic-bezier(0.25,1,0.5,1)]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `ease-&lsqb;cubic-bezier(0.25,1,0.5,1)&rsqb;` to silence this warning.
+React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
+React does not recognize the `isWishlisted` prop on a DOM element. If you intentionally want it to appear in the DOM as a custom attribute, spell it as lowercase `iswishlisted` instead. If you accidentally passed it from a parent component, remove it from the DOM element.
