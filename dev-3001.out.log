@@ -27,3 +27,12 @@ Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', 
  GET /shop 200 in 109682ms
  ✓ Compiled in 2.3s
  ✓ Compiled in 604ms
+ ✓ Compiled in 1383ms
+ ✓ Compiled in 11.2s
+ ✓ Compiled in 479ms
+ ✓ Compiled in 927ms
+ ✓ Compiled in 451ms
+ ✓ Compiled in 426ms
+ ✓ Compiled in 391ms
+ ✓ Compiled in 377ms
+ ✓ Compiled in 5.6s

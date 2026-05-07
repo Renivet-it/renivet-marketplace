@@ -388,7 +388,7 @@ export function NavbarHome({
 
                 <nav
                     className={cn(
-                        "relative z-10 order-1 flex w-full max-w-[100rem] items-center justify-between gap-4 px-4 py-3 md:order-2 md:px-8 xl:px-10",
+                        "relative z-10 order-1 flex w-full max-w-[100rem] items-center justify-between gap-2 px-2 py-3 sm:gap-4 sm:px-4 md:order-2 md:px-8 xl:px-10",
                         isMenuOpen && "border"
                     )}
                 >
@@ -795,7 +795,7 @@ export function NavbarHome({
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3 xl:gap-4">
+                    <div className="flex items-center gap-1 sm:gap-3 xl:gap-4">
                         <ProductSearch
                             placeholder="Search products, brands, categories..."
                             classNames={{
@@ -1027,8 +1027,7 @@ export function NavbarHome({
                         ) : (
                             <>
                                 <Button
-                                    variant="ghost"
-                                    className="hidden h-10 rounded-lg border border-[#d9d9d9] px-4 text-[#1f2b24] hover:bg-[#f5f5f5] hover:text-primary md:flex"
+                                    className="hidden h-10 rounded-full border-2 border-[#d4af37] bg-transparent px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] md:flex"
                                     size="sm"
                                     asChild
                                 >
@@ -1037,10 +1036,9 @@ export function NavbarHome({
                                     </Link>
                                 </Button>
 
-                                <div className="flex items-center gap-1 md:hidden">
+                                <div className="flex items-center md:hidden">
                                     <Button
-                                        variant="ghost"
-                                        className="h-10 rounded-lg border border-[#d9d9d9] px-4 text-primary hover:bg-[#f5f5f5]"
+                                        className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 sm:px-5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37]"
                                         size="sm"
                                         asChild
                                     >
