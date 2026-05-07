@@ -367,7 +367,7 @@ export function ProductCard({
                     </AnimatedProductLink>
 
                     <div
-                        className="absolute bottom-2 right-2 z-20 md:hidden"
+                        className="absolute bottom-[4.75rem] right-3 z-20 md:hidden"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -376,7 +376,7 @@ export function ProductCard({
                         <DialogTrigger asChild>
                             <button
                                 className={cn(
-                                    "relative flex h-12 w-12 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_14px_34px_rgba(144,112,44,0.3)] transition-all duration-300 active:scale-95",
+                                    "relative flex h-11 w-11 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] transition-all duration-300 active:scale-95 sm:h-12 sm:w-12",
                                     isQuickViewOpen &&
                                         "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
                                 )}
@@ -709,7 +709,7 @@ export function ProductCard({
                     </DialogContent>
                 </Dialog>
 
-                <div className="space-y-1.5 pt-2 pb-1">
+                <div className="min-h-[4.5rem] space-y-1.5 pb-1 pt-2">
                     <p className="truncate text-[11px] font-normal leading-tight text-gray-800 sm:text-xs">
                         {product.title}
                     </p>
