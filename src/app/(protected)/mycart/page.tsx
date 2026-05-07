@@ -49,75 +49,57 @@ export default async function CartPage({
                 <GeneralShell>
                     <div className="flex flex-col gap-6">
                         {step === 0 && (
-                            <section className="overflow-hidden rounded-[28px] border border-[#e6e0d4] bg-[linear-gradient(135deg,#ffffff_0%,#f7f4ed_52%,#eef3ee_100%)] shadow-[0_30px_80px_-50px_rgba(27,39,33,0.28)]">
-                                <div className="grid gap-6 px-5 py-6 md:p-8 xl:grid-cols-[1.25fr_0.75fr]">
-                                    <div className="space-y-5">
-                                        <div className="inline-flex items-center gap-2 rounded-full border border-[#d9e5dc] bg-white/80 px-3 py-1.5 text-11 font-semibold uppercase tracking-[0.18em] text-[#516457]">
+                            <section className="overflow-hidden rounded-[28px] border border-[#e7e2d8] bg-[linear-gradient(180deg,#ffffff_0%,#faf8f3_100%)] shadow-[0_24px_70px_-52px_rgba(24,31,27,0.25)]">
+                                <div className="space-y-6 px-5 py-6 md:p-8">
+                                    <div className="space-y-3">
+                                        <div className="inline-flex items-center gap-2 rounded-full border border-[#e7e2d8] bg-[#fcfbf8] px-3 py-1.5 text-11 font-semibold uppercase tracking-[0.18em] text-[#6d746d]">
                                             <Icons.Sparkles className="size-3.5" />
-                                            Almost yours
+                                            Curated for checkout
                                         </div>
-                                        <div className="space-y-3">
-                                            <h1 className="max-w-[14ch] text-[30px] font-semibold leading-[1.02] tracking-[-0.03em] text-[#1d2b23] md:text-[42px]">
-                                                Your cart is one calm, easy step
-                                                away from checkout.
-                                            </h1>
-                                            <p className="max-w-[62ch] text-sm leading-6 text-[#667267] md:text-[15px]">
-                                                We kept everything you loved in
-                                                one place. Review your picks,
-                                                enjoy your welcome savings, and
-                                                complete your order with secure
-                                                delivery and thoughtful support.
-                                            </p>
-                                        </div>
-                                        <div className="grid gap-3 sm:grid-cols-3">
-                                            {[
-                                                {
-                                                    icon: Icons.Truck,
-                                                    title: "Fast dispatch",
-                                                    copy: "Delivery updates at every step",
-                                                },
-                                                {
-                                                    icon: Icons.Shield,
-                                                    title: "Secure checkout",
-                                                    copy: "Protected payments and trusted fulfilment",
-                                                },
-                                                {
-                                                    icon: Icons.Leaf,
-                                                    title: "Better choices",
-                                                    copy: "Curated homegrown brands worth keeping",
-                                                },
-                                            ].map((item) => (
-                                                <div
-                                                    key={item.title}
-                                                    className="rounded-2xl border border-white/70 bg-white/75 p-4 shadow-[0_20px_40px_-34px_rgba(40,56,45,0.35)] backdrop-blur-sm"
-                                                >
-                                                    <item.icon className="size-4 text-[#5f7866]" />
-                                                    <p className="mt-3 text-sm font-semibold text-[#1f2b24]">
-                                                        {item.title}
+                                        <h1 className="max-w-[15ch] text-[30px] font-semibold leading-[1.02] tracking-[-0.03em] text-[#1f2521] md:text-[42px]">
+                                            A considered cart, ready when you are.
+                                        </h1>
+                                        <p className="max-w-[64ch] text-sm leading-6 text-[#6b706c] md:text-[15px]">
+                                            Review your selected pieces, refine
+                                            the details, and complete your order
+                                            through a secure, carefully paced
+                                            checkout.
+                                        </p>
+                                    </div>
+
+                                    <div className="grid gap-3 border-t border-[#ece7de] pt-5 sm:grid-cols-3">
+                                        {[
+                                            {
+                                                icon: Icons.Truck,
+                                                label: "Delivery",
+                                                copy: "Tracked updates from dispatch to doorstep",
+                                            },
+                                            {
+                                                icon: Icons.Shield,
+                                                label: "Payments",
+                                                copy: "Protected checkout with verified fulfilment",
+                                            },
+                                            {
+                                                icon: Icons.Leaf,
+                                                label: "Selection",
+                                                copy: "Homegrown brands chosen for lasting value",
+                                            },
+                                        ].map((item) => (
+                                            <div
+                                                key={item.label}
+                                                className="flex items-start gap-3 rounded-2xl bg-white/70 p-1"
+                                            >
+                                                <div className="mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-full border border-[#ece7de] bg-[#fcfbf8]">
+                                                    <item.icon className="size-4 text-[#667166]" />
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-semibold text-[#202722]">
+                                                        {item.label}
                                                     </p>
-                                                    <p className="mt-1 text-xs leading-5 text-[#708071]">
+                                                    <p className="mt-1 text-xs leading-5 text-[#747a74]">
                                                         {item.copy}
                                                     </p>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                    <div className="grid gap-3 self-start sm:grid-cols-3 xl:grid-cols-1">
-                                        {[
-                                            "Best value is auto-applied where eligible",
-                                            "Selected items stay grouped for faster checkout",
-                                            "Wishlist and pairing suggestions keep momentum high",
-                                        ].map((point, index) => (
-                                            <div
-                                                key={point}
-                                                className="flex items-start gap-3 rounded-2xl border border-[#e6e1d7] bg-[#fffdfa] p-4"
-                                            >
-                                                <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-[#1f3328] text-xs font-bold text-white">
-                                                    {index + 1}
-                                                </div>
-                                                <p className="text-sm leading-6 text-[#556257]">
-                                                    {point}
-                                                </p>
                                             </div>
                                         ))}
                                     </div>

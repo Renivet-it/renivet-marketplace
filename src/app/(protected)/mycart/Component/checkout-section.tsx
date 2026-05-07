@@ -233,56 +233,56 @@ export default function CheckoutSection({ userId }: PageProps) {
 
     return (
         <div className="w-full space-y-4">
-            <div className="overflow-hidden rounded-[24px] border border-[#dce8df] bg-[linear-gradient(135deg,#1f3328_0%,#30493b_100%)] text-white shadow-[0_28px_65px_-36px_rgba(22,34,29,0.55)]">
-                <div className="space-y-4 p-4">
+            <div className="rounded-[24px] border border-[#e7e1d6] bg-[linear-gradient(180deg,#ffffff_0%,#faf8f4_100%)] p-4 shadow-[0_22px_55px_-46px_rgba(24,31,27,0.22)]">
+                <div className="space-y-3">
                     <div className="flex items-start gap-3">
-                        <div className="bg-white/12 flex size-10 shrink-0 items-center justify-center rounded-full">
-                            <Truck className="size-4 text-[#e5f3e8]" />
+                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full border border-[#ece7de] bg-[#fcfbf8]">
+                            <Truck className="size-4 text-[#5f6d61]" />
                         </div>
                         <div>
-                            <p className="text-11 font-semibold uppercase tracking-[0.18em] text-[#c9dccf]">
-                                Checkout perks
+                            <p className="text-11 font-semibold uppercase tracking-[0.18em] text-[#8a8f86]">
+                                Order note
                             </p>
-                            <h2 className="mt-1 text-lg font-semibold leading-tight text-white">
+                            <h2 className="mt-1 text-lg font-semibold leading-tight text-[#1f2521]">
                                 {isWelcomeOfferUnlocked
-                                    ? "Your best available cart offer is ready."
-                                    : "You are close to unlocking your welcome offer."}
+                                    ? "Your savings are already in place."
+                                    : "A little more unlocks your welcome offer."}
                             </h2>
-                            <p className="mt-1 text-sm leading-6 text-white/75">
+                            <p className="mt-1 text-sm leading-6 text-[#6f746f]">
                                 {isWelcomeOfferUnlocked
-                                    ? "Complimentary delivery and your eligible savings are already working in your favor."
+                                    ? "Complimentary delivery and eligible cart savings have been applied where available."
                                     : `Add ${formatPriceTag(+convertPaiseToRupees(amountUntilAutoCoupon))} more to unlock ${AUTO_COUPON_CODE} automatically.`}
                             </p>
                         </div>
                     </div>
 
-                    <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-                        <div className="bg-white/8 rounded-2xl border border-white/10 p-3">
-                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-white/60">
-                                Selected items
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[#ece7de] pt-3">
+                        <div>
+                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-[#8a8f86]">
+                                Selected
                             </p>
-                            <p className="mt-2 text-2xl font-semibold text-white">
+                            <p className="mt-1 text-lg font-semibold text-[#1f2521]">
                                 {itemsCount}
                             </p>
                         </div>
-                        <div className="bg-white/8 rounded-2xl border border-white/10 p-3">
-                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-white/60">
-                                Current total
+                        <div>
+                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-[#8a8f86]">
+                                Total
                             </p>
-                            <p className="mt-2 text-2xl font-semibold text-white">
+                            <p className="mt-1 text-lg font-semibold text-[#1f2521]">
                                 {formatPriceTag(
                                     +convertPaiseToRupees(priceList.total)
                                 )}
                             </p>
                         </div>
-                        <div className="bg-white/8 rounded-2xl border border-white/10 p-3">
-                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-white/60">
-                                Status
+                        <div>
+                            <p className="text-11 font-semibold uppercase tracking-[0.14em] text-[#8a8f86]">
+                                Offer
                             </p>
-                            <p className="mt-2 text-sm font-semibold text-[#e7f5ea]">
+                            <p className="mt-1 text-sm font-semibold text-[#4f6756]">
                                 {isWelcomeOfferUnlocked
-                                    ? "Offer unlocked"
-                                    : "Almost there"}
+                                    ? "Unlocked"
+                                    : "Available soon"}
                             </p>
                         </div>
                     </div>

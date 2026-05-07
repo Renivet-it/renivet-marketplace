@@ -109,40 +109,45 @@ export function CartPage({
     return (
         <>
             <div className={cn("space-y-4", className)} {...props}>
-                <div className="rounded-[24px] border border-[#e7e1d6] bg-[linear-gradient(135deg,#ffffff_0%,#fbf8f1_100%)] p-4 shadow-[0_24px_60px_-44px_rgba(31,43,35,0.35)] md:p-5">
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="rounded-[24px] border border-[#e7e1d6] bg-[linear-gradient(180deg,#ffffff_0%,#faf8f4_100%)] p-4 shadow-[0_22px_55px_-46px_rgba(24,31,27,0.22)] md:p-5">
+                    <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                         <div className="space-y-2">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-[#d9e3da] bg-white px-3 py-1 text-11 font-semibold uppercase tracking-[0.16em] text-[#56705d]">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-[#ebe6dc] bg-[#fcfbf8] px-3 py-1 text-11 font-semibold uppercase tracking-[0.16em] text-[#6a716b]">
                                 <Icons.ShoppingBag className="size-3.5" />
-                                Ready to check out
+                                Your bag
                             </div>
                             <div>
-                                <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#1e2a23] md:text-2xl">
-                                    Review your thoughtful picks
+                                <h2 className="text-xl font-semibold tracking-[-0.02em] text-[#1f2521] md:text-2xl">
+                                    Edit the details, keep the best pieces.
                                 </h2>
-                                <p className="mt-1 max-w-[60ch] text-sm leading-6 text-[#69766b]">
-                                    Keep only what you love, save more with
-                                    eligible offers, and move to checkout with
-                                    confidence.
+                                <p className="mt-1 max-w-[58ch] text-sm leading-6 text-[#6f746f]">
+                                    Refine quantities, remove anything uncertain,
+                                    and move forward only with what still feels right.
                                 </p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3 md:min-w-[320px]">
-                            <div className="rounded-2xl border border-[#ebe5da] bg-white p-3">
+                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-[#ece7de] pt-3 md:border-0 md:pt-0">
+                            <div>
                                 <p className="text-11 font-semibold uppercase tracking-[0.14em] text-[#8a8f86]">
-                                    Selected items
+                                    Selected
                                 </p>
-                                <p className="mt-2 text-2xl font-semibold text-[#1f2b24]">
+                                <p className="mt-1 text-lg font-semibold text-[#1f2b24]">
                                     {itemCount || 0}
                                 </p>
                             </div>
-                            <div className="rounded-2xl border border-[#ebe5da] bg-white p-3">
+                            <div>
                                 <p className="text-11 font-semibold uppercase tracking-[0.14em] text-[#8a8f86]">
-                                    Current subtotal
+                                    Subtotal
                                 </p>
-                                <p className="mt-2 text-2xl font-semibold text-[#1f2b24]">
-                                    {formatPriceTag(totalPrice ? parseFloat(convertPaiseToRupees(totalPrice)) : 0)}
+                                <p className="mt-1 text-lg font-semibold text-[#1f2b24]">
+                                    {formatPriceTag(
+                                        totalPrice
+                                            ? parseFloat(
+                                                  convertPaiseToRupees(totalPrice)
+                                              )
+                                            : 0
+                                    )}
                                 </p>
                             </div>
                         </div>
