@@ -1,7 +1,9 @@
 "use client";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { ProductShareModal } from "@/components/globals/modals";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
+import { Icons } from "@/components/icons";
 import {
     Dialog,
     DialogContent,
@@ -96,6 +98,7 @@ export function ProductCard({
     >({});
     const [quickViewImageIndex, setQuickViewImageIndex] = useState(0);
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
+    const [isShareOpen, setIsShareOpen] = useState(false);
 
     const { mutateAsync: addToCart, isLoading } =
         trpc.general.users.cart.addProductToCart.useMutation({
@@ -367,7 +370,7 @@ export function ProductCard({
                     </AnimatedProductLink>
 
                     <div
-                        className="absolute bottom-2 right-2 z-20 md:hidden"
+                        className="absolute bottom-[4.75rem] right-3 z-20 md:hidden"
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
@@ -376,7 +379,7 @@ export function ProductCard({
                         <DialogTrigger asChild>
                             <button
                                 className={cn(
-                                    "relative flex h-12 w-12 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_14px_34px_rgba(144,112,44,0.3)] transition-all duration-300 active:scale-95",
+                                    "relative flex h-11 w-11 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] transition-all duration-300 active:scale-95 sm:h-12 sm:w-12",
                                     isQuickViewOpen &&
                                         "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
                                 )}
@@ -398,7 +401,7 @@ export function ProductCard({
                         </DialogTitle>
 
                         <div className="flex h-full min-h-0 flex-col overflow-y-auto overscroll-contain bg-white [-webkit-overflow-scrolling:touch] md:flex-row md:overflow-hidden">
-                            <div className="group/slider relative h-[320px] w-full shrink-0 bg-[#f7f7f7] sm:h-[380px] md:h-full md:w-1/2">
+                            <div className="group/slider relative mt-3 h-[320px] w-[calc(100%-1.5rem)] shrink-0 self-center overflow-hidden rounded-t-lg bg-[#f7f7f7] sm:h-[380px] md:mt-0 md:h-full md:w-1/2 md:rounded-none">
                                 <Image
                                     src={
                                         quickViewImages[quickViewImageIndex] ||
@@ -464,9 +467,19 @@ export function ProductCard({
                             </div>
 
                             <div className="scrollbar-hide flex flex-col p-4 md:w-1/2 md:overflow-y-auto md:p-12">
-                                <h2 className="pr-8 font-serif text-xl font-light leading-tight text-gray-900 sm:text-2xl md:text-[32px]">
-                                    {product.title}
-                                </h2>
+                                <div className="flex items-start justify-between gap-3">
+                                    <h2 className="font-serif text-xl font-light leading-tight text-gray-900 sm:text-2xl md:text-[32px]">
+                                        {product.title}
+                                    </h2>
+                                    <button
+                                        type="button"
+                                        onClick={() => setIsShareOpen(true)}
+                                        className="flex h-9 shrink-0 items-center gap-2 rounded-full border border-gray-200 px-3 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-50"
+                                    >
+                                        <Icons.Share className="size-3.5" />
+                                        Share
+                                    </button>
+                                </div>
 
                                 <div className="mt-2 flex items-baseline gap-3 md:mt-5">
                                     <span className="text-lg font-medium text-gray-900 md:text-xl">
@@ -709,7 +722,13 @@ export function ProductCard({
                     </DialogContent>
                 </Dialog>
 
-                <div className="space-y-1.5 pt-2 pb-1">
+                <ProductShareModal
+                    isOpen={isShareOpen}
+                    setIsOpen={setIsShareOpen}
+                    product={product}
+                />
+
+                <div className="min-h-[4.5rem] space-y-1.5 pb-1 pt-2">
                     <p className="truncate text-[11px] font-normal leading-tight text-gray-800 sm:text-xs">
                         {product.title}
                     </p>

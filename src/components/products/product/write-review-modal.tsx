@@ -34,6 +34,7 @@ const reviewSchema = z.object({
     rating: z.number().min(1, "Please select a rating"),
     title: z.string().min(3, "Title must be at least 3 characters").max(100),
     content: z.string().min(10, "Review must be at least 10 characters").max(1000),
+    variantId: z.string().optional(),
     sizePurchased: z.string().optional(),
     fit: z.string().optional(),
 });
@@ -45,9 +46,15 @@ interface WriteReviewModalProps {
 }
 
 export function WriteReviewModal({ productId }: WriteReviewModalProps) {
+    const utils = trpc.useUtils();
     const [open, setOpen] = useState(false);
     const [images, setImages] = useState<string[]>([]);
     const [hoveredStar, setHoveredStar] = useState<number>(0);
+    const { data: eligibility, isLoading: isCheckingEligibility, error: eligibilityError } =
+        trpc.general.customerReviews.getReviewEligibility.useQuery(
+            { productId },
+            { enabled: open, retry: false }
+        );
 
     const form = useForm<ReviewFormValues>({
         resolver: zodResolver(reviewSchema),
@@ -55,6 +62,7 @@ export function WriteReviewModal({ productId }: WriteReviewModalProps) {
             rating: 0,
             title: "",
             content: "",
+            variantId: "",
             sizePurchased: "",
             fit: "",
         },
@@ -68,10 +76,17 @@ export function WriteReviewModal({ productId }: WriteReviewModalProps) {
             form.reset();
             setImages([]);
             setOpen(false);
+            utils.general.customerReviews.getReviewsByProduct.invalidate({
+                productId,
+            });
         },
         onError: (error) => {
             if (error.data?.code === "UNAUTHORIZED") {
                 toast.error("Please sign in to write a review.");
+            } else if (error.data?.code === "FORBIDDEN") {
+                toast.error("Only verified buyers can review this product.", {
+                    description: error.message,
+                });
             } else {
                 toast.error("Failed to submit review", {
                     description: error.message,
@@ -92,6 +107,7 @@ export function WriteReviewModal({ productId }: WriteReviewModalProps) {
 
         createReview.mutate({
             productId,
+            variantId: data.variantId || undefined,
             rating: data.rating,
             title: data.title,
             content: data.content,
@@ -117,8 +133,21 @@ export function WriteReviewModal({ productId }: WriteReviewModalProps) {
                     </DialogDescription>
                 </DialogHeader>
 
-                <Form {...form}>
-                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+                {isCheckingEligibility ? (
+                    <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-neutral-50 p-4 text-sm text-neutral-600">
+                        Checking purchase history...
+                    </div>
+                ) : eligibilityError?.data?.code === "UNAUTHORIZED" ? (
+                    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-700">
+                        Please sign in with the account used for purchase to write a review.
+                    </div>
+                ) : eligibility && !eligibility.canReview ? (
+                    <div className="rounded-xl border border-neutral-200 bg-neutral-50 p-5 text-sm text-neutral-700">
+                        Only customers who bought this product can write a review.
+                    </div>
+                ) : (
+                    <Form {...form}>
+                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
                         {/* Rating */}
                         <FormField
                             control={form.control}
@@ -153,6 +182,42 @@ export function WriteReviewModal({ productId }: WriteReviewModalProps) {
                                 </FormItem>
                             )}
                         />
+
+                        {eligibility?.purchasedVariants &&
+                            eligibility.purchasedVariants.length > 0 && (
+                                <FormField
+                                    control={form.control}
+                                    name="variantId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel className="text-neutral-900">
+                                                Product Variant
+                                            </FormLabel>
+                                            <FormControl>
+                                                <select
+                                                    {...field}
+                                                    className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                                                >
+                                                    <option value="">
+                                                        Select variant to review
+                                                    </option>
+                                                    {eligibility.purchasedVariants.map(
+                                                        (variant) => (
+                                                            <option
+                                                                key={variant.id}
+                                                                value={variant.id}
+                                                            >
+                                                                {variant.label}
+                                                            </option>
+                                                        )
+                                                    )}
+                                                </select>
+                                            </FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
 
                         {/* Title */}
                         <FormField
@@ -216,11 +281,16 @@ export function WriteReviewModal({ productId }: WriteReviewModalProps) {
                                     <FormItem>
                                         <FormLabel className="text-neutral-900">Fit</FormLabel>
                                         <FormControl>
-                                            <Input
-                                                placeholder="e.g. True to size"
+                                            <select
                                                 {...field}
-                                                className="border-neutral-200 focus-visible:ring-neutral-900"
-                                            />
+                                                className="h-10 w-full rounded-md border border-neutral-200 bg-white px-3 text-sm text-neutral-900 focus:outline-none focus:ring-2 focus:ring-neutral-900"
+                                            >
+                                                <option value="">Select fit</option>
+                                                <option value="Runs small">Runs small</option>
+                                                <option value="True to size">True to size</option>
+                                                <option value="Runs large">Runs large</option>
+                                                <option value="Not applicable">Not applicable</option>
+                                            </select>
                                         </FormControl>
                                     </FormItem>
                                 )}
@@ -285,8 +355,9 @@ export function WriteReviewModal({ productId }: WriteReviewModalProps) {
                                 {createReview.isPending ? "Submitting..." : "Submit Review"}
                             </Button>
                         </div>
-                    </form>
-                </Form>
+                        </form>
+                    </Form>
+                )}
             </DialogContent>
         </Dialog>
     );

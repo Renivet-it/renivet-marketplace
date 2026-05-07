@@ -1,0 +1,39 @@
+
+> renivet-marketplace@0.1.0 dev
+> next dev --turbo -p 3001
+
+   ▲ Next.js 15.1.11 (Turbopack)
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.0.234:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', testMode: true }
+ ✓ Compiled in 2.2s
+ ✓ Ready in 5.4s
+ ○ Compiling / ...
+[getProducts] search: undefined requireMedia: true
+ ✓ Compiled / in 41.5s
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 50589ms
+ GET /shop 200 in 108922ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 5341ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 13614ms
+[getProducts] search: undefined requireMedia: true
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 5094ms
+ GET /shop 200 in 109682ms
+ ✓ Compiled in 2.3s
+ ✓ Compiled in 604ms
+ ✓ Compiled in 1383ms
+ ✓ Compiled in 11.2s
+ ✓ Compiled in 479ms
+ ✓ Compiled in 927ms
+ ✓ Compiled in 451ms
+ ✓ Compiled in 426ms
+ ✓ Compiled in 391ms
+ ✓ Compiled in 377ms
+ ✓ Compiled in 5.6s
+ ✓ Compiled in 717ms

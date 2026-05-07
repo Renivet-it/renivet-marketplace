@@ -122,23 +122,25 @@ export function MobileBottomNav() {
     { href: "/profile", icon: User, label: "Profile" },
   ];
 
-  if (pathname.startsWith("/sign-in") || pathname.startsWith("/sign-up")) {
+  if (
+    pathname === "/shop" ||
+    pathname.startsWith("/shop/") ||
+    pathname.startsWith("/sign-in") ||
+    pathname.startsWith("/sign-up")
+  ) {
     return null;
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 md:hidden">
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-[#f6efe1] via-[#f6efe1]/85 to-transparent" />
-      <div className="relative mx-auto mb-3 mt-1 w-[92%] max-w-sm px-1 pb-[max(env(safe-area-inset-bottom),0px)]">
-        <div className="rounded-[34px] border border-[#efe5d2] bg-[linear-gradient(180deg,rgba(255,250,242,0.96)_0%,rgba(244,234,214,0.98)_100%)] p-2 shadow-[0_20px_45px_rgba(62,52,33,0.18)] ring-1 ring-white/70 backdrop-blur-xl">
-          <div className="mb-2 h-[3px] w-16 rounded-full bg-[linear-gradient(90deg,rgba(64,72,41,0)_0%,rgba(64,72,41,0.85)_50%,rgba(64,72,41,0)_100%)] mx-auto" />
-          <div className="grid h-[78px] grid-cols-4 gap-1">
+    <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-[#eadfce] bg-white/95 pb-[max(env(safe-area-inset-bottom),0px)] shadow-[0_-8px_24px_rgba(57,48,33,0.08)] backdrop-blur-xl md:hidden">
+      <div className="mx-auto w-full max-w-sm px-3">
+          <div className="grid h-[74px] grid-cols-4 gap-1">
             {navItems.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
                 className={cn(
-                  "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-[24px] px-1.5 py-2 text-[10px] font-semibold tracking-[0.08em] transition-all duration-200",
+                  "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-semibold tracking-[0.08em] transition-all duration-200",
                   pathname === item.href
                     ? "bg-[linear-gradient(180deg,#31401f_0%,#263018_100%)] text-white shadow-[0_14px_26px_rgba(49,64,31,0.28)]"
                     : item.label === "Cart"
@@ -181,7 +183,6 @@ export function MobileBottomNav() {
               </Link>
             ))}
           </div>
-        </div>
       </div>
     </nav>
   );

@@ -16,25 +16,6 @@ interface PageProps extends GenericProps {
     userId?: string;
 }
 
-function seededRandom(seed: number) {
-    const x = Math.sin(seed) * 10000;
-    return x - Math.floor(x);
-}
-
-function stringToSeed(str: string) {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-        hash = str.charCodeAt(i) + ((hash << 5) - hash);
-    }
-    return Math.abs(hash);
-}
-
-function getRandomRatingAndReviews(seed: number) {
-    const rating = Math.round((4.0 + seededRandom(seed) * 0.6) * 10) / 10;
-    const reviews = Math.floor(seededRandom(seed + 1) * 71) + 10;
-    return { rating, reviews };
-}
-
 export function ProductContent({
     className,
     initialCart,
@@ -58,8 +39,22 @@ export function ProductContent({
 
     const { data: user } = trpc.general.users.currentUser.useQuery();
 
-    const seed = stringToSeed(product.id || product.title);
-    const { rating, reviews } = getRandomRatingAndReviews(seed);
+    const { data: productReviews = [] } =
+        trpc.general.customerReviews.getReviewsByProduct.useQuery({
+            productId: product.id,
+        });
+    const reviews = productReviews.length;
+    const rating =
+        reviews > 0
+            ? Number(
+                  (
+                      productReviews.reduce(
+                          (total, review) => total + review.rating,
+                          0
+                      ) / reviews
+                  ).toFixed(1)
+              )
+            : 0;
 
     useEffect(() => {
         if (user?.addresses[0]?.zip && brandDetails?.warehousePostalCode) {
@@ -157,7 +152,9 @@ export function ProductContent({
                         })}
                     </div>
                     <button className="text-[13px] font-medium text-neutral-500 underline underline-offset-2 hover:text-neutral-800 transition-colors">
-                        {reviews} Reviews
+                        {reviews > 0
+                            ? `${reviews} ${reviews === 1 ? "Review" : "Reviews"}`
+                            : "No reviews available"}
                     </button>
                 </div>
 

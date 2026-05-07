@@ -1,10 +1,10 @@
 "use client";
 
-import { GenericProps } from "@/types";
 import { trpc } from "@/lib/trpc/client";
 import { format } from "date-fns";
-import { Star, MoreHorizontal, Check, X, Trash2 } from "lucide-react";
+import { Star, MoreHorizontal, Check, X, Trash2, Plus } from "lucide-react";
 import Image from "next/image";
+import { useMemo, useState } from "react";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -14,11 +14,36 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog-dash";
+import { Input } from "@/components/ui/input-dash";
+import { Textarea } from "@/components/ui/textarea-dash";
 
-export default function AdminReviewsPage({}: GenericProps) {
+export default function AdminReviewsPage() {
     const utils = trpc.useUtils();
+    const [createOpen, setCreateOpen] = useState(false);
+    const [draft, setDraft] = useState({
+        productId: "",
+        variantId: "",
+        authorName: "",
+        rating: 5,
+        title: "",
+        content: "",
+        status: "approved" as "pending" | "approved" | "rejected",
+        verified: true,
+    });
     
     const { data: reviews, isLoading } = trpc.general.customerReviews.getAllReviews.useQuery({});
+    const { data: reviewProducts = [] } = trpc.general.customerReviews.getReviewProducts.useQuery();
+    const selectedProduct = useMemo(
+        () => reviewProducts.find((product) => product.id === draft.productId),
+        [draft.productId, reviewProducts]
+    );
     
     const updateStatus = trpc.general.customerReviews.updateReviewStatus.useMutation({
         onSuccess: () => {
@@ -40,15 +65,215 @@ export default function AdminReviewsPage({}: GenericProps) {
         }
     });
 
+    const createReview = trpc.general.customerReviews.createAdminReview.useMutation({
+        onSuccess: () => {
+            toast.success("Review created");
+            setCreateOpen(false);
+            setDraft({
+                productId: "",
+                variantId: "",
+                authorName: "",
+                rating: 5,
+                title: "",
+                content: "",
+                status: "approved",
+                verified: true,
+            });
+            utils.general.customerReviews.getAllReviews.invalidate();
+        },
+        onError: (err) => {
+            toast.error("Failed to create review", { description: err.message });
+        },
+    });
+
+    const handleCreateReview = () => {
+        if (!draft.productId || !draft.authorName || !draft.title || !draft.content) {
+            toast.error("Please fill product, author, title and review content.");
+            return;
+        }
+
+        createReview.mutate({
+            ...draft,
+            variantId: draft.variantId || undefined,
+            images: [],
+            attributes: [],
+        });
+    };
+
     return (
         <div className="flex w-full flex-col gap-6 p-6">
-            <div>
-                <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
-                    Product Reviews
-                </h1>
-                <p className="text-sm text-neutral-500">
-                    Manage and moderate customer reviews across the marketplace.
-                </p>
+            <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+                <div>
+                    <h1 className="text-2xl font-bold tracking-tight text-neutral-900">
+                        Product Reviews
+                    </h1>
+                    <p className="text-sm text-neutral-500">
+                        Manage, create and moderate customer reviews across the marketplace.
+                    </p>
+                </div>
+                <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="gap-2">
+                            <Plus className="size-4" />
+                            Create Review
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[650px]">
+                        <DialogHeader>
+                            <DialogTitle>Create Review</DialogTitle>
+                        </DialogHeader>
+                        <div className="grid gap-4">
+                            <label className="grid gap-2 text-sm font-medium">
+                                Product
+                                <select
+                                    value={draft.productId}
+                                    onChange={(event) =>
+                                        setDraft((current) => ({
+                                            ...current,
+                                            productId: event.target.value,
+                                            variantId: "",
+                                        }))
+                                    }
+                                    className="h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm"
+                                >
+                                    <option value="">Select product</option>
+                                    {reviewProducts.map((product) => (
+                                        <option key={product.id} value={product.id}>
+                                            {product.title}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="grid gap-2 text-sm font-medium">
+                                Variant suggestion
+                                <select
+                                    value={draft.variantId}
+                                    onChange={(event) =>
+                                        setDraft((current) => ({
+                                            ...current,
+                                            variantId: event.target.value,
+                                        }))
+                                    }
+                                    className="h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm"
+                                    disabled={!selectedProduct?.variants.length}
+                                >
+                                    <option value="">No variant / Product level</option>
+                                    {selectedProduct?.variants.map((variant) => (
+                                        <option key={variant.id} value={variant.id}>
+                                            {variant.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <label className="grid gap-2 text-sm font-medium">
+                                    Author name
+                                    <Input
+                                        value={draft.authorName}
+                                        onChange={(event) =>
+                                            setDraft((current) => ({
+                                                ...current,
+                                                authorName: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                </label>
+                                <label className="grid gap-2 text-sm font-medium">
+                                    Rating
+                                    <select
+                                        value={draft.rating}
+                                        onChange={(event) =>
+                                            setDraft((current) => ({
+                                                ...current,
+                                                rating: Number(event.target.value),
+                                            }))
+                                        }
+                                        className="h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm"
+                                    >
+                                        {[5, 4, 3, 2, 1].map((rating) => (
+                                            <option key={rating} value={rating}>
+                                                {rating} star{rating === 1 ? "" : "s"}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </label>
+                            </div>
+                            <label className="grid gap-2 text-sm font-medium">
+                                Title
+                                <Input
+                                    value={draft.title}
+                                    onChange={(event) =>
+                                        setDraft((current) => ({
+                                            ...current,
+                                            title: event.target.value,
+                                        }))
+                                    }
+                                />
+                            </label>
+                            <label className="grid gap-2 text-sm font-medium">
+                                Review
+                                <Textarea
+                                    value={draft.content}
+                                    onChange={(event) =>
+                                        setDraft((current) => ({
+                                            ...current,
+                                            content: event.target.value,
+                                        }))
+                                    }
+                                    className="min-h-28"
+                                />
+                            </label>
+                            <div className="grid gap-4 md:grid-cols-2">
+                                <label className="grid gap-2 text-sm font-medium">
+                                    Status
+                                    <select
+                                        value={draft.status}
+                                        onChange={(event) =>
+                                            setDraft((current) => ({
+                                                ...current,
+                                                status: event.target.value as typeof draft.status,
+                                            }))
+                                        }
+                                        className="h-10 rounded-md border border-neutral-200 bg-white px-3 text-sm"
+                                    >
+                                        <option value="approved">Approved</option>
+                                        <option value="pending">Pending</option>
+                                        <option value="rejected">Rejected</option>
+                                    </select>
+                                </label>
+                                <label className="flex items-center gap-2 pt-7 text-sm font-medium">
+                                    <input
+                                        type="checkbox"
+                                        checked={draft.verified}
+                                        onChange={(event) =>
+                                            setDraft((current) => ({
+                                                ...current,
+                                                verified: event.target.checked,
+                                            }))
+                                        }
+                                    />
+                                    Mark as verified
+                                </label>
+                            </div>
+                            <div className="flex justify-end gap-2 border-t pt-4">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setCreateOpen(false)}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="button"
+                                    onClick={handleCreateReview}
+                                    disabled={createReview.isPending}
+                                >
+                                    {createReview.isPending ? "Creating..." : "Create Review"}
+                                </Button>
+                            </div>
+                        </div>
+                    </DialogContent>
+                </Dialog>
             </div>
 
             <div className="rounded-md border border-neutral-200 bg-white">

@@ -88,22 +88,16 @@ export function StyleWithSubstance({ products, userId, className }: Props) {
     return (
         <section className={cn("bg-white py-2 pt-4", className)}>
             {/* TITLE */}
-            <h2 className="mb-6 text-center font-playfair text-[18px] font-[400] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
+            <h2 className="mb-6 text-center font-playfair text-[18px] leading-[1.3] tracking-[0.5px] text-[#7A6338] md:text-[26px]">
                 Best Sellers
             </h2>
 
             {/* ================= MOBILE ================= */}
-            <div className="px-2 md:hidden">
+            <div className="px-3 md:hidden">
                 <Carousel>
                     <CarouselContent>
                         <CarouselItem>
-                            <div
-                                className="grid justify-center gap-x-3 gap-y-5"
-                                style={{
-                                    gridTemplateColumns:
-                                        "repeat(auto-fit, minmax(110px, max-content))",
-                                }}
-                            >
+                            <div className="grid grid-cols-3 gap-x-3 gap-y-6">
                                 {products.map(({ product }) => (
                                     <ProductCard
                                         key={product.id}
@@ -165,14 +159,14 @@ function ProductCard({
     return (
         <AnimatedProductLink
             href={`/products/${product.slug}`}
-            className={cn("group block", isMobile ? "w-[110px]" : "w-[240px]")}
+            className={cn("group block", isMobile ? "w-full" : "w-[240px]")}
         >
             {/* IMAGE */}
             <div
                 className={cn(
                     "relative overflow-hidden rounded-md bg-[#EFE9DF]",
                     isMobile
-                        ? "h-[185px]"
+                        ? "aspect-[3/4]"
                         : "aspect-[3/4] transition-transform duration-300 group-hover:scale-[1.02]"
                 )}
             >
@@ -190,7 +184,7 @@ function ProductCard({
                 <div
                     className={cn(
                         "absolute z-10",
-                        isMobile ? "left-2 top-2" : "left-3 top-3"
+                        isMobile ? "hidden" : "left-3 top-3"
                     )}
                 >
                     {getRandomTags(product.id).map((tag) => (
@@ -228,15 +222,36 @@ function ProductCard({
                             "text-neutral-900"
                         )}
                     />
-                </button>
+                    </button>
             </div>
+
+            {isMobile && (
+                <div className="mt-2 flex min-h-[18px] flex-wrap gap-1">
+                    {getRandomTags(product.id).map((tag) => (
+                        <span
+                            key={tag.label}
+                            className={cn(
+                                "rounded-full border px-1.5 py-[1px] text-[8px] font-semibold leading-tight tracking-wide shadow-sm",
+                                tag.tone === "dark" &&
+                                    "border-neutral-200 bg-neutral-900 text-white",
+                                tag.tone === "green" &&
+                                    "border-emerald-200 bg-emerald-50 text-emerald-700",
+                                tag.tone === "earth" &&
+                                    "border-[#e3d8be] bg-[#f7f1e4] text-[#7a6338]"
+                            )}
+                        >
+                            {tag.label}
+                        </span>
+                    ))}
+                </div>
+            )}
 
             {/* TITLE */}
             <p
                 className={cn(
-                    "mt-2 leading-snug text-neutral-900",
+                    "leading-snug text-neutral-900",
                     isMobile
-                        ? "line-clamp-2 text-[12px] font-normal"
+                        ? "mt-1 line-clamp-2 text-[11px] font-normal"
                         : "mt-4 text-sm font-medium"
                 )}
             >

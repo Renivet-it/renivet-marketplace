@@ -486,7 +486,7 @@ export function ShopFilters({
                 <SheetTrigger asChild>
                     <Button
                         variant="outline"
-                        className="flex items-center gap-2"
+                        className={cn("flex items-center gap-2", className)}
                     >
                         <Icons.Filter className="size-4" />
                         Filters
@@ -1650,7 +1650,7 @@ const sortByWithOrderTypes = [
     { label: "Oldest First", value: "createdAt:asc" },
 ];
 
-export function ShopSortBy() {
+export function ShopSortBy({ className }: { className?: string } = {}) {
     const isMobile = useMediaQuery("(max-width: 768px)");
     const [sortBy, setSortBy] = useQueryState(
         "sortBy",
@@ -1707,10 +1707,13 @@ export function ShopSortBy() {
             <SheetTrigger asChild>
                 <Button
                     variant="outline"
-                    className="flex items-center gap-2 rounded-lg border-gray-200 text-sm font-medium shadow-sm"
+                    className={cn(
+                        "flex items-center gap-2 rounded-lg border-gray-200 text-sm font-medium shadow-sm",
+                        className
+                    )}
                 >
-                    <Icons.ArrowUpDown className="size-4 text-gray-500" />
-                    <span className="text-gray-700">{currentLabel}</span>
+                    <Icons.ArrowUpDown className="size-4 text-current/70" />
+                    <span className="truncate text-current">{currentLabel}</span>
                 </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-xl p-0">
