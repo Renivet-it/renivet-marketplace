@@ -32,12 +32,12 @@ export function Blogs({ className, blogs, ...props }: PageProps) {
                     </Link>
                 </div>
 
-                <div className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-5 overflow-x-auto px-4 pb-2 pt-2 lg:mx-0 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:px-0">
+                <div className="scrollbar-hide flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-2 pr-4 pt-2 sm:gap-5 lg:grid lg:grid-cols-3 lg:gap-6 lg:overflow-visible lg:pr-0">
                     {blogs.map((blog) => (
                         <Link
                             key={blog.id}
                             href={`/blogs/${blog.slug}`}
-                            className="group flex h-full w-[280px] shrink-0 snap-start flex-col overflow-hidden rounded-[10px] bg-[#f5f5f5] transition-all hover:-translate-y-1 hover:shadow-lg sm:w-[320px] lg:w-full"
+                            className="group flex h-full w-[min(84vw,360px)] shrink-0 snap-start flex-col overflow-hidden rounded-[10px] bg-[#f5f5f5] transition-all hover:-translate-y-1 hover:shadow-lg sm:w-[320px] lg:w-full lg:shrink"
                         >
                             <div className="relative aspect-[4/3] w-full overflow-hidden">
                                 <Image
