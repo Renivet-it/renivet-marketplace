@@ -141,7 +141,7 @@ export function GuestAddToCartPopup() {
                                 </SignUpButton>
                             </div>
 
-                            <div className="mt-auto flex items-center gap-4 py-2">
+                            <div className="mt-6 flex items-center gap-4 py-2">
                                 <div className="bg-[#234236]/12 h-px flex-1" />
                                 <span className="font-outfit min-w-8 text-center text-11 uppercase tracking-[0.18em] text-[#6d736c]">
                                     or
