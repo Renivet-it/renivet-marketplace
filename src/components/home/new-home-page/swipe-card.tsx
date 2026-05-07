@@ -220,7 +220,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
                                 </div>
                                 <p className="text-sm font-medium text-gray-600">You&apos;ve seen everything!</p>
                                 <p className="text-xs text-gray-400">Check your wishlist for saved items</p>
-                                <Link href="/wishlist" className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-gray-900 bg-gray-900 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition hover:bg-transparent hover:text-gray-900">
+                                <Link href="/profile/wishlist" className="mt-2 inline-flex items-center gap-1.5 rounded-sm border border-gray-900 bg-gray-900 px-5 py-2.5 text-[11px] font-bold uppercase tracking-[0.12em] text-white transition hover:bg-transparent hover:text-gray-900">
                                     View Wishlist
                                 </Link>
                             </div>
@@ -432,7 +432,7 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
 
                         {/* Wishlist tracker */}
                         <Link
-                            href="/wishlist"
+                            href="/profile/wishlist"
                             className={cn(
                                 "group flex items-center justify-between border border-gray-100 bg-white px-4 py-3.5 transition-all duration-200 hover:border-[#c5d08a] hover:bg-[#f9fbf3]",
                                 goneCards.size === 0 && "pointer-events-none opacity-35"

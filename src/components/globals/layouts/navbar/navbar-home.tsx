@@ -1027,13 +1027,11 @@ export function NavbarHome({
                         ) : (
                             <>
                                 <Button
-                                    className="hidden h-10 rounded-full border-2 border-[#d4af37] bg-transparent px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] md:flex"
+                                    className="hidden h-10 rounded-full border-2 border-[#d4af37] bg-transparent px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] md:inline-flex"
                                     size="sm"
                                     asChild
                                 >
-                                    <Link href="/auth/signin">
-                                        Login/Signup
-                                    </Link>
+                                    <Link href="/auth/signin">Login</Link>
                                 </Button>
 
                                 <div className="flex items-center md:hidden">
