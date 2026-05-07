@@ -175,7 +175,7 @@ function Under999ProductCard({ product, userId }: { product: ProductWithBrand; u
                         </DialogTrigger>
                     </div>
 
-                    <DialogContent className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-hidden rounded-md p-0 md:h-[85vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
+                    <DialogContent className="max-h-[95dvh] w-[96vw] max-w-5xl overflow-y-auto rounded-md p-0 md:h-[85vh]" onCloseAutoFocus={(e) => e.preventDefault()}>
                         <DialogTitle className="sr-only">{product.title}</DialogTitle>
                         <div className="flex h-full flex-col md:flex-row bg-white overflow-y-auto md:overflow-hidden">
                             {/* Image side */}

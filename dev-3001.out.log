@@ -32,3 +32,24 @@ Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', 
  ✓ Compiled /shop in 1667ms
 [getProducts] search: undefined requireMedia: true
  GET /shop 200 in 4148ms
+[getProducts] search: undefined requireMedia: true
+ GET /shop 200 in 6625ms
+ ○ Compiling /products/[slug] ...
+ GET /auth/signin 200 in 46667ms
+ ✓ Compiled /products/[slug] in 46.6s
+ GET /products/sample-t-shirt 200 in 49873ms
+ ✓ Compiled in 2.2s
+ ✓ Compiled /shop in 324ms
+[getProducts] search: undefined requireMedia: true
+ GET /products/sample-t-shirt 200 in 1515ms
+ GET /shop 200 in 3062ms
+ ✓ Compiled in 1492ms
+ ○ Compiling /shop ...
+ ✓ Compiled /shop in 823ms
+[getProducts] search: undefined requireMedia: true
+ GET /shop 200 in 6155ms
+ ✓ Compiled in 1078ms
+ ○ Compiling / ...
+ ✓ Compiled / in 27.4s
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 32163ms

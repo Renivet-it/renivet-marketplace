@@ -108,19 +108,26 @@ function NavbarActionButton({
     children,
     href,
     className,
+    badge,
 }: {
     children: React.ReactNode;
     href: string;
     className?: string;
+    badge?: number;
 }) {
     return (
         <Link
             href={href}
             className={cn(
-                "relative flex size-10 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2937] transition-all duration-200 hover:border hover:bg-[#f3f4f6] hover:text-[#111827]",
+                "relative flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2937] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary [&_svg]:size-5",
                 className
             )}
         >
+            {!!badge && badge > 0 && (
+                <span className="absolute -right-0.5 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold leading-none text-primary-foreground shadow-sm">
+                    {badge > 99 ? "99+" : badge}
+                </span>
+            )}
             {children}
         </Link>
     );
@@ -799,12 +806,10 @@ export function NavbarHome({
                         {/* ✅ Guest-only Wishlist & Cart */}
                         {!user && (
                             <>
-                                <NavbarActionButton href="/guestWishlist">
-                                    {wishlistCount > 0 && (
-                                        <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-                                            {wishlistCount}
-                                        </div>
-                                    )}
+                                <NavbarActionButton
+                                    href="/guestWishlist"
+                                    badge={wishlistCount}
+                                >
                                     <Icons.Heart className="size-5" />
                                     <span className="sr-only">Wishlist</span>
                                 </NavbarActionButton>
@@ -812,6 +817,7 @@ export function NavbarHome({
                                 <NavbarActionButton
                                     href="/mycart"
                                     className="global-cart-icon"
+                                    badge={cartCount}
                                 >
                                     <motion.div
                                         animate={{
@@ -822,13 +828,8 @@ export function NavbarHome({
                                             stiffness: 300,
                                             damping: 20,
                                         }}
-                                        className="relative flex items-center justify-center"
+                                        className="flex items-center justify-center"
                                     >
-                                        {cartCount > 0 && (
-                                            <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-                                                {cartCount}
-                                            </div>
-                                        )}
                                         <Icons.ShoppingCart className="size-5" />
                                     </motion.div>
                                     <span className="sr-only">Cart</span>
@@ -867,7 +868,7 @@ export function NavbarHome({
                                 <div className="hidden items-center gap-2 md:flex">
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <button className="flex size-10 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2b24] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary">
+                                            <button className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2b24] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary">
                                                 <Icons.UserCircle className="size-5" />
                                                 <span className="sr-only">
                                                     User menu
@@ -991,15 +992,10 @@ export function NavbarHome({
                                         </DropdownMenuContent>
                                     </DropdownMenu>
 
-                                    <NavbarActionButton href="/profile/wishlist">
-                                        {userWishlist?.length
-                                            ? userWishlist.length > 0 && (
-                                                  <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-                                                      {userWishlist.length}
-                                                  </div>
-                                              )
-                                            : null}
-
+                                    <NavbarActionButton
+                                        href="/profile/wishlist"
+                                        badge={userWishlist?.length ?? 0}
+                                    >
                                         <Icons.Heart className="size-5" />
                                         <span className="sr-only">
                                             Wishlist
@@ -1009,6 +1005,7 @@ export function NavbarHome({
                                     <NavbarActionButton
                                         href="/mycart"
                                         className="global-cart-icon"
+                                        badge={availableCart?.length ?? 0}
                                     >
                                         <motion.div
                                             animate={{
@@ -1019,14 +1016,8 @@ export function NavbarHome({
                                                 stiffness: 300,
                                                 damping: 20,
                                             }}
-                                            className="relative flex items-center justify-center"
+                                            className="flex items-center justify-center"
                                         >
-                                            {availableCart?.length &&
-                                            availableCart.length > 0 ? (
-                                                <div className="absolute -right-1 -top-1 flex min-w-[20px] items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground">
-                                                    {availableCart.length}
-                                                </div>
-                                            ) : null}
                                             <Icons.ShoppingCart className="size-5" />
                                         </motion.div>
                                         <span className="sr-only">Cart</span>
