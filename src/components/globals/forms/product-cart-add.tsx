@@ -34,6 +34,7 @@ import {
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
@@ -111,6 +112,14 @@ function useGuestCart() {
     return { guestCart, addToGuestCart, clearGuestCart };
 }
 
+function getInitialViewerCount(productId: string) {
+    const seed = productId
+        .split("")
+        .reduce((total, char) => total + char.charCodeAt(0), 0);
+
+    return 8 + (seed % 19);
+}
+
 //
 // ðŸ”¹ ProductCartAddForm
 //
@@ -149,6 +158,9 @@ export function ProductCartAddForm({
     const { trackAddToCartEvent } = useAddToCartTracking();
     const { guestCart, addToGuestCart } = useGuestCart();
     const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
+    const [viewerCount, setViewerCount] = useState(() =>
+        getInitialViewerCount(product.id)
+    );
 
     // Floating bar: show only when inline buttons scroll out of view on mobile
     const buttonsRef = useRef<HTMLDivElement>(null);
@@ -165,6 +177,20 @@ export function ProductCartAddForm({
         observer.observe(el);
         return () => observer.disconnect();
     }, []);
+
+    useEffect(() => {
+        setViewerCount(getInitialViewerCount(product.id));
+
+        const interval = window.setInterval(() => {
+            setViewerCount((current) => {
+                const movement = Math.random() > 0.55 ? 1 : -1;
+                return Math.min(32, Math.max(6, current + movement));
+            });
+        }, 12000);
+
+        return () => window.clearInterval(interval);
+    }, [product.id]);
+
     const router = useRouter();
 
     const handleAddProductCart = async (productId: string, brandId: string) => {
@@ -439,6 +465,14 @@ export function ProductCartAddForm({
                     <p className="mt-0.5 text-[13px] text-neutral-400">
                         Inclusive of all taxes
                     </p>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-12 font-medium text-amber-800">
+                        <span className="relative flex size-2">
+                            <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-500 opacity-60" />
+                            <span className="relative inline-flex size-2 rounded-full bg-amber-600" />
+                        </span>
+                        <Eye className="size-3.5" strokeWidth={2} />
+                        <span>{viewerCount} people are viewing this right now</span>
+                    </div>
                 </div>
             )}
 
