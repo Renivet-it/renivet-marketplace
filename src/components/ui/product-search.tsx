@@ -741,7 +741,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                         </div>
 
                         {/* Premium Results Area */}
-                        <div className="flex-1 overflow-y-auto px-6 py-8">
+                        <div className="flex-1 overflow-y-auto px-6 pb-8 pt-3">
                              {(isFetchingSuggestions || isFetchingProducts) && localSearch.trim().length >= 2 && (
                                 <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#eee8dc] bg-[#fbfaf6] px-3 py-2 text-12 font-medium text-[#7b725f]">
                                     <Spinner className="size-3.5 text-primary" />
@@ -838,10 +838,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
                              {(suggestions.length > 0 || products.length > 0) && (
                                 <div className="space-y-10">
-                                    <div className="rounded-2xl border border-[#ebe7df] bg-white px-4 py-3 text-12 text-[#6a614f]">
-                                        Suggestions for &ldquo;{localSearch.trim()}&rdquo;
-                                    </div>
-
                                     {/* SUGGESTIONS */}
                                     {suggestions.length > 0 && (
                                         <div>
