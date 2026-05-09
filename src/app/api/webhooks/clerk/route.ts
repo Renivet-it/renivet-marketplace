@@ -16,6 +16,8 @@ import { eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { Webhook } from "svix";
 
+const getPendingPhone = (userId: string) => `pending:${userId}`;
+
 export async function POST(req: NextRequest) {
     try {
         const payload = await req.json();
@@ -64,7 +66,9 @@ export async function POST(req: NextRequest) {
                             firstName: webhookUser.first_name,
                             lastName: webhookUser.last_name,
                             email: email.email_address,
-                            phone: phone?.phone_number ?? null,
+                            phone:
+                                phone?.phone_number ??
+                                getPendingPhone(webhookUser.id),
                             avatarUrl: webhookUser.image_url,
                             isEmailVerified:
                                 email.verification?.status === "verified",
@@ -124,7 +128,9 @@ export async function POST(req: NextRequest) {
                                 firstName: webhookUser.first_name,
                                 lastName: webhookUser.last_name,
                                 email: email.email_address,
-                                phone: phone?.phone_number ?? null,
+                                ...(phone?.phone_number
+                                    ? { phone: phone.phone_number }
+                                    : {}),
                                 avatarUrl: webhookUser.image_url,
                                 isEmailVerified:
                                     email.verification?.status === "verified",

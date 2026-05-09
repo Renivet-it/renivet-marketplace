@@ -6,16 +6,16 @@ import { blogs } from "./blog";
 import { bannedBrandMembers, brandMembers, brands } from "./brand";
 import { carts } from "./cart";
 import { categoryRequests } from "./category";
+import { reviews } from "./review";
 import { roles } from "./role";
 import { wishlists } from "./wishlist";
-import { reviews } from "./review";
 
 export const users = pgTable("users", {
     id: text("id").primaryKey().notNull().unique(),
     firstName: text("first_name").notNull(),
     lastName: text("last_name").notNull(),
     email: text("email").notNull().unique(),
-    phone: text("phone").unique(),
+    phone: text("phone").notNull().unique(),
     avatarUrl: text("avatar_url"),
     isEmailVerified: boolean("is_email_verified").notNull().default(false),
     isPhoneVerified: boolean("is_phone_verified").notNull().default(false),

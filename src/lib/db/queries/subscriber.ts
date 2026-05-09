@@ -2,7 +2,7 @@ import {
     CreateNewsletterSubscriber,
     newsletterSubscriberSchema,
 } from "@/lib/validations";
-import { and, desc, eq, ilike } from "drizzle-orm";
+import { and, desc, eq, ilike, or } from "drizzle-orm";
 import { db } from "..";
 import { newsletterSubscribers } from "../schema";
 
@@ -24,7 +24,10 @@ class SubscriberQuery {
                     ? eq(newsletterSubscribers.isActive, isActive)
                     : undefined,
                 !!search?.length
-                    ? ilike(newsletterSubscribers.email, `%${search}%`)
+                    ? or(
+                          ilike(newsletterSubscribers.email, `%${search}%`),
+                          ilike(newsletterSubscribers.phone, `%${search}%`)
+                      )
                     : undefined
             ),
             limit,
@@ -59,10 +62,47 @@ class SubscriberQuery {
         return data;
     }
 
+    async getSubscriberByPhone(phone: string) {
+        const data = await db.query.newsletterSubscribers.findFirst({
+            where: eq(newsletterSubscribers.phone, phone),
+        });
+
+        return data;
+    }
+
     async createSubscriber(values: CreateNewsletterSubscriber) {
         const data = await db
             .insert(newsletterSubscribers)
-            .values(values)
+            .values({
+                ...values,
+                name: values.name ?? null,
+                email: values.email ?? null,
+                source: values.source ?? "newsletter",
+            })
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateSubscriberLead({
+        phone,
+        values,
+    }: {
+        phone: string;
+        values: Partial<CreateNewsletterSubscriber> & { userId?: string };
+    }) {
+        const data = await db
+            .update(newsletterSubscribers)
+            .set({
+                name: values.name ?? undefined,
+                email: values.email ?? undefined,
+                userId: values.userId,
+                source: values.source ?? undefined,
+                isActive: true,
+                updatedAt: new Date(),
+            })
+            .where(eq(newsletterSubscribers.phone, phone))
             .returning()
             .then((res) => res[0]);
 

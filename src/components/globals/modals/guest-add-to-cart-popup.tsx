@@ -10,211 +10,152 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog-general";
+import { Input } from "@/components/ui/input-general";
 import { useGuestPopupStore } from "@/lib/store/use-guest-popup-store";
-import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
+import { trpc } from "@/lib/trpc/client";
+import { handleClientError } from "@/lib/utils";
+import { SignInButton, useAuth } from "@clerk/nextjs";
+import Link from "next/link";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { toast } from "sonner";
 
-// eslint-disable-next-line quotes
-const NOISE_SVG = `url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E")`;
+const PENDING_PHONE_KEY = "renivet-pending-phone-lead";
 
 const BENEFITS = [
-    "Exclusive welcome discount",
-    "Faster checkout and saved wishlist",
-    "Updates from mindful, homegrown brands",
+    "Exclusive welcome offers",
+    "Early access to mindful drops",
+    "Faster checkout after you join",
 ];
+
+function normalizePhone(value: string) {
+    return value.replace(/[^0-9+]/g, "");
+}
+
+function hasRealPhone(phone?: string | null) {
+    return !!phone && !phone.startsWith("pending:") && phone.length >= 10;
+}
 
 export function GuestAddToCartPopup() {
     const { isOpen, closePopup, mode } = useGuestPopupStore();
-    const { isSignedIn } = useAuth();
+    const { isSignedIn, isLoaded } = useAuth();
+    const [phone, setPhone] = useState("");
+    const [leadSaved, setLeadSaved] = useState(false);
+    const utils = trpc.useUtils();
 
-    if (isSignedIn) return null;
+    const { data: user } = trpc.general.users.currentUser.useQuery(undefined, {
+        enabled: !!isSignedIn,
+        retry: false,
+    });
+
+    const needsPhone = isSignedIn && user && !hasRealPhone(user.phone);
+
+    const title = useMemo(() => {
+        if (needsPhone) return "Add your number for member-only offers";
+        if (mode === "cart") return "Save your cart and unlock your offer";
+        return "Join the Renivet circle";
+    }, [mode, needsPhone]);
+
+    const createLead =
+        trpc.general.newsletterSubscribers.createNewsletterSubscriber.useMutation(
+            {
+                onSuccess: (_, variables) => {
+                    localStorage.setItem(PENDING_PHONE_KEY, variables.phone);
+                    setLeadSaved(true);
+                    toast.success("Offer saved. Sign in to attach it.");
+                },
+                onError: (err) => toast.error(err.message),
+            }
+        );
+
+    const claimPhone = trpc.general.users.claimPhoneLead.useMutation({
+        onSuccess: async () => {
+            localStorage.removeItem(PENDING_PHONE_KEY);
+            localStorage.setItem("renivet-phone-offer-seen", "true");
+            await utils.general.users.currentUser.invalidate();
+            toast.success("Phone number added to your profile.");
+            closePopup();
+        },
+        onError: (err) => handleClientError(err),
+    });
+
+    useEffect(() => {
+        if (!isLoaded || !isSignedIn || hasRealPhone(user?.phone)) return;
+
+        const pendingPhone = localStorage.getItem(PENDING_PHONE_KEY);
+        if (pendingPhone) {
+            setPhone(pendingPhone);
+            claimPhone.mutate({ phone: pendingPhone });
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [isLoaded, isSignedIn, user?.phone]);
+
+    function handleSubmit(e: FormEvent<HTMLFormElement>) {
+        e.preventDefault();
+
+        const cleanPhone = normalizePhone(phone);
+        if (cleanPhone.length < 10) {
+            toast.error("Please enter a valid phone number");
+            return;
+        }
+
+        if (needsPhone) {
+            claimPhone.mutate({ phone: cleanPhone });
+            return;
+        }
+
+        createLead.mutate({
+            phone: cleanPhone,
+            source: mode === "cart" ? "cart_offer_popup" : "welcome_popup",
+        });
+    }
+
+    if (!isLoaded) return null;
+    if (isSignedIn && !needsPhone) return null;
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && closePopup()}>
-            <DialogContent className="[&>button:last-child]:bg-white/12 h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-[920px] overflow-hidden rounded-[28px] border-none bg-transparent p-0 shadow-[0_40px_120px_-24px_rgba(15,23,42,0.45)] sm:h-auto sm:w-full [&>button:last-child]:right-3 [&>button:last-child]:top-3 [&>button:last-child]:z-40 [&>button:last-child]:rounded-full [&>button:last-child]:border [&>button:last-child]:border-white/20 [&>button:last-child]:p-2.5 [&>button:last-child]:text-white [&>button:last-child]:opacity-100 hover:[&>button:last-child]:bg-white/20 sm:[&>button:last-child]:right-5 sm:[&>button:last-child]:top-5 sm:[&>button:last-child]:border-black/10 sm:[&>button:last-child]:bg-[#f7f3eb] sm:[&>button:last-child]:text-[#234236] sm:hover:[&>button:last-child]:bg-white">
+            <DialogContent className="[&>button:last-child]:bg-white/12 h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-[900px] overflow-hidden rounded-[28px] border-none bg-transparent p-0 shadow-[0_40px_120px_-24px_rgba(15,23,42,0.45)] sm:h-auto sm:w-full [&>button:last-child]:right-3 [&>button:last-child]:top-3 [&>button:last-child]:z-40 [&>button:last-child]:rounded-full [&>button:last-child]:border [&>button:last-child]:border-white/20 [&>button:last-child]:p-2.5 [&>button:last-child]:text-white [&>button:last-child]:opacity-100 hover:[&>button:last-child]:bg-white/20">
                 <DialogHeader className="sr-only">
-                    <DialogTitle>Welcome to Renivet</DialogTitle>
+                    <DialogTitle>{title}</DialogTitle>
                     <DialogDescription>
-                        Sign in or create an account to unlock your welcome
-                        discount and curated product updates.
+                        Share your phone number to receive Renivet offers and
+                        account updates.
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="flex h-full flex-col overflow-hidden rounded-[28px] bg-[#f7f3eb] lg:hidden">
-                    <div className="relative overflow-hidden bg-[#234236] p-4 text-white">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(241,227,193,0.18),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(212,232,203,0.2),_transparent_34%),linear-gradient(145deg,_#173328_0%,_#234236_48%,_#2f5a4a_100%)]" />
-                        <div
-                            className="absolute inset-0 opacity-[0.07]"
-                            style={{ backgroundImage: NOISE_SVG }}
-                        />
-                        <div className="bg-white/8 absolute -right-10 top-20 size-32 rounded-full blur-2xl" />
-                        <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-[#f7f3eb]" />
-
-                        <div className="relative z-10 flex flex-col gap-2.5">
-                            <div className="inline-flex w-fit items-center rounded-full border border-white/15 bg-white/10 px-3 py-2 backdrop-blur-sm">
-                                <RenivetFull className="h-[20px] w-[76px] text-white" />
-                            </div>
-
-                            <div className="space-y-1.5 pr-10">
-                                <span className="font-outfit inline-flex items-center rounded-full border border-white/15 bg-white/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#e9ddbc]">
-                                    Welcome offer
-                                </span>
-                                <h2 className="max-w-[12ch] font-playfair text-[25px] leading-[0.94] text-[#f9f6ef]">
-                                    Shop mindfully. Save on your first order.
-                                </h2>
-                                <p className="font-outfit text-white/82 max-w-[31ch] text-[12px] leading-4">
-                                    Join Renivet to unlock your discount, keep
-                                    your wishlist, and check out faster.
-                                </p>
-                            </div>
-
-                            <div className="border-white/12 flex items-end justify-between gap-3 rounded-[18px] border bg-white/10 px-3.5 py-2.5 backdrop-blur-md">
-                                <div>
-                                    <p className="font-outfit text-[10px] font-semibold uppercase tracking-[0.16em] text-[#d7e8d7]">
-                                        First order perk
-                                    </p>
-                                    <p className="mt-1 font-playfair text-[22px] leading-none text-[#f3e5b7]">
-                                        20% OFF
-                                    </p>
-                                </div>
-                                <div className="rounded-[14px] border border-[#f3e5b7]/20 bg-[#f3e5b7]/10 px-3 py-2 text-right">
-                                    <p className="font-outfit text-[10px] font-semibold uppercase tracking-[0.15em] text-[#f6ebc7]">
-                                        Code
-                                    </p>
-                                    <p className="font-outfit mt-0.5 text-[15px] font-bold tracking-[0.06em] text-white">
-                                        TRYNEW20
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="relative min-h-0 flex-1 overflow-hidden px-4 pb-4 pt-2">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(166,198,179,0.18),_transparent_28%),radial-gradient(circle_at_bottom_left,_rgba(222,204,169,0.18),_transparent_24%)]" />
-
-                        <div className="relative z-10 flex min-h-full flex-col">
-                            <p className="font-outfit max-w-[34ch] text-[12px] leading-4 text-[#58655d]">
-                                Create your account to claim the offer and get
-                                product updates that are actually worth opening.
-                            </p>
-
-                            <div className="mt-2 space-y-1.5">
-                                {BENEFITS.map((item) => (
-                                    <div
-                                        key={item}
-                                        className="border-[#234236]/8 bg-white/78 flex items-center gap-2.5 rounded-[14px] border px-3 py-2 shadow-[0_18px_40px_-34px_rgba(35,66,54,0.42)]"
-                                    >
-                                        <Icons.CheckCircle className="size-3.5 shrink-0 text-[#6f8f7d]" />
-                                        <span className="font-outfit text-[12px] font-medium text-[#34433b]">
-                                            {item}
-                                        </span>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="mt-3 space-y-2">
-                                <SignInButton
-                                    mode="modal"
-                                    signUpFallbackRedirectUrl="/mycart"
-                                    forceRedirectUrl="/mycart"
-                                >
-                                    <div className="rounded-[22px] bg-[linear-gradient(135deg,#234236_0%,#315848_100%)] p-[1.5px] shadow-[0_24px_60px_-30px_rgba(35,66,54,0.7)]">
-                                        <Button
-                                            size="lg"
-                                            className="font-outfit h-[42px] w-full rounded-[15px] bg-[linear-gradient(135deg,#234236_0%,#2d5243_100%)] px-5 text-[13px] font-semibold text-[#f9f6ef] hover:bg-[linear-gradient(135deg,#234236_0%,#2d5243_100%)]"
-                                        >
-                                            Login to claim your offer
-                                        </Button>
-                                    </div>
-                                </SignInButton>
-
-                                <SignUpButton
-                                    mode="modal"
-                                    signInFallbackRedirectUrl="/mycart"
-                                    forceRedirectUrl="/mycart"
-                                >
-                                    <Button
-                                        size="lg"
-                                        className="font-outfit bg-white/88 h-[42px] w-full rounded-[15px] border border-[#234236]/10 px-5 text-[13px] font-semibold text-[#22382f] shadow-[0_22px_50px_-36px_rgba(35,66,54,0.45)] transition-all duration-300 hover:bg-white hover:text-[#18261f]"
-                                    >
-                                        Create free account
-                                    </Button>
-                                </SignUpButton>
-                            </div>
-
-                            <div className="mt-6 flex items-center gap-4 py-2">
-                                <div className="bg-[#234236]/12 h-px flex-1" />
-                                <span className="font-outfit min-w-8 text-center text-11 uppercase tracking-[0.18em] text-[#6d736c]">
-                                    or
-                                </span>
-                                <div className="bg-[#234236]/12 h-px flex-1" />
-                            </div>
-
-                            <div className="mx-auto flex w-full max-w-[34ch] flex-col items-center space-y-2 pb-0 text-center">
-                                {mode === "cart" && (
-                                    <p className="font-outfit inline-flex rounded-full bg-[#234236]/6 px-3 py-1 text-[12px] font-semibold text-[#234236]">
-                                        Your item is already in the cart.
-                                    </p>
-                                )}
-                                <button
-                                    onClick={closePopup}
-                                    className="font-outfit inline-flex items-center justify-center gap-2 text-[13px] font-medium text-[#566158] transition-colors hover:text-[#18261f]"
-                                >
-                                    {mode === "cart"
-                                        ? "Continue to checkout as guest"
-                                        : "Continue exploring"}
-                                    <Icons.ArrowRight className="size-4" />
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="hidden max-h-[90vh] overflow-y-auto rounded-[28px] bg-[#f7f3eb] lg:grid lg:grid-cols-[1.03fr_0.97fr]">
-                    <div className="relative overflow-hidden bg-[#234236] p-10 text-white">
-                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(241,227,193,0.18),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(212,232,203,0.22),_transparent_34%),linear-gradient(145deg,_#173328_0%,_#234236_48%,_#2f5a4a_100%)]" />
-                        <div
-                            className="absolute inset-0 opacity-[0.07]"
-                            style={{ backgroundImage: NOISE_SVG }}
-                        />
+                <div className="grid h-full overflow-hidden rounded-[28px] bg-[#f7f3eb] lg:grid-cols-[0.98fr_1.02fr]">
+                    <div className="relative hidden overflow-hidden bg-[#234236] p-10 text-white lg:block">
+                        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(241,227,193,0.2),_transparent_38%),radial-gradient(circle_at_bottom_right,_rgba(212,232,203,0.2),_transparent_34%),linear-gradient(145deg,_#173328_0%,_#234236_50%,_#2f5a4a_100%)]" />
                         <div className="absolute -right-16 top-20 size-40 rounded-full border border-white/10 bg-white/5 blur-sm" />
                         <div className="absolute -bottom-12 left-8 size-28 rounded-full bg-[#f3e5b7]/10 blur-2xl" />
 
                         <div className="relative z-10 flex h-full flex-col">
-                            <div className="inline-flex w-fit items-center rounded-full border border-white/15 bg-white/10 px-4 py-3 shadow-[0_12px_30px_-18px_rgba(0,0,0,0.65)] backdrop-blur-sm">
+                            <div className="inline-flex w-fit items-center rounded-full border border-white/15 bg-white/10 px-4 py-3 backdrop-blur-sm">
                                 <RenivetFull className="h-[30px] w-[108px] text-white" />
                             </div>
 
                             <div className="mt-12 flex-1">
-                                <div className="max-w-[380px]">
-                                    <span className="font-outfit inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-11 font-semibold uppercase tracking-[0.24em] text-[#e9ddbc]">
-                                        Conscious marketplace
-                                    </span>
-                                    <h2 className="mt-5 font-playfair text-[52px] leading-[0.98] text-[#f9f6ef]">
-                                        Discover homegrown brands with a more
-                                        thoughtful way to shop.
-                                    </h2>
-                                    <p className="font-outfit text-white/78 mt-4 max-w-[30ch] text-16 leading-7">
-                                        Join Renivet for curated finds,
-                                        mindful stories, and a welcome offer
-                                        made for your first order.
-                                    </p>
-                                </div>
+                                <span className="font-outfit inline-flex items-center rounded-full border border-white/15 bg-white/10 px-3 py-1 text-11 font-semibold uppercase tracking-[0.24em] text-[#e9ddbc]">
+                                    Private member list
+                                </span>
+                                <h2 className="mt-5 max-w-[9ch] font-playfair text-[56px] leading-[0.96] text-[#f9f6ef]">
+                                    Conscious finds, first.
+                                </h2>
+                                <p className="font-outfit text-white/78 mt-4 max-w-[32ch] text-16 leading-7">
+                                    Get curated drops, thoughtful offers, and a
+                                    smoother checkout path when you join.
+                                </p>
                             </div>
 
-                            <div className="grid gap-3 sm:grid-cols-[1.06fr_0.94fr]">
+                            <div className="grid grid-cols-[1.06fr_0.94fr] gap-3">
                                 <div className="border-white/12 rounded-[20px] border bg-white/10 p-4 backdrop-blur-md">
                                     <p className="font-outfit text-12 font-semibold uppercase tracking-[0.2em] text-[#d7e8d7]">
-                                        Welcome offer
+                                        First-order perk
                                     </p>
                                     <p className="mt-2 font-playfair text-[32px] leading-none text-[#f3e5b7]">
                                         20% OFF
                                     </p>
-                                    <p className="font-outfit text-white/78 mt-2 text-sm leading-5">
-                                        Use this code at checkout on your first
-                                        order.
-                                    </p>
                                 </div>
-
                                 <div className="rounded-[20px] border border-[#f3e5b7]/20 bg-[#f3e5b7]/10 p-4">
                                     <p className="font-outfit text-12 font-semibold uppercase tracking-[0.2em] text-[#f6ebc7]">
                                         Code
@@ -222,36 +163,30 @@ export function GuestAddToCartPopup() {
                                     <p className="font-outfit mt-2 text-[22px] font-bold tracking-[0.06em] text-white">
                                         TRYNEW20
                                     </p>
-                                    <p className="font-outfit text-white/72 mt-1.5 text-sm leading-5">
-                                        Crafted to welcome you in.
-                                    </p>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div className="relative overflow-hidden bg-[#f7f3eb] p-10">
+                    <div className="relative flex min-h-0 flex-col overflow-y-auto bg-[#f7f3eb] p-5 sm:p-8 lg:p-10">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(166,198,179,0.22),_transparent_30%),radial-gradient(circle_at_bottom_left,_rgba(222,204,169,0.2),_transparent_28%)]" />
-                        <div className="absolute right-0 top-0 size-56 -translate-y-1/3 translate-x-1/3 rounded-full bg-[#d2e2d1]/35 blur-3xl" />
 
-                        <div className="relative z-10 mx-auto flex h-full max-w-[390px] flex-col justify-center">
-                            <div>
-                                <div className="font-outfit inline-flex items-center gap-2 rounded-full border border-[#234236]/10 bg-white/75 px-3 py-1.5 text-12 font-semibold text-[#234236] shadow-[0_18px_50px_-32px_rgba(35,66,54,0.55)] backdrop-blur-sm">
-                                    <Icons.Sparkles className="size-3.5" />
-                                    Members get early access and offers
-                                </div>
-
-                                <h3 className="mt-5 font-playfair text-[38px] leading-[1.02] text-[#18261f]">
-                                    Stay close to the brands you will actually
-                                    want to follow.
-                                </h3>
-
-                                <p className="font-outfit mt-4 text-16 leading-7 text-[#5c665f]">
-                                    Create your Renivet account to save your
-                                    favorites, unlock your first-order offer,
-                                    and get thoughtfully curated updates.
-                                </p>
+                        <div className="relative z-10 mx-auto flex w-full max-w-[420px] flex-1 flex-col justify-center">
+                            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-[#234236]/10 bg-white/75 px-3 py-1.5 text-12 font-semibold text-[#234236] shadow-[0_18px_50px_-32px_rgba(35,66,54,0.55)] backdrop-blur-sm">
+                                <Icons.Sparkles className="size-3.5" />
+                                {needsPhone
+                                    ? "Complete your profile"
+                                    : "Exclusive Renivet offer"}
                             </div>
+
+                            <h3 className="mt-5 font-playfair text-[36px] leading-[1.02] text-[#18261f] sm:text-[40px]">
+                                {title}
+                            </h3>
+                            <p className="font-outfit text-15 mt-4 leading-7 text-[#5c665f]">
+                                {needsPhone
+                                    ? "Add your number so offers, delivery updates, and account nudges can reach the right place."
+                                    : "Enter your number to reserve your welcome offer. Then sign in with Google to connect it to your account."}
+                            </p>
 
                             <div className="mt-6 grid gap-3">
                                 {BENEFITS.map((item) => (
@@ -267,59 +202,88 @@ export function GuestAddToCartPopup() {
                                 ))}
                             </div>
 
-                            <div className="mt-7 flex flex-col gap-3">
-                                <SignInButton
-                                    mode="modal"
-                                    signUpFallbackRedirectUrl="/mycart"
-                                    forceRedirectUrl="/mycart"
-                                >
-                                    <div className="rounded-[22px] bg-[linear-gradient(135deg,#234236_0%,#315848_100%)] p-[1.5px] shadow-[0_24px_60px_-30px_rgba(35,66,54,0.8)] transition-transform duration-300 hover:scale-[1.01]">
-                                        <Button
-                                            size="lg"
-                                            className="font-outfit h-[56px] w-full rounded-[20px] bg-[linear-gradient(135deg,#234236_0%,#2d5243_100%)] px-6 text-[15px] font-semibold text-[#f9f6ef] hover:bg-[linear-gradient(135deg,#234236_0%,#2d5243_100%)]"
-                                        >
-                                            Login to claim your offer
-                                        </Button>
-                                    </div>
-                                </SignInButton>
-
-                                <SignUpButton
-                                    mode="modal"
-                                    signInFallbackRedirectUrl="/mycart"
-                                    forceRedirectUrl="/mycart"
-                                >
+                            <form onSubmit={handleSubmit} className="mt-7">
+                                <label className="font-outfit text-13 font-semibold text-[#2c3c34]">
+                                    Phone number
+                                </label>
+                                <div className="mt-2 flex gap-2">
+                                    <Input
+                                        inputMode="tel"
+                                        value={phone}
+                                        placeholder="+91 98765 43210"
+                                        disabled={
+                                            createLead.isPending ||
+                                            claimPhone.isPending
+                                        }
+                                        onChange={(e) =>
+                                            setPhone(
+                                                normalizePhone(e.target.value)
+                                            )
+                                        }
+                                        className="h-12 rounded-2xl border-[#234236]/15 bg-white/85"
+                                    />
                                     <Button
-                                        size="lg"
-                                        className="font-outfit h-[56px] w-full rounded-[20px] border border-[#234236]/10 bg-white/80 px-6 text-[15px] font-semibold text-[#22382f] shadow-[0_22px_50px_-36px_rgba(35,66,54,0.5)] transition-all duration-300 hover:bg-white hover:text-[#18261f]"
+                                        type="submit"
+                                        disabled={
+                                            createLead.isPending ||
+                                            claimPhone.isPending
+                                        }
+                                        className="h-12 rounded-2xl bg-[#234236] px-5 text-white hover:bg-[#1c362c]"
                                     >
-                                        Create free account
+                                        {needsPhone ? "Save" : "Reserve"}
                                     </Button>
-                                </SignUpButton>
-                            </div>
+                                </div>
+                            </form>
 
-                            <div className="relative mt-7 flex items-center py-1">
-                                <div className="border-[#234236]/12 grow border-t" />
-                                <span className="font-outfit mx-4 shrink-0 text-11 uppercase tracking-[0.18em] text-[#8b8d84]">
-                                    or
-                                </span>
-                                <div className="border-[#234236]/12 grow border-t" />
-                            </div>
+                            {!needsPhone && (
+                                <div className="mt-4 space-y-3">
+                                    <SignInButton
+                                        mode="modal"
+                                        forceRedirectUrl="/"
+                                        signUpFallbackRedirectUrl="/"
+                                    >
+                                        <Button
+                                            type="button"
+                                            className="border-[#234236]/12 h-12 w-full rounded-2xl border bg-white/85 text-[#22382f] shadow-[0_22px_50px_-36px_rgba(35,66,54,0.5)] hover:bg-white"
+                                            disabled={!leadSaved && !phone}
+                                        >
+                                            <Icons.Google className="size-4" />
+                                            Continue with Google
+                                        </Button>
+                                    </SignInButton>
+                                    {!leadSaved && (
+                                        <p className="font-outfit text-center text-xs text-[#68756d]">
+                                            Reserve with your phone first so we
+                                            can attach the offer after login.
+                                        </p>
+                                    )}
+                                </div>
+                            )}
 
-                            <div className="mt-5 flex flex-col items-start gap-3">
-                                {mode === "cart" && (
-                                    <p className="font-outfit bg-[#234236]/6 rounded-full px-3 py-1.5 text-13 font-semibold text-[#234236]">
-                                        Your item is already in the cart.
-                                    </p>
+                            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+                                {needsPhone ? (
+                                    <Button
+                                        asChild
+                                        variant="ghost"
+                                        className="px-0 text-[#566158] hover:bg-transparent hover:text-[#18261f]"
+                                    >
+                                        <Link href="/profile/personal-details">
+                                            Open profile details
+                                            <Icons.ArrowRight className="size-4" />
+                                        </Link>
+                                    </Button>
+                                ) : (
+                                    <button
+                                        type="button"
+                                        onClick={closePopup}
+                                        className="font-outfit inline-flex items-center gap-2 text-[15px] font-medium text-[#566158] transition-colors hover:text-[#18261f]"
+                                    >
+                                        {mode === "cart"
+                                            ? "Continue as guest"
+                                            : "Continue exploring"}
+                                        <Icons.ArrowRight className="size-4" />
+                                    </button>
                                 )}
-                                <button
-                                    onClick={closePopup}
-                                    className="font-outfit inline-flex items-center gap-2 text-[15px] font-medium text-[#566158] transition-colors hover:text-[#18261f]"
-                                >
-                                    {mode === "cart"
-                                        ? "Continue to checkout as guest"
-                                        : "Continue exploring"}
-                                    <Icons.ArrowRight className="size-4" />
-                                </button>
                             </div>
                         </div>
                     </div>

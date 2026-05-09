@@ -11,6 +11,7 @@ import { getUserPermissions, hasPermission, slugify } from "@/lib/utils";
 import {
     createAddressSchema,
     updateAddressSchema,
+    updateUserPhoneSchema,
     updateUserRolesSchema,
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
@@ -416,6 +417,81 @@ export const usersRouter = createTRPCRouter({
 
         return cachedUser;
     }),
+    claimPhoneLead: protectedProcedure
+        .input(updateUserPhoneSchema)
+        .mutation(async ({ ctx, input }) => {
+            const { db, schemas, user, queries } = ctx;
+
+            const hasRealPhone =
+                user.phone &&
+                !user.phone.startsWith("pending:") &&
+                user.phone.length >= 10;
+            if (hasRealPhone) return user;
+
+            const existingUser = await db.query.users.findFirst({
+                where: eq(schemas.users.phone, input.phone),
+            });
+            if (existingUser && existingUser.id !== user.id)
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message:
+                        "This phone number is already linked to an account",
+                });
+
+            const existingLead =
+                await queries.newsletterSubscribers.getSubscriberByPhone(
+                    input.phone
+                );
+
+            const updatedUser = await db.transaction(async (tx) => {
+                const [updated] = await tx
+                    .update(schemas.users)
+                    .set({
+                        phone: input.phone,
+                        isPhoneVerified: false,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(schemas.users.id, user.id))
+                    .returning();
+
+                if (existingLead)
+                    await tx
+                        .update(schemas.newsletterSubscribers)
+                        .set({
+                            userId: user.id,
+                            email: user.email,
+                            name:
+                                existingLead.name ||
+                                [user.firstName, user.lastName]
+                                    .filter(Boolean)
+                                    .join(" "),
+                            isActive: true,
+                            updatedAt: new Date(),
+                        })
+                        .where(
+                            eq(
+                                schemas.newsletterSubscribers.id,
+                                existingLead.id
+                            )
+                        );
+                else
+                    await tx.insert(schemas.newsletterSubscribers).values({
+                        phone: input.phone,
+                        userId: user.id,
+                        email: user.email,
+                        name: [user.firstName, user.lastName]
+                            .filter(Boolean)
+                            .join(" "),
+                        source: "profile_phone_prompt",
+                    });
+
+                return updated;
+            });
+
+            await userCache.remove(user.id);
+
+            return updatedUser;
+        }),
     addresses: userAddressesRouter,
     roles: userRolesRouter,
     wishlist: wishlistRouter,

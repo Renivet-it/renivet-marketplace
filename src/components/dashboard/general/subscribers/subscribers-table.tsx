@@ -39,11 +39,19 @@ const columns: ColumnDef<TableSubscriber>[] = [
         accessorKey: "name",
         header: "Name",
         enableHiding: false,
+        cell: ({ row }) => row.original.name || "-",
     },
     {
         accessorKey: "email",
         header: "Email",
         enableHiding: false,
+        cell: ({ row }) => row.original.email || "-",
+    },
+    {
+        accessorKey: "phone",
+        header: "Phone",
+        enableHiding: false,
+        cell: ({ row }) => row.original.phone || "-",
     },
     {
         accessorKey: "status",
@@ -102,22 +110,20 @@ export function SubscribersTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.newsletterSubscribers.getNewsletterSubscribers.useQuery(
-        { page, limit, search, isActive },
-        { initialData }
-    );
-    const dataRaw = queryData?.data ?? [];
+    const { data: queryData } =
+        trpc.general.newsletterSubscribers.getNewsletterSubscribers.useQuery(
+            { page, limit, search, isActive },
+            { initialData }
+        );
     const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>
-            dataRaw.map((x) => ({
+            (queryData?.data ?? []).map((x) => ({
                 ...x,
                 status: x.isActive ? "Active" : "Inactive",
             })),
-        [dataRaw]
+        [queryData?.data]
     );
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
@@ -146,16 +152,9 @@ export function SubscribersTable({ initialData }: PageProps) {
             <div className="flex items-center gap-2">
                 <div className="flex w-full flex-col items-center gap-2 md:w-auto md:flex-row">
                     <Input
-                        placeholder="Search by email..."
-                        value={
-                            (table
-                                .getColumn("email")
-                                ?.getFilterValue() as string) ?? search
-                        }
+                        placeholder="Search by email or phone..."
+                        value={search}
                         onChange={(event) => {
-                            table
-                                .getColumn("email")
-                                ?.setFilterValue(event.target.value);
                             setSearch(event.target.value);
                         }}
                     />

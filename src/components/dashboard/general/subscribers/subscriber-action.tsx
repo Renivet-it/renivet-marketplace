@@ -23,9 +23,11 @@ interface PageProps {
 export function SubscriberAction({ subscriber }: PageProps) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
-    const handleCopyEmail = (email: string) => {
-        navigator.clipboard.writeText(email);
-        return toast.success("Email copied to clipboard");
+    const handleCopyContact = (value: string | null, label: string) => {
+        if (!value) return toast.error(`${label} is not available`);
+
+        navigator.clipboard.writeText(value);
+        return toast.success(`${label} copied to clipboard`);
     };
 
     return (
@@ -43,10 +45,20 @@ export function SubscriberAction({ subscriber }: PageProps) {
 
                     <DropdownMenuGroup>
                         <DropdownMenuItem
-                            onClick={() => handleCopyEmail(subscriber.email)}
+                            onClick={() =>
+                                handleCopyContact(subscriber.email, "Email")
+                            }
                         >
                             <Icons.Copy className="size-4" />
                             <span>Copy Email</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                            onClick={() =>
+                                handleCopyContact(subscriber.phone, "Phone")
+                            }
+                        >
+                            <Icons.Copy className="size-4" />
+                            <span>Copy Phone</span>
                         </DropdownMenuItem>
                     </DropdownMenuGroup>
 

@@ -33,6 +33,7 @@ export function NewsLetterSubscribeForm({ setCurrentTab }: PageProps) {
         defaultValues: {
             name: "",
             email: "",
+            phone: "",
         },
     });
 
@@ -101,6 +102,35 @@ export function NewsLetterSubscribeForm({ setCurrentTab }: PageProps) {
                                     placeholder="Enter your email"
                                     disabled={isPending}
                                     {...field}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Your Phone</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    inputMode="tel"
+                                    placeholder="+91 98765 43210"
+                                    disabled={isPending}
+                                    {...field}
+                                    onChange={(e) =>
+                                        field.onChange(
+                                            e.target.value.replace(
+                                                /[^0-9+]/g,
+                                                ""
+                                            )
+                                        )
+                                    }
                                 />
                             </FormControl>
 

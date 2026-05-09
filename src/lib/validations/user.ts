@@ -31,8 +31,7 @@ export const userSchema = z.object({
             required_error: "Phone is required",
             invalid_type_error: "Phone must be a string",
         })
-        .min(10, "Phone must be at least 10 characters long")
-        .nullable(),
+        .min(1, "Phone is required"),
     avatarUrl: z
         .string({
             required_error: "Avatar URL is required",

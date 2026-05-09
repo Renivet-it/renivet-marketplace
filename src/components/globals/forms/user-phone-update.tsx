@@ -55,9 +55,6 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
             return { toastId };
         },
         mutationFn: async (values: UpdateUserPhone) => {
-            if (values.phone)
-                throw new Error("Adding a phone number is currently disabled");
-
             if (!isClerkUserLoaded || !clerkUser)
                 throw new Error(DEFAULT_MESSAGES.ERRORS.USER_FETCHING);
             const res = await clerkUser.createPhoneNumber({
@@ -70,14 +67,15 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
             );
             if (!phoneNumber)
                 throw new Error(DEFAULT_MESSAGES.ERRORS.PHONE_NOT_FOUND);
-            setPhoneObj(phoneNumber);
-
             await phoneNumber.prepareVerification();
+
+            return phoneNumber;
         },
-        onSuccess: (_, __, { toastId }) => {
+        onSuccess: (phoneNumber, __, { toastId }) => {
             toast.success("SMS sent successfully", { id: toastId });
+            setPhoneObj(phoneNumber);
             form.reset({
-                phone: phoneObj?.phoneNumber,
+                phone: phoneNumber.phoneNumber,
             });
             setIsVerifyModalOpen(true);
         },
@@ -111,8 +109,7 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
                                             inputMode="tel"
                                             placeholder="+919874563210"
                                             disabled={
-                                                isPhoneVerificationSending ||
-                                                true
+                                                isPhoneVerificationSending
                                             }
                                             {...field}
                                             onChange={(e) => {
@@ -139,8 +136,8 @@ export function UserPhoneUpdateForm({ user }: PageProps) {
                                 </FormControl>
 
                                 <FormMessage className="text-xs">
-                                    * Adding a phone number is currently
-                                    disabled
+                                    Add and verify your phone number for faster
+                                    checkout and account updates.
                                 </FormMessage>
                             </FormItem>
                         )}

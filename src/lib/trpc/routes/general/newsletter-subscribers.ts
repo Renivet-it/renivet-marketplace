@@ -74,11 +74,20 @@ export const newsletterSubscriberRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
 
-            const existingNewsletterSubscriber =
-                await queries.newsletterSubscribers.getSubscriberByEmail(
-                    input.email
-                );
-            if (existingNewsletterSubscriber)
+            const [existingByPhone, existingByEmail] = await Promise.all([
+                queries.newsletterSubscribers.getSubscriberByPhone(input.phone),
+                input.email
+                    ? queries.newsletterSubscribers.getSubscriberByEmail(
+                          input.email
+                      )
+                    : null,
+            ]);
+            if (existingByPhone)
+                return queries.newsletterSubscribers.updateSubscriberLead({
+                    phone: input.phone,
+                    values: input,
+                });
+            if (existingByEmail)
                 throw new TRPCError({
                     code: "CONFLICT",
                     message: "This email is already subscribed",
@@ -92,6 +101,7 @@ export const newsletterSubscriberRouter = createTRPCRouter({
                 distinctId: newsletterSubscriber.id,
                 properties: {
                     email: newsletterSubscriber.email,
+                    phone: newsletterSubscriber.phone,
                 },
             });
 
