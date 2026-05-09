@@ -2,7 +2,6 @@
 import { Spinner } from "@/components/ui/spinner";
 // src/app/(protected)/mycart/Component/checkout-section.tsx
 
-import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
@@ -29,11 +28,11 @@ interface PageProps {
 
 const AUTO_COUPON_CODE = "TRYNEW20";
 const AUTO_COUPON_MIN_CART_VALUE = 3000 * 100;
+const FREE_SHIPPING_THRESHOLD = 999 * 100;
 
 export default function CheckoutSection({ userId }: PageProps) {
     const router = useRouter();
-    const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
-        useCartStore();
+    const { appliedCoupon, setAppliedCoupon } = useCartStore();
 
     const [isCouponExpanded, setIsCouponExpanded] = useState(false);
     const [couponCode, setCouponCode] = useState<string>("");
@@ -104,11 +103,6 @@ export default function CheckoutSection({ userId }: PageProps) {
         });
     }, [activeCoupons, selectedItems]);
 
-    const itemsCount = useMemo(
-        () => selectedItems.reduce((acc, item) => acc + item.quantity, 0) || 0,
-        [selectedItems]
-    );
-
     const totalPrice = useMemo(
         () =>
             selectedItems.reduce((acc, item) => {
@@ -165,6 +159,20 @@ export default function CheckoutSection({ userId }: PageProps) {
             items
         );
     }, [selectedItems, appliedCoupon]);
+
+    const shippingProgress = useMemo(() => {
+        const progress = Math.min(
+            100,
+            Math.round((totalPrice / FREE_SHIPPING_THRESHOLD) * 100)
+        );
+        const remaining = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
+
+        return {
+            progress,
+            remaining,
+            isUnlocked: remaining === 0,
+        };
+    }, [totalPrice]);
 
     const { mutate: validateCoupon, isPending: isValidating } =
         trpc.general.coupons.validateCoupon.useMutation({
@@ -230,14 +238,24 @@ export default function CheckoutSection({ userId }: PageProps) {
 
     return (
         <div className="w-full space-y-4">
-            {/* Complimentary delivery banner */}
-            <div className="flex items-center gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
-                <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100">
-                    <Truck className="size-3.5 text-blue-600" />
+            {/* Complimentary delivery progress */}
+            <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3">
+                <div className="flex items-center gap-2">
+                    <div className="flex size-6 shrink-0 items-center justify-center rounded-full bg-blue-100">
+                        <Truck className="size-3.5 text-blue-600" />
+                    </div>
+                    <p className="text-xs font-medium text-blue-700">
+                        {shippingProgress.isUnlocked
+                            ? "Free delivery unlocked for this order."
+                            : `Add ${formatPriceTag(+convertPaiseToRupees(shippingProgress.remaining))} more for free delivery.`}
+                    </p>
                 </div>
-                <p className="text-xs font-medium text-blue-700">
-                    Your order is eligible for complimentary delivery!
-                </p>
+                <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-blue-100">
+                    <div
+                        className="h-full rounded-full bg-blue-600 transition-all"
+                        style={{ width: `${shippingProgress.progress}%` }}
+                    />
+                </div>
             </div>
 
             {/* Mobile: Product thumbnails before summary */}

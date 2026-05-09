@@ -17,7 +17,6 @@ import {
     Recycle,
     RotateCcw,
     ShoppingBag,
-    Trash2,
     Truck,
 } from "lucide-react";
 import Image from "next/image";
@@ -25,6 +24,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CheckoutStepper from "./checkout-stepper";
+
+const FREE_SHIPPING_THRESHOLD = 999 * 100;
 
 export default function GuestCartPage() {
     const router = useRouter();
@@ -78,6 +79,20 @@ export default function GuestCartPage() {
             ),
         [guestCart]
     );
+
+    const shippingProgress = useMemo(() => {
+        const progress = Math.min(
+            100,
+            Math.round((totalPrice / FREE_SHIPPING_THRESHOLD) * 100)
+        );
+        const remaining = Math.max(FREE_SHIPPING_THRESHOLD - totalPrice, 0);
+
+        return {
+            progress,
+            remaining,
+            isUnlocked: remaining === 0,
+        };
+    }, [totalPrice]);
 
     const fmtPrice = (paise: number) =>
         formatPriceTag(+convertPaiseToRupees(paise), true);
@@ -141,13 +156,24 @@ export default function GuestCartPage() {
                             {/* ==================== RIGHT — SIDEBAR ==================== */}
                             <div className="w-full lg:w-1/3">
                                 <div className="sticky top-4 space-y-4">
-                                    {/* Complimentary delivery banner */}
-                                    <div className="flex items-center gap-2 rounded-xl bg-[#e8f5e9] p-3">
-                                        <Truck className="size-5 shrink-0 text-green-700" />
-                                        <p className="text-sm font-medium text-green-800">
-                                            Your order is eligible for
-                                            complimentary delivery!
-                                        </p>
+                                    {/* Complimentary delivery progress */}
+                                    <div className="rounded-xl bg-[#e8f5e9] p-3">
+                                        <div className="flex items-center gap-2">
+                                            <Truck className="size-5 shrink-0 text-green-700" />
+                                            <p className="text-sm font-medium text-green-800">
+                                                {shippingProgress.isUnlocked
+                                                    ? "Free delivery unlocked!"
+                                                    : `Add ${fmtPrice(shippingProgress.remaining)} more for free delivery.`}
+                                            </p>
+                                        </div>
+                                        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-green-100">
+                                            <div
+                                                className="h-full rounded-full bg-green-700 transition-all"
+                                                style={{
+                                                    width: `${shippingProgress.progress}%`,
+                                                }}
+                                            />
+                                        </div>
                                     </div>
 
                                     {/* Order Summary card */}
