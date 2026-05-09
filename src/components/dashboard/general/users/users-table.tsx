@@ -56,6 +56,24 @@ const downloadCsv = (fileName: string, rows: Record<string, string | number>[]) 
     URL.revokeObjectURL(link.href);
 };
 
+const buildExportRows = (users: TableUser[]) =>
+    users.map((user) => {
+        const siteRoles = user.roles
+            .filter((role) => role.isSiteRole)
+            .map((role) => role.name)
+            .join(", ");
+
+        return {
+            Name: user.name,
+            Email: user.email || "N/A",
+            "User Phone": user.phone || "N/A",
+            "Address Phone": getAddressPhone(user),
+            Roles: siteRoles || "General",
+            Brand: user.brand?.name || "N/A",
+            "Joined At": user.joinedAt,
+        };
+    });
+
 const columns: ColumnDef<TableUser>[] = [
     {
         accessorKey: "name",
@@ -139,6 +157,14 @@ export function UsersTable({ initialData }: PageProps) {
         { page, limit, search },
         { initialData }
     );
+    const { refetch: refetchAllUsers, isFetching: isExporting } =
+        trpc.general.users.getAllUsers.useQuery(
+            { search },
+            {
+                enabled: false,
+                refetchOnWindowFocus: false,
+            }
+        );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 
@@ -173,24 +199,15 @@ export function UsersTable({ initialData }: PageProps) {
         },
     });
 
-    const handleExport = () => {
-        const rows = table.getFilteredRowModel().rows.map((row) => {
-            const user = row.original;
-            const siteRoles = user.roles
-                .filter((role) => role.isSiteRole)
-                .map((role) => role.name)
-                .join(", ");
-
-            return {
-                Name: user.name,
-                Email: user.email || "N/A",
-                "User Phone": user.phone || "N/A",
-                "Address Phone": getAddressPhone(user),
-                Roles: siteRoles || "General",
-                Brand: user.brand?.name || "N/A",
-                "Joined At": user.joinedAt,
-            };
-        });
+    const handleExport = async () => {
+        const { data: allUsers } = await refetchAllUsers();
+        const rows = buildExportRows(
+            (allUsers ?? []).map((user) => ({
+                ...user,
+                name: `${user.firstName} ${user.lastName}`,
+                joinedAt: format(new Date(user.createdAt), "MMM dd, yyyy"),
+            }))
+        );
 
         if (!rows.length) {
             toast.error("No users to export");
@@ -225,9 +242,13 @@ export function UsersTable({ initialData }: PageProps) {
                 </div>
 
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" onClick={handleExport}>
+                    <Button
+                        variant="outline"
+                        onClick={handleExport}
+                        disabled={isExporting}
+                    >
                         <Download className="size-4" />
-                        Export
+                        {isExporting ? "Exporting..." : "Export"}
                     </Button>
                     <DataTableViewOptions table={table} />
                 </div>

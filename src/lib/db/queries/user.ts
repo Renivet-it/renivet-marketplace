@@ -56,6 +56,35 @@ class UserQuery {
         };
     }
 
+    async getAllUsers({ search }: { search?: string } = {}) {
+        const data = await db.query.users.findMany({
+            where: !!search?.length
+                ? ilike(users.email, `%${search}%`)
+                : undefined,
+            with: {
+                addresses: true,
+                roles: {
+                    with: {
+                        role: true,
+                    },
+                },
+                brand: true,
+            },
+            orderBy: [desc(users.createdAt)],
+        });
+
+        return userWithAddressesRolesAndBrandSchema
+            .array()
+            .parse(
+                data.map((user) => ({
+                    ...user,
+                    email: user.email ?? "",
+                    roles: user.roles.map((role) => role.role),
+                    brand: user?.brand ?? null,
+                }))
+            );
+    }
+
     async getUser(id: string) {
         const user = await db.query.users.findFirst({
             where: eq(users.id, id),
