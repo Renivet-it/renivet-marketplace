@@ -44,6 +44,7 @@ class UserQuery {
         const parsed = userWithAddressesRolesAndBrandSchema.array().parse(
             data.map((user) => ({
                 ...user,
+                email: user.email ?? "",
                 roles: user.roles.map((role) => role.role),
                 brand: user?.brand ?? null,
             }))
@@ -77,6 +78,7 @@ class UserQuery {
 
         return userWithAddressesRolesAndBrandSchema.parse({
             ...user,
+            email: user.email ?? "",
             roles: user.roles.map((role) => role.role),
             brand: user?.brand ?? user?.brandMember?.brand ?? null,
         });

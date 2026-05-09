@@ -22,10 +22,13 @@ export const userSchema = z.object({
             invalid_type_error: "Last name must be a string",
         })
         .min(1, "Last name is required"),
-    email: z.string({
-        required_error: "Email is required",
-        invalid_type_error: "Email must be a string",
-    }),
+    email: z.preprocess(
+        (value) => (value === null ? "" : value),
+        z.string({
+            required_error: "Email is required",
+            invalid_type_error: "Email must be a string",
+        })
+    ),
     phone: z
         .string({
             required_error: "Phone is required",
