@@ -34,6 +34,7 @@ import {
     ProductWithBrand,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { Eye } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQueryState } from "nuqs";
@@ -111,6 +112,14 @@ function useGuestCart() {
     return { guestCart, addToGuestCart, clearGuestCart };
 }
 
+function getInitialViewerCount(productId: string) {
+    const seed = productId
+        .split("")
+        .reduce((total, char) => total + char.charCodeAt(0), 0);
+
+    return 8 + (seed % 19);
+}
+
 //
 // ðŸ”¹ ProductCartAddForm
 //
@@ -149,6 +158,9 @@ export function ProductCartAddForm({
     const { trackAddToCartEvent } = useAddToCartTracking();
     const { guestCart, addToGuestCart } = useGuestCart();
     const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
+    const [viewerCount, setViewerCount] = useState(() =>
+        getInitialViewerCount(product.id)
+    );
 
     // Floating bar: show only when inline buttons scroll out of view on mobile
     const buttonsRef = useRef<HTMLDivElement>(null);
@@ -165,6 +177,20 @@ export function ProductCartAddForm({
         observer.observe(el);
         return () => observer.disconnect();
     }, []);
+
+    useEffect(() => {
+        setViewerCount(getInitialViewerCount(product.id));
+
+        const interval = window.setInterval(() => {
+            setViewerCount((current) => {
+                const movement = Math.random() > 0.55 ? 1 : -1;
+                return Math.min(32, Math.max(6, current + movement));
+            });
+        }, 12000);
+
+        return () => window.clearInterval(interval);
+    }, [product.id]);
+
     const router = useRouter();
 
     const handleAddProductCart = async (productId: string, brandId: string) => {
@@ -324,13 +350,10 @@ export function ProductCartAddForm({
         return selectedVariant.price;
     }, [product, selectedVariant, selectedSku]);
 
-    const productCompareAtPrice = useMemo(() => {
-        if (!product.productHasVariants) return product.compareAtPrice;
-        if (!selectedVariant) return null;
-        return productPrice > selectedVariant.price
-            ? null
-            : selectedVariant.compareAtPrice;
-    }, [product, selectedVariant, productPrice]);
+    const selectedStock = useMemo(() => {
+        if (!product.productHasVariants) return product.quantity ?? null;
+        return selectedVariant?.quantity ?? null;
+    }, [product.productHasVariants, product.quantity, selectedVariant]);
 
     const sortedOptions = useMemo(() => {
         return [...product.options].sort((a, b) => {
@@ -343,6 +366,29 @@ export function ProductCartAddForm({
             return aIndex - bIndex;
         });
     }, [product.options]);
+
+    const selectedSummary = useMemo(() => {
+        if (!selectedVariant) return null;
+
+        return sortedOptions
+            .map((option) => {
+                const selectedValueId = selectedVariant.combinations[option.id];
+                const selectedValue = option.values.find(
+                    (value) => value.id === selectedValueId
+                );
+                return selectedValue ? `${option.name}: ${selectedValue.name}` : null;
+            })
+            .filter(Boolean)
+            .join(" / ");
+    }, [selectedVariant, sortedOptions]);
+
+    const productCompareAtPrice = useMemo(() => {
+        if (!product.productHasVariants) return product.compareAtPrice;
+        if (!selectedVariant) return null;
+        return productPrice > selectedVariant.price
+            ? null
+            : selectedVariant.compareAtPrice;
+    }, [product, selectedVariant, productPrice]);
 
     const sizeGuideImages = useMemo(() => {
         return (product.sizeChartMedia ?? [])
@@ -439,6 +485,19 @@ export function ProductCartAddForm({
                     <p className="mt-0.5 text-[13px] text-neutral-400">
                         Inclusive of all taxes
                     </p>
+                    <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-12 font-medium text-amber-800">
+                        <span className="relative flex size-2">
+                            <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-500 opacity-60" />
+                            <span className="relative inline-flex size-2 rounded-full bg-amber-600" />
+                        </span>
+                        <Eye className="size-3.5" strokeWidth={2} />
+                        <span>{viewerCount} people are viewing this right now</span>
+                    </div>
+                    {selectedStock !== null && selectedStock > 0 && selectedStock <= 5 && (
+                        <p className="mt-2 text-12 font-semibold text-red-600">
+                            Only {selectedStock} left in stock
+                        </p>
+                    )}
                 </div>
             )}
 
@@ -820,6 +879,26 @@ export function ProductCartAddForm({
                     {/* Floating bottom bar — mobile only */}
                     {showFloatingBar && (
                         <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] md:hidden">
+                            <div className="mb-2 flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-base font-semibold leading-none text-neutral-900">
+                                        {formatPriceTag(
+                                            parseFloat(convertPaiseToRupees(productPrice)),
+                                            true
+                                        )}
+                                    </p>
+                                    {selectedSummary && (
+                                        <p className="mt-1 truncate text-11 text-neutral-500">
+                                            {selectedSummary}
+                                        </p>
+                                    )}
+                                </div>
+                                {selectedStock !== null && selectedStock > 0 && selectedStock <= 5 && (
+                                    <span className="shrink-0 rounded-full bg-red-50 px-2 py-1 text-10 font-semibold text-red-600">
+                                        Only {selectedStock} left
+                                    </span>
+                                )}
+                            </div>
                             <div className="flex gap-2">
                                 <Button
                                     type="submit"

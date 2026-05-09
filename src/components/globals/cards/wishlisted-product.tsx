@@ -10,9 +10,10 @@ import {
     handleClientError,
 } from "@/lib/utils";
 import { CachedWishlist } from "@/lib/validations";
+import { Bell, BellRing } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { MoveProductToCartModal } from "../modals";
 
@@ -29,6 +30,44 @@ export function WishlistedProductCard({
     const [isAddToCartHovered, setIsAddToCartHovered] = useState(false);
     const [isCrossHovered, setIsCrossHovered] = useState(false);
     const [isMoveToCartModalOpen, setIsMoveToCartModalOpen] = useState(false);
+    const [priceAlertEnabled, setPriceAlertEnabled] = useState(false);
+    const [stockAlertEnabled, setStockAlertEnabled] = useState(false);
+    const alertKey = `renivet_wishlist_alerts_${item.productId}`;
+
+    useEffect(() => {
+        try {
+            const saved = window.localStorage.getItem(alertKey);
+            if (!saved) return;
+
+            const alerts = JSON.parse(saved) as {
+                price?: boolean;
+                stock?: boolean;
+            };
+            setPriceAlertEnabled(!!alerts.price);
+            setStockAlertEnabled(!!alerts.stock);
+        } catch {
+            setPriceAlertEnabled(false);
+            setStockAlertEnabled(false);
+        }
+    }, [alertKey]);
+
+    const updateAlertPreference = (type: "price" | "stock") => {
+        const next = {
+            price:
+                type === "price" ? !priceAlertEnabled : priceAlertEnabled,
+            stock:
+                type === "stock" ? !stockAlertEnabled : stockAlertEnabled,
+        };
+
+        setPriceAlertEnabled(next.price);
+        setStockAlertEnabled(next.stock);
+        window.localStorage.setItem(alertKey, JSON.stringify(next));
+        toast.success(
+            next[type]
+                ? `${type === "price" ? "Price drop" : "Back in stock"} alert enabled`
+                : `${type === "price" ? "Price drop" : "Back in stock"} alert disabled`
+        );
+    };
 
     let productPrice = 0;
 
@@ -172,6 +211,43 @@ export function WishlistedProductCard({
                             true
                         )}
                     </p>
+
+                    <div className="grid grid-cols-1 gap-1.5 pt-1 sm:grid-cols-2">
+                        <button
+                            type="button"
+                            onClick={() => updateAlertPreference("price")}
+                            className={cn(
+                                "inline-flex items-center justify-center gap-1.5 rounded border px-2 py-1 text-[11px] font-medium transition-colors",
+                                priceAlertEnabled
+                                    ? "border-amber-300 bg-amber-50 text-amber-800"
+                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                            )}
+                        >
+                            {priceAlertEnabled ? (
+                                <BellRing className="size-3" />
+                            ) : (
+                                <Bell className="size-3" />
+                            )}
+                            Price drop
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => updateAlertPreference("stock")}
+                            className={cn(
+                                "inline-flex items-center justify-center gap-1.5 rounded border px-2 py-1 text-[11px] font-medium transition-colors",
+                                stockAlertEnabled
+                                    ? "border-green-300 bg-green-50 text-green-800"
+                                    : "border-gray-200 bg-white text-gray-600 hover:border-gray-300"
+                            )}
+                        >
+                            {stockAlertEnabled ? (
+                                <BellRing className="size-3" />
+                            ) : (
+                                <Bell className="size-3" />
+                            )}
+                            Back in stock
+                        </button>
+                    </div>
                 </div>
 
                 <div className="space-y-1 md:hidden">

@@ -21,6 +21,7 @@ import {
 } from "@/lib/validations";
 import { Lock, X, ZoomIn } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useQueryState } from "nuqs";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ProductContent } from "./product-content";
@@ -39,6 +40,17 @@ interface PageProps extends GenericProps {
 const FALLBACK_IMAGE_URL =
     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
+type RecentlyViewedProduct = {
+    id: string;
+    slug: string;
+    title: string;
+    brand: string;
+    image: string;
+    price: number;
+};
+
+const RECENTLY_VIEWED_KEY = "renivet_recently_viewed_products";
+
 export function ProductPage({
     className,
     product,
@@ -52,6 +64,9 @@ export function ProductPage({
     const [modalImageIndex, setModalImageIndex] = useState(0);
     const [api, setApi] = useState<CarouselApi>();
     const [current, setCurrent] = useState(0);
+    const [recentlyViewed, setRecentlyViewed] = useState<
+        RecentlyViewedProduct[]
+    >([]);
 
     useEffect(() => {
         if (!api) return;
@@ -135,11 +150,51 @@ export function ProductPage({
                       position: -1,
                   },
               ];
+    const primaryImageUrl = displayImages[0]?.url ?? FALLBACK_IMAGE_URL;
 
     const openModal = useCallback((index: number) => {
         setModalImageIndex(index);
         setIsImageModalOpen(true);
     }, []);
+
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(RECENTLY_VIEWED_KEY);
+            const previous = raw
+                ? (JSON.parse(raw) as RecentlyViewedProduct[])
+                : [];
+
+            setRecentlyViewed(previous.filter((item) => item.id !== product.id));
+
+            const currentProduct: RecentlyViewedProduct = {
+                id: product.id,
+                slug: product.slug ?? product.id,
+                title: product.title,
+                brand: product.brand.name,
+                image: primaryImageUrl,
+                price: product.variants?.[0]?.price ?? product.price ?? 0,
+            };
+            const next = [
+                currentProduct,
+                ...previous.filter((item) => item.id !== product.id),
+            ].slice(0, 8);
+
+            window.localStorage.setItem(
+                RECENTLY_VIEWED_KEY,
+                JSON.stringify(next)
+            );
+        } catch {
+            setRecentlyViewed([]);
+        }
+    }, [
+        primaryImageUrl,
+        product.brand.name,
+        product.id,
+        product.price,
+        product.slug,
+        product.title,
+        product.variants,
+    ]);
 
     useEffect(() => {
         if (!isImageModalOpen) return;
@@ -342,6 +397,47 @@ export function ProductPage({
             </div>
 
             {/* ── Lightbox Modal ── */}
+            {recentlyViewed.length > 0 && (
+                <div className="mx-auto w-full max-w-[1440px] border-t border-neutral-200 px-4 py-8 md:px-8">
+                    <h2 className="mb-5 text-sm font-semibold uppercase tracking-[0.16em] text-neutral-900">
+                        Recently Viewed
+                    </h2>
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                        {recentlyViewed.slice(0, 4).map((item) => (
+                            <Link
+                                key={item.id}
+                                href={`/products/${item.slug}`}
+                                className="group block"
+                            >
+                                <div className="relative aspect-[3/4] overflow-hidden bg-neutral-100">
+                                    <Image
+                                        src={item.image}
+                                        alt={item.title}
+                                        fill
+                                        sizes="(max-width: 768px) 50vw, 25vw"
+                                        className="object-contain transition-transform duration-500 group-hover:scale-[1.03]"
+                                    />
+                                </div>
+                                <div className="mt-2 min-w-0">
+                                    <p className="truncate text-13 font-semibold text-neutral-900">
+                                        {item.title}
+                                    </p>
+                                    <p className="truncate text-12 text-neutral-500">
+                                        {item.brand}
+                                    </p>
+                                    <p className="mt-1 text-13 font-semibold text-neutral-900">
+                                        Rs.{" "}
+                                        {(item.price / 100).toLocaleString(
+                                            "en-IN"
+                                        )}
+                                    </p>
+                                </div>
+                            </Link>
+                        ))}
+                    </div>
+                </div>
+            )}
+
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogContent className="max-w-screen flex h-screen max-h-screen w-screen items-center justify-center bg-black/95 p-0">
                     <DialogHeader className="sr-only">

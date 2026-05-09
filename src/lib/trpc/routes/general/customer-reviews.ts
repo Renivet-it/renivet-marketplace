@@ -1,26 +1,50 @@
-import { TRPCError } from "@trpc/server";
-import { and, desc, eq, or } from "drizzle-orm";
-import { z } from "zod";
+import { orderItems, orders } from "@/lib/db/schema/order";
+import {
+    products as productsTable,
+    productVariants,
+} from "@/lib/db/schema/product";
 import { reviews } from "@/lib/db/schema/review";
-import { orders, orderItems } from "@/lib/db/schema/order";
-import { productVariants } from "@/lib/db/schema/product";
 import {
     adminProcedure,
     createTRPCRouter,
     protectedProcedure,
     publicProcedure,
 } from "@/lib/trpc/trpc";
+import { TRPCError } from "@trpc/server";
+import { and, eq, or } from "drizzle-orm";
+import { z } from "zod";
 
 const reviewAttributeSchema = z.object({
     label: z.string(),
     value: z.string(),
 });
 
-function formatVariantLabel(variant: { id: string; sku?: string | null; combinations?: unknown }) {
+function formatVariantLabel(variant: {
+    id: string;
+    sku?: string | null;
+    combinations?: unknown;
+    options?: {
+        id: string;
+        name: string;
+        values: { id: string; name: string }[];
+    }[];
+}) {
     const combinations =
         variant.combinations && typeof variant.combinations === "object"
             ? Object.entries(variant.combinations as Record<string, unknown>)
-                  .map(([key, value]) => `${key}: ${String(value)}`)
+                  .map(([key, value]) => {
+                      const option = variant.options?.find(
+                          (item) => item.id === key
+                      );
+                      const optionValue = option?.values.find(
+                          (item) => item.id === String(value)
+                      );
+
+                      return option && optionValue
+                          ? `${option.name}: ${optionValue.name}`
+                          : "";
+                  })
+                  .filter(Boolean)
                   .join(", ")
             : "";
 
@@ -32,6 +56,22 @@ async function getPurchasedVariants(
     userId: string,
     productId: string
 ) {
+    const product = await db.query.products.findFirst({
+        where: eq(productsTable.id, productId),
+        columns: {
+            id: true,
+        },
+        with: {
+            options: {
+                columns: {
+                    id: true,
+                    name: true,
+                    values: true,
+                },
+            },
+        },
+    });
+
     const rows = await db
         .select({
             variantId: orderItems.variantId,
@@ -45,7 +85,10 @@ async function getPurchasedVariants(
             and(
                 eq(orders.userId, userId),
                 eq(orderItems.productId, productId),
-                or(eq(orders.paymentStatus, "paid"), eq(orders.status, "delivered"))
+                or(
+                    eq(orders.paymentStatus, "paid"),
+                    eq(orders.status, "delivered")
+                )
             )
         );
 
@@ -56,19 +99,20 @@ async function getPurchasedVariants(
             sku: string | null;
             combinations: unknown;
         }) => {
-        const id = row.variantId ?? "product";
-        if (byId.has(id)) return;
-        byId.set(id, {
-            id,
-            label:
-                row.variantId && row.combinations
-                    ? formatVariantLabel({
-                          id: row.variantId,
-                          sku: row.sku,
-                          combinations: row.combinations,
-                      })
-                    : "Product purchased",
-        });
+            const id = row.variantId ?? "product";
+            if (byId.has(id)) return;
+            byId.set(id, {
+                id,
+                label:
+                    row.variantId && row.combinations
+                        ? formatVariantLabel({
+                              id: row.variantId,
+                              sku: row.sku,
+                              combinations: row.combinations,
+                              options: product?.options,
+                          })
+                        : "Product purchased",
+            });
         }
     );
 
@@ -130,12 +174,15 @@ export const customerReviewsRouter = createTRPCRouter({
             if (purchasedVariants.length === 0) {
                 throw new TRPCError({
                     code: "FORBIDDEN",
-                    message: "Only customers who bought this product can review it.",
+                    message:
+                        "Only customers who bought this product can review it.",
                 });
             }
 
             const selectedVariant = input.variantId
-                ? purchasedVariants.find((variant) => variant.id === input.variantId)
+                ? purchasedVariants.find(
+                      (variant) => variant.id === input.variantId
+                  )
                 : purchasedVariants[0];
 
             if (input.variantId && !selectedVariant) {
@@ -145,12 +192,9 @@ export const customerReviewsRouter = createTRPCRouter({
                 });
             }
 
-            const attributes = [
-                ...input.attributes,
-                ...(selectedVariant
-                    ? [{ label: "Variant", value: selectedVariant.label }]
-                    : []),
-            ];
+            const attributes = input.attributes.filter(
+                (attribute) => attribute.label.toLowerCase() !== "variant"
+            );
 
             const newReview = await ctx.db
                 .insert(reviews)
@@ -180,6 +224,13 @@ export const customerReviewsRouter = createTRPCRouter({
             orderBy: (products, { asc }) => [asc(products.title)],
             limit: 500,
             with: {
+                options: {
+                    columns: {
+                        id: true,
+                        name: true,
+                        values: true,
+                    },
+                },
                 variants: {
                     columns: {
                         id: true,
@@ -194,7 +245,10 @@ export const customerReviewsRouter = createTRPCRouter({
             ...product,
             variants: product.variants.map((variant) => ({
                 id: variant.id,
-                label: formatVariantLabel(variant),
+                label: formatVariantLabel({
+                    ...variant,
+                    options: product.options,
+                }),
             })),
         }));
     }),
@@ -210,12 +264,16 @@ export const customerReviewsRouter = createTRPCRouter({
                 content: z.string().min(10),
                 images: z.array(z.string()).default([]),
                 attributes: z.array(reviewAttributeSchema).default([]),
-                status: z.enum(["pending", "approved", "rejected"]).default("approved"),
+                status: z
+                    .enum(["pending", "approved", "rejected"])
+                    .default("approved"),
                 verified: z.boolean().default(true),
             })
         )
         .mutation(async ({ input, ctx }) => {
-            let attributes = input.attributes;
+            const attributes = input.attributes.filter(
+                (attribute) => attribute.label.toLowerCase() !== "variant"
+            );
 
             if (input.variantId) {
                 const variant = await ctx.db.query.productVariants.findFirst({
@@ -228,11 +286,11 @@ export const customerReviewsRouter = createTRPCRouter({
                     },
                 });
 
-                if (variant) {
-                    attributes = [
-                        ...attributes,
-                        { label: "Variant", value: formatVariantLabel(variant) },
-                    ];
+                if (!variant) {
+                    throw new TRPCError({
+                        code: "NOT_FOUND",
+                        message: "Variant not found.",
+                    });
                 }
             }
 

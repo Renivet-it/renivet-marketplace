@@ -1,11 +1,18 @@
 "use client";
 
-import { CheckCircle2, ChevronDown, Image as ImageIcon, Loader2, SlidersHorizontal, Star } from "lucide-react";
+import { trpc } from "@/lib/trpc/client";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
+import {
+    CheckCircle2,
+    ChevronDown,
+    Image as ImageIcon,
+    Loader2,
+    SlidersHorizontal,
+    Star,
+} from "lucide-react";
 import Image from "next/image";
 import { useMemo, useState } from "react";
-import { format } from "date-fns";
-import { cn } from "@/lib/utils";
-import { trpc } from "@/lib/trpc/client";
 import { WriteReviewModal } from "./write-review-modal";
 
 type ActiveFilter = "all" | "photos" | "verified";
@@ -15,15 +22,22 @@ interface ProductReviewsProps {
     productId: string;
 }
 
+function isPublicReviewAttribute(attribute: { label: string }) {
+    return attribute.label.toLowerCase() !== "variant";
+}
+
 export function ProductReviews({ productId }: ProductReviewsProps) {
     const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
     const [sortBy, setSortBy] = useState<SortBy>("newest");
     const [visibleCount, setVisibleCount] = useState(3);
 
-    const { data: reviews = [], isLoading, error } =
-        trpc.general.customerReviews.getReviewsByProduct.useQuery({
-            productId,
-        });
+    const {
+        data: reviews = [],
+        isLoading,
+        error,
+    } = trpc.general.customerReviews.getReviewsByProduct.useQuery({
+        productId,
+    });
 
     const averageRating = useMemo(() => {
         if (reviews.length === 0) return 0;
@@ -84,7 +98,8 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                             key={star}
                                             className={cn(
                                                 "size-5",
-                                                star <= Math.round(averageRating)
+                                                star <=
+                                                    Math.round(averageRating)
                                                     ? "fill-neutral-900 text-neutral-900"
                                                     : "fill-transparent text-neutral-300"
                                             )}
@@ -95,7 +110,11 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                     {averageRating} out of 5
                                 </p>
                                 <span className="text-sm text-neutral-500">
-                                    ({reviews.length} {reviews.length === 1 ? "Review" : "Reviews"})
+                                    ({reviews.length}{" "}
+                                    {reviews.length === 1
+                                        ? "Review"
+                                        : "Reviews"}
+                                    )
                                 </span>
                             </div>
                         ) : (
@@ -133,7 +152,9 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                         : "border border-neutral-200 bg-white text-neutral-900 hover:bg-neutral-50"
                                 )}
                             >
-                                {value === "photos" && <ImageIcon className="size-3.5" />}
+                                {value === "photos" && (
+                                    <ImageIcon className="size-3.5" />
+                                )}
                                 {label}
                             </button>
                         ))}
@@ -178,7 +199,8 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                             No reviews available.
                         </h3>
                         <p className="mt-2 text-sm text-neutral-500">
-                            Reviews from verified buyers will appear here after approval.
+                            Reviews from verified buyers will appear here after
+                            approval.
                         </p>
                     </div>
                 ) : (
@@ -218,7 +240,10 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                         ))}
                                     </div>
                                     <span className="text-xs font-semibold uppercase tracking-[0.1em] text-neutral-400">
-                                        {format(new Date(review.createdAt), "MMM d, yyyy")}
+                                        {format(
+                                            new Date(review.createdAt),
+                                            "MMM d, yyyy"
+                                        )}
                                     </span>
                                 </div>
 
@@ -242,16 +267,23 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                                         )}
                                     </div>
 
-                                    {review.attributes.length > 0 && (
+                                    {review.attributes.filter(
+                                        isPublicReviewAttribute
+                                    ).length > 0 && (
                                         <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs text-neutral-500">
-                                            {review.attributes.map((attr, i) => (
-                                                <span key={`${review.id}-${i}`} className="flex gap-1.5">
-                                                    <span className="font-semibold text-neutral-700">
-                                                        {attr.label}:
+                                            {review.attributes
+                                                .filter(isPublicReviewAttribute)
+                                                .map((attr, i) => (
+                                                    <span
+                                                        key={`${review.id}-${i}`}
+                                                        className="flex gap-1.5"
+                                                    >
+                                                        <span className="font-semibold text-neutral-700">
+                                                            {attr.label}:
+                                                        </span>
+                                                        {attr.value}
                                                     </span>
-                                                    {attr.value}
-                                                </span>
-                                            ))}
+                                                ))}
                                         </div>
                                     )}
                                 </div>
@@ -264,7 +296,9 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                     <div className="mt-10 flex justify-center border-t border-neutral-200 pt-10">
                         <button
                             type="button"
-                            onClick={() => setVisibleCount((count) => count + 3)}
+                            onClick={() =>
+                                setVisibleCount((count) => count + 3)
+                            }
                             className="rounded-full border border-neutral-200 px-8 py-3 text-sm font-semibold text-neutral-900 transition-colors hover:border-neutral-900 hover:bg-neutral-50"
                         >
                             View More Reviews
