@@ -23,7 +23,7 @@ export const siteConfig: SiteConfig = {
         url: "https://itsdrvgo.me/",
     },
     og: {
-        url: getAbsoluteURL("/images/renivet-logo.png"),
+        url: getAbsoluteURL("/opengraph-image"),
         width: 1200,
         height: 630,
     },
@@ -1160,4 +1160,3 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
         },
     ];
 }
-
