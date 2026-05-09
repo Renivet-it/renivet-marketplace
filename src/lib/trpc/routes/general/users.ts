@@ -404,6 +404,26 @@ export const usersRouter = createTRPCRouter({
 
             return data;
         }),
+    getAllUsers: protectedProcedure
+        .input(
+            z.object({
+                search: z.string().optional(),
+            })
+        )
+        .use(
+            isTRPCAuth(
+                BitFieldSitePermission.MANAGE_USERS |
+                    BitFieldSitePermission.VIEW_USERS,
+                "any"
+            )
+        )
+        .query(async ({ input, ctx }) => {
+            const { queries } = ctx;
+
+            return queries.users.getAllUsers({
+                search: input.search,
+            });
+        }),
     currentUser: protectedProcedure.query(async ({ ctx }) => {
         const { user } = ctx;
 
