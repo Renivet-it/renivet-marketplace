@@ -20,13 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input-dash";
 import { Label } from "@/components/ui/label";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select-dash";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -38,14 +31,12 @@ import {
 import {
     CachedBrand,
     OrderWithItemAndBrand,
-    ProductWithBrand,
 } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     SortingState,
     useReactTable,
@@ -54,7 +45,7 @@ import {
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, MapPin, PackageCheck, Search, Truck } from "lucide-react";
 import {
     parseAsArrayOf,
     parseAsInteger,
@@ -82,80 +73,243 @@ type StatusTab = (typeof STATUS_TABS)[number]["value"];
 
 export type TableOrder = OrderWithItemAndBrand;
 
+const getOrderStatusClassName = (status: TableOrder["status"]) =>
+    ({
+        pending: "border-amber-200 bg-amber-50 text-amber-700",
+        processing: "border-sky-200 bg-sky-50 text-sky-700",
+        shipped: "border-indigo-200 bg-indigo-50 text-indigo-700",
+        delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+    })[status] ?? "border-slate-200 bg-slate-50 text-slate-700";
+
+const getPaymentStatusClassName = (status: TableOrder["paymentStatus"]) =>
+    ({
+        pending: "border-amber-200 bg-amber-50 text-amber-700",
+        paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        failed: "border-rose-200 bg-rose-50 text-rose-700",
+        refund_pending: "border-orange-200 bg-orange-50 text-orange-700",
+        refunded: "border-teal-200 bg-teal-50 text-teal-700",
+        refund_failed: "border-rose-200 bg-rose-50 text-rose-700",
+    })[status] ?? "border-slate-200 bg-slate-50 text-slate-700";
+
+const getShipmentStatusClassName = (status?: string | null) =>
+    ({
+        pending: "border-amber-200 bg-amber-50 text-amber-700",
+        processing: "border-sky-200 bg-sky-50 text-sky-700",
+        pickup_scheduled: "border-violet-200 bg-violet-50 text-violet-700",
+        in_transit: "border-indigo-200 bg-indigo-50 text-indigo-700",
+        out_for_delivery: "border-blue-200 bg-blue-50 text-blue-700",
+        delivered: "border-emerald-200 bg-emerald-50 text-emerald-700",
+        cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+        rto_initiated: "border-orange-200 bg-orange-50 text-orange-700",
+        rto_delivered: "border-stone-200 bg-stone-50 text-stone-700",
+        failed: "border-rose-200 bg-rose-50 text-rose-700",
+    })[status ?? ""] ?? "border-slate-200 bg-slate-50 text-slate-700";
+
+const volumetricWeightGrams = (
+    length?: number | null,
+    width?: number | null,
+    height?: number | null
+) => {
+    if (!length || !width || !height) return 0;
+    return Math.round((length * width * height) / 5);
+};
+
 const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
     {
-        id: "select",
-        header: ({ table }) => (
-            <input
-                type="checkbox"
-                checked={table.getIsAllPageRowsSelected()}
-                onChange={(e) =>
-                    table.toggleAllPageRowsSelected(e.target.checked)
-                }
-                className="cursor-pointer"
-            />
-        ),
-        cell: ({ row }) => (
-            <input
-                type="checkbox"
-                checked={row.getIsSelected()}
-                onChange={(e) => row.toggleSelected(e.target.checked)}
-                className="cursor-pointer"
-            />
-        ),
-        enableSorting: false,
-        enableHiding: false,
-    },
-    {
         accessorKey: "id",
-        header: "Order ID",
+        header: "Order Details",
         enableHiding: false,
         cell: ({ row }) => {
             const data = row.original;
-            return <OrderSingle order={data} />;
-        },
-    },
-    {
-        accessorKey: "firstName",
-        header: "Customer Name",
-        cell: ({ row }) => {
-            const data = row.original;
-            return `${data?.user?.firstName} ${data?.user?.lastName}`;
-        },
-    },
-    {
-        accessorKey: "totalAmount",
-        header: "Total",
-        cell: ({ row }) => {
-            const data = row.original;
-            return formatPriceTag(
-                +convertPaiseToRupees(data.totalAmount),
-                true
+
+            return (
+                <div className="min-w-[220px] space-y-1.5">
+                    <div className="font-semibold text-sky-700">
+                        <OrderSingle order={data} />
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        {format(new Date(data.createdAt), "dd MMM yyyy")}{" "}
+                        <span className="px-1">|</span>{" "}
+                        {format(new Date(data.createdAt), "hh:mm a")}
+                    </div>
+                    <div className="text-xs font-medium text-slate-600">
+                        {data.shipments?.[0]?.courierName ||
+                            data.courierName ||
+                            "CUSTOM"}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                        <Badge
+                            variant="outline"
+                            className="rounded-md border-violet-100 bg-violet-50 px-2 py-0.5 font-medium text-violet-700"
+                        >
+                            Smart Order
+                        </Badge>
+                    </div>
+                </div>
             );
         },
     },
     {
-        accessorKey: "totalItems",
-        header: "Total Items",
+        id: "customer",
+        header: "Customer Details",
+        cell: ({ row }) => {
+            const data = row.original;
+            const customerName =
+                [data.user?.firstName, data.user?.lastName]
+                    .filter(Boolean)
+                    .join(" ") || data.address?.fullName;
+
+            return (
+                <div className="min-w-[190px] space-y-1">
+                    <div className="font-medium text-slate-900">
+                        {customerName || "Unknown customer"}
+                    </div>
+                    <div className="max-w-[190px] truncate text-xs text-muted-foreground">
+                        {data.user?.email || "No email"}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        {data.address?.phone || data.user?.phone || "No phone"}
+                    </div>
+                </div>
+            );
+        },
+    },
+    {
+        accessorKey: "totalAmount",
+        header: "Payment",
+        cell: ({ row }) => {
+            const data = row.original;
+
+            return (
+                <div className="min-w-[130px] space-y-1.5">
+                    <div className="font-semibold text-slate-950">
+                        {formatPriceTag(
+                            +convertPaiseToRupees(data.totalAmount),
+                            true
+                        )}
+                    </div>
+                    <Badge
+                        variant="outline"
+                        className={cn(
+                            "rounded px-2 py-0.5 font-medium",
+                            getPaymentStatusClassName(data.paymentStatus)
+                        )}
+                    >
+                        {convertValueToLabel(data.paymentStatus)}
+                    </Badge>
+                </div>
+            );
+        },
+    },
+    {
+        id: "pickupAddress",
+        header: "Pickup / RTO Addresses",
+        cell: ({ row }) => {
+            const data = row.original;
+            const shipment = data.shipments?.[0];
+            const brandName = data.items[0]?.product?.brand?.name;
+
+            return (
+                <div className="min-w-[220px] space-y-1">
+                    <button className="border-b border-dashed border-slate-500 text-sm font-medium text-slate-800">
+                        {brandName || "Pickup Address"}
+                    </button>
+                    <div className="flex max-w-[220px] items-center gap-1 truncate text-xs text-muted-foreground">
+                        <MapPin className="size-3 shrink-0" />
+                        <span className="truncate">
+                            {[data.address?.city, data.address?.state, data.address?.zip]
+                                .filter(Boolean)
+                                .join(", ") || "Address unavailable"}
+                        </span>
+                    </div>
+                    {shipment?.pickupTokenNumber && (
+                        <div className="text-xs text-muted-foreground">
+                            Pickup token: {shipment.pickupTokenNumber}
+                        </div>
+                    )}
+                </div>
+            );
+        },
+    },
+    {
+        id: "shipping",
+        header: "Shipping Details",
+        cell: ({ row }) => {
+            const data = row.original;
+            const shipment = data.shipments?.[0];
+            const length = shipment?.givenLength ?? data.givenLength ?? 0;
+            const width = shipment?.givenWidth ?? data.givenWidth ?? 0;
+            const height = shipment?.givenHeight ?? data.givenHeight ?? 0;
+            const awb = shipment?.awbNumber || shipment?.uploadWbn || data.awbNumber;
+            const courier = shipment?.courierName || data.courierName;
+            const volumetricWeight = volumetricWeightGrams(
+                length,
+                width,
+                height
+            );
+
+            return (
+                <div className="min-w-[220px] space-y-1.5">
+                    <div className="flex items-center gap-2 font-medium text-slate-900">
+                        <Truck className="size-4 text-sky-600" />
+                        <span className="truncate">
+                            {courier || "Courier pending"}
+                        </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        AWB #{" "}
+                        {awb ? (
+                            <span className="font-medium text-slate-700">
+                                {awb}
+                            </span>
+                        ) : (
+                            "Not Assigned"
+                        )}
+                    </div>
+                    <div className="flex items-center gap-2 font-medium text-slate-900">
+                        <PackageCheck className="size-4 text-emerald-600" />
+                        {`${length} x ${width} x ${height} cm`}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                        Vol. weight: {volumetricWeight} g
+                    </div>
+                    <Badge
+                        variant="outline"
+                        className={cn(
+                            "rounded px-2 py-0.5 font-medium",
+                            getShipmentStatusClassName(shipment?.status)
+                        )}
+                    >
+                        {shipment?.status
+                            ? convertValueToLabel(shipment.status)
+                            : "Shipment Pending"}
+                    </Badge>
+                </div>
+            );
+        },
     },
     {
         accessorKey: "status",
         header: "Status",
         cell: ({ row }) => {
             const data = row.original;
-            return <Badge>{convertValueToLabel(data.status)}</Badge>;
-        },
-    },
-    {
-        accessorKey: "createdAt",
-        header: "Created At",
-        cell: ({ row }) => {
-            const data = row.original;
-            return format(new Date(data.createdAt), "MMM dd, yyyy");
+            return (
+                <Badge
+                    variant="outline"
+                    className={cn(
+                        "rounded-md px-2.5 py-1 font-semibold",
+                        getOrderStatusClassName(data.status)
+                    )}
+                >
+                    {convertValueToLabel(data.status)}
+                </Badge>
+            );
         },
     },
     {
         id: "actions",
+        header: "Action",
         cell: ({ row }) => {
             const data = row.original;
             return <OrderAction order={data} onAction={onAction} />;
@@ -801,8 +955,8 @@ export function OrdersTable({
     };
     return (
         <div className="space-y-6 rounded-lg border border-gray-100 bg-white p-6 shadow-sm">
-            {/* Status Tabs - Modern Pill Style */}
-            <div className="rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 p-1.5">
+            {/* Status Tabs */}
+            <div className="border-b border-slate-200">
                 <Tabs
                     value={statusTab}
                     onValueChange={(value) => {
@@ -811,15 +965,15 @@ export function OrdersTable({
                     }}
                     className="w-full"
                 >
-                    <TabsList className="flex h-auto flex-wrap gap-1 border-none bg-transparent p-0">
+                    <TabsList className="flex h-auto w-full justify-start gap-8 overflow-x-auto border-none bg-transparent p-0">
                         {STATUS_TABS.map((tab) => (
                             <TabsTrigger
                                 key={tab.value}
                                 value={tab.value}
                                 className={cn(
-                                    "relative rounded-lg px-4 py-2.5 text-sm font-medium transition-all duration-300",
-                                    "data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-md",
-                                    "data-[state=inactive]:text-gray-600 data-[state=inactive]:hover:bg-white/60 data-[state=inactive]:hover:text-gray-900",
+                                    "relative rounded-none border-b-2 border-transparent bg-transparent px-0 py-3 text-sm font-medium shadow-none transition-colors",
+                                    "data-[state=active]:border-violet-500 data-[state=active]:bg-transparent data-[state=active]:text-violet-600 data-[state=active]:shadow-none",
+                                    "data-[state=inactive]:text-slate-500 data-[state=inactive]:hover:bg-transparent data-[state=inactive]:hover:text-slate-950",
                                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
                                 )}
                             >
@@ -834,8 +988,8 @@ export function OrdersTable({
                                             className={cn(
                                                 "ml-2 inline-flex items-center justify-center rounded-full px-2 py-0.5 text-xs font-semibold",
                                                 statusTab === tab.value
-                                                    ? "bg-primary/10 text-primary"
-                                                    : "bg-gray-200 text-gray-600"
+                                                    ? "bg-violet-50 text-violet-700"
+                                                    : "bg-slate-200 text-slate-600"
                                             )}
                                         >
                                             {
@@ -856,10 +1010,11 @@ export function OrdersTable({
                 {/* Filters Group */}
                 <div className="flex flex-wrap items-end gap-4">
                     {/* Search Input */}
-                    <div className="min-w-[240px]">
+                    <div className="relative min-w-[280px]">
+                        <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search by order ID..."
-                            className="w-full"
+                            className="w-full pl-11"
                             value={search}
                             onChange={(e) => {
                                 table
@@ -1078,6 +1233,10 @@ export function OrdersTable({
                     table={table}
                     pages={pages}
                     count={count}
+                    className="gap-3"
+                    headerClassName="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"
+                    rowClassName="hover:bg-sky-50/40"
+                    cellClassName="py-3 align-top"
                     perPage={perPage}
                     onPerPageChange={(value) => {
                         setPerPage(value);
