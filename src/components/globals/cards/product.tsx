@@ -13,10 +13,10 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { trpc } from "@/lib/trpc/client";
-import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { ProductWithBrand } from "@/lib/validations";
-import { ChevronLeft, ChevronRight, ShoppingCart } from "lucide-react";
+import { ChevronRight, ShoppingCart } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -110,11 +110,11 @@ export function ProductCard({
     const mediaUrls = useMemo(
         () =>
             Array.from(
-            new Set(
-                product.media
-                    ?.filter((media) => media.mediaItem?.url)
-                    .map((media) => media.mediaItem?.url || "")
-            )
+                new Set(
+                    product.media
+                        ?.filter((media) => media.mediaItem?.url)
+                        .map((media) => media.mediaItem?.url || "")
+                )
             ) || [],
         [product.media]
     );
@@ -335,37 +335,39 @@ export function ProductCard({
                                 )}
                             />
 
-                        {discount ? (
-                            <span className="absolute left-0 top-2 z-20 rounded-r-sm bg-[#E95123] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                                -{discount}%
-                            </span>
-                        ) : null}
+                            {discount ? (
+                                <span className="absolute left-0 top-2 z-20 rounded-r-sm bg-[#E95123] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
+                                    -{discount}%
+                                </span>
+                            ) : null}
 
-                        <div
-                            className={cn(
-                                "absolute inset-x-0 bottom-0 z-20 hidden p-2 transition-all duration-500 ease-out md:block",
-                                isProductHovered
-                                    ? "translate-y-0 opacity-100"
-                                    : "translate-y-full opacity-0"
-                            )}
-                        >
                             <div
-                                className="rounded-xl bg-[linear-gradient(180deg,rgba(255,253,249,0.82)_0%,rgba(245,236,220,0.94)_100%)] p-2 shadow-[0_20px_40px_rgba(32,26,18,0.14)] backdrop-blur-md"
-                                onClick={(e) => {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                }}
+                                className={cn(
+                                    "absolute inset-x-0 bottom-0 z-20 hidden p-2 transition-all duration-500 ease-out md:block",
+                                    isProductHovered
+                                        ? "translate-y-0 opacity-100"
+                                        : "translate-y-full opacity-0"
+                                )}
                             >
-                                <DialogTrigger asChild>
-                                    <button
-                                        className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]"
-                                        onPointerDown={preloadQuickViewImages}
-                                    >
-                                        Quick Buy
-                                    </button>
-                                </DialogTrigger>
+                                <div
+                                    className="rounded-xl bg-[linear-gradient(180deg,rgba(255,253,249,0.82)_0%,rgba(245,236,220,0.94)_100%)] p-2 shadow-[0_20px_40px_rgba(32,26,18,0.14)] backdrop-blur-md"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                    }}
+                                >
+                                    <DialogTrigger asChild>
+                                        <button
+                                            className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]"
+                                            onPointerDown={
+                                                preloadQuickViewImages
+                                            }
+                                        >
+                                            Quick Buy
+                                        </button>
+                                    </DialogTrigger>
+                                </div>
                             </div>
-                        </div>
                         </div>
                     </AnimatedProductLink>
 
@@ -421,39 +423,39 @@ export function ProductCard({
                                 {quickViewImages.length > 1 && (
                                     <>
                                         <button
+                                            type="button"
+                                            aria-label="Show next product image"
                                             onClick={(e) => {
+                                                e.preventDefault();
                                                 e.stopPropagation();
-                                                setQuickViewImageIndex((prev) =>
-                                                    prev === 0
-                                                        ? quickViewImages.length -
-                                                          1
-                                                        : prev - 1
+                                                setQuickViewImageIndex(
+                                                    (prev) =>
+                                                        prev ===
+                                                        quickViewImages.length -
+                                                            1
+                                                            ? 0
+                                                            : prev + 1
                                                 );
                                             }}
-                                            className="absolute left-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-sm opacity-0 transition-opacity group-hover/slider:opacity-100 hover:bg-white"
+                                            className="absolute bottom-5 right-5 z-20 flex size-9 items-center justify-center rounded-full border border-white/70 bg-white/90 text-gray-800 shadow-[0_12px_30px_rgba(15,23,42,0.16)] backdrop-blur transition-all hover:bg-white hover:shadow-[0_16px_34px_rgba(15,23,42,0.22)] active:scale-95 md:bottom-6 md:right-6 md:size-10"
                                         >
-                                            <ChevronLeft className="h-5 w-5 text-gray-600" />
-                                        </button>
-                                        <button
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                setQuickViewImageIndex((prev) =>
-                                                    prev ===
-                                                    quickViewImages.length - 1
-                                                        ? 0
-                                                        : prev + 1
-                                                );
-                                            }}
-                                            className="absolute right-4 top-1/2 z-10 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-sm opacity-0 transition-opacity group-hover/slider:opacity-100 hover:bg-white"
-                                        >
-                                            <ChevronRight className="h-5 w-5 text-gray-600" />
+                                            <ChevronRight className="size-4" />
                                         </button>
                                         <div className="absolute bottom-6 left-1/2 z-10 flex -translate-x-1/2 gap-2">
                                             {quickViewImages.map((_, index) => (
-                                                <div
+                                                <button
+                                                    type="button"
                                                     key={index}
+                                                    aria-label={`Show product image ${index + 1}`}
+                                                    onClick={(e) => {
+                                                        e.preventDefault();
+                                                        e.stopPropagation();
+                                                        setQuickViewImageIndex(
+                                                            index
+                                                        );
+                                                    }}
                                                     className={cn(
-                                                        "h-1.5 w-1.5 rounded-full transition-colors",
+                                                        "size-1.5 rounded-full transition-all hover:scale-125",
                                                         index ===
                                                             quickViewImageIndex
                                                             ? "bg-gray-800"
