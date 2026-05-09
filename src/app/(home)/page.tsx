@@ -1,16 +1,17 @@
 import { FloatingLoginButton } from "@/components/home/floating-login-button";
 import { Landing } from "@/components/home/landing";
+import { siteConfig } from "@/config/site";
 import {
+    blogQueries,
     homeShopByCategoryQueries,
     homeShopByCategoryTitleQueries,
     productQueries,
     WomenHomeSectionQueries,
-    blogQueries,
 } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { getAbsoluteURL } from "@/lib/utils";
-import type { Metadata } from "next";
 import { Leaf, Lock, RefreshCcw, Truck } from "lucide-react";
+import type { Metadata } from "next";
 import dynamic from "next/dynamic";
 import { Suspense } from "react";
 
@@ -27,6 +28,12 @@ export const metadata: Metadata = {
             "Shop responsibly with Renivet — your trusted sustainable marketplace featuring eco-conscious brands, verified sellers, and ethically sourced products.",
         url: getAbsoluteURL("/"),
         type: "website",
+        images: [
+            {
+                ...siteConfig.og,
+                alt: "Renivet - Sustainable Marketplace",
+            },
+        ],
     },
 };
 
@@ -112,11 +119,9 @@ const SwapSpace = dynamic(() =>
     }))
 );
 const ProductsUnder999 = dynamic(() =>
-    import("@/components/home/new-home-page/products-under-999").then(
-        (m) => ({
-            default: m.ProductsUnder999,
-        })
-    )
+    import("@/components/home/new-home-page/products-under-999").then((m) => ({
+        default: m.ProductsUnder999,
+    }))
 );
 const SwipeCard = dynamic(() =>
     import("@/components/home/new-home-page/swipe-card").then((m) => ({
@@ -149,7 +154,11 @@ export default function Page() {
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ShopCategoryFetch />
             </Suspense> */}
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <MobileCategoriesFetch />
             </Suspense>
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
@@ -158,10 +167,18 @@ export default function Page() {
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <CuratedBannerFetch />
             </Suspense> */}
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <SwapSpaceBannerFetch />
             </Suspense>
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <ProductsUnder999Fetch />
             </Suspense>
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
@@ -223,21 +240,41 @@ export default function Page() {
             </div>
 
             <div className="hidden md:block">
-                <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+                <Suspense
+                    fallback={
+                        <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                    }
+                >
                     <ShopByNewCategoriesFetch />
                 </Suspense>
             </div>
 
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <ProductNewArrivalsGridFetch />
             </Suspense>
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <WelcomeToRenivetFetch />
             </Suspense>
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <ProductSwipeCardFetch />
             </Suspense>
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <EventSectionTwoBannerFetch />
             </Suspense>
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
@@ -250,15 +287,27 @@ export default function Page() {
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <ProductNewArrivalsGridFetch />
             </Suspense> */}
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <MayAlsoLoveTheseFetch />
             </Suspense>
 
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <BrandPromotionFetch />
             </Suspense>
 
-            <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
                 <BlogsFetch />
             </Suspense>
 
