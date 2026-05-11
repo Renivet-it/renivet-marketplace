@@ -14,8 +14,8 @@ export const metadata: Metadata = {
 
 export default function BulkWhatsAppPage({ searchParams }: PageProps) {
   return (
-    <DashShell>
-      <div className="max-w-5xl mx-auto space-y-6">
+    <DashShell className="max-w-[100rem]">
+      <div className="mx-auto w-full max-w-none space-y-6 px-4">
         <div className="flex flex-col items-start gap-4">
           <h1 className="text-2xl font-semibold text-gray-800">
             Bulk WhatsApp Campaigns

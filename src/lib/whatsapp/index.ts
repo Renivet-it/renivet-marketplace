@@ -111,7 +111,7 @@ export async function sendWhatsAppMessage({
 
 export async function sendPromoOfferMessage({
     recipientPhoneNumber,
-    templateName = "consciuos_click",
+    templateName = "renivet_story_1",
     languageCode = "en",
     parameters = [],
 }: {
@@ -129,26 +129,42 @@ export async function sendPromoOfferMessage({
     }
 
     const templates = {
-        consciuos_click: {
-            contentSid: "HXccde2ac426a9787bc2a8a04900bb7bd7",
-            parameterCount: 1,
-        },
-        campaign_launch: {
-            contentSid: "HX5683df47a3a2da437b7cf8301af073f3",
+        renivet_story_1: {
+            contentSid: "HXe40ca3d6f4f1cc52d73476b91d4caba2",
             parameterCount: 0,
         },
-        campaign_reminder: {
-            contentSid: "HX7bed86f4a2fbae21ada05766132b0f6d",
+        renivet_story_2: {
+            contentSid: "HXf4b138a5fe202b3d3d4af3254529e412",
             parameterCount: 0,
         },
-        campaign_last_call: {
-            contentSid: "HX7bded402d15ce941a93de1f590754dd5",
+        renivet_story_3: {
+            contentSid: "HX5d3d2d92db040ea3f1cfb8081107f3ad",
+            parameterCount: 0,
+        },
+        renivet_story_4: {
+            contentSid: "HXc2120149c6eeefa9629196d2c12ccd1f",
+            parameterCount: 0,
+        },
+        renivet_story_5: {
+            contentSid: "HX55ca53a893846e377241e83441ad9ead",
+            parameterCount: 0,
+        },
+        renivet_story_6: {
+            contentSid: "HXcdaf2ca15d1d6f8df443d02f1a98f041",
+            parameterCount: 0,
+        },
+        renivet_story_7: {
+            contentSid: "HXc5f3c11815f78e5afe2b12356bfd51f8",
             parameterCount: 0,
         },
     };
     // @ts-ignore
     if (!templates[templateName]) {
         throw new Error(`Template ${templateName} not found`);
+    }
+    // @ts-ignore
+    if (!templates[templateName].contentSid) {
+        throw new Error(`Content SID missing for template ${templateName}`);
     }
     // @ts-ignore
     if (templates[templateName].parameterCount !== parameters.length) {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import Papa from "papaparse";
@@ -10,10 +10,20 @@ import {
   Upload,
   CheckCircle,
   FileSpreadsheet,
+  History,
+  RefreshCcw,
+  Trash2,
   Users,
 } from "lucide-react";
-import { sendBulkEmail } from "@/actions/sendBulkEmail";
+import {
+  clearEmailMessageLogs,
+  getEmailMessageLogs,
+  retrySelectedEmailMessageLogs,
+  sendBulkEmail,
+  type EmailMessageLog,
+} from "@/actions/sendBulkEmail";
 import { useUploadThing } from "@/lib/uploadthing";
+import * as XLSX from "xlsx";
 
 const ReactQuill = dynamic(() => import("react-quill-new"), { ssr: false });
 import "react-quill-new/dist/quill.snow.css";
@@ -27,19 +37,107 @@ type Recipient = {
 };
 
 export function MarketingEmailForm() {
+  const [activeTab, setActiveTab] = useState<"send" | "logs">("send");
   const [step, setStep] = useState(1);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [emailLogs, setEmailLogs] = useState<EmailMessageLog[]>([]);
+  const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
+  const [logPage, setLogPage] = useState(1);
+  const logsPerPage = 10;
   const [emailContent, setEmailContent] = useState("");
   const [subject, setSubject] = useState(
     "Trying a new brand shouldn't feel risky — here's ₹1000 OFF"
   );
   const [isLoading, setIsLoading] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
   const [confirmSend, setConfirmSend] = useState(false);
   const [sentCount, setSentCount] = useState<number | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { startUpload } = useUploadThing("contentUploader");
   const quillRef = useRef<any>(null);
+
+  const refreshLogs = useCallback(async () => {
+    const logs = await getEmailMessageLogs();
+    setEmailLogs(logs);
+    setLogPage(1);
+  }, []);
+
+  useEffect(() => {
+    refreshLogs();
+  }, [refreshLogs]);
+
+  const exportLogs = (logs: EmailMessageLog[]) => {
+    if (!logs.length) return toast.error("No logs to export.");
+
+    const ws = XLSX.utils.json_to_sheet(
+      logs.map((log) => ({
+        "Sent At": new Date(log.sentAt).toLocaleString(),
+        Email: log.email,
+        "First Name": log.firstName ?? "",
+        Subject: log.subject,
+        Status: log.status,
+        Success: log.success ? "Yes" : "No",
+        Attempts: log.attempts,
+        "Message ID": log.messageId ?? "",
+        Error: log.error ?? "",
+      }))
+    );
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Email Logs");
+    const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const url = URL.createObjectURL(
+      new Blob([buf], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      })
+    );
+    Object.assign(document.createElement("a"), {
+      href: url,
+      download: `email_log_${new Date().toISOString().split("T")[0]}.xlsx`,
+    }).click();
+    URL.revokeObjectURL(url);
+  };
+
+  const toggleLogSelection = (id: string) => {
+    setSelectedLogIds((current) =>
+      current.includes(id)
+        ? current.filter((selectedId) => selectedId !== id)
+        : [...current, id]
+    );
+  };
+
+  const toggleAllLogs = () => {
+    const pageIds = emailLogs
+      .slice((logPage - 1) * logsPerPage, logPage * logsPerPage)
+      .map((log) => log.id);
+
+    setSelectedLogIds((current) =>
+      pageIds.every((id) => current.includes(id))
+        ? current.filter((id) => !pageIds.includes(id))
+        : Array.from(new Set([...current, ...pageIds]))
+    );
+  };
+
+  const retryLogs = async (logsToRetry: EmailMessageLog[]) => {
+    if (!logsToRetry.length) return toast.error("Select at least one log to retry.");
+
+    setIsRetrying(true);
+    const results = await retrySelectedEmailMessageLogs(
+      logsToRetry.map((log) => log.id)
+    );
+    await refreshLogs();
+    setSelectedLogIds([]);
+    setIsRetrying(false);
+    toast.success(
+      `Retry complete: ${results.filter((result) => result.success).length}/${logsToRetry.length} sent.`
+    );
+  };
+
+  const totalLogPages = Math.max(1, Math.ceil(emailLogs.length / logsPerPage));
+  const paginatedEmailLogs = emailLogs.slice(
+    (logPage - 1) * logsPerPage,
+    logPage * logsPerPage
+  );
 
   const downloadTemplate = () => {
     const csvContent = [
@@ -125,6 +223,7 @@ const onSubmit = async () => {
     formData.append("emailContent", emailContent);
 
     const result = await sendBulkEmail(formData);
+    await refreshLogs();
 
     if (result.success) {
       toast.success("Emails sent successfully!");
@@ -133,8 +232,10 @@ const onSubmit = async () => {
       setEmailContent("");
       setSubject("");
       setStep(4); // move to success screen
+      setActiveTab("logs");
     } else {
       toast.error(result.message || "Failed to send emails.");
+      setActiveTab("logs");
     }
   } catch (err) {
     console.error(err);
@@ -147,7 +248,47 @@ const onSubmit = async () => {
 
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-6">
+    <div className="mx-auto w-full max-w-none px-6 py-12">
+      <div className="mb-8 flex flex-wrap gap-2 rounded-xl border border-gray-100 bg-white p-2 shadow-sm">
+        <button
+          type="button"
+          onClick={() => setActiveTab("send")}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === "send"
+              ? "bg-indigo-600 text-white"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          <Mail className="h-4 w-4" />
+          Send Campaign
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("logs")}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors ${
+            activeTab === "logs"
+              ? "bg-indigo-600 text-white"
+              : "text-gray-600 hover:bg-gray-50"
+          }`}
+        >
+          <History className="h-4 w-4" />
+          Logs
+          {emailLogs.length > 0 && (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${
+                activeTab === "logs"
+                  ? "bg-white/20 text-white"
+                  : "bg-gray-100 text-gray-600"
+              }`}
+            >
+              {emailLogs.length}
+            </span>
+          )}
+        </button>
+      </div>
+
+      {activeTab === "send" && (
+        <>
       {/* Progress Steps */}
       {step <= 3 && (
  <div className="flex items-center justify-around md:justify-between mb-8 gap-2">
@@ -257,9 +398,9 @@ const onSubmit = async () => {
               If you leave the editor below empty, the email will use the
               pre-built campaign template:
               <br />
-              <strong>Headline:</strong> "Trying a new brand shouldn't feel risky." →{" "}
+              <strong>Headline:</strong> Trying a new brand should not feel risky. {" "}
               <strong>₹1000 OFF offer block</strong> →{" "}
-              <strong>"Explore Renivet" CTA</strong> → Footer line.
+              <strong>Explore Renivet CTA</strong> Footer line.
               <br />
               You can also write custom content in the editor to override it.
             </p>
@@ -411,6 +552,230 @@ const onSubmit = async () => {
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
               >
                 Confirm
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {activeTab === "logs" && (
+        <div className="space-y-4 rounded-2xl border border-gray-100 bg-white p-6 shadow-sm">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-gray-800">
+                Email Send Logs
+              </h2>
+              <p className="text-sm text-gray-500">
+                Saved in the database with retry support for single or selected rows.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  retryLogs(emailLogs.filter((log) => selectedLogIds.includes(log.id)))
+                }
+                disabled={isLoading || isRetrying || selectedLogIds.length === 0}
+                className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:bg-gray-300"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Retry Selected
+              </button>
+              <button
+                type="button"
+                onClick={() => retryLogs(emailLogs.filter((log) => !log.success))}
+                disabled={
+                  isLoading ||
+                  isRetrying ||
+                  emailLogs.filter((log) => !log.success).length === 0
+                }
+                className="flex items-center gap-2 rounded-lg bg-gray-900 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-gray-800 disabled:bg-gray-300"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Retry Failed
+              </button>
+              <button
+                type="button"
+                onClick={() => exportLogs(emailLogs)}
+                disabled={emailLogs.length === 0}
+                className="flex items-center gap-2 rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-200 disabled:text-gray-400"
+              >
+                <Download className="h-4 w-4" />
+                Export
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  await clearEmailMessageLogs();
+                  await refreshLogs();
+                  setSelectedLogIds([]);
+                  toast.success("Email logs cleared.");
+                }}
+                disabled={emailLogs.length === 0 || isLoading || isRetrying}
+                className="flex items-center gap-2 rounded-lg bg-red-50 px-4 py-2 text-sm font-semibold text-red-600 transition-colors hover:bg-red-100 disabled:text-gray-400"
+              >
+                <Trash2 className="h-4 w-4" />
+                Clear
+              </button>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            <div className="rounded-xl bg-gray-50 p-4">
+              <p className="text-xs font-semibold uppercase text-gray-400">Total</p>
+              <p className="mt-1 text-2xl font-bold text-gray-800">
+                {emailLogs.length}
+              </p>
+            </div>
+            <div className="rounded-xl bg-emerald-50 p-4">
+              <p className="text-xs font-semibold uppercase text-emerald-500">Sent</p>
+              <p className="mt-1 text-2xl font-bold text-emerald-700">
+                {emailLogs.filter((log) => log.success).length}
+              </p>
+            </div>
+            <div className="rounded-xl bg-red-50 p-4">
+              <p className="text-xs font-semibold uppercase text-red-500">Failed</p>
+              <p className="mt-1 text-2xl font-bold text-red-700">
+                {emailLogs.filter((log) => !log.success).length}
+              </p>
+            </div>
+            <div className="rounded-xl bg-indigo-50 p-4">
+              <p className="text-xs font-semibold uppercase text-indigo-500">Selected</p>
+              <p className="mt-1 text-2xl font-bold text-indigo-700">
+                {selectedLogIds.length}
+              </p>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-gray-100">
+            <table className="min-w-[1400px] divide-y divide-gray-100 text-sm">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="w-12 px-4 py-3 text-left">
+                    <input
+                      type="checkbox"
+                      checked={
+                        paginatedEmailLogs.length > 0 &&
+                        paginatedEmailLogs.every((log) =>
+                          selectedLogIds.includes(log.id)
+                        )
+                      }
+                      onChange={toggleAllLogs}
+                      className="h-4 w-4 rounded border-gray-300"
+                    />
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Recipient</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Subject</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Status</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Attempts</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold uppercase text-gray-500">Sent At</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold uppercase text-gray-500">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 bg-white">
+                {paginatedEmailLogs.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-500">
+                      No email logs yet.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedEmailLogs.map((log) => (
+                    <tr key={log.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3">
+                        <input
+                          type="checkbox"
+                          checked={selectedLogIds.includes(log.id)}
+                          onChange={() => toggleLogSelection(log.id)}
+                          className="h-4 w-4 rounded border-gray-300"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-gray-800">
+                          {log.firstName || "Recipient"}
+                        </div>
+                        <div className="text-xs text-gray-500">{log.email}</div>
+                      </td>
+                      <td className="max-w-sm truncate px-4 py-3 text-gray-600">
+                        {log.subject}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span
+                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                            log.success
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          }`}
+                        >
+                          {log.status}
+                        </span>
+                        {log.error && (
+                          <div className="mt-1 max-w-xs truncate text-xs text-red-500">
+                            {log.error}
+                          </div>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{log.attempts}</td>
+                      <td className="px-4 py-3 text-gray-600">
+                        {new Date(log.sentAt).toLocaleString()}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => retryLogs([log])}
+                          disabled={isLoading || isRetrying}
+                          className="inline-flex items-center gap-2 rounded-lg bg-gray-100 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-200 disabled:text-gray-400"
+                        >
+                          <RefreshCcw className="h-3.5 w-3.5" />
+                          Retry
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-500">
+              Showing{" "}
+              <span className="font-semibold text-gray-700">
+                {emailLogs.length === 0 ? 0 : (logPage - 1) * logsPerPage + 1}
+              </span>{" "}
+              to{" "}
+              <span className="font-semibold text-gray-700">
+                {Math.min(logPage * logsPerPage, emailLogs.length)}
+              </span>{" "}
+              of{" "}
+              <span className="font-semibold text-gray-700">
+                {emailLogs.length}
+              </span>{" "}
+              logs
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setLogPage((page) => Math.max(1, page - 1))}
+                disabled={logPage === 1}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:text-gray-300"
+              >
+                Previous
+              </button>
+              <span className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-semibold text-gray-700">
+                Page {logPage} / {totalLogPages}
+              </span>
+              <button
+                type="button"
+                onClick={() =>
+                  setLogPage((page) => Math.min(totalLogPages, page + 1))
+                }
+                disabled={logPage === totalLogPages}
+                className="rounded-lg border border-gray-200 px-3 py-2 text-sm font-semibold text-gray-700 disabled:cursor-not-allowed disabled:text-gray-300"
+              >
+                Next
               </button>
             </div>
           </div>
