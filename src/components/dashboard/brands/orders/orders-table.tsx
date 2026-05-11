@@ -322,9 +322,18 @@ const columns = (
                     </div>
                     <div className="text-xs text-muted-foreground">
                         AWB:{" "}
-                        <span className="font-medium text-slate-700">
-                            {awb || "Not generated"}
-                        </span>
+                        {awb ? (
+                            <Link
+                                href={`/dashboard/tracking/${encodeURIComponent(awb)}`}
+                                className="font-medium text-sky-700 underline-offset-2 hover:underline"
+                            >
+                                {awb}
+                            </Link>
+                        ) : (
+                            <span className="font-medium text-slate-700">
+                                Not generated
+                            </span>
+                        )}
                     </div>
                     {shipmentId && (
                         <div className="text-xs text-muted-foreground">
