@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import Papa from "papaparse";
 import {
   CheckCircle2,
+  CloudDownload,
   Download,
   History,
   MessageSquare,
@@ -18,6 +19,7 @@ import {
 import {
   clearWhatsAppMessageLogs,
   getWhatsAppMessageLogs,
+  importTwilioWhatsAppMessageLogs,
   retrySelectedWhatsAppMessageLogs,
   sendSingleWhatsAppMessage,
   type CampaignTemplateKey,
@@ -152,6 +154,7 @@ export function MarketingWhatsAppForm() {
   const [activeTab, setActiveTab] = useState<"send" | "logs">("send");
   const [isLoading, setIsLoading] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
   const [recipients, setRecipients] = useState<Recipient[]>([]);
   const [messageLogs, setMessageLogs] = useState<WhatsAppMessageLog[]>([]);
   const [selectedLogIds, setSelectedLogIds] = useState<string[]>([]);
@@ -343,6 +346,31 @@ export function MarketingWhatsAppForm() {
     toast.success(`Retry complete: ${successCount}/${logsToRetry.length} sent.`);
   };
 
+  const importTwilioLogs = async () => {
+    setIsImporting(true);
+
+    try {
+      const result = await importTwilioWhatsAppMessageLogs({
+        days: 90,
+        limit: 1000,
+      });
+
+      await refreshLogs();
+      setActiveTab("logs");
+      toast.success(
+        `Imported ${result.imported} Twilio WhatsApp logs. Skipped ${result.skipped} duplicates.`
+      );
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Failed to import Twilio WhatsApp logs."
+      );
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   const onSubmit = async () => {
     if (!selectedTemplate)
       return toast.error("Please select a campaign template first.");
@@ -393,7 +421,7 @@ export function MarketingWhatsAppForm() {
     selectedLogIds.includes(log.id)
   );
   const failedLogs = messageLogs.filter((log) => !log.success);
-  const isBusy = isLoading || isRetrying;
+  const isBusy = isLoading || isRetrying || isImporting;
   const totalLogPages = Math.max(1, Math.ceil(messageLogs.length / logsPerPage));
   const paginatedMessageLogs = messageLogs.slice(
     (logPage - 1) * logsPerPage,
@@ -646,6 +674,15 @@ export function MarketingWhatsAppForm() {
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={importTwilioLogs}
+                disabled={isBusy}
+                className="flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-emerald-700 disabled:bg-gray-300"
+              >
+                <CloudDownload className="h-4 w-4" />
+                {isImporting ? "Importing..." : "Import Twilio Logs"}
+              </button>
               <button
                 type="button"
                 onClick={() => retryLogs(selectedLogs)}
