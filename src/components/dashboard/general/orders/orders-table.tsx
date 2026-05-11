@@ -54,6 +54,7 @@ import {
     parseAsStringLiteral,
     useQueryState,
 } from "nuqs";
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { OrderAction } from "./order-action";
 import { OrderSingle } from "./order-single";
@@ -260,9 +261,12 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                     <div className="text-xs text-muted-foreground">
                         AWB #{" "}
                         {awb ? (
-                            <span className="font-medium text-slate-700">
+                            <Link
+                                href={`/dashboard/tracking/${encodeURIComponent(awb)}`}
+                                className="font-medium text-sky-700 underline-offset-2 hover:underline"
+                            >
                                 {awb}
-                            </span>
+                            </Link>
                         ) : (
                             "Not Assigned"
                         )}

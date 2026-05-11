@@ -937,6 +937,20 @@ class OrderQuery {
         return parseSingleOrderSafely(enhancedData);
     }
 
+    async getOrderByAwb(awb: string) {
+        const shipment = await db.query.orderShipments.findFirst({
+            where: or(
+                eq(orderShipments.awbNumber, awb),
+                eq(orderShipments.uploadWbn, awb),
+                eq(orderShipments.trackingNumber, awb)
+            ),
+        });
+
+        if (!shipment) return null;
+
+        return this.getOrderById(shipment.orderId);
+    }
+
     async getOrdersByUserId(userId: string, year?: number) {
         const data = await db.query.orders.findMany({
             where: and(
