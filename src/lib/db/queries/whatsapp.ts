@@ -21,6 +21,15 @@ class WhatsAppMessageLogQuery {
         });
     }
 
+    async getLogsBySids(sids: string[]) {
+        if (!sids.length) return [];
+
+        return db.query.whatsappMessageLogs.findMany({
+            where: inArray(whatsappMessageLogs.sid, sids),
+            orderBy: [desc(whatsappMessageLogs.sentAt)],
+        });
+    }
+
     async createLog(values: CreateWhatsAppMessageLog) {
         return db
             .insert(whatsappMessageLogs)
