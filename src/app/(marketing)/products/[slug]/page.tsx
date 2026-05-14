@@ -29,6 +29,22 @@ interface PageProps {
 const FALLBACK_IMAGE_URL =
     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
+function getProductAvailability(product: {
+    productHasVariants?: boolean;
+    quantity?: number | null;
+    variants?: Array<{ quantity?: number | null; isDeleted?: boolean }>;
+}) {
+    const totalVariantStock =
+        product.variants
+            ?.filter((variant) => !variant.isDeleted)
+            .reduce((sum, variant) => sum + (variant.quantity ?? 0), 0) ?? 0;
+    const availableStock = product.productHasVariants
+        ? totalVariantStock
+        : (product.quantity ?? 0);
+
+    return availableStock > 0 ? "in stock" : "out of stock";
+}
+
 // ------------------
 // 🔹 generateMetadata with OG + product meta tags
 // ------------------
@@ -54,10 +70,9 @@ export async function generateMetadata({
         : existingProduct.variants?.[0]?.price
           ? (existingProduct.variants[0].price / 100).toFixed(2)
           : "0.00";
-
-    const availability =
-        (existingProduct.quantity ?? 0) > 0 ? "in stock" : "out of stock";
-    const image = existingProduct.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL;
+    const availability = getProductAvailability(existingProduct);
+    const image =
+        existingProduct.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL;
     const url = getAbsoluteURL(`/products/${slug}`);
 
     return {
@@ -179,6 +194,7 @@ async function ProductFetch({ params }: PageProps) {
           : "0.00";
 
     // 🔹 Generate Event ID for Deduplication
+    const availability = getProductAvailability(existingProduct);
     const eventId = randomUUID();
 
     // 🔹 Fetch User Details for Address if available
@@ -215,7 +231,9 @@ async function ProductFetch({ params }: PageProps) {
         {
             content_ids: [existingProduct.id],
             content_name: existingProduct.title,
-            content_type: existingProduct.productHasVariants ? "product_group" : "product",
+            content_type: existingProduct.productHasVariants
+                ? "product_group"
+                : "product",
             content_category: existingProduct.brand?.name || "Unknown Brand",
             value: parseFloat(priceInRupees),
             currency: "INR",
@@ -228,7 +246,9 @@ async function ProductFetch({ params }: PageProps) {
         "@type": "Product",
         sku: retailerItemId,
         name: existingProduct.title,
-        image: [existingProduct.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL],
+        image: [
+            existingProduct.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL,
+        ],
         description: existingProduct.description ?? "",
         brand: {
             "@type": "Brand",
@@ -239,10 +259,7 @@ async function ProductFetch({ params }: PageProps) {
             "@type": "Offer",
             price: priceInRupees,
             priceCurrency: "INR",
-            availability:
-                (existingProduct.quantity ?? 0) > 0
-                    ? "in stock"
-                    : "out of stock",
+            availability,
             url: getAbsoluteURL(`/products/${slug}`),
         },
     };

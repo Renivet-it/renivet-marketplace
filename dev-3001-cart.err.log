@@ -5,3 +5,27 @@ $ next dev --turbo --port "3001"
 
 [1m[33mwarn[39m[22m - The class `ease-[cubic-bezier(0.25,1,0.5,1)]` is ambiguous and matches multiple utilities.
 [1m[33mwarn[39m[22m - If this is content and not a class, replace it with `ease-&lsqb;cubic-bezier(0.25,1,0.5,1)&rsqb;` to silence this warning.
+ ⨯ ReferenceError: availability is not defined
+    at ProductFetch (file://C%3A/Personal%20Projects/renivet-marketplace/src/app/%28marketing%29/products/%5Bslug%5D/page.tsx:253:12)
+  251 |             price: priceInRupees,
+  252 |             priceCurrency: "INR",
+> 253 |             availability,
+      |            ^
+  254 |             url: getAbsoluteURL(`/products/${slug}`),
+  255 |         },
+  256 |     }; {
+  digest: '2259903938'
+}
+ ⨯ ReferenceError: availability is not defined
+    at ProductFetch (file://C%3A/Personal%20Projects/renivet-marketplace/src/app/%28marketing%29/products/%5Bslug%5D/page.tsx:253:12)
+  251 |             price: priceInRupees,
+  252 |             priceCurrency: "INR",
+> 253 |             availability,
+      |            ^
+  254 |             url: getAbsoluteURL(`/products/${slug}`),
+  255 |         },
+  256 |     }; {
+  digest: '2259903938'
+}
+Tiptap Error: SSR has been detected, please set `immediatelyRender` explicitly to `false` to avoid hydration mismatches.
+Tiptap Error: SSR has been detected, please set `immediatelyRender` explicitly to `false` to avoid hydration mismatches.

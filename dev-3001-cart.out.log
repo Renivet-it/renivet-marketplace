@@ -7,3 +7,47 @@
 Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', testMode: true }
  ✓ Compiled in 2.2s
  ✓ Ready in 6.5s
+ ○ Compiling /mycart ...
+ ✓ Compiled /mycart in 22s
+ GET /mycart 200 in 23535ms
+ ○ Compiling /products/[slug] ...
+ ✓ Compiled /products/[slug] in 10.1s
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 12181ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 80f1da30-9982-44bd-a963-3bfac283cde2
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1985ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 57439367-8901-4d73-a1bf-122dc413f54e
+ ✓ Compiled in 702ms
+ ✓ Compiled in 742ms
+ ✓ Compiled in 635ms
+ ✓ Compiled /products/[slug] in 91ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2139ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 10954412-0bc3-4959-9998-0f6d59949e94
+ ○ Compiling /api/permission ...
+ ✓ Compiled /api/permission in 4.1s
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 5438ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2921ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 3791f040-2d6e-47b6-bb0c-50630e759e69
