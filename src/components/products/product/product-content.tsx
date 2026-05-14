@@ -111,10 +111,7 @@ export function ProductContent({
                     {product.title}
                 </h1>
 
-                {/* ── Style number ── */}
-                <p className="mb-4 text-[11px] uppercase tracking-[0.1em] text-neutral-400">
-                    Style #{product.id.slice(0, 8).toUpperCase()}
-                </p>
+                {/* ── Style number ── P1-FE-015: hidden until human-readable SKU system is built ── */}
 
                 {/* ── Star rating ── */}
                 <div className="mb-5 flex items-center gap-2">
@@ -154,7 +151,7 @@ export function ProductContent({
                     <button className="text-[13px] font-medium text-neutral-500 underline underline-offset-2 hover:text-neutral-800 transition-colors">
                         {reviews > 0
                             ? `${reviews} ${reviews === 1 ? "Review" : "Reviews"}`
-                            : "No reviews available"}
+                            : "Be the first to review"}
                     </button>
                 </div>
 

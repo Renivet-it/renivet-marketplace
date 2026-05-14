@@ -13,13 +13,14 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import React from "react";
 
 type YouMayAlsoLikeProps = React.HTMLAttributes<HTMLDivElement> & {
+    brandId: string;
     categoryId: string;
     excludeProductId: string;
     userId?: string;
 };
 
-const YOU_MAY_LIKE_COUNT = 14;
-const PEOPLE_ALSO_LIKED_COUNT = 14;
+const FALLBACK_QUERY_LIMIT = 12;
+const FINAL_RECOMMENDATION_LIMIT = 8;
 
 type RecommendationProduct = {
     id: string;
@@ -144,76 +145,218 @@ const SectionHeader = ({ title }: { title: string }) => (
 
 const YouMayAlsoLike = ({
     className,
+    brandId,
     categoryId,
     excludeProductId,
     userId,
     ...props
 }: YouMayAlsoLikeProps) => {
-    void categoryId;
     const {
-        data: allProducts = [],
-        isLoading,
-        error,
-    } = trpc.brands.products.getRecommendations.useQuery({
-        productId: excludeProductId,
-    });
+        data: primaryProducts = [],
+        status: primaryStatus,
+    } = trpc.brands.products.getRecommendations.useQuery(
+        {
+            productId: excludeProductId,
+        },
+        {
+            retry: false,
+            refetchOnWindowFocus: false,
+        }
+    );
 
-    if (isLoading) {
+    const normalizedPrimaryProducts = React.useMemo(
+        () =>
+            primaryProducts.filter(
+                (product): product is RecommendationProduct =>
+                    !!product?.id && product.id !== excludeProductId
+            ),
+        [excludeProductId, primaryProducts]
+    );
+
+    const shouldLoadSameBrand =
+        primaryStatus !== "pending" && normalizedPrimaryProducts.length === 0;
+
+    const {
+        data: sameBrandData,
+        status: sameBrandStatus,
+    } = trpc.brands.products.getProducts.useQuery(
+        {
+            limit: FALLBACK_QUERY_LIMIT,
+            page: 1,
+            brandIds: [brandId],
+            isPublished: true,
+            isAvailable: true,
+            isActive: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            sortBy: "best-sellers",
+            sortOrder: "desc",
+            requireMedia: true,
+        },
+        {
+            enabled: shouldLoadSameBrand,
+            retry: false,
+            refetchOnWindowFocus: false,
+        }
+    );
+
+    const sameBrandProducts = React.useMemo(
+        () =>
+            (sameBrandData?.data ?? []).filter(
+                (product): product is RecommendationProduct =>
+                    !!product?.id && product.id !== excludeProductId
+            ),
+        [excludeProductId, sameBrandData?.data]
+    );
+
+    const shouldLoadSameCategory =
+        shouldLoadSameBrand &&
+        sameBrandStatus !== "pending" &&
+        sameBrandProducts.length === 0;
+
+    const {
+        data: sameCategoryData,
+        status: sameCategoryStatus,
+    } = trpc.brands.products.getProducts.useQuery(
+        {
+            limit: FALLBACK_QUERY_LIMIT,
+            page: 1,
+            categoryId,
+            isPublished: true,
+            isAvailable: true,
+            isActive: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            sortBy: "best-sellers",
+            sortOrder: "desc",
+            requireMedia: true,
+        },
+        {
+            enabled: shouldLoadSameCategory,
+            retry: false,
+            refetchOnWindowFocus: false,
+        }
+    );
+
+    const sameCategoryProducts = React.useMemo(
+        () =>
+            (sameCategoryData?.data ?? []).filter(
+                (product): product is RecommendationProduct =>
+                    !!product?.id && product.id !== excludeProductId
+            ),
+        [excludeProductId, sameCategoryData?.data]
+    );
+
+    const shouldLoadBestSellers =
+        shouldLoadSameCategory &&
+        sameCategoryStatus !== "pending" &&
+        sameCategoryProducts.length === 0;
+
+    const {
+        data: bestSellerData,
+        status: bestSellerStatus,
+    } = trpc.brands.products.getProducts.useQuery(
+        {
+            limit: FALLBACK_QUERY_LIMIT,
+            page: 1,
+            isPublished: true,
+            isAvailable: true,
+            isActive: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            sortBy: "best-sellers",
+            sortOrder: "desc",
+            requireMedia: true,
+        },
+        {
+            enabled: shouldLoadBestSellers,
+            retry: false,
+            refetchOnWindowFocus: false,
+        }
+    );
+
+    const bestSellerProducts = React.useMemo(
+        () =>
+            (bestSellerData?.data ?? []).filter(
+                (product): product is RecommendationProduct =>
+                    !!product?.id && product.id !== excludeProductId
+            ),
+        [bestSellerData?.data, excludeProductId]
+    );
+
+    const finalProducts = React.useMemo(() => {
+        const seen = new Set<string>();
+        const merged = [
+            ...normalizedPrimaryProducts,
+            ...sameBrandProducts,
+            ...sameCategoryProducts,
+            ...bestSellerProducts,
+        ].filter((product) => {
+            if (!product?.id || seen.has(product.id)) return false;
+            seen.add(product.id);
+            return true;
+        });
+
+        return merged.slice(0, FINAL_RECOMMENDATION_LIMIT);
+    }, [
+        bestSellerProducts,
+        normalizedPrimaryProducts,
+        sameBrandProducts,
+        sameCategoryProducts,
+    ]);
+
+    const isResolvingFallbacks =
+        primaryStatus === "pending" ||
+        (shouldLoadSameBrand && sameBrandStatus === "pending") ||
+        (shouldLoadSameCategory && sameCategoryStatus === "pending") ||
+        (shouldLoadBestSellers && bestSellerStatus === "pending");
+
+    if (isResolvingFallbacks) {
         return (
             <div
                 className={cn(
-                    "w-full px-4 py-10 text-center text-sm text-stone-400",
+                    "w-full px-4 py-8",
                     className
                 )}
                 {...props}
             >
-                Loading recommendations...
+                <div className="mx-auto w-full max-w-screen-3xl grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                    {Array.from({ length: 4 }).map((_, index) => (
+                        <div
+                            key={index}
+                            className="overflow-hidden rounded-lg border border-neutral-100 bg-white"
+                        >
+                            <div className="aspect-[3/4] animate-pulse bg-neutral-100" />
+                            <div className="space-y-2 p-3">
+                                <div className="h-3 animate-pulse rounded bg-neutral-100" />
+                                <div className="h-3 w-2/3 animate-pulse rounded bg-neutral-100" />
+                            </div>
+                        </div>
+                    ))}
+                </div>
             </div>
         );
     }
 
-    if (error || !allProducts.length) return null;
-
-    const youMayLike = allProducts.slice(0, YOU_MAY_LIKE_COUNT);
-    // Get next batch for "People Also Liked"
-    const peopleAlsoLikedTotal = allProducts.slice(
-        YOU_MAY_LIKE_COUNT,
-        YOU_MAY_LIKE_COUNT + PEOPLE_ALSO_LIKED_COUNT
-    );
+    if (!finalProducts.length) return null;
 
     return (
         <div
             className={cn(
-                "w-full space-y-7 bg-white py-5 md:space-y-9 md:py-7",
+                "w-full bg-white py-5 md:py-7",
                 className
             )}
             {...props}
         >
-            {/* Section 1: You May Like (Always 14 - 2 rows of 7) */}
-            {youMayLike.length > 0 && (
-                <section>
-                    <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-                        <SectionHeader title="You May Like" />
-                        <RecommendationCarousel
-                            products={youMayLike}
-                            userId={userId}
-                        />
-                    </div>
-                </section>
-            )}
-
-            {/* Section 2: People Also Liked (7 -> 14) */}
-            {peopleAlsoLikedTotal.length > 0 && (
-                <section>
-                    <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
-                        <SectionHeader title="People Also Liked" />
-                        <RecommendationCarousel
-                            products={peopleAlsoLikedTotal}
-                            userId={userId}
-                        />
-                    </div>
-                </section>
-            )}
+            <section>
+                <div className="max-w-screen-3xl mx-auto w-full px-4 sm:px-6 lg:px-8">
+                    <SectionHeader title="You May Like" />
+                    <RecommendationCarousel
+                        products={finalProducts}
+                        userId={userId}
+                    />
+                </div>
+            </section>
         </div>
     );
 };

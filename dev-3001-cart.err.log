@@ -582,3 +582,85 @@ Error fetching advanced recommendations: Error [AxiosError]: Request failed with
   digest: '1394315279'
 }
  ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ [Error [PostgresError]: canceling statement due to statement timeout] {
+  severity_local: 'ERROR',
+  severity: 'ERROR',
+  code: '57014',
+  file: 'postgres.c',
+  line: '3330',
+  routine: 'ProcessInterrupts',
+  digest: '1394315279'
+}
+Tiptap Error: SSR has been detected, please set `immediatelyRender` explicitly to `false` to avoid hydration mismatches.
+Tiptap Error: SSR has been detected, please set `immediatelyRender` explicitly to `false` to avoid hydration mismatches.
+❌ tRPC failed on general.users.currentUser: You're not authorized
+Error fetching advanced recommendations: Error [AxiosError]: Request failed with status code 404
+    at async getAdvancedRecommendations (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/python/product-recommendation.ts:9:25)
+    at async (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/trpc/routes/brands/products.ts:1580:33)
+    at async (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/trpc/trpc.ts:96:15)
+   7 |     console.log("productId", productId);
+   8 |     try {
+>  9 |         const response = await axios.get(
+     |                         ^
+  10 |             `${"http://64.227.137.174:8000"}/recommendations/similar-advanced`,
+  11 |             {
+  12 |                 params: { product_id: productId, top_n: 28 }, {
+  code: 'ERR_BAD_REQUEST',
+  config: [Object],
+  request: [ClientRequest],
+  response: [Object],
+  status: 404,
+  constructor: [Function],
+  toJSON: [Function: toJSON]
+}
+❌ tRPC failed on brands.products.getRecommendations: Product not found or inactive
+❌ tRPC failed on general.users.currentUser: You're not authorized
+Error fetching advanced recommendations: Error [AxiosError]: Request failed with status code 404
+    at async getAdvancedRecommendations (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/python/product-recommendation.ts:9:25)
+    at async (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/trpc/routes/brands/products.ts:1580:33)
+    at async (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/trpc/trpc.ts:96:15)
+   7 |     console.log("productId", productId);
+   8 |     try {
+>  9 |         const response = await axios.get(
+     |                         ^
+  10 |             `${"http://64.227.137.174:8000"}/recommendations/similar-advanced`,
+  11 |             {
+  12 |                 params: { product_id: productId, top_n: 28 }, {
+  code: 'ERR_BAD_REQUEST',
+  config: [Object],
+  request: [ClientRequest],
+  response: [Object],
+  status: 404,
+  constructor: [Function],
+  toJSON: [Function: toJSON]
+}
+❌ tRPC failed on brands.products.getRecommendations: Product not found or inactive
+❌ tRPC failed on general.users.currentUser: You're not authorized
+Error fetching advanced recommendations: Error [AxiosError]: Request failed with status code 404
+    at async getAdvancedRecommendations (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/python/product-recommendation.ts:9:25)
+    at async (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/trpc/routes/brands/products.ts:1580:33)
+    at async (file://C%3A/Personal%20Projects/renivet-marketplace/src/lib/trpc/trpc.ts:96:15)
+   7 |     console.log("productId", productId);
+   8 |     try {
+>  9 |         const response = await axios.get(
+     |                         ^
+  10 |             `${"http://64.227.137.174:8000"}/recommendations/similar-advanced`,
+  11 |             {
+  12 |                 params: { product_id: productId, top_n: 28 }, {
+  code: 'ERR_BAD_REQUEST',
+  config: [Object],
+  request: [ClientRequest],
+  response: [Object],
+  status: 404,
+  constructor: [Function],
+  toJSON: [Function: toJSON]
+}
+❌ tRPC failed on brands.products.getRecommendations: Product not found or inactive
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNwtzcOLrQTkEsKW16AOLVjr8DhmeCypgUGfJz 404
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNFyZ74xsYuOBPqLnX487ACSVER29DxtW5vmhN 404
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNjggDBNSmPpnZoHc5f2E4rFNLugdK3ty9ObjY 404
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNjdSgSgmPpnZoHc5f2E4rFNLugdK3ty9ObjYx 404
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNKJg0KkoXWY4M9GmONJv38rnKquVZUx0pjkQE 404
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNVO9J5WBbpNcg6ZSKi0IGkAsjuLwQox3znmlt 404
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNQbPBW2JvbyYEoZ78eJzNIKWdcxq1Of9wlHtA 404
+ ⨯ upstream image response failed for https://utfs.io/a/4o4vm2cu6g/HtysHtJpctzNNQuZ1v4g0rgXZuWwadPABUqnljV5RbJMFsx1 404
