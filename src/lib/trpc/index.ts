@@ -18,6 +18,7 @@ import {
 import {
     adminAnalyticsRouter,
     adminSupportRouter,
+    backInStockRouter,
     blogsRouter,
     brandProductTypePackingRouter,
     brandsRouter,
@@ -45,9 +46,9 @@ import {
     usersRouter,
     userSupportRouter,
 } from "./routes/general";
-import { customerReviewsRouter } from "./routes/general/customer-reviews";
 import { addressesRouter } from "./routes/general/address";
 import { capiLogsRouter } from "./routes/general/capi";
+import { customerReviewsRouter } from "./routes/general/customer-reviews";
 import { createTRPCRouter } from "./trpc";
 
 export const appRouter = createTRPCRouter({
@@ -77,6 +78,7 @@ export const appRouter = createTRPCRouter({
         returnReplace: returnReplaceRouter,
         analytics: adminAnalyticsRouter,
         adminSupportRouter: adminSupportRouter,
+        backInStock: backInStockRouter,
         userSupport: userSupportRouter,
         packingTypes: packingTypesRouter,
         brandProductTypePacking: brandProductTypePackingRouter,

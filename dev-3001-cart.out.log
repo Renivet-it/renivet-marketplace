@@ -51,3 +51,212 @@ Sanitized fbc value: MISSING / UNDEFINED
 
  GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2921ms
 CAPI Event 'ViewContent' sent successfully. Event ID: 3791f040-2d6e-47b6-bb0c-50630e759e69
+ ✓ Compiled in 1752ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 696ms
+ ✓ Compiled /products/[slug] in 108ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 108ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1278ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2452ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 635117de-b871-4243-8dbc-44a5cd1f1cc2
+CAPI Event 'ViewContent' sent successfully. Event ID: 679ee950-994d-4e8b-9afa-88611fdb0e0d
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 131ms
+ ✓ Compiled in 378ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 116ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1191ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 943ms
+CAPI Event 'ViewContent' sent successfully. Event ID: e5f2083c-e84d-420e-a45f-b673741be861
+CAPI Event 'ViewContent' sent successfully. Event ID: 038555f0-42ec-41f1-9338-f14ed48c65d3
+ ✓ Compiled in 1103ms
+ ✓ Compiled in 926ms
+ ✓ Compiled in 950ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 121ms
+ ✓ Compiled /products/[slug] in 83ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 105ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2148ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1188ms
+CAPI Event 'ViewContent' sent successfully. Event ID: c7c288c7-d955-4f90-a524-3eb73b0dc4f9
+CAPI Event 'ViewContent' sent successfully. Event ID: 54fe2e0d-e805-4230-9d13-7f0d26cf1921
+ ✓ Compiled in 879ms
+ ✓ Compiled in 1019ms
+ ✓ Compiled in 1066ms
+ ✓ Compiled in 785ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2269ms
+CAPI Event 'ViewContent' sent successfully. Event ID: a491bc1d-6646-4273-9626-362868914d15
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 328ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 726db090-2e8c-4929-a4c4-24bfe9bd54fa
+ ○ Compiling /api/trpc/[trpc] ...
+ ✓ Compiled /api/trpc/[trpc] in 6.5s
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ POST /api/trpc/general.backInStock.createBackInStockRequest 200 in 8820ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 772ms
+CAPI Event 'ViewContent' sent successfully. Event ID: c0f85748-f3fa-4158-b814-068726143ab7
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 308ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 3cfe45b1-de54-483d-a718-75de55c4574c
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 334ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 0284abcf-ed27-41a1-9153-b9a3734fb3e9
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1196ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 24b8de6f-66b7-4bdc-ab1f-434323dfc5b4
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 805ms
+CAPI Event 'ViewContent' sent successfully. Event ID: ba42bff2-c0fa-4cf4-8c12-01a162077b69
+ ✓ Compiled in 2.7s
+ ✓ Compiled in 729ms
+ ✓ Compiled in 678ms
+ ✓ Compiled in 385ms
+ ✓ Compiled /products/[slug] in 281ms
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1474ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 1835ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 11ea6875-c820-4163-a27d-5de4d801e04d
+ ✓ Compiled in 724ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1744ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 95fd2a92-eb63-4356-8e28-d5a8031598ff
+ ✓ Compiled in 806ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ POST /api/trpc/general.backInStock.createBackInStockRequest 400 in 2685ms
+ POST /api/trpc/general.backInStock.createBackInStockRequest 200 in 2815ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 3022ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 032a3c08-6734-46c3-af6b-1deb71eae68f
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 713ms
+ ✓ Compiled in 676ms
+ ✓ Compiled in 691ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1648ms
+CAPI Event 'ViewContent' sent successfully. Event ID: be1ca5fb-996a-4109-8db1-228a95f1ae9d
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+CAPI Event 'ViewContent' sent successfully. Event ID: d0ec6b7a-be17-432a-84d1-8964eb672383
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1501ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fonearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 538ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 2361ms
+CAPI Event 'ViewContent' sent successfully. Event ID: ac2230bc-35ef-41e0-b76f-970eca0d8351
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 470ms
+ ○ Compiling / ...
+ ✓ Compiled / in 25.4s
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 28067ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 339ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 1717ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 300ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 2161ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+CAPI Event 'ViewContent' sent successfully. Event ID: 4e25748c-e362-4db8-8391-d8b8d5454710
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 3026ms

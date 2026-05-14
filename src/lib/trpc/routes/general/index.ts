@@ -1,4 +1,5 @@
 export * from "./blogs";
+export * from "./back-in-stock";
 export * from "./brands";
 export * from "./brands-waitlist";
 export * from "./categories";
@@ -28,4 +29,3 @@ export * from "./user-support";
 export * from "./decodex";
 
 export * from "./analytics";
-
