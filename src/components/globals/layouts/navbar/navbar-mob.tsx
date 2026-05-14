@@ -504,6 +504,11 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                         label="Addresses"
                                         href="/addresses"
                                     />
+                                    <MobileNavItem
+                                        icon={ShoppingBag}
+                                        label="Discover"
+                                        href="/discover"
+                                    />
                                 </div>
                             </div>
 

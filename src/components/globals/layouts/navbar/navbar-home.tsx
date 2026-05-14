@@ -917,6 +917,22 @@ export function NavbarHome({
                                                 <DropdownMenuItem
                                                     className={cn(
                                                         "rounded-xl",
+                                                        isAuthorized && "hidden"
+                                                    )}
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href="/discover"
+                                                        prefetch
+                                                    >
+                                                        <Icons.Sparkles className="size-4" />
+                                                        <span>Discover</span>
+                                                    </Link>
+                                                </DropdownMenuItem>
+
+                                                <DropdownMenuItem
+                                                    className={cn(
+                                                        "rounded-xl",
                                                         !isAuthorized &&
                                                             "hidden"
                                                     )}

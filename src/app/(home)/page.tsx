@@ -1,4 +1,5 @@
 import { FloatingLoginButton } from "@/components/home/floating-login-button";
+import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
 import { Landing } from "@/components/home/landing";
 import { siteConfig } from "@/config/site";
 import {
@@ -10,6 +11,7 @@ import {
 } from "@/lib/db/queries";
 import { bannerCache, marketingStripCache } from "@/lib/redis/methods";
 import { getAbsoluteURL } from "@/lib/utils";
+import { auth } from "@clerk/nextjs/server";
 import { Leaf, Lock, RefreshCcw, Truck } from "lucide-react";
 import type { Metadata } from "next";
 import dynamic from "next/dynamic";
@@ -123,11 +125,6 @@ const ProductsUnder999 = dynamic(() =>
         default: m.ProductsUnder999,
     }))
 );
-const SwipeCard = dynamic(() =>
-    import("@/components/home/new-home-page/swipe-card").then((m) => ({
-        default: m.SwipeCard,
-    }))
-);
 const WelcomeRenivet = dynamic(() =>
     import("@/components/home/new-home-page/welcome-to-renivet").then((m) => ({
         default: m.WelcomeRenivet,
@@ -140,7 +137,9 @@ const ScrollReveal = dynamic(() =>
     }))
 );
 
-export default function Page() {
+export default async function Page() {
+    const { userId } = await auth();
+
     return (
         <>
             <Suspense
@@ -263,13 +262,7 @@ export default function Page() {
             >
                 <WelcomeToRenivetFetch />
             </Suspense>
-            <Suspense
-                fallback={
-                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
-                }
-            >
-                <ProductSwipeCardFetch />
-            </Suspense>
+            {userId ? <DiscoverPrompt /> : null}
             <Suspense
                 fallback={
                     <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
@@ -333,16 +326,6 @@ async function ProductNewArrivalsGridFetch() {
     return (
         <ScrollReveal>
             <ProductGridNewArrivals products={products as any} />
-        </ScrollReveal>
-    );
-}
-
-async function ProductSwipeCardFetch() {
-    const products = await productQueries.getHomePageFeaturedProducts();
-    if (!products.length) return null;
-    return (
-        <ScrollReveal>
-            <SwipeCard products={products} />
         </ScrollReveal>
     );
 }
