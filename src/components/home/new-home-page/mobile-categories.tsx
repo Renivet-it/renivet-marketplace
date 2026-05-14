@@ -9,6 +9,7 @@ import type { MouseEvent, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
 const REDIRECT_DELAY_MS = 220;
+const SALE_CATEGORY_HREF = "https://renivet.com/shop?minDiscount=10";
 
 interface StripLoaderLinkProps {
     href: string;
@@ -169,7 +170,7 @@ export function MobileCategories() {
             subtitle: "The best deals of the season.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmKiAnjNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
+            link: SALE_CATEGORY_HREF,
         },
     ];
 

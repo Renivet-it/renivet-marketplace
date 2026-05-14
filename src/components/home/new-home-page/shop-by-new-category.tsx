@@ -6,6 +6,16 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRef } from "react";
 
+const SALE_CATEGORY_HREF = "/shop?minDiscount=10";
+
+function getCategoryHref(category: HomeShopByCategory) {
+    if (category.title?.trim().toLowerCase() === "sale") {
+        return SALE_CATEGORY_HREF;
+    }
+
+    return category.url || "/shop";
+}
+
 interface PageProps extends GenericProps {
     shopByCategories: HomeShopByCategory[];
     titleData?: { title: string };
@@ -130,7 +140,7 @@ export function ShopByNewCategories({
                             {row.map((cat, i) => (
                                 <Link
                                     key={i}
-                                    href={cat.url || "/shop"}
+                                    href={getCategoryHref(cat)}
                                     className="group relative block shrink-0 snap-center overflow-hidden rounded-md bg-gray-100 shadow-sm transition-transform active:scale-95"
                                     style={{
                                         width: "140px",
@@ -184,7 +194,7 @@ export function ShopByNewCategories({
                     {shopByCategories.map((cat, i) => (
                         <Link
                             key={i}
-                            href={cat.url || "/shop"}
+                            href={getCategoryHref(cat)}
                             className="group/card ease-[cubic-bezier(0.25,1,0.5,1)] relative block shrink-0 overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 hover:z-20 hover:-translate-y-3 hover:scale-[1.03] hover:!opacity-100 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] hover:!blur-none group-hover/container:opacity-40 group-hover/container:blur-[2px]"
                             style={{ width: "280px", height: "440px" }}
                         >
