@@ -1,0 +1,9 @@
+   ▲ Next.js 15.1.11 (Turbopack)
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.0.233:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', testMode: true }
+ ✓ Compiled in 2.2s
+ ✓ Ready in 6.5s

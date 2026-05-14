@@ -1,10 +1,11 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
+
 // src/app/(protected)/mycart/Component/checkout-section.tsx
 
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
+import { Spinner } from "@/components/ui/spinner";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
@@ -16,7 +17,15 @@ import {
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
-import { ChevronRight, Clock, Leaf, Recycle, Tag, Ticket, Truck, Users } from "lucide-react";
+import {
+    ChevronRight,
+    Clock,
+    Leaf,
+    Recycle,
+    Tag,
+    Ticket,
+    Truck,
+} from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -69,6 +78,11 @@ export default function CheckoutSection({ userId }: PageProps) {
     const selectedItems = useMemo(
         () => availableCart.filter((item) => item.status),
         [availableCart]
+    );
+
+    const selectedItemsCount = useMemo(
+        () => selectedItems.reduce((acc, item) => acc + item.quantity, 0),
+        [selectedItems]
     );
 
     const filteredCoupons = useMemo(() => {
@@ -395,25 +409,26 @@ export default function CheckoutSection({ userId }: PageProps) {
                     <Separator />
 
                     {/* Your Impact section — desktop only */}
-                    <div className="hidden rounded-lg bg-blue-50/70 p-3 md:block">
-                        <p className="mb-2 text-xs font-semibold text-blue-800">
-                            Your Impact
-                        </p>
-                        <div className="space-y-1.5 text-xs text-blue-700">
-                            <div className="flex items-center gap-1.5">
-                                <Leaf className="size-3" />
-                                <span>1.6kg CO₂ saved</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <Recycle className="size-3" />
-                                <span>8% materials reused</span>
-                            </div>
-                            <div className="flex items-center gap-1.5">
-                                <Users className="size-3" />
-                                <span>2 artisans supported</span>
+                    {selectedItemsCount > 0 && (
+                        <div className="hidden rounded-lg bg-blue-50/70 p-3 md:block">
+                            <p className="mb-2 text-xs font-semibold text-blue-800">
+                                Your Impact
+                            </p>
+                            <div className="space-y-1.5 text-xs text-blue-700">
+                                <div className="flex items-center gap-1.5">
+                                    <Leaf className="size-3" />
+                                    <span>
+                                        Impact summary will be calculated from{" "}
+                                        {selectedItemsCount}{" "}
+                                        {selectedItemsCount === 1
+                                            ? "item"
+                                            : "items"}{" "}
+                                        in your bag.
+                                    </span>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* Total */}
                     <div className="flex items-center justify-between pt-2">

@@ -7,23 +7,15 @@ import {
     NavbarMob,
 } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
 import { convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
-import {
-    Leaf,
-    Minus,
-    Plus,
-    Recycle,
-    RotateCcw,
-    ShoppingBag,
-    Truck,
-} from "lucide-react";
+import { Leaf, Minus, Plus, Recycle, RotateCcw, Truck } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import CheckoutStepper from "./checkout-stepper";
+import { EmptyCartRecommendations } from "./empty-cart-recommendations";
 
 const FREE_SHIPPING_THRESHOLD = 999 * 100;
 
@@ -120,22 +112,7 @@ export default function GuestCartPage() {
                                 </div>
 
                                 {guestCart.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 bg-white py-16 text-center">
-                                        <ShoppingBag className="mb-4 size-12 text-gray-300" />
-                                        <p className="text-base font-medium text-gray-500">
-                                            Your bag is empty.
-                                        </p>
-                                        <p className="mt-1 text-sm text-gray-400">
-                                            Add items to start shopping!
-                                        </p>
-                                        <Button
-                                            className="mt-4"
-                                            size="sm"
-                                            onClick={() => router.push("/shop")}
-                                        >
-                                            Continue Shopping
-                                        </Button>
-                                    </div>
+                                    <EmptyCartRecommendations />
                                 ) : (
                                     <div className="space-y-3">
                                         {guestCart.map((item, idx) => (
@@ -220,25 +197,25 @@ export default function GuestCartPage() {
                                         </div>
 
                                         {/* Your Impact */}
-                                        <div className="mt-4 rounded-lg border border-green-200 bg-green-50/50 p-3">
-                                            <p className="mb-1.5 text-xs font-semibold text-green-800">
-                                                Your Impact
-                                            </p>
-                                            <div className="space-y-1 text-[11px] text-green-700">
-                                                <p className="flex items-center gap-1.5">
-                                                    <Leaf className="size-3" />
-                                                    1.6kg CO₂ saved
+                                        {itemsCount > 0 && (
+                                            <div className="mt-4 rounded-lg border border-green-200 bg-green-50/50 p-3">
+                                                <p className="mb-1.5 text-xs font-semibold text-green-800">
+                                                    Your Impact
                                                 </p>
-                                                <p className="flex items-center gap-1.5">
-                                                    <Recycle className="size-3" />
-                                                    8% materials reused
-                                                </p>
-                                                <p className="flex items-center gap-1.5">
-                                                    <Icons.User className="size-3" />
-                                                    2 artisans supported
-                                                </p>
+                                                <div className="space-y-1 text-[11px] text-green-700">
+                                                    <p className="flex items-center gap-1.5">
+                                                        <Leaf className="size-3" />
+                                                        Impact summary will be
+                                                        calculated from{" "}
+                                                        {itemsCount}{" "}
+                                                        {itemsCount === 1
+                                                            ? "item"
+                                                            : "items"}{" "}
+                                                        in your bag.
+                                                    </p>
+                                                </div>
                                             </div>
-                                        </div>
+                                        )}
 
                                         <Separator className="my-3" />
 

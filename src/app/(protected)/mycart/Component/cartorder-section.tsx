@@ -6,13 +6,6 @@ import {
 } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
-import {
-    EmptyPlaceholder,
-    EmptyPlaceholderContent,
-    EmptyPlaceholderDescription,
-    EmptyPlaceholderIcon,
-    EmptyPlaceholderTitle,
-} from "@/components/ui/empty-placeholder-general";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
 import { cn, handleClientError } from "@/lib/utils";
@@ -20,6 +13,7 @@ import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EmptyCartRecommendations } from "./empty-cart-recommendations";
 import { ProductCartCard } from "./product-cart-card";
 
 interface PageProps extends GenericProps {
@@ -205,28 +199,8 @@ export function CartPage({
 
 function NoCartCard() {
     return (
-        <div className="flex flex-col items-center justify-center gap-5 p-6">
-            <EmptyPlaceholder
-                isBackgroundVisible={false}
-                className="w-full max-w-full border-none"
-            >
-                <EmptyPlaceholderIcon>
-                    <Icons.AlertTriangle className="size-10" />
-                </EmptyPlaceholderIcon>
-
-                <EmptyPlaceholderContent>
-                    <EmptyPlaceholderTitle>
-                        Your cart is empty
-                    </EmptyPlaceholderTitle>
-                    <EmptyPlaceholderDescription>
-                        Continue shopping and keep adding products to your cart.
-                    </EmptyPlaceholderDescription>
-                </EmptyPlaceholderContent>
-
-                <Button asChild>
-                    <Link href="/shop">Continue Shopping</Link>
-                </Button>
-            </EmptyPlaceholder>
+        <div className="space-y-4">
+            <EmptyCartRecommendations />
         </div>
     );
 }
