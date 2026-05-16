@@ -442,6 +442,30 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
+    supportAttachmentUploader: f({
+        "image/jpeg": { maxFileSize: "8MB", maxFileCount: 6 },
+        "image/png": { maxFileSize: "8MB", maxFileCount: 6 },
+        "image/webp": { maxFileSize: "8MB", maxFileCount: 6 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            return {
+                uploaderId: metadata.userId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                url: file.url,
+            };
+        }),
 } satisfies FileRouter;
 
 export type UploadRouter = typeof uploadRouter;

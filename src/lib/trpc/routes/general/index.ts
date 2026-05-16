@@ -7,6 +7,7 @@ export * from "./content";
 export * from "./coupons";
 export * from "./legal";
 export * from "./newsletter-subscribers";
+export * from "./notifications";
 export * from "./orders";
 export * from "./plan";
 export * from "./product-review";

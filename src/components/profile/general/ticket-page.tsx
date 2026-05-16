@@ -1,14 +1,24 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import { Button } from "@/components/ui/button-general";
 import { trpc } from "@/lib/trpc/client";
+import { useUploadThing } from "@/lib/uploadthing";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { AlertCircle, ArrowLeft, CheckCircle, RefreshCw, Send } from "lucide-react";
+import {
+    ArrowLeft,
+    Bell,
+    FileImage,
+    LifeBuoy,
+    Package,
+    Send,
+    Sparkles,
+} from "lucide-react";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import type { ElementType } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { generatePermittedFileTypes } from "uploadthing/client";
 
 interface TicketData {
     id: string;
@@ -18,6 +28,7 @@ interface TicketData {
     issueType: string;
     orderId: string | null;
     createdAt: Date;
+    updatedAt: Date;
     description: string | null;
 }
 
@@ -25,327 +36,522 @@ interface TicketPageProps {
     initialTicket: TicketData;
 }
 
+type UploadedAttachment = {
+    filename: string;
+    url: string;
+    contentType?: string;
+    sizeBytes?: string;
+    fileKey?: string;
+};
+
+const buildSupportCaseTitle = (input: {
+    title?: string | null;
+    issueLabel?: string | null;
+    issueType?: string | null;
+    orderId?: string | null;
+}) => {
+    const baseLabel =
+        input.issueLabel?.trim() ||
+        input.title
+            ?.replace(/\s*\(Order #.+\)\s*$/i, "")
+            .replace(/\s*for order\s+.+$/i, "")
+            .trim() ||
+        input.issueType?.replace(/_/g, " ").trim() ||
+        "Support request";
+
+    return input.orderId ? `${baseLabel} (Order #${input.orderId})` : baseLabel;
+};
+
 export function TicketPage({ initialTicket }: TicketPageProps) {
     const [msgText, setMsgText] = useState("");
-    const chatScrollRef = useRef<HTMLDivElement>(null);
-    const hasInitializedScrollRef = useRef(false);
-    const previousMessageCountRef = useRef(0);
+    const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Ticket data
     const ticketQuery = trpc.general.userSupport.getTicket.useQuery(
         initialTicket.id
     );
     const ticket = ticketQuery.data ?? initialTicket;
 
-    // Messages
     const { data: messages, refetch: refetchMessages } =
         trpc.general.userSupport.getMessages.useQuery(initialTicket.id);
+    const notificationsCountQuery =
+        trpc.general.notifications.unreadCount.useQuery();
 
-    // Send message mutation
+    const { startUpload, routeConfig } = useUploadThing(
+        "supportAttachmentUploader",
+        {
+            onUploadError(error) {
+                toast.error(error.message);
+                setIsUploading(false);
+            },
+        }
+    );
+
     const sendMutation = trpc.general.userSupport.sendMessage.useMutation({
         onSuccess: () => {
             setMsgText("");
+            setAttachments([]);
             refetchMessages();
         },
-        onError: () => {
-            toast.error("Failed to send message");
+        onError: (error) => {
+            toast.error(error.message);
         },
     });
 
-    // Keep chat scrolling inside the chat panel only (not the whole page).
-    useEffect(() => {
-        const container = chatScrollRef.current;
-        if (!container || !messages) return;
+    const uploadAttachments = async (files: File[]) => {
+        setIsUploading(true);
+        try {
+            const uploaded = await startUpload(files);
+            if (!uploaded?.length) throw new Error("Upload failed");
 
-        const currentCount = messages.length;
-
-        if (!hasInitializedScrollRef.current) {
-            hasInitializedScrollRef.current = true;
-            previousMessageCountRef.current = currentCount;
-            return;
+            setAttachments((current) => [
+                ...current,
+                ...uploaded.map((file) => ({
+                    filename: file.name,
+                    url: file.url ?? file.appUrl,
+                    contentType: file.type,
+                    sizeBytes: String(file.size),
+                    fileKey: file.key,
+                })),
+            ]);
+        } catch (error) {
+            toast.error(
+                error instanceof Error ? error.message : "Upload failed"
+            );
+        } finally {
+            setIsUploading(false);
         }
-
-        const hasNewMessage = currentCount > previousMessageCountRef.current;
-        const distanceFromBottom =
-            container.scrollHeight - container.scrollTop - container.clientHeight;
-        const isNearBottom = distanceFromBottom < 140;
-
-        if (hasNewMessage && isNearBottom) {
-            container.scrollTop = container.scrollHeight;
-        }
-
-        previousMessageCountRef.current = currentCount;
-    }, [messages]);
-
-    const isResolved = ticket?.status === "resolved";
-    const hasHumanSupportReply =
-        messages?.some(
-            (msg) => msg.sender === "admin" && msg.senderId !== "support-bot"
-        ) ?? false;
-    const isAssistantHandling =
-        ticket?.category === "order" && !isResolved && !hasHumanSupportReply;
+    };
 
     const handleSend = () => {
-        if (!msgText.trim()) return;
+        if (!msgText.trim() && attachments.length === 0) return;
         sendMutation.mutate({
             ticketId: initialTicket.id,
-            text: msgText.trim(),
+            text: msgText.trim() || "Added supporting attachments",
+            attachments,
         });
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            handleSend();
-        }
-    };
+    const isResolved = ["resolved", "closed", "rejected"].includes(
+        ticket?.status ?? "open"
+    );
+    const order = (ticket as any)?.order ?? null;
+    const dispute = (ticket as any)?.dispute ?? null;
 
-    const statusConfig: Record<
-        string,
-        {
-            color: string;
-            bgColor: string;
-            icon: React.ElementType;
-            label: string;
+    const timelineMessage = useMemo(() => {
+        if (!dispute) return null;
+        if (dispute.replacementOrderId) {
+            return `Replacement order ${dispute.replacementOrderId} was created for this case.`;
         }
-    > = {
-        open: {
-            color: "text-amber-700",
-            bgColor: "bg-amber-50 border-amber-200",
-            icon: AlertCircle,
-            label: "Open",
-        },
-        in_progress: {
-            color: "text-blue-700",
-            bgColor: "bg-blue-50 border-blue-200",
-            icon: RefreshCw,
-            label: "In Progress",
-        },
-        resolved: {
-            color: "text-green-700",
-            bgColor: "bg-green-50 border-green-200",
-            icon: CheckCircle,
-            label: "Resolved",
-        },
-    };
-
-    const config = statusConfig[ticket?.status ?? "open"] ?? statusConfig.open;
-    const StatusIcon = config.icon;
+        if (dispute.status === "approved_for_brand_action") {
+            return "This case has been approved and the brand has been asked to take action.";
+        }
+        return null;
+    }, [dispute]);
 
     return (
-        <div
-            className="flex min-w-0 flex-1 flex-col"
-            style={{ minHeight: 600 }}
-        >
-            {/* Header */}
-            <div className="mb-4">
-                <Link
-                    href="/profile/help-center"
-                    className="mb-3 inline-flex items-center gap-1 text-sm text-blue-600 transition-colors hover:text-blue-700"
-                >
-                    <ArrowLeft className="size-4" />
-                    Back to Help Center
-                </Link>
-
-                <div className="rounded-xl border border-gray-200 bg-white p-5">
-                    <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0 flex-1">
-                            <h1 className="text-lg font-bold text-gray-900">
-                                {ticket?.title}
-                            </h1>
-                            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                                <span className="capitalize">
-                                    {ticket?.category}
-                                </span>
-                                <span>•</span>
-                                <span>
-                                    {ticket?.issueType?.replace(/_/g, " ")}
-                                </span>
-                                {ticket?.orderId && (
-                                    <>
-                                        <span>•</span>
-                                        <span>
-                                            Order #{ticket.orderId.slice(0, 8)}
-                                        </span>
-                                    </>
-                                )}
-                                <span>•</span>
-                                <span>
-                                    {ticket?.createdAt
-                                        ? format(
-                                              new Date(ticket.createdAt),
-                                              "dd MMM yyyy, hh:mm a"
-                                          )
-                                        : ""}
-                                </span>
-                            </div>
-                        </div>
-                        <span
-                            className={cn(
-                                "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold",
-                                config.bgColor,
-                                config.color
-                            )}
+        <div className="space-y-6">
+            <section className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-[#F7FBFF] to-[#EEF5FF] p-6 shadow-sm">
+                <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                        <Link
+                            href="/profile/help-center"
+                            className="inline-flex items-center gap-2 text-sm font-medium text-[#5B9BD5]"
                         >
-                            <StatusIcon className="size-3.5" />
-                            {config.label}
-                        </span>
+                            <ArrowLeft className="size-4" />
+                            Back to help center
+                        </Link>
+
+                        <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[#CFE3F8] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#4A84B8]">
+                            <LifeBuoy className="size-3.5" />
+                            Case {ticket.id.slice(0, 8)}
+                        </div>
+
+                        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+                            {buildSupportCaseTitle({
+                                title: ticket.title,
+                                issueLabel: (ticket as any).issueLabel,
+                                issueType: ticket.issueType,
+                                orderId: ticket.orderId,
+                            })}
+                        </h1>
+                        <p className="mt-2 text-sm text-slate-600">
+                            Created{" "}
+                            {format(
+                                new Date(ticket.createdAt),
+                                "dd MMM yyyy, hh:mm a"
+                            )}
+                        </p>
+                    </div>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                        <SummaryPill
+                            label="Status"
+                            value={ticket.status.replace(/_/g, " ")}
+                        />
+                        <SummaryPill
+                            label="Unread Alerts"
+                            value={String(notificationsCountQuery.data ?? 0)}
+                            href="/profile/notifications"
+                            icon={Bell}
+                        />
                     </div>
                 </div>
-            </div>
+            </section>
 
-            {/* Chat Area */}
-            <div className="flex flex-1 flex-col overflow-hidden rounded-xl border border-gray-200 bg-white">
-                {/* Messages */}
-                <div
-                    ref={chatScrollRef}
-                    className="flex-1 space-y-4 overflow-y-auto p-4"
-                    style={{ maxHeight: 450 }}
-                >
-                    {/* System message */}
-                    <div className="flex justify-center">
-                        <div className="rounded-full bg-gray-100 px-4 py-1.5 text-xs text-gray-500">
-                            Ticket created •{" "}
-                            {ticket?.createdAt
-                                ? format(
-                                      new Date(ticket.createdAt),
-                                      "dd MMM yyyy"
-                                  )
-                                : ""}
+            <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+                <section className="space-y-6">
+                    <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A84B8]">
+                            Case Summary
+                        </p>
+                        <div className="mt-4 space-y-3 text-sm text-slate-600">
+                            <InfoRow label="Category" value={ticket.category} />
+                            <InfoRow
+                                label="Issue"
+                                value={
+                                    (ticket as any).issueLabel ??
+                                    ticket.issueType.replace(/_/g, " ")
+                                }
+                            />
+                            <InfoRow
+                                label="Status"
+                                value={ticket.status.replace(/_/g, " ")}
+                            />
+                            {ticket.orderId && (
+                                <InfoRow label="Order" value={ticket.orderId} />
+                            )}
                         </div>
-                    </div>
-
-                    {messages?.map((msg) => {
-                        const isUser = msg.sender === "user";
-                        const isSupportAssistant =
-                            !isUser && msg.senderId === "support-bot";
-                        return (
-                            <div
-                                key={msg.id}
-                                className={cn(
-                                    "flex",
-                                    isUser ? "justify-end" : "justify-start"
-                                )}
-                            >
-                                <div
-                                    className={cn(
-                                        "max-w-[75%] rounded-2xl px-4 py-3",
-                                        isUser
-                                            ? "rounded-br-md bg-blue-600 text-white"
-                                            : isSupportAssistant
-                                              ? "rounded-bl-md border border-[#D7E7F8] bg-[#F5FAFF] text-gray-900"
-                                              : "rounded-bl-md bg-gray-100 text-gray-900"
-                                    )}
-                                >
-                                    {!isUser && (
-                                        <p
-                                            className={cn(
-                                                "mb-1 text-[10px] font-semibold",
-                                                isSupportAssistant
-                                                    ? "text-[#5B9BD5]"
-                                                    : "text-blue-600"
-                                            )}
-                                        >
-                                            {isSupportAssistant
-                                                ? "Support Assistant"
-                                                : "Support Team"}
-                                        </p>
-                                    )}
-                                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                                        {msg.text}
-                                    </p>
-                                    <p
-                                        className={cn(
-                                            "mt-1.5 text-[10px]",
-                                            isUser
-                                                ? "text-blue-200"
-                                                : "text-gray-400"
-                                        )}
-                                    >
-                                        {format(
-                                            new Date(msg.createdAt),
-                                            "hh:mm a"
-                                        )}
-                                    </p>
+                        {timelineMessage && (
+                            <div className="mt-5 rounded-[20px] border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                                <div className="flex items-start gap-3">
+                                    <Sparkles className="mt-0.5 size-4 shrink-0" />
+                                    <p>{timelineMessage}</p>
                                 </div>
                             </div>
-                        );
-                    })}
+                        )}
+                    </div>
 
-                    {(!messages || messages.length === 0) && (
-                        <div className="flex flex-col items-center justify-center py-8 text-center">
-                            <div className="mb-3 rounded-full bg-blue-50 p-3">
-                                <Send className="size-5 text-blue-400" />
+                    {order && (
+                        <div className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                            <div className="flex items-center gap-3">
+                                <Package className="size-5 text-[#5B9BD5]" />
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A84B8]">
+                                        Linked Order
+                                    </p>
+                                    <h2 className="mt-1 text-lg font-semibold text-slate-900">
+                                        {order.id}
+                                    </h2>
+                                </div>
                             </div>
-                            <p className="text-sm text-gray-500">
-                                {isResolved
-                                    ? "This ticket has been resolved."
-                                    : "Our support team will respond shortly."}
-                            </p>
-                            <p className="mt-1 text-xs text-gray-400">
-                                {isResolved
-                                    ? "Thank you for contacting us."
-                                    : "You'll receive a notification when we reply."}
-                            </p>
+
+                            <div className="mt-4 grid gap-3">
+                                <InfoRow
+                                    label="Order status"
+                                    value={order.status}
+                                />
+                                <InfoRow
+                                    label="Shipment"
+                                    value={
+                                        order.shipments?.[0]?.status ??
+                                        "Pending"
+                                    }
+                                />
+                                <InfoRow
+                                    label="Tracking"
+                                    value={
+                                        order.shipments?.[0]?.awbNumber ??
+                                        order.shipments?.[0]?.trackingNumber ??
+                                        "Not assigned yet"
+                                    }
+                                />
+                            </div>
+
+                            <div className="mt-4 space-y-3">
+                                {order.items.map((item: any) => (
+                                    <div
+                                        key={item.id}
+                                        className="rounded-[20px] border border-slate-200 bg-slate-50 p-4"
+                                    >
+                                        <p className="text-sm font-semibold text-slate-900">
+                                            {item.product.title}
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            Qty {item.quantity} · Brand{" "}
+                                            {item.product.brand.name}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
+                </section>
 
-                    <div className="h-px" />
-                </div>
-
-                {/* Input */}
-                {isResolved ? (
-                    <div className="border-t border-gray-200 bg-gray-50 p-4 text-center">
-                        <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
-                            <CheckCircle className="size-4 text-green-500" />
-                            <span>
-                                This ticket has been resolved. Chat is closed.
-                            </span>
+                <section className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="flex items-center justify-between gap-4">
+                        <div>
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#4A84B8]">
+                                Support Conversation
+                            </p>
+                            <h2 className="mt-2 text-2xl font-semibold text-slate-900">
+                                Messages and proof
+                            </h2>
                         </div>
                     </div>
-                ) : (
-                    <div className="border-t border-gray-200 bg-white p-4">
-                        {isAssistantHandling && (
-                            <div className="mb-3 rounded-xl border border-[#D7E7F8] bg-[#F5FAFF] px-4 py-3 text-sm text-gray-600">
-                                <span className="font-semibold text-[#5B9BD5]">
-                                    Support Assistant:
-                                </span>{" "}
-                                You can keep chatting here. I'll capture your
-                                updates until a support specialist joins.
-                            </div>
-                        )}
-                        <div className="flex items-end gap-3">
+
+                    <div className="mt-6 max-h-[640px] space-y-4 overflow-y-auto pr-1">
+                        {(messages ?? []).map((message: any) => {
+                            const isUser = message.sender === "user";
+                            const isAssistant =
+                                message.sender === "admin" &&
+                                message.senderId === "support-bot";
+
+                            return (
+                                <div
+                                    key={message.id}
+                                    className={cn(
+                                        "flex",
+                                        isUser ? "justify-end" : "justify-start"
+                                    )}
+                                >
+                                    <div
+                                        className={cn(
+                                            "max-w-[80%] rounded-[24px] px-4 py-4 shadow-sm",
+                                            isUser
+                                                ? "rounded-br-md bg-[#5B9BD5] text-white"
+                                                : isAssistant
+                                                  ? "rounded-bl-md border border-blue-200 bg-blue-50 text-slate-900"
+                                                  : "rounded-bl-md border border-slate-200 bg-slate-50 text-slate-900"
+                                        )}
+                                    >
+                                        {!isUser && (
+                                            <p
+                                                className={cn(
+                                                    "mb-2 text-[11px] font-semibold uppercase tracking-[0.16em]",
+                                                    isAssistant
+                                                        ? "text-[#4A84B8]"
+                                                        : "text-slate-500"
+                                                )}
+                                            >
+                                                {isAssistant
+                                                    ? "Support Assistant"
+                                                    : "Support Team"}
+                                            </p>
+                                        )}
+                                        <p className="whitespace-pre-wrap text-sm leading-6">
+                                            {message.text}
+                                        </p>
+
+                                        {!!message.attachments?.length && (
+                                            <div className="mt-4 grid gap-2">
+                                                {message.attachments.map(
+                                                    (attachment: any) => (
+                                                        <a
+                                                            key={attachment.id}
+                                                            href={
+                                                                attachment.url
+                                                            }
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className={cn(
+                                                                "flex items-center gap-3 rounded-2xl border px-3 py-3 text-sm",
+                                                                isUser
+                                                                    ? "border-white/20 bg-white/10 text-white"
+                                                                    : "border-slate-200 bg-white text-slate-700"
+                                                            )}
+                                                        >
+                                                            <FileImage className="size-4 shrink-0" />
+                                                            <span className="truncate">
+                                                                {
+                                                                    attachment.filename
+                                                                }
+                                                            </span>
+                                                        </a>
+                                                    )
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <p
+                                            className={cn(
+                                                "mt-3 text-[11px]",
+                                                isUser
+                                                    ? "text-white/70"
+                                                    : "text-slate-400"
+                                            )}
+                                        >
+                                            {format(
+                                                new Date(message.createdAt),
+                                                "dd MMM, hh:mm a"
+                                            )}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {isResolved ? (
+                        <div className="mt-6 rounded-[22px] border border-slate-200 bg-slate-50 px-5 py-4 text-sm text-slate-600">
+                            This case is closed for new messages. If something
+                            is still wrong, create a fresh support case from the
+                            help center.
+                        </div>
+                    ) : (
+                        <div className="mt-6 space-y-4 border-t border-slate-100 pt-6">
                             <textarea
                                 value={msgText}
-                                onChange={(e) => setMsgText(e.target.value)}
-                                onKeyDown={handleKeyDown}
-                                placeholder={
-                                    isAssistantHandling
-                                        ? "Type your update for Support Assistant..."
-                                        : "Type your message..."
+                                onChange={(event) =>
+                                    setMsgText(event.target.value)
                                 }
-                                rows={1}
-                                className="flex-1 resize-none rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 transition-all placeholder:text-gray-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-100"
-                                style={{ minHeight: 44, maxHeight: 120 }}
+                                rows={4}
+                                placeholder="Add more details, shipment proof, packaging photos, or any follow-up update here."
+                                className="w-full rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-900 outline-none transition focus:border-[#5B9BD5] focus:bg-white"
                             />
-                            <Button
-                                onClick={handleSend}
-                                disabled={
-                                    !msgText.trim() || sendMutation.isPending
-                                }
-                                size="sm"
-                                className="h-11 rounded-xl px-4"
-                            >
-                                {sendMutation.isPending ? (
-                                    <Spinner className="size-4 animate-spin" />
-                                ) : (
-                                    <Send className="size-4" />
+
+                            <div className="rounded-[22px] border border-dashed border-[#BCD5EE] bg-[#F8FBFF] p-4">
+                                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-900">
+                                            Add more proof
+                                        </p>
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            Share more images or screenshots
+                                            with your reply.
+                                        </p>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="rounded-full"
+                                        onClick={() =>
+                                            fileInputRef.current?.click()
+                                        }
+                                        disabled={isUploading}
+                                    >
+                                        {isUploading
+                                            ? "Uploading..."
+                                            : "Add attachment"}
+                                    </Button>
+                                </div>
+
+                                <input
+                                    ref={fileInputRef}
+                                    type="file"
+                                    multiple
+                                    accept={generatePermittedFileTypes(
+                                        routeConfig
+                                    ).fileTypes.join()}
+                                    className="hidden"
+                                    onChange={(event) => {
+                                        const files = Array.from(
+                                            event.target.files ?? []
+                                        );
+                                        if (!files.length) return;
+                                        void uploadAttachments(files);
+                                        event.currentTarget.value = "";
+                                    }}
+                                />
+
+                                {attachments.length > 0 && (
+                                    <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                                        {attachments.map((attachment) => (
+                                            <div
+                                                key={attachment.url}
+                                                className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                                            >
+                                                <div className="flex items-center gap-3">
+                                                    <FileImage className="size-4 text-[#5B9BD5]" />
+                                                    <span className="truncate text-sm text-slate-700">
+                                                        {attachment.filename}
+                                                    </span>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setAttachments(
+                                                            (current) =>
+                                                                current.filter(
+                                                                    (item) =>
+                                                                        item.url !==
+                                                                        attachment.url
+                                                                )
+                                                        )
+                                                    }
+                                                    className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-400 hover:text-slate-700"
+                                                >
+                                                    Remove
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
                                 )}
-                            </Button>
+                            </div>
+
+                            <div className="flex justify-end">
+                                <Button
+                                    onClick={handleSend}
+                                    className="rounded-full px-6"
+                                    disabled={
+                                        sendMutation.isPending ||
+                                        isUploading ||
+                                        (!msgText.trim() &&
+                                            attachments.length === 0)
+                                    }
+                                >
+                                    <Send className="mr-2 size-4" />
+                                    {sendMutation.isPending
+                                        ? "Sending..."
+                                        : "Send update"}
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                )}
+                    )}
+                </section>
             </div>
+        </div>
+    );
+}
+
+function SummaryPill({
+    label,
+    value,
+    href,
+    icon: Icon,
+}: {
+    label: string;
+    value: string;
+    href?: string;
+    icon?: ElementType;
+}) {
+    const content = (
+        <div className="rounded-[24px] border border-[#D6E6F6] bg-white px-5 py-4 shadow-sm">
+            <div className="flex items-center justify-between gap-4">
+                <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4A84B8]">
+                        {label}
+                    </p>
+                    <p className="mt-2 text-lg font-semibold capitalize text-slate-900">
+                        {value}
+                    </p>
+                </div>
+                {Icon ? <Icon className="size-5 text-[#5B9BD5]" /> : null}
+            </div>
+        </div>
+    );
+
+    return href ? <Link href={href}>{content}</Link> : content;
+}
+
+function InfoRow({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                {label}
+            </span>
+            <span className="text-sm font-medium text-slate-900">{value}</span>
         </div>
     );
 }

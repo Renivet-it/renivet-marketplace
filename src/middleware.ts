@@ -7,6 +7,7 @@ import { CachedUser, ResponseData } from "./lib/validations";
 export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
     const res = NextResponse.next();
+    const supportQueue = url.searchParams.get("queue");
 
     if (url.pathname === "/api/webhooks/clerk") return NextResponse.next();
 
@@ -112,9 +113,31 @@ export default clerkMiddleware(async (auth, req) => {
                     )
                         return NextResponse.next();
 
-                    const accessedRoute = routes.find((route) =>
-                        url.pathname.startsWith(route.url)
-                    );
+                    const accessedRoute = routes.find((route) => {
+                        if (
+                            url.pathname === "/dashboard/general/support" &&
+                            supportQueue
+                        ) {
+                            if (
+                                supportQueue === "user" &&
+                                route.url === "/dashboard/general/support/user"
+                            )
+                                return true;
+                            if (
+                                supportQueue === "brand" &&
+                                route.url === "/dashboard/general/support/brand"
+                            )
+                                return true;
+                            if (
+                                supportQueue === "disputes" &&
+                                route.url ===
+                                    "/dashboard/general/support/disputes"
+                            )
+                                return true;
+                        }
+
+                        return url.pathname.startsWith(route.url);
+                    });
                     if (!accessedRoute)
                         return NextResponse.redirect(
                             new URL("/dashboard", url)
@@ -152,9 +175,29 @@ export default clerkMiddleware(async (auth, req) => {
                     url.pathname !==
                     `/dashboard/brands/${existingUser.brand.id}`
                 ) {
-                    const accessedRoute = routes.find((route) =>
-                        url.pathname.startsWith(route.url)
-                    );
+                    const accessedRoute = routes.find((route) => {
+                        if (
+                            url.pathname ===
+                                `/dashboard/brands/${existingUser.brand.id}/support` &&
+                            (supportQueue === "support" ||
+                                supportQueue === "disputes")
+                        ) {
+                            if (
+                                supportQueue === "support" &&
+                                route.url ===
+                                    `/dashboard/brands/${existingUser.brand.id}/support?queue=support`
+                            )
+                                return true;
+                            if (
+                                supportQueue === "disputes" &&
+                                route.url ===
+                                    `/dashboard/brands/${existingUser.brand.id}/support/disputes`
+                            )
+                                return true;
+                        }
+
+                        return url.pathname.startsWith(route.url);
+                    });
                     if (!accessedRoute)
                         return NextResponse.redirect(
                             new URL(

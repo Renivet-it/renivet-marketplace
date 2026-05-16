@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/sidebar";
 import { cn, hasPermission } from "@/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface Props extends GenericProps {
     items: BrandSidebarConfig[];
@@ -35,6 +35,18 @@ export function NavBrand({
     ...props
 }: Props) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    const normalizeSupportUrl = (url: string) => {
+        if (url.endsWith("/support/disputes")) {
+            return url.replace(
+                /\/support\/disputes$/,
+                "/support?queue=disputes"
+            );
+        }
+
+        return url;
+    };
 
     return (
         <SidebarGroup className={cn("px-1.5 py-0", className)} {...props}>
@@ -54,8 +66,18 @@ export function NavBrand({
                         )
                     );
 
-                    const isSubItemActive = (url: string) =>
-                        pathname === url || pathname.startsWith(`${url}/`);
+                    const isSubItemActive = (url: string) => {
+                        const normalizedUrl = normalizeSupportUrl(url);
+
+                        return (
+                            currentUrl === url ||
+                            currentUrl === normalizedUrl ||
+                            pathname === url ||
+                            pathname === normalizedUrl ||
+                            pathname.startsWith(`${url}/`) ||
+                            pathname.startsWith(`${normalizedUrl}/`)
+                        );
+                    };
                     const isItemActive =
                         !!item.url &&
                         (pathname === item.url ||
@@ -78,7 +100,9 @@ export function NavBrand({
                                 <CollapsibleTrigger asChild>
                                     <SidebarMenuButton
                                         tooltip={item.title}
-                                        isActive={isItemActive || hasActiveChild}
+                                        isActive={
+                                            isItemActive || hasActiveChild
+                                        }
                                         className="h-10 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/90 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm"
                                     >
                                         {Icon && <Icon />}

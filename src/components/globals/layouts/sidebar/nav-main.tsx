@@ -19,7 +19,7 @@ import {
 import { BitFieldSitePermission } from "@/config/permissions";
 import { cn, hasPermission } from "@/lib/utils";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 
 interface Props extends GenericProps {
     items: {
@@ -46,6 +46,21 @@ export function NavMain({
     ...props
 }: Props) {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    const normalizeSupportUrl = (url: string) => {
+        if (url === "/dashboard/general/support/user") {
+            return "/dashboard/general/support?queue=user";
+        }
+        if (url === "/dashboard/general/support/brand") {
+            return "/dashboard/general/support?queue=brand";
+        }
+        if (url === "/dashboard/general/support/disputes") {
+            return "/dashboard/general/support?queue=disputes";
+        }
+
+        return url;
+    };
 
     return (
         <SidebarGroup className={cn("px-1.5 py-0", className)} {...props}>
@@ -68,8 +83,18 @@ export function NavMain({
                         )
                     );
 
-                    const isSubItemActive = (url: string) =>
-                        pathname === url || pathname.startsWith(`${url}/`);
+                    const isSubItemActive = (url: string) => {
+                        const normalizedUrl = normalizeSupportUrl(url);
+
+                        return (
+                            currentUrl === url ||
+                            currentUrl === normalizedUrl ||
+                            pathname === url ||
+                            pathname === normalizedUrl ||
+                            pathname.startsWith(`${url}/`) ||
+                            pathname.startsWith(`${normalizedUrl}/`)
+                        );
+                    };
                     const isItemActive =
                         !!item.url &&
                         (pathname === item.url ||
@@ -92,7 +117,9 @@ export function NavMain({
                                 <CollapsibleTrigger asChild>
                                     <SidebarMenuButton
                                         tooltip={item.title}
-                                        isActive={isItemActive || hasActiveChild}
+                                        isActive={
+                                            isItemActive || hasActiveChild
+                                        }
                                         className="relative h-10 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/90 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:font-semibold data-[active=true]:text-sidebar-primary-foreground data-[active=true]:shadow-sm data-[active=true]:before:absolute data-[active=true]:before:inset-y-2 data-[active=true]:before:left-1 data-[active=true]:before:w-1 data-[active=true]:before:rounded-full data-[active=true]:before:bg-sidebar-primary-foreground/90"
                                     >
                                         {Icon && <Icon />}
