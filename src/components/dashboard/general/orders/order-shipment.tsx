@@ -489,7 +489,7 @@ export default function OrderShipment({
                                             Volumetric weight is 0 g, so choose a packing type or enter custom LBH before shipping.
                                         </div>
                                     )}
-                                    {(requiresPackageSelection || packingTypes.length > 0) && (
+                                    {requiresPackageSelection && (
                                         <div className="mt-3 space-y-3">
                                             <select
                                                 value={packageMode}
