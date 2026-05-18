@@ -1,5 +1,3 @@
-import { courierService } from "@/actions/shiprocket/couriers";
-import { is } from "drizzle-orm";
 import { z } from "zod";
 import { addressSchema } from "./address";
 import { orderItemSchema } from "./order-item";
@@ -10,6 +8,24 @@ import {
     returnExchangePolicySchema,
 } from "./product";
 import { userSchema } from "./user";
+
+const coerceDbBoolean = (value: unknown) => {
+    if (value === null || value === undefined) return value;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (["true", "t", "1", "yes", "y"].includes(normalized)) return true;
+        if (["false", "f", "0", "no", "n"].includes(normalized)) return false;
+    }
+
+    return value;
+};
+
+const nullableDbBooleanSchema = z.preprocess(
+    coerceDbBoolean,
+    z.boolean().default(false).nullable().optional()
+);
 
 export const orderSchema = z.object({
     id: z
@@ -62,19 +78,11 @@ export const orderSchema = z.object({
     shiprocketOrderId: z.number().nullable().optional(), // Changed from string to number
     shiprocketShipmentId: z.number().nullable().optional(), // Added new field
     uploadWbn: z.string().nullable().optional(), // Added new field
-    isReturnLabelGenerated: z.boolean().default(false).nullable().optional(),
-    is_return_label_generated: z.boolean().default(false).nullable().optional(),
-    is_replacement_label_generated: z
-        .boolean()
-        .default(false)
-        .nullable()
-        .optional(),
-    isReplacementLabelGenerated: z
-        .boolean()
-        .default(false)
-        .nullable()
-        .optional(),
-    isRto: z.boolean().nullable().default(false).optional(), // Added new field
+    isReturnLabelGenerated: nullableDbBooleanSchema,
+    is_return_label_generated: nullableDbBooleanSchema,
+    is_replacement_label_generated: nullableDbBooleanSchema,
+    isReplacementLabelGenerated: nullableDbBooleanSchema,
+    isRto: nullableDbBooleanSchema, // Added new field
     delhiveryClientId: z.string().nullable().optional(),
     courierName: z.string().nullable().optional(), // Added new field
     delhiverySortCode: z.string().nullable().optional(),
@@ -89,7 +97,7 @@ export const orderSchema = z.object({
     zip: z.string().nullable().optional(),
     phone: z.string().nullable().optional(),
     awbNumber: z.string().nullable().optional(),
-    isAwbGenerated: z.boolean().nullable().optional(),
+    isAwbGenerated: nullableDbBooleanSchema,
     addressId: z
         .string({
             required_error: "Address ID is required",

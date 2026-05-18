@@ -56,6 +56,18 @@ const toNonNegativeInt = (value: unknown) => {
     return Math.max(0, Math.trunc(numeric));
 };
 
+const toBooleanLike = (value: unknown) => {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (["true", "t", "1", "yes", "y"].includes(normalized)) return true;
+        if (["false", "f", "0", "no", "n"].includes(normalized)) return false;
+    }
+
+    return Boolean(value);
+};
+
 const sanitizeOrderQuantities = (order: any) => ({
     ...order,
     items: (order.items ?? []).map((item: any) => ({
@@ -735,7 +747,8 @@ class OrderQuery {
             console.log(ordersForBrand, "ordersForBrandordersForBrand");
 
             return {
-                data: ordersForBrand.map((item) => ({
+                data: ordersForBrand
+                    .map((item) => ({
                     id: item.id,
                     userId: item.userId,
                     firstName: item.firstName,
@@ -751,7 +764,7 @@ class OrderQuery {
                     givenLength: item.givenLength,
                     givenWidth: item.givenWidth,
                     givenHeight: item.givenHeight,
-                    isAwbGenerated: item.isAwbGenerated,
+                    isAwbGenerated: toBooleanLike(item.isAwbGenerated),
                     courierName: item.courierName ?? undefined,
                     receiptId: item.receiptId,
                     paymentId: item.paymentId,
@@ -764,9 +777,9 @@ class OrderQuery {
                     deliveryAmount: item.deliveryAmount,
                     discountAmount: item.discountAmount,
                     totalAmount: item.totalAmount,
-                    isReturnLabelGenerated: item.isReturnLabelGenerated,
+                    isReturnLabelGenerated: toBooleanLike(item.isReturnLabelGenerated),
                     isReplacementLabelGenerated:
-                        item.isReplacementLabelGenerated,
+                        toBooleanLike(item.isReplacementLabelGenerated),
                     street: item.street,
                     city: item.city,
                     state: item.state,
@@ -777,7 +790,11 @@ class OrderQuery {
                     isRto: item.isRto, // ⭐ MAIN FLAG
                     createdAt: item.createdAt,
                     updatedAt: item.updatedAt,
-                })),
+                    }))
+                    .map((item) => ({
+                        ...item,
+                        isRto: toBooleanLike(item.isRto),
+                    })),
                 total,
             };
         } catch (error) {
