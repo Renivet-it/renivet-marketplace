@@ -1,7 +1,29 @@
 import { z } from "zod";
 import { brandSchema } from "./brand";
 import { orderSchema } from "./order";
-import { is } from "drizzle-orm";
+
+const coerceDbBoolean = (value: unknown) => {
+    if (value === null || value === undefined) return value;
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value !== 0;
+    if (typeof value === "string") {
+        const normalized = value.trim().toLowerCase();
+        if (["true", "t", "1", "yes", "y"].includes(normalized)) return true;
+        if (["false", "f", "0", "no", "n"].includes(normalized)) return false;
+    }
+
+    return value;
+};
+
+const dbBooleanSchema = z.preprocess(
+    coerceDbBoolean,
+    z.boolean().default(false)
+);
+
+const nullableDbBooleanSchema = z.preprocess(
+    coerceDbBoolean,
+    z.boolean().default(false).nullable().optional()
+);
 
 export const orderShipmentSchema = z.object({
     id: z.string().uuid(),
@@ -71,7 +93,7 @@ export const orderShipmentSchema = z.object({
     labelUrl: z.string().nullable(),
     manifestUrl: z.string().nullable(),
     invoiceUrl: z.string().nullable(),
-    isPickupScheduled: z.boolean().default(false),
+    isPickupScheduled: dbBooleanSchema,
     pickupScheduledDate: z
         .union([z.string(), z.date()], {
             invalid_type_error: "Pickup scheduled date must be a date",
@@ -79,13 +101,13 @@ export const orderShipmentSchema = z.object({
         .transform((v) => new Date(v))
         .nullable(),
     pickupTokenNumber: z.string().nullable(),
-    isAwbGenerated: z.boolean().default(false),
-    isReturnLabelGenerated: z.boolean().default(false).nullable().optional(),
-    is_return_label_generated: z.boolean().default(false).nullable().optional(),
-    is_replacement_label_generated: z.boolean().default(false).nullable().optional(),
-    isReplacementLabelGenerated: z.boolean().default(false).nullable().optional(),
-    isRto: z.boolean().default(false).nullable().optional(),
-    isRtoReturn: z.boolean().default(false),
+    isAwbGenerated: dbBooleanSchema,
+    isReturnLabelGenerated: nullableDbBooleanSchema,
+    is_return_label_generated: nullableDbBooleanSchema,
+    is_replacement_label_generated: nullableDbBooleanSchema,
+    isReplacementLabelGenerated: nullableDbBooleanSchema,
+    isRto: nullableDbBooleanSchema,
+    isRtoReturn: dbBooleanSchema,
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",
