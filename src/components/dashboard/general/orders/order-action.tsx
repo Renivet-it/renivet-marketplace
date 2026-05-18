@@ -28,33 +28,179 @@ import { toast } from "sonner";
 import OrderShipment from "./order-shipment";
 import { TableOrder } from "./orders-table";
 
+const volumetricWeightGrams = (
+    length?: number | null,
+    width?: number | null,
+    height?: number | null
+) => {
+    if (!length || !width || !height) return 0;
+    return Math.round((length * width * height) / 5);
+};
+
+const resolveBrandPackingRule = (order: TableOrder) => {
+    const orderItem = order.items[0];
+    const product = orderItem?.product;
+
+    if (!product?.brand?.packingRules?.length) return null;
+
+    return (
+        product.brand.packingRules.find(
+            (rule) => rule.productTypeId === product.productTypeId
+        ) ?? null
+    );
+};
+
+const buildDimensionsFromPackingType = ({
+    productLength,
+    productWidth,
+    productHeight,
+    packingType,
+}: {
+    productLength: number;
+    productWidth: number;
+    productHeight: number;
+    packingType?: {
+        name?: string | null;
+        baseLength: number;
+        baseWidth: number;
+        baseHeight: number;
+    } | null;
+}) => {
+    if (!packingType) {
+        return { length: 0, width: 0, height: 0, volumetricWeight: 0 };
+    }
+
+    const packingTypeName = packingType.name?.toLowerCase() ?? "";
+    const isHardOrFragileBox =
+        packingTypeName === "hard box" || packingTypeName === "fragile box";
+    const length = isHardOrFragileBox
+        ? productLength + packingType.baseLength
+        : packingType.baseLength;
+    const width = isHardOrFragileBox
+        ? productWidth + packingType.baseWidth
+        : packingType.baseWidth;
+    const height = isHardOrFragileBox
+        ? productHeight + packingType.baseHeight
+        : packingType.baseHeight;
+
+    return {
+        length,
+        width,
+        height,
+        volumetricWeight:
+            length > 0 && width > 0 && height > 0
+                ? volumetricWeightGrams(length, width, height)
+                : 0,
+    };
+};
+
 interface PageProps {
     order: TableOrder;
     onAction: () => void;
 }
 
 export function OrderAction({ order, onAction }: PageProps) {
+    const shipment = order.shipments?.[0];
     const {
         data: orderShipmentDetails,
         refetch: refetchOrderShipmentDetails
     } = trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery(
         {
-            shipmentId: order.shipments?.[0]?.shiprocketShipmentId
-                ? Number(order.shipments[0].shiprocketShipmentId)
+            shipmentId: shipment?.shiprocketShipmentId
+                ? Number(shipment.shiprocketShipmentId)
                 : 0,
         },
         {
-            enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
+            enabled: !!shipment?.shiprocketShipmentId,
         }
     );
-const isDelhivery = Boolean(order?.shipments?.[0]?.uploadWbn);
+    const isDelhivery = Boolean(shipment?.uploadWbn || shipment?.awbNumber);
+    const shipmentStatus = shipment?.status ?? "";
+    const isShipmentScheduled = Boolean(shipment?.isPickupScheduled);
+    const packingRule = resolveBrandPackingRule(order);
+    const { data: packingTypesData } = trpc.general.packingTypes.getAll.useQuery(
+        { page: 1, limit: 100 },
+        { enabled: isDelhivery }
+    );
+    const orderItem = order.items[0];
+    const dimensionSource = orderItem?.variant ?? orderItem?.product;
+    const quantity = orderItem?.quantity ?? 1;
+    const productLength = Number(dimensionSource?.length ?? 0);
+    const productWidth = Number(dimensionSource?.width ?? 0);
+    const productHeight = Number(dimensionSource?.height ?? 0) * quantity;
+    const savedLength = shipment?.givenLength ?? order.givenLength ?? 0;
+    const savedWidth = shipment?.givenWidth ?? order.givenWidth ?? 0;
+    const savedHeight = shipment?.givenHeight ?? order.givenHeight ?? 0;
+    const savedVolumetricWeight = volumetricWeightGrams(
+        savedLength,
+        savedWidth,
+        savedHeight
+    );
+    const requiresPackageSelection =
+        isDelhivery && savedVolumetricWeight <= 0;
+    const packingTypes = packingTypesData?.data ?? [];
+    const shouldShowShipNow =
+        Boolean(shipment) &&
+        !isShipmentScheduled &&
+        ![
+            "in_transit",
+            "out_for_delivery",
+            "delivered",
+            "cancelled",
+            "rto_initiated",
+            "rto_delivered",
+        ].includes(shipmentStatus);
 
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
     const [isSheetOpen, setIsSheetOpen] = useState(false);
+    const [isPackageModalOpen, setIsPackageModalOpen] = useState(false);
     const [isAwbGenerated, setIsAwbGenerated] = useState(false);
     const [isShipmentGenerated, setIsShipmentGenerated] = useState(false);
+    const [packageMode, setPackageMode] = useState<
+        "saved" | "packing_type" | "custom"
+    >(requiresPackageSelection ? "packing_type" : "saved");
+    const [selectedPackingTypeId, setSelectedPackingTypeId] = useState(
+        packingRule?.packingType?.id ?? ""
+    );
+    const [customLength, setCustomLength] = useState("");
+    const [customWidth, setCustomWidth] = useState("");
+    const [customHeight, setCustomHeight] = useState("");
+
+    const selectedPackingType =
+        packingTypes.find((packingType) => packingType.id === selectedPackingTypeId) ??
+        (selectedPackingTypeId === packingRule?.packingType?.id
+            ? packingRule?.packingType
+            : null) ??
+        null;
+    const packingTypeDimensions = buildDimensionsFromPackingType({
+        productLength,
+        productWidth,
+        productHeight,
+        packingType: selectedPackingType,
+    });
+    const customDimensions = {
+        length: Number(customLength) || 0,
+        width: Number(customWidth) || 0,
+        height: Number(customHeight) || 0,
+    };
+    const customVolumetricWeight =
+        customDimensions.length > 0 &&
+        customDimensions.width > 0 &&
+        customDimensions.height > 0
+            ? volumetricWeightGrams(
+                  customDimensions.length,
+                  customDimensions.width,
+                  customDimensions.height
+              )
+            : 0;
+    const selectedVolumetricWeight =
+        packageMode === "custom"
+            ? customVolumetricWeight
+            : packageMode === "packing_type"
+              ? packingTypeDimensions.volumetricWeight
+              : savedVolumetricWeight;
 
     useEffect(() => {
         console.log("Order Shipment Details:", order);
@@ -69,6 +215,38 @@ const isDelhivery = Boolean(order?.shipments?.[0]?.uploadWbn);
             setIsShipmentGenerated(shipmentGenerated);
         }
     }, [orderShipmentDetails]);
+
+    useEffect(() => {
+        setPackageMode(requiresPackageSelection ? "packing_type" : "saved");
+        setSelectedPackingTypeId(packingRule?.packingType?.id ?? "");
+    }, [packingRule?.packingType?.id, requiresPackageSelection]);
+
+    const handleShipNowClick = () => {
+        if (requiresPackageSelection) {
+            setIsPackageModalOpen(true);
+            return;
+        }
+
+        setIsSheetOpen(true);
+    };
+
+    const continueToShipNow = () => {
+        if (packageMode === "packing_type" && !selectedPackingTypeId) {
+            toast.error("Please select a packing type.");
+            return;
+        }
+
+        if (
+            (packageMode === "packing_type" || packageMode === "custom") &&
+            selectedVolumetricWeight <= 0
+        ) {
+            toast.error("Please enter valid package dimensions.");
+            return;
+        }
+
+        setIsPackageModalOpen(false);
+        setIsSheetOpen(true);
+    };
 // Frontend download function
 const downloadDelhiveryLabel = async () => {
   try {
@@ -280,10 +458,14 @@ const downloadDelhiveryInvoice = async () => {
 
         <DropdownMenuGroup>
             {/* 🚚 SHIP NOW — SHOW ONLY WHEN PICKUP NOT DONE */}
-            {!order?.shipments[0]?.isPickupScheduled === true && (
-                <DropdownMenuItem onClick={() => setIsSheetOpen(true)}>
+            {shouldShowShipNow && (
+                <DropdownMenuItem onClick={handleShipNowClick}>
                     <Icons.Truck className="size-4" />
-                    <span>Ship Now</span>
+                    <span>
+                        {requiresPackageSelection
+                            ? "Choose Package & Ship"
+                            : "Ship Now"}
+                    </span>
                 </DropdownMenuItem>
             )}
 
@@ -296,7 +478,7 @@ const downloadDelhiveryInvoice = async () => {
             {/* ===============================
                🚚 DELHIVERY LABEL LOGIC
                =============================== */}
-            {isDelhivery && order?.shipments[0]?.isPickupScheduled === true && (
+            {isDelhivery && isShipmentScheduled && (
                 <DropdownMenuItem onClick={() => setIsLabelModalOpen(true)}>
                     <Icons.Tag className="size-4" />
                     <span>Download Label</span>
@@ -324,6 +506,141 @@ const downloadDelhiveryInvoice = async () => {
 
     </DropdownMenuContent>
 </DropdownMenu>
+
+            <Dialog
+                open={isPackageModalOpen}
+                onOpenChange={setIsPackageModalOpen}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Choose Package Details</DialogTitle>
+                        <DialogDescription>
+                            This Delhivery order has 0 g volumetric weight. Pick a
+                            packing type or enter custom LBH before shipping.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 text-sm">
+                        <div className="text-xs text-slate-600">
+                            Saved package: {savedLength} x {savedWidth} x {savedHeight} cm |{" "}
+                            {savedVolumetricWeight} g
+                        </div>
+
+                        <select
+                            value={packageMode}
+                            onChange={(event) =>
+                                setPackageMode(
+                                    event.target.value as
+                                        | "saved"
+                                        | "packing_type"
+                                        | "custom"
+                                )
+                            }
+                            className="w-full rounded-md border p-2 text-sm"
+                        >
+                            {!requiresPackageSelection && (
+                                <option value="saved">Use saved package</option>
+                            )}
+                            <option value="packing_type">Select packing type</option>
+                            <option value="custom">Custom LBH</option>
+                        </select>
+
+                        {packageMode === "packing_type" && (
+                            <div className="space-y-2">
+                                <select
+                                    value={selectedPackingTypeId}
+                                    onChange={(event) =>
+                                        setSelectedPackingTypeId(event.target.value)
+                                    }
+                                    className="w-full rounded-md border p-2 text-sm"
+                                >
+                                    <option value="">Select packing type</option>
+                                    {packingRule?.packingType && (
+                                        <option value={packingRule.packingType.id}>
+                                            {packingRule.packingType.name} (Suggested)
+                                        </option>
+                                    )}
+                                    {packingTypes
+                                        .filter(
+                                            (packingType) =>
+                                                packingType.id !==
+                                                packingRule?.packingType?.id
+                                        )
+                                        .map((packingType) => (
+                                            <option
+                                                key={packingType.id}
+                                                value={packingType.id}
+                                            >
+                                                {packingType.name}
+                                            </option>
+                                        ))}
+                                </select>
+
+                                <div className="text-xs text-slate-600">
+                                    Calculated: {packingTypeDimensions.length} x{" "}
+                                    {packingTypeDimensions.width} x{" "}
+                                    {packingTypeDimensions.height} cm |{" "}
+                                    {packingTypeDimensions.volumetricWeight} g
+                                </div>
+                            </div>
+                        )}
+
+                        {packageMode === "custom" && (
+                            <div className="space-y-2">
+                                <div className="grid grid-cols-3 gap-2">
+                                    <input
+                                        value={customLength}
+                                        onChange={(event) =>
+                                            setCustomLength(event.target.value)
+                                        }
+                                        placeholder="Length"
+                                        className="rounded-md border p-2 text-sm"
+                                        inputMode="numeric"
+                                    />
+                                    <input
+                                        value={customWidth}
+                                        onChange={(event) =>
+                                            setCustomWidth(event.target.value)
+                                        }
+                                        placeholder="Width"
+                                        className="rounded-md border p-2 text-sm"
+                                        inputMode="numeric"
+                                    />
+                                    <input
+                                        value={customHeight}
+                                        onChange={(event) =>
+                                            setCustomHeight(event.target.value)
+                                        }
+                                        placeholder="Height"
+                                        className="rounded-md border p-2 text-sm"
+                                        inputMode="numeric"
+                                    />
+                                </div>
+
+                                <div className="text-xs text-slate-600">
+                                    Calculated: {customDimensions.length} x{" "}
+                                    {customDimensions.width} x {customDimensions.height} cm |{" "}
+                                    {customVolumetricWeight} g
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="text-xs font-medium text-slate-700">
+                            Selected volumetric weight: {selectedVolumetricWeight} g
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsPackageModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={continueToShipNow}>
+                            Continue to Ship Now
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
 
 
@@ -412,6 +729,13 @@ const downloadDelhiveryInvoice = async () => {
             <OrderShipment
                 isSheetOpen={isSheetOpen}
                 setIsSheetOpen={setIsSheetOpen}
+                initialPackageSelection={{
+                    packageMode,
+                    selectedPackingTypeId,
+                    customLength,
+                    customWidth,
+                    customHeight,
+                }}
                 onShipmentSuccessRefetchOrder={async () => {
                     await refetchOrderShipmentDetails();
                     setIsSheetOpen(false); // ✅ Close after success

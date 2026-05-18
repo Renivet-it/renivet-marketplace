@@ -81,6 +81,11 @@ console.log(productData, "productData");
             setIsShipmentGenerated(shipmentGenerated);
         }
     }, [orderShipmentDetails]);
+    const shouldShowShipNow =
+        !isShipmentGenerated &&
+        order.status !== "cancelled" &&
+        order.status !== "delivered" &&
+        order.status !== "shipped";
 console.log(order, "orders");
     // ------------------------------------------------------
     // 2. DELHIVERY DOWNLOAD INVOICE
@@ -222,7 +227,7 @@ console.log(order, "orders");
                     <DropdownMenuLabel>Actions</DropdownMenuLabel>
 
                     <DropdownMenuGroup>
-                        {!isShipmentGenerated && order.status !== "cancelled" && order.status !== "delivered" && order.status !== "shipped" && (
+                        {shouldShowShipNow && (
                             <DropdownMenuItem
                                 onClick={() => setIsSheetOpen(true)}
                             >

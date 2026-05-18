@@ -95,6 +95,7 @@ const getPaymentStatusClassName = (status: TableOrder["paymentStatus"]) =>
 
 const getShipmentStatusClassName = (status?: string | null) =>
     ({
+        ready_to_pickup: "border-amber-200 bg-amber-50 text-amber-700",
         pending: "border-amber-200 bg-amber-50 text-amber-700",
         processing: "border-sky-200 bg-sky-50 text-sky-700",
         pickup_scheduled: "border-violet-200 bg-violet-50 text-violet-700",
@@ -106,6 +107,18 @@ const getShipmentStatusClassName = (status?: string | null) =>
         rto_delivered: "border-stone-200 bg-stone-50 text-stone-700",
         failed: "border-rose-200 bg-rose-50 text-rose-700",
     })[status ?? ""] ?? "border-slate-200 bg-slate-50 text-slate-700";
+
+const getShipmentDisplayStatus = (shipment?: TableOrder["shipments"][number]) => {
+    if (!shipment?.status) return null;
+
+    if (shipment.status === "pending") {
+        return shipment.isPickupScheduled
+            ? "pickup_scheduled"
+            : "ready_to_pickup";
+    }
+
+    return shipment.status;
+};
 
 const volumetricWeightGrams = (
     length?: number | null,
@@ -249,6 +262,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                 width,
                 height
             );
+            const shipmentDisplayStatus = getShipmentDisplayStatus(shipment);
 
             return (
                 <div className="min-w-[220px] space-y-1.5">
@@ -282,11 +296,11 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                         variant="outline"
                         className={cn(
                             "rounded px-2 py-0.5 font-medium",
-                            getShipmentStatusClassName(shipment?.status)
+                            getShipmentStatusClassName(shipmentDisplayStatus)
                         )}
                     >
-                        {shipment?.status
-                            ? convertValueToLabel(shipment.status)
+                        {shipmentDisplayStatus
+                            ? convertValueToLabel(shipmentDisplayStatus)
                             : "Shipment Pending"}
                     </Badge>
                 </div>
