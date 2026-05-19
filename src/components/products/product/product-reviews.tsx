@@ -6,8 +6,10 @@ import { format } from "date-fns";
 import {
     CheckCircle2,
     ChevronDown,
+    Gift,
     Image as ImageIcon,
     Loader2,
+    ShoppingBag,
     SlidersHorizontal,
     Star,
 } from "lucide-react";
@@ -20,13 +22,14 @@ type SortBy = "newest" | "highest" | "lowest";
 
 interface ProductReviewsProps {
     productId: string;
+    userId?: string;
 }
 
 function isPublicReviewAttribute(attribute: { label: string }) {
     return attribute.label.toLowerCase() !== "variant";
 }
 
-export function ProductReviews({ productId }: ProductReviewsProps) {
+export function ProductReviews({ productId, userId }: ProductReviewsProps) {
     const [activeFilter, setActiveFilter] = useState<ActiveFilter>("all");
     const [sortBy, setSortBy] = useState<SortBy>("newest");
     const [visibleCount, setVisibleCount] = useState(3);
@@ -44,6 +47,16 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
         const total = reviews.reduce((acc, review) => acc + review.rating, 0);
         return Number((total / reviews.length).toFixed(1));
     }, [reviews]);
+
+    // Determine buyer status for auth-aware CTA — only query when a userId exists.
+    const { data: eligibility } =
+        trpc.general.customerReviews.getReviewEligibility.useQuery(
+            { productId },
+            { enabled: !!userId, retry: false }
+        );
+
+    const isPastBuyer = !!userId && (eligibility?.canReview ?? false);
+    const isLoggedIn = !!userId;
 
     const filteredReviews = useMemo(() => {
         const filtered = reviews.filter((review) => {
@@ -119,7 +132,7 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                             </div>
                         ) : (
                             <p className="mt-4 text-sm text-neutral-500">
-                                No reviews available.
+                                Be the first to review this product.
                             </p>
                         )}
                     </div>
@@ -194,14 +207,72 @@ export function ProductReviews({ productId }: ProductReviewsProps) {
                         ))}
                     </div>
                 ) : filteredReviews.length === 0 ? (
+                    // ── Zero-reviews empty state (auth-aware) ──────────────────────────
                     <div className="rounded-2xl border border-neutral-200 bg-[#fcfbf7] px-6 py-14 text-center">
-                        <h3 className="text-lg font-semibold text-neutral-900">
-                            No reviews available.
-                        </h3>
-                        <p className="mt-2 text-sm text-neutral-500">
-                            Reviews from verified buyers will appear here after
-                            approval.
-                        </p>
+                        {/* Icon */}
+                        <div className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-full border border-[#e8dfd4] bg-white shadow-sm">
+                            <Star className="size-6 fill-[#c8a97a] text-[#c8a97a]" />
+                        </div>
+
+                        {isPastBuyer ? (
+                            // ── Past buyer: earn-credits incentive + write-review CTA ──
+                            <>
+                                <h3 className="text-lg font-semibold text-neutral-900">
+                                    Be the first to review — earn{" "}
+                                    <span className="text-[#a07850]">100 Renivet credits</span>
+                                </h3>
+                                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
+                                    You&apos;ve purchased this product. Share your
+                                    experience and help fellow shoppers — and earn
+                                    100 credits toward your next order.
+                                </p>
+                                <div className="mt-6 flex flex-col items-center gap-3">
+                                    <WriteReviewModal productId={productId} />
+                                    <p className="flex items-center gap-1.5 text-xs text-[#a07850]">
+                                        <Gift className="size-3.5" />
+                                        100 Renivet credits credited on approval
+                                    </p>
+                                </div>
+                            </>
+                        ) : isLoggedIn ? (
+                            // ── Logged-in non-buyer: encourage a purchase first ────────
+                            <>
+                                <h3 className="text-lg font-semibold text-neutral-900">
+                                    No reviews yet — be the first
+                                </h3>
+                                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
+                                    Reviews are written by verified buyers. Purchase
+                                    this product and share your honest experience to
+                                    earn{" "}
+                                    <span className="font-semibold text-[#a07850]">
+                                        100 Renivet credits
+                                    </span>
+                                    .
+                                </p>
+                                <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-neutral-400">
+                                    <ShoppingBag className="size-3.5" />
+                                    Only verified buyers can write reviews
+                                </p>
+                            </>
+                        ) : (
+                            // ── Guest / not logged in: soft invitation ────────────────
+                            <>
+                                <h3 className="text-lg font-semibold text-neutral-900">
+                                    No reviews yet — yours could be first
+                                </h3>
+                                <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-neutral-500">
+                                    Purchase this product and earn{" "}
+                                    <span className="font-semibold text-[#a07850]">
+                                        100 Renivet credits
+                                    </span>{" "}
+                                    by sharing your honest review.
+                                </p>
+                                <p className="mt-5 flex items-center justify-center gap-1.5 text-xs text-neutral-400">
+                                    <ShoppingBag className="size-3.5" />
+                                    Verified buyers earn credits for every approved review
+                                </p>
+                            </>
+                        )}
                     </div>
                 ) : (
                     <div className="grid gap-x-12 gap-y-12 md:grid-cols-2 lg:grid-cols-3">

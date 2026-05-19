@@ -9,6 +9,7 @@ import type { MouseEvent, ReactNode } from "react";
 import { useEffect, useRef, useState } from "react";
 
 const REDIRECT_DELAY_MS = 220;
+const SALE_CATEGORY_HREF = "https://renivet.com/shop?minDiscount=10";
 
 interface StripLoaderLinkProps {
     href: string;
@@ -129,7 +130,7 @@ export function MobileCategories() {
             link: "https://renivet.com/shop?categoryId=16d40bb3-3061-4790-b9b7-253cb078dfe1&subcategoryId=f050d1bc-f435-45fc-ac22-47942a4d4a74",
         },
         {
-            title: "Foot Wear",
+            title: "Footwear",
             subtitle: "Step out in style with premium quality.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN8g1QARjj1qpSPZJEOTHVgaenl2yArM78zCkm",
@@ -169,7 +170,7 @@ export function MobileCategories() {
             subtitle: "The best deals of the season.",
             imageUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNmKiAnjNpGL6AgslOfF3vz5Wa1NUerQXMBIPZ",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
+            link: SALE_CATEGORY_HREF,
         },
     ];
 
@@ -179,7 +180,7 @@ export function MobileCategories() {
                 {/* Header Section */}
                 <div className="mb-5 flex flex-col items-start md:mb-6">
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
-                        Discover products you can trust
+                        Curated departments
                     </span>
                     <div className="mt-2 flex w-full items-center justify-between">
                         <h2 className="font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">

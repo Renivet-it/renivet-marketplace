@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { Icons } from "@/components/icons";
 import { RenivetFull } from "@/components/svgs";
@@ -37,10 +37,7 @@ import {
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
-import {
-    AnimatePresence,
-    motion,
-} from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useMemo, useState } from "react";
@@ -55,7 +52,7 @@ function useGuestCart() {
         if (stored) setGuestCart(JSON.parse(stored));
     }, []);
 
-    // 🔥 Listen for custom events to update cart
+    // ðŸ”¥ Listen for custom events to update cart
     useEffect(() => {
         const handleCartUpdate = () => {
             const stored = localStorage.getItem("guest_cart");
@@ -89,7 +86,7 @@ function useGuestCart() {
                 updated = [...prev, item];
             }
             localStorage.setItem("guest_cart", JSON.stringify(updated));
-            // 🔥 Dispatch event to notify other components
+            // ðŸ”¥ Dispatch event to notify other components
             window.dispatchEvent(new Event("guestCartUpdated"));
             return updated;
         });
@@ -132,6 +129,22 @@ function NavbarActionButton({
         </Link>
     );
 }
+
+const ANNOUNCEMENT_MESSAGES = [
+    {
+        icon: Icons.Truck,
+        text: "Free shipping on orders Rs. 999+",
+    },
+    {
+        icon: Icons.Tag,
+        text: "Use RENIVET10 for 10% off your first order",
+    },
+    {
+        icon: Icons.Shield,
+        text: "Verified sustainable brands | Easy returns",
+    },
+];
+
 export function NavbarHome({
     customLogo,
 }: { customLogo?: React.ReactNode } = {}) {
@@ -342,50 +355,24 @@ export function NavbarHome({
                 className="sticky inset-x-0 top-0 z-50 flex h-auto w-full flex-col items-center justify-center border bg-[rgba(255,255,255,0.96)] shadow-[0_10px_30px_-28px_rgba(15,23,42,0.18)] backdrop-blur-xl"
                 data-menu-open={isMenuOpen}
             >
-                {/* 🔵 DISCOUNT STRIP — GLOBALLY ABOVE NAVBAR */}
                 <div className="order-2 w-full overflow-hidden border-t border-[#244136] bg-[#244136] md:order-1 md:border-none">
-                    <div
-                        className="text-11 tracking-[0.08em] text-[#f8fafc] md:text-xs"
-                        style={{
-                            display: "inline-flex",
-                            whiteSpace: "nowrap",
-                            gap: "40px",
-                            padding: "8px 0",
-                            fontWeight: 600,
-                            animation: "discountMarquee 120s linear infinite",
-                        }}
-                    >
-                        {Array.from({ length: 8 }).map((_, i) => (
-                            <span key={i} className="flex items-center gap-[40px]">
-                                <span className="flex items-center gap-2">
-                                    <Icons.Truck className="size-4" />
-                                    <span>Free Delivery on Your 1st Conscious Choice</span>
-                                </span>
-                                <span>•</span>
-                                <span className="flex items-center gap-2">
-                                    <Icons.Ticket className="size-4" />
-                                    <span>
-                                        Flat 20% Off on Orders Above ₹3,000 – Use <strong>TRYNEW20</strong>
-                                    </span>
-                                </span>
-                                <span>•</span>
-                                <span className="flex items-center gap-2">
-                                    <Icons.Tag className="size-4" />
-                                    <span>
-                                        Flat 10% Off For Your First Conscious Choice – Use <strong>RENIVET10</strong>
-                                    </span>
-                                </span>
-                                <span>•</span>
-                                <span className="flex items-center gap-2">
-                                    <Icons.Shield className="size-4" />
-                                    <span>Verified Sustainable Brands & Easy Returns</span>
-                                </span>
-                                <span>•</span>
-                            </span>
-                        ))}
+                    <div className="relative h-9 overflow-hidden text-11 font-semibold tracking-[0.08em] text-[#f8fafc] md:h-8 md:text-xs">
+                        {ANNOUNCEMENT_MESSAGES.map(
+                            ({ icon: Icon, text }, index) => (
+                                <div
+                                    key={text}
+                                    className="announcement-rotator-item absolute inset-0 flex items-center justify-center gap-2 px-4 text-center"
+                                    style={{
+                                        animationDelay: `${index * 4}s`,
+                                    }}
+                                >
+                                    <Icon className="size-4 shrink-0" />
+                                    <span>{text}</span>
+                                </div>
+                            )
+                        )}
                     </div>
                 </div>
-
                 <nav
                     className={cn(
                         "relative z-10 order-1 flex w-full max-w-[100rem] items-center justify-between gap-2 px-2 py-3 sm:gap-4 sm:px-4 md:order-2 md:px-8 xl:px-10",
@@ -584,7 +571,9 @@ export function NavbarHome({
                                                                                 Explore
                                                                             </p>
                                                                             <h3 className="mt-1 font-dmsans text-[24px] font-semibold tracking-[0.01em] text-[#111827]">
-                                                                                {category.name}
+                                                                                {
+                                                                                    category.name
+                                                                                }
                                                                             </h3>
                                                                         </div>
                                                                         <Link
@@ -599,180 +588,181 @@ export function NavbarHome({
                                                                             }
                                                                             className="font-outfit inline-flex items-center gap-2 rounded-full border border-[#d1d5db] bg-white px-4 py-2 text-12 font-semibold uppercase tracking-[0.12em] text-[#374151] transition-colors hover:border-[#9ca3af] hover:text-[#111827]"
                                                                         >
-                                                                            Shop all
+                                                                            Shop
+                                                                            all
                                                                             <Icons.ArrowRight className="size-3.5" />
                                                                         </Link>
                                                                     </div>
 
                                                                     <div className="grid w-[1180px] max-w-[95vw] grid-cols-4 font-dmsans">
-                                                                    {(() => {
-                                                                        const filteredSubCategories =
-                                                                            subcategories.data
-                                                                                .filter(
-                                                                                    (
-                                                                                        sub
-                                                                                    ) =>
-                                                                                        sub.categoryId ===
-                                                                                            category.id &&
-                                                                                        productTypes.data.some(
-                                                                                            (
-                                                                                                pt
-                                                                                            ) =>
-                                                                                                pt.subCategoryId ===
-                                                                                                    sub.id &&
-                                                                                                (pt.productCount ??
-                                                                                                    0) >
-                                                                                                    0
-                                                                                        )
-                                                                                )
-                                                                                .sort(
-                                                                                    (
-                                                                                        a,
-                                                                                        b
-                                                                                    ) => {
-                                                                                        const rankA =
-                                                                                            a.rank ||
-                                                                                            Infinity;
-                                                                                        const rankB =
-                                                                                            b.rank ||
-                                                                                            Infinity;
-                                                                                        if (
-                                                                                            rankA !==
-                                                                                            rankB
-                                                                                        ) {
-                                                                                            return (
-                                                                                                rankA -
+                                                                        {(() => {
+                                                                            const filteredSubCategories =
+                                                                                subcategories.data
+                                                                                    .filter(
+                                                                                        (
+                                                                                            sub
+                                                                                        ) =>
+                                                                                            sub.categoryId ===
+                                                                                                category.id &&
+                                                                                            productTypes.data.some(
+                                                                                                (
+                                                                                                    pt
+                                                                                                ) =>
+                                                                                                    pt.subCategoryId ===
+                                                                                                        sub.id &&
+                                                                                                    (pt.productCount ??
+                                                                                                        0) >
+                                                                                                        0
+                                                                                            )
+                                                                                    )
+                                                                                    .sort(
+                                                                                        (
+                                                                                            a,
+                                                                                            b
+                                                                                        ) => {
+                                                                                            const rankA =
+                                                                                                a.rank ||
+                                                                                                Infinity;
+                                                                                            const rankB =
+                                                                                                b.rank ||
+                                                                                                Infinity;
+                                                                                            if (
+                                                                                                rankA !==
                                                                                                 rankB
+                                                                                            ) {
+                                                                                                return (
+                                                                                                    rankA -
+                                                                                                    rankB
+                                                                                                );
+                                                                                            }
+                                                                                            return (
+                                                                                                new Date(
+                                                                                                    b.updatedAt
+                                                                                                ).getTime() -
+                                                                                                new Date(
+                                                                                                    a.updatedAt
+                                                                                                ).getTime()
                                                                                             );
                                                                                         }
-                                                                                        return (
-                                                                                            new Date(
-                                                                                                b.updatedAt
-                                                                                            ).getTime() -
-                                                                                            new Date(
-                                                                                                a.updatedAt
-                                                                                            ).getTime()
-                                                                                        );
-                                                                                    }
-                                                                                );
+                                                                                    );
 
-                                                                        // Split into 4 denser columns for a cleaner mega menu
-                                                                        const columns: (typeof filteredSubCategories)[] =
-                                                                            [
-                                                                                [],
-                                                                                [],
-                                                                                [],
-                                                                                [],
-                                                                            ];
-                                                                        filteredSubCategories.forEach(
-                                                                            (
-                                                                                sub,
-                                                                                i
-                                                                            ) => {
-                                                                                columns[
-                                                                                    i %
-                                                                                        4
-                                                                                ].push(
-                                                                                    sub
-                                                                                );
-                                                                            }
-                                                                        );
+                                                                            // Split into 4 denser columns for a cleaner mega menu
+                                                                            const columns: (typeof filteredSubCategories)[] =
+                                                                                [
+                                                                                    [],
+                                                                                    [],
+                                                                                    [],
+                                                                                    [],
+                                                                                ];
+                                                                            filteredSubCategories.forEach(
+                                                                                (
+                                                                                    sub,
+                                                                                    i
+                                                                                ) => {
+                                                                                    columns[
+                                                                                        i %
+                                                                                            4
+                                                                                    ].push(
+                                                                                        sub
+                                                                                    );
+                                                                                }
+                                                                            );
 
-                                                                        return columns.map(
-                                                                            (
-                                                                                col,
-                                                                                colIdx
-                                                                            ) => (
-                                                                                <div
-                                                                                    key={
-                                                                                        colIdx
-                                                                                    }
-                                                                                    className={cn(
-                                                                                        "flex min-h-[250px] flex-col gap-7 px-8 pb-8 pt-7",
-                                                                                        colIdx %
-                                                                                            2 ===
-                                                                                            1
-                                                                                            ? "bg-[#f8fafc]"
-                                                                                            : "bg-[#ffffff]"
-                                                                                    )}
-                                                                                >
-                                                                                    {col.map(
-                                                                                        (
-                                                                                            subcategory
-                                                                                        ) => (
-                                                                                            <div
-                                                                                                key={
-                                                                                                    subcategory.id
-                                                                                                }
-                                                                                                className="space-y-3"
-                                                                                            >
-                                                                                                <Link
-                                                                                                    href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
-                                                                                                    className="block border-b border-[#eef2f7] pb-2 transition-colors hover:text-[#111827]"
+                                                                            return columns.map(
+                                                                                (
+                                                                                    col,
+                                                                                    colIdx
+                                                                                ) => (
+                                                                                    <div
+                                                                                        key={
+                                                                                            colIdx
+                                                                                        }
+                                                                                        className={cn(
+                                                                                            "flex min-h-[250px] flex-col gap-7 px-8 pb-8 pt-7",
+                                                                                            colIdx %
+                                                                                                2 ===
+                                                                                                1
+                                                                                                ? "bg-[#f8fafc]"
+                                                                                                : "bg-[#ffffff]"
+                                                                                        )}
+                                                                                    >
+                                                                                        {col.map(
+                                                                                            (
+                                                                                                subcategory
+                                                                                            ) => (
+                                                                                                <div
+                                                                                                    key={
+                                                                                                        subcategory.id
+                                                                                                    }
+                                                                                                    className="space-y-3"
                                                                                                 >
-                                                                                                    <h3 className="font-lato text-[15px] font-bold uppercase tracking-[0.06em] text-[#1f2937]">
-                                                                                                        {
-                                                                                                            subcategory.name
-                                                                                                        }
-                                                                                                    </h3>
-                                                                                                </Link>
-                                                                                                <ul className="space-y-2">
-                                                                                                    {productTypes.data
-                                                                                                        .filter(
-                                                                                                            (
-                                                                                                                pt
-                                                                                                            ) =>
-                                                                                                                pt.subCategoryId ===
-                                                                                                                    subcategory.id &&
-                                                                                                                (pt.productCount ??
-                                                                                                                    0) >
-                                                                                                                    0
-                                                                                                        )
-                                                                                                        .sort(
-                                                                                                            (
-                                                                                                                a,
-                                                                                                                b
-                                                                                                            ) =>
-                                                                                                                a.name.localeCompare(
-                                                                                                                    b.name
-                                                                                                                )
-                                                                                                        )
-                                                                                                        .map(
-                                                                                                            (
-                                                                                                                productType
-                                                                                                            ) => (
-                                                                                                                <li
-                                                                                                                    key={
-                                                                                                                        productType.id
-                                                                                                                    }
-                                                                                                                >
-                                                                                                                    <NavigationMenuLink
-                                                                                                                        asChild
-                                                                                                                    >
-                                                                                                                        <Link
-                                                                                                                            href={handleNavigate(
-                                                                                                                                category.id,
-                                                                                                                                subcategory.id,
-                                                                                                                                productType.id
-                                                                                                                            )}
-                                                                                                                            className="block text-[15px] font-normal leading-6 text-[#6b7280] transition-colors [transition-duration:0ms] hover:text-[#111827]"
-                                                                                                                        >
-                                                                                                                            {
-                                                                                                                                productType.name
-                                                                                                                            }
-                                                                                                                        </Link>
-                                                                                                                    </NavigationMenuLink>
-                                                                                                                </li>
+                                                                                                    <Link
+                                                                                                        href={`/shop?categoryId=${category.id}&subcategoryId=${subcategory.id}`}
+                                                                                                        className="block border-b border-[#eef2f7] pb-2 transition-colors hover:text-[#111827]"
+                                                                                                    >
+                                                                                                        <h3 className="font-lato text-[15px] font-bold uppercase tracking-[0.06em] text-[#1f2937]">
+                                                                                                            {
+                                                                                                                subcategory.name
+                                                                                                            }
+                                                                                                        </h3>
+                                                                                                    </Link>
+                                                                                                    <ul className="space-y-2">
+                                                                                                        {productTypes.data
+                                                                                                            .filter(
+                                                                                                                (
+                                                                                                                    pt
+                                                                                                                ) =>
+                                                                                                                    pt.subCategoryId ===
+                                                                                                                        subcategory.id &&
+                                                                                                                    (pt.productCount ??
+                                                                                                                        0) >
+                                                                                                                        0
                                                                                                             )
-                                                                                                        )}
-                                                                                                </ul>
-                                                                                            </div>
-                                                                                        )
-                                                                                    )}
-                                                                                </div>
-                                                                            )
-                                                                        );
-                                                                    })()}
+                                                                                                            .sort(
+                                                                                                                (
+                                                                                                                    a,
+                                                                                                                    b
+                                                                                                                ) =>
+                                                                                                                    a.name.localeCompare(
+                                                                                                                        b.name
+                                                                                                                    )
+                                                                                                            )
+                                                                                                            .map(
+                                                                                                                (
+                                                                                                                    productType
+                                                                                                                ) => (
+                                                                                                                    <li
+                                                                                                                        key={
+                                                                                                                            productType.id
+                                                                                                                        }
+                                                                                                                    >
+                                                                                                                        <NavigationMenuLink
+                                                                                                                            asChild
+                                                                                                                        >
+                                                                                                                            <Link
+                                                                                                                                href={handleNavigate(
+                                                                                                                                    category.id,
+                                                                                                                                    subcategory.id,
+                                                                                                                                    productType.id
+                                                                                                                                )}
+                                                                                                                                className="block text-[15px] font-normal leading-6 text-[#6b7280] transition-colors [transition-duration:0ms] hover:text-[#111827]"
+                                                                                                                            >
+                                                                                                                                {
+                                                                                                                                    productType.name
+                                                                                                                                }
+                                                                                                                            </Link>
+                                                                                                                        </NavigationMenuLink>
+                                                                                                                    </li>
+                                                                                                                )
+                                                                                                            )}
+                                                                                                    </ul>
+                                                                                                </div>
+                                                                                            )
+                                                                                        )}
+                                                                                    </div>
+                                                                                )
+                                                                            );
+                                                                        })()}
                                                                     </div>
                                                                 </div>
                                                             </NavigationMenuContent>
@@ -803,7 +793,7 @@ export function NavbarHome({
                                     "hidden min-w-[280px] xl:flex xl:min-w-[360px] [&>div]:rounded-xl [&>div]:border-[#dfdfdf] [&>div]:bg-[#f5f5f5] [&>div]:shadow-none",
                             }}
                         />
-                        {/* ✅ Guest-only Wishlist & Cart */}
+                        {/* âœ… Guest-only Wishlist & Cart */}
                         {!user && (
                             <>
                                 <NavbarActionButton
@@ -927,6 +917,22 @@ export function NavbarHome({
                                                 <DropdownMenuItem
                                                     className={cn(
                                                         "rounded-xl",
+                                                        isAuthorized && "hidden"
+                                                    )}
+                                                    asChild
+                                                >
+                                                    <Link
+                                                        href="/discover"
+                                                        prefetch
+                                                    >
+                                                        <Icons.Sparkles className="size-4" />
+                                                        <span>Discover</span>
+                                                    </Link>
+                                                </DropdownMenuItem>
+
+                                                <DropdownMenuItem
+                                                    className={cn(
+                                                        "rounded-xl",
                                                         !isAuthorized &&
                                                             "hidden"
                                                     )}
@@ -1036,7 +1042,7 @@ export function NavbarHome({
 
                                 <div className="flex items-center md:hidden">
                                     <Button
-                                        className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 sm:px-5 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37]"
+                                        className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] sm:px-5"
                                         size="sm"
                                         asChild
                                     >

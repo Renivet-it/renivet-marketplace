@@ -14,6 +14,11 @@ import { Suspense, useEffect, useState } from "react";
 import superjson from "superjson";
 import { PostHogPageView } from "../globals/posthog";
 
+function getTrpcUrl() {
+    if (typeof window !== "undefined") return "/api/trpc";
+    return getAbsoluteURL("/api/trpc");
+}
+
 export function ClientProvider({ children }: LayoutProps) {
     const [queryClient] = useState(() => new QueryClient());
 
@@ -21,7 +26,7 @@ export function ClientProvider({ children }: LayoutProps) {
         trpc.createClient({
             links: [
                 httpBatchLink({
-                    url: getAbsoluteURL("/api/trpc"),
+                    url: getTrpcUrl(),
                     transformer: superjson,
                 }),
                 loggerLink({

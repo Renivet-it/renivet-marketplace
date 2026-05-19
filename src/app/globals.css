@@ -178,18 +178,21 @@ h3.tiptap-heading + h2.tiptap-heading {
 .scrollbar-hide {
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE 10+ */
-  }
-  .scrollbar-hide::-webkit-scrollbar {
+}
+.scrollbar-hide::-webkit-scrollbar {
     display: none; /* Chrome, Safari, Opera */
-  }
+}
 
 .home-product-link[data-redirecting="true"] {
     cursor: progress;
 }
 
 .home-product-link__overlay {
-    background:
-        linear-gradient(135deg, rgba(252, 251, 244, 0.08), rgba(176, 138, 74, 0.18));
+    background: linear-gradient(
+        135deg,
+        rgba(252, 251, 244, 0.08),
+        rgba(176, 138, 74, 0.18)
+    );
     backdrop-filter: blur(1.5px);
 }
 
@@ -214,9 +217,30 @@ h3.tiptap-heading + h2.tiptap-heading {
     }
 }
 
-@keyframes discountMarquee {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-50%); }
+.announcement-rotator-item {
+    animation: announcementRotator 12s ease-in-out infinite;
+    opacity: 0;
+    transform: translateX(100%);
+}
+
+@keyframes announcementRotator {
+    0%,
+    6% {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+
+    10%,
+    30% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    36%,
+    100% {
+        opacity: 0;
+        transform: translateX(-100%);
+    }
 }
 
 /* ========================================================
@@ -237,7 +261,7 @@ h3.tiptap-heading + h2.tiptap-heading {
 }
 
 .btn-liquid::before {
-    content: '';
+    content: "";
     position: absolute;
     display: block;
     border-radius: 50%;
@@ -246,7 +270,7 @@ h3.tiptap-heading + h2.tiptap-heading {
     top: -50%;
     left: -25%;
     transform: translate3d(0, -76%, 0);
-    transition: transform 0.6s cubic-bezier(.7, 0, .2, 1);
+    transition: transform 0.6s cubic-bezier(0.7, 0, 0.2, 1);
     z-index: -1;
 }
 
@@ -258,7 +282,7 @@ h3.tiptap-heading + h2.tiptap-heading {
 .btn-liquid-primary {
     background-color: #222222;
     color: white !important;
-    transition: color 0.4s cubic-bezier(.7, 0, .2, 1);
+    transition: color 0.4s cubic-bezier(0.7, 0, 0.2, 1);
 }
 .btn-liquid-primary::before {
     background-color: #f5f5f5; /* off-white fill */
@@ -272,7 +296,7 @@ h3.tiptap-heading + h2.tiptap-heading {
     background-color: white;
     color: #222222 !important;
     border: 1px solid #e5e7eb; /* tailwind gray-200 */
-    transition: color 0.4s cubic-bezier(.7, 0, .2, 1);
+    transition: color 0.4s cubic-bezier(0.7, 0, 0.2, 1);
 }
 .btn-liquid-secondary::before {
     background-color: #222222;

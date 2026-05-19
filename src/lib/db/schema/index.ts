@@ -1,6 +1,7 @@
 export * from "./address";
 export * from "./advertisement";
 export * from "./blog";
+export * from "./back-in-stock";
 export * from "./brand";
 export * from "./brand-media-item";
 export * from "./brand-page";

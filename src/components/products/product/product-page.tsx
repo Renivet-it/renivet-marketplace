@@ -30,6 +30,12 @@ import YouMayAlsoLike from "./product-recommendation";
 import { ProductReviews } from "./product-reviews";
 import { ProductCard } from "./product-static";
 
+/**
+ * Feature flag — Decode X / Behind The Product block.
+ * Set to `true` when the module is ready to ship (P1-FE-009).
+ */
+const SHOW_DECODEX = false;
+
 interface PageProps extends GenericProps {
     product: ProductWithBrand;
     initialWishlist?: CachedWishlist[];
@@ -359,37 +365,40 @@ export function ProductPage({
                 </div>
             </div>
 
-            {/* ── Decode X / Story Section ── */}
-            <div className="mx-auto w-full max-w-[1440px]">
-                <div className="relative h-[420px] overflow-hidden rounded-[34px] border border-neutral-200 bg-[#fcfbf4] md:h-[520px]">
-                    <div className="pointer-events-none absolute inset-0 select-none opacity-55 blur-[4px]">
-                        <ProductCard product={product} />
-                    </div>
-                    <div className="absolute inset-0 flex items-center justify-center bg-[#fcfbf4]/58">
-                        <div className="px-4 text-center text-[#162038]">
-                            <p className="text-[52px] font-semibold leading-[1.05] tracking-tight md:text-[64px]">
-                                Decode X
-                            </p>
-                            <p className="mt-1 text-[44px] font-semibold leading-[1.06] tracking-tight md:text-[56px]">
-                                Behind The Product
-                            </p>
-                            <div className="mx-auto mt-5 h-[2px] w-52 bg-[#efe4d0]" />
-                            <p className="mt-3 text-[28px] font-medium tracking-[0.2em] text-[#28476b] md:text-[34px]">
-                                COMING SOON
-                            </p>
+            {/* ── Decode X / Story Section — hidden until module ships (P1-FE-009) ── */}
+            {SHOW_DECODEX && (
+                <div className="mx-auto w-full max-w-[1440px]">
+                    <div className="relative h-[420px] overflow-hidden rounded-[34px] border border-neutral-200 bg-[#fcfbf4] md:h-[520px]">
+                        <div className="pointer-events-none absolute inset-0 select-none opacity-55 blur-[4px]">
+                            <ProductCard product={product} />
+                        </div>
+                        <div className="absolute inset-0 flex items-center justify-center bg-[#fcfbf4]/58">
+                            <div className="px-4 text-center text-[#162038]">
+                                <p className="text-[52px] font-semibold leading-[1.05] tracking-tight md:text-[64px]">
+                                    Decode X
+                                </p>
+                                <p className="mt-1 text-[44px] font-semibold leading-[1.06] tracking-tight md:text-[56px]">
+                                    Behind The Product
+                                </p>
+                                <div className="mx-auto mt-5 h-[2px] w-52 bg-[#efe4d0]" />
+                                <p className="mt-3 text-[28px] font-medium tracking-[0.2em] text-[#28476b] md:text-[34px]">
+                                    COMING SOON
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             {/* ── Customer Reviews ── */}
             <div className="mx-auto w-full max-w-[1440px] border-t border-neutral-200">
-                <ProductReviews productId={product.id} />
+                <ProductReviews productId={product.id} userId={userId} />
             </div>
 
             {/* ── You May Also Like ── */}
             <div className="mx-auto mt-0 w-full max-w-[1440px] border-t border-neutral-200 pt-3">
                 <YouMayAlsoLike
+                    brandId={product.brandId}
                     categoryId={product.categoryId}
                     excludeProductId={product.id}
                     userId={userId}

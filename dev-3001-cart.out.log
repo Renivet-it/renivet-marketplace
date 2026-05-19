@@ -1,0 +1,649 @@
+   ▲ Next.js 15.1.11 (Turbopack)
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.0.233:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', testMode: true }
+ ✓ Compiled in 2.2s
+ ✓ Ready in 6.5s
+ ○ Compiling /mycart ...
+ ✓ Compiled /mycart in 22s
+ GET /mycart 200 in 23535ms
+ ○ Compiling /products/[slug] ...
+ ✓ Compiled /products/[slug] in 10.1s
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 12181ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 80f1da30-9982-44bd-a963-3bfac283cde2
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1985ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 57439367-8901-4d73-a1bf-122dc413f54e
+ ✓ Compiled in 702ms
+ ✓ Compiled in 742ms
+ ✓ Compiled in 635ms
+ ✓ Compiled /products/[slug] in 91ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2139ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 10954412-0bc3-4959-9998-0f6d59949e94
+ ○ Compiling /api/permission ...
+ ✓ Compiled /api/permission in 4.1s
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 5438ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2921ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 3791f040-2d6e-47b6-bb0c-50630e759e69
+ ✓ Compiled in 1752ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 696ms
+ ✓ Compiled /products/[slug] in 108ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 108ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1278ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2452ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 635117de-b871-4243-8dbc-44a5cd1f1cc2
+CAPI Event 'ViewContent' sent successfully. Event ID: 679ee950-994d-4e8b-9afa-88611fdb0e0d
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 131ms
+ ✓ Compiled in 378ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 116ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1191ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 943ms
+CAPI Event 'ViewContent' sent successfully. Event ID: e5f2083c-e84d-420e-a45f-b673741be861
+CAPI Event 'ViewContent' sent successfully. Event ID: 038555f0-42ec-41f1-9338-f14ed48c65d3
+ ✓ Compiled in 1103ms
+ ✓ Compiled in 926ms
+ ✓ Compiled in 950ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 121ms
+ ✓ Compiled /products/[slug] in 83ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fnanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 105ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2148ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1188ms
+CAPI Event 'ViewContent' sent successfully. Event ID: c7c288c7-d955-4f90-a524-3eb73b0dc4f9
+CAPI Event 'ViewContent' sent successfully. Event ID: 54fe2e0d-e805-4230-9d13-7f0d26cf1921
+ ✓ Compiled in 879ms
+ ✓ Compiled in 1019ms
+ ✓ Compiled in 1066ms
+ ✓ Compiled in 785ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 2269ms
+CAPI Event 'ViewContent' sent successfully. Event ID: a491bc1d-6646-4273-9626-362868914d15
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 328ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 726db090-2e8c-4929-a4c4-24bfe9bd54fa
+ ○ Compiling /api/trpc/[trpc] ...
+ ✓ Compiled /api/trpc/[trpc] in 6.5s
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ POST /api/trpc/general.backInStock.createBackInStockRequest 200 in 8820ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 772ms
+CAPI Event 'ViewContent' sent successfully. Event ID: c0f85748-f3fa-4158-b814-068726143ab7
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 308ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 3cfe45b1-de54-483d-a718-75de55c4574c
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 334ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 0284abcf-ed27-41a1-9153-b9a3734fb3e9
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8 200 in 1196ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 24b8de6f-66b7-4bdc-ab1f-434323dfc5b4
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 805ms
+CAPI Event 'ViewContent' sent successfully. Event ID: ba42bff2-c0fa-4cf4-8c12-01a162077b69
+ ✓ Compiled in 2.7s
+ ✓ Compiled in 729ms
+ ✓ Compiled in 678ms
+ ✓ Compiled in 385ms
+ ✓ Compiled /products/[slug] in 281ms
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1474ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 1835ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 11ea6875-c820-4163-a27d-5de4d801e04d
+ ✓ Compiled in 724ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1744ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 95fd2a92-eb63-4356-8e28-d5a8031598ff
+ ✓ Compiled in 806ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ POST /api/trpc/general.backInStock.createBackInStockRequest 400 in 2685ms
+ POST /api/trpc/general.backInStock.createBackInStockRequest 200 in 2815ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 3022ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 032a3c08-6734-46c3-af6b-1deb71eae68f
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 713ms
+ ✓ Compiled in 676ms
+ ✓ Compiled in 691ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1648ms
+CAPI Event 'ViewContent' sent successfully. Event ID: be1ca5fb-996a-4109-8db1-228a95f1ae9d
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+CAPI Event 'ViewContent' sent successfully. Event ID: d0ec6b7a-be17-432a-84d1-8964eb672383
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1501ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fproducts%2Fonearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 538ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 2361ms
+CAPI Event 'ViewContent' sent successfully. Event ID: ac2230bc-35ef-41e0-b76f-970eca0d8351
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 470ms
+ ○ Compiling / ...
+ ✓ Compiled / in 25.4s
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 28067ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 339ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 1717ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 300ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 2161ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+CAPI Event 'ViewContent' sent successfully. Event ID: 4e25748c-e362-4db8-8391-d8b8d5454710
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 3026ms
+ ✓ Compiled in 2.5s
+productId 00eeeaca-3de9-474e-a2a7-b07b61c00963
+productId 02140746-6c14-4fe8-98c6-b25257b5c925
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes,general.addresses.getBrandConfidential,general.users.currentUser,general.customerReviews.getReviewsByProduct,general.decodex.getPublicByScope,brands.products.getRecommendations?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%2C%22subcategoryId%22%3A%22640cf1af-759f-44f5-952f-289467cdc44f%22%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%7D 207 in 1038ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes,general.addresses.getBrandConfidential,general.users.currentUser,general.customerReviews.getReviewsByProduct,general.decodex.getPublicByScope,brands.products.getRecommendations?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%22a8f6b262-a911-418c-b247-1fd1423e279c%22%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2202140746-6c14-4fe8-98c6-b25257b5c925%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%22a8f6b262-a911-418c-b247-1fd1423e279c%22%2C%22subcategoryId%22%3A%220fa9c2f9-0bff-42ad-9220-2b54d6e94c6f%22%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2202140746-6c14-4fe8-98c6-b25257b5c925%22%7D%7D%7D 207 in 718ms
+ POST /api/trpc/general.backInStock.createBackInStockRequest 200 in 193ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 406ms
+productId 00eeeaca-3de9-474e-a2a7-b07b61c00963
+productId 02140746-6c14-4fe8-98c6-b25257b5c925
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes,general.addresses.getBrandConfidential,general.users.currentUser,general.customerReviews.getReviewsByProduct,general.decodex.getPublicByScope,brands.products.getRecommendations?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%2C%22subcategoryId%22%3A%22640cf1af-759f-44f5-952f-289467cdc44f%22%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%7D 207 in 388ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes,general.addresses.getBrandConfidential,general.users.currentUser,general.customerReviews.getReviewsByProduct,general.decodex.getPublicByScope,brands.products.getRecommendations?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%22a8f6b262-a911-418c-b247-1fd1423e279c%22%7D%7D%2C%224%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2202140746-6c14-4fe8-98c6-b25257b5c925%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%22a8f6b262-a911-418c-b247-1fd1423e279c%22%2C%22subcategoryId%22%3A%220fa9c2f9-0bff-42ad-9220-2b54d6e94c6f%22%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2202140746-6c14-4fe8-98c6-b25257b5c925%22%7D%7D%7D 207 in 473ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 2105ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 1c3489f4-17c1-448f-8a62-878469dd6c8d
+productId 00eeeaca-3de9-474e-a2a7-b07b61c00963
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes,general.addresses.getBrandConfidential,general.customerReviews.getReviewsByProduct,general.decodex.getPublicByScope,general.users.currentUser,brands.products.getRecommendations?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%7D%7D%2C%224%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%2C%22subcategoryId%22%3A%22640cf1af-759f-44f5-952f-289467cdc44f%22%7D%7D%2C%226%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%7D 207 in 906ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+productId 00eeeaca-3de9-474e-a2a7-b07b61c00963
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes,general.addresses.getBrandConfidential,general.customerReviews.getReviewsByProduct,general.decodex.getPublicByScope,general.users.currentUser,brands.products.getRecommendations?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%7D%7D%2C%224%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22brandId%22%3A%225d88aa92-f018-462c-96a9-1d5a3ec6c12c%22%2C%22subcategoryId%22%3A%22640cf1af-759f-44f5-952f-289467cdc44f%22%7D%7D%2C%226%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%227%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%7D 207 in 805ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+productId 00eeeaca-3de9-474e-a2a7-b07b61c00963
+ GET /api/trpc/general.users.currentUser,brands.products.getRecommendations?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22productId%22%3A%2200eeeaca-3de9-474e-a2a7-b07b61c00963%22%7D%7D%7D 207 in 560ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ POST /api/trpc/general.backInStock.createBackInStockRequest?batch=1 200 in 461ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 912ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 465ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 183ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 834ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 405ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 183ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 879ms
+ ✓ Compiled in 855ms
+ ✓ Compiled /products/[slug] in 154ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 1353ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1653ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 440ms
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 1756ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 381ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 5f2fa973-3c4e-4b17-8644-eb5290b15699
+CAPI Event 'ViewContent' sent successfully. Event ID: b6266bc6-3e44-490b-a1dc-3fde4b3866f1
+CAPI Event 'ViewContent' sent successfully. Event ID: ffdf8df5-a49d-4fa7-a362-99691138344a
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 791ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 642ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 263f9f07-6061-41d7-b7fe-6f6a1e9fdf0c
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 796ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 6381f0db-ba88-41b8-b1bc-e6e9c758d66e
+CAPI Event 'ViewContent' sent successfully. Event ID: ae13097c-cdd8-4e3c-a804-fd8665c3d307
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 811ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 276ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 224ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 2s
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1155ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 1176ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 9686c3b6-073d-4287-b5f3-dae1e54ddf07
+CAPI Event 'ViewContent' sent successfully. Event ID: a6398b7a-1b82-4742-9545-147cd47de4e9
+ ✓ Compiled in 3.9s
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 264ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 242ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 860ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 368ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 215ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 886ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 306ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 313ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 1900ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 1361ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1513ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 62892f57-d26c-4fd1-9da0-5bb9ba33d316
+CAPI Event 'ViewContent' sent successfully. Event ID: a89fa9e8-9af1-4dd0-94bd-3e5f407066ee
+ ✓ Compiled in 751ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 274ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 222ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled / in 183ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 2688ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 375ms
+[getProducts] search: undefined requireMedia: true
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fapi%2Ftrpc%2Fgeneral.subCategories.getSubCategories%2Cgeneral.users.currentUser%2Cgeneral.categories.getCategories%2Cgeneral.productTypes.getProductTypes 200 in 569ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.users.currentUser,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 649ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET / 200 in 4232ms
+ ✓ Compiled in 918ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 264ms
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 470ms
+[getProducts] search: undefined requireMedia: true
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET /api/trpc/general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 1929ms
+ GET / 200 in 3975ms
+ ✓ Compiled in 1909ms
+ ✓ Compiled /products/[slug] in 182ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 1558ms
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 1559ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 453ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fapi%2Ftrpc%2Fgeneral.subCategories.getSubCategories%2Cgeneral.users.currentUser%2Cgeneral.categories.getCategories%2Cgeneral.productTypes.getProductTypes 200 in 479ms
+CAPI Event 'ViewContent' sent successfully. Event ID: ed772a8f-eb0d-46e4-956b-2d3f932aa686
+CAPI Event 'ViewContent' sent successfully. Event ID: 5b54d590-90a6-421d-8808-b8a5173ef47e
+[getProducts] search: undefined requireMedia: true
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /api/trpc/general.subCategories.getSubCategories,general.users.currentUser,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 386ms
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 789ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 840ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 45a6a2b2-5c7f-4439-8d84-3cfa5b713cc3
+CAPI Event 'ViewContent' sent successfully. Event ID: e77a1095-4978-47e6-b12c-367d85bf0ded
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fapi%2Ftrpc%2Fgeneral.subCategories.getSubCategories%2Cgeneral.users.currentUser%2Cgeneral.categories.getCategories%2Cgeneral.productTypes.getProductTypes 200 in 142ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.users.currentUser,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 486ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fapi%2Ftrpc%2Fgeneral.users.wishlist.getWishlist%2Cgeneral.users.cart.getCartForUser%2Cgeneral.orders.getOrdersByUserId 200 in 257ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET /api/trpc/general.users.wishlist.getWishlist,general.users.cart.getCartForUser,general.orders.getOrdersByUserId?batch=1&input=%7B%220%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%2C%221%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%2C%222%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%7D 200 in 524ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 119774ms
+ ○ Compiling /_not-found/page ...
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 511ms
+[getProducts] search: undefined requireMedia: true
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 525ms
+[getProducts] search: undefined requireMedia: true
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 609ms
+ GET / 200 in 12770ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 4074ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 1055ms
+[getProducts] search: undefined requireMedia: true
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 576ms
+[getProducts] search: undefined requireMedia: true
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 374ms
+[getProducts] search: undefined requireMedia: true
+ ✓ Compiled in 18.9s
+ ✓ Compiled /_not-found/page in 18.7s
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 404 in 18992ms
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 404 in 18998ms
+ ✓ Compiled /products/[slug] in 69ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 618ms
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 694ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 532ms
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 534ms
+CAPI Event 'ViewContent' sent successfully. Event ID: a5b556cf-9212-4090-93b7-cc797f2c5618
+CAPI Event 'ViewContent' sent successfully. Event ID: 3429918f-969f-46e0-8782-4ef166b38882
+CAPI Event 'ViewContent' sent successfully. Event ID: d1a9282c-c29a-46e8-ac46-3713c39737b3
+CAPI Event 'ViewContent' sent successfully. Event ID: 2c26f9ec-92f6-45b0-ac2a-a2b4b5435877
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 568ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 576ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 39a6bd35-c5e1-4871-9cf3-b6967168c8d0
+CAPI Event 'ViewContent' sent successfully. Event ID: 9ad598ba-dbd8-40b2-ad45-7209d4e9440c
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 716ms
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 721ms
+CAPI Event 'ViewContent' sent successfully. Event ID: 4a334328-9bda-430d-aa13-db34c600088a
+CAPI Event 'ViewContent' sent successfully. Event ID: 593b014d-c42e-4e05-af6e-cbf16fbd980b
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 916ms
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 1067ms
+CAPI Event 'ViewContent' sent successfully. Event ID: ffe53d6c-527c-4faa-85cb-7cb9b3e2b625
+CAPI Event 'ViewContent' sent successfully. Event ID: fc210019-2907-44dd-adf5-acf2a9fe8bd9
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+CAPI Event 'ViewContent' sent successfully. Event ID: d8dcccee-c2f3-4296-aba8-0a425dbdcab9
+
+--- CAPI EVENT: ViewContent ---
+Original fbc value: MISSING / UNDEFINED
+Sanitized fbc value: MISSING / UNDEFINED
+-----------------------
+
+CAPI Event 'ViewContent' sent successfully. Event ID: 18ccefbd-253c-4c5d-98c9-c5777baa3e45
+ GET /products/nanhey-playing-cards-dice-embroidered-shirt-black-1745410414972-7k01m8?sku=RN-NAN279C-KID-BOY-SHI-CBLACK-S2-3Y-OQSVDH 200 in 2953ms
+ GET /products/onearth-medium-coconut-shell-bowl-with-spoon-pack-of-1-1746382342836-be889i 200 in 2963ms
+productId 00eeeaca-3de9-474e-a2a7-b07b61c00963
+productId 00eeeaca-3de9-474e-a2a7-b07b61c00963
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+productId 02140746-6c14-4fe8-98c6-b25257b5c925
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fapi%2Ftrpc%2Fgeneral.users.currentUser%2Cgeneral.categories.getCategories%2Cgeneral.subCategories.getSubCategories%2Cgeneral.productTypes.getProductTypes%2Cgeneral.users.wishlist.getWishlist%2Cgeneral.users.cart.getCartForUser%2Cgeneral.orders.getOrdersByUserId 200 in 441ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ ✓ Compiled in 873ms
+ ✓ Compiled in 2.1s
+ ✓ Compiled in 742ms
+ ✓ Compiled in 12.7s
+ ✓ Compiled in 3.9s
+ ✓ Compiled in 886ms
+ ✓ Compiled in 810ms
+ ✓ Compiled in 651ms
+ ✓ Compiled in 2.4s
+ ✓ Compiled in 3.3s
+ ✓ Compiled in 1489ms
+ ✓ Compiled in 2.6s
+ ✓ Compiled / in 329ms
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 59723ms
+ GET / 200 in 3520102ms
+ GET /api/trpc/general.users.currentUser,general.categories.getCategories,general.subCategories.getSubCategories,general.productTypes.getProductTypes,general.users.wishlist.getWishlist,general.users.cart.getCartForUser,general.orders.getOrdersByUserId?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%224%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%7D 200 in 3500882ms
+ GET / 200 in 3776562ms
+ GET / 200 in 3517201ms
+ GET / 200 in 3515988ms
+ GET / 200 in 3514474ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 1366ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 1363ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fapi%2Ftrpc%2Fgeneral.categories.getCategories%2Cgeneral.productTypes.getProductTypes%2Cgeneral.users.currentUser%2Cgeneral.subCategories.getSubCategories%2Cgeneral.users.wishlist.getWishlist%2Cgeneral.users.cart.getCartForUser%2Cgeneral.orders.getOrdersByUserId 200 in 1440ms
+[getProducts] search: undefined requireMedia: true
+[getProducts] search: undefined requireMedia: true
+ GET /api/trpc/general.categories.getCategories,general.productTypes.getProductTypes,general.users.currentUser,general.subCategories.getSubCategories,general.users.wishlist.getWishlist,general.users.cart.getCartForUser,general.orders.getOrdersByUserId?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%224%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%2C%225%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%2C%226%22%3A%7B%22json%22%3A%7B%22userId%22%3A%22user_2up0RXKnR2zVhppFOKnzJR7A1xd%22%7D%7D%7D 200 in 1626ms
+ GET / 200 in 1751ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2F 200 in 1151ms
+ GET /api/permission?uId=user_2up0RXKnR2zVhppFOKnzJR7A1xd&path=%2Fapi%2Ftrpc%2Fgeneral.subCategories.getSubCategories%2Cgeneral.users.currentUser%2Cgeneral.categories.getCategories%2Cgeneral.productTypes.getProductTypes 200 in 600ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET / 200 in 14930ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.users.currentUser,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%223%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 9989ms
+ ✓ Compiled in 2.1s
+ ✓ Compiled in 3.2s
+   Reload env: .env.local
+ ✓ Compiled in 20.8s
+ ✓ Compiled in 1214ms
+ ✓ Compiled in 2.8s
+   Reload env: .env.local
+ ✓ Compiled in 4.4s
+ ✓ Compiled in 25s
+ ✓ Compiled in 2.4s
+ ✓ Compiled middleware in 452ms
+ ✓ Compiled in 1414ms
+ ✓ Compiled in 783ms
+ ✓ Compiled in 909ms
+ ✓ Compiled in 754ms
+ ✓ Compiled in 711ms
+ ✓ Compiled in 697ms
+ ✓ Compiled in 752ms
+ ✓ Compiled in 11.5s

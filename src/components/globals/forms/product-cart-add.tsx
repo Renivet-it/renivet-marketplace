@@ -1,15 +1,14 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
+import { Icons } from "@/components/icons";
+import { Button } from "@/components/ui/button-general";
 import {
     Dialog,
     DialogContent,
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog-general";
-import { Icons } from "@/components/icons";
-import { Button } from "@/components/ui/button-general";
 import {
     Form,
     FormControl,
@@ -21,6 +20,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
+import { Spinner } from "@/components/ui/spinner";
 import { getColorHex } from "@/lib/color-utils";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -33,6 +33,7 @@ import {
     createCartSchema,
     ProductWithBrand,
 } from "@/lib/validations";
+import { useUser } from "@clerk/nextjs";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Eye } from "lucide-react";
 import Image from "next/image";
@@ -120,6 +121,8 @@ function getInitialViewerCount(productId: string) {
     return 8 + (seed % 19);
 }
 
+const LOW_STOCK_THRESHOLD = 3;
+
 //
 // ðŸ”¹ ProductCartAddForm
 //
@@ -155,6 +158,7 @@ export function ProductCartAddForm({
     compact = false,
     hideWishlist = false,
 }: PageProps) {
+    const { user: clerkUser } = useUser();
     const { trackAddToCartEvent } = useAddToCartTracking();
     const { guestCart, addToGuestCart } = useGuestCart();
     const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
@@ -213,14 +217,27 @@ export function ProductCartAddForm({
     const setIsProductWishlisted =
         parentSetIsProductWishlisted || setLocalIsProductWishlisted;
 
-    // Find the variant with the lowest price to use as default
+    const activeVariants = useMemo(
+        () => product.variants?.filter((variant) => !variant.isDeleted) ?? [],
+        [product.variants]
+    );
+
+    const inStockVariants = useMemo(
+        () => activeVariants.filter((variant) => (variant.quantity ?? 0) > 0),
+        [activeVariants]
+    );
+
+    // Find the lowest-priced in-stock variant to use as default.
     const lowestPriceVariant = useMemo(() => {
-        if (!product.variants?.length) return null;
-        return product.variants.reduce(
+        const variants =
+            inStockVariants.length > 0 ? inStockVariants : activeVariants;
+        if (!variants.length) return null;
+
+        return variants.reduce(
             (min, variant) => (variant.price < min.price ? variant : min),
-            product.variants[0]
+            variants[0]
         );
-    }, [product.variants]);
+    }, [activeVariants, inStockVariants]);
 
     const [selectedSku, setSelectedSku] = useQueryState("sku", {
         defaultValue: lowestPriceVariant?.nativeSku,
@@ -228,7 +245,18 @@ export function ProductCartAddForm({
     const [isAddedToCart, setIsAddedToCart] = useState(false);
     const [isBuyNow, setIsBuyNow] = useState(false);
     const [isSizeChartOpen, setIsSizeChartOpen] = useState(false);
+    const [isNotifyModalOpen, setIsNotifyModalOpen] = useState(false);
+    const [notifyEmail, setNotifyEmail] = useState("");
+    const [notifyPhone, setNotifyPhone] = useState("");
     const isBuyNowRef = useRef(false);
+    const savedNotifyEmail =
+        clerkUser?.primaryEmailAddress?.emailAddress ??
+        clerkUser?.emailAddresses?.[0]?.emailAddress ??
+        "";
+    const savedNotifyPhone =
+        clerkUser?.primaryPhoneNumber?.phoneNumber ??
+        clerkUser?.phoneNumbers?.[0]?.phoneNumber ??
+        "";
 
     // User cart
     const { data: userCart, refetch } =
@@ -241,11 +269,11 @@ export function ProductCartAddForm({
     const selectedVariant = useMemo(() => {
         if (!product.productHasVariants || !selectedSku) return null;
         return (
-            product.variants.find(
+            activeVariants.find(
                 (variant) => variant.nativeSku === selectedSku
             ) ?? null
         );
-    }, [product.productHasVariants, product.variants, selectedSku]);
+    }, [activeVariants, product.productHasVariants, selectedSku]);
 
     // Product in cart?
     const isProductInCart = useMemo(() => {
@@ -282,22 +310,22 @@ export function ProductCartAddForm({
             currentSelections: Record<string, string>
         ) => {
             const testSelection = { ...currentSelections, [optionId]: valueId };
-            return product.variants.some((variant) => {
+            return activeVariants.some((variant) => {
                 return Object.entries(testSelection).every(
                     ([key, value]) => variant.combinations[key] === value
                 );
             });
         },
-        [product.variants]
+        [activeVariants]
     );
 
-    const getVariantStockByOption = useCallback(
+    const getVariantAvailabilityByOption = useCallback(
         (
             optionId: string,
             valueId: string,
             currentSelections: Record<string, string>
         ) => {
-            const matchingVariants = product.variants.filter((variant) => {
+            const matchingVariants = activeVariants.filter((variant) => {
                 const selections = {
                     ...currentSelections,
                     [optionId]: valueId,
@@ -307,12 +335,21 @@ export function ProductCartAddForm({
                 );
             });
 
-            return matchingVariants.reduce(
+            const stockCount = matchingVariants.reduce(
                 (sum, variant) => sum + (variant.quantity || 0),
                 0
             );
+
+            return {
+                hasMatchingVariant: matchingVariants.length > 0,
+                isSelectable: matchingVariants.some(
+                    (variant) => (variant.quantity ?? 0) > 0
+                ),
+                isExactVariant: matchingVariants.length === 1,
+                stockCount,
+            };
         },
-        [product.variants]
+        [activeVariants]
     );
 
     const currentSelections = useMemo(() => {
@@ -334,26 +371,44 @@ export function ProductCartAddForm({
     const handleOptionSelect = useCallback(
         (optionId: string, valueId: string) => {
             const newSelections = { ...currentSelections, [optionId]: valueId };
-            const matchingVariant = product.variants.find((variant) =>
+            const matchingVariant = activeVariants.find((variant) =>
                 Object.entries(newSelections).every(
                     ([key, value]) => variant.combinations[key] === value
                 )
             );
-            if (matchingVariant) setSelectedSku(matchingVariant.nativeSku);
+            if (matchingVariant && matchingVariant.quantity > 0) {
+                setSelectedSku(matchingVariant.nativeSku);
+            }
         },
-        [currentSelections, product.variants, setSelectedSku]
+        [activeVariants, currentSelections, setSelectedSku]
     );
 
     const productPrice = useMemo(() => {
         if (!product.productHasVariants) return product.price ?? 0;
         if (!selectedVariant) return 0;
         return selectedVariant.price;
-    }, [product, selectedVariant, selectedSku]);
+    }, [product, selectedVariant]);
 
     const selectedStock = useMemo(() => {
         if (!product.productHasVariants) return product.quantity ?? null;
         return selectedVariant?.quantity ?? null;
     }, [product.productHasVariants, product.quantity, selectedVariant]);
+
+    const isSelectedOutOfStock = selectedStock !== null && selectedStock <= 0;
+    const isSelectedUnavailable =
+        !product.isAvailable ||
+        !product.isActive ||
+        !product.isPublished ||
+        product.isDeleted ||
+        product.verificationStatus !== "approved" ||
+        isSelectedOutOfStock ||
+        (!!selectedVariant && selectedVariant.isDeleted) ||
+        (product.productHasVariants && !selectedVariant);
+    const isProductLevelOutOfStock =
+        !product.isAvailable ||
+        (product.productHasVariants
+            ? activeVariants.length > 0 && inStockVariants.length === 0
+            : (product.quantity ?? 0) <= 0);
 
     const sortedOptions = useMemo(() => {
         return [...product.options].sort((a, b) => {
@@ -376,7 +431,9 @@ export function ProductCartAddForm({
                 const selectedValue = option.values.find(
                     (value) => value.id === selectedValueId
                 );
-                return selectedValue ? `${option.name}: ${selectedValue.name}` : null;
+                return selectedValue
+                    ? `${option.name}: ${selectedValue.name}`
+                    : null;
             })
             .filter(Boolean)
             .join(" / ");
@@ -396,7 +453,8 @@ export function ProductCartAddForm({
                 id: media.id,
                 url:
                     media.mediaItem?.url ??
-                    ((media as unknown as { url?: string }).url ?? ""),
+                    (media as unknown as { url?: string }).url ??
+                    "",
                 alt: media.mediaItem?.alt ?? "Size guide image",
                 position: media.position,
             }))
@@ -430,6 +488,57 @@ export function ProductCartAddForm({
                 toast.error(err.message);
             },
         });
+
+    const { mutate: createBackInStockRequest, isPending: isNotifyPending } =
+        trpc.general.backInStock.createBackInStockRequest.useMutation({
+            onSuccess: () => {
+                toast.success("We'll let you know when this is back in stock.");
+                setIsNotifyModalOpen(false);
+                setNotifyEmail("");
+                setNotifyPhone("");
+            },
+            onError: (err) => {
+                if (err.message === "Enter an email or phone number") {
+                    setNotifyEmail(savedNotifyEmail);
+                    setNotifyPhone(savedNotifyPhone);
+                    setIsNotifyModalOpen(true);
+                }
+                toast.error(err.message);
+            },
+        });
+
+    const submitNotifyRequest = useCallback(
+        (contact?: { email?: string; phone?: string }) => {
+            createBackInStockRequest({
+                productId: product.id,
+                variantId: selectedVariant?.id ?? null,
+                userId,
+                email: contact?.email ?? notifyEmail,
+                phone: contact?.phone ?? notifyPhone,
+                source: "pdp",
+            });
+        },
+        [
+            createBackInStockRequest,
+            notifyEmail,
+            notifyPhone,
+            product.id,
+            selectedVariant?.id,
+            userId,
+        ]
+    );
+
+    const openNotifyModal = useCallback(() => {
+        setNotifyEmail(savedNotifyEmail);
+        setNotifyPhone(savedNotifyPhone);
+        setIsNotifyModalOpen(true);
+    }, [savedNotifyEmail, savedNotifyPhone]);
+
+    const handleNotifyClick = useCallback(() => {
+        openNotifyModal();
+    }, [openNotifyModal]);
+
+    const handleNotifyMe = () => submitNotifyRequest();
 
     //
     // Render
@@ -477,7 +586,8 @@ export function ProductCartAddForm({
                                                     )
                                                 )) *
                                                 100
-                                        )}% OFF
+                                        )}
+                                        % OFF
                                     </span>
                                 </>
                             )}
@@ -491,12 +601,32 @@ export function ProductCartAddForm({
                             <span className="relative inline-flex size-2 rounded-full bg-amber-600" />
                         </span>
                         <Eye className="size-3.5" strokeWidth={2} />
-                        <span>{viewerCount} people are viewing this right now</span>
+                        <span>
+                            {viewerCount} people are viewing this right now
+                        </span>
                     </div>
-                    {selectedStock !== null && selectedStock > 0 && selectedStock <= 5 && (
-                        <p className="mt-2 text-12 font-semibold text-red-600">
-                            Only {selectedStock} left in stock
-                        </p>
+                    {selectedStock !== null &&
+                        selectedStock > 0 &&
+                        selectedStock < LOW_STOCK_THRESHOLD && (
+                            <p className="mt-2 text-12 font-semibold text-red-600">
+                                Only {selectedStock} left in stock
+                            </p>
+                        )}
+                    {isSelectedOutOfStock && (
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                            <p className="text-12 font-semibold text-red-600">
+                                Out of stock
+                            </p>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="h-8 rounded-full border-red-200 px-3 text-12 font-semibold text-red-600 hover:bg-red-50 hover:text-red-700"
+                                onClick={handleNotifyClick}
+                            >
+                                Notify me
+                            </Button>
+                        </div>
                     )}
                 </div>
             )}
@@ -514,6 +644,12 @@ export function ProductCartAddForm({
                         ) {
                             return toast.error(
                                 "Requested product is not available"
+                            );
+                        }
+
+                        if (isSelectedUnavailable) {
+                            return toast.error(
+                                "This selection is out of stock."
                             );
                         }
 
@@ -596,7 +732,8 @@ export function ProductCartAddForm({
                                                 {["size", "sizes"].includes(
                                                     option.name.toLowerCase()
                                                 ) &&
-                                                    (sizeGuideImages.length > 0 ||
+                                                    (sizeGuideImages.length >
+                                                        0 ||
                                                         hasSizeAndFitContent) && (
                                                         <button
                                                             type="button"
@@ -651,7 +788,10 @@ export function ProductCartAddForm({
                                                     }}
                                                     className={cn(
                                                         "flex flex-wrap",
-                                                        option.name.toLowerCase() === "color" ? "gap-3" : "gap-2"
+                                                        option.name.toLowerCase() ===
+                                                            "color"
+                                                            ? "gap-3"
+                                                            : "gap-2"
                                                     )}
                                                 >
                                                     {option.values.map(
@@ -662,16 +802,21 @@ export function ProductCartAddForm({
                                                                     value.id,
                                                                     currentSelections
                                                                 );
-                                                            const stockCount =
-                                                                getVariantStockByOption(
+                                                            const availability =
+                                                                getVariantAvailabilityByOption(
                                                                     option.id,
                                                                     value.id,
                                                                     currentSelections
                                                                 );
                                                             const lowStock =
-                                                                stockCount >
+                                                                availability.isExactVariant &&
+                                                                availability.stockCount >
                                                                     0 &&
-                                                                stockCount < 5;
+                                                                availability.stockCount <
+                                                                    LOW_STOCK_THRESHOLD;
+                                                            const outOfStock =
+                                                                availability.hasMatchingVariant &&
+                                                                !availability.isSelectable;
 
                                                             return (
                                                                 <div
@@ -690,53 +835,89 @@ export function ProductCartAddForm({
                                                                         className="peer sr-only"
                                                                         disabled={
                                                                             !isAvailable ||
-                                                                            stockCount ===
-                                                                                0
+                                                                            !availability.isSelectable
                                                                         }
                                                                     />
-                                                                    {option.name.toLowerCase() === "color" ? (
+                                                                    {option.name.toLowerCase() ===
+                                                                    "color" ? (
                                                                         <Label
-                                                                            htmlFor={value.id}
-                                                                            title={value.name}
+                                                                            htmlFor={
+                                                                                value.id
+                                                                            }
+                                                                            title={
+                                                                                value.name
+                                                                            }
                                                                             className={cn(
                                                                                 "relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-full transition-all duration-150",
-                                                                                currentSelections[option.id] === value.id
+                                                                                currentSelections[
+                                                                                    option
+                                                                                        .id
+                                                                                ] ===
+                                                                                    value.id
                                                                                     ? "ring-2 ring-neutral-900 ring-offset-2"
                                                                                     : "ring-1 ring-neutral-300 ring-offset-1 hover:ring-neutral-500",
-                                                                                (!isAvailable || stockCount === 0) && "cursor-not-allowed opacity-40"
+                                                                                (!isAvailable ||
+                                                                                    !availability.isSelectable) &&
+                                                                                    "cursor-not-allowed opacity-40"
                                                                             )}
-                                                                            style={{ backgroundColor: getColorHex(value.name) }}
+                                                                            style={{
+                                                                                backgroundColor:
+                                                                                    getColorHex(
+                                                                                        value.name
+                                                                                    ),
+                                                                            }}
                                                                         />
                                                                     ) : (
                                                                         <Label
-                                                                            htmlFor={value.id}
+                                                                            htmlFor={
+                                                                                value.id
+                                                                            }
                                                                             className={cn(
                                                                                 "flex h-10 min-w-[3rem] cursor-pointer items-center justify-center border px-3 text-[13px] font-medium transition-all duration-150",
-                                                                                currentSelections[option.id] === value.id
+                                                                                currentSelections[
+                                                                                    option
+                                                                                        .id
+                                                                                ] ===
+                                                                                    value.id
                                                                                     ? "border-neutral-900 bg-neutral-900 text-white"
                                                                                     : "border-neutral-300 bg-white text-neutral-800 hover:border-neutral-600",
-                                                                                (!isAvailable || stockCount === 0) && "cursor-not-allowed opacity-40"
+                                                                                (!isAvailable ||
+                                                                                    !availability.isSelectable) &&
+                                                                                    "cursor-not-allowed opacity-40"
                                                                             )}
                                                                         >
-                                                                            {value.name}
+                                                                            {
+                                                                                value.name
+                                                                            }
                                                                         </Label>
                                                                     )}
                                                                     {lowStock && (
                                                                         <span className="text-xs text-red-500">
                                                                             Only{" "}
                                                                             {
-                                                                                stockCount
+                                                                                availability.stockCount
                                                                             }{" "}
                                                                             left
                                                                         </span>
                                                                     )}
-                                                                    {stockCount ===
-                                                                        0 && (
-                                                                        <span className="text-xs text-red-500">
-                                                                            Out
-                                                                            of
-                                                                            stock
-                                                                        </span>
+                                                                    {outOfStock && (
+                                                                        <div className="flex flex-col items-center gap-1">
+                                                                            <span className="text-xs text-red-500">
+                                                                                Out
+                                                                                of
+                                                                                stock
+                                                                            </span>
+                                                                            <button
+                                                                                type="button"
+                                                                                className="text-[10px] font-semibold uppercase tracking-wide text-neutral-700 underline underline-offset-2 hover:text-neutral-950"
+                                                                                onClick={
+                                                                                    handleNotifyClick
+                                                                                }
+                                                                            >
+                                                                                Notify
+                                                                                me
+                                                                            </button>
+                                                                        </div>
                                                                     )}
                                                                 </div>
                                                             );
@@ -762,190 +943,61 @@ export function ProductCartAddForm({
 
                         {/* Inline buttons — Patagonia-style pill buttons */}
                         <div ref={buttonsRef} className="flex flex-col gap-3">
-                            {/* Add to Bag — full-width solid black pill */}
-                            <Button
-                                type="submit"
-                                size="lg"
-                                className="h-14 w-full rounded-full bg-neutral-900 text-[15px] font-semibold tracking-wide text-white transition-all hover:bg-black active:scale-[0.98] disabled:opacity-50"
-                                disabled={
-                                    !product.isAvailable ||
-                                    (!!selectedVariant &&
-                                        (selectedVariant.isDeleted ||
-                                            selectedVariant?.quantity === 0)) ||
-                                    (product.productHasVariants &&
-                                        !selectedVariant) ||
-                                    isPending
-                                }
-                                onClick={(e) => {
-                                    if (isAddedToCart) {
-                                        e.preventDefault();
-                                        router.push("/mycart");
-                                        return;
-                                    }
-                                    setIsBuyNow(false);
-                                    isBuyNowRef.current = false;
-                                    handleAddProductCart(product.id, product.brandId);
-                                }}
-                            >
-                                {isPending && !isBuyNow ? (
-                                    <><Spinner className="mr-2 size-5 animate-spin" />Adding...</>
-                                ) : isAddedToCart ? (
-                                    <>Go to Bag <Icons.ArrowRight className="ml-2 size-5" /></>
-                                ) : (
-                                    "Add to Bag"
-                                )}
-                            </Button>
-
-                            {/* Buy Now — outline pill */}
-                            <Button
-                                type="submit"
-                                size="lg"
-                                className="h-14 w-full rounded-full border-2 border-neutral-900 bg-transparent text-[15px] font-semibold tracking-wide text-neutral-900 transition-all hover:bg-neutral-100 active:scale-[0.98] disabled:opacity-50"
-                                disabled={
-                                    !product.isAvailable ||
-                                    (!!selectedVariant &&
-                                        (selectedVariant.isDeleted ||
-                                            selectedVariant?.quantity === 0)) ||
-                                    (product.productHasVariants &&
-                                        !selectedVariant) ||
-                                    isPending
-                                }
-                                onClick={(e) => {
-                                    if (isAddedToCart) {
-                                        e.preventDefault();
-                                        router.push("/checkout");
-                                        return;
-                                    }
-                                    setIsBuyNow(true);
-                                    isBuyNowRef.current = true;
-                                    handleAddProductCart(product.id, product.brandId);
-                                }}
-                            >
-                                {isPending && isBuyNow ? (
-                                    <><Spinner className="mr-2 size-5 animate-spin" />Wait...</>
-                                ) : (
-                                    "Buy Now"
-                                )}
-                            </Button>
-
-                            {!hideWishlist && (userId ? (
-                                <WishlistButton
-                                    type="button"
-                                    variant="outline"
-                                    size="lg"
-                                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 hover:border-neutral-500 hover:text-neutral-900 transition-colors"
-                                    userId={userId}
-                                    productId={product.id}
-                                    isProductWishlisted={isProductWishlisted}
-                                    setIsProductWishlisted={setIsProductWishlisted}
-                                    iconClassName={cn(
-                                        "size-4",
-                                        isProductWishlisted && "fill-red-500 stroke-red-500"
-                                    )}
-                                />
-                            ) : (
-                                <button
-                                    type="button"
-                                    className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 hover:border-neutral-500 hover:text-neutral-900 transition-colors"
-                                    onClick={() => {
-                                        addToGuestWishlist({
-                                            productId: product.id,
-                                            variantId: selectedVariant?.id || null,
-                                            title: product.title,
-                                            brand: product.brand?.name,
-                                            price: productPrice,
-                                            image: selectedVariant?.image ?? product.thumbnail ?? null,
-                                            sku: selectedVariant?.nativeSku ?? null,
-                                            fullProduct: product,
-                                        });
-                                    }}
-                                >
-                                    <Icons.Heart
-                                        className={cn(
-                                            "size-4",
-                                            guestWishlist.some(
-                                                (w) =>
-                                                    w.productId === product.id &&
-                                                    String(w.variantId ?? "") ===
-                                                        String(selectedVariant?.id ?? "")
-                                            ) && "fill-red-500 stroke-red-500"
-                                        )}
-                                    />
-                                    Save to Wishlist
-                                </button>
-                            ))}</div>
-                        </div>
-
-                    {/* Floating bottom bar — mobile only */}
-                    {showFloatingBar && (
-                        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] md:hidden">
-                            <div className="mb-2 flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-base font-semibold leading-none text-neutral-900">
-                                        {formatPriceTag(
-                                            parseFloat(convertPaiseToRupees(productPrice)),
-                                            true
-                                        )}
-                                    </p>
-                                    {selectedSummary && (
-                                        <p className="mt-1 truncate text-11 text-neutral-500">
-                                            {selectedSummary}
-                                        </p>
-                                    )}
-                                </div>
-                                {selectedStock !== null && selectedStock > 0 && selectedStock <= 5 && (
-                                    <span className="shrink-0 rounded-full bg-red-50 px-2 py-1 text-10 font-semibold text-red-600">
-                                        Only {selectedStock} left
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex gap-2">
+                            {isProductLevelOutOfStock ? (
                                 <Button
-                                    type="submit"
+                                    type="button"
                                     size="lg"
-                                    className="h-12 flex-1 rounded-full bg-neutral-900 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
-                                    disabled={
-                                        !product.isAvailable ||
-                                        (!!selectedVariant &&
-                                            (selectedVariant.isDeleted ||
-                                                selectedVariant?.quantity === 0)) ||
-                                        (product.productHasVariants &&
-                                            !selectedVariant) ||
-                                        isPending
-                                    }
-                                    onClick={(e) => {
-                                        if (isAddedToCart) {
-                                            e.preventDefault();
-                                            router.push("/mycart");
-                                            return;
-                                        }
-                                        setIsBuyNow(false);
-                                        isBuyNowRef.current = false;
-                                        handleAddProductCart(product.id, product.brandId);
-                                    }}
+                                    className="h-14 w-full rounded-full bg-neutral-900 text-[15px] font-semibold tracking-wide text-white transition-all hover:bg-black active:scale-[0.98]"
+                                    onClick={handleNotifyClick}
                                 >
-                                    {isPending && !isBuyNow ? (
-                                        <><Spinner className="mr-2 size-4 animate-spin" />Adding...</>
-                                    ) : isAddedToCart ? (
-                                        <>Go to Bag <Icons.ArrowRight className="ml-2 size-4" /></>
-                                    ) : (
-                                        "Add to Bag"
-                                    )}
+                                    Notify me when back in stock
                                 </Button>
-
-                                {userId && (
+                            ) : (
+                                <>
+                                    {/* Add to Bag — full-width solid black pill */}
                                     <Button
                                         type="submit"
                                         size="lg"
-                                        className="h-12 flex-1 rounded-full border-2 border-neutral-900 bg-transparent text-[14px] font-semibold text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
+                                        className="h-14 w-full rounded-full bg-neutral-900 text-[15px] font-semibold tracking-wide text-white transition-all hover:bg-black active:scale-[0.98] disabled:opacity-50"
                                         disabled={
-                                            !product.isAvailable ||
-                                            (!!selectedVariant &&
-                                                (selectedVariant.isDeleted ||
-                                                    selectedVariant?.quantity === 0)) ||
-                                            (product.productHasVariants &&
-                                                !selectedVariant) ||
-                                            isPending
+                                            isSelectedUnavailable || isPending
+                                        }
+                                        onClick={(e) => {
+                                            if (isAddedToCart) {
+                                                e.preventDefault();
+                                                router.push("/mycart");
+                                                return;
+                                            }
+                                            setIsBuyNow(false);
+                                            isBuyNowRef.current = false;
+                                            handleAddProductCart(
+                                                product.id,
+                                                product.brandId
+                                            );
+                                        }}
+                                    >
+                                        {isPending && !isBuyNow ? (
+                                            <>
+                                                <Spinner className="mr-2 size-5 animate-spin" />
+                                                Adding...
+                                            </>
+                                        ) : isAddedToCart ? (
+                                            <>
+                                                Go to Bag{" "}
+                                                <Icons.ArrowRight className="ml-2 size-5" />
+                                            </>
+                                        ) : (
+                                            "Add to Bag"
+                                        )}
+                                    </Button>
+
+                                    {/* Buy Now — outline pill */}
+                                    <Button
+                                        type="submit"
+                                        size="lg"
+                                        className="h-14 w-full rounded-full border-2 border-neutral-900 bg-transparent text-[15px] font-semibold tracking-wide text-neutral-900 transition-all hover:bg-neutral-100 active:scale-[0.98] disabled:opacity-50"
+                                        disabled={
+                                            isSelectedUnavailable || isPending
                                         }
                                         onClick={(e) => {
                                             if (isAddedToCart) {
@@ -955,21 +1007,298 @@ export function ProductCartAddForm({
                                             }
                                             setIsBuyNow(true);
                                             isBuyNowRef.current = true;
-                                            handleAddProductCart(product.id, product.brandId);
+                                            handleAddProductCart(
+                                                product.id,
+                                                product.brandId
+                                            );
                                         }}
                                     >
                                         {isPending && isBuyNow ? (
-                                            <><Spinner className="mr-2 size-4 animate-spin" />Wait...</>
+                                            <>
+                                                <Spinner className="mr-2 size-5 animate-spin" />
+                                                Wait...
+                                            </>
                                         ) : (
                                             "Buy Now"
                                         )}
                                     </Button>
+                                </>
+                            )}
+
+                            {!hideWishlist &&
+                                (userId ? (
+                                    <WishlistButton
+                                        type="button"
+                                        variant="outline"
+                                        size="lg"
+                                        className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 transition-colors hover:border-neutral-500 hover:text-neutral-900"
+                                        userId={userId}
+                                        productId={product.id}
+                                        isProductWishlisted={
+                                            isProductWishlisted
+                                        }
+                                        setIsProductWishlisted={
+                                            setIsProductWishlisted
+                                        }
+                                        iconClassName={cn(
+                                            "size-4",
+                                            isProductWishlisted &&
+                                                "fill-red-500 stroke-red-500"
+                                        )}
+                                    />
+                                ) : (
+                                    <button
+                                        type="button"
+                                        className="flex h-12 w-full items-center justify-center gap-2 rounded-full border border-neutral-300 bg-white text-[14px] font-medium text-neutral-700 transition-colors hover:border-neutral-500 hover:text-neutral-900"
+                                        onClick={() => {
+                                            addToGuestWishlist({
+                                                productId: product.id,
+                                                variantId:
+                                                    selectedVariant?.id || null,
+                                                title: product.title,
+                                                brand: product.brand?.name,
+                                                price: productPrice,
+                                                image:
+                                                    selectedVariant?.image ??
+                                                    product.thumbnail ??
+                                                    null,
+                                                sku:
+                                                    selectedVariant?.nativeSku ??
+                                                    null,
+                                                fullProduct: product,
+                                            });
+                                        }}
+                                    >
+                                        <Icons.Heart
+                                            className={cn(
+                                                "size-4",
+                                                guestWishlist.some(
+                                                    (w) =>
+                                                        w.productId ===
+                                                            product.id &&
+                                                        String(
+                                                            w.variantId ?? ""
+                                                        ) ===
+                                                            String(
+                                                                selectedVariant?.id ??
+                                                                    ""
+                                                            )
+                                                ) &&
+                                                    "fill-red-500 stroke-red-500"
+                                            )}
+                                        />
+                                        Save to Wishlist
+                                    </button>
+                                ))}
+                        </div>
+                    </div>
+
+                    {/* Floating bottom bar — mobile only */}
+                    {showFloatingBar && (
+                        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] md:hidden">
+                            <div className="mb-2 flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-base font-semibold leading-none text-neutral-900">
+                                        {formatPriceTag(
+                                            parseFloat(
+                                                convertPaiseToRupees(
+                                                    productPrice
+                                                )
+                                            ),
+                                            true
+                                        )}
+                                    </p>
+                                    {selectedSummary && (
+                                        <p className="mt-1 truncate text-11 text-neutral-500">
+                                            {selectedSummary}
+                                        </p>
+                                    )}
+                                </div>
+                                {selectedStock !== null &&
+                                    selectedStock > 0 &&
+                                    selectedStock < LOW_STOCK_THRESHOLD && (
+                                        <span className="text-10 shrink-0 rounded-full bg-red-50 px-2 py-1 font-semibold text-red-600">
+                                            Only {selectedStock} left
+                                        </span>
+                                    )}
+                                {isSelectedOutOfStock && (
+                                    <span className="text-10 shrink-0 rounded-full bg-red-50 px-2 py-1 font-semibold text-red-600">
+                                        Out of stock
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex gap-2">
+                                {isProductLevelOutOfStock ? (
+                                    <Button
+                                        type="button"
+                                        size="lg"
+                                        className="h-12 flex-1 rounded-full bg-neutral-900 text-[14px] font-semibold text-white hover:bg-black"
+                                        onClick={handleNotifyClick}
+                                    >
+                                        Notify me
+                                    </Button>
+                                ) : (
+                                    <>
+                                        <Button
+                                            type="submit"
+                                            size="lg"
+                                            className="h-12 flex-1 rounded-full bg-neutral-900 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
+                                            disabled={
+                                                isSelectedUnavailable ||
+                                                isPending
+                                            }
+                                            onClick={(e) => {
+                                                if (isAddedToCart) {
+                                                    e.preventDefault();
+                                                    router.push("/mycart");
+                                                    return;
+                                                }
+                                                setIsBuyNow(false);
+                                                isBuyNowRef.current = false;
+                                                handleAddProductCart(
+                                                    product.id,
+                                                    product.brandId
+                                                );
+                                            }}
+                                        >
+                                            {isPending && !isBuyNow ? (
+                                                <>
+                                                    <Spinner className="mr-2 size-4 animate-spin" />
+                                                    Adding...
+                                                </>
+                                            ) : isAddedToCart ? (
+                                                <>
+                                                    Go to Bag{" "}
+                                                    <Icons.ArrowRight className="ml-2 size-4" />
+                                                </>
+                                            ) : (
+                                                "Add to Bag"
+                                            )}
+                                        </Button>
+
+                                        {userId && (
+                                            <Button
+                                                type="submit"
+                                                size="lg"
+                                                className="h-12 flex-1 rounded-full border-2 border-neutral-900 bg-transparent text-[14px] font-semibold text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
+                                                disabled={
+                                                    isSelectedUnavailable ||
+                                                    isPending
+                                                }
+                                                onClick={(e) => {
+                                                    if (isAddedToCart) {
+                                                        e.preventDefault();
+                                                        router.push(
+                                                            "/checkout"
+                                                        );
+                                                        return;
+                                                    }
+                                                    setIsBuyNow(true);
+                                                    isBuyNowRef.current = true;
+                                                    handleAddProductCart(
+                                                        product.id,
+                                                        product.brandId
+                                                    );
+                                                }}
+                                            >
+                                                {isPending && isBuyNow ? (
+                                                    <>
+                                                        <Spinner className="mr-2 size-4 animate-spin" />
+                                                        Wait...
+                                                    </>
+                                                ) : (
+                                                    "Buy Now"
+                                                )}
+                                            </Button>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
                     )}
                 </form>
             </Form>
+
+            <Dialog
+                open={isNotifyModalOpen}
+                onOpenChange={setIsNotifyModalOpen}
+            >
+                <DialogContent className="max-w-md rounded-sm">
+                    <DialogHeader>
+                        <DialogTitle className="text-[18px] font-semibold uppercase tracking-[0.08em] text-neutral-900">
+                            Notify me when back in stock
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        <p className="text-sm leading-6 text-neutral-600">
+                            {userId &&
+                            (savedNotifyEmail.trim() || savedNotifyPhone.trim())
+                                ? "We'll send the restock alert to your saved email or phone. You can update it below before confirming."
+                                : "Leave your email or phone number and we'll message you when this product is available again."}
+                        </p>
+
+                        <div className="space-y-3">
+                            <div className="space-y-1.5">
+                                <Label
+                                    htmlFor="back-in-stock-email"
+                                    className="text-xs font-semibold uppercase tracking-wide text-neutral-600"
+                                >
+                                    Email
+                                </Label>
+                                <input
+                                    id="back-in-stock-email"
+                                    type="email"
+                                    value={notifyEmail}
+                                    onChange={(event) =>
+                                        setNotifyEmail(event.target.value)
+                                    }
+                                    placeholder="you@example.com"
+                                    className="h-11 w-full rounded-sm border border-neutral-300 px-3 text-sm outline-none transition focus:border-neutral-900"
+                                />
+                            </div>
+
+                            <div className="space-y-1.5">
+                                <Label
+                                    htmlFor="back-in-stock-phone"
+                                    className="text-xs font-semibold uppercase tracking-wide text-neutral-600"
+                                >
+                                    Phone
+                                </Label>
+                                <input
+                                    id="back-in-stock-phone"
+                                    type="tel"
+                                    value={notifyPhone}
+                                    onChange={(event) =>
+                                        setNotifyPhone(event.target.value)
+                                    }
+                                    placeholder="+91 98765 43210"
+                                    className="h-11 w-full rounded-sm border border-neutral-300 px-3 text-sm outline-none transition focus:border-neutral-900"
+                                />
+                            </div>
+                        </div>
+
+                        <Button
+                            type="button"
+                            className="h-11 w-full rounded-full bg-neutral-900 text-white hover:bg-black"
+                            disabled={
+                                isNotifyPending ||
+                                (!notifyEmail.trim() && !notifyPhone.trim())
+                            }
+                            onClick={handleNotifyMe}
+                        >
+                            {isNotifyPending ? (
+                                <>
+                                    <Spinner className="mr-2 size-4 animate-spin" />
+                                    Saving...
+                                </>
+                            ) : (
+                                "Notify me"
+                            )}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <Dialog open={isSizeChartOpen} onOpenChange={setIsSizeChartOpen}>
                 <DialogContent className="max-h-[90vh] max-w-[960px] overflow-y-auto rounded-sm">

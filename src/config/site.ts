@@ -106,14 +106,6 @@ export const siteConfig: SiteConfig = {
                 name: "Socials",
                 items: [
                     {
-                        name: "Facebook",
-                        href: "/soon",
-                    },
-                    {
-                        name: "Twitter",
-                        href: "/soon",
-                    },
-                    {
                         name: "Instagram",
                         href: "https://www.instagram.com/shop.renivet?igsh=NGNzamtsZ25qaDU1",
                     },

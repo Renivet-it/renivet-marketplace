@@ -3,6 +3,16 @@ import { HomeShopByCategory } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
 
+const SALE_CATEGORY_HREF = "/shop?minDiscount=10";
+
+function getCategoryHref(category: HomeShopByCategory) {
+    if (category.title?.trim().toLowerCase() === "sale") {
+        return SALE_CATEGORY_HREF;
+    }
+
+    return category.url || "/shop";
+}
+
 interface PageProps extends GenericProps {
     shopByCategories: HomeShopByCategory[];
     titleData?: { title: string };
@@ -31,7 +41,7 @@ export function ShopByCategories({
                     {shopByCategories.map((category, index) => (
                         <Link
                             key={index}
-                            href={category.url || "/shop"}
+                            href={getCategoryHref(category)}
                             className="block"
                         >
                             <div className="overflow-hidden rounded-lg shadow-sm">
@@ -53,7 +63,7 @@ export function ShopByCategories({
                     {shopByCategories.map((category, index) => (
                         <Link
                             key={index}
-                            href={category.url || "/shop"}
+                            href={getCategoryHref(category)}
                             className="block"
                         >
                             <div className="overflow-hidden rounded-lg shadow-sm">
