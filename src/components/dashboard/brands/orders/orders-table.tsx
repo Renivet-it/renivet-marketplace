@@ -66,6 +66,14 @@ const getPaymentStatusClassName = (status: TableOrder["paymentStatus"]) =>
 const formatOrderDate = (date: TableOrder["createdAt"]) =>
     format(new Date(date), "dd MMM yyyy, h:mm a");
 
+const getOrderSourceLabel = (paymentMethod?: string | null) => {
+    if (paymentMethod === "support_replacement") {
+        return "Dispute replacement";
+    }
+
+    return null;
+};
+
 function DimensionEditModal({
     open,
     onClose,
@@ -248,6 +256,14 @@ const columns = (
                                 {convertValueToLabel(data.paymentMethod)}
                             </Badge>
                         )}
+                        {getOrderSourceLabel(data.paymentMethod) && (
+                            <Badge
+                                variant="outline"
+                                className="rounded-md border-rose-100 bg-rose-50 px-2 py-0.5 font-medium text-rose-700"
+                            >
+                                {getOrderSourceLabel(data.paymentMethod)}
+                            </Badge>
+                        )}
                     </div>
                 </div>
             );
@@ -312,7 +328,8 @@ const columns = (
         cell: ({ row }) => {
             const data = row.original;
             const awb = data.awbNumber || data.uploadWbn;
-            const shipmentId = data.shiprocketShipmentId ?? data.shiprocketOrderId;
+            const shipmentId =
+                data.shiprocketShipmentId ?? data.shiprocketOrderId;
 
             return (
                 <div className="min-w-[190px] space-y-1.5">

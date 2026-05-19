@@ -268,13 +268,6 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
-                title: "Support",
-                url: "/dashboard/general/support",
-                permissions:
-                    BitFieldSitePermission.MANAGE_FEEDBACK |
-                    BitFieldSitePermission.VIEW_FEEDBACK,
-            },
-            {
                 title: "Packaging Delta Rules",
                 url: "/dashboard/general/packaging-types",
                 permissions:
@@ -327,6 +320,34 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 title: "Coupons",
                 url: "/dashboard/general/coupons",
                 permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+        ],
+    },
+    {
+        title: "Support",
+        url: "#",
+        icon: "LifeBuoy",
+        items: [
+            {
+                title: "User Support",
+                url: "/dashboard/general/support/user",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Brand Support",
+                url: "/dashboard/general/support/brand",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Disputes",
+                url: "/dashboard/general/support/disputes",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
             },
         ],
     },
@@ -1052,8 +1073,13 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
-                    title: "Support Requests",
-                    url: `/dashboard/brands/${brandId}/support`,
+                    title: "Support",
+                    url: `/dashboard/brands/${brandId}/support?queue=support`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Disputes",
+                    url: `/dashboard/brands/${brandId}/support/disputes`,
                     permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
                 {

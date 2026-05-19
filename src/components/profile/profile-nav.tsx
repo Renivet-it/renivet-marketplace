@@ -114,6 +114,10 @@ export function ProfileNav({ className, ...props }: GenericProps) {
         { userId: user?.id ?? "" },
         { enabled: !!user?.id }
     );
+    const { data: unreadNotifications } =
+        trpc.general.notifications.unreadCount.useQuery(undefined, {
+            enabled: !!user?.id,
+        });
 
     // Using store/logic for cart count roughly
     const cartCount =
@@ -195,8 +199,9 @@ export function ProfileNav({ className, ...props }: GenericProps) {
         {
             icon: "Bell",
             name: "notifications",
-            href: "#",
+            href: "/notifications",
             label: "Notifications",
+            count: unreadNotifications,
         },
     ];
 

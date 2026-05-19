@@ -17,6 +17,7 @@ import OrderRefundInitiated from "./order-refund-initiated";
 import OrderRefundProcessed from "./order-refund-processed";
 import ProductReviewStatusUpdate from "./product-review-status-update";
 import ProductReviewSubmitted from "./product-review-submitted";
+import SupportNotificationEmail from "./support-notification";
 
 export {
     AccountCreated,
@@ -38,4 +39,5 @@ export {
     OrderRefundProcessed,
     OrderRefundFailed,
     brandOrderNotification,
+    SupportNotificationEmail,
 };

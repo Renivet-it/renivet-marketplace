@@ -28,10 +28,7 @@ import {
     convertValueToLabel,
     formatPriceTag,
 } from "@/lib/utils";
-import {
-    CachedBrand,
-    OrderWithItemAndBrand,
-} from "@/lib/validations";
+import { CachedBrand, OrderWithItemAndBrand } from "@/lib/validations";
 import {
     ColumnDef,
     ColumnFiltersState,
@@ -46,6 +43,7 @@ import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { ChevronDown, MapPin, PackageCheck, Search, Truck } from "lucide-react";
+import Link from "next/link";
 import {
     parseAsArrayOf,
     parseAsInteger,
@@ -54,7 +52,6 @@ import {
     parseAsStringLiteral,
     useQueryState,
 } from "nuqs";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { OrderAction } from "./order-action";
 import { OrderSingle } from "./order-single";
@@ -108,7 +105,9 @@ const getShipmentStatusClassName = (status?: string | null) =>
         failed: "border-rose-200 bg-rose-50 text-rose-700",
     })[status ?? ""] ?? "border-slate-200 bg-slate-50 text-slate-700";
 
-const getShipmentDisplayStatus = (shipment?: TableOrder["shipments"][number]) => {
+const getShipmentDisplayStatus = (
+    shipment?: TableOrder["shipments"][number]
+) => {
     if (!shipment?.status) return null;
 
     if (shipment.status === "pending") {
@@ -118,6 +117,14 @@ const getShipmentDisplayStatus = (shipment?: TableOrder["shipments"][number]) =>
     }
 
     return shipment.status;
+};
+
+const getOrderSourceLabel = (paymentMethod?: string | null) => {
+    if (paymentMethod === "support_replacement") {
+        return "Dispute replacement";
+    }
+
+    return null;
 };
 
 const volumetricWeightGrams = (
@@ -159,6 +166,14 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                         >
                             Smart Order
                         </Badge>
+                        {getOrderSourceLabel(data.paymentMethod) && (
+                            <Badge
+                                variant="outline"
+                                className="rounded-md border-rose-100 bg-rose-50 px-2 py-0.5 font-medium text-rose-700"
+                            >
+                                {getOrderSourceLabel(data.paymentMethod)}
+                            </Badge>
+                        )}
                     </div>
                 </div>
             );
@@ -212,6 +227,11 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                     >
                         {convertValueToLabel(data.paymentStatus)}
                     </Badge>
+                    {getOrderSourceLabel(data.paymentMethod) && (
+                        <div className="text-xs font-medium text-rose-700">
+                            {getOrderSourceLabel(data.paymentMethod)}
+                        </div>
+                    )}
                 </div>
             );
         },
@@ -232,7 +252,11 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                     <div className="flex max-w-[220px] items-center gap-1 truncate text-xs text-muted-foreground">
                         <MapPin className="size-3 shrink-0" />
                         <span className="truncate">
-                            {[data.address?.city, data.address?.state, data.address?.zip]
+                            {[
+                                data.address?.city,
+                                data.address?.state,
+                                data.address?.zip,
+                            ]
                                 .filter(Boolean)
                                 .join(", ") || "Address unavailable"}
                         </span>
@@ -255,7 +279,8 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const length = shipment?.givenLength ?? data.givenLength ?? 0;
             const width = shipment?.givenWidth ?? data.givenWidth ?? 0;
             const height = shipment?.givenHeight ?? data.givenHeight ?? 0;
-            const awb = shipment?.awbNumber || shipment?.uploadWbn || data.awbNumber;
+            const awb =
+                shipment?.awbNumber || shipment?.uploadWbn || data.awbNumber;
             const courier = shipment?.courierName || data.courierName;
             const volumetricWeight = volumetricWeightGrams(
                 length,

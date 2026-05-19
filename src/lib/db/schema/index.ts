@@ -15,6 +15,7 @@ export * from "./decodex";
 export * from "./legal";
 export * from "./marketing-strip";
 export * from "./newsletter-subscriber";
+export * from "./notification";
 export * from "./order";
 export * from "./order-shipment";
 export * from "./plan";
