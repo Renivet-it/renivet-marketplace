@@ -13,7 +13,7 @@ import {
     type CarouselApi,
 } from "@/components/ui/carousel";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import {
     CachedCart,
     CachedWishlist,
@@ -438,10 +438,7 @@ export function ProductPage({
                                         {item.brand}
                                     </p>
                                     <p className="mt-1 text-13 font-semibold text-neutral-900">
-                                        Rs.{" "}
-                                        {(item.price / 100).toLocaleString(
-                                            "en-IN"
-                                        )}
+                                        {formatINR(item.price, { input: "paise" })}
                                     </p>
                                 </div>
                             </Link>

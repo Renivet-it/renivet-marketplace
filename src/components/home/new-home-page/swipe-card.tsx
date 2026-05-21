@@ -3,7 +3,7 @@
 import { Icons } from "@/components/icons";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import { animated, to as interpolate, useSprings } from "@react-spring/web";
 import Image from "next/image";
 import Link from "next/link";
@@ -395,11 +395,15 @@ export function SwipeCard({ products, userId }: SwipeableProductCardProps) {
 
                                         <div className="absolute bottom-3 left-3 flex items-baseline gap-2">
                                             <span className="text-lg font-semibold text-white">
-                                                Rs.{price.toLocaleString()}
+                                                {formatINR(price, {
+                                                    input: "rupees",
+                                                })}
                                             </span>
                                             {comparePrice && (
                                                 <span className="text-xs text-white/60 line-through">
-                                                    Rs.{comparePrice.toLocaleString()}
+                                                    {formatINR(comparePrice, {
+                                                        input: "rupees",
+                                                    })}
                                                 </span>
                                             )}
                                         </div>

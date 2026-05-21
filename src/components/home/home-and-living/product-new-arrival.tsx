@@ -9,7 +9,7 @@ import {
     CarouselNext,
     CarouselPrevious,
 } from "@/components/ui/carousel";
-import { cn, convertPaiseToRupees } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import Autoplay from "embla-carousel-autoplay";
 import Image from "next/image";
 import { Heart } from "lucide-react";
@@ -163,7 +163,7 @@ function ProductCard({ product }: { product: Product }) {
     }, [isHovered, mediaUrls.length]);
 
     return (
-        <div 
+        <div
             className="w-full group bg-white"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -224,15 +224,15 @@ function ProductCard({ product }: { product: Product }) {
                             {product.title}
                         </h3>
                     </AnimatedProductLink>
-                    
+
                     <div className="flex flex-col items-center justify-center text-[13px] font-semibold text-gray-900">
                         {displayPrice ? (
                             <div className="flex items-center gap-1.5">
-                                <span>Rs. {price.toLocaleString()}</span>
-                                <span className="text-gray-400 line-through font-normal text-[11px]">Rs. {displayPrice.toLocaleString()}</span>
+                                <span>{formatINR(price, { input: "rupees" })}</span>
+                                <span className="text-gray-400 line-through font-normal text-[11px]">{formatINR(displayPrice, { input: "rupees" })}</span>
                             </div>
                         ) : (
-                            <span>Rs. {price.toLocaleString()}</span>
+                            <span>{formatINR(price, { input: "rupees" })}</span>
                         )}
                     </div>
                 </CardContent>

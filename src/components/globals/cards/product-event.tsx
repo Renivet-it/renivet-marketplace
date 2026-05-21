@@ -1,6 +1,6 @@
 "use client";
 
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
 import Link from "next/link";
@@ -202,11 +202,11 @@ export function EventProductCard({
                 </p> */}
 
 <p className="text-sm font-semibold">
-    <span className="text-gray-900">Rs.{formatPriceTag(parseFloat(convertPaiseToRupees(productPrice)))}</span>
+    <span className="text-gray-900">{formatINR(productPrice, { input: "paise" })}</span>
     {product.compareAtPrice ? (
         <>
             {" "}
-            <span className="text-gray-400 line-through">Rs.{formatPriceTag(parseFloat(convertPaiseToRupees(product.compareAtPrice)))}</span>
+            <span className="text-gray-400 line-through">{formatINR(product.compareAtPrice, { input: "paise" })}</span>
             {" "}
             <span className="text-red-600">({Math.round(
                 ((parseFloat(convertPaiseToRupees(product.compareAtPrice)) -

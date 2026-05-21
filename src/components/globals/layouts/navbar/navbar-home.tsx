@@ -133,7 +133,7 @@ function NavbarActionButton({
 const ANNOUNCEMENT_MESSAGES = [
     {
         icon: Icons.Truck,
-        text: "Free shipping on orders Rs. 999+",
+        text: "Free shipping on orders ₹999+",
     },
     {
         icon: Icons.Tag,

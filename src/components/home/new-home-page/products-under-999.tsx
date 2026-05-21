@@ -14,7 +14,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { ProductWithBrand } from "@/lib/validations";
 import { ChevronLeft, ChevronRight } from "lucide-react";
@@ -423,28 +423,20 @@ function Under999ProductCard({
                                 </div>
                                 <div className="mt-2 flex items-baseline gap-3 md:mt-5">
                                     <span className="text-lg font-medium text-gray-900 md:text-xl">
-                                        Rs.{" "}
-                                        {formatPriceTag(
-                                            parseFloat(
-                                                convertPaiseToRupees(
-                                                    selectedVariant?.price ||
-                                                        rawPrice
-                                                )
-                                            ),
-                                            true
+                                        {formatINR(
+                                            selectedVariant?.price || rawPrice,
+                                            {
+                                                input: "paise",
+                                                keepDecimals: true,
+                                            }
                                         )}
                                     </span>
                                     {originalPrice && (
                                         <span className="text-sm font-medium text-gray-400 line-through">
-                                            Rs.{" "}
-                                            {formatPriceTag(
-                                                parseFloat(
-                                                    convertPaiseToRupees(
-                                                        originalPrice
-                                                    )
-                                                ),
-                                                true
-                                            )}
+                                            {formatINR(originalPrice, {
+                                                input: "paise",
+                                                keepDecimals: true,
+                                            })}
                                         </span>
                                     )}
                                 </div>
