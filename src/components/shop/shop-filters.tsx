@@ -2,7 +2,6 @@
 
 import { cn, formatPriceTag } from "@/lib/utils";
 import {
-    BrandMeta,
     CachedCategory,
     CachedProductType,
     CachedSubCategory,
@@ -371,8 +370,19 @@ interface GenericProps {
     [key: string]: any;
 }
 
+type ShopBrandMeta = {
+    id: string;
+    name: string;
+    slug: string;
+    count?: number;
+    productCount?: number;
+    productsCount?: number;
+    totalCount?: number;
+    total?: number;
+};
+
 interface PageProps extends GenericProps {
-    brandsMeta: BrandMeta[];
+    brandsMeta: ShopBrandMeta[];
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -626,7 +636,7 @@ function ShopFiltersSection({
     ...props
 }: {
     className?: string;
-    brandsMeta: BrandMeta[];
+    brandsMeta: ShopBrandMeta[];
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -703,7 +713,7 @@ function BrandFilter({
     brandsMeta,
     showHeading = true,
 }: {
-    brandsMeta: BrandMeta[];
+    brandsMeta: ShopBrandMeta[];
     showHeading?: boolean;
 }) {
     const [brandIds, setBrandIds] = useQueryState(
@@ -748,30 +758,45 @@ function BrandFilter({
             )}
             <div className="space-y-1">
                 {visibleBrands.map((brand) => (
-                    <label
-                        key={brand.id}
-                        htmlFor={`brand-${brand.id}`}
-                        className="flex cursor-pointer items-center space-x-2 rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
-                    >
-                        <Checkbox
-                            id={`brand-${brand.id}`}
-                            checked={brandIds.includes(brand.id)}
-                            onCheckedChange={() => {
-                                setBrandIds(
-                                    brandIds.includes(brand.id)
-                                        ? brandIds.filter((b) => b !== brand.id)
-                                        : [...brandIds, brand.id]
-                                );
-                                setPage(1);
-                            }}
-                        />
-                        <Label
-                            htmlFor={`brand-${brand.id}`}
-                            className="cursor-pointer text-sm font-normal text-[#30455f]"
-                        >
-                            {brand.name}
-                        </Label>
-                    </label>
+                    (() => {
+                        const productCount = getBrandProductCount(brand);
+
+                        return (
+                            <label
+                                key={brand.id}
+                                htmlFor={`brand-${brand.id}`}
+                                className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`brand-${brand.id}`}
+                                        checked={brandIds.includes(brand.id)}
+                                        onCheckedChange={() => {
+                                            setBrandIds(
+                                                brandIds.includes(brand.id)
+                                                    ? brandIds.filter(
+                                                          (b) => b !== brand.id
+                                                      )
+                                                    : [...brandIds, brand.id]
+                                            );
+                                            setPage(1);
+                                        }}
+                                    />
+                                    <Label
+                                        htmlFor={`brand-${brand.id}`}
+                                        className="cursor-pointer text-sm font-normal text-[#30455f]"
+                                    >
+                                        {brand.name}
+                                    </Label>
+                                </div>
+                                {productCount !== null ? (
+                                    <span className="text-xs text-[#8ba0bb]">
+                                        {productCount}
+                                    </span>
+                                ) : null}
+                            </label>
+                        );
+                    })()
                 ))}
             </div>
             {brandsWithProducts.length > 10 && (
