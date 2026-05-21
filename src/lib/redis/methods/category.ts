@@ -7,7 +7,7 @@ class CategoryCache {
     private genKey: (...args: string[]) => string;
 
     constructor() {
-        this.genKey = generateCacheKey(":", "category");
+        this.genKey = generateCacheKey(":", "category-v2");
     }
 
     async getAll(): Promise<CachedCategory[]> {

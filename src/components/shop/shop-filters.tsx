@@ -870,6 +870,55 @@ function CategoryFilter({
     const toggleSubCategoryId = (id: string) => {
         return updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
     };
+    const categoryNameById = useMemo(
+        () => new Map(categories.map((category) => [category.id, category.name])),
+        [categories]
+    );
+    const subCategoryNameById = useMemo(
+        () =>
+            new Map(
+                subCategories.map((subCategory) => [subCategory.id, subCategory.name])
+            ),
+        [subCategories]
+    );
+    const subCategoryNameCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        subCategories.forEach((subCategory) => {
+            const key = subCategory.name.trim().toLowerCase();
+            map.set(key, (map.get(key) ?? 0) + 1);
+        });
+        return map;
+    }, [subCategories]);
+    const productTypeNameCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        productTypes.forEach((productType) => {
+            const key = productType.name.trim().toLowerCase();
+            map.set(key, (map.get(key) ?? 0) + 1);
+        });
+        return map;
+    }, [productTypes]);
+    const getSubCategoryLabel = (subCategory: CachedSubCategory) => {
+        const key = subCategory.name.trim().toLowerCase();
+        const isDuplicate = (subCategoryNameCounts.get(key) ?? 0) > 1;
+        if (!isDuplicate) return subCategory.name;
+
+        const categoryName = categoryNameById.get(subCategory.categoryId);
+        return categoryName
+            ? `${subCategory.name} (${categoryName})`
+            : subCategory.name;
+    };
+    const getProductTypeLabel = (productType: CachedProductType) => {
+        const key = productType.name.trim().toLowerCase();
+        const isDuplicate = (productTypeNameCounts.get(key) ?? 0) > 1;
+        if (!isDuplicate) return productType.name;
+
+        const subCategoryName =
+            productType.subCategory?.name ??
+            subCategoryNameById.get(productType.subCategoryId);
+        return subCategoryName
+            ? `${productType.name} (${subCategoryName})`
+            : productType.name;
+    };
     const categoryCountMap = useMemo(() => {
         const map = new Map<string, number>();
         for (const subCategory of subCategories) {
@@ -983,7 +1032,7 @@ function CategoryFilter({
                                         htmlFor={`sub-${sub.id}`}
                                         className="cursor-pointer text-sm font-normal text-[#30455f]"
                                     >
-                                        {sub.name}
+                                        {getSubCategoryLabel(sub)}
                                     </Label>
                                 </div>
                                 <span className="text-xs text-[#8ba0bb]">
@@ -1038,7 +1087,7 @@ function CategoryFilter({
                                                 htmlFor={`type-${t.id}`}
                                                 className="cursor-pointer text-sm font-normal text-[#30455f]"
                                             >
-                                                {t.name}
+                                                {getProductTypeLabel(t)}
                                             </Label>
                                         </div>
                                         <span className="text-xs text-[#8ba0bb]">

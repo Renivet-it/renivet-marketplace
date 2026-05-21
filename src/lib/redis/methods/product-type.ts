@@ -7,7 +7,7 @@ class ProductTypeCache {
     private genKey: (...args: string[]) => string;
 
     constructor() {
-        this.genKey = generateCacheKey(":", "product-type");
+        this.genKey = generateCacheKey(":", "product-type-v2");
     }
 
     async getAll(): Promise<CachedProductType[]> {
