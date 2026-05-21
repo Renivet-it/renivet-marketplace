@@ -197,6 +197,21 @@ export function ProductCard({
         });
     }, [product.variants, sizeOption]);
 
+    const sizePreview = useMemo(() => {
+        if (!sizePills.length) return null;
+
+        const inStockSizes = sizePills.filter((size) => size.inStock);
+        const sourceSizes = inStockSizes.length > 0 ? inStockSizes : sizePills;
+        const visibleSizes = sourceSizes.slice(0, 4);
+        const remainingCount = Math.max(sourceSizes.length - visibleSizes.length, 0);
+
+        return {
+            visibleSizes,
+            remainingCount,
+            totalCount: sourceSizes.length,
+        };
+    }, [sizePills]);
+
     const emiAmount = useMemo(() => {
         const price = selectedVariant?.price ?? rawPrice;
         if (price < 300000) return null;
@@ -399,16 +414,51 @@ export function ProductCard({
                                         e.stopPropagation();
                                     }}
                                 >
-                                    <DialogTrigger asChild>
-                                        <button
-                                            className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]"
-                                            onPointerDown={
-                                                preloadQuickViewImages
-                                            }
-                                        >
-                                            Quick Add
-                                        </button>
-                                    </DialogTrigger>
+                                    <div className="space-y-2">
+                                        <DialogTrigger asChild>
+                                            <button
+                                                className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]"
+                                                onPointerDown={
+                                                    preloadQuickViewImages
+                                                }
+                                            >
+                                                Quick Add
+                                            </button>
+                                        </DialogTrigger>
+                                        {sizePreview ? (
+                                            <div className="rounded-lg border border-[#e7dece] bg-white/80 px-2.5 py-2 text-left">
+                                                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#728365]">
+                                                    Size Run
+                                                </p>
+                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                    {sizePreview.visibleSizes.map(
+                                                        (size) => (
+                                                            <span
+                                                                key={size.id}
+                                                                className={cn(
+                                                                    "rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                                                                    size.inStock
+                                                                        ? "border-[#d5dcc8] bg-white text-[#31401f]"
+                                                                        : "border-[#e1e1e1] bg-[#f5f5f5] text-[#9a9a9a] line-through"
+                                                                )}
+                                                            >
+                                                                {size.label}
+                                                            </span>
+                                                        )
+                                                    )}
+                                                    {sizePreview.remainingCount >
+                                                    0 ? (
+                                                        <span className="rounded-full bg-[#eef3e7] px-1.5 py-0.5 text-[10px] font-semibold text-[#556743]">
+                                                            +
+                                                            {
+                                                                sizePreview.remainingCount
+                                                            }
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -792,33 +842,6 @@ export function ProductCard({
                             </span>
                         ) : null}
                     </div>
-                    {sizePills.length > 0 && (
-                        <div className="flex flex-wrap gap-1.5">
-                            {sizePills.map((size) => (
-                                <button
-                                    key={size.id}
-                                    type="button"
-                                    onClick={(event) => {
-                                        event.preventDefault();
-                                        event.stopPropagation();
-                                        router.push(
-                                            size.sku
-                                                ? `/products/${product.slug}?sku=${size.sku}`
-                                                : `/products/${product.slug}`
-                                        );
-                                    }}
-                                    className={cn(
-                                        "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
-                                        size.inStock
-                                            ? "border-[#d5dcc8] bg-white text-[#31401f] hover:border-[#31401f]"
-                                            : "border-[#e1e1e1] bg-[#f5f5f5] text-[#9a9a9a] line-through"
-                                    )}
-                                >
-                                    {size.label}
-                                </button>
-                            ))}
-                        </div>
-                    )}
                     <p className="truncate text-[10px] text-[#7f7662]">
                         {normalizeBrandName(product.brand?.name)}
                     </p>
