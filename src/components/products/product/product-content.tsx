@@ -4,9 +4,16 @@ import { getEstimatedDelivery } from "@/actions/shiprocket/get-estimate-delivery
 import { ProductCartAddForm } from "@/components/globals/forms";
 import { ProductShareModal } from "@/components/globals/modals";
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, normalizeBrandName } from "@/lib/utils";
 import { CachedCart, ProductWithBrand } from "@/lib/validations";
-import { Leaf, Package2, RefreshCw, ShieldCheck, Truck } from "lucide-react";
+import {
+    Leaf,
+    Package2,
+    RefreshCw,
+    Share2,
+    ShieldCheck,
+    Truck,
+} from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 interface PageProps extends GenericProps {
@@ -38,11 +45,11 @@ export function ProductContent({
         });
 
     const { data: user } = trpc.general.users.currentUser.useQuery();
-
     const { data: productReviews = [] } =
         trpc.general.customerReviews.getReviewsByProduct.useQuery({
             productId: product.id,
         });
+
     const reviews = productReviews.length;
     const rating =
         reviews > 0
@@ -80,40 +87,45 @@ export function ProductContent({
                         if (isNaN(estimatedDate.getTime())) return;
                         if (estimatedDate <= today) return;
 
-                        const formattedDate = estimatedDate.toLocaleDateString(
-                            "en-US",
-                            {
+                        setZipCode(user.addresses[0].zip);
+                        setEstimatedDelivery(
+                            estimatedDate.toLocaleDateString("en-US", {
                                 weekday: "short",
                                 month: "short",
                                 day: "numeric",
-                            }
+                            })
                         );
-                        setZipCode(user.addresses[0].zip);
-                        setEstimatedDelivery(formattedDate);
                     }
                 } catch {
                     // Silent fail
                 }
             });
         }
-    }, [user, brandDetails, startTransition]);
+    }, [brandDetails, startTransition, user]);
 
     return (
         <>
             <div className={cn("", className)} {...props}>
-                {/* ── Brand name (small caps) ── */}
-                <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
-                    {product.brand.name}
-                </p>
+                <div className="mb-3 flex items-start justify-between gap-3">
+                    <div>
+                        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                            {normalizeBrandName(product.brand.name)}
+                        </p>
+                        <h1 className="mb-2 font-sans text-[1.6rem] font-semibold leading-tight text-neutral-900 md:text-[1.85rem]">
+                            {product.title}
+                        </h1>
+                    </div>
 
-                {/* ── Product title ── */}
-                <h1 className="mb-2 font-sans text-[1.6rem] font-semibold leading-tight text-neutral-900 md:text-[1.85rem]">
-                    {product.title}
-                </h1>
+                    <button
+                        type="button"
+                        onClick={() => setIsProductShareModalOpen(true)}
+                        className="flex h-11 shrink-0 items-center gap-2 rounded-full border border-neutral-200 px-4 text-sm font-semibold text-neutral-700 transition-colors hover:bg-neutral-50"
+                    >
+                        <Share2 className="size-4" />
+                        Share
+                    </button>
+                </div>
 
-                {/* ── Style number ── P1-FE-015: hidden until human-readable SKU system is built ── */}
-
-                {/* ── Star rating ── */}
                 <div className="mb-5 flex items-center gap-2">
                     <div className="flex items-center gap-0.5">
                         {[...Array(5)].map((_, i) => {
@@ -148,19 +160,15 @@ export function ProductContent({
                             );
                         })}
                     </div>
-                    <button className="text-[13px] font-medium text-neutral-500 underline underline-offset-2 hover:text-neutral-800 transition-colors">
+                    <button className="text-[13px] font-medium text-neutral-500 underline underline-offset-2 transition-colors hover:text-neutral-800">
                         {reviews > 0
                             ? `${reviews} ${reviews === 1 ? "Review" : "Reviews"}`
                             : "Be the first to review"}
                     </button>
                 </div>
 
-                {/* ── Divider ── */}
                 <div className="mb-6 border-t border-neutral-200" />
 
-
-
-                {/* ── Cart add form (prices + selectors + buttons) ── */}
                 <ProductCartAddForm
                     product={product}
                     isWishlisted={isWishlisted}
@@ -175,10 +183,8 @@ export function ProductContent({
                     setEstimatedDelivery={setEstimatedDelivery}
                 />
 
-                {/* ── Divider ── */}
                 <div className="my-7 border-t border-neutral-200" />
 
-                {/* ── Service promises (Patagonia icons row) ── */}
                 <div className="mb-7 grid grid-cols-2 gap-3 sm:grid-cols-4">
                     {[
                         { icon: Truck, label: "Free Shipping", sub: "Orders ₹999+" },
@@ -205,7 +211,6 @@ export function ProductContent({
                     ))}
                 </div>
 
-                {/* ── Sustainability badge strip ── */}
                 <div className="mt-7 flex flex-wrap gap-2">
                     <span className="inline-flex items-center gap-1.5 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-[11px] font-semibold text-green-800">
                         <Leaf className="size-3" />
@@ -220,7 +225,6 @@ export function ProductContent({
                         Renivet Verified
                     </span>
                 </div>
-
             </div>
 
             <ProductShareModal

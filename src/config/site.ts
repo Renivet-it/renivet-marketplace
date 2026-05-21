@@ -400,6 +400,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_PRODUCTS,
             },
             {
+                title: "Most Popular Products",
+                url: "/dashboard/general/most-popular-products",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
+            },
+            {
                 title: "Orders",
                 url: "/dashboard/general/orders",
                 permissions:

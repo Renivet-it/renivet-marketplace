@@ -60,6 +60,7 @@ import {
     productValues,
     productVariants,
     returnExchangePolicy,
+    wishlists,
     womenPageFeaturedProducts,
 } from "../schema";
 import { brandQueries } from "./brand";
@@ -4316,6 +4317,21 @@ class ProductQuery {
             .returning()
             .then((res) => res[0]);
     }
+
+    async trackProductView(productId: string, brandId: string, userId?: string) {
+        return db
+            .insert(productEvents)
+            .values({
+                productId,
+                brandId,
+                userId: userId ?? null,
+                event: "view",
+                createdAt: new Date(),
+            })
+            .returning()
+            .then((res) => res[0]);
+    }
+
     async trackAddToCart(productId: string, brandId: string, userId?: string) {
         return db
             .insert(productEvents)
@@ -4328,6 +4344,166 @@ class ProductQuery {
             })
             .returning()
             .then((res) => res[0]);
+    }
+
+    async getMostPopularProducts({
+        limit = 30,
+        days = 30,
+    }: {
+        limit?: number;
+        days?: number;
+    } = {}) {
+        const lookbackDays = Math.max(1, Math.trunc(days));
+        const cappedLimit = Math.max(1, Math.trunc(limit));
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - lookbackDays);
+
+        const recencyBoostStartDate = new Date();
+        recencyBoostStartDate.setDate(recencyBoostStartDate.getDate() - 30);
+
+        const viewsAgg = db
+            .select({
+                productId: productEvents.productId,
+                count: count(productEvents.id).as("view_count"),
+            })
+            .from(productEvents)
+            .where(
+                and(
+                    eq(productEvents.event, "view"),
+                    gte(productEvents.createdAt, startDate)
+                )
+            )
+            .groupBy(productEvents.productId)
+            .as("most_popular_views");
+
+        const addToCartAgg = db
+            .select({
+                productId: productEvents.productId,
+                count: count(productEvents.id).as("add_to_cart_count"),
+            })
+            .from(productEvents)
+            .where(
+                and(
+                    eq(productEvents.event, "add_to_cart"),
+                    gte(productEvents.createdAt, startDate)
+                )
+            )
+            .groupBy(productEvents.productId)
+            .as("most_popular_add_to_cart");
+
+        const purchaseAgg = db
+            .select({
+                productId: productEvents.productId,
+                count: count(productEvents.id).as("purchase_count"),
+            })
+            .from(productEvents)
+            .where(
+                and(
+                    eq(productEvents.event, "purchase"),
+                    gte(productEvents.createdAt, startDate)
+                )
+            )
+            .groupBy(productEvents.productId)
+            .as("most_popular_purchase");
+
+        const wishlistAgg = db
+            .select({
+                productId: wishlists.productId,
+                count: count(wishlists.id).as("wishlist_count"),
+            })
+            .from(wishlists)
+            .where(gte(wishlists.createdAt, startDate))
+            .groupBy(wishlists.productId)
+            .as("most_popular_wishlist");
+
+        const popularityScoreSql = sql<number>`
+            (
+                COALESCE(${viewsAgg.count}, 0) * 1 +
+                COALESCE(${wishlistAgg.count}, 0) * 3 +
+                COALESCE(${addToCartAgg.count}, 0) * 5 +
+                COALESCE(${purchaseAgg.count}, 0) * 8 +
+                CASE
+                    WHEN ${products.createdAt} >= ${recencyBoostStartDate} THEN 2
+                    ELSE 0
+                END
+            )
+        `;
+
+        const rankedProducts = await db
+            .select({
+                productId: products.id,
+                popularityScore: popularityScoreSql.as("popularity_score"),
+                viewCount: sql<number>`COALESCE(${viewsAgg.count}, 0)`.as(
+                    "view_count"
+                ),
+                wishlistCount: sql<number>`COALESCE(${wishlistAgg.count}, 0)`.as(
+                    "wishlist_count"
+                ),
+                addToCartCount: sql<number>`COALESCE(${addToCartAgg.count}, 0)`.as(
+                    "add_to_cart_count"
+                ),
+                purchaseCount: sql<number>`COALESCE(${purchaseAgg.count}, 0)`.as(
+                    "purchase_count"
+                ),
+            })
+            .from(products)
+            .leftJoin(viewsAgg, eq(viewsAgg.productId, products.id))
+            .leftJoin(addToCartAgg, eq(addToCartAgg.productId, products.id))
+            .leftJoin(purchaseAgg, eq(purchaseAgg.productId, products.id))
+            .leftJoin(wishlistAgg, eq(wishlistAgg.productId, products.id))
+            .where(
+                and(
+                    eq(products.isDeleted, false),
+                    eq(products.isActive, true),
+                    eq(products.isPublished, true),
+                    eq(products.verificationStatus, "approved")
+                )
+            )
+            .orderBy(
+                desc(popularityScoreSql),
+                desc(sql`COALESCE(${purchaseAgg.count}, 0)`),
+                desc(sql`COALESCE(${addToCartAgg.count}, 0)`),
+                desc(sql`COALESCE(${wishlistAgg.count}, 0)`),
+                desc(sql`COALESCE(${viewsAgg.count}, 0)`),
+                desc(products.createdAt)
+            )
+            .limit(cappedLimit);
+
+        const rankedProductIds = rankedProducts.map((item) => item.productId);
+        if (rankedProductIds.length === 0) return [];
+
+        const listingProducts = await this.getProducts({
+            limit: rankedProductIds.length,
+            page: 1,
+            isDeleted: false,
+            isAvailable: true,
+            isPublished: true,
+            isActive: true,
+            verificationStatus: "approved",
+            priorityProductIds: rankedProductIds,
+        });
+
+        const listingProductMap = new Map(
+            listingProducts.data.map((product) => [product.id, product])
+        );
+
+        return rankedProducts
+            .map((item) => {
+                const product = listingProductMap.get(item.productId);
+                if (!product) return null;
+
+                return {
+                    ...product,
+                    popularityScore: Number(item.popularityScore ?? 0),
+                    popularityMetrics: {
+                        views: Number(item.viewCount ?? 0),
+                        wishlists: Number(item.wishlistCount ?? 0),
+                        addToCarts: Number(item.addToCartCount ?? 0),
+                        purchases: Number(item.purchaseCount ?? 0),
+                    },
+                };
+            })
+            .filter(Boolean);
     }
 
     async trackPurchase(productId: string, brandId: string, userId?: string) {

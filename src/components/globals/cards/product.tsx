@@ -13,7 +13,13 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatINR,
+    formatPriceTag,
+    normalizeBrandName,
+} from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { ProductWithBrand } from "@/lib/validations";
 import { ChevronRight, ShoppingCart } from "lucide-react";
@@ -136,7 +142,6 @@ export function ProductCard({
         originalPrice && originalPrice > rawPrice
             ? Math.round(Number(convertPaiseToRupees(originalPrice)))
             : null;
-    const displayCurrent = Math.round(Number(convertPaiseToRupees(rawPrice)));
     const discount =
         originalPrice && originalPrice > rawPrice
             ? Math.round(((originalPrice - rawPrice) / originalPrice) * 100)
@@ -159,6 +164,44 @@ export function ProductCard({
             ) ?? product.variants[0]
         );
     }, [product.options, product.variants, selectedOptions]);
+
+    const sizeOption = useMemo(
+        () =>
+            product.options?.find((option) =>
+                option.name.toLowerCase().includes("size")
+            ) ?? null,
+        [product.options]
+    );
+
+    const sizePills = useMemo(() => {
+        if (!sizeOption) return [];
+
+        return sizeOption.values.map((value) => {
+            const matchingVariants = (product.variants ?? []).filter(
+                (variant) => variant.combinations?.[sizeOption.id] === value.id
+            );
+            const inStock = matchingVariants.some(
+                (variant) => !variant.isDeleted && (variant.quantity ?? 0) > 0
+            );
+            const targetVariant =
+                matchingVariants.find(
+                    (variant) => !variant.isDeleted && (variant.quantity ?? 0) > 0
+                ) ?? matchingVariants[0];
+
+            return {
+                id: value.id,
+                label: value.name,
+                inStock,
+                sku: targetVariant?.nativeSku ?? null,
+            };
+        });
+    }, [product.variants, sizeOption]);
+
+    const emiAmount = useMemo(() => {
+        const price = selectedVariant?.price ?? rawPrice;
+        if (price < 300000) return null;
+        return Math.ceil(price / 3);
+    }, [rawPrice, selectedVariant?.price]);
 
     useEffect(() => {
         if (!isProductHovered) {
@@ -363,7 +406,7 @@ export function ProductCard({
                                                 preloadQuickViewImages
                                             }
                                         >
-                                            Quick Buy
+                                            Quick Add
                                         </button>
                                     </DialogTrigger>
                                 </div>
@@ -385,7 +428,7 @@ export function ProductCard({
                                     isQuickViewOpen &&
                                         "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
                                 )}
-                                aria-label="Quick buy"
+                                aria-label="Quick add"
                                 onPointerDown={preloadQuickViewImages}
                             >
                                 <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_68%)] opacity-70" />
@@ -485,28 +528,20 @@ export function ProductCard({
 
                                 <div className="mt-2 flex items-baseline gap-3 md:mt-5">
                                     <span className="text-lg font-medium text-gray-900 md:text-xl">
-                                        Rs.{" "}
-                                        {formatPriceTag(
-                                            parseFloat(
-                                                convertPaiseToRupees(
-                                                    selectedVariant?.price ||
-                                                        rawPrice
-                                                )
-                                            ),
-                                            true
+                                        {formatINR(
+                                            selectedVariant?.price || rawPrice,
+                                            {
+                                                input: "paise",
+                                                keepDecimals: true,
+                                            }
                                         )}
                                     </span>
                                     {originalPrice ? (
                                         <span className="text-sm font-medium text-gray-400 line-through">
-                                            Rs.{" "}
-                                            {formatPriceTag(
-                                                parseFloat(
-                                                    convertPaiseToRupees(
-                                                        originalPrice
-                                                    )
-                                                ),
-                                                true
-                                            )}
+                                            {formatINR(originalPrice, {
+                                                input: "paise",
+                                                keepDecimals: true,
+                                            })}
                                         </span>
                                     ) : null}
                                     {discount ? (
@@ -736,16 +771,56 @@ export function ProductCard({
                     </p>
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-[12px] font-semibold text-gray-900">
-                            Rs.{displayCurrent}
+                            {formatINR(rawPrice, { input: "paise" })}
                         </span>
                         {displayOriginal ? (
                             <span className="text-[10px] text-gray-400 line-through">
-                                Rs.{displayOriginal}
+                                {formatINR(originalPrice, { input: "paise" })}
                             </span>
                         ) : null}
                     </div>
+                    <div className="flex flex-wrap gap-1.5">
+                        <span className="rounded-full border border-[#d8decd] bg-[#f7faf2] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#3a4b28]">
+                            COD
+                        </span>
+                        <span className="rounded-full border border-[#dfe7f1] bg-[#f8fbff] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#315176]">
+                            UPI
+                        </span>
+                        {emiAmount ? (
+                            <span className="rounded-full border border-[#eadfce] bg-[#fffaf2] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#7a5a28]">
+                                EMI from {formatINR(emiAmount, { input: "paise" })}
+                            </span>
+                        ) : null}
+                    </div>
+                    {sizePills.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {sizePills.map((size) => (
+                                <button
+                                    key={size.id}
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.preventDefault();
+                                        event.stopPropagation();
+                                        router.push(
+                                            size.sku
+                                                ? `/products/${product.slug}?sku=${size.sku}`
+                                                : `/products/${product.slug}`
+                                        );
+                                    }}
+                                    className={cn(
+                                        "rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors",
+                                        size.inStock
+                                            ? "border-[#d5dcc8] bg-white text-[#31401f] hover:border-[#31401f]"
+                                            : "border-[#e1e1e1] bg-[#f5f5f5] text-[#9a9a9a] line-through"
+                                    )}
+                                >
+                                    {size.label}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                     <p className="truncate text-[10px] text-[#7f7662]">
-                        {product.brand?.name}
+                        {normalizeBrandName(product.brand?.name)}
                     </p>
                 </div>
             </div>

@@ -1,7 +1,5 @@
 "use client";
 
-import { env } from "@/../env";
-import { Icons } from "@/components/icons";
 import {
     Dialog,
     DialogContent,
@@ -9,12 +7,11 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog-general";
 import { siteConfig } from "@/config/site";
-import { URLBuilder } from "@/lib/builders";
-import { cn, getAbsoluteURL } from "@/lib/utils";
+import { cn, getAbsoluteURL, normalizeBrandName } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
-import Image from "next/image";
+import { Mail, MessageCircle, Share2 } from "lucide-react";
 import Link from "next/link";
-import { Dispatch, MouseEvent, ReactNode, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 
 interface PageProps {
@@ -23,148 +20,89 @@ interface PageProps {
     product: ProductWithBrand | any;
 }
 
-const FALLBACK_IMAGE_URL =
-    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
-
-export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
-    const productUrl = getAbsoluteURL(
+function buildTrackedProductUrl(product: ProductWithBrand | any) {
+    const baseUrl = getAbsoluteURL(
         product?.slug ? `/products/${product.slug}` : "/shop"
     );
-    const primaryMediaUrl =
-        product?.media?.[0]?.mediaItem?.url ?? FALLBACK_IMAGE_URL;
-    const brandName = product?.brand?.name ?? siteConfig.name;
+    const url = new URL(baseUrl);
+    url.searchParams.set("utm_source", "share");
+    url.searchParams.set("utm_medium", "product-share");
+    url.searchParams.set("utm_campaign", product?.slug ?? "product");
+    return url.toString();
+}
 
-    const facebookShareUrl = new URLBuilder(
-        "https://www.facebook.com/dialog/share"
-    )
-        .addQueryParam("encoding", "UTF-8")
-        .addQueryParam("app_id", env.NEXT_PUBLIC_FACEBOOK_APP_ID)
-        .addQueryParam("display", "popup")
-        .addQueryParam("href", productUrl)
-        .addQueryParam(
-            "hashtag",
-            `#${product.title} #${brandName} #${siteConfig.name}`
-        )
-        .build();
+export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
+    const shareUrl = useMemo(() => buildTrackedProductUrl(product), [product]);
+    const brandName = normalizeBrandName(product?.brand?.name ?? siteConfig.name);
+    const shareMessage = `${product?.title} by ${brandName} on ${siteConfig.name} ${shareUrl}`;
 
-    const xShareUrl = new URLBuilder("https://www.x.com/intent/tweet")
-        .addQueryParam("text", `Check out this product : ${product.title}`)
-        .addQueryParam("url", productUrl)
-        .addQueryParam(
-            "hashtags",
-            `${product.title},${brandName},${siteConfig.name}`
-        )
-        .build();
+    useEffect(() => {
+        if (!isOpen || typeof window === "undefined") return;
+        if (!("share" in navigator) || window.innerWidth >= 768) return;
 
-    const pinterestUrl = new URLBuilder(
-        "https://www.pinterest.com/pin/create/button/"
-    )
-        .addQueryParam("url", productUrl)
-        .addQueryParam("media", primaryMediaUrl)
-        .addQueryParam(
-            "description",
-            product.description?.replace(/<[^>]*>/gm, "") ?? ""
-        )
-        .addQueryParam("method", "button")
-        .build();
+        navigator
+            .share({
+                title: `${product?.title} by ${brandName}`,
+                text: shareMessage,
+                url: shareUrl,
+            })
+            .catch(() => null)
+            .finally(() => setIsOpen(false));
+    }, [brandName, isOpen, product?.title, setIsOpen, shareMessage, shareUrl]);
+
+    const desktopActions = [
+        {
+            label: "WhatsApp",
+            href: `https://wa.me/?text=${encodeURIComponent(shareMessage)}`,
+            icon: MessageCircle,
+        },
+        {
+            label: "Email",
+            href: `mailto:?subject=${encodeURIComponent(`${product?.title} by ${brandName}`)}&body=${encodeURIComponent(shareMessage)}`,
+            icon: Mail,
+        },
+    ];
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
-            <DialogContent className="md:w-auto">
+            <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Share Item</DialogTitle>
+                    <DialogTitle>Share this product</DialogTitle>
                 </DialogHeader>
 
-                <div className="flex justify-between gap-2 md:gap-5">
-                    <ProductShareLink
-                        icon="Mail"
-                        href={`mailto:?subject=${encodeURIComponent(`Check out this product : ${product.title}`)}&body=${encodeURIComponent(productUrl)}`}
-                    />
+                <div className="space-y-3">
+                    <p className="text-sm leading-6 text-neutral-600">
+                        Share via WhatsApp, email, or copy the tracked product link.
+                    </p>
 
-                    <ProductShareLink
-                        icon="Facebook"
-                        href={facebookShareUrl}
-                        target="_blank"
-                        img={
-                            <Image
-                                src="/socials/facebook.png"
-                                alt="Facebook"
-                                width={24}
-                                height={24}
-                            />
-                        }
-                    />
-
-                    <ProductShareLink
-                        icon="X_Twitter"
-                        href={xShareUrl}
-                        target="_blank"
-                        img={
-                            <Image
-                                src="/socials/x.png"
-                                alt="Facebook"
-                                width={24}
-                                height={24}
-                            />
-                        }
-                    />
-
-                    <ProductShareLink
-                        icon="Pin"
-                        href={pinterestUrl}
-                        target="_blank"
-                        img={
-                            <Image
-                                src="/socials/pinterest.png"
-                                alt="Facebook"
-                                width={24}
-                                height={24}
-                            />
-                        }
-                    />
-
-                    <ProductShareLink
-                        icon="Link"
-                        href={productUrl}
-                        onClick={(e) => {
-                            e.preventDefault();
-                            navigator.clipboard.writeText(productUrl);
-                            toast.success("Link copied to clipboard");
-                        }}
-                    />
+                    <div className="grid grid-cols-2 gap-3">
+                        {desktopActions.map(({ label, href, icon: Icon }) => (
+                            <Link
+                                key={label}
+                                href={href}
+                                target="_blank"
+                                className={cn(
+                                    "flex h-12 items-center justify-center gap-2 rounded-full border border-neutral-200 text-sm font-semibold transition-colors hover:bg-neutral-50"
+                                )}
+                            >
+                                <Icon className="size-4" />
+                                {label}
+                            </Link>
+                        ))}
+                        <button
+                            type="button"
+                            className="col-span-2 flex h-12 items-center justify-center gap-2 rounded-full bg-neutral-900 text-sm font-semibold text-white transition-colors hover:bg-black"
+                            onClick={() => {
+                                navigator.clipboard.writeText(shareUrl);
+                                toast.success("Link copied to clipboard");
+                            }}
+                        >
+                            <Share2 className="size-4" />
+                            Copy link
+                        </button>
+                    </div>
                 </div>
             </DialogContent>
         </Dialog>
-    );
-}
-
-interface ProductShareLinkProps {
-    className?: string;
-    icon: keyof typeof Icons;
-    href: string;
-    onClick?: (e: MouseEvent<HTMLAnchorElement>) => void;
-    target?: string;
-    img?: ReactNode;
-}
-
-function ProductShareLink({
-    className,
-    icon,
-    img,
-    ...props
-}: ProductShareLinkProps) {
-    const Icon = Icons[icon];
-
-    return (
-        <Link
-            className={cn(
-                "flex size-12 items-center justify-center rounded-full border border-foreground p-2",
-                className
-            )}
-            title={`Share via ${icon === "Pin" ? "Pinterest" : icon}`}
-            {...props}
-        >
-            <div>{img ? img : <Icon className="size-7" />}</div>
-        </Link>
     );
 }

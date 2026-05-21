@@ -25,7 +25,7 @@ import { getColorHex } from "@/lib/color-utils";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import { cn, convertPaiseToRupees, formatINR, formatPriceTag } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import {
     CachedCart,
@@ -166,9 +166,9 @@ export function ProductCartAddForm({
         getInitialViewerCount(product.id)
     );
 
-    // Floating bar: show only when inline buttons scroll out of view on mobile
     const buttonsRef = useRef<HTMLDivElement>(null);
     const [showFloatingBar, setShowFloatingBar] = useState(false);
+    const [isPastMobileCtaTrigger, setIsPastMobileCtaTrigger] = useState(false);
 
     useEffect(() => {
         const el = buttonsRef.current;
@@ -180,6 +180,24 @@ export function ProductCartAddForm({
         );
         observer.observe(el);
         return () => observer.disconnect();
+    }, []);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            const pageHeight =
+                document.documentElement.scrollHeight - window.innerHeight;
+            const progress = pageHeight > 0 ? window.scrollY / pageHeight : 0;
+            setIsPastMobileCtaTrigger(progress >= 0.3);
+        };
+
+        handleScroll();
+        window.addEventListener("scroll", handleScroll, { passive: true });
+        window.addEventListener("resize", handleScroll);
+
+        return () => {
+            window.removeEventListener("scroll", handleScroll);
+            window.removeEventListener("resize", handleScroll);
+        };
     }, []);
 
     useEffect(() => {
@@ -438,6 +456,14 @@ export function ProductCartAddForm({
             .filter(Boolean)
             .join(" / ");
     }, [selectedVariant, sortedOptions]);
+
+    const floatingBarImage = useMemo(() => {
+        return (
+            selectedVariant?.mediaItem?.url ??
+            product.media?.[0]?.mediaItem?.url ??
+            null
+        );
+    }, [product.media, selectedVariant?.mediaItem?.url]);
 
     const productCompareAtPrice = useMemo(() => {
         if (!product.productHasVariants) return product.compareAtPrice;
@@ -1094,58 +1120,51 @@ export function ProductCartAddForm({
                     </div>
 
                     {/* Floating bottom bar — mobile only */}
-                    {showFloatingBar && (
-                        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white px-4 py-3 shadow-[0_-4px_16px_rgba(0,0,0,0.12)] md:hidden">
-                            <div className="mb-2 flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                    <p className="text-base font-semibold leading-none text-neutral-900">
-                                        {formatPriceTag(
-                                            parseFloat(
-                                                convertPaiseToRupees(
-                                                    productPrice
-                                                )
-                                            ),
-                                            true
-                                        )}
-                                    </p>
-                                    {selectedSummary && (
-                                        <p className="mt-1 truncate text-11 text-neutral-500">
-                                            {selectedSummary}
-                                        </p>
-                                    )}
+                    {showFloatingBar && isPastMobileCtaTrigger && !compact && (
+                        <div className="fixed inset-x-0 bottom-0 z-50 border-t border-neutral-200 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+12px)] pt-3 shadow-[0_-10px_28px_rgba(0,0,0,0.14)] backdrop-blur md:hidden">
+                            <div className="flex items-center gap-3">
+                                <div className="relative h-14 w-12 shrink-0 overflow-hidden rounded-xl bg-neutral-100">
+                                    {floatingBarImage ? (
+                                        <Image
+                                            src={floatingBarImage}
+                                            alt={product.title}
+                                            fill
+                                            sizes="48px"
+                                            className="object-cover"
+                                        />
+                                    ) : null}
                                 </div>
-                                {selectedStock !== null &&
-                                    selectedStock > 0 &&
-                                    selectedStock < LOW_STOCK_THRESHOLD && (
-                                        <span className="text-10 shrink-0 rounded-full bg-red-50 px-2 py-1 font-semibold text-red-600">
-                                            Only {selectedStock} left
-                                        </span>
-                                    )}
-                                {isSelectedOutOfStock && (
-                                    <span className="text-10 shrink-0 rounded-full bg-red-50 px-2 py-1 font-semibold text-red-600">
-                                        Out of stock
-                                    </span>
-                                )}
-                            </div>
-                            <div className="flex gap-2">
-                                {isProductLevelOutOfStock ? (
-                                    <Button
-                                        type="button"
-                                        size="lg"
-                                        className="h-12 flex-1 rounded-full bg-neutral-900 text-[14px] font-semibold text-white hover:bg-black"
-                                        onClick={handleNotifyClick}
-                                    >
-                                        Notify me
-                                    </Button>
-                                ) : (
-                                    <>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-xs font-semibold uppercase tracking-[0.08em] text-neutral-500">
+                                        {product.title}
+                                    </p>
+                                    <p className="mt-0.5 text-base font-semibold leading-none text-neutral-900">
+                                        {formatINR(productPrice, {
+                                            input: "paise",
+                                            keepDecimals: true,
+                                        })}
+                                    </p>
+                                    <p className="mt-1 truncate text-[11px] text-neutral-500">
+                                        {selectedSummary ?? "Select size or color"}
+                                    </p>
+                                </div>
+                                <div className="shrink-0">
+                                    {isProductLevelOutOfStock ? (
+                                        <Button
+                                            type="button"
+                                            size="lg"
+                                            className="h-12 min-w-[126px] rounded-full bg-neutral-900 px-5 text-[14px] font-semibold text-white hover:bg-black"
+                                            onClick={handleNotifyClick}
+                                        >
+                                            Notify me
+                                        </Button>
+                                    ) : (
                                         <Button
                                             type="submit"
                                             size="lg"
-                                            className="h-12 flex-1 rounded-full bg-neutral-900 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
+                                            className="h-12 min-w-[126px] rounded-full bg-neutral-900 px-5 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
                                             disabled={
-                                                isSelectedUnavailable ||
-                                                isPending
+                                                isSelectedUnavailable || isPending
                                             }
                                             onClick={(e) => {
                                                 if (isAddedToCart) {
@@ -1167,52 +1186,13 @@ export function ProductCartAddForm({
                                                     Adding...
                                                 </>
                                             ) : isAddedToCart ? (
-                                                <>
-                                                    Go to Bag{" "}
-                                                    <Icons.ArrowRight className="ml-2 size-4" />
-                                                </>
+                                                "Go to Bag"
                                             ) : (
                                                 "Add to Bag"
                                             )}
                                         </Button>
-
-                                        {userId && (
-                                            <Button
-                                                type="submit"
-                                                size="lg"
-                                                className="h-12 flex-1 rounded-full border-2 border-neutral-900 bg-transparent text-[14px] font-semibold text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
-                                                disabled={
-                                                    isSelectedUnavailable ||
-                                                    isPending
-                                                }
-                                                onClick={(e) => {
-                                                    if (isAddedToCart) {
-                                                        e.preventDefault();
-                                                        router.push(
-                                                            "/checkout"
-                                                        );
-                                                        return;
-                                                    }
-                                                    setIsBuyNow(true);
-                                                    isBuyNowRef.current = true;
-                                                    handleAddProductCart(
-                                                        product.id,
-                                                        product.brandId
-                                                    );
-                                                }}
-                                            >
-                                                {isPending && isBuyNow ? (
-                                                    <>
-                                                        <Spinner className="mr-2 size-4 animate-spin" />
-                                                        Wait...
-                                                    </>
-                                                ) : (
-                                                    "Buy Now"
-                                                )}
-                                            </Button>
-                                        )}
-                                    </>
-                                )}
+                                    )}
+                                </div>
                             </div>
                         </div>
                     )}

@@ -1,4 +1,5 @@
 import { GeneralShell } from "@/components/globals/layouts";
+import { StorefrontBreadcrumbs, buildBreadcrumbJsonLd } from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
 import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { ProductSearch } from "@/components/ui/product-search";
 import { Label } from "@/components/ui/label";
@@ -42,10 +43,57 @@ interface PageProps {
 export default async function Page({ searchParams }: PageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
-    const productTypes = await productTypeCache.getAll();
+    const [productTypes, categories, subCategories] = await Promise.all([
+        productTypeCache.getAll(),
+        categoryCache.getAll(),
+        subCategoryCache.getAll(),
+    ]);
+
+    const selectedCategory = categories.find(
+        (category) => category.id === params.categoryId
+    );
+    const selectedSubCategory = subCategories.find(
+        (subcategory) => subcategory.id === subCategoryId
+    );
+    const selectedProductType = productTypes.find(
+        (productType) => productType.id === params.productTypeId
+    );
+
+    const breadcrumbItems = [
+        { label: "Home", href: "/" },
+        { label: "Shop", href: "/shop" },
+        ...(selectedCategory
+            ? [
+                  {
+                      label: selectedCategory.name,
+                      href: `/shop?categoryId=${selectedCategory.id}`,
+                  },
+              ]
+            : []),
+        ...(selectedSubCategory
+            ? [
+                  {
+                      label: selectedSubCategory.name,
+                      href: `/shop?categoryId=${selectedSubCategory.categoryId}&subCategoryId=${selectedSubCategory.id}`,
+                  },
+              ]
+            : []),
+        ...(selectedProductType
+            ? [
+                  {
+                      label: selectedProductType.name,
+                      href: `/shop?categoryId=${selectedCategory?.id ?? ""}&subCategoryId=${selectedSubCategory?.id ?? ""}&productTypeId=${selectedProductType.id}`,
+                  },
+              ]
+            : []),
+    ];
+    const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
 
     return (
         <GeneralShell>
+            <div className="mb-4">
+                <StorefrontBreadcrumbs items={breadcrumbItems} />
+            </div>
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
                 <aside className="hidden md:sticky md:top-5 md:block md:max-h-[calc(100vh-2.5rem)] md:w-[335px] md:flex-shrink-0 md:overflow-y-auto">
                     <Suspense fallback={<ShopFiltersSkeleton />}>
@@ -116,6 +164,12 @@ export default async function Page({ searchParams }: PageProps) {
                     </Suspense>
                 </main>
             </div>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(breadcrumbJsonLd),
+                }}
+            />
         </GeneralShell>
     );
 }

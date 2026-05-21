@@ -285,7 +285,7 @@ export function ProductPage({
                                         >
                                             <div
                                                 id={i === 0 ? "pdp-main-image" : undefined}
-                                                className="relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0]"
+                                                className="relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0] [touch-action:pinch-zoom]"
                                             >
                                                 <Image
                                                     src={image.url}
@@ -298,6 +298,9 @@ export function ProductPage({
                                                     className="object-contain object-center"
                                                     priority={i === 0}
                                                 />
+                                                <div className="absolute bottom-4 left-4 flex h-9 w-9 items-center justify-center rounded-full bg-white/85 shadow-sm backdrop-blur-sm">
+                                                    <ZoomIn className="size-4 text-neutral-700" />
+                                                </div>
                                             </div>
                                         </CarouselItem>
                                     ))}
@@ -493,6 +496,7 @@ export function ProductPage({
                             }
                             fill
                             className="object-contain"
+                            style={{ touchAction: "pinch-zoom" }}
                             sizes="100vw"
                         />
                     </div>
