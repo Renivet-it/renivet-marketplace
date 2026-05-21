@@ -1,5 +1,6 @@
 "use client";
 
+import { Icons } from "@/components/icons";
 import {
     Dialog,
     DialogContent,
@@ -9,7 +10,7 @@ import {
 import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL, normalizeBrandName } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
-import { Mail, MessageCircle, Share2 } from "lucide-react";
+import { Mail, MessageCircle, Send, Share2 } from "lucide-react";
 import Link from "next/link";
 import { Dispatch, SetStateAction, useEffect, useMemo } from "react";
 import { toast } from "sonner";
@@ -35,6 +36,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
     const shareUrl = useMemo(() => buildTrackedProductUrl(product), [product]);
     const brandName = normalizeBrandName(product?.brand?.name ?? siteConfig.name);
     const shareMessage = `${product?.title} by ${brandName} on ${siteConfig.name} ${shareUrl}`;
+    const shareTitle = `${product?.title} by ${brandName}`;
 
     useEffect(() => {
         if (!isOpen || typeof window === "undefined") return;
@@ -42,13 +44,13 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
 
         navigator
             .share({
-                title: `${product?.title} by ${brandName}`,
+                title: shareTitle,
                 text: shareMessage,
                 url: shareUrl,
             })
             .catch(() => null)
             .finally(() => setIsOpen(false));
-    }, [brandName, isOpen, product?.title, setIsOpen, shareMessage, shareUrl]);
+    }, [isOpen, setIsOpen, shareMessage, shareTitle, shareUrl]);
 
     const desktopActions = [
         {
@@ -58,8 +60,28 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
         },
         {
             label: "Email",
-            href: `mailto:?subject=${encodeURIComponent(`${product?.title} by ${brandName}`)}&body=${encodeURIComponent(shareMessage)}`,
+            href: `mailto:?subject=${encodeURIComponent(shareTitle)}&body=${encodeURIComponent(shareMessage)}`,
             icon: Mail,
+        },
+        {
+            label: "Facebook",
+            href: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+            icon: Icons.Facebook,
+        },
+        {
+            label: "X",
+            href: `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareMessage)}`,
+            icon: Icons.X_Twitter,
+        },
+        {
+            label: "Telegram",
+            href: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`,
+            icon: Send,
+        },
+        {
+            label: "Pinterest",
+            href: `https://pinterest.com/pin/create/button/?url=${encodeURIComponent(shareUrl)}&description=${encodeURIComponent(shareTitle)}`,
+            icon: Icons.Pin,
         },
     ];
 
@@ -72,7 +94,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
 
                 <div className="space-y-3">
                     <p className="text-sm leading-6 text-neutral-600">
-                        Share via WhatsApp, email, or copy the tracked product link.
+                        Share via WhatsApp, Facebook, email, or copy the tracked product link.
                     </p>
 
                     <div className="grid grid-cols-2 gap-3">
@@ -81,6 +103,7 @@ export function ProductShareModal({ isOpen, setIsOpen, product }: PageProps) {
                                 key={label}
                                 href={href}
                                 target="_blank"
+                                rel="noreferrer"
                                 className={cn(
                                     "flex h-12 items-center justify-center gap-2 rounded-full border border-neutral-200 text-sm font-semibold transition-colors hover:bg-neutral-50"
                                 )}
