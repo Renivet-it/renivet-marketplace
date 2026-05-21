@@ -1159,38 +1159,73 @@ export function ProductCartAddForm({
                                             Notify me
                                         </Button>
                                     ) : (
-                                        <Button
-                                            type="submit"
-                                            size="lg"
-                                            className="h-12 min-w-[126px] rounded-full bg-neutral-900 px-5 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
-                                            disabled={
-                                                isSelectedUnavailable || isPending
-                                            }
-                                            onClick={(e) => {
-                                                if (isAddedToCart) {
-                                                    e.preventDefault();
-                                                    router.push("/mycart");
-                                                    return;
+                                        <div className="flex flex-col gap-2">
+                                            <Button
+                                                type="submit"
+                                                size="lg"
+                                                className="h-12 min-w-[126px] rounded-full bg-neutral-900 px-5 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
+                                                disabled={
+                                                    isSelectedUnavailable ||
+                                                    isPending
                                                 }
-                                                setIsBuyNow(false);
-                                                isBuyNowRef.current = false;
-                                                handleAddProductCart(
-                                                    product.id,
-                                                    product.brandId
-                                                );
-                                            }}
-                                        >
-                                            {isPending && !isBuyNow ? (
-                                                <>
-                                                    <Spinner className="mr-2 size-4 animate-spin" />
-                                                    Adding...
-                                                </>
-                                            ) : isAddedToCart ? (
-                                                "Go to Bag"
-                                            ) : (
-                                                "Add to Bag"
-                                            )}
-                                        </Button>
+                                                onClick={(e) => {
+                                                    if (isAddedToCart) {
+                                                        e.preventDefault();
+                                                        router.push("/mycart");
+                                                        return;
+                                                    }
+                                                    setIsBuyNow(false);
+                                                    isBuyNowRef.current = false;
+                                                    handleAddProductCart(
+                                                        product.id,
+                                                        product.brandId
+                                                    );
+                                                }}
+                                            >
+                                                {isPending && !isBuyNow ? (
+                                                    <>
+                                                        <Spinner className="mr-2 size-4 animate-spin" />
+                                                        Adding...
+                                                    </>
+                                                ) : isAddedToCart ? (
+                                                    "Go to Bag"
+                                                ) : (
+                                                    "Add to Bag"
+                                                )}
+                                            </Button>
+                                            <Button
+                                                type="submit"
+                                                size="lg"
+                                                variant="outline"
+                                                className="h-11 min-w-[126px] rounded-full border-neutral-900 px-5 text-[13px] font-semibold text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
+                                                disabled={
+                                                    isSelectedUnavailable ||
+                                                    isPending
+                                                }
+                                                onClick={(e) => {
+                                                    if (isAddedToCart) {
+                                                        e.preventDefault();
+                                                        router.push("/checkout");
+                                                        return;
+                                                    }
+                                                    setIsBuyNow(true);
+                                                    isBuyNowRef.current = true;
+                                                    handleAddProductCart(
+                                                        product.id,
+                                                        product.brandId
+                                                    );
+                                                }}
+                                            >
+                                                {isPending && isBuyNow ? (
+                                                    <>
+                                                        <Spinner className="mr-2 size-4 animate-spin" />
+                                                        Wait...
+                                                    </>
+                                                ) : (
+                                                    "Buy Now"
+                                                )}
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </div>
