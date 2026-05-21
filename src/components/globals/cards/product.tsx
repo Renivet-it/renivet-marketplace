@@ -212,12 +212,6 @@ export function ProductCard({
         };
     }, [sizePills]);
 
-    const emiAmount = useMemo(() => {
-        const price = selectedVariant?.price ?? rawPrice;
-        if (price < 300000) return null;
-        return Math.ceil(price / 3);
-    }, [rawPrice, selectedVariant?.price]);
-
     useEffect(() => {
         if (!isProductHovered) {
             setCurrentImageIndex(0);
@@ -400,6 +394,29 @@ export function ProductCard({
                             ) : null}
 
                             <div
+                                className="absolute bottom-3 right-3 z-20 md:hidden"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
+                            >
+                                <DialogTrigger asChild>
+                                    <button
+                                        className={cn(
+                                            "relative flex h-11 w-11 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] transition-all duration-300 active:scale-95 sm:h-12 sm:w-12",
+                                            isQuickViewOpen &&
+                                                "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
+                                        )}
+                                        aria-label="Quick add"
+                                        onPointerDown={preloadQuickViewImages}
+                                    >
+                                        <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_68%)] opacity-70" />
+                                        <ShoppingCart className="size-[18px]" />
+                                    </button>
+                                </DialogTrigger>
+                            </div>
+
+                            <div
                                 className={cn(
                                     "absolute inset-x-0 bottom-0 z-20 hidden p-2 transition-all duration-500 ease-out md:block",
                                     isProductHovered
@@ -463,29 +480,6 @@ export function ProductCard({
                             </div>
                         </div>
                     </AnimatedProductLink>
-
-                    <div
-                        className="absolute bottom-[4.75rem] right-3 z-20 md:hidden"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }}
-                    >
-                        <DialogTrigger asChild>
-                            <button
-                                className={cn(
-                                    "relative flex h-11 w-11 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] transition-all duration-300 active:scale-95 sm:h-12 sm:w-12",
-                                    isQuickViewOpen &&
-                                        "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
-                                )}
-                                aria-label="Quick add"
-                                onPointerDown={preloadQuickViewImages}
-                            >
-                                <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_68%)] opacity-70" />
-                                <ShoppingCart className="size-[18px]" />
-                            </button>
-                        </DialogTrigger>
-                    </div>
 
                     <DialogContent
                         className="block h-[92dvh] w-[96vw] max-w-5xl gap-0 overflow-hidden rounded-[24px] border border-[#ebe7df] bg-white p-0 shadow-[0_24px_70px_rgba(29,24,18,0.14)] md:h-[85vh]"
@@ -829,18 +823,37 @@ export function ProductCard({
                             </span>
                         ) : null}
                     </div>
-                    <div className="flex flex-wrap gap-1.5">
-                        <span className="rounded-full border border-[#d8decd] bg-[#f7faf2] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#3a4b28]">
-                            COD
-                        </span>
-                        <span className="rounded-full border border-[#dfe7f1] bg-[#f8fbff] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#315176]">
-                            UPI
-                        </span>
-                        {emiAmount ? (
-                            <span className="rounded-full border border-[#eadfce] bg-[#fffaf2] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-[#7a5a28]">
-                                EMI from {formatINR(emiAmount, { input: "paise" })}
+                    <div className="pt-0.5">
+                        <div className="flex items-center gap-3 text-[10px] font-medium text-[#6f6555] sm:hidden">
+                            <span className="inline-flex items-center gap-1">
+                                <Icons.Package className="size-3 text-[#8b7a5f]" />
+                                COD
                             </span>
-                        ) : null}
+                            <span className="h-3 w-px bg-[#ddd5c8]" />
+                            <span className="inline-flex items-center gap-1">
+                                <span className="flex size-3.5 items-center justify-center rounded-[4px] bg-[#e7f0fb] text-[7px] font-semibold tracking-[0.08em] text-[#2f6fb1]">
+                                    U
+                                </span>
+                                UPI
+                            </span>
+                        </div>
+
+                        <div className="hidden flex-wrap items-center gap-2 sm:flex">
+                            <span className="inline-flex items-center gap-1.5 rounded-md border border-[#e7e2d8] bg-[#fcfaf6] px-2 py-1 text-[10px] font-medium text-[#564c3d]">
+                                <span className="flex size-4 items-center justify-center rounded-sm bg-[#efe6d6] text-[#6a5b45]">
+                                    <Icons.Package className="size-2.5" />
+                                </span>
+                                Pay on delivery
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 rounded-md border border-[#dde6f2] bg-[#f8fbff] px-2 py-1 text-[10px] font-medium text-[#355272]">
+                                <span className="flex size-4 items-center justify-center rounded-sm bg-[#e7f0fb]">
+                                    <span className="text-[8px] font-semibold tracking-[0.08em] text-[#2f6fb1]">
+                                        U
+                                    </span>
+                                </span>
+                                UPI accepted
+                            </span>
+                        </div>
                     </div>
                     <p className="truncate text-[10px] text-[#7f7662]">
                         {normalizeBrandName(product.brand?.name)}
