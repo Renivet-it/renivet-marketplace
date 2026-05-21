@@ -5165,6 +5165,227 @@ class ProductQuery {
         }
     }
 
+    async getFilteredCategoryCounts(filters?: {
+        brandIds?: string[];
+        search?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        colors?: string[];
+        sizes?: string[];
+        minDiscount?: number;
+    }): Promise<Map<string, number>> {
+        try {
+            const normalizedColors = filters?.colors?.map((c) =>
+                c.toLowerCase()
+            );
+            const normalizedSizes = filters?.sizes?.map((s) => s.toLowerCase());
+            const colorOptionNames = ["colour", "color"];
+            const sizeOptionNames = ["sizes", "size"];
+
+            const whereConditions = [
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isAvailable, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+                hasMedia(products, "media"),
+                filters?.brandIds?.length
+                    ? inArray(products.brandId, filters.brandIds)
+                    : undefined,
+                filters?.search?.length
+                    ? ilike(products.title, `%${filters.search}%`)
+                    : undefined,
+                filters?.minPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.maxPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.minDiscount !== undefined
+                    ? sql`(
+                        CASE
+                            WHEN COALESCE(${products.compareAtPrice}, 0) > 0 AND COALESCE(${products.price}, 0) > 0
+                                THEN ((${products.compareAtPrice} - ${products.price}) * 100.0 / ${products.compareAtPrice})
+                            ELSE 0
+                        END
+                    ) >= ${filters.minDiscount}`
+                    : undefined,
+                normalizedColors?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(colorOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedColors, sql`, `)})
+                        )
+                    `
+                    : undefined,
+                normalizedSizes?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(sizeOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedSizes, sql`, `)})
+                        )
+                    `
+                    : undefined,
+            ];
+
+            const rows = await db
+                .select({
+                    categoryId: products.categoryId,
+                    count: sql<number>`COUNT(${products.id})`.as(
+                        "product_count"
+                    ),
+                })
+                .from(products)
+                .where(and(...whereConditions))
+                .groupBy(products.categoryId);
+
+            return new Map(
+                rows.map((row) => [String(row.categoryId), Number(row.count)])
+            );
+        } catch (error) {
+            console.error("Error fetching filtered category counts:", error);
+            return new Map();
+        }
+    }
+
+    async getFilteredSubCategoryCounts(filters?: {
+        categoryId?: string;
+        brandIds?: string[];
+        search?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        colors?: string[];
+        sizes?: string[];
+        minDiscount?: number;
+    }): Promise<Map<string, number>> {
+        try {
+            const normalizedColors = filters?.colors?.map((c) =>
+                c.toLowerCase()
+            );
+            const normalizedSizes = filters?.sizes?.map((s) => s.toLowerCase());
+            const colorOptionNames = ["colour", "color"];
+            const sizeOptionNames = ["sizes", "size"];
+
+            const whereConditions = [
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isAvailable, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+                hasMedia(products, "media"),
+                filters?.brandIds?.length
+                    ? inArray(products.brandId, filters.brandIds)
+                    : undefined,
+                filters?.categoryId
+                    ? eq(products.categoryId, filters.categoryId)
+                    : undefined,
+                filters?.search?.length
+                    ? ilike(products.title, `%${filters.search}%`)
+                    : undefined,
+                filters?.minPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.maxPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.minDiscount !== undefined
+                    ? sql`(
+                        CASE
+                            WHEN COALESCE(${products.compareAtPrice}, 0) > 0 AND COALESCE(${products.price}, 0) > 0
+                                THEN ((${products.compareAtPrice} - ${products.price}) * 100.0 / ${products.compareAtPrice})
+                            ELSE 0
+                        END
+                    ) >= ${filters.minDiscount}`
+                    : undefined,
+                normalizedColors?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(colorOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedColors, sql`, `)})
+                        )
+                    `
+                    : undefined,
+                normalizedSizes?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(sizeOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedSizes, sql`, `)})
+                        )
+                    `
+                    : undefined,
+            ];
+
+            const rows = await db
+                .select({
+                    subCategoryId: products.subcategoryId,
+                    count: sql<number>`COUNT(${products.id})`.as(
+                        "product_count"
+                    ),
+                })
+                .from(products)
+                .where(and(...whereConditions))
+                .groupBy(products.subcategoryId);
+
+            return new Map(
+                rows.map((row) => [
+                    String(row.subCategoryId),
+                    Number(row.count),
+                ])
+            );
+        } catch (error) {
+            console.error("Error fetching filtered subcategory counts:", error);
+            return new Map();
+        }
+    }
+
     private normalizeSizeName(val: string): string {
         let str = val.trim().toLowerCase();
 

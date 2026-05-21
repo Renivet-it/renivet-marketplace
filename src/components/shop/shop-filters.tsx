@@ -718,9 +718,18 @@ function BrandFilter({
 }) {
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
-        parseAsArrayOf(parseAsString, ",").withDefault([])
+        parseAsArrayOf(parseAsString, ",")
+            .withDefault([])
+            .withOptions({
+                shallow: false,
+            })
     );
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState(
+        "shopPage",
+        parseAsInteger.withDefault(1).withOptions({
+            shallow: false,
+        })
+    );
     const [showAllBrands, setShowAllBrands] = useState(false);
     const brandsWithProducts = useMemo(
         () =>
