@@ -13,7 +13,13 @@ import {
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatINR,
+    formatPriceTag,
+    normalizeBrandName,
+} from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { ProductWithBrand } from "@/lib/validations";
 import { ChevronRight, ShoppingCart } from "lucide-react";
@@ -136,7 +142,6 @@ export function ProductCard({
         originalPrice && originalPrice > rawPrice
             ? Math.round(Number(convertPaiseToRupees(originalPrice)))
             : null;
-    const displayCurrent = Math.round(Number(convertPaiseToRupees(rawPrice)));
     const discount =
         originalPrice && originalPrice > rawPrice
             ? Math.round(((originalPrice - rawPrice) / originalPrice) * 100)
@@ -159,6 +164,53 @@ export function ProductCard({
             ) ?? product.variants[0]
         );
     }, [product.options, product.variants, selectedOptions]);
+
+    const sizeOption = useMemo(
+        () =>
+            product.options?.find((option) =>
+                option.name.toLowerCase().includes("size")
+            ) ?? null,
+        [product.options]
+    );
+
+    const sizePills = useMemo(() => {
+        if (!sizeOption) return [];
+
+        return sizeOption.values.map((value) => {
+            const matchingVariants = (product.variants ?? []).filter(
+                (variant) => variant.combinations?.[sizeOption.id] === value.id
+            );
+            const inStock = matchingVariants.some(
+                (variant) => !variant.isDeleted && (variant.quantity ?? 0) > 0
+            );
+            const targetVariant =
+                matchingVariants.find(
+                    (variant) => !variant.isDeleted && (variant.quantity ?? 0) > 0
+                ) ?? matchingVariants[0];
+
+            return {
+                id: value.id,
+                label: value.name,
+                inStock,
+                sku: targetVariant?.nativeSku ?? null,
+            };
+        });
+    }, [product.variants, sizeOption]);
+
+    const sizePreview = useMemo(() => {
+        if (!sizePills.length) return null;
+
+        const inStockSizes = sizePills.filter((size) => size.inStock);
+        const sourceSizes = inStockSizes.length > 0 ? inStockSizes : sizePills;
+        const visibleSizes = sourceSizes.slice(0, 4);
+        const remainingCount = Math.max(sourceSizes.length - visibleSizes.length, 0);
+
+        return {
+            visibleSizes,
+            remainingCount,
+            totalCount: sourceSizes.length,
+        };
+    }, [sizePills]);
 
     useEffect(() => {
         if (!isProductHovered) {
@@ -342,6 +394,29 @@ export function ProductCard({
                             ) : null}
 
                             <div
+                                className="absolute bottom-3 right-3 z-20 md:hidden"
+                                onClick={(e) => {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                }}
+                            >
+                                <DialogTrigger asChild>
+                                    <button
+                                        className={cn(
+                                            "relative flex h-11 w-11 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] transition-all duration-300 active:scale-95 sm:h-12 sm:w-12",
+                                            isQuickViewOpen &&
+                                                "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
+                                        )}
+                                        aria-label="Quick add"
+                                        onPointerDown={preloadQuickViewImages}
+                                    >
+                                        <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_68%)] opacity-70" />
+                                        <ShoppingCart className="size-[18px]" />
+                                    </button>
+                                </DialogTrigger>
+                            </div>
+
+                            <div
                                 className={cn(
                                     "absolute inset-x-0 bottom-0 z-20 hidden p-2 transition-all duration-500 ease-out md:block",
                                     isProductHovered
@@ -356,43 +431,55 @@ export function ProductCard({
                                         e.stopPropagation();
                                     }}
                                 >
-                                    <DialogTrigger asChild>
-                                        <button
-                                            className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]"
-                                            onPointerDown={
-                                                preloadQuickViewImages
-                                            }
-                                        >
-                                            Quick Buy
-                                        </button>
-                                    </DialogTrigger>
+                                    <div className="space-y-2">
+                                        <DialogTrigger asChild>
+                                            <button
+                                                className="btn-liquid btn-liquid-primary flex h-10 w-full items-center justify-center rounded-lg text-[10px] font-bold uppercase tracking-[0.12em] shadow-[0_12px_24px_rgba(49,58,31,0.22)]"
+                                                onPointerDown={
+                                                    preloadQuickViewImages
+                                                }
+                                            >
+                                                Quick Add
+                                            </button>
+                                        </DialogTrigger>
+                                        {sizePreview ? (
+                                            <div className="rounded-lg border border-[#e7dece] bg-white/80 px-2.5 py-2 text-left">
+                                                <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-[#728365]">
+                                                    Size Run
+                                                </p>
+                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                    {sizePreview.visibleSizes.map(
+                                                        (size) => (
+                                                            <span
+                                                                key={size.id}
+                                                                className={cn(
+                                                                    "rounded-full border px-1.5 py-0.5 text-[10px] font-medium",
+                                                                    size.inStock
+                                                                        ? "border-[#d5dcc8] bg-white text-[#31401f]"
+                                                                        : "border-[#e1e1e1] bg-[#f5f5f5] text-[#9a9a9a] line-through"
+                                                                )}
+                                                            >
+                                                                {size.label}
+                                                            </span>
+                                                        )
+                                                    )}
+                                                    {sizePreview.remainingCount >
+                                                    0 ? (
+                                                        <span className="rounded-full bg-[#eef3e7] px-1.5 py-0.5 text-[10px] font-semibold text-[#556743]">
+                                                            +
+                                                            {
+                                                                sizePreview.remainingCount
+                                                            }
+                                                        </span>
+                                                    ) : null}
+                                                </div>
+                                            </div>
+                                        ) : null}
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </AnimatedProductLink>
-
-                    <div
-                        className="absolute bottom-[4.75rem] right-3 z-20 md:hidden"
-                        onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        }}
-                    >
-                        <DialogTrigger asChild>
-                            <button
-                                className={cn(
-                                    "relative flex h-11 w-11 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] transition-all duration-300 active:scale-95 sm:h-12 sm:w-12",
-                                    isQuickViewOpen &&
-                                        "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
-                                )}
-                                aria-label="Quick buy"
-                                onPointerDown={preloadQuickViewImages}
-                            >
-                                <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_68%)] opacity-70" />
-                                <ShoppingCart className="size-[18px]" />
-                            </button>
-                        </DialogTrigger>
-                    </div>
 
                     <DialogContent
                         className="block h-[92dvh] w-[96vw] max-w-5xl gap-0 overflow-hidden rounded-[24px] border border-[#ebe7df] bg-white p-0 shadow-[0_24px_70px_rgba(29,24,18,0.14)] md:h-[85vh]"
@@ -485,28 +572,20 @@ export function ProductCard({
 
                                 <div className="mt-2 flex items-baseline gap-3 md:mt-5">
                                     <span className="text-lg font-medium text-gray-900 md:text-xl">
-                                        Rs.{" "}
-                                        {formatPriceTag(
-                                            parseFloat(
-                                                convertPaiseToRupees(
-                                                    selectedVariant?.price ||
-                                                        rawPrice
-                                                )
-                                            ),
-                                            true
+                                        {formatINR(
+                                            selectedVariant?.price || rawPrice,
+                                            {
+                                                input: "paise",
+                                                keepDecimals: true,
+                                            }
                                         )}
                                     </span>
                                     {originalPrice ? (
                                         <span className="text-sm font-medium text-gray-400 line-through">
-                                            Rs.{" "}
-                                            {formatPriceTag(
-                                                parseFloat(
-                                                    convertPaiseToRupees(
-                                                        originalPrice
-                                                    )
-                                                ),
-                                                true
-                                            )}
+                                            {formatINR(originalPrice, {
+                                                input: "paise",
+                                                keepDecimals: true,
+                                            })}
                                         </span>
                                     ) : null}
                                     {discount ? (
@@ -736,16 +815,48 @@ export function ProductCard({
                     </p>
                     <div className="flex items-baseline gap-1.5">
                         <span className="text-[12px] font-semibold text-gray-900">
-                            Rs.{displayCurrent}
+                            {formatINR(rawPrice, { input: "paise" })}
                         </span>
                         {displayOriginal ? (
                             <span className="text-[10px] text-gray-400 line-through">
-                                Rs.{displayOriginal}
+                                {formatINR(originalPrice, { input: "paise" })}
                             </span>
                         ) : null}
                     </div>
+                    <div className="pt-0.5">
+                        <div className="flex items-center gap-3 text-[10px] font-medium text-[#6f6555] sm:hidden">
+                            <span className="inline-flex items-center gap-1">
+                                <Icons.Package className="size-3 text-[#8b7a5f]" />
+                                COD
+                            </span>
+                            <span className="h-3 w-px bg-[#ddd5c8]" />
+                            <span className="inline-flex items-center gap-1">
+                                <span className="flex size-3.5 items-center justify-center rounded-[4px] bg-[#e7f0fb] text-[7px] font-semibold tracking-[0.08em] text-[#2f6fb1]">
+                                    U
+                                </span>
+                                UPI
+                            </span>
+                        </div>
+
+                        <div className="hidden flex-wrap items-center gap-2 sm:flex">
+                            <span className="inline-flex items-center gap-1.5 rounded-md border border-[#e7e2d8] bg-[#fcfaf6] px-2 py-1 text-[10px] font-medium text-[#564c3d]">
+                                <span className="flex size-4 items-center justify-center rounded-sm bg-[#efe6d6] text-[#6a5b45]">
+                                    <Icons.Package className="size-2.5" />
+                                </span>
+                                Pay on delivery
+                            </span>
+                            <span className="inline-flex items-center gap-1.5 rounded-md border border-[#dde6f2] bg-[#f8fbff] px-2 py-1 text-[10px] font-medium text-[#355272]">
+                                <span className="flex size-4 items-center justify-center rounded-sm bg-[#e7f0fb]">
+                                    <span className="text-[8px] font-semibold tracking-[0.08em] text-[#2f6fb1]">
+                                        U
+                                    </span>
+                                </span>
+                                UPI accepted
+                            </span>
+                        </div>
+                    </div>
                     <p className="truncate text-[10px] text-[#7f7662]">
-                        {product.brand?.name}
+                        {normalizeBrandName(product.brand?.name)}
                     </p>
                 </div>
             </div>

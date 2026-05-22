@@ -1,3 +1,4 @@
+import { hasMedia } from "@/lib/db/helperfilter";
 import { CreateSubCategory, UpdateSubCategory } from "@/lib/validations";
 import { and, asc, desc, eq, ne, sql } from "drizzle-orm";
 import { db } from "..";
@@ -15,6 +16,16 @@ class SubCategoryQuery {
                 productCount: sql<number>`count(*)`,
             })
             .from(products)
+            .where(
+                and(
+                    eq(products.isDeleted, false),
+                    eq(products.isActive, true),
+                    eq(products.isAvailable, true),
+                    eq(products.isPublished, true),
+                    eq(products.verificationStatus, "approved"),
+                    hasMedia(products, "media")
+                )
+            )
             .groupBy(products.subcategoryId);
 
         return new Map(

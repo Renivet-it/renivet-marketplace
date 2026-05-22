@@ -2,7 +2,6 @@
 
 import { cn, formatPriceTag } from "@/lib/utils";
 import {
-    BrandMeta,
     CachedCategory,
     CachedProductType,
     CachedSubCategory,
@@ -371,8 +370,19 @@ interface GenericProps {
     [key: string]: any;
 }
 
+type ShopBrandMeta = {
+    id: string;
+    name: string;
+    slug: string;
+    count?: number;
+    productCount?: number;
+    productsCount?: number;
+    totalCount?: number;
+    total?: number;
+};
+
 interface PageProps extends GenericProps {
-    brandsMeta: BrandMeta[];
+    brandsMeta: ShopBrandMeta[];
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -626,7 +636,7 @@ function ShopFiltersSection({
     ...props
 }: {
     className?: string;
-    brandsMeta: BrandMeta[];
+    brandsMeta: ShopBrandMeta[];
     categories: CachedCategory[];
     subCategories: CachedSubCategory[];
     productTypes: CachedProductType[];
@@ -703,14 +713,23 @@ function BrandFilter({
     brandsMeta,
     showHeading = true,
 }: {
-    brandsMeta: BrandMeta[];
+    brandsMeta: ShopBrandMeta[];
     showHeading?: boolean;
 }) {
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
-        parseAsArrayOf(parseAsString, ",").withDefault([])
+        parseAsArrayOf(parseAsString, ",")
+            .withDefault([])
+            .withOptions({
+                shallow: false,
+            })
     );
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState(
+        "shopPage",
+        parseAsInteger.withDefault(1).withOptions({
+            shallow: false,
+        })
+    );
     const [showAllBrands, setShowAllBrands] = useState(false);
     const brandsWithProducts = useMemo(
         () =>
@@ -748,30 +767,45 @@ function BrandFilter({
             )}
             <div className="space-y-1">
                 {visibleBrands.map((brand) => (
-                    <label
-                        key={brand.id}
-                        htmlFor={`brand-${brand.id}`}
-                        className="flex cursor-pointer items-center space-x-2 rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
-                    >
-                        <Checkbox
-                            id={`brand-${brand.id}`}
-                            checked={brandIds.includes(brand.id)}
-                            onCheckedChange={() => {
-                                setBrandIds(
-                                    brandIds.includes(brand.id)
-                                        ? brandIds.filter((b) => b !== brand.id)
-                                        : [...brandIds, brand.id]
-                                );
-                                setPage(1);
-                            }}
-                        />
-                        <Label
-                            htmlFor={`brand-${brand.id}`}
-                            className="cursor-pointer text-sm font-normal text-[#30455f]"
-                        >
-                            {brand.name}
-                        </Label>
-                    </label>
+                    (() => {
+                        const productCount = getBrandProductCount(brand);
+
+                        return (
+                            <label
+                                key={brand.id}
+                                htmlFor={`brand-${brand.id}`}
+                                className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
+                            >
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`brand-${brand.id}`}
+                                        checked={brandIds.includes(brand.id)}
+                                        onCheckedChange={() => {
+                                            setBrandIds(
+                                                brandIds.includes(brand.id)
+                                                    ? brandIds.filter(
+                                                          (b) => b !== brand.id
+                                                      )
+                                                    : [...brandIds, brand.id]
+                                            );
+                                            setPage(1);
+                                        }}
+                                    />
+                                    <Label
+                                        htmlFor={`brand-${brand.id}`}
+                                        className="cursor-pointer text-sm font-normal text-[#30455f]"
+                                    >
+                                        {brand.name}
+                                    </Label>
+                                </div>
+                                {productCount !== null ? (
+                                    <span className="text-xs text-[#8ba0bb]">
+                                        {productCount}
+                                    </span>
+                                ) : null}
+                            </label>
+                        );
+                    })()
                 ))}
             </div>
             {brandsWithProducts.length > 10 && (
@@ -835,6 +869,55 @@ function CategoryFilter({
         });
     const toggleSubCategoryId = (id: string) => {
         return updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
+    };
+    const categoryNameById = useMemo(
+        () => new Map(categories.map((category) => [category.id, category.name])),
+        [categories]
+    );
+    const subCategoryNameById = useMemo(
+        () =>
+            new Map(
+                subCategories.map((subCategory) => [subCategory.id, subCategory.name])
+            ),
+        [subCategories]
+    );
+    const subCategoryNameCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        subCategories.forEach((subCategory) => {
+            const key = subCategory.name.trim().toLowerCase();
+            map.set(key, (map.get(key) ?? 0) + 1);
+        });
+        return map;
+    }, [subCategories]);
+    const productTypeNameCounts = useMemo(() => {
+        const map = new Map<string, number>();
+        productTypes.forEach((productType) => {
+            const key = productType.name.trim().toLowerCase();
+            map.set(key, (map.get(key) ?? 0) + 1);
+        });
+        return map;
+    }, [productTypes]);
+    const getSubCategoryLabel = (subCategory: CachedSubCategory) => {
+        const key = subCategory.name.trim().toLowerCase();
+        const isDuplicate = (subCategoryNameCounts.get(key) ?? 0) > 1;
+        if (!isDuplicate) return subCategory.name;
+
+        const categoryName = categoryNameById.get(subCategory.categoryId);
+        return categoryName
+            ? `${subCategory.name} (${categoryName})`
+            : subCategory.name;
+    };
+    const getProductTypeLabel = (productType: CachedProductType) => {
+        const key = productType.name.trim().toLowerCase();
+        const isDuplicate = (productTypeNameCounts.get(key) ?? 0) > 1;
+        if (!isDuplicate) return productType.name;
+
+        const subCategoryName =
+            productType.subCategory?.name ??
+            subCategoryNameById.get(productType.subCategoryId);
+        return subCategoryName
+            ? `${productType.name} (${subCategoryName})`
+            : productType.name;
     };
     const categoryCountMap = useMemo(() => {
         const map = new Map<string, number>();
@@ -949,7 +1032,7 @@ function CategoryFilter({
                                         htmlFor={`sub-${sub.id}`}
                                         className="cursor-pointer text-sm font-normal text-[#30455f]"
                                     >
-                                        {sub.name}
+                                        {getSubCategoryLabel(sub)}
                                     </Label>
                                 </div>
                                 <span className="text-xs text-[#8ba0bb]">
@@ -1004,7 +1087,7 @@ function CategoryFilter({
                                                 htmlFor={`type-${t.id}`}
                                                 className="cursor-pointer text-sm font-normal text-[#30455f]"
                                             >
-                                                {t.name}
+                                                {getProductTypeLabel(t)}
                                             </Label>
                                         </div>
                                         <span className="text-xs text-[#8ba0bb]">

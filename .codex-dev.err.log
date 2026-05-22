@@ -1,0 +1,13 @@
+[Error: EPERM: operation not permitted, open 'C:\Personal Projects\renivet-marketplace\.next\trace'] {
+  errno: -4048,
+  code: 'EPERM',
+  syscall: 'open',
+  path: 'C:\\Personal Projects\\renivet-marketplace\\.next\\trace'
+}
+
+[1m[33mwarn[39m[22m - The class `duration-[1200ms]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `duration-&lsqb;1200ms&rsqb;` to silence this warning.
+
+[1m[33mwarn[39m[22m - The class `ease-[cubic-bezier(0.25,1,0.5,1)]` is ambiguous and matches multiple utilities.
+[1m[33mwarn[39m[22m - If this is content and not a class, replace it with `ease-&lsqb;cubic-bezier(0.25,1,0.5,1)&rsqb;` to silence this warning.
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Personal Projects\renivet-marketplace\.next\cache\webpack\edge-server-development\1.pack.gz_' -> 'C:\Personal Projects\renivet-marketplace\.next\cache\webpack\edge-server-development\1.pack.gz'

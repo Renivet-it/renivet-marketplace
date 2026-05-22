@@ -90,6 +90,13 @@ const MayAlsoLoveThese = dynamic(() =>
         default: m.MayAlsoLoveThese,
     }))
 );
+const MostPopularProducts = dynamic(() =>
+    import("@/components/home/new-home-page/most-popular-products").then(
+        (m) => ({
+            default: m.MostPopularProducts,
+        })
+    )
+);
 const MobileBottom = dynamic(() =>
     import("@/components/home/new-home-page/mobile-bottom-product").then(
         (m) => ({ default: m.MobileBottom })
@@ -328,6 +335,27 @@ async function ProductNewArrivalsGridFetch() {
             <ProductGridNewArrivals products={products as any} />
         </ScrollReveal>
     );
+}
+
+async function MostPopularProductsFetch({ userId }: { userId?: string }) {
+    try {
+        const products = await productQueries.getMostPopularProducts({
+            limit: 30,
+            days: 30,
+        });
+
+        if (!products.length) return null;
+        const safeProducts = JSON.parse(JSON.stringify(products));
+
+        return (
+            <ScrollReveal>
+                <MostPopularProducts products={safeProducts} userId={userId} />
+            </ScrollReveal>
+        );
+    } catch (error) {
+        console.error("MostPopularProductsFetch failed:", error);
+        return null;
+    }
 }
 
 async function EventSectionTwoBannerFetch() {

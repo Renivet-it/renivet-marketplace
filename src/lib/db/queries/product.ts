@@ -60,6 +60,7 @@ import {
     productValues,
     productVariants,
     returnExchangePolicy,
+    wishlists,
     womenPageFeaturedProducts,
 } from "../schema";
 import { brandQueries } from "./brand";
@@ -4316,6 +4317,21 @@ class ProductQuery {
             .returning()
             .then((res) => res[0]);
     }
+
+    async trackProductView(productId: string, brandId: string, userId?: string) {
+        return db
+            .insert(productEvents)
+            .values({
+                productId,
+                brandId,
+                userId: userId ?? null,
+                event: "view",
+                createdAt: new Date(),
+            })
+            .returning()
+            .then((res) => res[0]);
+    }
+
     async trackAddToCart(productId: string, brandId: string, userId?: string) {
         return db
             .insert(productEvents)
@@ -4328,6 +4344,169 @@ class ProductQuery {
             })
             .returning()
             .then((res) => res[0]);
+    }
+
+    async getMostPopularProducts({
+        limit = 30,
+        days = 30,
+    }: {
+        limit?: number;
+        days?: number;
+    } = {}) {
+        const lookbackDays = Math.max(1, Math.trunc(days));
+        const cappedLimit = Math.max(1, Math.trunc(limit));
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - lookbackDays);
+        const weights = {
+            views: 1,
+            wishlists: 3,
+            addToCarts: 5,
+            purchases: 8,
+        } as const;
+
+        const viewsAgg = db
+            .select({
+                productId: productEvents.productId,
+                count: count(productEvents.id).as("view_count"),
+            })
+            .from(productEvents)
+            .where(
+                and(
+                    eq(productEvents.event, "view"),
+                    gte(productEvents.createdAt, startDate)
+                )
+            )
+            .groupBy(productEvents.productId)
+            .as("most_popular_views");
+
+        const addToCartAgg = db
+            .select({
+                productId: productEvents.productId,
+                count: count(productEvents.id).as("add_to_cart_count"),
+            })
+            .from(productEvents)
+            .where(
+                and(
+                    eq(productEvents.event, "add_to_cart"),
+                    gte(productEvents.createdAt, startDate)
+                )
+            )
+            .groupBy(productEvents.productId)
+            .as("most_popular_add_to_cart");
+
+        const purchaseAgg = db
+            .select({
+                productId: orderItems.productId,
+                count: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`.as(
+                    "purchase_count"
+                ),
+            })
+            .from(orderItems)
+            .innerJoin(orders, eq(orderItems.orderId, orders.id))
+            .where(
+                and(
+                    gte(orders.createdAt, startDate),
+                    eq(orders.paymentStatus, "paid"),
+                    sql`${orders.status} <> 'cancelled'`
+                )
+            )
+            .groupBy(orderItems.productId)
+            .as("most_popular_purchase");
+
+        const wishlistAgg = db
+            .select({
+                productId: wishlists.productId,
+                count: count(wishlists.id).as("wishlist_count"),
+            })
+            .from(wishlists)
+            .where(gte(wishlists.createdAt, startDate))
+            .groupBy(wishlists.productId)
+            .as("most_popular_wishlist");
+
+        const popularityScoreSql = sql<number>`
+            (
+                COALESCE(${viewsAgg.count}, 0) * ${weights.views} +
+                COALESCE(${wishlistAgg.count}, 0) * ${weights.wishlists} +
+                COALESCE(${addToCartAgg.count}, 0) * ${weights.addToCarts} +
+                COALESCE(${purchaseAgg.count}, 0) * ${weights.purchases}
+            )
+        `;
+
+        const rankedProducts = await db
+            .select({
+                productId: products.id,
+                popularityScore: popularityScoreSql.as("popularity_score"),
+                viewCount: sql<number>`COALESCE(${viewsAgg.count}, 0)`.as(
+                    "view_count"
+                ),
+                wishlistCount: sql<number>`COALESCE(${wishlistAgg.count}, 0)`.as(
+                    "wishlist_count"
+                ),
+                addToCartCount: sql<number>`COALESCE(${addToCartAgg.count}, 0)`.as(
+                    "add_to_cart_count"
+                ),
+                purchaseCount: sql<number>`COALESCE(${purchaseAgg.count}, 0)`.as(
+                    "purchase_count"
+                ),
+            })
+            .from(products)
+            .leftJoin(viewsAgg, eq(viewsAgg.productId, products.id))
+            .leftJoin(addToCartAgg, eq(addToCartAgg.productId, products.id))
+            .leftJoin(purchaseAgg, eq(purchaseAgg.productId, products.id))
+            .leftJoin(wishlistAgg, eq(wishlistAgg.productId, products.id))
+            .where(
+                and(
+                    eq(products.isDeleted, false),
+                    eq(products.isActive, true),
+                    eq(products.isPublished, true),
+                    eq(products.verificationStatus, "approved")
+                )
+            )
+            .orderBy(
+                desc(popularityScoreSql),
+                desc(sql`COALESCE(${purchaseAgg.count}, 0)`),
+                desc(sql`COALESCE(${addToCartAgg.count}, 0)`),
+                desc(sql`COALESCE(${wishlistAgg.count}, 0)`),
+                desc(sql`COALESCE(${viewsAgg.count}, 0)`),
+                desc(products.createdAt)
+            )
+            .limit(cappedLimit);
+
+        const rankedProductIds = rankedProducts.map((item) => item.productId);
+        if (rankedProductIds.length === 0) return [];
+
+        const listingProducts = await this.getProducts({
+            limit: rankedProductIds.length,
+            page: 1,
+            isDeleted: false,
+            isAvailable: true,
+            isPublished: true,
+            isActive: true,
+            verificationStatus: "approved",
+            priorityProductIds: rankedProductIds,
+        });
+
+        const listingProductMap = new Map(
+            listingProducts.data.map((product) => [product.id, product])
+        );
+
+        return rankedProducts
+            .map((item) => {
+                const product = listingProductMap.get(item.productId);
+                if (!product) return null;
+
+                return {
+                    ...product,
+                    popularityScore: Number(item.popularityScore ?? 0),
+                    popularityMetrics: {
+                        views: Number(item.viewCount ?? 0),
+                        wishlists: Number(item.wishlistCount ?? 0),
+                        addToCarts: Number(item.addToCartCount ?? 0),
+                        purchases: Number(item.purchaseCount ?? 0),
+                    },
+                };
+            })
+            .filter(Boolean);
     }
 
     async trackPurchase(productId: string, brandId: string, userId?: string) {
@@ -4986,6 +5165,227 @@ class ProductQuery {
         } catch (error) {
             console.error("Error fetching unique brands:", error);
             return [];
+        }
+    }
+
+    async getFilteredCategoryCounts(filters?: {
+        brandIds?: string[];
+        search?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        colors?: string[];
+        sizes?: string[];
+        minDiscount?: number;
+    }): Promise<Map<string, number>> {
+        try {
+            const normalizedColors = filters?.colors?.map((c) =>
+                c.toLowerCase()
+            );
+            const normalizedSizes = filters?.sizes?.map((s) => s.toLowerCase());
+            const colorOptionNames = ["colour", "color"];
+            const sizeOptionNames = ["sizes", "size"];
+
+            const whereConditions = [
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isAvailable, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+                hasMedia(products, "media"),
+                filters?.brandIds?.length
+                    ? inArray(products.brandId, filters.brandIds)
+                    : undefined,
+                filters?.search?.length
+                    ? ilike(products.title, `%${filters.search}%`)
+                    : undefined,
+                filters?.minPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.maxPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.minDiscount !== undefined
+                    ? sql`(
+                        CASE
+                            WHEN COALESCE(${products.compareAtPrice}, 0) > 0 AND COALESCE(${products.price}, 0) > 0
+                                THEN ((${products.compareAtPrice} - ${products.price}) * 100.0 / ${products.compareAtPrice})
+                            ELSE 0
+                        END
+                    ) >= ${filters.minDiscount}`
+                    : undefined,
+                normalizedColors?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(colorOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedColors, sql`, `)})
+                        )
+                    `
+                    : undefined,
+                normalizedSizes?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(sizeOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedSizes, sql`, `)})
+                        )
+                    `
+                    : undefined,
+            ];
+
+            const rows = await db
+                .select({
+                    categoryId: products.categoryId,
+                    count: sql<number>`COUNT(${products.id})`.as(
+                        "product_count"
+                    ),
+                })
+                .from(products)
+                .where(and(...whereConditions))
+                .groupBy(products.categoryId);
+
+            return new Map(
+                rows.map((row) => [String(row.categoryId), Number(row.count)])
+            );
+        } catch (error) {
+            console.error("Error fetching filtered category counts:", error);
+            return new Map();
+        }
+    }
+
+    async getFilteredSubCategoryCounts(filters?: {
+        categoryId?: string;
+        brandIds?: string[];
+        search?: string;
+        minPrice?: number;
+        maxPrice?: number;
+        colors?: string[];
+        sizes?: string[];
+        minDiscount?: number;
+    }): Promise<Map<string, number>> {
+        try {
+            const normalizedColors = filters?.colors?.map((c) =>
+                c.toLowerCase()
+            );
+            const normalizedSizes = filters?.sizes?.map((s) => s.toLowerCase());
+            const colorOptionNames = ["colour", "color"];
+            const sizeOptionNames = ["sizes", "size"];
+
+            const whereConditions = [
+                eq(products.isDeleted, false),
+                eq(products.isActive, true),
+                eq(products.isAvailable, true),
+                eq(products.isPublished, true),
+                eq(products.verificationStatus, "approved"),
+                hasMedia(products, "media"),
+                filters?.brandIds?.length
+                    ? inArray(products.brandId, filters.brandIds)
+                    : undefined,
+                filters?.categoryId
+                    ? eq(products.categoryId, filters.categoryId)
+                    : undefined,
+                filters?.search?.length
+                    ? ilike(products.title, `%${filters.search}%`)
+                    : undefined,
+                filters?.minPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) >= ${convertPriceToPaise(filters.minPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.maxPrice !== undefined
+                    ? sql`(
+                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        OR EXISTS (
+                            SELECT 1 FROM ${productVariants} pv
+                            WHERE pv.product_id = ${products.id}
+                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.is_deleted = false
+                        )
+                    )`
+                    : undefined,
+                filters?.minDiscount !== undefined
+                    ? sql`(
+                        CASE
+                            WHEN COALESCE(${products.compareAtPrice}, 0) > 0 AND COALESCE(${products.price}, 0) > 0
+                                THEN ((${products.compareAtPrice} - ${products.price}) * 100.0 / ${products.compareAtPrice})
+                            ELSE 0
+                        END
+                    ) >= ${filters.minDiscount}`
+                    : undefined,
+                normalizedColors?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(colorOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedColors, sql`, `)})
+                        )
+                    `
+                    : undefined,
+                normalizedSizes?.length
+                    ? sql`
+                        EXISTS (
+                            SELECT 1
+                            FROM ${productOptions} po,
+                                 jsonb_to_recordset(po.values) AS item(name text)
+                            WHERE po.product_id = ${products.id}
+                              AND LOWER(po.name) IN (${sql.join(sizeOptionNames, sql`, `)})
+                              AND LOWER(item.name) IN (${sql.join(normalizedSizes, sql`, `)})
+                        )
+                    `
+                    : undefined,
+            ];
+
+            const rows = await db
+                .select({
+                    subCategoryId: products.subcategoryId,
+                    count: sql<number>`COUNT(${products.id})`.as(
+                        "product_count"
+                    ),
+                })
+                .from(products)
+                .where(and(...whereConditions))
+                .groupBy(products.subcategoryId);
+
+            return new Map(
+                rows.map((row) => [
+                    String(row.subCategoryId),
+                    Number(row.count),
+                ])
+            );
+        } catch (error) {
+            console.error("Error fetching filtered subcategory counts:", error);
+            return new Map();
         }
     }
 

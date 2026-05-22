@@ -3,7 +3,7 @@ import { Spinner } from "@/components/ui/spinner";
 
 
 import { trpc } from "@/lib/trpc/client";
-import { cn } from "@/lib/utils";
+import { cn, formatINR } from "@/lib/utils";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryState } from "nuqs";
@@ -897,7 +897,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                             )}
                                                             <span className="line-clamp-2 text-13 font-medium leading-tight text-[#2f2a23] transition-colors group-hover:text-primary">{product.name}</span>
                                                             <span className="mt-1.5 text-13 font-semibold text-primary">
-                                                                Rs. {(product.price / 100).toLocaleString("en-IN")}
+                                                                {formatINR(product.price, { input: "paise" })}
                                                             </span>
                                                         </div>
                                                     </div>

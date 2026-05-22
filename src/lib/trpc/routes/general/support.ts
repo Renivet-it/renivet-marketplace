@@ -1059,7 +1059,7 @@ export const adminSupportRouter = createTRPCRouter({
                     "We shared a coupon on your support case as a goodwill gesture.",
                 emailDetails: [
                     `Coupon code: ${coupon.code}`,
-                    `Discount: ${input.discountType === "percentage" ? `${input.discountValue}%` : `Rs. ${input.discountValue / 100}`}`,
+                    `Discount: ${input.discountType === "percentage" ? `${input.discountValue}%` : `₹${(input.discountValue / 100).toLocaleString("en-IN")}`}`,
                     `Valid until: ${expiresAt.toDateString()}`,
                 ],
                 metadata: {

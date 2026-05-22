@@ -8,7 +8,7 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { FREE_DELIVERY_THRESHOLD } from "@/config/const";
 import { trpc } from "@/lib/trpc/client";
-import { cn, handleClientError } from "@/lib/utils";
+import { cn, formatINR, handleClientError } from "@/lib/utils";
 import { CachedCart } from "@/lib/validations";
 import Link from "next/link";
 import { useState } from "react";
@@ -147,6 +147,27 @@ export function CartPage({
                     >
                         {isAllSelected ? "Deselect All" : "Select All"}
                     </button>
+                </div>
+
+                <div className="rounded-2xl border border-[#dfe6d7] bg-[#f8fbf4] p-4">
+                    <div className="flex items-center justify-between gap-3">
+                        <p className="text-sm font-medium text-[#314224]">
+                            {totalPrice >= FREE_DELIVERY_THRESHOLD
+                                ? "Free shipping unlocked!"
+                                : `Add ${formatINR(FREE_DELIVERY_THRESHOLD - (totalPrice ?? 0), {
+                                      input: "paise",
+                                  })} more for free shipping`}
+                        </p>
+                        <span className="text-xs font-semibold uppercase tracking-[0.08em] text-[#6e7b63]">
+                            Target {formatINR(FREE_DELIVERY_THRESHOLD, { input: "paise" })}
+                        </span>
+                    </div>
+                    <div className="mt-3 h-2.5 overflow-hidden rounded-full bg-[#e3ead9]">
+                        <div
+                            className="h-full rounded-full bg-[linear-gradient(90deg,#43572f_0%,#7f9d5f_100%)] transition-all"
+                            style={{ width: `${getProgress()}%` }}
+                        />
+                    </div>
                 </div>
 
                 {/* Cart items */}

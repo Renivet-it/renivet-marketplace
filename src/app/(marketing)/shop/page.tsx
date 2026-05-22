@@ -1,4 +1,5 @@
 import { GeneralShell } from "@/components/globals/layouts";
+import { StorefrontBreadcrumbs, buildBreadcrumbJsonLd } from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
 import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
 import { ProductSearch } from "@/components/ui/product-search";
 import { Label } from "@/components/ui/label";
@@ -42,14 +43,62 @@ interface PageProps {
 export default async function Page({ searchParams }: PageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
-    const productTypes = await productTypeCache.getAll();
+    const [productTypes, categories, subCategories] = await Promise.all([
+        productTypeCache.getAll(),
+        categoryCache.getAll(),
+        subCategoryCache.getAll(),
+    ]);
+
+    const selectedCategory = categories.find(
+        (category) => category.id === params.categoryId
+    );
+    const selectedSubCategory = subCategories.find(
+        (subcategory) => subcategory.id === subCategoryId
+    );
+    const selectedProductType = productTypes.find(
+        (productType) => productType.id === params.productTypeId
+    );
+
+    const breadcrumbItems = [
+        { label: "Home", href: "/" },
+        { label: "Shop", href: "/shop" },
+        ...(selectedCategory
+            ? [
+                  {
+                      label: selectedCategory.name,
+                      href: `/shop?categoryId=${selectedCategory.id}`,
+                  },
+              ]
+            : []),
+        ...(selectedSubCategory
+            ? [
+                  {
+                      label: selectedSubCategory.name,
+                      href: `/shop?categoryId=${selectedSubCategory.categoryId}&subCategoryId=${selectedSubCategory.id}`,
+                  },
+              ]
+            : []),
+        ...(selectedProductType
+            ? [
+                  {
+                      label: selectedProductType.name,
+                      href: `/shop?categoryId=${selectedCategory?.id ?? ""}&subCategoryId=${selectedSubCategory?.id ?? ""}&productTypeId=${selectedProductType.id}`,
+                  },
+              ]
+            : []),
+    ];
+    const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
 
     return (
         <GeneralShell>
+            <div className="mb-4">
+                <StorefrontBreadcrumbs items={breadcrumbItems} />
+            </div>
             <div className="flex flex-col gap-6 md:flex-row md:items-start md:gap-8">
                 <aside className="hidden md:sticky md:top-5 md:block md:max-h-[calc(100vh-2.5rem)] md:w-[335px] md:flex-shrink-0 md:overflow-y-auto">
                     <Suspense fallback={<ShopFiltersSkeleton />}>
                         <ShopFiltersFetch
+                            brandIds={params.brandIds}
                             categoryId={params.categoryId}
                             subCategoryId={subCategoryId}
                             productTypeId={params.productTypeId}
@@ -87,6 +136,7 @@ export default async function Page({ searchParams }: PageProps) {
                             >
                                 <ShopFiltersFetch
                                     className="h-full w-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
+                                    brandIds={params.brandIds}
                                     categoryId={params.categoryId}
                                     subCategoryId={subCategoryId}
                                     productTypeId={params.productTypeId}
@@ -116,6 +166,12 @@ export default async function Page({ searchParams }: PageProps) {
                     </Suspense>
                 </main>
             </div>
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(breadcrumbJsonLd),
+                }}
+            />
         </GeneralShell>
     );
 }
@@ -202,6 +258,7 @@ interface GenericProps {
 
 async function ShopFiltersFetch(
     props: GenericProps & {
+        brandIds?: string;
         categoryId?: string;
         subCategoryId?: string;
         productTypeId?: string;
@@ -214,6 +271,7 @@ async function ShopFiltersFetch(
     }
 ) {
     const {
+        brandIds,
         categoryId,
         subCategoryId,
         productTypeId,
@@ -234,6 +292,7 @@ async function ShopFiltersFetch(
         maxPrice && !isNaN(parseInt(maxPrice, 10))
             ? parseInt(maxPrice, 10)
             : undefined;
+    const brandIdsValue = brandIds?.length ? brandIds.split(",") : undefined;
     const colorsValue = colorsParam?.length
         ? colorsParam.split(",")
         : undefined;
@@ -247,6 +306,8 @@ async function ShopFiltersFetch(
         subCategories,
         productTypes,
         brandsMeta,
+        filteredCategoryCounts,
+        filteredSubCategoryCounts,
         colors,
         alphaSize,
         numSize,
@@ -258,6 +319,25 @@ async function ShopFiltersFetch(
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
+            search: search?.trim() || undefined,
+            minPrice: minPriceValue,
+            maxPrice: maxPriceValue,
+            colors: colorsValue,
+            sizes: sizesValue,
+            minDiscount: minDiscountValue,
+        }),
+        productQueries.getFilteredCategoryCounts({
+            brandIds: brandIdsValue,
+            search: search?.trim() || undefined,
+            minPrice: minPriceValue,
+            maxPrice: maxPriceValue,
+            colors: colorsValue,
+            sizes: sizesValue,
+            minDiscount: minDiscountValue,
+        }),
+        productQueries.getFilteredSubCategoryCounts({
+            categoryId,
+            brandIds: brandIdsValue,
             search: search?.trim() || undefined,
             minPrice: minPriceValue,
             maxPrice: maxPriceValue,
@@ -282,11 +362,41 @@ async function ShopFiltersFetch(
         }),
     ]);
 
+    const hasBrandFilter = !!brandIdsValue?.length;
+
+    const subCategoriesWithFilteredCounts = subCategories.map(
+        (subCategory) => ({
+            ...subCategory,
+            productCount: hasBrandFilter
+                ? (filteredSubCategoryCounts.get(String(subCategory.id)) ?? 0)
+                : (subCategory.productCount ?? 0),
+        })
+    );
+
+    const categoryCountMapFromSubCategories = new Map<string, number>();
+    if (hasBrandFilter) {
+        subCategoriesWithFilteredCounts.forEach((subCategory) => {
+            const key = String(subCategory.categoryId);
+            const current = categoryCountMapFromSubCategories.get(key) ?? 0;
+            categoryCountMapFromSubCategories.set(
+                key,
+                current + Math.max(subCategory.productCount ?? 0, 0)
+            );
+        });
+    }
+
+    const categoriesWithFilteredCounts = categories.map((category) => ({
+        ...category,
+        productCount: hasBrandFilter
+            ? (categoryCountMapFromSubCategories.get(String(category.id)) ?? 0)
+            : category.productCount,
+    }));
+
     return (
         <ShopFilters
             sizes={[]}
-            categories={categories}
-            subCategories={subCategories}
+            categories={categoriesWithFilteredCounts}
+            subCategories={subCategoriesWithFilteredCounts}
             productTypes={productTypes}
             brandsMeta={brandsMeta}
             colors={colors}

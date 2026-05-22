@@ -1,5 +1,6 @@
 import { Footer, NavbarHome, NavbarMob } from "@/components/globals/layouts";
 import { HomeRouteClickLoader } from "@/components/globals/layouts/home-route-click-loader";
+import { MobileBottomNav } from "@/components/globals/layouts/shop/MobileBottomNav";
 import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
 
@@ -18,6 +19,7 @@ export default function Layout({ children }: LayoutProps) {
             <main className="flex flex-1 flex-col">{children}</main>
             <Footer />
             <NavbarMob />
+            <MobileBottomNav />
         </div>
     );
 }

@@ -444,6 +444,38 @@ export function formatPriceTag(price: number, keepDeciamls = false) {
     }).format(price);
 }
 
+export function formatINR(
+    amount: number | null | undefined,
+    options: {
+        input?: "paise" | "rupees";
+        keepDecimals?: boolean;
+    } = {}
+) {
+    const value = Number(amount ?? 0);
+    const normalizedValue =
+        options.input === "rupees" ? value : Number((value / 100).toFixed(2));
+
+    return new Intl.NumberFormat("en-IN", {
+        style: "currency",
+        currency: "INR",
+        minimumFractionDigits: options.keepDecimals ? 2 : 0,
+        maximumFractionDigits: options.keepDecimals ? 2 : 0,
+    }).format(normalizedValue);
+}
+
+export function normalizeBrandName(value: string | null | undefined) {
+    if (!value) return "";
+
+    return value
+        .trim()
+        .replace(/\s+/g, " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (char) => char.toUpperCase())
+        .replace(/\bAnd\b/g, "and")
+        .replace(/\bOf\b/g, "of")
+        .replace(/\bThe\b/g, "The");
+}
+
 export function generateProductSlug(productName: string, brandName: string) {
     return slugify(
         `${brandName} ${productName} ${Date.now()} ${Math.random().toString(36).substring(7)}`

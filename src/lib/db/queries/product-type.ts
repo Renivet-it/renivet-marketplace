@@ -1,5 +1,6 @@
+import { hasMedia } from "@/lib/db/helperfilter";
 import { CreateProductType, UpdateProductType } from "@/lib/validations";
-import { and, desc, eq, inArray, ne } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "..";
 import { products, productTypes } from "../schema";
 
@@ -20,27 +21,47 @@ class ProductTypeQuery {
     //     return data;
     // }
     async getProductTypes() {
-        const data = await db.query.productTypes.findMany({
-            orderBy: [desc(productTypes.createdAt)],
-            with: {
-                subCategory: {
-                    columns: {
-                        id: true,
-                        name: true,
+        const [data, countRows] = await Promise.all([
+            db.query.productTypes.findMany({
+                orderBy: [desc(productTypes.createdAt)],
+                with: {
+                    subCategory: {
+                        columns: {
+                            id: true,
+                            name: true,
+                        },
                     },
                 },
-                products: {
-                    columns: {
-                        id: true, // just need one field to count
-                    },
-                },
-            },
-        });
+            }),
+            db
+                .select({
+                    productTypeId: products.productTypeId,
+                    productCount: sql<number>`count(*)`,
+                })
+                .from(products)
+                .where(
+                    and(
+                        eq(products.isDeleted, false),
+                        eq(products.isActive, true),
+                        eq(products.isAvailable, true),
+                        eq(products.isPublished, true),
+                        eq(products.verificationStatus, "approved"),
+                        hasMedia(products, "media")
+                    )
+                )
+                .groupBy(products.productTypeId),
+        ]);
 
-        // Add productCount manually
+        const productCountMap = new Map(
+            countRows.map((row) => [
+                String(row.productTypeId),
+                Number(row.productCount) || 0,
+            ])
+        );
+
         return data.map((pt) => ({
             ...pt,
-            productCount: pt.products.length,
+            productCount: Number(productCountMap.get(String(pt.id)) ?? 0),
         }));
     }
 

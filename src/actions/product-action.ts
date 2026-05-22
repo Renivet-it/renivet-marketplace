@@ -1721,6 +1721,7 @@ export async function toggleBestSeller(
         }
 
         revalidatePath("/dashboard/general/products");
+        revalidatePath("/dashboard/general/most-popular-products");
         revalidatePath("/");
         revalidatePath("/shop");
         return {
@@ -1979,6 +1980,7 @@ export async function updateSectionPosition(
                 .set({ bestSellerPosition: safePosition })
                 .where(eq(products.id, productId));
             revalidatePath("/dashboard/general/products");
+            revalidatePath("/dashboard/general/most-popular-products");
             revalidatePath("/");
             revalidatePath("/shop");
             return { success: true, message: "Best Seller position updated" };

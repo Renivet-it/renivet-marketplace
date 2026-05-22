@@ -1,6 +1,10 @@
 import { randomUUID } from "crypto";
 import { trackViewContentCapi } from "@/actions/analytics";
 import { GeneralShell } from "@/components/globals/layouts";
+import {
+    StorefrontBreadcrumbs,
+    buildBreadcrumbJsonLd,
+} from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
 import { ProductPage } from "@/components/products/product";
 import { TrackViewContent } from "@/components/shop/facebook-pixel-events"; // Import the new component
 import { Separator } from "@/components/ui/separator";
@@ -186,6 +190,12 @@ async function ProductFetch({ params }: PageProps) {
         },
     });
 
+    productQueries
+        .trackProductView(existingProduct.id, existingProduct.brand.id, userId)
+        .catch((error) =>
+            console.error("Failed to record product view event:", error)
+        );
+
     const retailerItemId = existingProduct.id;
     const priceInRupees = existingProduct.costPerItem
         ? (existingProduct.costPerItem / 100).toFixed(2)
@@ -263,9 +273,33 @@ async function ProductFetch({ params }: PageProps) {
             url: getAbsoluteURL(`/products/${slug}`),
         },
     };
+    const breadcrumbItems = [
+        { label: "Home", href: "/" },
+        { label: "Shop", href: "/shop" },
+        {
+            label: existingProduct.category.name,
+            href: `/shop?categoryId=${existingProduct.categoryId}`,
+        },
+        {
+            label: existingProduct.subcategory.name,
+            href: `/shop?categoryId=${existingProduct.categoryId}&subCategoryId=${existingProduct.subcategoryId}`,
+        },
+        {
+            label: existingProduct.productType.name,
+            href: `/shop?categoryId=${existingProduct.categoryId}&subCategoryId=${existingProduct.subcategoryId}&productTypeId=${existingProduct.productTypeId}`,
+        },
+        {
+            label: existingProduct.title,
+            href: `/products/${slug}`,
+        },
+    ];
+    const breadcrumbJsonLd = buildBreadcrumbJsonLd(breadcrumbItems);
 
     return (
         <>
+            <div className="mx-auto w-full max-w-[1440px] px-4 pb-3 pt-4 md:px-8">
+                <StorefrontBreadcrumbs items={breadcrumbItems} />
+            </div>
             <ProductPage
                 product={existingProduct}
                 initialWishlist={userWishlist}
@@ -277,6 +311,12 @@ async function ProductFetch({ params }: PageProps) {
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(breadcrumbJsonLd),
+                }}
             />
             <TrackViewContent
                 product={existingProduct}
