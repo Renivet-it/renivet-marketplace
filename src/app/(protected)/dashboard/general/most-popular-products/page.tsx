@@ -1,4 +1,5 @@
 import { DashShell } from "@/components/globals/layouts";
+import { Icons } from "@/components/icons";
 import { MostPopularBestSellerAction } from "@/components/dashboard/general/products/most-popular-best-seller-action";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button-dash";
@@ -55,14 +56,17 @@ export default async function Page() {
                     </p>
                 </div>
 
-                <Badge variant="secondary" className="w-fit">
+                <Badge
+                    variant="outline"
+                    className="w-fit border-slate-300 bg-white text-slate-700"
+                >
                     Live 30-day ranking
                 </Badge>
             </div>
 
             <div className="overflow-hidden rounded-2xl border bg-background shadow-sm">
                 <div className="overflow-x-auto">
-                    <table className="min-w-full text-sm">
+                    <table className="min-w-[1500px] text-sm">
                         <thead className="bg-muted/40 text-left">
                             <tr className="border-b">
                                 <th className="px-4 py-3 font-semibold">
@@ -92,8 +96,8 @@ export default async function Page() {
                                 <th className="px-4 py-3 font-semibold">
                                     Purchases
                                 </th>
-                                <th className="px-4 py-3 font-semibold">
-                                    Actions
+                                <th className="sticky right-0 z-10 min-w-[190px] bg-muted/40 px-4 py-3 text-right font-semibold shadow-[-8px_0_16px_-16px_rgba(15,23,42,0.45)]">
+                                    Action
                                 </th>
                             </tr>
                         </thead>
@@ -146,7 +150,7 @@ export default async function Page() {
                                         <td className="p-4 align-top">
                                             <Badge
                                                 variant="outline"
-                                                className="font-mono"
+                                                className="border-slate-300 bg-slate-50 font-mono text-slate-700"
                                             >
                                                 {product.popularityScore}
                                             </Badge>
@@ -163,8 +167,8 @@ export default async function Page() {
                                         <td className="p-4 align-top">
                                             {metrics.purchases}
                                         </td>
-                                        <td className="p-4 align-top">
-                                            <div className="flex min-w-[300px] flex-wrap gap-2">
+                                        <td className="sticky right-0 bg-background p-4 align-top shadow-[-8px_0_16px_-16px_rgba(15,23,42,0.45)]">
+                                            <div className="flex min-w-[190px] items-center justify-end gap-2 whitespace-nowrap">
                                                 <MostPopularBestSellerAction
                                                     productId={product.id}
                                                     isBestSeller={
@@ -177,25 +181,35 @@ export default async function Page() {
                                                 <Link
                                                     href={`/products/${product.slug}`}
                                                     target="_blank"
+                                                    title="View PDP"
                                                     className={cn(
                                                         buttonVariants({
-                                                            size: "sm",
+                                                            size: "icon",
                                                             variant: "outline",
-                                                        })
+                                                        }),
+                                                        "size-9 shrink-0 border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                                                     )}
                                                 >
-                                                    View PDP
+                                                    <Icons.ExternalLink className="size-4" />
+                                                    <span className="sr-only">
+                                                        View PDP
+                                                    </span>
                                                 </Link>
                                                 <Link
                                                     href={`/dashboard/general/products/${product.id}`}
+                                                    title="Admin View"
                                                     className={cn(
                                                         buttonVariants({
-                                                            size: "sm",
-                                                            variant: "secondary",
-                                                        })
+                                                            size: "icon",
+                                                            variant: "outline",
+                                                        }),
+                                                        "size-9 shrink-0 border-zinc-300 bg-zinc-900 text-white hover:bg-zinc-800 hover:text-white"
                                                     )}
                                                 >
-                                                    Admin View
+                                                    <Icons.Eye className="size-4" />
+                                                    <span className="sr-only">
+                                                        Admin View
+                                                    </span>
                                                 </Link>
                                             </div>
                                         </td>

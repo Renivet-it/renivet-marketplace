@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface MostPopularBestSellerActionProps {
     productId: string;
@@ -76,11 +77,21 @@ export function MostPopularBestSellerAction({
             <DropdownMenuTrigger asChild>
                 <Button
                     size="sm"
-                    variant={isBestSeller ? "secondary" : "outline"}
+                    variant="outline"
                     disabled={isPending}
+                    className={cn(
+                        "h-9 shrink-0 border-slate-300 px-3 text-slate-700 hover:bg-slate-100 hover:text-slate-950",
+                        isBestSeller &&
+                            "border-rose-600 bg-rose-600 text-white hover:bg-rose-700 hover:text-white"
+                    )}
+                    title={
+                        isBestSeller
+                            ? "Manage Best Seller"
+                            : "Add to Best Sellers"
+                    }
                 >
                     <Icons.Star className="size-4" />
-                    {isBestSeller ? "Best Seller" : "Add Best Seller"}
+                    {isBestSeller ? "Added" : "Add"}
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56 p-2">
