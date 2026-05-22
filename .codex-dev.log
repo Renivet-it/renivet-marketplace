@@ -1,0 +1,37 @@
+
+> renivet-marketplace@0.1.0 dev
+> next dev --port 4010
+
+   ▲ Next.js 15.1.11
+   - Local:        http://localhost:4010
+   - Network:      http://192.168.0.233:4010
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 7s
+ ✓ Compiled /src/middleware in 429ms (575 modules)
+ ○ Compiling /auth/signin ...
+ ✓ Compiled /auth/signin in 19.9s (5280 modules)
+ GET /auth/signin 200 in 21757ms
+ ✓ Compiled in 2.4s (1635 modules)
+ ✓ Compiled in 1057ms (1635 modules)
+ ✓ Compiled in 3.8s (1635 modules)
+ ✓ Compiled in 4.3s (2210 modules)
+ ✓ Compiled in 10.3s (2210 modules)
+ ✓ Compiled in 916ms (1635 modules)
+ ✓ Compiled in 3.8s (1635 modules)
+ ✓ Compiled in 1195ms (1635 modules)
+ ✓ Compiled in 782ms (1635 modules)
+ ✓ Compiled in 604ms (1635 modules)
+ ✓ Compiled in 1810ms (1635 modules)
+ ✓ Compiled in 837ms (1635 modules)
+ ✓ Compiled in 1267ms (2210 modules)
+ ✓ Compiled in 1830ms (2210 modules)
+ ✓ Compiled in 1936ms (2196 modules)
+ ✓ Compiled in 2.3s (1635 modules)
+ ✓ Compiled in 1093ms (1635 modules)
+ ✓ Compiled in 789ms (1635 modules)
+ ✓ Compiled in 2.7s (1635 modules)
+ ✓ Compiled in 2s (1635 modules)
+ ✓ Compiled in 342ms (1621 modules)
+ ✓ Compiled in 1816ms (2210 modules)
