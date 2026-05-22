@@ -4357,9 +4357,12 @@ class ProductQuery {
         const cappedLimit = Math.max(1, Math.trunc(limit));
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - lookbackDays);
-
-        const recencyBoostStartDate = new Date();
-        recencyBoostStartDate.setDate(recencyBoostStartDate.getDate() - 30);
+        const weights = {
+            views: 1,
+            wishlists: 3,
+            addToCarts: 5,
+            purchases: 8,
+        } as const;
 
         const viewsAgg = db
             .select({
@@ -4393,17 +4396,21 @@ class ProductQuery {
 
         const purchaseAgg = db
             .select({
-                productId: productEvents.productId,
-                count: count(productEvents.id).as("purchase_count"),
+                productId: orderItems.productId,
+                count: sql<number>`COALESCE(SUM(${orderItems.quantity}), 0)`.as(
+                    "purchase_count"
+                ),
             })
-            .from(productEvents)
+            .from(orderItems)
+            .innerJoin(orders, eq(orderItems.orderId, orders.id))
             .where(
                 and(
-                    eq(productEvents.event, "purchase"),
-                    gte(productEvents.createdAt, startDate)
+                    gte(orders.createdAt, startDate),
+                    eq(orders.paymentStatus, "paid"),
+                    sql`${orders.status} <> 'cancelled'`
                 )
             )
-            .groupBy(productEvents.productId)
+            .groupBy(orderItems.productId)
             .as("most_popular_purchase");
 
         const wishlistAgg = db
@@ -4418,14 +4425,10 @@ class ProductQuery {
 
         const popularityScoreSql = sql<number>`
             (
-                COALESCE(${viewsAgg.count}, 0) * 1 +
-                COALESCE(${wishlistAgg.count}, 0) * 3 +
-                COALESCE(${addToCartAgg.count}, 0) * 5 +
-                COALESCE(${purchaseAgg.count}, 0) * 8 +
-                CASE
-                    WHEN ${products.createdAt} >= ${recencyBoostStartDate} THEN 2
-                    ELSE 0
-                END
+                COALESCE(${viewsAgg.count}, 0) * ${weights.views} +
+                COALESCE(${wishlistAgg.count}, 0) * ${weights.wishlists} +
+                COALESCE(${addToCartAgg.count}, 0) * ${weights.addToCarts} +
+                COALESCE(${purchaseAgg.count}, 0) * ${weights.purchases}
             )
         `;
 
