@@ -1,4 +1,5 @@
 import { DashShell } from "@/components/globals/layouts";
+import { MostPopularBestSellerAction } from "@/components/dashboard/general/products/most-popular-best-seller-action";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button-dash";
 import { productQueries } from "@/lib/db/queries";
@@ -163,7 +164,16 @@ export default async function Page() {
                                             {metrics.purchases}
                                         </td>
                                         <td className="p-4 align-top">
-                                            <div className="flex min-w-[180px] flex-wrap gap-2">
+                                            <div className="flex min-w-[300px] flex-wrap gap-2">
+                                                <MostPopularBestSellerAction
+                                                    productId={product.id}
+                                                    isBestSeller={
+                                                        product.isBestSeller
+                                                    }
+                                                    bestSellerPosition={
+                                                        product.bestSellerPosition
+                                                    }
+                                                />
                                                 <Link
                                                     href={`/products/${product.slug}`}
                                                     target="_blank"
