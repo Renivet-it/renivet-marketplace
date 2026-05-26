@@ -899,11 +899,12 @@ class ProductQuery {
                 : undefined,
             !!maxPrice
                 ? sql`(
-          COALESCE(${products.price}, 0) <= ${maxPrice}
+          (${products.price} IS NOT NULL AND ${products.price} <= ${maxPrice})
           OR EXISTS (
             SELECT 1 FROM ${productVariants} pv
             WHERE pv.product_id = ${products.id}
-            AND COALESCE(pv.price, 0) <= ${maxPrice}
+            AND pv.price IS NOT NULL
+            AND pv.price <= ${maxPrice}
             AND pv.is_deleted = false
           )
         )`
@@ -1316,11 +1317,12 @@ class ProductQuery {
                 : undefined,
             !!maxPrice
                 ? sql`(
-                COALESCE(${products.price}, 0) <= ${maxPrice}
+                (${products.price} IS NOT NULL AND ${products.price} <= ${maxPrice})
                 OR EXISTS (
                     SELECT 1 FROM ${productVariants} pv
                     WHERE pv.product_id = ${products.id}
-                    AND COALESCE(pv.price, 0) <= ${maxPrice}
+                    AND pv.price IS NOT NULL
+                    AND pv.price <= ${maxPrice}
                     AND pv.is_deleted = false
                 )
             )`
@@ -5078,11 +5080,12 @@ class ProductQuery {
                     : undefined,
                 filters?.maxPrice !== undefined
                     ? sql`(
-                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        (${products.price} IS NOT NULL AND ${products.price} <= ${convertPriceToPaise(filters.maxPrice)})
                         OR EXISTS (
                             SELECT 1 FROM ${productVariants} pv
                             WHERE pv.product_id = ${products.id}
-                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.price IS NOT NULL
+                              AND pv.price <= ${convertPriceToPaise(filters.maxPrice)}
                               AND pv.is_deleted = false
                         )
                     )`
@@ -5211,11 +5214,12 @@ class ProductQuery {
                     : undefined,
                 filters?.maxPrice !== undefined
                     ? sql`(
-                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        (${products.price} IS NOT NULL AND ${products.price} <= ${convertPriceToPaise(filters.maxPrice)})
                         OR EXISTS (
                             SELECT 1 FROM ${productVariants} pv
                             WHERE pv.product_id = ${products.id}
-                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.price IS NOT NULL
+                              AND pv.price <= ${convertPriceToPaise(filters.maxPrice)}
                               AND pv.is_deleted = false
                         )
                     )`
@@ -5322,11 +5326,12 @@ class ProductQuery {
                     : undefined,
                 filters?.maxPrice !== undefined
                     ? sql`(
-                        COALESCE(${products.price}, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                        (${products.price} IS NOT NULL AND ${products.price} <= ${convertPriceToPaise(filters.maxPrice)})
                         OR EXISTS (
                             SELECT 1 FROM ${productVariants} pv
                             WHERE pv.product_id = ${products.id}
-                              AND COALESCE(pv.price, 0) <= ${convertPriceToPaise(filters.maxPrice)}
+                              AND pv.price IS NOT NULL
+                              AND pv.price <= ${convertPriceToPaise(filters.maxPrice)}
                               AND pv.is_deleted = false
                         )
                     )`
