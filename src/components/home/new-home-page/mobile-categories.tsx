@@ -116,6 +116,12 @@ export function MobileCategories() {
 
     const categories = [
         {
+            title: "Under 999",
+            subtitle: "Fashion finds at easy prices.",
+            imageUrl: "/assets/products-under-999.png",
+            link: "https://renivet.com/shop?maxPrice=999",
+        },
+        {
             title: "Indian Wear",
             subtitle: "Elegant ethnic styles for every occasion.",
             imageUrl:
