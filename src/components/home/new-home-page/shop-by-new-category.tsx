@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useRef } from "react";
 
 const SALE_CATEGORY_HREF = "/shop?minDiscount=10";
-
 function getCategoryHref(category: HomeShopByCategory) {
     if (category.title?.trim().toLowerCase() === "sale") {
         return SALE_CATEGORY_HREF;

@@ -1,37 +1,37 @@
 
 > renivet-marketplace@0.1.0 dev
-> next dev --port 4010
+> next dev --turbo --port 4010
 
-   ▲ Next.js 15.1.11
+   ▲ Next.js 15.1.11 (Turbopack)
    - Local:        http://localhost:4010
-   - Network:      http://192.168.0.233:4010
+   - Network:      http://192.168.0.234:4010
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 7s
- ✓ Compiled /src/middleware in 429ms (575 modules)
- ○ Compiling /auth/signin ...
- ✓ Compiled /auth/signin in 19.9s (5280 modules)
- GET /auth/signin 200 in 21757ms
- ✓ Compiled in 2.4s (1635 modules)
- ✓ Compiled in 1057ms (1635 modules)
- ✓ Compiled in 3.8s (1635 modules)
- ✓ Compiled in 4.3s (2210 modules)
- ✓ Compiled in 10.3s (2210 modules)
- ✓ Compiled in 916ms (1635 modules)
- ✓ Compiled in 3.8s (1635 modules)
- ✓ Compiled in 1195ms (1635 modules)
- ✓ Compiled in 782ms (1635 modules)
- ✓ Compiled in 604ms (1635 modules)
- ✓ Compiled in 1810ms (1635 modules)
- ✓ Compiled in 837ms (1635 modules)
- ✓ Compiled in 1267ms (2210 modules)
- ✓ Compiled in 1830ms (2210 modules)
- ✓ Compiled in 1936ms (2196 modules)
- ✓ Compiled in 2.3s (1635 modules)
- ✓ Compiled in 1093ms (1635 modules)
- ✓ Compiled in 789ms (1635 modules)
- ✓ Compiled in 2.7s (1635 modules)
- ✓ Compiled in 2s (1635 modules)
- ✓ Compiled in 342ms (1621 modules)
- ✓ Compiled in 1816ms (2210 modules)
+Creating turbopack project { dir: 'C:\\Personal Projects\\renivet-marketplace', testMode: true }
+ ✓ Compiled in 4.5s
+ ✓ Ready in 17.2s
+ ○ Compiling / ...
+ ✓ Compiled / in 59s
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 63051ms
+ ○ Compiling /api/trpc/[trpc] ...
+ ✓ Compiled /api/trpc/[trpc] in 6s
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+[getProducts] search: undefined requireMedia: true
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 7877ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+ GET / 200 in 2702ms
+[getProducts] search: undefined requireMedia: true
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 1405ms
+ GET / 200 in 1565ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 395ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 4151ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 1193ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
+[getProducts] search: undefined requireMedia: true
+ GET / 200 in 4729ms
+ GET /api/trpc/general.subCategories.getSubCategories,general.categories.getCategories,general.productTypes.getProductTypes?batch=1&input=%7B%220%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%221%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%2C%222%22%3A%7B%22json%22%3Anull%2C%22meta%22%3A%7B%22values%22%3A%5B%22undefined%22%5D%7D%7D%7D 200 in 734ms
+[Delhivery Client] Initialized with Base URL: "https://track.delhivery.com"
