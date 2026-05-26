@@ -504,6 +504,8 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         !subCategoryId &&
         !productTypeId &&
         !brandIds?.length &&
+        minPrice === 0 &&
+        maxPrice === 1000000 &&
         !minDiscount &&
         (!sortByRaw || sortByRaw === "recommended") &&
         !!userId;

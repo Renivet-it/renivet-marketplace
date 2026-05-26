@@ -186,11 +186,15 @@ export function ShopProducts({
                 !search &&
                 page === 1 &&
                 (!sortBy || sortBy === "recommended") &&
+                minPrice === 0 &&
+                maxPrice === 1000000 &&
                 !minDiscount,
             requireMedia: true,
             useRecommendations:
                 !search &&
                 (!sortBy || sortBy === "recommended") &&
+                minPrice === 0 &&
+                maxPrice === 1000000 &&
                 !minDiscount,
         }),
         [
@@ -235,6 +239,8 @@ export function ShopProducts({
                 !effectiveSubCategoryId.length &&
                 !productTypeId.length &&
                 !brandIds?.length &&
+                minPrice === 0 &&
+                maxPrice === 1000000 &&
                 !colors.length &&
                 !sizes.length &&
                 !minDiscount

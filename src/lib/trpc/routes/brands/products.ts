@@ -127,6 +127,9 @@ export const productsRouter = createTRPCRouter({
                 !input.subcategoryId &&
                 !input.productTypeId &&
                 (!input.brandIds || input.brandIds.length === 0) &&
+                (input.minPrice === undefined || input.minPrice === 0) &&
+                (input.maxPrice === undefined || input.maxPrice === 1000000) &&
+                input.minDiscount === undefined &&
                 (!input.sortBy || input.sortBy === "recommended");
 
             if (shouldUseRecommendations && userId) {
