@@ -115,6 +115,16 @@ export const sitePermissions: Permission[] = [
         description: "Create, edit, or delete products across all brands",
         bit: 1 << 21,
     },
+    {
+        name: "VIEW_MONITORING",
+        description: "View monitoring, alert, SLA, compliance, and access review dashboards",
+        bit: 1 << 22,
+    },
+    {
+        name: "MANAGE_MONITORING",
+        description: "Run monitoring checks, acknowledge alerts, export compliance packs, and manage access reviews",
+        bit: 1 << 23,
+    },
 ];
 
 export enum BitFieldSitePermission {
@@ -140,6 +150,8 @@ export enum BitFieldSitePermission {
     VIEW_PRODUCTS = 1 << 19,
     VIEW_CATEGORIES = 1 << 20,
     MANAGE_PRODUCTS = 1 << 21,
+    VIEW_MONITORING = 1 << 22,
+    MANAGE_MONITORING = 1 << 23,
 }
 
 export const brandPermissions: Permission[] = [

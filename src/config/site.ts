@@ -193,6 +193,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_PRODUCTS,
             },
             {
+                title: "Monitoring & SLA",
+                url: "/dashboard/general/monitoring-sla",
+                permissions:
+                    BitFieldSitePermission.VIEW_MONITORING |
+                    BitFieldSitePermission.MANAGE_MONITORING,
+            },
+            {
                 title: "CAPI Logs",
                 url: "/dashboard/capi-logs",
                 permissions:
