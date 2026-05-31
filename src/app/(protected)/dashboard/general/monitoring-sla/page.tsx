@@ -118,15 +118,65 @@ function metricLabel(value: number | string) {
 }
 
 const metricConfig = {
-    ordersToday: {
-        label: "Orders Today",
+    ordersPlaced24h: {
+        label: "Orders 24H",
         sublabel: "Placed since midnight",
         icon: Activity,
     },
-    orders7d: {
-        label: "Orders 7D",
-        sublabel: "Rolling order volume",
+    ordersUnacknowledged24h: {
+        label: "Unack Orders",
+        sublabel: "Brand acknowledgement >24h",
+        icon: TimerReset,
+    },
+    ordersShipped24h: {
+        label: "Shipped 24H",
+        sublabel: "Orders moved to shipped",
         icon: Gauge,
+    },
+    stuckOrders48h: {
+        label: "Stuck Orders",
+        sublabel: "No movement >48h",
+        icon: AlertTriangle,
+    },
+    openTickets: {
+        label: "Open Tickets",
+        sublabel: "Support queues",
+        icon: TimerReset,
+    },
+    ticketsAged24h: {
+        label: "Aged Tickets",
+        sublabel: "No response >24h",
+        icon: Bell,
+    },
+    refundsPendingProcessing: {
+        label: "Pending Refunds",
+        sublabel: "Finance follow-up",
+        icon: FileText,
+    },
+    refundsPendingQc: {
+        label: "Refund QC",
+        sublabel: "Pending quality check",
+        icon: ClipboardCheck,
+    },
+    failedPayments: {
+        label: "Failed Payments",
+        sublabel: "Needs payment review",
+        icon: AlertTriangle,
+    },
+    brandNonResponseCases: {
+        label: "Brand Cases",
+        sublabel: "Non-response/onboarding",
+        icon: UsersRound,
+    },
+    platformUptime24h: {
+        label: "Uptime 24H",
+        sublabel: "Manual until uptime source connected",
+        icon: Gauge,
+    },
+    ordersWtd: {
+        label: "Orders WTD",
+        sublabel: "Business week activity",
+        icon: Activity,
     },
     openAlerts: {
         label: "Open Alerts",
@@ -137,21 +187,6 @@ const metricConfig = {
         label: "Critical Alerts",
         sublabel: "Needs immediate review",
         icon: AlertTriangle,
-    },
-    openTickets: {
-        label: "Open Tickets",
-        sublabel: "Support queues",
-        icon: TimerReset,
-    },
-    pendingRefunds: {
-        label: "Pending Refunds",
-        sublabel: "Finance follow-up",
-        icon: FileText,
-    },
-    pendingBrandRequests: {
-        label: "Brand Requests",
-        sublabel: "Pending onboarding",
-        icon: UsersRound,
     },
 };
 
@@ -277,7 +312,7 @@ export default async function MonitoringSlaPage() {
                                     {" "}
                                     {health.metrics.openAlerts} open alerts,{" "}
                                     {health.metrics.openTickets} open tickets,{" "}
-                                    {health.metrics.pendingRefunds} pending refunds
+                                    {health.metrics.refundsPendingProcessing} pending refunds
                                 </p>
                             </div>
                         </div>
@@ -338,7 +373,7 @@ export default async function MonitoringSlaPage() {
                                 </p>
                                 <p className="mt-1 text-lg font-semibold">
                                     {health.metrics.openTickets} tickets /{" "}
-                                    {health.metrics.pendingRefunds} refunds
+                                    {health.metrics.refundsPendingProcessing} refunds
                                 </p>
                             </div>
                             <div>
@@ -346,8 +381,8 @@ export default async function MonitoringSlaPage() {
                                     Business Activity
                                 </p>
                                 <p className="mt-1 text-lg font-semibold">
-                                    {health.metrics.ordersToday} today /{" "}
-                                    {health.metrics.orders7d} in 7D
+                                    {health.metrics.ordersPlaced24h} today /{" "}
+                                    {health.metrics.ordersWtd} WTD
                                 </p>
                             </div>
                         </div>
@@ -540,6 +575,18 @@ export default async function MonitoringSlaPage() {
                                         </option>
                                         <option value="access-changes">
                                             Access Changes
+                                        </option>
+                                        <option value="manual-overrides">
+                                            Manual Overrides
+                                        </option>
+                                        <option value="sustainability-claims">
+                                            Sustainability Claims
+                                        </option>
+                                        <option value="data-deletion-requests">
+                                            Data Deletion Requests
+                                        </option>
+                                        <option value="customer-escalations">
+                                            Customer Escalations
                                         </option>
                                         <option value="alerts">
                                             Alerts and Overrides

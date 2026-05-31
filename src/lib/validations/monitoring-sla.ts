@@ -8,7 +8,16 @@ export const monitoringAlertActionSchema = z.object({
 
 export const complianceExportSchema = z.object({
     exportMonth: z.string().regex(/^\d{4}-\d{2}$/),
-    exportType: z.enum(["refunds", "brand-actions", "access-changes", "alerts"]),
+    exportType: z.enum([
+        "refunds",
+        "brand-actions",
+        "access-changes",
+        "manual-overrides",
+        "sustainability-claims",
+        "data-deletion-requests",
+        "customer-escalations",
+        "alerts",
+    ]),
 });
 
 export type MonitoringAlertAction = z.infer<typeof monitoringAlertActionSchema>;

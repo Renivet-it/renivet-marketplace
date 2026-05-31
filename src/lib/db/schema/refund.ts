@@ -23,6 +23,10 @@ export const refunds = pgTable("refunds", {
         .notNull()
         .default("pending"),
     amount: integer("amount").notNull(),
+    reasonCode: text("reason_code"),
+    reasonNotes: text("reason_notes"),
+    processedBy: text("processed_by"),
+    failedReason: text("failed_reason"),
     ...timestamps,
 });
 

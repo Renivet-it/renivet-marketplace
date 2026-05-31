@@ -200,6 +200,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_MONITORING,
             },
             {
+                title: "Audit Log",
+                url: "/dashboard/general/audit-log",
+                permissions:
+                    BitFieldSitePermission.VIEW_MONITORING |
+                    BitFieldSitePermission.MANAGE_MONITORING,
+            },
+            {
                 title: "CAPI Logs",
                 url: "/dashboard/capi-logs",
                 permissions:

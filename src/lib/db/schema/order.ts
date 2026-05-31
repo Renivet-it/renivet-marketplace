@@ -7,7 +7,8 @@ import {
     text,
     uniqueIndex,
     uuid,
-    jsonb
+    jsonb,
+    timestamp,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
@@ -51,6 +52,10 @@ export const orders = pgTable(
         })
             .notNull()
             .default("pending"),
+        brandAcknowledgedAt: timestamp("brand_acknowledged_at"),
+        brandAcknowledgedBy: text("brand_acknowledged_by"),
+        cancellationReasonCode: text("cancellation_reason_code"),
+        manualOverrideReason: text("manual_override_reason"),
         addressId: uuid("address_id")
             .notNull()
             .references(() => addresses.id),

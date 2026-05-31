@@ -1,6 +1,35 @@
 import { index, jsonb, pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 
+export const auditLogs = pgTable(
+    "audit_logs",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        timestampUtc: timestamp("timestamp_utc").notNull().defaultNow(),
+        userId: text("user_id"),
+        userRoleSnapshot: text("user_role_snapshot"),
+        actionType: text("action_type").notNull(),
+        entityType: text("entity_type").notNull(),
+        entityId: text("entity_id").notNull(),
+        beforeValue: jsonb("before_value").$type<Record<string, unknown> | null>(),
+        afterValue: jsonb("after_value").$type<Record<string, unknown> | null>(),
+        reason: text("reason"),
+        ipAddress: text("ip_address"),
+        sessionId: text("session_id"),
+        metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+        voidedBy: text("voided_by"),
+        voidedAt: timestamp("voided_at"),
+        voidReason: text("void_reason"),
+        ...timestamps,
+    },
+    (table) => ({
+        auditEntityIdx: index("audit_log_entity_idx").on(table.entityType, table.entityId),
+        auditActionIdx: index("audit_log_action_idx").on(table.actionType),
+        auditUserIdx: index("audit_log_user_idx").on(table.userId),
+        auditTimestampIdx: index("audit_log_timestamp_idx").on(table.timestampUtc),
+    })
+);
+
 export const monitoringAlerts = pgTable(
     "monitoring_alerts",
     {
@@ -16,7 +45,11 @@ export const monitoringAlerts = pgTable(
         title: text("title").notNull(),
         message: text("message").notNull(),
         ownerId: text("owner_id"),
+        ownerRole: text("owner_role"),
+        channels: jsonb("channels").$type<Array<"whatsapp" | "email" | "admin">>().default(["admin"]),
+        recipients: jsonb("recipients").$type<string[]>().default([]),
         dueAt: timestamp("due_at"),
+        acknowledgedDueAt: timestamp("acknowledged_due_at"),
         status: text("status", {
             enum: ["open", "acknowledged", "escalated", "resolved"],
         })
@@ -64,6 +97,34 @@ export const monitoringAlertEvents = pgTable(
     })
 );
 
+export const monitoringAlertDeliveries = pgTable(
+    "monitoring_alert_deliveries",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        alertId: uuid("alert_id")
+            .notNull()
+            .references(() => monitoringAlerts.id, { onDelete: "cascade" }),
+        channel: text("channel", {
+            enum: ["whatsapp", "email", "admin"],
+        }).notNull(),
+        recipient: text("recipient").notNull(),
+        status: text("status", {
+            enum: ["pending", "sent", "failed", "skipped"],
+        })
+            .notNull()
+            .default("pending"),
+        providerMessageId: text("provider_message_id"),
+        error: text("error"),
+        sentAt: timestamp("sent_at"),
+        metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+        ...timestamps,
+    },
+    (table) => ({
+        alertDeliveryAlertIdx: index("monitoring_alert_delivery_alert_idx").on(table.alertId),
+        alertDeliveryChannelIdx: index("monitoring_alert_delivery_channel_idx").on(table.channel),
+    })
+);
+
 export const slaRules = pgTable(
     "sla_rules",
     {
@@ -72,6 +133,8 @@ export const slaRules = pgTable(
         entityType: text("entity_type").notNull(),
         description: text("description").notNull(),
         ownerRole: text("owner_role").notNull().default("operations"),
+        channels: jsonb("channels").$type<Array<"whatsapp" | "email" | "admin">>().default(["admin"]),
+        recipients: jsonb("recipients").$type<string[]>().default([]),
         severity: text("severity", {
             enum: ["info", "warning", "critical"],
         })
@@ -144,7 +207,7 @@ export const weeklyReportingPacks = pgTable(
             .default("draft"),
         executiveSnapshot: text("executive_snapshot"),
         actionItems: jsonb("action_items").$type<string[]>().default([]),
-        metrics: jsonb("metrics").$type<Record<string, number | string>>().default({}),
+        metrics: jsonb("metrics").$type<Record<string, unknown>>().default({}),
         generatedBy: text("generated_by"),
         publishedAt: timestamp("published_at"),
         ...timestamps,
@@ -173,6 +236,8 @@ export const complianceExportRuns = pgTable(
         rowCount: text("row_count").notNull().default("0"),
         filters: jsonb("filters").$type<Record<string, unknown>>().default({}),
         metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+        files: jsonb("files").$type<Array<{ name: string; rowCount: number; path?: string }>>().default([]),
+        retentionUntil: timestamp("retention_until"),
         ...timestamps,
     },
     (table) => ({
@@ -180,6 +245,26 @@ export const complianceExportRuns = pgTable(
             table.exportMonth,
             table.exportType
         ),
+    })
+);
+
+export const complianceExportFiles = pgTable(
+    "compliance_export_files",
+    {
+        id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+        exportRunId: uuid("export_run_id")
+            .notNull()
+            .references(() => complianceExportRuns.id, { onDelete: "cascade" }),
+        fileName: text("file_name").notNull(),
+        contentType: text("content_type").notNull().default("text/csv"),
+        rowCount: text("row_count").notNull().default("0"),
+        storagePath: text("storage_path"),
+        checksum: text("checksum"),
+        metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
+        ...timestamps,
+    },
+    (table) => ({
+        complianceExportFileRunIdx: index("compliance_export_file_run_idx").on(table.exportRunId),
     })
 );
 
