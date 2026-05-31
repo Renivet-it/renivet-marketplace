@@ -23,7 +23,14 @@ import { Lock, X, ZoomIn } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useQueryState } from "nuqs";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    type PointerEvent,
+} from "react";
 import { ProductContent } from "./product-content";
 import { ProductDetails } from "./product-detais";
 import YouMayAlsoLike from "./product-recommendation";
@@ -70,6 +77,9 @@ export function ProductPage({
     const [modalImageIndex, setModalImageIndex] = useState(0);
     const [api, setApi] = useState<CarouselApi>();
     const [current, setCurrent] = useState(0);
+    const mobileImagePointerStart = useRef<{ x: number; y: number } | null>(
+        null
+    );
     const [recentlyViewed, setRecentlyViewed] = useState<
         RecentlyViewedProduct[]
     >([]);
@@ -162,6 +172,34 @@ export function ProductPage({
         setModalImageIndex(index);
         setIsImageModalOpen(true);
     }, []);
+
+    const handleMobileImagePointerDown = useCallback(
+        (event: PointerEvent<HTMLDivElement>) => {
+            mobileImagePointerStart.current = {
+                x: event.clientX,
+                y: event.clientY,
+            };
+        },
+        []
+    );
+
+    const handleMobileImagePointerUp = useCallback(
+        (event: PointerEvent<HTMLDivElement>, index: number) => {
+            const start = mobileImagePointerStart.current;
+            mobileImagePointerStart.current = null;
+
+            if (!start) return;
+
+            const deltaX = Math.abs(event.clientX - start.x);
+            const deltaY = Math.abs(event.clientY - start.y);
+            const isTap = deltaX < 8 && deltaY < 8;
+
+            if (isTap) {
+                openModal(index);
+            }
+        },
+        [openModal]
+    );
 
     useEffect(() => {
         try {
@@ -274,18 +312,33 @@ export function ProductPage({
                         </div>
 
                         {/* Mobile: carousel images */}
-                        <div className="lg:hidden">
-                            <Carousel setApi={setApi} className="w-full">
+                        <div className="lg:hidden [touch-action:pan-y_pinch-zoom]">
+                            <Carousel
+                                setApi={setApi}
+                                className="w-full [touch-action:pan-y_pinch-zoom]"
+                            >
                                 <CarouselContent className="ml-0">
                                     {displayImages.map((image, i) => (
                                         <CarouselItem
                                             key={image.id}
                                             className="pl-0"
-                                            onClick={() => openModal(i)}
+                                            onPointerDown={
+                                                handleMobileImagePointerDown
+                                            }
+                                            onPointerUp={(event) =>
+                                                handleMobileImagePointerUp(
+                                                    event,
+                                                    i
+                                                )
+                                            }
+                                            onPointerCancel={() => {
+                                                mobileImagePointerStart.current =
+                                                    null;
+                                            }}
                                         >
                                             <div
                                                 id={i === 0 ? "pdp-main-image" : undefined}
-                                                className="relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0] [touch-action:pinch-zoom]"
+                                                className="relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0] [touch-action:pan-y_pinch-zoom]"
                                             >
                                                 <Image
                                                     src={image.url}
