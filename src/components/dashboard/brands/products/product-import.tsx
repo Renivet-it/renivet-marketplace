@@ -82,6 +82,9 @@ interface ImportRow {
     [key: `Specification${number} Label` | `Specification${number} Value`]: string | undefined;
 }
 
+const getCell = (row: ImportRow, key: string) =>
+    String((row as Record<string, unknown>)[key] ?? "").trim();
+
 export function ProductImportButton({
     brand,
     categories,
@@ -412,7 +415,9 @@ export function ProductImportButton({
         const rows: ImportRow[] = XLSX.utils.sheet_to_json(sheet);
         const skuOccurrences: Record<string, number[]> = {};
         // Filter out empty rows
-        const filteredRows = rows.filter((row) => row["Product Title"]?.trim());
+        const filteredRows = rows.filter((row) =>
+            getCell(row, "Product Title")
+        );
 
         const errors: { row: number; errors: Record<string, string> }[] = [];
         rows.forEach((row, index) => {
@@ -420,51 +425,57 @@ export function ProductImportButton({
             const rowNumber = index + 2; // Excel row numbers start from 2
 
             // Validation Rules
-            if (!row["Product Title"]?.trim()) {
+            const productTitle = getCell(row, "Product Title");
+            const productDescription = getCell(row, "Product Description (HTML)");
+            const metaTitle = getCell(row, "Meta Title");
+            const metaDescription = getCell(row, "Meta Description");
+            const metaKeywords = getCell(row, "Meta Keywords");
+            const sku = getCell(row, "SKU");
+            const categoryName = getCell(row, "Category");
+            const subcategoryName = getCell(row, "Subcategory");
+            const productTypeName = getCell(row, "Product Type");
+
+            if (!productTitle) {
                 rowErrors["Product Title"] = "Product Title is required";
-              } else if (row["Product Title"].trim().length < 3) {
+              } else if (productTitle.length < 3) {
                 rowErrors["Product Title"] = "Product Title must be at least 3 characters long";
               }
 
 
-              if (row["Product Description (HTML)"]) {
-                const trimmedMetaTitle = row["Product Description (HTML)"].trim();
-                if (trimmedMetaTitle.length < 3) {
+              if (productDescription) {
+                if (productDescription.length < 3) {
                   rowErrors["Product Description (HTML)"] = "Product Description (HTML) must be at least 3 characters long";
                 }
               }
-              if (row["Meta Title"]) {
-                const trimmedMetaTitle = row["Meta Title"].trim();
-                if (trimmedMetaTitle.length < 3) {
+              if (metaTitle) {
+                if (metaTitle.length < 3) {
                   rowErrors["Meta Title"] = "Meta Title must be at least 3 characters long";
-                } else if (trimmedMetaTitle.length > 70) {
+                } else if (metaTitle.length > 70) {
                   rowErrors["Meta Title"] = "Meta Title must be at most 70 characters long";
                 }
               }
 
-              if (row["Meta Description"]) {
-                   const trimmedMetaDescription = row["Meta Description"].trim();
-                   if (trimmedMetaDescription.length < 3) {
+              if (metaDescription) {
+                   if (metaDescription.length < 3) {
                      rowErrors["Meta Description"] = "Meta Description must be at least 3 characters long";
-                   } else if (trimmedMetaDescription.length > 160) {
+                   } else if (metaDescription.length > 160) {
                      rowErrors["Meta Description"] = "Meta Description must be at most 160 characters long";
                    }
                  }
-                 if (!row["Meta Keywords"]?.trim()) {
+                 if (!metaKeywords) {
                    rowErrors["Meta Keywords"] = "Meta Keywords is required";
-               } else if (row["Meta Keywords"].trim().length < 3) {
+               } else if (metaKeywords.length < 3) {
                    rowErrors["Meta Keywords"] = "Meta Keywords must be at least 1 characters long";
                  }
-                 const sku = row["SKU"]?.trim();
                  if (!sku) {
                      rowErrors["SKU"] = "SKU is required";
                  } else {
                      (skuOccurrences[sku] ||= []).push(rowNumber); // Store row numbers for each SKU
                  }
-               if (!row["Category"]?.trim()) {
+               if (!categoryName) {
                    rowErrors["Category"] = "Category is required";
                }
-               if (!row["Subcategory"]?.trim()) {
+               if (!subcategoryName) {
                    rowErrors["Subcategory"] = "Sub Category is required";
                }
 
@@ -500,7 +511,7 @@ export function ProductImportButton({
             if (row["Price (in Rupees)"] === "" || Number(row["Price (in Rupees)"]) <= 0) {
               rowErrors["Price"] = "Price must be a valid number greater than 0";
             }
-            if (!row["Product Type"]?.trim()) {
+            if (!productTypeName) {
                 rowErrors["Product Type"] = "Product Type is required";
             }
 
@@ -510,19 +521,22 @@ export function ProductImportButton({
 
             try {
                    findProductType(
-                       row["Product Type"],
-                       row["Subcategory"],
-                       row["Category"],
+                       productTypeName,
+                       subcategoryName,
+                       categoryName,
                        categories,
                        subcategories,
                        productTypes
                    );
-               } catch (error: any) {
-                   rowErrors["Product Type"] = error.message;
+               } catch (error: unknown) {
+                   rowErrors["Product Type"] =
+                       error instanceof Error
+                           ? error.message
+                           : "An unknown error occurred while validating the Product Type.";
                }
 
              try {
-                 findCategory(row["Category"], categories);
+                 findCategory(categoryName, categories);
              } catch (error: unknown) {
                  if (error instanceof Error) {
                      rowErrors["Category"] = error.message;
@@ -532,7 +546,7 @@ export function ProductImportButton({
              }
 
              try {
-                 findSubcategory(row["Subcategory"], row["Category"], categories, subcategories);
+                 findSubcategory(subcategoryName, categoryName, categories, subcategories);
              } catch (error: unknown) {
                  if (error instanceof Error) {
                      rowErrors["Subcategory"] = error.message;
@@ -565,7 +579,7 @@ export function ProductImportButton({
         // Group products by title
         const productGroups = new Map<string, ImportRow[]>();
         filteredRows.forEach((row) => {
-            const title = row["Product Title"];
+            const title = getCell(row, "Product Title");
             if (!productGroups.has(title)) {
                 productGroups.set(title, []);
             }
@@ -661,18 +675,18 @@ export function ProductImportButton({
                    variants: [],
                    weight: 0,
                    width: 0,
-                   sizeAndFit: firstRow["Size and Fit"]?.trim() || "",
-                   materialAndCare: firstRow["Material and Care"]?.trim() || "",
+                   sizeAndFit: getCell(firstRow, "Size and Fit"),
+                   materialAndCare: getCell(firstRow, "Material and Care"),
                    returnable: String(firstRow["Return (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
                    exchangeable: String(firstRow["Replace (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
-                   returnDescription: firstRow["Return Policy Description(IF yes)"]?.trim() || "",
-                   exchangeDescription: firstRow["Replace Policy Description(IF yes)"]?.trim() || "",
+                   returnDescription: getCell(firstRow, "Return Policy Description(IF yes)"),
+                   exchangeDescription: getCell(firstRow, "Replace Policy Description(IF yes)"),
                    specifications,
                };
 
                if (!hasVariants) {
                    // **Simple Product Handling (No Variants)**
-                   product.sku = firstRow.SKU || "";
+                   product.sku = getCell(firstRow, "SKU");
                    // product.barcode = firstRow.Barcode || null;
                    product.barcode = String(firstRow.Barcode || "").trim();
                    product.hsCode = String(firstRow["HS Code"] || "").trim();
@@ -839,7 +853,7 @@ export function ProductImportButton({
                             productType: productType.name,
                             options: optionCombinations,
                         }),
-                           sku: row.SKU,
+                           sku: getCell(row, "SKU"),
                            price:
                                convertPriceToPaise(
                                    parseFloat(row["Price (in Rupees)"]) || 0
@@ -862,8 +876,8 @@ export function ProductImportButton({
                            originCountry: row["Country Code (ISO)"] || null,
                            barcode: String(row.Barcode || "").trim(),
                            hsCode: String(row["HS Code"] || "").trim(),
-                           sizeAndFit:String(row["Size and Fit"])?.trim() || "",
-                           materialAndCare:String(row["Material and Care"])?.trim() || "",
+                           sizeAndFit: getCell(row, "Size and Fit"),
+                           materialAndCare: getCell(row, "Material and Care"),
                            returnable: String(row["Return (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
                            exchangeable: String(row["Replace (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
                            returnDescription: String(row["Return Policy Description(IF yes)"] || "").trim() || "",
