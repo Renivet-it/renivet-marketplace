@@ -21,6 +21,7 @@ import {
     notifyBrandUsers,
     notifyUser,
 } from "@/lib/support/utils";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { generateId } from "@/lib/utils";
 import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
@@ -200,6 +201,15 @@ export const adminSupportRouter = createTRPCRouter({
                 changedBy: ctx.user.id,
                 reason: input.reason ?? null,
             });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_status_changed",
+                entityType: "support_ticket",
+                entityId: existing.id,
+                beforeValue: { status: existing.status },
+                afterValue: { status: input.status },
+                reason: input.reason ?? "support_ticket_status_update",
+            });
 
             await notifyBrandUsers({
                 brandId: existing.brandId,
@@ -248,6 +258,14 @@ export const adminSupportRouter = createTRPCRouter({
                 .then((res) => res[0]);
 
             await attachBrandMessageFiles(inserted.id, input.attachments);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_message_added",
+                entityType: "support_ticket",
+                entityId: ticket.id,
+                afterValue: { messageId: inserted.id, sender: "admin" },
+                reason: "brand_ticket_reply",
+            });
 
             await db
                 .update(supportTickets)
@@ -318,7 +336,7 @@ export const adminSupportRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            return db
+            const note = await db
                 .insert(supportInternalNotes)
                 .values({
                     ticketId: input.ticketId,
@@ -327,6 +345,15 @@ export const adminSupportRouter = createTRPCRouter({
                 })
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_internal_note_added",
+                entityType: "support_ticket",
+                entityId: input.ticketId,
+                afterValue: { noteId: note.id },
+                reason: "internal_note",
+            });
+            return note;
         }),
     listUserTickets: protectedProcedure
         .input(
@@ -490,6 +517,19 @@ export const adminSupportRouter = createTRPCRouter({
                 .where(eq(userSupportTickets.id, input.ticketId))
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_status_changed",
+                entityType: "user_support_ticket",
+                entityId: existing.id,
+                beforeValue: { status: existing.status },
+                afterValue: {
+                    status: input.status,
+                    resolutionType: updated.resolutionType,
+                    resolutionSummary: updated.resolutionSummary,
+                },
+                reason: input.resolutionSummary ?? "user_ticket_status_update",
+            });
 
             await notifyUser({
                 userId: existing.userId,
@@ -540,6 +580,14 @@ export const adminSupportRouter = createTRPCRouter({
                 .then((res) => res[0]);
 
             await attachUserMessageFiles(inserted.id, input.attachments);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_message_added",
+                entityType: "user_support_ticket",
+                entityId: ticket.id,
+                afterValue: { messageId: inserted.id, sender: "admin" },
+                reason: "customer_ticket_reply",
+            });
 
             await db
                 .update(userSupportTickets)
@@ -585,7 +633,7 @@ export const adminSupportRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            return db
+            const note = await db
                 .insert(userSupportInternalNotes)
                 .values({
                     ticketId: input.ticketId,
@@ -594,6 +642,15 @@ export const adminSupportRouter = createTRPCRouter({
                 })
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_internal_note_added",
+                entityType: "user_support_ticket",
+                entityId: input.ticketId,
+                afterValue: { noteId: note.id },
+                reason: "internal_note",
+            });
+            return note;
         }),
     assignUserTicket: protectedProcedure
         .input(
@@ -602,8 +659,11 @@ export const adminSupportRouter = createTRPCRouter({
                 adminId: z.string(),
             })
         )
-        .mutation(async ({ input }) => {
-            return db
+        .mutation(async ({ input, ctx }) => {
+            const before = await db.query.userSupportTickets.findFirst({
+                where: eq(userSupportTickets.id, input.ticketId),
+            });
+            const updated = await db
                 .update(userSupportTickets)
                 .set({
                     assignedAdminId: input.adminId,
@@ -612,6 +672,27 @@ export const adminSupportRouter = createTRPCRouter({
                 .where(eq(userSupportTickets.id, input.ticketId))
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_assigned",
+                entityType: "user_support_ticket",
+                entityId: input.ticketId,
+                beforeValue: { assignedAdminId: before?.assignedAdminId ?? null },
+                afterValue: { assignedAdminId: input.adminId },
+                reason: "ticket_assignment",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "ticket_assigned",
+                severity: "info",
+                entityType: "user_support_ticket",
+                entityId: input.ticketId,
+                title: "Customer ticket assigned",
+                message: `Ticket ${input.ticketId} assigned to ${input.adminId}.`,
+                ownerRole: "support_manager",
+                dedupeKey: `ticket:assigned:${input.ticketId}:${input.adminId}`,
+            });
+            return updated;
         }),
     listDisputes: protectedProcedure
         .input(

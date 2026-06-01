@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
 import { orderQueries, refundQueries } from "@/lib/db/queries";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { OrderRefundFailed, OrderRefundProcessed } from "@/lib/resend/emails";
@@ -42,12 +43,30 @@ export async function POST(req: NextRequest) {
                                 payload.payload.payment.entity.method,
                             paymentStatus: "refunded",
                             status: "cancelled",
+                            cancellationReasonCode: "RTN_GOODWILL",
+                            manualOverrideReason: "Refund processed by Razorpay webhook",
                         }),
                         refundQueries.updateRefundStatus(
                             payload.payload.refund.entity.id,
                             payload.payload.refund.entity.status
                         ),
                     ]);
+                    await auditEntityChange({
+                        actorId: "razorpay-webhook",
+                        actionType: "refund_processed",
+                        entityType: "refund",
+                        entityId: payload.payload.refund.entity.id,
+                        beforeValue: {
+                            orderPaymentStatus: existingOrder.paymentStatus,
+                        },
+                        afterValue: {
+                            orderId: existingOrder.id,
+                            paymentStatus: "refunded",
+                            refundStatus: payload.payload.refund.entity.status,
+                            amount: payload.payload.refund.entity.amount,
+                        },
+                        reason: "razorpay_refund_processed",
+                    });
 
                     const uniqueBrandIds = [
                         ...new Set(
@@ -151,12 +170,42 @@ export async function POST(req: NextRequest) {
                                 payload.payload.payment.entity.method,
                             paymentStatus: "refund_failed",
                             status: "cancelled",
+                            cancellationReasonCode: "RTN_GOODWILL",
+                            manualOverrideReason: "Refund failed by Razorpay webhook",
                         }),
                         refundQueries.updateRefundStatus(
                             payload.payload.refund.entity.id,
                             payload.payload.refund.entity.status
                         ),
                     ]);
+                    await auditEntityChange({
+                        actorId: "razorpay-webhook",
+                        actionType: "refund_failed",
+                        entityType: "refund",
+                        entityId: payload.payload.refund.entity.id,
+                        beforeValue: {
+                            orderPaymentStatus: existingOrder.paymentStatus,
+                        },
+                        afterValue: {
+                            orderId: existingOrder.id,
+                            paymentStatus: "refund_failed",
+                            refundStatus: payload.payload.refund.entity.status,
+                            amount: payload.payload.refund.entity.amount,
+                        },
+                        reason: "razorpay_refund_failed",
+                    });
+                    await createOperationalAlert({
+                        actorId: "razorpay-webhook",
+                        type: "refund_failed_gateway",
+                        severity: "critical",
+                        entityType: "refund",
+                        entityId: payload.payload.refund.entity.id,
+                        title: "Refund failed at gateway",
+                        message: `Refund ${payload.payload.refund.entity.id} failed for order ${existingOrder.id}.`,
+                        ownerRole: "admin",
+                        channels: ["admin", "email", "whatsapp"],
+                        dedupeKey: `refund:gateway-failed:${payload.payload.refund.entity.id}`,
+                    });
 
                     const uniqueBrandIds = [
                         ...new Set(

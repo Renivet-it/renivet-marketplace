@@ -11,6 +11,7 @@ import {
     createOrder as createDelhiveryOrder,
 } from "@/lib/delhivery/orders";
 import { razorpay } from "@/lib/razorpay";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import {
     analytics,
     brandCache,
@@ -1139,8 +1140,37 @@ export const ordersRouter = createTRPCRouter({
         })
         .mutation(async ({ input, ctx }) => {
             const { queries, existingOrder } = ctx;
+            if (
+                input.values.status === "cancelled" &&
+                !input.values.cancellationReasonCode
+            ) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Cancellation reason code is required",
+                });
+            }
 
-            await queries.orders.updateOrderStatus(input.orderId, input.values);
+            const updated = await queries.orders.updateOrderStatus(input.orderId, input.values);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "order_status_changed",
+                entityType: "order",
+                entityId: input.orderId,
+                beforeValue: {
+                    status: existingOrder.status,
+                    paymentStatus: existingOrder.paymentStatus,
+                },
+                afterValue: {
+                    status: updated.status,
+                    paymentStatus: updated.paymentStatus,
+                    cancellationReasonCode: updated.cancellationReasonCode,
+                    manualOverrideReason: updated.manualOverrideReason,
+                },
+                reason:
+                    input.values.cancellationReasonCode ??
+                    input.values.manualOverrideReason ??
+                    "order_status_update",
+            });
 
             if (input.values.status === "cancelled") {
                 const uniqueBrandIds = [
@@ -1249,10 +1279,46 @@ export const ordersRouter = createTRPCRouter({
         })
         .mutation(async ({ input, ctx }) => {
             const { existingOrders, queries } = ctx;
+            if (
+                input.values.status === "cancelled" &&
+                !input.values.cancellationReasonCode
+            ) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Cancellation reason code is required",
+                });
+            }
 
-            await queries.orders.bulkUpdateOrderStatus(
+            const updatedOrders = await queries.orders.bulkUpdateOrderStatus(
                 existingOrders.map((order) => order.id),
                 input.values
+            );
+            await Promise.all(
+                updatedOrders.map((updated) => {
+                    const before = existingOrders.find((order) => order.id === updated.id);
+                    return auditEntityChange({
+                        actorId: ctx.user.id,
+                        actionType: "order_status_changed",
+                        entityType: "order",
+                        entityId: updated.id,
+                        beforeValue: before
+                            ? {
+                                  status: before.status,
+                                  paymentStatus: before.paymentStatus,
+                              }
+                            : null,
+                        afterValue: {
+                            status: updated.status,
+                            paymentStatus: updated.paymentStatus,
+                            cancellationReasonCode: updated.cancellationReasonCode,
+                            manualOverrideReason: updated.manualOverrideReason,
+                        },
+                        reason:
+                            input.values.cancellationReasonCode ??
+                            input.values.manualOverrideReason ??
+                            "bulk_order_status_update",
+                    });
+                })
             );
 
             return true;
@@ -1505,6 +1571,35 @@ export const ordersRouter = createTRPCRouter({
                 paymentStatus: nextPaymentStatus,
                 paymentId: existingOrder.paymentId,
                 paymentMethod: existingOrder.paymentMethod,
+                cancellationReasonCode: "CAN_CUSTOMER_REQUEST",
+                manualOverrideReason: "Order cancelled by customer",
+            });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "order_cancelled",
+                entityType: "order",
+                entityId: existingOrder.id,
+                beforeValue: {
+                    status: existingOrder.status,
+                    paymentStatus: existingOrder.paymentStatus,
+                },
+                afterValue: {
+                    status: "cancelled",
+                    paymentStatus: nextPaymentStatus,
+                    cancellationReasonCode: "CAN_CUSTOMER_REQUEST",
+                },
+                reason: "CAN_CUSTOMER_REQUEST",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "order_cancelled",
+                severity: "info",
+                entityType: "order",
+                entityId: existingOrder.id,
+                title: "Order cancelled",
+                message: `Order ${existingOrder.id} was cancelled by customer.`,
+                ownerRole: "order_manager",
+                dedupeKey: `order:cancelled:${existingOrder.id}`,
             });
 
             // Track analytics events

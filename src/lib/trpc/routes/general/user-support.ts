@@ -11,6 +11,7 @@ import {
     buildSupportHref,
     notifyAdmins,
 } from "@/lib/support/utils";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { and, desc, eq, inArray, SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -134,6 +135,7 @@ export const userSupportRouter = createTRPCRouter({
                     issueType: input.issueType,
                     issueLabel: input.issueLabel ?? null,
                     description: input.description ?? null,
+                    assignedAdminId: process.env.SUPPORT_INTERN_USER_ID || null,
                     priority: input.priority ?? "normal",
                     intakeContext: input.intakeContext ?? null,
                     latestMessageAt: new Date(),
@@ -190,6 +192,32 @@ export const userSupportRouter = createTRPCRouter({
                     category: input.category,
                     orderId: input.orderId ?? null,
                 },
+            });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_created",
+                entityType: "user_support_ticket",
+                entityId: row.id,
+                afterValue: {
+                    title: row.title,
+                    category: row.category,
+                    issueType: row.issueType,
+                    status: row.status,
+                    orderId: row.orderId,
+                },
+                reason: "customer_support_ticket_created",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "new_ticket_created",
+                severity: "info",
+                entityType: "user_support_ticket",
+                entityId: row.id,
+                title: "New customer support ticket",
+                message: `${ctx.user.firstName} raised "${title}".`,
+                ownerRole: "support_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dedupeKey: `ticket:new:user:${row.id}`,
             });
 
             return row;

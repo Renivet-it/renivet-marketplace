@@ -1,6 +1,7 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -371,6 +372,44 @@ export const userRolesRouter = createTRPCRouter({
                 }),
                 userCache.remove(userId),
             ]);
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: "user_roles_changed",
+                entityType: "user_role",
+                entityId: userId,
+                beforeValue: {
+                    roles: existingUser.roles.map((role) => ({
+                        id: role.id,
+                        name: role.name,
+                        slug: role.slug,
+                    })),
+                },
+                afterValue: {
+                    added: newRoles.map((role) => ({
+                        id: role.id,
+                        name: role.name,
+                        slug: role.slug,
+                    })),
+                    removed: removedRoles.map((role) => ({
+                        id: role.id,
+                        name: role.name,
+                        slug: role.slug,
+                    })),
+                },
+                reason: "access_change",
+            });
+            await createOperationalAlert({
+                actorId: user.id,
+                type: "access_changed",
+                severity: "warning",
+                entityType: "user_role",
+                entityId: userId,
+                title: "User access changed",
+                message: `Roles updated for ${existingUser.email}. Added ${newRoles.length}, removed ${removedRoles.length}.`,
+                ownerRole: "admin",
+                channels: ["admin", "email"],
+                dedupeKey: `access:user-role:${userId}:${Date.now()}`,
+            });
 
             return true;
         }),

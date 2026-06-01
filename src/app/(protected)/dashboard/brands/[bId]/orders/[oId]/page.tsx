@@ -1,4 +1,5 @@
 import { OrderPage } from "@/components/dashboard/brands/orders";
+import { AuditHistoryPanel } from "@/components/dashboard/general/monitoring-sla/audit-history-panel";
 import { DashShell } from "@/components/globals/layouts";
 import { orderQueries } from "@/lib/db/queries";
 import { notFound } from "next/navigation";
@@ -37,5 +38,10 @@ async function OrderFetch({ params }: PageProps) {
     const brandIdsInOrder = data.items.map((item) => item.product.brandId);
     if (!brandIdsInOrder.includes(bId)) notFound();
 
-    return <OrderPage order={data} />;
+    return (
+        <div className="space-y-6">
+            <OrderPage order={data} />
+            <AuditHistoryPanel entityType="order" entityId={oId} />
+        </div>
+    );
 }

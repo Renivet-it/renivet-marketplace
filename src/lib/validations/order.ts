@@ -184,6 +184,9 @@ export const updateOrderStatusSchema = orderSchema.pick({
     paymentMethod: true,
     paymentStatus: true,
     status: true,
+}).extend({
+    cancellationReasonCode: z.string().min(2).max(80).optional(),
+    manualOverrideReason: z.string().min(3).max(500).optional(),
 });
 
 export type Order = z.infer<typeof orderSchema>;

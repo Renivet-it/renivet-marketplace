@@ -2,6 +2,7 @@ import {
     ProductActionPage,
     ProductReviewPage,
 } from "@/components/dashboard/general/products";
+import { AuditHistoryPanel } from "@/components/dashboard/general/monitoring-sla/audit-history-panel";
 import { DashShell } from "@/components/globals/layouts";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -290,6 +291,7 @@ async function ProductReviewFetch({ params }: PageProps) {
                         </CardContent>
                     </Card>
                 )}
+                <AuditHistoryPanel entityType="product" entityId={id} />
             </div>
         </>
     );
