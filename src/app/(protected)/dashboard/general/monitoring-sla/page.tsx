@@ -20,9 +20,18 @@ import {
 } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 const pagePath = "/dashboard/general/monitoring-sla";
+
+function finishAction(
+    notice: string,
+    extraParams: Record<string, string> = {}
+): never {
+    const params = new URLSearchParams({ notice, ...extraParams });
+    revalidatePath(pagePath);
+    redirect(`${pagePath}?${params.toString()}`);
+}
 
 async function getActor() {
     const { userId } = await auth();
@@ -59,7 +68,7 @@ async function acknowledgeAlert(formData: FormData) {
             formData.get("notes") ?? "Acknowledged from monitoring dashboard"
         ),
     });
-    revalidatePath(pagePath);
+    finishAction("alert-acknowledged");
 }
 
 async function resolveAlert(formData: FormData) {
@@ -72,31 +81,31 @@ async function resolveAlert(formData: FormData) {
             formData.get("notes") ?? "Resolved from monitoring dashboard"
         ),
     });
-    revalidatePath(pagePath);
+    finishAction("alert-resolved");
 }
 
 async function runSlaCheck() {
     "use server";
     await monitoringSlaQueries.runSlaCheck(await getActor());
-    revalidatePath(pagePath);
+    finishAction("sla-run");
 }
 
 async function saveDailySnapshot() {
     "use server";
     await monitoringSlaQueries.saveDailySnapshot(await getActor());
-    revalidatePath(pagePath);
+    finishAction("snapshot");
 }
 
 async function generateWeeklyPack() {
     "use server";
     await monitoringSlaQueries.generateWeeklyPack(await getActor());
-    revalidatePath(pagePath);
+    finishAction("weekly-pack");
 }
 
 async function generateAccessReview() {
     "use server";
     await monitoringSlaQueries.generateAccessReview(await getActor());
-    revalidatePath(pagePath);
+    finishAction("access-review");
 }
 
 async function generateComplianceExport(formData: FormData) {
@@ -111,7 +120,7 @@ async function generateComplianceExport(formData: FormData) {
         exportType,
         await getActor()
     );
-    revalidatePath(pagePath);
+    finishAction("compliance-export", { exportMonth, exportType });
 }
 
 function metricLabel(value: number | string) {
@@ -218,6 +227,27 @@ function getStatusConfig(status: "green" | "amber" | "red") {
     };
 }
 
+function getNoticeConfig(notice?: string) {
+    switch (notice) {
+        case "sla-run":
+            return "SLA check completed. Alerts, delivery attempts, and evidence were refreshed.";
+        case "snapshot":
+            return "Daily health snapshot saved.";
+        case "weekly-pack":
+            return "Weekly reporting pack generated.";
+        case "access-review":
+            return "Access review generated.";
+        case "compliance-export":
+            return "Compliance export generated. Check the Exports evidence card below.";
+        case "alert-acknowledged":
+            return "Alert acknowledged and audit evidence recorded.";
+        case "alert-resolved":
+            return "Alert resolved and audit evidence recorded.";
+        default:
+            return null;
+    }
+}
+
 function EvidenceList({ rows }: { rows: string[] }) {
     if (!rows.length) {
         return <p className="text-sm text-muted-foreground">Not generated</p>;
@@ -244,6 +274,16 @@ export default async function MonitoringSlaPage({
     const alertPageRaw = Array.isArray(params.alertPage)
         ? params.alertPage[0]
         : params.alertPage;
+    const noticeRaw = Array.isArray(params.notice)
+        ? params.notice[0]
+        : params.notice;
+    const generatedExportMonthRaw = Array.isArray(params.exportMonth)
+        ? params.exportMonth[0]
+        : params.exportMonth;
+    const generatedExportTypeRaw = Array.isArray(params.exportType)
+        ? params.exportType[0]
+        : params.exportType;
+    const notice = getNoticeConfig(noticeRaw);
     const alertPage = Math.max(1, Number(alertPageRaw ?? "1") || 1);
     const alertPageSize = 10;
 
@@ -259,7 +299,7 @@ export default async function MonitoringSlaPage({
     const makeAlertPageHref = (page: number) => {
         const nextParams = new URLSearchParams();
         for (const [key, value] of Object.entries(params)) {
-            if (!value || key === "alertPage") continue;
+            if (!value || key === "alertPage" || key === "notice") continue;
             nextParams.set(key, Array.isArray(value) ? value[0] : value);
         }
         nextParams.set("alertPage", String(page));
@@ -268,6 +308,14 @@ export default async function MonitoringSlaPage({
 
     const healthStatus = getStatusConfig(health.status);
     const currentMonth = new Date().toISOString().slice(0, 7);
+    const generatedExportHref =
+        noticeRaw === "compliance-export"
+            ? `/api/admin/monitoring-sla/compliance-export?${new URLSearchParams({
+                  exportMonth: generatedExportMonthRaw || currentMonth,
+                  exportType: generatedExportTypeRaw || "alerts",
+                  format: "xlsx",
+              }).toString()}`
+            : null;
     const metricEntries = Object.entries(health.metrics) as Array<
         [keyof typeof metricConfig, number | string]
     >;
@@ -368,6 +416,32 @@ export default async function MonitoringSlaPage({
                         </div>
                     </div>
                 </header>
+
+                {notice && (
+                    <section
+                        aria-live="polite"
+                        className="flex items-start gap-3 rounded-md border border-emerald-200 bg-emerald-50 p-4 text-emerald-950 shadow-sm"
+                    >
+                        <div className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-md bg-emerald-600 text-white">
+                            <CheckCircle2 className="size-4" />
+                        </div>
+                        <div>
+                            <p className="text-sm font-semibold">Done</p>
+                            <p className="mt-0.5 text-sm text-emerald-900">
+                                {notice}
+                            </p>
+                            {generatedExportHref && (
+                                <Link
+                                    href={generatedExportHref}
+                                    className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800"
+                                >
+                                    <Download className="size-4" />
+                                    Download Excel
+                                </Link>
+                            )}
+                        </div>
+                    </section>
+                )}
 
                 <section
                     className={`overflow-hidden rounded-md border shadow-sm ${healthStatus.className}`}

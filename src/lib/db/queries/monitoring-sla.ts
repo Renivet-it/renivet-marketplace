@@ -31,6 +31,19 @@ import { auditLogQueries, type AuditLogInput } from "./audit-log";
 type AlertSeverity = "info" | "warning" | "critical";
 type AlertChannel = "whatsapp" | "email" | "admin";
 
+export type ComplianceExportRow = Record<string, unknown>;
+export type ComplianceExportFile = {
+    name: string;
+    rowCount: number;
+    headers: string[];
+};
+export type ComplianceExportBuild = {
+    rows: ComplianceExportRow[];
+    csv: string;
+    files: ComplianceExportFile[];
+    headers: string[];
+};
+
 type AlertInput = {
     type: string;
     severity: AlertSeverity;
@@ -91,12 +104,12 @@ function csvEscape(value: unknown) {
     return `"${text.replaceAll('"', '""')}"`;
 }
 
-function toCsv<T extends Record<string, unknown>>(rows: T[]) {
-    if (!rows.length) return "";
-    const headers = Object.keys(rows[0]);
+function toCsv<T extends Record<string, unknown>>(rows: T[], headers?: string[]) {
+    const csvHeaders = headers ?? Object.keys(rows[0] ?? {});
+    if (!csvHeaders.length) return "";
     return [
-        headers.map(csvEscape).join(","),
-        ...rows.map((row) => headers.map((header) => csvEscape(row[header])).join(",")),
+        csvHeaders.map(csvEscape).join(","),
+        ...rows.map((row) => csvHeaders.map((header) => csvEscape(row[header])).join(",")),
     ].join("\n");
 }
 
@@ -697,37 +710,66 @@ class MonitoringSlaQuery {
         const dayCutoff = new Date(Date.now() - DAY);
         const twoDayCutoff = new Date(Date.now() - 2 * DAY);
 
-        const [
-            ordersPlaced24h,
-            ordersUnack24h,
-            ordersShipped24h,
-            stuckOrders48h,
-            openAlerts,
-            criticalAlerts,
-            openAdminTickets,
-            openUserTickets,
-            agedAdminTickets,
-            agedUserTickets,
-            pendingRefunds,
-            failedPayments,
-            pendingBrandRequests,
-            weeklyOrders,
-        ] = await Promise.all([
-            db.$count(orders, gte(orders.createdAt, today)),
-            db.$count(orders, and(inArray(orders.status, ["pending", "processing"]), isNull(orders.brandAcknowledgedAt), lt(orders.createdAt, dayCutoff))),
-            db.$count(orders, and(eq(orders.status, "shipped"), gte(orders.updatedAt, today))),
-            db.$count(orders, and(inArray(orders.status, ["pending", "processing"]), lt(orders.updatedAt, twoDayCutoff))),
-            db.$count(monitoringAlerts, ne(monitoringAlerts.status, "resolved")),
-            db.$count(monitoringAlerts, and(eq(monitoringAlerts.severity, "critical"), ne(monitoringAlerts.status, "resolved"))),
-            db.$count(supportTickets, inArray(supportTickets.status, ["open", "pending", "in_progress"])),
-            db.$count(userSupportTickets, inArray(userSupportTickets.status, ["open", "pending", "in_progress"])),
-            db.$count(supportTickets, and(inArray(supportTickets.status, ["open", "pending", "in_progress"]), lt(supportTickets.statusChangedAt, dayCutoff))),
-            db.$count(userSupportTickets, and(inArray(userSupportTickets.status, ["open", "pending", "in_progress"]), lt(userSupportTickets.statusChangedAt, dayCutoff))),
-            db.$count(refunds, eq(refunds.status, "pending")),
-            db.$count(orders, eq(orders.paymentStatus, "failed")),
-            db.$count(brandRequests, eq(brandRequests.status, "pending")),
-            db.$count(orders, gte(orders.createdAt, weekStart)),
-        ]);
+        const ordersPlaced24h = await db.$count(orders, gte(orders.createdAt, today));
+        const ordersUnack24h = await db.$count(
+            orders,
+            and(
+                inArray(orders.status, ["pending", "processing"]),
+                isNull(orders.brandAcknowledgedAt),
+                lt(orders.createdAt, dayCutoff)
+            )
+        );
+        const ordersShipped24h = await db.$count(
+            orders,
+            and(eq(orders.status, "shipped"), gte(orders.updatedAt, today))
+        );
+        const stuckOrders48h = await db.$count(
+            orders,
+            and(
+                inArray(orders.status, ["pending", "processing"]),
+                lt(orders.updatedAt, twoDayCutoff)
+            )
+        );
+        const openAlerts = await db.$count(
+            monitoringAlerts,
+            ne(monitoringAlerts.status, "resolved")
+        );
+        const criticalAlerts = await db.$count(
+            monitoringAlerts,
+            and(
+                eq(monitoringAlerts.severity, "critical"),
+                ne(monitoringAlerts.status, "resolved")
+            )
+        );
+        const openAdminTickets = await db.$count(
+            supportTickets,
+            inArray(supportTickets.status, ["open", "pending", "in_progress"])
+        );
+        const openUserTickets = await db.$count(
+            userSupportTickets,
+            inArray(userSupportTickets.status, ["open", "pending", "in_progress"])
+        );
+        const agedAdminTickets = await db.$count(
+            supportTickets,
+            and(
+                inArray(supportTickets.status, ["open", "pending", "in_progress"]),
+                lt(supportTickets.statusChangedAt, dayCutoff)
+            )
+        );
+        const agedUserTickets = await db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, ["open", "pending", "in_progress"]),
+                lt(userSupportTickets.statusChangedAt, dayCutoff)
+            )
+        );
+        const pendingRefunds = await db.$count(refunds, eq(refunds.status, "pending"));
+        const failedPayments = await db.$count(orders, eq(orders.paymentStatus, "failed"));
+        const pendingBrandRequests = await db.$count(
+            brandRequests,
+            eq(brandRequests.status, "pending")
+        );
+        const weeklyOrders = await db.$count(orders, gte(orders.createdAt, weekStart));
 
         const status: "green" | "amber" | "red" =
             criticalAlerts > 0 || stuckOrders48h > 0 ? "red" : openAlerts > 0 || pendingRefunds > 0 ? "amber" : "green";
@@ -846,8 +888,28 @@ class MonitoringSlaQuery {
             .then((res) => res[0]);
     }
 
-    async buildComplianceExport(exportMonth: string, exportType: string) {
+    async buildComplianceExport(
+        exportMonth: string,
+        exportType: string
+    ): Promise<ComplianceExportBuild> {
         const { start, end } = monthWindow(exportMonth);
+        const auditHeaders = [
+            "timestampUtc",
+            "userId",
+            "actionType",
+            "entityType",
+            "entityId",
+            "reason",
+        ];
+        const refundHeaders = [
+            "id",
+            "orderId",
+            "status",
+            "amount",
+            "reasonCode",
+            "createdAt",
+            "updatedAt",
+        ];
         const auditByTypes = async (types: string[]) =>
             db
                 .select({
@@ -874,7 +936,18 @@ class MonitoringSlaQuery {
                 })
                 .from(refunds)
                 .where(and(gte(refunds.createdAt, start), lt(refunds.createdAt, end)));
-            return { rows, csv: toCsv(rows), files: [{ name: `${exportMonth}-refund-audit.csv`, rowCount: rows.length }] };
+            return {
+                rows,
+                csv: toCsv(rows, refundHeaders),
+                headers: refundHeaders,
+                files: [
+                    {
+                        name: `${exportMonth}-refund-audit.csv`,
+                        rowCount: rows.length,
+                        headers: refundHeaders,
+                    },
+                ],
+            };
         }
 
         const exportMap: Record<string, string[]> = {
@@ -887,7 +960,18 @@ class MonitoringSlaQuery {
             alerts: ["monitoring_alert", "alert"],
         };
         const rows = await auditByTypes(exportMap[exportType] ?? exportMap.alerts);
-        return { rows, csv: toCsv(rows), files: [{ name: `${exportMonth}-${exportType}.csv`, rowCount: rows.length }] };
+        return {
+            rows,
+            csv: toCsv(rows, auditHeaders),
+            headers: auditHeaders,
+            files: [
+                {
+                    name: `${exportMonth}-${exportType}.csv`,
+                    rowCount: rows.length,
+                    headers: auditHeaders,
+                },
+            ],
+        };
     }
 
     async generateComplianceExport(exportMonth: string, exportType: string, actorId?: string | null) {

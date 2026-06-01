@@ -1,8 +1,11 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { auditLogQueries } from "@/lib/db/queries";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
+import { inArray } from "drizzle-orm";
 import { History, Search } from "lucide-react";
 import { notFound } from "next/navigation";
 
@@ -43,6 +46,37 @@ export default async function AuditLogPage({
         q,
         limit: 100,
     });
+    const actorIds = [
+        ...new Set(
+            logs
+                .map((log) => log.userId)
+                .filter((userId): userId is string => Boolean(userId?.startsWith("user_")))
+        ),
+    ];
+    const actorRows = actorIds.length
+        ? await db.query.users.findMany({
+              where: inArray(users.id, actorIds),
+              columns: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+              },
+          })
+        : [];
+    const actorMap = new Map(
+        actorRows.map((user) => [
+            user.id,
+            `${user.firstName} ${user.lastName}`.trim() || user.email,
+        ])
+    );
+    const getActorLabel = (actorId: string | null) => {
+        if (!actorId) return "system";
+        if (actorMap.has(actorId)) return actorMap.get(actorId);
+        if (actorId === "cron") return "Cron";
+        if (actorId.endsWith("-webhook")) return actorId.replaceAll("-", " ");
+        return actorId;
+    };
 
     return (
         <main className="min-h-screen bg-slate-50/70 p-4 sm:p-6">
@@ -92,7 +126,7 @@ export default async function AuditLogPage({
                 </form>
 
                 <section className="overflow-hidden rounded-md border bg-white shadow-sm">
-                    <div className="grid grid-cols-[180px_160px_160px_1fr_180px] gap-3 border-b bg-slate-100 px-4 py-3 text-xs font-semibold uppercase text-slate-600">
+                    <div className="grid grid-cols-[180px_180px_220px_1fr_220px] gap-3 border-b bg-slate-100 px-4 py-3 text-xs font-semibold uppercase text-slate-600">
                         <span>Time UTC</span>
                         <span>Action</span>
                         <span>Entity</span>
@@ -104,14 +138,14 @@ export default async function AuditLogPage({
                             <p className="p-6 text-sm text-muted-foreground">No audit rows found.</p>
                         ) : (
                             logs.map((log) => (
-                                <div key={log.id} className="grid grid-cols-[180px_160px_160px_1fr_180px] gap-3 px-4 py-3 text-sm">
+                                <div key={log.id} className="grid grid-cols-[180px_180px_220px_1fr_220px] gap-3 px-4 py-3 text-sm">
                                     <span className="text-muted-foreground">{log.timestampUtc.toISOString()}</span>
                                     <span className="font-medium text-slate-900">{log.actionType}</span>
                                     <span className="truncate text-slate-700">
                                         {log.entityType}:{log.entityId}
                                     </span>
                                     <span className="truncate text-muted-foreground">{log.reason ?? "-"}</span>
-                                    <span className="truncate text-muted-foreground">{log.userId ?? "system"}</span>
+                                    <span className="truncate text-muted-foreground">{getActorLabel(log.userId) ?? "system"}</span>
                                 </div>
                             ))
                         )}
