@@ -19,6 +19,7 @@ import {
     UsersRound,
 } from "lucide-react";
 import { revalidatePath } from "next/cache";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 const pagePath = "/dashboard/general/monitoring-sla";
@@ -233,15 +234,37 @@ function EvidenceList({ rows }: { rows: string[] }) {
     );
 }
 
-export default async function MonitoringSlaPage() {
+export default async function MonitoringSlaPage({
+    searchParams,
+}: {
+    searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
     await assertMonitoringAccess();
+    const params = await searchParams;
+    const alertPageRaw = Array.isArray(params.alertPage)
+        ? params.alertPage[0]
+        : params.alertPage;
+    const alertPage = Math.max(1, Number(alertPageRaw ?? "1") || 1);
+    const alertPageSize = 10;
 
-    const [health, alerts, alertSummary, evidence] = await Promise.all([
+    const [health, alertsPage, alertSummary, evidence] = await Promise.all([
         monitoringSlaQueries.getDailyHealth(),
-        monitoringSlaQueries.getActiveAlerts(),
+        monitoringSlaQueries.getActiveAlertsPage(alertPage, alertPageSize),
         monitoringSlaQueries.getAlertSummary(),
         monitoringSlaQueries.getRecentEvidence(),
     ]);
+    const alerts = alertsPage.rows;
+    const pageCount = alertsPage.pageCount;
+    const currentAlertPage = Math.min(alertsPage.page, pageCount);
+    const makeAlertPageHref = (page: number) => {
+        const nextParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(params)) {
+            if (!value || key === "alertPage") continue;
+            nextParams.set(key, Array.isArray(value) ? value[0] : value);
+        }
+        nextParams.set("alertPage", String(page));
+        return `/dashboard/general/monitoring-sla?${nextParams.toString()}`;
+    };
 
     const healthStatus = getStatusConfig(health.status);
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -428,8 +451,9 @@ export default async function MonitoringSlaPage() {
                                     Active Alerts
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    {alerts.length} unresolved alert
-                                    {alerts.length === 1 ? "" : "s"}
+                                    {alertsPage.total} unresolved alert
+                                    {alertsPage.total === 1 ? "" : "s"} · page{" "}
+                                    {currentAlertPage} of {pageCount}
                                 </p>
                             </div>
                             <Bell className="size-5 text-muted-foreground" />
@@ -500,6 +524,49 @@ export default async function MonitoringSlaPage() {
                                 ))
                             )}
                         </div>
+                        {alertsPage.total > alertPageSize && (
+                            <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                <p className="text-sm text-muted-foreground">
+                                    Showing{" "}
+                                    {Math.min(
+                                        alertsPage.total,
+                                        (currentAlertPage - 1) * alertPageSize + 1
+                                    )}
+                                    {"-"}
+                                    {Math.min(
+                                        alertsPage.total,
+                                        currentAlertPage * alertPageSize
+                                    )}{" "}
+                                    of {alertsPage.total}
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    {currentAlertPage > 1 ? (
+                                        <Link
+                                            href={makeAlertPageHref(currentAlertPage - 1)}
+                                            className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                                        >
+                                            Previous
+                                        </Link>
+                                    ) : (
+                                        <span className="inline-flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm font-semibold text-slate-400">
+                                            Previous
+                                        </span>
+                                    )}
+                                    {currentAlertPage < pageCount ? (
+                                        <Link
+                                            href={makeAlertPageHref(currentAlertPage + 1)}
+                                            className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                                        >
+                                            Next
+                                        </Link>
+                                    ) : (
+                                        <span className="inline-flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm font-semibold text-slate-400">
+                                            Next
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <aside className="grid gap-4 lg:grid-cols-2 xl:grid-cols-1">

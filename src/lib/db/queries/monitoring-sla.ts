@@ -333,12 +333,31 @@ class MonitoringSlaQuery {
         return alert;
     }
 
-    async getActiveAlerts(limit = 50) {
+    async getActiveAlerts(limit = 50, offset = 0) {
         return db.query.monitoringAlerts.findMany({
             where: ne(monitoringAlerts.status, "resolved"),
             orderBy: [desc(monitoringAlerts.severity), desc(monitoringAlerts.createdAt)],
             limit,
+            offset,
         });
+    }
+
+    async getActiveAlertsPage(page = 1, pageSize = 10) {
+        const safePage = Math.max(1, page);
+        const safePageSize = Math.min(Math.max(5, pageSize), 50);
+        const total = await db.$count(monitoringAlerts, ne(monitoringAlerts.status, "resolved"));
+        const rows = await this.getActiveAlerts(
+            safePageSize,
+            (safePage - 1) * safePageSize
+        );
+
+        return {
+            rows,
+            total,
+            page: safePage,
+            pageSize: safePageSize,
+            pageCount: Math.max(1, Math.ceil(total / safePageSize)),
+        };
     }
 
     async getAlertSummary() {
