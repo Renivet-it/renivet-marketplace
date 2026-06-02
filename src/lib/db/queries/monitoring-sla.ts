@@ -79,6 +79,22 @@ const ALERT_WHATSAPP_RECIPIENTS = (process.env.RENIVET_ALERT_WHATSAPP ?? "")
     .split(",")
     .map((item) => item.trim())
     .filter(Boolean);
+const ACTIVE_SUPPORT_STATUSES = [
+    "new",
+    "acknowledged",
+    "in_progress",
+    "waiting_customer",
+    "waiting_brand",
+    "waiting_internal",
+    "reopened",
+    "escalated",
+    "open",
+    "pending",
+    "in_review",
+    "waiting_for_customer",
+    "waiting_for_brand",
+    "approved",
+];
 
 function startOfDay(date = new Date()) {
     const d = new Date(date);
@@ -413,7 +429,7 @@ class MonitoringSlaQuery {
             .from(supportTickets)
             .where(
                 and(
-                    inArray(supportTickets.status, ["open", "pending", "in_progress"]),
+                    inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES),
                     isNull(supportTickets.assignedAdminId),
                     lt(supportTickets.createdAt, twoHourCutoff)
                 )
@@ -425,7 +441,7 @@ class MonitoringSlaQuery {
             .from(supportTickets)
             .where(
                 and(
-                    inArray(supportTickets.status, ["open", "pending", "in_progress"]),
+                    inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES),
                     lt(supportTickets.statusChangedAt, dayCutoff)
                 )
             )
@@ -436,8 +452,70 @@ class MonitoringSlaQuery {
             .from(userSupportTickets)
             .where(
                 and(
-                    inArray(userSupportTickets.status, ["open", "pending", "in_progress"]),
+                    inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES),
                     lt(userSupportTickets.statusChangedAt, dayCutoff)
+                )
+            )
+            .limit(100);
+
+        const adminFirstResponseBreaches = await db
+            .select({ id: supportTickets.id, title: supportTickets.title, dueAt: supportTickets.firstResponseDueAt })
+            .from(supportTickets)
+            .where(
+                and(
+                    inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES),
+                    isNotNull(supportTickets.firstResponseDueAt),
+                    isNull(supportTickets.firstRespondedAt),
+                    lt(supportTickets.firstResponseDueAt, now)
+                )
+            )
+            .limit(100);
+
+        const userFirstResponseBreaches = await db
+            .select({ id: userSupportTickets.id, title: userSupportTickets.title, dueAt: userSupportTickets.firstResponseDueAt })
+            .from(userSupportTickets)
+            .where(
+                and(
+                    inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES),
+                    isNotNull(userSupportTickets.firstResponseDueAt),
+                    isNull(userSupportTickets.firstRespondedAt),
+                    lt(userSupportTickets.firstResponseDueAt, now)
+                )
+            )
+            .limit(100);
+
+        const adminResolutionBreaches = await db
+            .select({ id: supportTickets.id, title: supportTickets.title, dueAt: supportTickets.resolutionDueAt })
+            .from(supportTickets)
+            .where(
+                and(
+                    inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES),
+                    isNotNull(supportTickets.resolutionDueAt),
+                    lt(supportTickets.resolutionDueAt, now)
+                )
+            )
+            .limit(100);
+
+        const userResolutionBreaches = await db
+            .select({ id: userSupportTickets.id, title: userSupportTickets.title, dueAt: userSupportTickets.resolutionDueAt })
+            .from(userSupportTickets)
+            .where(
+                and(
+                    inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES),
+                    isNotNull(userSupportTickets.resolutionDueAt),
+                    lt(userSupportTickets.resolutionDueAt, now)
+                )
+            )
+            .limit(100);
+
+        const missedCustomerUpdates = await db
+            .select({ id: userSupportTickets.id, title: userSupportTickets.title, dueAt: userSupportTickets.nextCustomerUpdateDueAt })
+            .from(userSupportTickets)
+            .where(
+                and(
+                    inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES),
+                    isNotNull(userSupportTickets.nextCustomerUpdateDueAt),
+                    lt(userSupportTickets.nextCustomerUpdateDueAt, now)
                 )
             )
             .limit(100);
@@ -519,6 +597,63 @@ class MonitoringSlaQuery {
                 dueAt: new Date(ticket.statusChangedAt!.getTime() + 28 * HOUR),
                 dedupeKey: `ticket:stale:${ticket.id}`,
                 metadata: { source: "sla-check" },
+            });
+        }
+
+        for (const ticket of [...adminFirstResponseBreaches, ...userFirstResponseBreaches]) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "support_first_response_breach",
+                severity: "critical",
+                entityType: "support_ticket",
+                entityId: ticket.id,
+                title: "Support first response SLA breached",
+                message: `${ticket.title} missed the Chapter 3 first-response SLA.`,
+                ownerId: actorId,
+                ownerRole: "support_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: ticket.dueAt,
+                dedupeKey: `support:first-response:${ticket.id}`,
+                metadata: { source: "sla-check", dueAt: ticket.dueAt?.toISOString() },
+            });
+        }
+
+        for (const ticket of [...adminResolutionBreaches, ...userResolutionBreaches]) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "support_resolution_breach",
+                severity: "critical",
+                entityType: "support_ticket",
+                entityId: ticket.id,
+                title: "Support resolution SLA breached",
+                message: `${ticket.title} missed the Chapter 3 resolution SLA.`,
+                ownerId: actorId,
+                ownerRole: "support_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: ticket.dueAt,
+                dedupeKey: `support:resolution:${ticket.id}`,
+                metadata: { source: "sla-check", dueAt: ticket.dueAt?.toISOString() },
+            });
+        }
+
+        for (const ticket of missedCustomerUpdates) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "support_customer_update_breach",
+                severity: "warning",
+                entityType: "support_ticket",
+                entityId: ticket.id,
+                title: "Customer update SLA breached",
+                message: `${ticket.title} needs a 24-hour customer update.`,
+                ownerId: actorId,
+                ownerRole: "support_manager",
+                channels: ["admin", "email"],
+                dueAt: ticket.dueAt,
+                dedupeKey: `support:customer-update:${ticket.id}`,
+                metadata: { source: "sla-check", dueAt: ticket.dueAt?.toISOString() },
             });
         }
 
@@ -668,6 +803,11 @@ class MonitoringSlaQuery {
                 metadata: {
                     unassignedTickets: unassignedTickets.length,
                     staleTickets: staleAdminTickets.length + staleUserTickets.length,
+                    supportFirstResponseBreaches:
+                        adminFirstResponseBreaches.length + userFirstResponseBreaches.length,
+                    supportResolutionBreaches:
+                        adminResolutionBreaches.length + userResolutionBreaches.length,
+                    missedCustomerUpdates: missedCustomerUpdates.length,
                     unackOrders24: unackOrders24.length,
                     stuckOrders: stuckOrders.length,
                     pendingRefunds: pendingRefunds.length,
@@ -743,23 +883,23 @@ class MonitoringSlaQuery {
         );
         const openAdminTickets = await db.$count(
             supportTickets,
-            inArray(supportTickets.status, ["open", "pending", "in_progress"])
+            inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES)
         );
         const openUserTickets = await db.$count(
             userSupportTickets,
-            inArray(userSupportTickets.status, ["open", "pending", "in_progress"])
+            inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES)
         );
         const agedAdminTickets = await db.$count(
             supportTickets,
             and(
-                inArray(supportTickets.status, ["open", "pending", "in_progress"]),
+                inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES),
                 lt(supportTickets.statusChangedAt, dayCutoff)
             )
         );
         const agedUserTickets = await db.$count(
             userSupportTickets,
             and(
-                inArray(userSupportTickets.status, ["open", "pending", "in_progress"]),
+                inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES),
                 lt(userSupportTickets.statusChangedAt, dayCutoff)
             )
         );
