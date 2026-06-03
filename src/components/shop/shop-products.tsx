@@ -29,6 +29,7 @@ import {
     EmptyPlaceholderTitle,
 } from "../ui/empty-placeholder-general";
 import { Spinner } from "../ui/spinner";
+import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
 
 interface PageProps extends GenericProps {
     initialData: {
@@ -86,7 +87,7 @@ export function ShopProducts({
     const [minPrice] = useQueryState("minPrice", parseAsInteger.withDefault(0));
     const [maxPrice] = useQueryState(
         "maxPrice",
-        parseAsInteger.withDefault(1000000)
+        parseAsInteger.withDefault(SHOP_PRICE_FILTER_MAX)
     );
     const [categoryId] = useQueryState("categoryId", { defaultValue: "" });
     const [subCategoryId] = useQueryState("subCategoryId", {
@@ -171,7 +172,7 @@ export function ShopProducts({
             verificationStatus: "approved" as const,
             brandIds,
             minPrice: minPrice < 0 ? 0 : minPrice,
-            maxPrice: maxPrice,
+            maxPrice: maxPrice >= SHOP_PRICE_FILTER_MAX ? undefined : maxPrice,
             categoryId: !!categoryId.length ? categoryId : undefined,
             subcategoryId: !!effectiveSubCategoryId.length
                 ? effectiveSubCategoryId
@@ -187,14 +188,14 @@ export function ShopProducts({
                 page === 1 &&
                 (!sortBy || sortBy === "recommended") &&
                 minPrice === 0 &&
-                maxPrice === 1000000 &&
+                maxPrice >= SHOP_PRICE_FILTER_MAX &&
                 !minDiscount,
             requireMedia: true,
             useRecommendations:
                 !search &&
                 (!sortBy || sortBy === "recommended") &&
                 minPrice === 0 &&
-                maxPrice === 1000000 &&
+                maxPrice >= SHOP_PRICE_FILTER_MAX &&
                 !minDiscount,
         }),
         [
@@ -219,37 +220,34 @@ export function ShopProducts({
         data: queryData,
         isFetching,
         isError,
-    } = trpc.brands.products.getProducts.useQuery(
-        queryInput,
-        {
-            // Prevent a duplicate client fetch on first render when server data already matches.
-            enabled: !isSameAsInitial,
-            initialData: isSameAsInitial
-                ? {
-                      ...initialData,
-                      recommendationSource: null,
-                      topBrandMatch: null,
-                  }
-                : undefined,
-            // Never cache search results; always fetch fresh so search is accurate.
-            // Only apply staleTime when showing default browse (no filters at all).
-            staleTime:
-                !search &&
-                !categoryId.length &&
-                !effectiveSubCategoryId.length &&
-                !productTypeId.length &&
-                !brandIds?.length &&
-                minPrice === 0 &&
-                maxPrice === 1000000 &&
-                !colors.length &&
-                !sizes.length &&
-                !minDiscount
-                    ? 60 * 1000
-                    : 0,
-            keepPreviousData: true,
-            refetchOnWindowFocus: false,
-        }
-    );
+    } = trpc.brands.products.getProducts.useQuery(queryInput, {
+        // Prevent a duplicate client fetch on first render when server data already matches.
+        enabled: !isSameAsInitial,
+        initialData: isSameAsInitial
+            ? {
+                  ...initialData,
+                  recommendationSource: null,
+                  topBrandMatch: null,
+              }
+            : undefined,
+        // Never cache search results; always fetch fresh so search is accurate.
+        // Only apply staleTime when showing default browse (no filters at all).
+        staleTime:
+            !search &&
+            !categoryId.length &&
+            !effectiveSubCategoryId.length &&
+            !productTypeId.length &&
+            !brandIds?.length &&
+            minPrice === 0 &&
+            maxPrice >= SHOP_PRICE_FILTER_MAX &&
+            !colors.length &&
+            !sizes.length &&
+            !minDiscount
+                ? 60 * 1000
+                : 0,
+        keepPreviousData: true,
+        refetchOnWindowFocus: false,
+    });
 
     const { data: wishlist } = trpc.general.users.wishlist.getWishlist.useQuery(
         { userId: userId! },
@@ -300,7 +298,8 @@ export function ShopProducts({
             setAllProducts(visibleProducts);
             setTotalCount(count);
             setHasReachedEnd(
-                visibleProducts.length < limit || visibleProducts.length >= count
+                visibleProducts.length < limit ||
+                    visibleProducts.length >= count
             );
             setIsLoadingMore(false);
             return;
