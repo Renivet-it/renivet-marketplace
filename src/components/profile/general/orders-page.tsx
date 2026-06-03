@@ -1,7 +1,7 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import { UnavailableOrdersModal } from "@/components/globals/modals";
+import { WriteReviewModal } from "@/components/products/product/write-review-modal";
 import {
     AlertDialog,
     AlertDialogContent,
@@ -31,6 +31,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc/client";
 import {
     cn,
@@ -40,7 +41,26 @@ import {
 } from "@/lib/utils";
 import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { differenceInDays, differenceInMonths, format } from "date-fns";
-import { Check, ChevronLeft, ChevronRight, Droplets, Eye, Heart, HelpCircle, Leaf, MoreHorizontal, Package, RefreshCw, RotateCcw, Shirt, ShoppingBag, ShoppingCart, Star, Truck, XCircle } from "lucide-react";
+import {
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    Droplets,
+    Eye,
+    Heart,
+    HelpCircle,
+    Leaf,
+    MoreHorizontal,
+    Package,
+    RefreshCw,
+    RotateCcw,
+    Shirt,
+    ShoppingBag,
+    ShoppingCart,
+    Star,
+    Truck,
+    XCircle,
+} from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
@@ -144,10 +164,11 @@ export function OrdersPage({
         []
     );
 
-    const { data: orders = [] } = trpc.general.orders.getOrdersByUserId.useQuery(
-        { userId: user.id },
-        { initialData }
-    );
+    const { data: orders = [] } =
+        trpc.general.orders.getOrdersByUserId.useQuery(
+            { userId: user.id },
+            { initialData }
+        );
 
     // ── Derived data ─────────────────────────────────────────────────
     const availableOrders = useMemo(
@@ -784,6 +805,11 @@ function getProductDisplayName(order: OrderWithItemAndBrand): string {
     return variantName ? `${variantName} - ${title}` : title;
 }
 
+function getPrimaryProductHref(order: OrderWithItemAndBrand): string {
+    const product = order.items[0]?.product;
+    return product?.slug ? `/products/${product.slug}` : "/shop";
+}
+
 // ═══════════════════════════════════════════════════════════════════════
 // ── ON THE WAY ORDER CARD ─────────────────────────────────────────────
 // ═══════════════════════════════════════════════════════════════════════
@@ -836,6 +862,7 @@ function OnTheWayOrderCard({
     const displayStatus = getOrderDisplayStatus(order);
     const { url: imageUrl, alt: imageAlt } = getOrderImage(order);
     const productDisplay = getProductDisplayName(order);
+    const productHref = getPrimaryProductHref(order);
     const shipment = order.shipments?.[0];
     const canCancel =
         (order.status === "pending" || order.status === "processing") &&
@@ -849,7 +876,11 @@ function OnTheWayOrderCard({
             {/* ── Desktop Card ── */}
             <div className="hidden rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md md:block">
                 <div className="flex items-center gap-4">
-                    <div className="size-[96px] shrink-0 overflow-hidden rounded-lg border border-gray-100">
+                    <Link
+                        href={productHref}
+                        className="size-[96px] shrink-0 overflow-hidden rounded-lg border border-gray-100 transition-opacity hover:opacity-90"
+                        aria-label={`View ${productDisplay}`}
+                    >
                         <Image
                             src={imageUrl}
                             alt={imageAlt}
@@ -857,7 +888,7 @@ function OnTheWayOrderCard({
                             height={200}
                             className="h-full w-full object-contain"
                         />
-                    </div>
+                    </Link>
                     <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 text-xs text-gray-400">
                             <span className="font-medium text-gray-500">
@@ -871,14 +902,17 @@ function OnTheWayOrderCard({
                                 )}
                             </span>
                         </div>
-                        <p className="mt-1 truncate text-sm font-medium text-gray-800">
+                        <Link
+                            href={productHref}
+                            className="mt-1 block truncate text-sm font-medium text-gray-800 transition-colors hover:text-[#5B9BD5]"
+                        >
                             {productDisplay}
                             {order.items.length > 1 && (
                                 <span className="ml-1 text-gray-400">
                                     +{order.items.length - 1} more
                                 </span>
                             )}
-                        </p>
+                        </Link>
                     </div>
                     <span
                         className={cn(
@@ -979,7 +1013,11 @@ function OnTheWayOrderCard({
                     </span>
                 </div>
                 <div className="mt-3 flex items-center gap-3">
-                    <div className="size-[72px] shrink-0 overflow-hidden rounded-lg border border-gray-100">
+                    <Link
+                        href={productHref}
+                        className="size-[72px] shrink-0 overflow-hidden rounded-lg border border-gray-100 transition-opacity hover:opacity-90"
+                        aria-label={`View ${productDisplay}`}
+                    >
                         <Image
                             src={imageUrl}
                             alt={imageAlt}
@@ -987,15 +1025,18 @@ function OnTheWayOrderCard({
                             height={200}
                             className="h-full w-full object-contain"
                         />
-                    </div>
-                    <p className="line-clamp-2 text-sm font-medium text-gray-800">
+                    </Link>
+                    <Link
+                        href={productHref}
+                        className="line-clamp-2 text-sm font-medium text-gray-800 transition-colors hover:text-[#5B9BD5]"
+                    >
                         {productDisplay}
                         {order.items.length > 1 && (
                             <span className="ml-1 text-gray-400">
                                 +{order.items.length - 1} more
                             </span>
                         )}
-                    </p>
+                    </Link>
                 </div>
                 <div className="mt-3 flex items-center gap-2">
                     <button
@@ -1025,7 +1066,7 @@ function OnTheWayOrderCard({
                         </button>
                     )}
                     <Link
-                        href={`/profile/help-center`}
+                        href="/profile/help-center"
                         className="rounded-lg border border-gray-200 p-2 text-gray-500 transition-colors hover:bg-gray-50"
                         title="Get Help"
                     >
@@ -1132,6 +1173,7 @@ function DeliveredOrderCard({
 
     const { url: imageUrl, alt: imageAlt } = getOrderImage(order);
     const productDisplay = getProductDisplayName(order);
+    const productHref = getPrimaryProductHref(order);
 
     // Delivery data
     const deliveredAt = order.shipments?.[0]?.updatedAt
@@ -1199,7 +1241,11 @@ function DeliveredOrderCard({
                 <div className="px-4 py-3">
                     {/* Desktop: full-width image */}
                     <div className="hidden md:block">
-                        <div className="h-[180px] w-full overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                        <Link
+                            href={productHref}
+                            className="block h-[180px] w-full overflow-hidden rounded-lg border border-gray-100 bg-gray-50 transition-opacity hover:opacity-90"
+                            aria-label={`View ${productDisplay}`}
+                        >
                             <Image
                                 src={imageUrl}
                                 alt={imageAlt}
@@ -1207,14 +1253,21 @@ function DeliveredOrderCard({
                                 height={400}
                                 className="h-full w-full object-contain"
                             />
-                        </div>
-                        <p className="mt-2 text-sm font-medium text-gray-800">
+                        </Link>
+                        <Link
+                            href={productHref}
+                            className="mt-2 block text-sm font-medium text-gray-800 transition-colors hover:text-[#5B9BD5]"
+                        >
                             {productDisplay}
-                        </p>
+                        </Link>
                     </div>
                     {/* Mobile: thumbnail + name side by side */}
                     <div className="flex items-center gap-3 md:hidden">
-                        <div className="size-[64px] shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50">
+                        <Link
+                            href={productHref}
+                            className="size-[64px] shrink-0 overflow-hidden rounded-lg border border-gray-100 bg-gray-50 transition-opacity hover:opacity-90"
+                            aria-label={`View ${productDisplay}`}
+                        >
                             <Image
                                 src={imageUrl}
                                 alt={imageAlt}
@@ -1222,10 +1275,13 @@ function DeliveredOrderCard({
                                 height={200}
                                 className="h-full w-full object-contain"
                             />
-                        </div>
-                        <p className="line-clamp-2 text-sm font-medium text-gray-800">
+                        </Link>
+                        <Link
+                            href={productHref}
+                            className="line-clamp-2 text-sm font-medium text-gray-800 transition-colors hover:text-[#5B9BD5]"
+                        >
                             {productDisplay}
-                        </p>
+                        </Link>
                     </div>
                 </div>
 
@@ -1284,14 +1340,15 @@ function DeliveredOrderCard({
                         <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                         Share your experience to help conscious shoppers
                     </p>
-                    <button
-                        onClick={() =>
-                            toast.info("Review feature coming soon!")
+                    <WriteReviewModal
+                        productId={firstItem.product.id}
+                        initialVariantId={firstItem.variantId}
+                        trigger={
+                            <button className="w-full rounded-lg bg-[#5B9BD5] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4A8BC5]">
+                                Write Review
+                            </button>
                         }
-                        className="w-full rounded-lg bg-[#5B9BD5] px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-[#4A8BC5]"
-                    >
-                        Write Review
-                    </button>
+                    />
                 </div>
 
                 {/* ── Action Buttons ── */}
@@ -1333,7 +1390,7 @@ function DeliveredOrderCard({
                                 <Eye className="h-4 w-4" /> View Details
                             </Link>
                             <Link
-                                href={`/profile/help-center`}
+                                href="/profile/help-center"
                                 className="flex items-center gap-2 rounded-md px-3 py-2 text-sm text-gray-700 hover:bg-gray-100"
                             >
                                 <HelpCircle className="h-4 w-4" /> Get Help
@@ -1391,12 +1448,17 @@ function DeliveredOrderCard({
                             {order.items.length > 1 && (
                                 <div className="mt-1 space-y-0.5">
                                     {order.items.slice(1).map((item) => (
-                                        <p
+                                        <Link
                                             key={item.id}
-                                            className="text-gray-400"
+                                            href={
+                                                item.product.slug
+                                                    ? `/products/${item.product.slug}`
+                                                    : "/shop"
+                                            }
+                                            className="block text-gray-400 transition-colors hover:text-[#5B9BD5]"
                                         >
                                             + {item.product.title}
-                                        </p>
+                                        </Link>
                                     ))}
                                 </div>
                             )}
