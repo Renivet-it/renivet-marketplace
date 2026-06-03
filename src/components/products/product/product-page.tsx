@@ -358,12 +358,12 @@ export function ProductPage({
 
                         {/* Mobile: carousel images */}
                         <div 
-                            className="lg:hidden [touch-action:pan-y_pinch-zoom]"
+                            className="lg:hidden [touch-action:pan-y pinch-zoom]"
                             {...carouselSwipeGesture}
                         >
-                            <Carousel
+                                <Carousel
                                 setApi={setApi}
-                                className="w-full [touch-action:pan-y_pinch-zoom]"
+                                className="w-full [touch-action:pan-y pinch-zoom]"
                             >
                                 <CarouselContent className="ml-0">
                                     {displayImages.map((image, i) => (
@@ -387,7 +387,7 @@ export function ProductPage({
                                             <div
                                                 id={i === 0 ? "pdp-main-image" : undefined}
                                                 className={cn(
-                                                    "relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0] [touch-action:pan-y_pinch-zoom] transition-all duration-300",
+                                                    "relative aspect-[4/5] w-full overflow-hidden bg-[#f5f5f0] [touch-action:pan-y pinch-zoom] transition-all duration-300",
                                                     activeImageIndex === i && "ring-2 ring-blue-500 ring-offset-1"
                                                 )}
                                             >
@@ -406,7 +406,7 @@ export function ProductPage({
                                                     "absolute bottom-4 left-4 flex h-9 w-9 items-center justify-center rounded-full shadow-sm backdrop-blur-sm transition-all duration-200",
                                                     isCarouselSwiping 
                                                         ? "bg-blue-500/90 scale-110" 
-                                                        : "bg-white/85"
+                                                        : "bg-white/90"
                                                 )}>
                                                     <ZoomIn className={cn(
                                                         "size-4 transition-colors duration-200",
@@ -574,7 +574,7 @@ export function ProductPage({
 
             <Dialog open={isImageModalOpen} onOpenChange={setIsImageModalOpen}>
                 <DialogContent 
-                    className="max-w-screen flex h-screen max-h-screen w-screen items-center justify-center bg-black/95 p-0"
+                    className="max-w-screen flex h-screen max-h-screen w-screen items-center justify-center bg-black/95 p-0 [touch-action:pan-y pinch-zoom]"
                     {...modalSwipeGesture}
                 >
                     <DialogHeader className="sr-only">
@@ -582,7 +582,7 @@ export function ProductPage({
                     </DialogHeader>
 
                     <button
-                        className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white transition-colors hover:bg-white/20 active:bg-blue-500/40"
+                        className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-black transition-colors hover:bg-white active:bg-white/80"
                         onClick={() => setIsImageModalOpen(false)}
                         aria-label="Close image viewer"
                     >
@@ -595,7 +595,7 @@ export function ProductPage({
 
                     {modalImageIndex > 0 && (
                         <button
-                            className="absolute left-4 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-all duration-200 hover:bg-blue-500/50 active:scale-90"
+                            className="absolute left-4 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black transition-all duration-200 hover:bg-white active:scale-90"
                             onClick={() => setModalImageIndex((i) => i - 1)}
                             aria-label="Previous image"
                         >
@@ -604,7 +604,7 @@ export function ProductPage({
                     )}
                     {modalImageIndex < displayImages.length - 1 && (
                         <button
-                            className="absolute right-4 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/10 text-white transition-all duration-200 hover:bg-blue-500/50 active:scale-90"
+                            className="absolute right-4 top-1/2 z-50 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 text-black transition-all duration-200 hover:bg-white active:scale-90"
                             onClick={() => setModalImageIndex((i) => i + 1)}
                             aria-label="Next image"
                         >
@@ -619,7 +619,7 @@ export function ProductPage({
                         </div>
                     </div>
 
-                    <div className="relative h-full w-full select-none">
+                    <div className="relative h-full w-full select-none [touch-action:pan-y pinch-zoom]">
                         <Image
                             src={
                                 displayImages[modalImageIndex]?.url ??
@@ -631,7 +631,7 @@ export function ProductPage({
                             }
                             fill
                             className="object-contain transition-opacity duration-200"
-                            style={{ touchAction: "pinch-zoom" }}
+                            style={{ touchAction: "pan-y pinch-zoom" }}
                             sizes="100vw"
                             priority
                         />
