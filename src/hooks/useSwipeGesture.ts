@@ -85,5 +85,64 @@ export function useSwipeGesture(options: SwipeGestureOptions) {
     [minSwipeDistance, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, onTap]
   );
 
-  return { handleTouchStart, handleTouchEnd };
+  // Pointer-based handlers to support pointer events (useful on some mobile browsers)
+  const handlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    touchStartX.current = e.clientX ?? null;
+    touchStartY.current = e.clientY ?? null;
+    touchStartTime.current = Date.now();
+  }, []);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const touchEndX = e.clientX;
+    const touchEndY = e.clientY;
+    const touchEndTime = Date.now();
+
+    if (
+      touchStartX.current === null ||
+      touchStartY.current === null ||
+      touchStartTime.current === null ||
+      touchEndX === undefined ||
+      touchEndY === undefined
+    ) {
+      return;
+    }
+
+    const deltaX = touchEndX - touchStartX.current;
+    const deltaY = touchEndY - touchStartY.current;
+    const deltaTime = touchEndTime - touchStartTime.current;
+
+    if (Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8 && deltaTime < 300) {
+      onTap?.();
+      touchStartX.current = null;
+      touchStartY.current = null;
+      touchStartTime.current = null;
+      return;
+    }
+
+    if (Math.abs(deltaX) > Math.abs(deltaY)) {
+      if (Math.abs(deltaX) > minSwipeDistance) {
+        if (deltaX > 0) onSwipeRight?.();
+        else onSwipeLeft?.();
+      }
+    } else {
+      if (Math.abs(deltaY) > minSwipeDistance) {
+        if (deltaY > 0) onSwipeDown?.();
+        else onSwipeUp?.();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+    touchStartTime.current = null;
+  }, [minSwipeDistance, onSwipeLeft, onSwipeRight, onSwipeUp, onSwipeDown, onTap]);
+
+  // Return props that can be spread directly onto elements
+  return {
+    onTouchStart: handleTouchStart,
+    onTouchEnd: handleTouchEnd,
+    onTouchCancel: handleTouchEnd,
+    onPointerDown: handlePointerDown,
+    onPointerUp: handlePointerUp,
+    onPointerCancel: handlePointerUp,
+  };
 }
