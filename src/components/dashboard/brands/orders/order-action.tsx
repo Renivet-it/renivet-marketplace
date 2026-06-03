@@ -21,7 +21,6 @@ import {
     DropdownMenuLabel,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { useEffect, useState } from "react";
@@ -39,7 +38,7 @@ export function OrderAction({ order, onAction }: PageProps) {
     // 1. Detect if Delhivery order
     // -----------------------------
     const isDelhivery = Boolean(order?.uploadWbn || order?.awbNumber);
-  const { data: userData } = trpc.general.users.currentUser.useQuery();
+    const { data: userData } = trpc.general.users.currentUser.useQuery();
 
     // Shiprocket shipment details
     const { data: orderShipmentDetails } =
@@ -53,14 +52,15 @@ export function OrderAction({ order, onAction }: PageProps) {
                 enabled: !!order.shiprocketShipmentId,
             }
         );
-const { data: brandData } = trpc.brands.brands.getBrandWithConfidential.useQuery(
-  { brandId: userData?.brand?.id ?? "" },
-  { enabled: !!userData?.brand?.id }
-);
-const { data: productData } = trpc.brands.products.getProduct.useQuery(
-  { productId: order?.productId ?? "" },
-);
-console.log(productData, "productData");
+    const { data: brandData } =
+        trpc.brands.brands.getBrandWithConfidential.useQuery(
+            { brandId: userData?.brand?.id ?? "" },
+            { enabled: !!userData?.brand?.id }
+        );
+    const { data: productData } = trpc.brands.products.getProduct.useQuery({
+        productId: order?.productId ?? "",
+    });
+    console.log(productData, "productData");
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
@@ -86,7 +86,33 @@ console.log(productData, "productData");
         order.status !== "cancelled" &&
         order.status !== "delivered" &&
         order.status !== "shipped";
-console.log(order, "orders");
+    const isCancelled = order.status === "cancelled";
+
+    const showDownloadLabel =
+        !isCancelled &&
+        !shouldShowShipNow &&
+        (isDelhivery
+            ? Boolean(order.awbNumber || order.uploadWbn)
+            : isAwbGenerated);
+
+    const handlePrimaryAction = () => {
+        if (shouldShowShipNow) {
+            setIsSheetOpen(true);
+            return;
+        }
+
+        if (showDownloadLabel) {
+            setIsLabelModalOpen(true);
+        }
+    };
+
+    const primaryActionLabel = shouldShowShipNow
+        ? "Ship Now"
+        : showDownloadLabel
+          ? "Download Label"
+          : null;
+
+    console.log(order, "orders");
     // ------------------------------------------------------
     // 2. DELHIVERY DOWNLOAD INVOICE
     // ------------------------------------------------------
@@ -98,10 +124,7 @@ console.log(order, "orders");
                 body: JSON.stringify({
                     order: {
                         id: order.id,
-                        customerName:
-                            order.firstName +
-                            " " +
-                            order.lastName,
+                        customerName: order.firstName + " " + order.lastName,
                         phone: order?.phone,
                         address:
                             order.street +
@@ -186,7 +209,9 @@ console.log(order, "orders");
                 link.click();
                 link.remove();
             } else if (type === "label") {
-                const response = await generateLabel(order.shiprocketShipmentId);
+                const response = await generateLabel(
+                    order.shiprocketShipmentId
+                );
                 const link = document.createElement("a");
                 link.href = response.labelUrl;
                 link.download = `label_${order.shiprocketShipmentId}.pdf`;
@@ -216,65 +241,88 @@ console.log(order, "orders");
 
     return (
         <>
-            <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="size-8 p-0">
-                        <Icons.MoreHorizontal className="size-4" />
-                    </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-
-                    <DropdownMenuGroup>
-                        {shouldShowShipNow && (
-                            <DropdownMenuItem
-                                onClick={() => setIsSheetOpen(true)}
-                            >
-                                <Icons.Truck className="size-4" />
-                                <span>Ship Now</span>
-                            </DropdownMenuItem>
+            <div className="flex items-center gap-2">
+                {primaryActionLabel ? (
+                    <Button
+                        variant="outline"
+                        onClick={handlePrimaryAction}
+                        className={cn(
+                            "h-8 whitespace-nowrap rounded-md px-3 text-xs font-medium shadow-none",
+                            shouldShowShipNow
+                                ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
+                                : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                         )}
+                    >
+                        {primaryActionLabel}
+                    </Button>
+                ) : null}
 
-                        {/* INVOICE */}
-                        <DropdownMenuItem
-                            onClick={() => setIsInvoiceModalOpen(true)}
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            className="size-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
                         >
-                            <Icons.FileText className="size-4" />
-                            <span>Download Invoice</span>
-                        </DropdownMenuItem>
+                            <span className="sr-only">Open menu</span>
+                            <Icons.MoreHorizontal className="size-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
 
-                        {/* LABEL */}
-                        {isDelhivery ? (
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+
+                        <DropdownMenuGroup>
+                            {shouldShowShipNow && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsSheetOpen(true)}
+                                >
+                                    <Icons.Truck className="size-4" />
+                                    <span>Ship Now</span>
+                                </DropdownMenuItem>
+                            )}
+
+                            {/* INVOICE */}
                             <DropdownMenuItem
-                                onClick={() => setIsLabelModalOpen(true)}
+                                onClick={() => setIsInvoiceModalOpen(true)}
                             >
-                                <Icons.Tag className="size-4" />
-                                <span>Download Label (Delhivery)</span>
+                                <Icons.FileText className="size-4" />
+                                <span>Download Invoice</span>
                             </DropdownMenuItem>
-                        ) : (
-                            isAwbGenerated && (
+
+                            {/* LABEL */}
+                            {isDelhivery && showDownloadLabel ? (
                                 <DropdownMenuItem
                                     onClick={() => setIsLabelModalOpen(true)}
                                 >
                                     <Icons.Tag className="size-4" />
                                     <span>Download Label</span>
                                 </DropdownMenuItem>
-                            )
-                        )}
+                            ) : (
+                                showDownloadLabel && (
+                                    <DropdownMenuItem
+                                        onClick={() =>
+                                            setIsLabelModalOpen(true)
+                                        }
+                                    >
+                                        <Icons.Tag className="size-4" />
+                                        <span>Download Label</span>
+                                    </DropdownMenuItem>
+                                )
+                            )}
 
-                        {/* MANIFEST (Shiprocket only) */}
-                        {!isDelhivery && isAwbGenerated && (
-                            <DropdownMenuItem
-                                onClick={() => setIsManifestModalOpen(true)}
-                            >
-                                <Icons.ClipboardList className="size-4" />
-                                <span>Download Manifest</span>
-                            </DropdownMenuItem>
-                        )}
-                    </DropdownMenuGroup>
-                </DropdownMenuContent>
-            </DropdownMenu>
+                            {/* MANIFEST (Shiprocket only) */}
+                            {!isDelhivery && showDownloadLabel && (
+                                <DropdownMenuItem
+                                    onClick={() => setIsManifestModalOpen(true)}
+                                >
+                                    <Icons.ClipboardList className="size-4" />
+                                    <span>Download Manifest</span>
+                                </DropdownMenuItem>
+                            )}
+                        </DropdownMenuGroup>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
 
             {/* --------------------- INVOICE MODAL --------------------- */}
             <Dialog
@@ -332,8 +380,7 @@ console.log(order, "orders");
 
                         <Button
                             onClick={async () => {
-                                if (isDelhivery)
-                                    await downloadDelhiveryLabel();
+                                if (isDelhivery) await downloadDelhiveryLabel();
                                 else await handleDownload("label");
 
                                 setIsLabelModalOpen(false);
@@ -358,7 +405,7 @@ console.log(order, "orders");
                         </DialogDescription>
                     </DialogHeader>
 
-                    <p className={cn("text-[#FF5733] font-bold")}>
+                    <p className={cn("font-bold text-[#FF5733]")}>
                         Note: Manifest can be downloaded only once.
                     </p>
 

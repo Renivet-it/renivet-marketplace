@@ -64,16 +64,24 @@ const columns: ColumnDef<TableBrand>[] = [
         accessorKey: "isActive",
         header: "Status",
         cell: ({ row }) => {
-            const isActive = row.original.isActive;
+            const brand = row.original;
+            const hasRazorpay = Boolean(brand.rzpAccountId?.trim());
+            const isActive = brand.isActive && hasRazorpay;
+            const statusLabel = !brand.isActive
+                ? "Inactive"
+                : !hasRazorpay
+                ? "Razorpay Pending"
+                : "Active";
+
             return (
                 <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                         isActive
                             ? "bg-green-100 text-green-800"
-                            : "bg-red-100 text-red-800"
+                            : "bg-amber-100 text-amber-800"
                     }`}
                 >
-                    {isActive ? "Active" : "Inactive"}
+                    {statusLabel}
                 </span>
             );
         },

@@ -22,7 +22,7 @@ interface PageProps {
 
 export default function Page({ searchParams }: PageProps) {
     return (
-        <DashShell>
+        <DashShell className="max-w-none">
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
                     <h1 className="text-2xl font-bold">
