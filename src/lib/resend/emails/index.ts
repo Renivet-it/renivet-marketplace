@@ -9,6 +9,7 @@ import BrandVerificationtSubmitted from "./brand-verification-submitted";
 import brandOrderNotification from "./brandOrderNotification";
 import CategoryRequestStatusUpdate from "./category-request-status-update";
 import DailyOrderSummary from "./daily-order-summary";
+import MonitoringAlertEmail from "./monitoring-alert";
 import OrderDelivered from "./order-delivered";
 import OrderPlaceFailed from "./order-place-failed";
 import OrderPlaced from "./order-placed";
@@ -30,6 +31,7 @@ export {
     BrandVerificationtSubmitted,
     CategoryRequestStatusUpdate,
     DailyOrderSummary,
+    MonitoringAlertEmail,
     OrderDelivered,
     OrderPlaced,
     OrderPlaceFailed,

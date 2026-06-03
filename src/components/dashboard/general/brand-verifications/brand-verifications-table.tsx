@@ -37,6 +37,30 @@ export type TableBrandVerifications = BrandConfidentialWithBrand & {
     brandEmail: string;
 };
 
+/**
+ * Helper function to detect pending verification steps
+ */
+function getPendingVerificationSteps(data: BrandConfidentialWithBrand): string[] {
+    const steps: string[] = [];
+
+    if (!data.gstin || data.gstin.trim() === "") steps.push("GST Registration");
+    if (!data.pan || data.pan.trim() === "") steps.push("PAN");
+    if (!data.bankName || data.bankName.trim() === "") steps.push("Bank Details");
+    if (!data.bankAccountHolderName || data.bankAccountHolderName.trim() === "") steps.push("Bank Account Holder Name");
+    if (!data.bankAccountNumber || data.bankAccountNumber.trim() === "") steps.push("Bank Account Number");
+    if (!data.bankIfscCode || data.bankIfscCode.trim() === "") steps.push("Bank IFSC Code");
+    if (!data.bankAccountVerificationDocument) steps.push("Bank Document Verification");
+    if (!data.authorizedSignatoryName || data.authorizedSignatoryName.trim() === "") steps.push("Signatory Name");
+    if (!data.authorizedSignatoryEmail || data.authorizedSignatoryEmail.trim() === "") steps.push("Signatory Email");
+    if (!data.authorizedSignatoryPhone || data.authorizedSignatoryPhone.trim() === "") steps.push("Signatory Phone");
+    if (!data.addressLine1 || data.addressLine1.trim() === "") steps.push("Office Address");
+    if (!data.city || data.city.trim() === "") steps.push("Office City");
+    if (!data.state || data.state.trim() === "") steps.push("Office State");
+    if (!data.postalCode || data.postalCode.trim() === "") steps.push("Postal Code");
+
+    return steps;
+}
+
 const columns: ColumnDef<TableBrandVerifications>[] = [
     {
         accessorKey: "id",
@@ -71,6 +95,37 @@ const columns: ColumnDef<TableBrandVerifications>[] = [
                 >
                     {convertValueToLabel(data.verificationStatus)}
                 </Badge>
+            );
+        },
+    },
+    {
+        id: "pendingSteps",
+        header: "Required Steps",
+        cell: ({ row }) => {
+            const data = row.original;
+            const pendingSteps = getPendingVerificationSteps(data);
+
+            if (pendingSteps.length === 0) {
+                return (
+                    <span className="text-sm text-muted-foreground">
+                        Verification complete, ready for admin approval
+                    </span>
+                );
+            }
+
+            return (
+                <div className="flex flex-wrap gap-1">
+                    {pendingSteps.slice(0, 2).map((step, idx) => (
+                        <Badge key={idx} variant="outline" className="text-xs">
+                            {step}
+                        </Badge>
+                    ))}
+                    {pendingSteps.length > 2 && (
+                        <Badge variant="outline" className="text-xs">
+                            +{pendingSteps.length - 2} more required fields
+                        </Badge>
+                    )}
+                </div>
             );
         },
     },

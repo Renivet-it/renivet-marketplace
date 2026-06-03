@@ -413,7 +413,7 @@ const columns = (
     },
     {
         id: "actions",
-        header: "",
+        header: "Ship",
         cell: ({ row }) => (
             <OrderAction order={row.original} onAction={onAction} />
         ),
