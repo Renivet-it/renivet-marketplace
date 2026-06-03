@@ -20,6 +20,7 @@ export * from "./coupon";
 export * from "./legal";
 export * from "./marketing-strip";
 export * from "./newsletter-subscriber";
+export * from "./monitoring-sla";
 export * from "./order";
 export * from "./order-item";
 export * from "./plan";

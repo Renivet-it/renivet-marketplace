@@ -61,6 +61,23 @@ export default clerkMiddleware(async (auth, req) => {
                         .map((item) => item.items.map((subItem) => subItem))
                         .flat();
 
+                    const monitoringRoute = allRoutes.find(
+                        (route) =>
+                            route.url === "/dashboard/general/monitoring-sla"
+                    );
+                    if (
+                        monitoringRoute &&
+                        hasPermission(
+                            sitePermissions,
+                            [monitoringRoute.permissions],
+                            "any"
+                        )
+                    ) {
+                        return NextResponse.redirect(
+                            new URL(monitoringRoute.url, url)
+                        );
+                    }
+
                     // Prioritize Products page if user has access
                     const productsRoute = allRoutes.find(
                         (route) => route.url === "/dashboard/general/products"
@@ -158,40 +175,41 @@ export default clerkMiddleware(async (auth, req) => {
             if (url.pathname.startsWith("/dashboard/brands")) {
                 if (!existingUser.brand)
                     return NextResponse.redirect(new URL("/dashboard", url));
+                const userBrand = existingUser.brand;
 
                 if (url.pathname === "/dashboard/brands")
                     return NextResponse.redirect(
                         new URL(
-                            `/dashboard/brands/${existingUser.brand.id}`,
+                            `/dashboard/brands/${userBrand.id}`,
                             url
                         )
                     );
 
-                const routes = generateBrandSideNav(existingUser.brand.id)
+                const routes = generateBrandSideNav(userBrand.id)
                     .map((item) => item.items.map((subItem) => subItem))
                     .flat();
 
                 if (
                     url.pathname !==
-                    `/dashboard/brands/${existingUser.brand.id}`
+                    `/dashboard/brands/${userBrand.id}`
                 ) {
                     const accessedRoute = routes.find((route) => {
                         if (
                             url.pathname ===
-                                `/dashboard/brands/${existingUser.brand.id}/support` &&
+                                `/dashboard/brands/${userBrand.id}/support` &&
                             (supportQueue === "support" ||
                                 supportQueue === "disputes")
                         ) {
                             if (
                                 supportQueue === "support" &&
                                 route.url ===
-                                    `/dashboard/brands/${existingUser.brand.id}/support?queue=support`
+                                    `/dashboard/brands/${userBrand.id}/support?queue=support`
                             )
                                 return true;
                             if (
                                 supportQueue === "disputes" &&
                                 route.url ===
-                                    `/dashboard/brands/${existingUser.brand.id}/support/disputes`
+                                    `/dashboard/brands/${userBrand.id}/support/disputes`
                             )
                                 return true;
                         }
@@ -201,7 +219,7 @@ export default clerkMiddleware(async (auth, req) => {
                     if (!accessedRoute)
                         return NextResponse.redirect(
                             new URL(
-                                `/dashboard/brands/${existingUser.brand.id}`,
+                                `/dashboard/brands/${userBrand.id}`,
                                 url
                             )
                         );
@@ -214,7 +232,7 @@ export default clerkMiddleware(async (auth, req) => {
                     if (!isAuthorized)
                         return NextResponse.redirect(
                             new URL(
-                                `/dashboard/brands/${existingUser.brand.id}`,
+                                `/dashboard/brands/${userBrand.id}`,
                                 url
                             )
                         );

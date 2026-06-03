@@ -31,4 +31,6 @@ export * from "./user";
 export * from "./waitlist";
 export * from "./wishlist";
 export * from "./address";
+export * from "./audit-log";
 export * from "./recommendation";
+export * from "./monitoring-sla";

@@ -11,6 +11,16 @@ import {
     buildSupportHref,
     notifyAdmins,
 } from "@/lib/support/utils";
+import {
+    calculateCustomerAutoCloseEligibleAt,
+    calculateFirstResponseDueAt,
+    calculateResolutionDueAt,
+    detectCriticalSupportCategory,
+    getSupportCategoryConfig,
+    SUPPORT_CHANNELS,
+    SUPPORT_TEMPLATE_LIBRARY,
+} from "@/lib/customer-support/playbook";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { and, desc, eq, inArray, SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -30,23 +40,8 @@ const formatIssueLabel = (issueLabel?: string, issueType?: string) => {
     return issueType.replace(/_/g, " ");
 };
 
-const buildAutomatedSupportReply = (input: {
-    category: string;
-    issueLabel?: string;
-    issueType: string;
-    orderId?: string;
-}) => {
-    const orderSnippet = input.orderId
-        ? ` linked to Order #${input.orderId}`
-        : "";
-    const issueLabel = formatIssueLabel(input.issueLabel, input.issueType);
-
-    return [
-        `Thanks, I've logged ${issueLabel}${orderSnippet}.`,
-        "Your case has been created and our support team has the details.",
-        "You can continue adding updates, photos, and screenshots in this conversation while the team reviews it.",
-    ].join("\n\n");
-};
+const buildAutomatedSupportReply = (ticketId: string) =>
+    SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK.replaceAll("[ID]", ticketId);
 
 const buildTicketTitle = (input: {
     issueLabel?: string;
@@ -90,6 +85,7 @@ export const userSupportRouter = createTRPCRouter({
                 priority: z
                     .enum(["low", "normal", "high", "critical"])
                     .optional(),
+                sourceChannel: z.enum(SUPPORT_CHANNELS).default("web_form"),
                 intakeContext: z.record(z.string(), z.any()).optional(),
                 attachments: z.array(attachmentSchema).default([]),
             })
@@ -121,6 +117,23 @@ export const userSupportRouter = createTRPCRouter({
                     issueType: input.issueType,
                     orderId: input.orderId,
                 });
+            const criticalCategory = detectCriticalSupportCategory(
+                [title, input.description].filter(Boolean).join(" ")
+            );
+            const normalizedCategory = criticalCategory ?? input.category;
+            const categoryConfig = getSupportCategoryConfig(normalizedCategory);
+            const createdAt = new Date();
+            const assignedAdminId =
+                categoryConfig.requiresAj || categoryConfig.priority === "critical"
+                    ? process.env.AJ_USER_ID ||
+                      process.env.SUPPORT_MANAGER_USER_ID ||
+                      process.env.SUPPORT_INTERN_USER_ID ||
+                      null
+                    : categoryConfig.defaultOwnerRole === "order_ops"
+                      ? process.env.ORDER_OPS_INTERN_USER_ID ||
+                        process.env.SUPPORT_INTERN_USER_ID ||
+                        null
+                      : process.env.SUPPORT_INTERN_USER_ID || null;
 
             const row = await db
                 .insert(userSupportTickets)
@@ -130,14 +143,37 @@ export const userSupportRouter = createTRPCRouter({
                     orderItemId: input.orderItemId ?? null,
                     brandId: linkedBrandId,
                     title,
-                    category: input.category,
+                    category: normalizedCategory,
                     issueType: input.issueType,
                     issueLabel: input.issueLabel ?? null,
                     description: input.description ?? null,
-                    priority: input.priority ?? "normal",
+                    assignedAdminId,
+                    priority: input.priority ?? categoryConfig.priority,
+                    sourceChannel: input.sourceChannel,
+                    firstResponseDueAt: calculateFirstResponseDueAt(
+                        normalizedCategory,
+                        createdAt
+                    ),
+                    resolutionDueAt: calculateResolutionDueAt(
+                        normalizedCategory,
+                        createdAt
+                    ),
+                    autoAckSentAt: createdAt,
+                    autoAckTemplateKey: "AUTO_ACK",
+                    autoCloseEligibleAt: calculateCustomerAutoCloseEligibleAt(
+                        createdAt
+                    ),
+                    status:
+                        categoryConfig.priority === "critical"
+                            ? "escalated"
+                            : "acknowledged",
+                    escalatedAt:
+                        categoryConfig.priority === "critical" ? createdAt : null,
+                    escalationOwner:
+                        categoryConfig.priority === "critical" ? "AJ" : null,
                     intakeContext: input.intakeContext ?? null,
-                    latestMessageAt: new Date(),
-                    statusChangedAt: new Date(),
+                    latestMessageAt: createdAt,
+                    statusChangedAt: createdAt,
                 })
                 .returning()
                 .then((res) => res[0]);
@@ -163,7 +199,7 @@ export const userSupportRouter = createTRPCRouter({
                 );
             }
 
-            const automatedReply = buildAutomatedSupportReply(input);
+            const automatedReply = buildAutomatedSupportReply(row.id);
             await db.insert(userSupportMessages).values({
                 ticketId: row.id,
                 sender: "admin",
@@ -191,6 +227,57 @@ export const userSupportRouter = createTRPCRouter({
                     orderId: input.orderId ?? null,
                 },
             });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_created",
+                entityType: "user_support_ticket",
+                entityId: row.id,
+                afterValue: {
+                    title: row.title,
+                    category: row.category,
+                    issueType: row.issueType,
+                    status: row.status,
+                    orderId: row.orderId,
+                    sourceChannel: row.sourceChannel,
+                    firstResponseDueAt: row.firstResponseDueAt,
+                    resolutionDueAt: row.resolutionDueAt,
+                    autoAckSentAt: row.autoAckSentAt,
+                },
+                reason: "customer_support_ticket_created",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "new_ticket_created",
+                severity: "info",
+                entityType: "user_support_ticket",
+                entityId: row.id,
+                title: "New customer support ticket",
+                message: `${ctx.user.firstName} raised "${title}".`,
+                ownerRole: "support_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dedupeKey: `ticket:new:user:${row.id}`,
+            });
+            if (categoryConfig.priority === "critical") {
+                await createOperationalAlert({
+                    actorId: ctx.user.id,
+                    type:
+                        normalizedCategory === "SOCIAL_COMPLAINT"
+                            ? "social_complaint_detected"
+                            : "legal_threat_detected",
+                    severity: "critical",
+                    entityType: "user_support_ticket",
+                    entityId: row.id,
+                    title:
+                        normalizedCategory === "SOCIAL_COMPLAINT"
+                            ? "Social complaint support escalation"
+                            : "Legal threat support escalation",
+                    message: `Ticket ${row.id} was auto-escalated from ${input.sourceChannel}.`,
+                    ownerRole: "aj",
+                    channels: ["admin", "email", "whatsapp"],
+                    dedupeKey: `ticket:critical:${row.id}`,
+                    metadata: { category: normalizedCategory },
+                });
+            }
 
             return row;
         }),
@@ -323,10 +410,15 @@ export const userSupportRouter = createTRPCRouter({
                     unreadByAdmin: "true",
                     latestMessageAt: new Date(),
                     updatedAt: new Date(),
+                    customerPingCount: ticket.customerPingCount + 1,
                     status:
-                        ticket.status === "waiting_for_customer"
-                            ? "open"
-                            : ticket.status,
+                        ticket.status === "waiting_customer"
+                            ? "in_progress"
+                            : ticket.status === "closed" &&
+                                ticket.reopenAllowedUntil &&
+                                ticket.reopenAllowedUntil > new Date()
+                              ? "reopened"
+                              : ticket.status,
                 })
                 .where(eq(userSupportTickets.id, input.ticketId));
 
@@ -347,7 +439,75 @@ export const userSupportRouter = createTRPCRouter({
                     ticketId: ticket.id,
                 },
             });
+            if (ticket.customerPingCount + 1 > 3 && !ticket.firstRespondedAt) {
+                await createOperationalAlert({
+                    actorId: ctx.user.id,
+                    type: "customer_pinged_three_times",
+                    severity: "warning",
+                    entityType: "user_support_ticket",
+                    entityId: ticket.id,
+                    title: "Customer pinged repeatedly before support response",
+                    message: `Ticket ${ticket.id} has more than 3 customer pings before first response.`,
+                    ownerRole: "support_manager",
+                    channels: ["admin", "email", "whatsapp"],
+                    dedupeKey: `ticket:pings:${ticket.id}`,
+                });
+            }
 
             return inserted;
+        }),
+    submitCsat: protectedProcedure
+        .input(
+            z.object({
+                ticketId: z.string(),
+                score: z.number().int().min(1).max(5),
+                comment: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const ticket = await db.query.userSupportTickets.findFirst({
+                where: eq(userSupportTickets.id, input.ticketId),
+            });
+            if (!ticket || ticket.userId !== ctx.user.id) {
+                throw new Error("Unauthorized");
+            }
+
+            const updated = await db
+                .update(userSupportTickets)
+                .set({
+                    csatScore: input.score,
+                    csatComment: input.comment?.trim() || null,
+                    csatRespondedAt: new Date(),
+                    updatedAt: new Date(),
+                })
+                .where(eq(userSupportTickets.id, input.ticketId))
+                .returning()
+                .then((res) => res[0]);
+
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "csat_response_received",
+                entityType: "user_support_ticket",
+                entityId: ticket.id,
+                afterValue: { score: input.score, comment: input.comment ?? null },
+                reason: "customer_support_csat",
+            });
+
+            if (input.score < 3) {
+                await createOperationalAlert({
+                    actorId: ctx.user.id,
+                    type: "low_csat_response",
+                    severity: "critical",
+                    entityType: "user_support_ticket",
+                    entityId: ticket.id,
+                    title: "Low CSAT response requires AJ review",
+                    message: `Ticket ${ticket.id} received CSAT ${input.score}/5.`,
+                    ownerRole: "aj",
+                    channels: ["admin", "email", "whatsapp"],
+                    dedupeKey: `ticket:csat:${ticket.id}`,
+                });
+            }
+
+            return updated;
         }),
 });

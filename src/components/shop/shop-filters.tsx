@@ -37,6 +37,10 @@ import {
     SheetTrigger,
 } from "../ui/sheet";
 import { Slider } from "../ui/slider";
+import {
+    SHOP_PRICE_FILTER_MAX,
+    SHOP_PRICE_FILTER_STEP,
+} from "./price-filter-config";
 
 // --- HELPER FUNCTIONS (Unchanged) ---
 
@@ -358,12 +362,7 @@ const getColorHex = (colorName: string): string => {
 };
 
 // --- TYPE DEFINITIONS ---
-type ActiveFilter =
-    | "category"
-    | "brand"
-    | "price"
-    | "discount"
-    | "color";
+type ActiveFilter = "category" | "brand" | "price" | "discount" | "color";
 
 interface GenericProps {
     className?: string;
@@ -701,7 +700,6 @@ function ShopFiltersSection({
                         <ColorFilter colors={colors} />
                     </>
                 )}
-
             </div>
         </div>
     );
@@ -718,11 +716,9 @@ function BrandFilter({
 }) {
     const [brandIds, setBrandIds] = useQueryState(
         "brandIds",
-        parseAsArrayOf(parseAsString, ",")
-            .withDefault([])
-            .withOptions({
-                shallow: false,
-            })
+        parseAsArrayOf(parseAsString, ",").withDefault([]).withOptions({
+            shallow: false,
+        })
     );
     const [, setPage] = useQueryState(
         "shopPage",
@@ -766,7 +762,7 @@ function BrandFilter({
                 </Label>
             )}
             <div className="space-y-1">
-                {visibleBrands.map((brand) => (
+                {visibleBrands.map((brand) =>
                     (() => {
                         const productCount = getBrandProductCount(brand);
 
@@ -806,7 +802,7 @@ function BrandFilter({
                             </label>
                         );
                     })()
-                ))}
+                )}
             </div>
             {brandsWithProducts.length > 10 && (
                 <button
@@ -871,13 +867,17 @@ function CategoryFilter({
         return updateSubCategoryId(id === effectiveSubCategoryId ? "" : id);
     };
     const categoryNameById = useMemo(
-        () => new Map(categories.map((category) => [category.id, category.name])),
+        () =>
+            new Map(categories.map((category) => [category.id, category.name])),
         [categories]
     );
     const subCategoryNameById = useMemo(
         () =>
             new Map(
-                subCategories.map((subCategory) => [subCategory.id, subCategory.name])
+                subCategories.map((subCategory) => [
+                    subCategory.id,
+                    subCategory.name,
+                ])
             ),
         [subCategories]
     );
@@ -924,7 +924,8 @@ function CategoryFilter({
         for (const subCategory of subCategories) {
             const key = String(subCategory.categoryId);
             const next =
-                (map.get(key) ?? 0) + Math.max(subCategory.productCount ?? 0, 0);
+                (map.get(key) ?? 0) +
+                Math.max(subCategory.productCount ?? 0, 0);
             map.set(key, next);
         }
         return map;
@@ -1018,30 +1019,31 @@ function CategoryFilter({
                     className="space-y-2"
                 >
                     {visibleSubCategories.map((sub) => (
-                            <label
-                                key={sub.id}
-                                htmlFor={`sub-${sub.id}`}
-                                className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem
-                                        value={sub.id}
-                                        id={`sub-${sub.id}`}
-                                    />
-                                    <Label
-                                        htmlFor={`sub-${sub.id}`}
-                                        className="cursor-pointer text-sm font-normal text-[#30455f]"
-                                    >
-                                        {getSubCategoryLabel(sub)}
-                                    </Label>
-                                </div>
-                                <span className="text-xs text-[#8ba0bb]">
-                                    {sub.productCount ?? 0}
-                                </span>
-                            </label>
-                        ))}
+                        <label
+                            key={sub.id}
+                            htmlFor={`sub-${sub.id}`}
+                            className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <RadioGroupItem
+                                    value={sub.id}
+                                    id={`sub-${sub.id}`}
+                                />
+                                <Label
+                                    htmlFor={`sub-${sub.id}`}
+                                    className="cursor-pointer text-sm font-normal text-[#30455f]"
+                                >
+                                    {getSubCategoryLabel(sub)}
+                                </Label>
+                            </div>
+                            <span className="text-xs text-[#8ba0bb]">
+                                {sub.productCount ?? 0}
+                            </span>
+                        </label>
+                    ))}
                 </RadioGroup>
-                {filteredSubCategories.length > INITIAL_VISIBLE_SUBCATEGORIES && (
+                {filteredSubCategories.length >
+                    INITIAL_VISIBLE_SUBCATEGORIES && (
                     <button
                         type="button"
                         onClick={() => setShowAllSubCategories((prev) => !prev)}
@@ -1073,28 +1075,28 @@ function CategoryFilter({
                             className="space-y-2"
                         >
                             {visibleTypes.map((t) => (
-                                    <label
-                                        key={t.id}
-                                        htmlFor={`type-${t.id}`}
-                                        className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
-                                    >
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem
-                                                value={t.id}
-                                                id={`type-${t.id}`}
-                                            />
-                                            <Label
-                                                htmlFor={`type-${t.id}`}
-                                                className="cursor-pointer text-sm font-normal text-[#30455f]"
-                                            >
-                                                {getProductTypeLabel(t)}
-                                            </Label>
-                                        </div>
-                                        <span className="text-xs text-[#8ba0bb]">
-                                            {t.productCount ?? 0}
-                                        </span>
-                                    </label>
-                                ))}
+                                <label
+                                    key={t.id}
+                                    htmlFor={`type-${t.id}`}
+                                    className="flex cursor-pointer items-center justify-between rounded-md px-1.5 py-1.5 hover:bg-[#f6f9fc]"
+                                >
+                                    <div className="flex items-center space-x-2">
+                                        <RadioGroupItem
+                                            value={t.id}
+                                            id={`type-${t.id}`}
+                                        />
+                                        <Label
+                                            htmlFor={`type-${t.id}`}
+                                            className="cursor-pointer text-sm font-normal text-[#30455f]"
+                                        >
+                                            {getProductTypeLabel(t)}
+                                        </Label>
+                                    </div>
+                                    <span className="text-xs text-[#8ba0bb]">
+                                        {t.productCount ?? 0}
+                                    </span>
+                                </label>
+                            ))}
                         </RadioGroup>
                         {filteredTypes.length > INITIAL_VISIBLE_TYPES && (
                             <button
@@ -1121,13 +1123,31 @@ function PriceFilter({ showHeading = true }: { showHeading?: boolean }) {
     );
     const [maxPrice, setMaxPrice] = useQueryState(
         "maxPrice",
-        parseAsInteger.withDefault(1000000)
+        parseAsInteger.withDefault(SHOP_PRICE_FILTER_MAX)
     );
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState(
+        "shopPage",
+        parseAsInteger.withDefault(1)
+    );
+    const normalizedMinPrice = Math.max(
+        0,
+        Math.min(minPrice, SHOP_PRICE_FILTER_MAX)
+    );
+    const normalizedMaxPrice =
+        maxPrice >= SHOP_PRICE_FILTER_MAX || maxPrice <= 0
+            ? SHOP_PRICE_FILTER_MAX
+            : maxPrice;
     const [priceRange, setPriceRange] = useState<number[]>([
-        minPrice,
-        maxPrice,
+        normalizedMinPrice,
+        Math.max(normalizedMinPrice, normalizedMaxPrice),
     ]);
+
+    useEffect(() => {
+        setPriceRange([
+            normalizedMinPrice,
+            Math.max(normalizedMinPrice, normalizedMaxPrice),
+        ]);
+    }, [normalizedMinPrice, normalizedMaxPrice]);
 
     return (
         <div className="space-y-3">
@@ -1138,20 +1158,22 @@ function PriceFilter({ showHeading = true }: { showHeading?: boolean }) {
             )}
             <Slider
                 value={priceRange}
-                step={100}
+                step={SHOP_PRICE_FILTER_STEP}
                 min={0}
-                max={1000000}
+                max={SHOP_PRICE_FILTER_MAX}
                 onValueChange={setPriceRange}
                 onValueCommit={(values) => {
-                    setMinPrice(values[0]);
-                    setMaxPrice(values[1]);
+                    setMinPrice(values[0] <= 0 ? null : values[0]);
+                    setMaxPrice(
+                        values[1] >= SHOP_PRICE_FILTER_MAX ? null : values[1]
+                    );
                     setPage(1);
                 }}
             />
             <p className="text-sm tabular-nums text-[#30455f]">
                 {formatPriceTag(priceRange[0])} -{" "}
                 {formatPriceTag(priceRange[1])}
-                {priceRange[1] === 1000000 && "+"}
+                {priceRange[1] === SHOP_PRICE_FILTER_MAX && "+"}
             </p>
         </div>
     );
@@ -1170,7 +1192,10 @@ function DiscountFilter({ showHeading = true }: { showHeading?: boolean }) {
         "minDiscount",
         parseAsInteger
     );
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState(
+        "shopPage",
+        parseAsInteger.withDefault(1)
+    );
 
     return (
         <div className="space-y-2">
@@ -1222,7 +1247,10 @@ function ColorFilter({
         "colors",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState(
+        "shopPage",
+        parseAsInteger.withDefault(1)
+    );
     const [showAllColors, setShowAllColors] = useState(false);
     const INITIAL_VISIBLE_COUNT = 10;
 
@@ -1639,7 +1667,10 @@ function SizeFilter({
         "sizes",
         parseAsArrayOf(parseAsString, ",").withDefault([])
     );
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState(
+        "shopPage",
+        parseAsInteger.withDefault(1)
+    );
     const [categoryId] = useQueryState(
         "categoryId",
         parseAsString.withDefault("")
@@ -1658,9 +1689,13 @@ function SizeFilter({
     const validSizeSet = useMemo(() => new Set(allSizes), [allSizes]);
 
     useEffect(() => {
-        const invalidSelected = sizeFilters.filter((size) => !validSizeSet.has(size));
+        const invalidSelected = sizeFilters.filter(
+            (size) => !validSizeSet.has(size)
+        );
         if (invalidSelected.length > 0) {
-            setSizeFilters(sizeFilters.filter((size) => validSizeSet.has(size)));
+            setSizeFilters(
+                sizeFilters.filter((size) => validSizeSet.has(size))
+            );
         }
     }, [sizeFilters, setSizeFilters, validSizeSet]);
 
@@ -1748,7 +1783,10 @@ export function ShopSortBy({ className }: { className?: string } = {}) {
         "sortOrder",
         parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
     );
-    const [, setPage] = useQueryState("shopPage", parseAsInteger.withDefault(1));
+    const [, setPage] = useQueryState(
+        "shopPage",
+        parseAsInteger.withDefault(1)
+    );
 
     const handleSort = (value: string) => {
         const [sort, order] = value.split(":");
@@ -1795,8 +1833,10 @@ export function ShopSortBy({ className }: { className?: string } = {}) {
                         className
                     )}
                 >
-                    <Icons.ArrowUpDown className="size-4 text-current/70" />
-                    <span className="truncate text-current">{currentLabel}</span>
+                    <Icons.ArrowUpDown className="text-current/70 size-4" />
+                    <span className="truncate text-current">
+                        {currentLabel}
+                    </span>
                 </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="rounded-t-xl p-0">

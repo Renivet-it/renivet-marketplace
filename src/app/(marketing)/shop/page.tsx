@@ -1,8 +1,12 @@
 import { GeneralShell } from "@/components/globals/layouts";
-import { StorefrontBreadcrumbs, buildBreadcrumbJsonLd } from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
+import {
+    buildBreadcrumbJsonLd,
+    StorefrontBreadcrumbs,
+} from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
 import { ShopFilters, ShopProducts, ShopSortBy } from "@/components/shop";
-import { ProductSearch } from "@/components/ui/product-search";
+import { SHOP_PRICE_FILTER_MAX } from "@/components/shop/price-filter-config";
 import { Label } from "@/components/ui/label";
+import { ProductSearch } from "@/components/ui/product-search";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries, recommendationQueries } from "@/lib/db/queries";
@@ -290,7 +294,9 @@ async function ShopFiltersFetch(
             : undefined;
     const maxPriceValue =
         maxPrice && !isNaN(parseInt(maxPrice, 10))
-            ? parseInt(maxPrice, 10)
+            ? parseInt(maxPrice, 10) >= SHOP_PRICE_FILTER_MAX
+                ? undefined
+                : parseInt(maxPrice, 10)
             : undefined;
     const brandIdsValue = brandIds?.length ? brandIds.split(",") : undefined;
     const colorsValue = colorsParam?.length
@@ -419,7 +425,6 @@ const getCachedDefaultProducts = unstable_cache(
             isDeleted: false,
             verificationStatus: "approved",
             minPrice: 0,
-            maxPrice: 1000000,
             prioritizeBestSellers: true,
             requireMedia: true,
         });
@@ -428,7 +433,13 @@ const getCachedDefaultProducts = unstable_cache(
     { revalidate: 60 }
 );
 
-async function ShopProductsFetch({ searchParams, productTypes }: { searchParams: PageProps["searchParams"], productTypes: any[] }) {
+async function ShopProductsFetch({
+    searchParams,
+    productTypes,
+}: {
+    searchParams: PageProps["searchParams"];
+    productTypes: any[];
+}) {
     const { userId } = await auth();
 
     const {
@@ -468,7 +479,9 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
     const maxPrice =
         maxPriceRaw && !isNaN(parseInt(maxPriceRaw))
             ? parseInt(maxPriceRaw)
-            : 1000000;
+            : SHOP_PRICE_FILTER_MAX;
+    const effectiveMaxPrice =
+        maxPrice >= SHOP_PRICE_FILTER_MAX ? undefined : maxPrice;
     const categoryId = !!categoryIdRaw?.length ? categoryIdRaw : undefined;
     const subCategoryId =
         (subCategoryIdRaw && subCategoryIdRaw.length > 0
@@ -505,7 +518,7 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         !productTypeId &&
         !brandIds?.length &&
         minPrice === 0 &&
-        maxPrice === 1000000 &&
+        maxPrice >= SHOP_PRICE_FILTER_MAX &&
         !minDiscount &&
         (!sortByRaw || sortByRaw === "recommended") &&
         !!userId;
@@ -547,10 +560,21 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
         }
     } else {
         // Regular products query
-        const isDefaultView = page === 1 && limit === 28 &&
-                              !search && !brandIds && minPrice === 0 && maxPrice === 1000000 &&
-                              !categoryId && !subCategoryId && !productTypeId &&
-                              (!sortByRaw || sortByRaw === "recommended") && !sortOrder && !colors && !sizes && !minDiscount;
+        const isDefaultView =
+            page === 1 &&
+            limit === 28 &&
+            !search &&
+            !brandIds &&
+            minPrice === 0 &&
+            maxPrice >= SHOP_PRICE_FILTER_MAX &&
+            !categoryId &&
+            !subCategoryId &&
+            !productTypeId &&
+            (!sortByRaw || sortByRaw === "recommended") &&
+            !sortOrder &&
+            !colors &&
+            !sizes &&
+            !minDiscount;
 
         if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
@@ -566,10 +590,14 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
                 verificationStatus: "approved",
                 brandIds,
                 minPrice,
-                maxPrice,
+                maxPrice: effectiveMaxPrice,
                 categoryId: !!categoryId?.length ? categoryId : undefined,
-                subcategoryId: !!subCategoryId?.length ? subCategoryId : undefined,
-                productTypeId: !!productTypeId?.length ? productTypeId : undefined,
+                subcategoryId: !!subCategoryId?.length
+                    ? subCategoryId
+                    : undefined,
+                productTypeId: !!productTypeId?.length
+                    ? productTypeId
+                    : undefined,
                 sortBy,
                 sortOrder,
                 colors,
@@ -624,7 +652,11 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
                         item
                     ): item is readonly [
                         string,
-                        { id: string; name: string; subCategory?: { name: string } }
+                        {
+                            id: string;
+                            name: string;
+                            subCategory?: { name: string };
+                        },
                     ] => item !== null
                 )
         ).values()
@@ -656,7 +688,8 @@ async function ShopProductsFetch({ searchParams, productTypes }: { searchParams:
             <ShopProducts
                 initialData={{
                     ...finalData,
-                    data: finalData?.data?.filter((p: any) => !p.isDeleted) ?? [],
+                    data:
+                        finalData?.data?.filter((p: any) => !p.isDeleted) ?? [],
                 }}
                 initialWishlist={userWishlist}
                 userId={userId ?? undefined}
@@ -731,13 +764,13 @@ function ShopFiltersSkeleton() {
 function ShopProductsSkeleton() {
     return (
         <div className="space-y-5">
-            <div className="flex gap-2 overflow-hidden scrollbar-hide pb-2">
-                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
-                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
-                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
-                <Skeleton className="h-10 w-24 rounded-lg shrink-0" />
-                <Skeleton className="h-10 w-24 rounded-lg shrink-0 hidden md:block" />
-                <Skeleton className="h-10 w-24 rounded-lg shrink-0 hidden md:block" />
+            <div className="scrollbar-hide flex gap-2 overflow-hidden pb-2">
+                <Skeleton className="h-10 w-24 shrink-0 rounded-lg" />
+                <Skeleton className="h-10 w-24 shrink-0 rounded-lg" />
+                <Skeleton className="h-10 w-24 shrink-0 rounded-lg" />
+                <Skeleton className="h-10 w-24 shrink-0 rounded-lg" />
+                <Skeleton className="hidden h-10 w-24 shrink-0 rounded-lg md:block" />
+                <Skeleton className="hidden h-10 w-24 shrink-0 rounded-lg md:block" />
             </div>
 
             <Separator />

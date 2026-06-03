@@ -34,6 +34,7 @@ export * from "./types";
 export * from "./capi-logs";
 export * from "./whatsapp";
 export * from "./email";
+export * from "./monitoring-sla";
 
 export * from "./analytics";
 export * from "./unicommerce";

@@ -15,6 +15,7 @@ import {
     notifyAdmins,
     notifyUser,
 } from "@/lib/support/utils";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { and, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -125,6 +126,7 @@ export const brandSupportRouter = createTRPCRouter({
                     issueType: input.issueType,
                     issueLabel: input.issueLabel ?? null,
                     description: input.description ?? null,
+                    assignedAdminId: process.env.SUPPORT_INTERN_USER_ID || null,
                     priority: input.priority ?? "normal",
                     latestMessageAt: new Date(),
                     statusChangedAt: new Date(),
@@ -161,6 +163,31 @@ export const brandSupportRouter = createTRPCRouter({
                     brandId: ctx.user.brand.id,
                 },
             });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_created",
+                entityType: "support_ticket",
+                entityId: row.id,
+                afterValue: {
+                    title: row.title,
+                    issueType: row.issueType,
+                    status: row.status,
+                    brandId: row.brandId,
+                },
+                reason: "brand_support_ticket_created",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "new_ticket_created",
+                severity: "info",
+                entityType: "support_ticket",
+                entityId: row.id,
+                title: "New brand support ticket",
+                message: `${ctx.user.brand.name} raised "${row.title}".`,
+                ownerRole: "support_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dedupeKey: `ticket:new:brand:${row.id}`,
+            });
 
             return row;
         }),
@@ -193,6 +220,14 @@ export const brandSupportRouter = createTRPCRouter({
                 .then((res) => res[0]);
 
             await attachBrandMessageFiles(inserted.id, input.attachments);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_message_added",
+                entityType: "support_ticket",
+                entityId: ticket.id,
+                afterValue: { messageId: inserted.id, sender: "brand" },
+                reason: "brand_ticket_reply",
+            });
 
             await db
                 .update(supportTickets)

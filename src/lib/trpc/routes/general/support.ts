@@ -2,9 +2,12 @@ import { db } from "@/lib/db";
 import {
     brands,
     supportAttachments,
+    supportDailyCheckIns,
     supportInternalNotes,
     supportMessages,
+    supportMonthlyPatternReviews,
     supportTickets,
+    supportWeeklySummaries,
     supportTicketStatusHistory,
     users,
     userSupportAttachments,
@@ -17,13 +20,28 @@ import { createDisputeReplacementOrder } from "@/lib/support/dispute-replacement
 import {
     buildBrandDisputeHref,
     buildBrandSupportHref,
+    buildAdminSupportHref,
     buildSupportHref,
     notifyBrandUsers,
     notifyUser,
 } from "@/lib/support/utils";
+import {
+    calculateCustomerAutoCloseEligibleAt,
+    calculateCustomerUpdateDueAt,
+    calculateFirstResponseDueAt,
+    calculateReopenAllowedUntil,
+    calculateResolutionDueAt,
+    detectCriticalSupportCategory,
+    getSupportCategoryConfig,
+    SUPPORT_CHANNELS,
+    SUPPORT_RESOLUTION_CODES,
+    SUPPORT_TEMPLATE_LIBRARY,
+    SUPPORT_TICKET_STATUSES,
+} from "@/lib/customer-support/playbook";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { generateId } from "@/lib/utils";
-import { and, desc, eq, ilike, inArray, or } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
 import { z } from "zod";
 
 const attachmentSchema = z.object({
@@ -34,17 +52,58 @@ const attachmentSchema = z.object({
     fileKey: z.string().optional(),
 });
 
-const statusSchema = z.enum([
+const statusSchema = z.enum(SUPPORT_TICKET_STATUSES);
+const resolutionCodeSchema = z.enum(SUPPORT_RESOLUTION_CODES);
+const supportChannelSchema = z.enum(SUPPORT_CHANNELS);
+const terminalStatuses = [
+    "resolved",
+    "refunded",
+    "replaced",
+    "declined",
+    "closed",
+    "auto_closed",
+] as const;
+
+function buildAutomatedSupportReply(ticketId: string) {
+    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK.replaceAll("[ID]", ticketId);
+}
+
+function formatSupportCategoryLabel(category: string) {
+    return category
+        .replaceAll("_", " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const activeSupportStatuses = [
+    "new",
+    "acknowledged",
+    "in_progress",
+    "waiting_customer",
+    "waiting_brand",
+    "waiting_internal",
+    "reopened",
+    "escalated",
     "open",
+    "pending",
     "in_review",
     "waiting_for_customer",
     "waiting_for_brand",
     "approved",
-    "rejected",
-    "resolved",
-    "closed",
-    "escalated",
-]);
+];
+
+function dateOnly(date = new Date()) {
+    return date.toISOString().slice(0, 10);
+}
+
+function weekWindow(date = new Date()) {
+    const end = new Date(date);
+    end.setHours(23, 59, 59, 999);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 6);
+    start.setHours(0, 0, 0, 0);
+    return { start, end };
+}
 
 async function attachBrandMessageFiles(
     messageId: string,
@@ -82,7 +141,684 @@ async function attachUserMessageFiles(
     );
 }
 
+async function computeSupportHealth() {
+    const now = new Date();
+    const dayCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const twoDayCutoff = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    const approachingCutoff = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+    const { start: weekStart } = weekWindow(now);
+
+    const [
+        openTickets,
+        agedTickets24h,
+        agedTickets48h,
+        criticalTickets,
+        approachingFirstResponse,
+        breachedFirstResponse,
+        approachingResolution,
+        breachedResolution,
+        weekTickets,
+        recentCsat,
+        weeklySummary,
+    ] = await Promise.all([
+        db.$count(
+            userSupportTickets,
+            inArray(userSupportTickets.status, activeSupportStatuses)
+        ),
+        db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, activeSupportStatuses),
+                lt(userSupportTickets.statusChangedAt, dayCutoff)
+            )
+        ),
+        db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, activeSupportStatuses),
+                lt(userSupportTickets.statusChangedAt, twoDayCutoff)
+            )
+        ),
+        db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, activeSupportStatuses),
+                eq(userSupportTickets.priority, "critical")
+            )
+        ),
+        db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, activeSupportStatuses),
+                isNotNull(userSupportTickets.firstResponseDueAt),
+                lt(userSupportTickets.firstResponseDueAt, approachingCutoff),
+                gte(userSupportTickets.firstResponseDueAt, now)
+            )
+        ),
+        db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, activeSupportStatuses),
+                isNotNull(userSupportTickets.firstResponseDueAt),
+                lt(userSupportTickets.firstResponseDueAt, now),
+                sql`${userSupportTickets.firstRespondedAt} IS NULL`
+            )
+        ),
+        db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, activeSupportStatuses),
+                isNotNull(userSupportTickets.resolutionDueAt),
+                lt(userSupportTickets.resolutionDueAt, approachingCutoff),
+                gte(userSupportTickets.resolutionDueAt, now)
+            )
+        ),
+        db.$count(
+            userSupportTickets,
+            and(
+                inArray(userSupportTickets.status, activeSupportStatuses),
+                isNotNull(userSupportTickets.resolutionDueAt),
+                lt(userSupportTickets.resolutionDueAt, now)
+            )
+        ),
+        db.query.userSupportTickets.findMany({
+            where: gte(userSupportTickets.createdAt, weekStart),
+            columns: {
+                id: true,
+                firstRespondedAt: true,
+                firstResponseDueAt: true,
+                status: true,
+            },
+        }),
+        db
+            .select({
+                average:
+                    sql<number>`ROUND(AVG(${userSupportTickets.csatScore}) * 100)`,
+                count: sql<number>`COUNT(${userSupportTickets.csatScore})`,
+            })
+            .from(userSupportTickets)
+            .where(
+                and(
+                    isNotNull(userSupportTickets.csatScore),
+                    gte(userSupportTickets.csatRespondedAt, weekStart)
+                )
+            ),
+        db.query.supportWeeklySummaries.findFirst({
+            orderBy: [desc(supportWeeklySummaries.createdAt)],
+        }),
+    ]);
+
+    const ticketsWithDueDate = weekTickets.filter(
+        (ticket) => ticket.firstResponseDueAt
+    );
+    const ticketsWithinSla = ticketsWithDueDate.filter(
+        (ticket) =>
+            ticket.firstRespondedAt &&
+            ticket.firstResponseDueAt &&
+            ticket.firstRespondedAt <= ticket.firstResponseDueAt
+    );
+    const slaHitRate = ticketsWithDueDate.length
+        ? Math.round((ticketsWithinSla.length / ticketsWithDueDate.length) * 100)
+        : 100;
+
+    return {
+        openTickets,
+        agedTickets24h,
+        agedTickets48h,
+        criticalTickets,
+        approachingSla: approachingFirstResponse + approachingResolution,
+        breachedSla: breachedFirstResponse + breachedResolution,
+        slaHitRate,
+        csatAverage: recentCsat[0]?.average
+            ? Number(recentCsat[0].average) / 100
+            : null,
+        csatCount: Number(recentCsat[0]?.count ?? 0),
+        latestWeeklySummary: weeklySummary,
+    };
+}
+
 export const adminSupportRouter = createTRPCRouter({
+    getSupportHealth: protectedProcedure.query(async () => {
+        const now = new Date();
+        const dayCutoff = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const twoDayCutoff = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+        const approachingCutoff = new Date(now.getTime() + 2 * 60 * 60 * 1000);
+        const { start: weekStart } = weekWindow(now);
+
+        const [
+            openTickets,
+            agedTickets24h,
+            agedTickets48h,
+            criticalTickets,
+            approachingFirstResponse,
+            breachedFirstResponse,
+            approachingResolution,
+            breachedResolution,
+            weekTickets,
+            recentCsat,
+            weeklySummary,
+        ] = await Promise.all([
+            db.$count(
+                userSupportTickets,
+                inArray(userSupportTickets.status, activeSupportStatuses)
+            ),
+            db.$count(
+                userSupportTickets,
+                and(
+                    inArray(userSupportTickets.status, activeSupportStatuses),
+                    lt(userSupportTickets.statusChangedAt, dayCutoff)
+                )
+            ),
+            db.$count(
+                userSupportTickets,
+                and(
+                    inArray(userSupportTickets.status, activeSupportStatuses),
+                    lt(userSupportTickets.statusChangedAt, twoDayCutoff)
+                )
+            ),
+            db.$count(
+                userSupportTickets,
+                and(
+                    inArray(userSupportTickets.status, activeSupportStatuses),
+                    eq(userSupportTickets.priority, "critical")
+                )
+            ),
+            db.$count(
+                userSupportTickets,
+                and(
+                    inArray(userSupportTickets.status, activeSupportStatuses),
+                    isNotNull(userSupportTickets.firstResponseDueAt),
+                    lt(userSupportTickets.firstResponseDueAt, approachingCutoff),
+                    gte(userSupportTickets.firstResponseDueAt, now)
+                )
+            ),
+            db.$count(
+                userSupportTickets,
+                and(
+                    inArray(userSupportTickets.status, activeSupportStatuses),
+                    isNotNull(userSupportTickets.firstResponseDueAt),
+                    lt(userSupportTickets.firstResponseDueAt, now),
+                    sql`${userSupportTickets.firstRespondedAt} IS NULL`
+                )
+            ),
+            db.$count(
+                userSupportTickets,
+                and(
+                    inArray(userSupportTickets.status, activeSupportStatuses),
+                    isNotNull(userSupportTickets.resolutionDueAt),
+                    lt(userSupportTickets.resolutionDueAt, approachingCutoff),
+                    gte(userSupportTickets.resolutionDueAt, now)
+                )
+            ),
+            db.$count(
+                userSupportTickets,
+                and(
+                    inArray(userSupportTickets.status, activeSupportStatuses),
+                    isNotNull(userSupportTickets.resolutionDueAt),
+                    lt(userSupportTickets.resolutionDueAt, now)
+                )
+            ),
+            db.query.userSupportTickets.findMany({
+                where: gte(userSupportTickets.createdAt, weekStart),
+                columns: {
+                    id: true,
+                    firstRespondedAt: true,
+                    firstResponseDueAt: true,
+                    status: true,
+                },
+            }),
+            db
+                .select({
+                    average:
+                        sql<number>`ROUND(AVG(${userSupportTickets.csatScore}) * 100)`,
+                    count: sql<number>`COUNT(${userSupportTickets.csatScore})`,
+                })
+                .from(userSupportTickets)
+                .where(
+                    and(
+                        isNotNull(userSupportTickets.csatScore),
+                        gte(userSupportTickets.csatRespondedAt, weekStart)
+                    )
+                ),
+            db.query.supportWeeklySummaries.findFirst({
+                orderBy: [desc(supportWeeklySummaries.createdAt)],
+            }),
+        ]);
+
+        const ticketsWithDueDate = weekTickets.filter(
+            (ticket) => ticket.firstResponseDueAt
+        );
+        const ticketsWithinSla = ticketsWithDueDate.filter(
+            (ticket) =>
+                ticket.firstRespondedAt &&
+                ticket.firstResponseDueAt &&
+                ticket.firstRespondedAt <= ticket.firstResponseDueAt
+        );
+        const slaHitRate = ticketsWithDueDate.length
+            ? Math.round((ticketsWithinSla.length / ticketsWithDueDate.length) * 100)
+            : 100;
+
+        return {
+            openTickets,
+            agedTickets24h,
+            agedTickets48h,
+            criticalTickets,
+            approachingSla: approachingFirstResponse + approachingResolution,
+            breachedSla: breachedFirstResponse + breachedResolution,
+            slaHitRate,
+            csatAverage: recentCsat[0]?.average
+                ? Number(recentCsat[0].average) / 100
+                : null,
+            csatCount: Number(recentCsat[0]?.count ?? 0),
+            latestWeeklySummary: weeklySummary,
+        };
+    }),
+    createDailyCheckIn: protectedProcedure
+        .input(
+            z.object({
+                checkType: z.enum(["morning", "midday", "eod"]),
+                summary: z.string().optional(),
+                blockers: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const health = await computeSupportHealth();
+            const check = await db
+                .insert(supportDailyCheckIns)
+                .values({
+                    checkDate: dateOnly(),
+                    checkType: input.checkType,
+                    ownerId: ctx.user.id,
+                    openTickets: health.openTickets,
+                    agedTickets24h: health.agedTickets24h,
+                    approachingSla: health.approachingSla,
+                    breachedSla: health.breachedSla,
+                    criticalTickets: health.criticalTickets,
+                    summary: input.summary ?? null,
+                    blockers: input.blockers ?? null,
+                    metadata: { source: "admin_support_dashboard" },
+                })
+                .returning()
+                .then((res) => res[0]);
+
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "support_daily_check_in_logged",
+                entityType: "support_daily_check_in",
+                entityId: check.id,
+                afterValue: check,
+                reason: `support_${input.checkType}_check`,
+            });
+
+            return check;
+        }),
+    generateWeeklySummary: protectedProcedure
+        .input(
+            z.object({
+                summary: z.string().optional(),
+                actionItems: z.array(z.string()).default([]),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const { start, end } = weekWindow();
+            const health = await computeSupportHealth();
+            const weekTickets = await db.query.userSupportTickets.findMany({
+                where: and(
+                    gte(userSupportTickets.createdAt, start),
+                    lt(userSupportTickets.createdAt, end)
+                ),
+                columns: {
+                    id: true,
+                    createdAt: true,
+                    category: true,
+                    resolutionCode: true,
+                    firstRespondedAt: true,
+                    firstResponseDueAt: true,
+                    escalatedAt: true,
+                    status: true,
+                },
+            });
+
+            const topCategories = Object.entries(
+                weekTickets.reduce<Record<string, number>>((acc, ticket) => {
+                    acc[ticket.category] = (acc[ticket.category] ?? 0) + 1;
+                    return acc;
+                }, {})
+            )
+                .map(([category, count]) => ({ category, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 3);
+
+            const topResolutionCodes = Object.entries(
+                weekTickets.reduce<Record<string, number>>((acc, ticket) => {
+                    if (!ticket.resolutionCode) return acc;
+                    acc[ticket.resolutionCode] =
+                        (acc[ticket.resolutionCode] ?? 0) + 1;
+                    return acc;
+                }, {})
+            )
+                .map(([code, count]) => ({ code, count }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 3);
+
+            const firstResponseMinutes = weekTickets
+                .filter((ticket) => ticket.firstRespondedAt)
+                .map((ticket) =>
+                    Math.max(
+                        0,
+                        Math.round(
+                            (ticket.firstRespondedAt!.getTime() -
+                                ticket.createdAt.getTime()) /
+                                60000
+                        )
+                    )
+                );
+            const avgFirstResponseMinutes = firstResponseMinutes.length
+                ? Math.round(
+                      firstResponseMinutes.reduce((sum, value) => sum + value, 0) /
+                          firstResponseMinutes.length
+                  )
+                : null;
+
+            const record = await db
+                .insert(supportWeeklySummaries)
+                .values({
+                    weekStart: dateOnly(start),
+                    weekEnd: dateOnly(end),
+                    ownerId: ctx.user.id,
+                    ticketsOpened: weekTickets.length,
+                    ticketsResolved: weekTickets.filter((ticket) =>
+                        terminalStatuses.includes(ticket.status as any)
+                    ).length,
+                    openTicketsAtWeekEnd: health.openTickets,
+                    agedTickets48h: health.agedTickets48h,
+                    slaBreaches: health.breachedSla,
+                    escalatedToAj: weekTickets.filter((ticket) => ticket.escalatedAt)
+                        .length,
+                    avgFirstResponseMinutes,
+                    slaHitRate: health.slaHitRate,
+                    csatAverage:
+                        health.csatAverage == null
+                            ? null
+                            : Math.round(health.csatAverage * 100),
+                    topCategories,
+                    topResolutionCodes,
+                    summary: input.summary ?? null,
+                    actionItems: input.actionItems,
+                })
+                .returning()
+                .then((res) => res[0]);
+
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "support_weekly_summary_generated",
+                entityType: "support_weekly_summary",
+                entityId: record.id,
+                afterValue: record,
+                reason: "friday_support_weekly_summary",
+            });
+
+            return record;
+        }),
+    generateMonthlyPatternReview: protectedProcedure
+        .input(
+            z.object({
+                reviewMonth: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+                learnings: z.string().optional(),
+                driveLink: z.string().url().optional(),
+                actionItems: z.array(z.string()).default([]),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const month = input.reviewMonth ?? new Date().toISOString().slice(0, 7);
+            const [year, monthIndex] = month.split("-").map(Number);
+            const start = new Date(year, monthIndex - 1, 1);
+            const end = new Date(year, monthIndex, 1);
+            const rows = await db.query.userSupportTickets.findMany({
+                where: and(
+                    gte(userSupportTickets.createdAt, start),
+                    lt(userSupportTickets.createdAt, end)
+                ),
+                columns: {
+                    id: true,
+                    userId: true,
+                    brandId: true,
+                    category: true,
+                    csatScore: true,
+                    firstRespondedAt: true,
+                    resolutionCode: true,
+                    preventable: true,
+                },
+            });
+
+            const average = (values: number[]) =>
+                values.length
+                    ? Math.round(
+                          (values.reduce((sum, value) => sum + value, 0) /
+                              values.length) *
+                              100
+                      )
+                    : null;
+            const top = <K extends string | null>(
+                values: K[],
+                keyName: "category" | "brandId" | "userId"
+            ) =>
+                Object.entries(
+                    values.reduce<Record<string, number>>((acc, value) => {
+                        const key = value ?? "unassigned";
+                        acc[key] = (acc[key] ?? 0) + 1;
+                        return acc;
+                    }, {})
+                )
+                    .map(([key, count]) => ({ [keyName]: key, count }))
+                    .sort((a, b) => Number(b.count) - Number(a.count))
+                    .slice(0, 3);
+
+            const record = await db
+                .insert(supportMonthlyPatternReviews)
+                .values({
+                    reviewMonth: month,
+                    ownerId: ctx.user.id,
+                    totalTickets: rows.length,
+                    csatAverage: average(
+                        rows
+                            .map((row) => row.csatScore)
+                            .filter((score): score is number => typeof score === "number")
+                    ),
+                    firstTouchResolutionRate: rows.length
+                        ? Math.round(
+                              (rows.filter(
+                                  (row) =>
+                                      row.firstRespondedAt &&
+                                      row.resolutionCode === "RES_INFO_PROVIDED"
+                              ).length /
+                                  rows.length) *
+                                  100
+                          )
+                        : null,
+                    preventableIssueRate: rows.length
+                        ? Math.round(
+                              (rows.filter((row) => row.preventable).length /
+                                  rows.length) *
+                                  100
+                          )
+                        : null,
+                    topCategories: top(
+                        rows.map((row) => row.category),
+                        "category"
+                    ) as Array<{ category: string; count: number }>,
+                    topBrandsByComplaint: top(
+                        rows.map((row) => row.brandId ?? null),
+                        "brandId"
+                    ) as Array<{ brandId: string | null; count: number }>,
+                    customersWithMultipleTickets: (
+                        top(
+                            rows.map((row) => row.userId),
+                            "userId"
+                        ) as Array<{ userId: string; count: number }>
+                    ).filter((row) => row.count >= 3),
+                    learnings: input.learnings ?? null,
+                    driveLink: input.driveLink ?? null,
+                    actionItems: input.actionItems,
+                })
+                .returning()
+                .then((res) => res[0]);
+
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "support_monthly_pattern_review_generated",
+                entityType: "support_monthly_pattern_review",
+                entityId: record.id,
+                afterValue: record,
+                reason: "monthly_customer_support_learnings",
+            });
+
+            return record;
+        }),
+    createManualUserTicket: protectedProcedure
+        .input(
+            z.object({
+                customer: z.string().min(1),
+                sourceChannel: supportChannelSchema,
+                category: z.string().min(1),
+                subject: z.string().min(3),
+                description: z.string().min(3),
+                orderId: z.string().optional(),
+                brandId: z.string().optional(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const customer = await db.query.users.findFirst({
+                where: or(eq(users.id, input.customer), eq(users.email, input.customer)),
+            });
+            if (!customer) {
+                throw new Error("Customer not found. Use the customer user ID or email already in Renivet.");
+            }
+
+            const detectedCategory = detectCriticalSupportCategory(
+                `${input.subject} ${input.description}`
+            );
+            const category = detectedCategory ?? input.category;
+            const config = getSupportCategoryConfig(category);
+            const now = new Date();
+            const critical = config.priority === "critical";
+            const ticketId = crypto.randomUUID();
+
+            const row = await db
+                .insert(userSupportTickets)
+                .values({
+                    id: ticketId,
+                    userId: customer.id,
+                    orderId: input.orderId?.trim() || null,
+                    brandId: input.brandId?.trim() || null,
+                    title: input.subject.trim(),
+                    category,
+                    issueType: category,
+                    issueLabel: formatSupportCategoryLabel(category),
+                    description: input.description.trim(),
+                    sourceChannel: input.sourceChannel,
+                    priority: config.priority,
+                    status: critical ? "escalated" : "acknowledged",
+                    assignedAdminId:
+                        critical
+                            ? process.env.AJ_USER_ID || ctx.user.id
+                            : process.env.SUPPORT_INTERN_USER_ID || ctx.user.id,
+                    firstResponseDueAt: calculateFirstResponseDueAt(category, now),
+                    resolutionDueAt: calculateResolutionDueAt(category, now),
+                    autoAckSentAt: now,
+                    autoAckTemplateKey: "AUTO_ACK",
+                    autoCloseEligibleAt: calculateCustomerAutoCloseEligibleAt(now),
+                    escalatedAt: critical ? now : null,
+                    escalationOwner: critical ? "AJ" : null,
+                    latestMessageAt: now,
+                    intakeContext: {
+                        createdByAdminId: ctx.user.id,
+                        manualChannel: input.sourceChannel,
+                    },
+                })
+                .returning()
+                .then((res) => res[0]);
+
+            await db.insert(userSupportMessages).values([
+                {
+                    ticketId: row.id,
+                    sender: "customer",
+                    senderId: customer.id,
+                    text: input.description.trim(),
+                    messageType: "message",
+                    metadata: { sourceChannel: input.sourceChannel, createdByAdminId: ctx.user.id },
+                },
+                {
+                    ticketId: row.id,
+                    sender: "system",
+                    senderId: "support-bot",
+                    text: buildAutomatedSupportReply(row.id),
+                    messageType: "system",
+                    metadata: { template: "AUTO_ACK", sourceChannel: input.sourceChannel },
+                },
+            ]);
+
+            await notifyUser({
+                userId: customer.id,
+                actorId: ctx.user.id,
+                type: "support.ticket.manual_intake",
+                title: "Support case created",
+                body: `We created support case ${row.id.slice(0, 8)} from your ${input.sourceChannel.replaceAll("_", " ")} message.`,
+                href: buildSupportHref(row.id),
+                emailSubject: `Renivet support case ${row.id.slice(0, 8)} created`,
+                emailIntro: "We have logged your message as a Renivet support case.",
+                emailDetails: [
+                    `Case: ${row.id}`,
+                    `Channel: ${input.sourceChannel}`,
+                    `Category: ${formatSupportCategoryLabel(category)}`,
+                    `Subject: ${row.title}`,
+                ],
+                metadata: { ticketId: row.id, sourceChannel: input.sourceChannel },
+            });
+
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "manual_customer_support_ticket_created",
+                entityType: "user_support_ticket",
+                entityId: row.id,
+                beforeValue: null,
+                afterValue: {
+                    id: row.id,
+                    userId: customer.id,
+                    sourceChannel: input.sourceChannel,
+                    category,
+                    status: row.status,
+                    firstResponseDueAt: row.firstResponseDueAt,
+                    resolutionDueAt: row.resolutionDueAt,
+                },
+                reason: "chapter_3_manual_channel_intake",
+                metadata: { href: buildAdminSupportHref(row.id, "user") },
+            });
+
+            if (critical) {
+                await createOperationalAlert({
+                    type:
+                        category === "SOCIAL_COMPLAINT"
+                            ? "social_complaint_detected"
+                            : "legal_threat_detected",
+                    severity: "critical",
+                    entityType: "user_support_ticket",
+                    entityId: row.id,
+                    title:
+                        category === "SOCIAL_COMPLAINT"
+                            ? "Social complaint support escalation"
+                            : "Legal threat support escalation",
+                    message: `Manual ${input.sourceChannel} intake created critical ticket ${row.id}.`,
+                    actorId: row.assignedAdminId,
+                    ownerRole: "support_manager",
+                    channels: ["admin", "email", "whatsapp"],
+                    dedupeKey: `ticket:manual-critical:${row.id}`,
+                    metadata: { sourceChannel: input.sourceChannel, category },
+                });
+            }
+
+            return row;
+        }),
     listTickets: protectedProcedure
         .input(
             z.object({
@@ -168,6 +904,7 @@ export const adminSupportRouter = createTRPCRouter({
                 ticketId: z.string(),
                 status: statusSchema,
                 reason: z.string().optional(),
+                resolutionCode: resolutionCodeSchema.optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -175,16 +912,32 @@ export const adminSupportRouter = createTRPCRouter({
                 where: eq(supportTickets.id, input.ticketId),
             });
             if (!existing) throw new Error("Ticket not found");
+            if (
+                terminalStatuses.includes(input.status as any) &&
+                !input.resolutionCode
+            ) {
+                throw new Error("Resolution code is required before closing a support ticket.");
+            }
 
             const updated = await db
                 .update(supportTickets)
                 .set({
                     status: input.status,
+                    resolutionCode:
+                        input.resolutionCode ?? existing.resolutionCode ?? null,
                     statusChangedAt: new Date(),
-                    resolvedAt:
-                        input.status === "resolved"
-                            ? new Date()
-                            : existing.resolvedAt,
+                    resolvedAt: terminalStatuses.includes(input.status as any)
+                        ? new Date()
+                        : existing.resolvedAt,
+                    closedAt: ["closed", "auto_closed"].includes(input.status)
+                        ? new Date()
+                        : existing.closedAt,
+                    reopenAllowedUntil: terminalStatuses.includes(input.status as any)
+                        ? calculateReopenAllowedUntil()
+                        : existing.reopenAllowedUntil,
+                    csatSentAt: terminalStatuses.includes(input.status as any)
+                        ? new Date()
+                        : existing.csatSentAt,
                     resolutionSummary:
                         input.reason ?? existing.resolutionSummary ?? null,
                     updatedAt: new Date(),
@@ -199,6 +952,18 @@ export const adminSupportRouter = createTRPCRouter({
                 newStatus: input.status,
                 changedBy: ctx.user.id,
                 reason: input.reason ?? null,
+            });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_status_changed",
+                entityType: "support_ticket",
+                entityId: existing.id,
+                beforeValue: { status: existing.status },
+                afterValue: {
+                    status: input.status,
+                    resolutionCode: input.resolutionCode ?? null,
+                },
+                reason: input.reason ?? "support_ticket_status_update",
             });
 
             await notifyBrandUsers({
@@ -248,6 +1013,14 @@ export const adminSupportRouter = createTRPCRouter({
                 .then((res) => res[0]);
 
             await attachBrandMessageFiles(inserted.id, input.attachments);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_message_added",
+                entityType: "support_ticket",
+                entityId: ticket.id,
+                afterValue: { messageId: inserted.id, sender: "admin" },
+                reason: "brand_ticket_reply",
+            });
 
             await db
                 .update(supportTickets)
@@ -255,11 +1028,18 @@ export const adminSupportRouter = createTRPCRouter({
                     unreadByBrand: "true",
                     unreadByAdmin: "false",
                     latestMessageAt: new Date(),
-                    status: ["resolved", "closed", "rejected"].includes(
+                    firstRespondedAt: ticket.firstRespondedAt ?? new Date(),
+                    nextCustomerUpdateDueAt: calculateCustomerUpdateDueAt(),
+                    status: [
+                        "resolved",
+                        "closed",
+                        "declined",
+                        "auto_closed",
+                    ].includes(
                         ticket.status
                     )
                         ? ticket.status
-                        : "in_review",
+                        : "waiting_brand",
                     updatedAt: new Date(),
                 })
                 .where(eq(supportTickets.id, ticket.id));
@@ -318,7 +1098,7 @@ export const adminSupportRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            return db
+            const note = await db
                 .insert(supportInternalNotes)
                 .values({
                     ticketId: input.ticketId,
@@ -327,6 +1107,15 @@ export const adminSupportRouter = createTRPCRouter({
                 })
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_internal_note_added",
+                entityType: "support_ticket",
+                entityId: input.ticketId,
+                afterValue: { noteId: note.id },
+                reason: "internal_note",
+            });
+            return note;
         }),
     listUserTickets: protectedProcedure
         .input(
@@ -463,6 +1252,7 @@ export const adminSupportRouter = createTRPCRouter({
                 status: statusSchema,
                 resolutionType: z.string().optional(),
                 resolutionSummary: z.string().optional(),
+                resolutionCode: resolutionCodeSchema.optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -470,26 +1260,60 @@ export const adminSupportRouter = createTRPCRouter({
                 where: eq(userSupportTickets.id, input.ticketId),
             });
             if (!existing) throw new Error("Ticket not found");
+            if (
+                terminalStatuses.includes(input.status as any) &&
+                !input.resolutionCode
+            ) {
+                throw new Error("Resolution code is required before closing a customer support ticket.");
+            }
 
             const updated = await db
                 .update(userSupportTickets)
                 .set({
                     status: input.status,
+                    resolutionCode:
+                        input.resolutionCode ?? existing.resolutionCode ?? null,
                     resolutionType:
                         input.resolutionType ?? existing.resolutionType,
                     resolutionSummary:
                         input.resolutionSummary ?? existing.resolutionSummary,
                     statusChangedAt: new Date(),
-                    resolvedAt:
-                        input.status === "resolved"
-                            ? new Date()
-                            : existing.resolvedAt,
+                    resolvedAt: terminalStatuses.includes(input.status as any)
+                        ? new Date()
+                        : existing.resolvedAt,
+                    closedAt: ["closed", "auto_closed"].includes(input.status)
+                        ? new Date()
+                        : existing.closedAt,
+                    autoCloseEligibleAt:
+                        input.status === "waiting_customer"
+                            ? calculateCustomerAutoCloseEligibleAt()
+                            : existing.autoCloseEligibleAt,
+                    reopenAllowedUntil: terminalStatuses.includes(input.status as any)
+                        ? calculateReopenAllowedUntil()
+                        : existing.reopenAllowedUntil,
+                    csatSentAt: terminalStatuses.includes(input.status as any)
+                        ? new Date()
+                        : existing.csatSentAt,
                     updatedAt: new Date(),
                     unreadByUser: "true",
                 })
                 .where(eq(userSupportTickets.id, input.ticketId))
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_status_changed",
+                entityType: "user_support_ticket",
+                entityId: existing.id,
+                beforeValue: { status: existing.status },
+                afterValue: {
+                    status: input.status,
+                    resolutionCode: updated.resolutionCode,
+                    resolutionType: updated.resolutionType,
+                    resolutionSummary: updated.resolutionSummary,
+                },
+                reason: input.resolutionSummary ?? "user_ticket_status_update",
+            });
 
             await notifyUser({
                 userId: existing.userId,
@@ -540,6 +1364,14 @@ export const adminSupportRouter = createTRPCRouter({
                 .then((res) => res[0]);
 
             await attachUserMessageFiles(inserted.id, input.attachments);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_message_added",
+                entityType: "user_support_ticket",
+                entityId: ticket.id,
+                afterValue: { messageId: inserted.id, sender: "admin" },
+                reason: "customer_ticket_reply",
+            });
 
             await db
                 .update(userSupportTickets)
@@ -547,15 +1379,22 @@ export const adminSupportRouter = createTRPCRouter({
                     unreadByUser: "true",
                     unreadByAdmin: "false",
                     latestMessageAt: new Date(),
-                    status: ["resolved", "closed", "rejected"].includes(
+                    firstRespondedAt: ticket.firstRespondedAt ?? new Date(),
+                    nextCustomerUpdateDueAt: calculateCustomerUpdateDueAt(),
+                    status: [
+                        "resolved",
+                        "closed",
+                        "declined",
+                        "refunded",
+                        "replaced",
+                        "auto_closed",
+                    ].includes(
                         ticket.status
                     )
                         ? ticket.status
-                        : ticket.status === "approved"
-                          ? "approved"
-                          : ticket.status === "waiting_for_brand"
-                            ? "waiting_for_brand"
-                            : "waiting_for_customer",
+                        : ticket.status === "waiting_brand"
+                          ? "waiting_brand"
+                          : "waiting_customer",
                     updatedAt: new Date(),
                 })
                 .where(eq(userSupportTickets.id, ticket.id));
@@ -585,7 +1424,7 @@ export const adminSupportRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
-            return db
+            const note = await db
                 .insert(userSupportInternalNotes)
                 .values({
                     ticketId: input.ticketId,
@@ -594,6 +1433,15 @@ export const adminSupportRouter = createTRPCRouter({
                 })
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_internal_note_added",
+                entityType: "user_support_ticket",
+                entityId: input.ticketId,
+                afterValue: { noteId: note.id },
+                reason: "internal_note",
+            });
+            return note;
         }),
     assignUserTicket: protectedProcedure
         .input(
@@ -602,8 +1450,11 @@ export const adminSupportRouter = createTRPCRouter({
                 adminId: z.string(),
             })
         )
-        .mutation(async ({ input }) => {
-            return db
+        .mutation(async ({ input, ctx }) => {
+            const before = await db.query.userSupportTickets.findFirst({
+                where: eq(userSupportTickets.id, input.ticketId),
+            });
+            const updated = await db
                 .update(userSupportTickets)
                 .set({
                     assignedAdminId: input.adminId,
@@ -612,6 +1463,27 @@ export const adminSupportRouter = createTRPCRouter({
                 .where(eq(userSupportTickets.id, input.ticketId))
                 .returning()
                 .then((res) => res[0]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "ticket_assigned",
+                entityType: "user_support_ticket",
+                entityId: input.ticketId,
+                beforeValue: { assignedAdminId: before?.assignedAdminId ?? null },
+                afterValue: { assignedAdminId: input.adminId },
+                reason: "ticket_assignment",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "ticket_assigned",
+                severity: "info",
+                entityType: "user_support_ticket",
+                entityId: input.ticketId,
+                title: "Customer ticket assigned",
+                message: `Ticket ${input.ticketId} assigned to ${input.adminId}.`,
+                ownerRole: "support_manager",
+                dedupeKey: `ticket:assigned:${input.ticketId}:${input.adminId}`,
+            });
+            return updated;
         }),
     listDisputes: protectedProcedure
         .input(
@@ -814,7 +1686,8 @@ export const adminSupportRouter = createTRPCRouter({
                     brandActionStatus: replacementOrderId
                         ? "replacement_created"
                         : "awaiting_brand_action",
-                    status: "approved",
+                    status: replacementOrderId ? "replaced" : "waiting_brand",
+                    resolutionCode: replacementOrderId ? "RES_REPLACEMENT" : null,
                     linkedReplacementOrderId: replacementOrderId,
                     unreadByUser: "true",
                     unreadByAdmin: "true",
@@ -955,7 +1828,8 @@ export const adminSupportRouter = createTRPCRouter({
             await db
                 .update(userSupportTickets)
                 .set({
-                    status: "rejected",
+                    status: "declined",
+                    resolutionCode: "RES_DECLINED_OTHER",
                     resolutionSummary: input.summary,
                     unreadByUser: "true",
                     updatedAt: new Date(),

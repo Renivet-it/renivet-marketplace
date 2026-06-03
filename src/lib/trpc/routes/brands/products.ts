@@ -13,6 +13,7 @@ import {
     returnExchangePolicy,
 } from "@/lib/db/schema/product";
 import { posthog } from "@/lib/posthog/client";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 import { getEmbedding, getEmbedding768 } from "@/lib/python/sematic-search";
 import {
@@ -1124,6 +1125,23 @@ export const productsRouter = createTRPCRouter({
                 productId,
                 values
             );
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: "product_updated",
+                entityType: "product",
+                entityId: productId,
+                beforeValue: {
+                    title: existingProduct.title,
+                    price: existingProduct.price,
+                    verificationStatus: existingProduct.verificationStatus,
+                },
+                afterValue: {
+                    title: data.title,
+                    price: data.price,
+                    verificationStatus: data.verificationStatus,
+                },
+                reason: "product_manual_edit",
+            });
             return data;
         }),
     updateProductAvailability: protectedProcedure
@@ -1224,6 +1242,15 @@ export const productsRouter = createTRPCRouter({
                 productId,
                 isPublished
             );
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: "product_publish_status_changed",
+                entityType: "product",
+                entityId: productId,
+                beforeValue: { isPublished: existingProduct.isPublished },
+                afterValue: { isPublished },
+                reason: isPublished ? "product_approved_go_live" : "product_publish_status_update",
+            });
 
             // posthog.capture({
             //     event: POSTHOG_EVENTS.PRODUCT.PUBLISHED,
@@ -1290,6 +1317,28 @@ export const productsRouter = createTRPCRouter({
                 productId,
                 isActive
             );
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: isActive ? "product_activated" : "product_delisted",
+                entityType: "product",
+                entityId: productId,
+                beforeValue: { isActive: existingProduct.isActive },
+                afterValue: { isActive },
+                reason: isActive ? "product_activated" : "product_delisted",
+            });
+            if (!isActive) {
+                await createOperationalAlert({
+                    actorId: user.id,
+                    type: "product_delisted",
+                    severity: "info",
+                    entityType: "product",
+                    entityId: productId,
+                    title: "Product delisted",
+                    message: `${existingProduct.title} was marked inactive.`,
+                    ownerRole: "product_manager",
+                    dedupeKey: `product:delisted:${productId}`,
+                });
+            }
             return data;
         }),
     sendProductForReview: protectedProcedure
@@ -1449,6 +1498,18 @@ export const productsRouter = createTRPCRouter({
                 userCartCache.dropAll(),
                 userWishlistCache.dropAll(),
             ]);
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: "product_deleted",
+                entityType: "product",
+                entityId: productId,
+                beforeValue: {
+                    title: existingProduct.title,
+                    isDeleted: existingProduct.isDeleted,
+                },
+                afterValue: { isDeleted: true },
+                reason: "product_deleted",
+            });
 
             posthog.capture({
                 event: POSTHOG_EVENTS.PRODUCT.DELETED,

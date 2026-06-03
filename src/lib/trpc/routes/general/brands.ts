@@ -6,6 +6,7 @@ import {
 } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { posthog } from "@/lib/posthog/client";
+import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import {
@@ -149,6 +150,30 @@ export const brandRequestsRouter = createTRPCRouter({
                     ...input,
                     ownerId: user.id,
                 });
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: "brand_request_created",
+                entityType: "brand_request",
+                entityId: newBrandRequest.id,
+                afterValue: {
+                    name: newBrandRequest.name,
+                    email: newBrandRequest.email,
+                    status: newBrandRequest.status,
+                },
+                reason: "new_brand_onboarding_submitted",
+            });
+            await createOperationalAlert({
+                actorId: user.id,
+                type: "new_brand_onboarding_submitted",
+                severity: "info",
+                entityType: "brand_request",
+                entityId: newBrandRequest.id,
+                title: "New brand onboarding submitted",
+                message: `${newBrandRequest.name} submitted a brand onboarding request.`,
+                ownerRole: "brand_manager",
+                channels: ["admin", "email"],
+                dedupeKey: `brand:onboarding:${newBrandRequest.id}`,
+            });
 
             await resend.batch.send([
                 {
@@ -358,6 +383,22 @@ export const brandRequestsRouter = createTRPCRouter({
                     }),
                 });
             }
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "brand_request_status_changed",
+                entityType: "brand_request",
+                entityId: id,
+                beforeValue: { status: existingBrandRequest.status },
+                afterValue: {
+                    status: data.status,
+                    rejectionReason: data.rejectionReason,
+                    brandId: newBrand ? newBrand.id : null,
+                },
+                reason:
+                    data.status === "approved"
+                        ? "BRD_ACTIVATED"
+                        : data.rejectionReason ?? "BRD_OFFBOARDED_BREACH",
+            });
 
             return true;
         }),
@@ -420,6 +461,18 @@ export const brandRequestsRouter = createTRPCRouter({
             }
 
             await queries.brandRequests.deleteBrandRequest(input.id);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "brand_request_deleted",
+                entityType: "brand_request",
+                entityId: input.id,
+                beforeValue: {
+                    status: existingBrandRequest.status,
+                    name: existingBrandRequest.name,
+                    email: existingBrandRequest.email,
+                },
+                reason: "brand_request_withdrawn_or_removed",
+            });
 
             posthog.capture({
                 distinctId: existingBrandRequest.ownerId,
@@ -551,6 +604,15 @@ export const brandVerificationsRouter = createTRPCRouter({
                 brandCache.remove(existingBrandConfidential.brand.id),
                 userCache.remove(existingBrandConfidential.brand.ownerId),
             ]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "brand_kyc_verified",
+                entityType: "brand_confidential",
+                entityId: id,
+                beforeValue: { verificationStatus: existingBrandConfidential.verificationStatus },
+                afterValue: { verificationStatus: "approved" },
+                reason: "BRD_ACTIVATED",
+            });
 
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
@@ -625,6 +687,30 @@ export const brandVerificationsRouter = createTRPCRouter({
                 brandCache.remove(existingBrandConfidential.brand.id),
                 userCache.remove(existingBrandConfidential.brand.ownerId),
             ]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "brand_kyc_rejected",
+                entityType: "brand_confidential",
+                entityId: id,
+                beforeValue: { verificationStatus: existingBrandConfidential.verificationStatus },
+                afterValue: {
+                    verificationStatus: "rejected",
+                    rejectedReason,
+                },
+                reason: rejectedReason ?? "BRD_PAUSED_QUALITY",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "brand_kyc_rejected",
+                severity: "warning",
+                entityType: "brand_confidential",
+                entityId: id,
+                title: "Brand verification rejected",
+                message: `${existingBrandConfidential.brand.name} verification was rejected.`,
+                ownerRole: "brand_manager",
+                channels: ["admin", "email"],
+                dedupeKey: `brand:kyc-rejected:${id}`,
+            });
 
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
@@ -709,6 +795,27 @@ export const brandsRouter = createTRPCRouter({
 
             await queries.brands.updateBrand(id, { isActive });
             await brandCache.remove(id);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "brand_status_changed",
+                entityType: "brand",
+                entityId: id,
+                beforeValue: { isActive: existingBrand.isActive },
+                afterValue: { isActive },
+                reason: isActive ? "BRD_ACTIVATED" : "BRD_PAUSED_REQUEST",
+            });
+            await createOperationalAlert({
+                actorId: ctx.user.id,
+                type: "brand_status_changed",
+                severity: isActive ? "info" : "warning",
+                entityType: "brand",
+                entityId: id,
+                title: isActive ? "Brand activated" : "Brand paused",
+                message: `${existingBrand.name} is now ${isActive ? "active" : "inactive"}.`,
+                ownerRole: "brand_manager",
+                channels: ["admin", "email"],
+                dedupeKey: `brand:status:${id}:${isActive}`,
+            });
 
             return { success: true, isActive };
         }),

@@ -4,6 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input-dash";
+import {
+    SUPPORT_CATEGORY_MATRIX,
+    SUPPORT_CHANNELS,
+    type SupportChannel,
+} from "@/lib/customer-support/playbook";
 import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { cn, convertPaiseToRupees, formatPriceTag } from "@/lib/utils";
@@ -52,120 +57,170 @@ const statusTabs: Array<{ key: StatusTab; label: string }> = [
     { key: "resolved", label: "Resolved" },
 ];
 
+const channelLabels: Record<SupportChannel, string> = {
+    web_form: "Web form",
+    email: "Support email",
+    instagram_dm: "Instagram DM",
+    whatsapp_business: "WhatsApp Business",
+    order_page: "Order page",
+    admin_manual: "Admin manual",
+};
+
+function formatSupportCategoryLabel(category: string) {
+    return category
+        .replaceAll("_", " ")
+        .toLowerCase()
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+const categoryOptions = Object.values(SUPPORT_CATEGORY_MATRIX).map((item) => ({
+    value: item.category,
+    label: formatSupportCategoryLabel(item.category),
+}));
+
 const statusOptions = [
-    "open",
-    "in_review",
-    "waiting_for_customer",
-    "waiting_for_brand",
-    "approved",
-    "rejected",
+    "new",
+    "acknowledged",
+    "in_progress",
+    "waiting_customer",
+    "waiting_brand",
+    "waiting_internal",
     "resolved",
+    "refunded",
+    "replaced",
+    "declined",
     "closed",
+    "auto_closed",
+    "reopened",
     "escalated",
 ] as const;
 
 const statusLabels: Record<(typeof statusOptions)[number], string> = {
-    open: "Open",
-    in_review: "In review",
-    waiting_for_customer: "Waiting for customer",
-    waiting_for_brand: "Waiting for brand",
-    approved: "Approved",
-    rejected: "Rejected",
+    new: "New",
+    acknowledged: "Acknowledged",
+    in_progress: "In progress",
+    waiting_customer: "Waiting for customer",
+    waiting_brand: "Waiting for brand",
+    waiting_internal: "Waiting internal",
     resolved: "Resolved",
+    refunded: "Refunded",
+    replaced: "Replaced",
+    declined: "Declined",
     closed: "Closed",
+    auto_closed: "Auto-closed",
+    reopened: "Reopened",
     escalated: "Escalated",
+};
+
+type SupportResolutionCode =
+    | "RES_REFUND_FULL"
+    | "RES_REFUND_PARTIAL"
+    | "RES_REPLACEMENT"
+    | "RES_INFO_PROVIDED"
+    | "RES_REDIRECTED_TO_BRAND"
+    | "RES_DECLINED_OUT_OF_WINDOW"
+    | "RES_DECLINED_INELIGIBLE"
+    | "RES_DECLINED_OTHER"
+    | "RES_GOODWILL"
+    | "RES_AUTOCLOSED_NO_RESPONSE"
+    | "RES_DUPLICATE_TICKET"
+    | "RES_ESCALATED_TO_LEGAL";
+
+const terminalResolutionCodeByStatus: Partial<
+    Record<(typeof statusOptions)[number], SupportResolutionCode>
+> = {
+    resolved: "RES_INFO_PROVIDED",
+    refunded: "RES_REFUND_FULL",
+    replaced: "RES_REPLACEMENT",
+    declined: "RES_DECLINED_OTHER",
+    closed: "RES_INFO_PROVIDED",
+    auto_closed: "RES_AUTOCLOSED_NO_RESPONSE",
 };
 
 function getSuggestedActions(status: string, queue: QueueTab) {
     if (queue === "brand") {
-        if (status === "open") {
+        if (status === "new" || status === "acknowledged") {
             return [
-                { label: "Start review", status: "in_review" as const },
+                { label: "Start review", status: "in_progress" as const },
                 {
                     label: "Request brand update",
-                    status: "waiting_for_brand" as const,
+                    status: "waiting_brand" as const,
                 },
                 { label: "Resolve case", status: "resolved" as const },
             ];
         }
 
-        if (status === "in_review") {
+        if (status === "in_progress" || status === "reopened") {
             return [
                 {
                     label: "Request brand update",
-                    status: "waiting_for_brand" as const,
+                    status: "waiting_brand" as const,
                 },
                 { label: "Resolve case", status: "resolved" as const },
                 { label: "Escalate", status: "escalated" as const },
             ];
         }
 
-        if (status === "waiting_for_brand") {
+        if (status === "waiting_brand") {
             return [
-                { label: "Resume review", status: "in_review" as const },
+                { label: "Resume review", status: "in_progress" as const },
                 { label: "Resolve case", status: "resolved" as const },
                 { label: "Close case", status: "closed" as const },
             ];
         }
 
         return [
-            { label: "Reopen case", status: "in_review" as const },
+            { label: "Reopen case", status: "reopened" as const },
             { label: "Close case", status: "closed" as const },
         ];
     }
 
-    if (status === "open") {
+    if (status === "new" || status === "acknowledged") {
         return [
-            { label: "Start review", status: "in_review" as const },
+            { label: "Start review", status: "in_progress" as const },
             {
                 label: "Need customer reply",
-                status: "waiting_for_customer" as const,
+                status: "waiting_customer" as const,
             },
             { label: "Resolve case", status: "resolved" as const },
         ];
     }
 
-    if (status === "in_review") {
+    if (status === "in_progress" || status === "reopened") {
         return [
             {
                 label: "Need customer reply",
-                status: "waiting_for_customer" as const,
+                status: "waiting_customer" as const,
             },
             {
                 label: "Need brand action",
-                status: "waiting_for_brand" as const,
+                status: "waiting_brand" as const,
             },
             { label: "Resolve case", status: "resolved" as const },
+            { label: "Refunded", status: "refunded" as const },
+            { label: "Replaced", status: "replaced" as const },
+            { label: "Decline", status: "declined" as const },
             { label: "Escalate", status: "escalated" as const },
         ];
     }
 
-    if (status === "waiting_for_customer") {
+    if (status === "waiting_customer") {
         return [
-            { label: "Resume review", status: "in_review" as const },
+            { label: "Resume review", status: "in_progress" as const },
             { label: "Resolve case", status: "resolved" as const },
             { label: "Close case", status: "closed" as const },
         ];
     }
 
-    if (status === "waiting_for_brand") {
+    if (status === "waiting_brand" || status === "waiting_internal") {
         return [
-            { label: "Resume review", status: "in_review" as const },
-            { label: "Approve case", status: "approved" as const },
+            { label: "Resume review", status: "in_progress" as const },
             { label: "Resolve case", status: "resolved" as const },
-        ];
-    }
-
-    if (status === "approved") {
-        return [
-            { label: "Mark in progress", status: "in_review" as const },
-            { label: "Resolve case", status: "resolved" as const },
-            { label: "Close case", status: "closed" as const },
         ];
     }
 
     return [
-        { label: "Reopen case", status: "in_review" as const },
+        { label: "Reopen case", status: "reopened" as const },
         { label: "Close case", status: "closed" as const },
     ];
 }
@@ -189,18 +244,31 @@ function buildSupportDisplayTitle(input: {
 }
 
 function isStatusInTab(status: string, tab: StatusTab) {
-    if (tab === "new") return status === "open";
+    if (tab === "new") return ["new", "acknowledged", "open"].includes(status);
     if (tab === "opened") {
         return [
+            "in_progress",
+            "waiting_customer",
+            "waiting_brand",
+            "waiting_internal",
+            "reopened",
+            "escalated",
             "in_review",
             "waiting_for_customer",
             "waiting_for_brand",
             "approved",
-            "escalated",
         ].includes(status);
     }
 
-    return ["resolved", "closed", "rejected"].includes(status);
+    return [
+        "resolved",
+        "refunded",
+        "replaced",
+        "declined",
+        "closed",
+        "auto_closed",
+        "rejected",
+    ].includes(status);
 }
 
 function formatDisplayStatus(value?: string | null) {
@@ -255,6 +323,16 @@ export default function AdminSupportPage() {
     const [statusTab, setStatusTab] = useState<StatusTab>("new");
     const [selectedId, setSelectedId] = useState(ticketParam);
     const [search, setSearch] = useState("");
+    const [manualIntakeOpen, setManualIntakeOpen] = useState(false);
+    const [manualTicket, setManualTicket] = useState({
+        customer: "",
+        sourceChannel: "instagram_dm" as SupportChannel,
+        category: "OTHER",
+        subject: "",
+        description: "",
+        orderId: "",
+        brandId: "",
+    });
     const [replyText, setReplyText] = useState("");
     const [noteText, setNoteText] = useState("");
     const [couponSummary, setCouponSummary] = useState("Apology coupon");
@@ -307,6 +385,29 @@ export default function AdminSupportPage() {
             },
             { enabled: queue === "brand" }
         );
+    const supportHealthQuery =
+        trpc.general.adminSupportRouter.getSupportHealth.useQuery();
+    const manualTicketMutation =
+        trpc.general.adminSupportRouter.createManualUserTicket.useMutation({
+            onSuccess: (ticket) => {
+                toast.success("Customer support ticket created");
+                setQueue("user");
+                setSelectedId(ticket.id);
+                setManualIntakeOpen(false);
+                setManualTicket({
+                    customer: "",
+                    sourceChannel: "instagram_dm",
+                    category: "OTHER",
+                    subject: "",
+                    description: "",
+                    orderId: "",
+                    brandId: "",
+                });
+                userTicketsQuery.refetch();
+                supportHealthQuery.refetch();
+            },
+            onError: (error) => toast.error(error.message),
+        });
 
     const userTicketQuery =
         trpc.general.adminSupportRouter.getUserTicket.useQuery(selectedId, {
@@ -409,6 +510,24 @@ export default function AdminSupportPage() {
             },
             onError: (error) => toast.error(error.message),
         });
+    const dailyCheckInMutation =
+        trpc.general.adminSupportRouter.createDailyCheckIn.useMutation({
+            onSuccess: (check) => {
+                toast.success(`${check.checkType} support check-in logged`);
+                supportHealthQuery.refetch();
+            },
+            onError: (error) => toast.error(error.message),
+        });
+    const weeklySummaryMutation =
+        trpc.general.adminSupportRouter.generateWeeklySummary.useMutation({
+            onSuccess: () => toast.success("Support weekly summary generated"),
+            onError: (error) => toast.error(error.message),
+        });
+    const monthlyReviewMutation =
+        trpc.general.adminSupportRouter.generateMonthlyPatternReview.useMutation({
+            onSuccess: () => toast.success("Support monthly pattern review generated"),
+            onError: (error) => toast.error(error.message),
+        });
 
     const queueItems: any[] = useMemo(() => {
         if (queue === "user") return userTicketsQuery.data?.data ?? [];
@@ -418,7 +537,7 @@ export default function AdminSupportPage() {
     const filteredQueueItems = useMemo(
         () =>
             queueItems.filter((item) =>
-                isStatusInTab(item.status ?? "open", statusTab)
+                isStatusInTab(item.status ?? "new", statusTab)
             ),
         [queueItems, statusTab]
     );
@@ -469,6 +588,27 @@ export default function AdminSupportPage() {
         }
     };
 
+    const handleManualTicketSubmit = () => {
+        if (
+            !manualTicket.customer.trim() ||
+            !manualTicket.subject.trim() ||
+            !manualTicket.description.trim()
+        ) {
+            toast.error("Customer, subject, and description are required");
+            return;
+        }
+
+        manualTicketMutation.mutate({
+            customer: manualTicket.customer.trim(),
+            sourceChannel: manualTicket.sourceChannel,
+            category: manualTicket.category,
+            subject: manualTicket.subject.trim(),
+            description: manualTicket.description.trim(),
+            orderId: manualTicket.orderId.trim() || undefined,
+            brandId: manualTicket.brandId.trim() || undefined,
+        });
+    };
+
     const sendReply = () => {
         if (!selectedId || (!replyText.trim() && attachments.length === 0)) {
             return;
@@ -509,11 +649,13 @@ export default function AdminSupportPage() {
 
     const updateSelectedStatus = (status: (typeof statusOptions)[number]) => {
         if (!selectedRecord) return;
+        const resolutionCode = terminalResolutionCodeByStatus[status];
 
         if (queue === "user") {
             updateUserStatusMutation.mutate({
                 ticketId: selectedRecord.id,
                 status,
+                ...(resolutionCode ? { resolutionCode } : {}),
             });
             return;
         }
@@ -521,12 +663,100 @@ export default function AdminSupportPage() {
         updateBrandStatusMutation.mutate({
             ticketId: selectedRecord.id,
             status,
+            ...(resolutionCode ? { resolutionCode } : {}),
         });
     };
 
     return (
         <div className="bg-[#EDF2F8] p-6">
             <div className="space-y-6">
+                <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+                    {[
+                        {
+                            label: "Open tickets",
+                            value: supportHealthQuery.data?.openTickets ?? "-",
+                        },
+                        {
+                            label: "Aged >24H (24 Hours)",
+                            value: supportHealthQuery.data?.agedTickets24h ?? "-",
+                        },
+                        {
+                            label: "Approaching SLA (Service Level Agreement)",
+                            value: supportHealthQuery.data?.approachingSla ?? "-",
+                        },
+                        {
+                            label: "Breached SLA (Service Level Agreement)",
+                            value: supportHealthQuery.data?.breachedSla ?? "-",
+                        },
+                        {
+                            label: "CSAT (Customer Satisfaction) 7D",
+                            value:
+                                supportHealthQuery.data?.csatAverage == null
+                                    ? "-"
+                                    : supportHealthQuery.data.csatAverage.toFixed(1),
+                        },
+                        {
+                            label: "SLA Hit Rate (Service Level Agreement)",
+                            value:
+                                supportHealthQuery.data?.slaHitRate == null
+                                    ? "-"
+                                    : `${supportHealthQuery.data.slaHitRate}%`,
+                        },
+                    ].map((item) => (
+                        <Card
+                            key={item.label}
+                            className="rounded-[22px] border border-[#D7E2EF] bg-white p-4 shadow-[0_12px_36px_rgba(37,61,94,0.05)]"
+                        >
+                            <p className="text-[10px] font-semibold uppercase tracking-normal text-[#6B94C1]">
+                                {item.label}
+                            </p>
+                            <p className="mt-2 text-2xl font-semibold text-slate-950">
+                                {item.value}
+                            </p>
+                        </Card>
+                    ))}
+                </section>
+
+                <section className="flex flex-wrap items-center gap-2">
+                    {(["morning", "midday", "eod"] as const).map((checkType) => (
+                        <Button
+                            key={checkType}
+                            variant="outline"
+                            className="rounded-full bg-white"
+                            onClick={() =>
+                                dailyCheckInMutation.mutate({
+                                    checkType,
+                                    summary: `${checkType} support queue check`,
+                                })
+                            }
+                        >
+                            Log{" "}
+                            {checkType === "eod"
+                                ? "EOD (End Of Day)"
+                                : checkType}{" "}
+                            check
+                        </Button>
+                    ))}
+                    <Button
+                        variant="outline"
+                        className="rounded-full bg-white"
+                        onClick={() =>
+                            weeklySummaryMutation.mutate({
+                                summary: "Friday customer support weekly summary",
+                            })
+                        }
+                    >
+                        Weekly summary
+                    </Button>
+                    <Button
+                        variant="outline"
+                        className="rounded-full bg-white"
+                        onClick={() => monthlyReviewMutation.mutate({})}
+                    >
+                        Monthly review
+                    </Button>
+                </section>
+
                 <Card className="rounded-[34px] border border-[#D7E2EF] bg-white p-6 shadow-[0_18px_50px_rgba(37,61,94,0.06)]">
                     <div className="space-y-5">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
@@ -574,17 +804,128 @@ export default function AdminSupportPage() {
                                     </div>
                                 </div>
                             </div>
-                            <div className="xl:w-[360px]">
-                                <Input
-                                    value={search}
-                                    onChange={(event) =>
-                                        setSearch(event.target.value)
-                                    }
-                                    placeholder="Search support cases"
-                                    className="h-12 rounded-2xl border-[#D7E2EF] bg-[#FBFDFF]"
-                                />
+                            <div className="flex flex-col gap-3 xl:w-[420px]">
+                                <div className="flex gap-2">
+                                    <Button
+                                        type="button"
+                                        onClick={() =>
+                                            setManualIntakeOpen((value) => !value)
+                                        }
+                                        className="h-12 rounded-2xl bg-[#1F2937] px-4 text-white hover:bg-[#111827]"
+                                    >
+                                        Intake ticket
+                                    </Button>
+                                    <Input
+                                        value={search}
+                                        onChange={(event) =>
+                                            setSearch(event.target.value)
+                                        }
+                                        placeholder="Search support cases"
+                                        className="h-12 rounded-2xl border-[#D7E2EF] bg-[#FBFDFF]"
+                                    />
+                                </div>
                             </div>
                         </div>
+
+                        {manualIntakeOpen && (
+                            <div className="rounded-[22px] border border-[#DDE6F0] bg-[#F8FBFF] p-4">
+                                <div className="grid gap-3 lg:grid-cols-4">
+                                    <Input
+                                        value={manualTicket.customer}
+                                        onChange={(event) =>
+                                            setManualTicket((current) => ({
+                                                ...current,
+                                                customer: event.target.value,
+                                            }))
+                                        }
+                                        placeholder="Customer email or user ID"
+                                        className="h-11 rounded-2xl border-[#D7E2EF] bg-white"
+                                    />
+                                    <select
+                                        value={manualTicket.sourceChannel}
+                                        onChange={(event) =>
+                                            setManualTicket((current) => ({
+                                                ...current,
+                                                sourceChannel: event.target
+                                                    .value as SupportChannel,
+                                            }))
+                                        }
+                                        className="h-11 rounded-2xl border border-[#D7E2EF] bg-white px-3 text-sm text-slate-800"
+                                    >
+                                        {SUPPORT_CHANNELS.map((channel) => (
+                                            <option key={channel} value={channel}>
+                                                {channelLabels[channel]}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <select
+                                        value={manualTicket.category}
+                                        onChange={(event) =>
+                                            setManualTicket((current) => ({
+                                                ...current,
+                                                category: event.target.value,
+                                            }))
+                                        }
+                                        className="h-11 rounded-2xl border border-[#D7E2EF] bg-white px-3 text-sm text-slate-800"
+                                    >
+                                        {categoryOptions.map((category) => (
+                                            <option
+                                                key={category.value}
+                                                value={category.value}
+                                            >
+                                                {category.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <Input
+                                        value={manualTicket.orderId}
+                                        onChange={(event) =>
+                                            setManualTicket((current) => ({
+                                                ...current,
+                                                orderId: event.target.value,
+                                            }))
+                                        }
+                                        placeholder="Order ID optional"
+                                        className="h-11 rounded-2xl border-[#D7E2EF] bg-white"
+                                    />
+                                </div>
+                                <div className="mt-3 grid gap-3 lg:grid-cols-[1fr_1.4fr_auto]">
+                                    <Input
+                                        value={manualTicket.subject}
+                                        onChange={(event) =>
+                                            setManualTicket((current) => ({
+                                                ...current,
+                                                subject: event.target.value,
+                                            }))
+                                        }
+                                        placeholder="Subject"
+                                        className="h-11 rounded-2xl border-[#D7E2EF] bg-white"
+                                    />
+                                    <textarea
+                                        value={manualTicket.description}
+                                        onChange={(event) =>
+                                            setManualTicket((current) => ({
+                                                ...current,
+                                                description: event.target.value,
+                                            }))
+                                        }
+                                        placeholder="Customer message"
+                                        rows={2}
+                                        className="min-h-11 rounded-2xl border border-[#D7E2EF] bg-white px-3 py-2 text-sm text-slate-800 outline-none transition focus:border-slate-400"
+                                    />
+                                    <Button
+                                        type="button"
+                                        onClick={handleManualTicketSubmit}
+                                        disabled={manualTicketMutation.isPending}
+                                        className="h-11 rounded-2xl bg-[#0F766E] px-5 text-white hover:bg-[#115E59]"
+                                    >
+                                        {manualTicketMutation.isPending
+                                            ? "Creating"
+                                            : "Create"}
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
 
                         <div className="overflow-x-auto">
                             <div className="inline-flex min-w-full gap-2 rounded-[18px] border border-[#D7E2EF] bg-[#F8FBFF] p-1.5">
@@ -821,12 +1162,14 @@ export default function AdminSupportPage() {
                                                                         action.status ===
                                                                             "resolved" ||
                                                                             action.status ===
-                                                                                "approved"
+                                                                                "refunded" ||
+                                                                            action.status ===
+                                                                                "replaced"
                                                                             ? "border-[#CFE3F8] bg-[#F3F8FF] text-[#1D4F80] hover:border-[#A8CBEE] hover:bg-white"
                                                                             : action.status ===
                                                                                     "closed" ||
                                                                                 action.status ===
-                                                                                    "rejected"
+                                                                                    "declined"
                                                                               ? "border-[#E2E8F0] bg-[#F8FAFC] text-slate-600 hover:border-slate-300 hover:bg-white"
                                                                               : "border-[#D7E2EF] bg-white text-slate-700 hover:border-[#BDD6EF] hover:bg-[#FAFCFF]"
                                                                     )}

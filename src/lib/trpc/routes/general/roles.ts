@@ -1,4 +1,5 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { auditEntityChange } from "@/lib/monitoring-sla/audit";
 import { roleCache, userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -66,6 +67,18 @@ export const rolesRouter = createTRPCRouter({
                 ...newRole,
                 users: 0,
             });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "role_created",
+                entityType: "role",
+                entityId: newRole.id,
+                afterValue: {
+                    name: newRole.name,
+                    slug: newRole.slug,
+                    sitePermissions: newRole.sitePermissions,
+                },
+                reason: "access_role_created",
+            });
 
             return newRole;
         }),
@@ -107,6 +120,23 @@ export const rolesRouter = createTRPCRouter({
                 }),
                 roleCache.remove(id),
             ]);
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "role_changed",
+                entityType: "role",
+                entityId: id,
+                beforeValue: {
+                    name: existingRole.name,
+                    slug: existingRole.slug,
+                    sitePermissions: existingRole.sitePermissions,
+                },
+                afterValue: {
+                    name: updatedRole.name,
+                    slug: updatedRole.slug,
+                    sitePermissions: updatedRole.sitePermissions,
+                },
+                reason: "access_role_changed",
+            });
 
             return updatedRole;
         }),
@@ -138,6 +168,25 @@ export const rolesRouter = createTRPCRouter({
                 }
 
                 await roleCache.drop();
+            });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "roles_reordered",
+                entityType: "role",
+                entityId: "site_roles",
+                beforeValue: {
+                    order: existingRoles.map((role) => ({
+                        id: role.id,
+                        position: role.position,
+                    })),
+                },
+                afterValue: {
+                    order: input.map((role) => ({
+                        id: role.id,
+                        position: role.position,
+                    })),
+                },
+                reason: "access_role_reorder",
             });
 
             return true;
@@ -194,6 +243,18 @@ export const rolesRouter = createTRPCRouter({
                     roleCache.addBulk(updateRoles),
                     userCache.drop(),
                 ]);
+            });
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "role_deleted",
+                entityType: "role",
+                entityId: id,
+                beforeValue: {
+                    name: existingRole.name,
+                    slug: existingRole.slug,
+                    sitePermissions: existingRole.sitePermissions,
+                },
+                reason: "access_role_deleted",
             });
 
             return true;

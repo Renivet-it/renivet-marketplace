@@ -81,6 +81,9 @@ export const brands = pgTable(
         confidentialVerificationRejectedAt: timestamp(
             "confidential_verification_rejected_at"
         ),
+        statusReasonCode: text("status_reason_code"),
+        contractSignedAt: timestamp("contract_signed_at"),
+        contractExpiresAt: timestamp("contract_expires_at"),
         embeddings: vector("embeddings", { dimensions: 384 }),
 
         ...timestamps,
@@ -139,6 +142,9 @@ export const brandConfidentials = pgTable(
         hasAcceptedTerms: boolean("has_accepted_terms")
             .notNull()
             .default(false),
+        sustainabilityCertificateExpiresAt: timestamp(
+            "sustainability_certificate_expires_at"
+        ),
         ...timestamps,
     },
     (table) => ({

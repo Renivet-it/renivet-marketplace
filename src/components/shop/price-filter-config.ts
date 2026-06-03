@@ -1,0 +1,2 @@
+export const SHOP_PRICE_FILTER_MAX = 25000;
+export const SHOP_PRICE_FILTER_STEP = 250;
