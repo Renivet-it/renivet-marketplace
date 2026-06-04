@@ -9,7 +9,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { orders, products, orderItems, orderShipments } from "@/lib/db/schema";
-import { sql, eq, and, gte } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export const analyticsRouter = createTRPCRouter({
 
@@ -80,11 +80,39 @@ getOverview: protectedProcedure
           WHERE brand_id = ${brandId}
       `);
 
+      const orderStatusCounts = await db.execute(sql`
+          SELECT
+              COUNT(*) FILTER (
+                  WHERE o.status = 'pending'
+                    AND os.status = 'pending'
+                    AND COALESCE(os.is_pickup_scheduled, false) = false
+              )::int AS new_orders,
+              COUNT(*) FILTER (
+                  WHERE COALESCE(os.is_pickup_scheduled, false) = true
+                     OR os.status = 'pickup_scheduled'
+              )::int AS pickup_scheduled,
+              COUNT(*) FILTER (
+                  WHERE os.status = 'in_transit'
+              )::int AS in_transit,
+              COUNT(*) FILTER (
+                  WHERE o.status = 'delivered'
+                     OR os.status = 'delivered'
+              )::int AS delivered
+          FROM ${orderShipments} os
+          JOIN ${orders} o ON os.order_id = o.id
+          WHERE os.brand_id = ${brandId}
+          AND o.created_at >= ${sinceISO}
+      `);
+
       return {
           totalOrders: Number(ordersCount[0]?.count ?? 0),
           totalRevenue: Number(revenue[0]?.sum ?? 0) / 100,
           returnRate: Number(returns[0]?.count ?? 0),
           activeProducts: Number(activeProducts[0]?.count ?? 0),
+          newOrders: Number(orderStatusCounts[0]?.new_orders ?? 0),
+          pickupScheduled: Number(orderStatusCounts[0]?.pickup_scheduled ?? 0),
+          inTransit: Number(orderStatusCounts[0]?.in_transit ?? 0),
+          delivered: Number(orderStatusCounts[0]?.delivered ?? 0),
       };
   }),
 
@@ -145,7 +173,7 @@ getOverview: protectedProcedure
 //         .query(async ({ input }) => {
 
 //             const result = await db.execute(sql`
-//                 SELECT 
+//                 SELECT
 //                     p.title AS name,
 //                     SUM(o.total_amount)::numeric AS sales,
 //                     COUNT(*)::int AS orders

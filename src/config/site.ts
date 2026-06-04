@@ -1054,16 +1054,6 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
-                    title: "Support",
-                    url: `/dashboard/brands/${brandId}/support?queue=support`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                },
-                {
-                    title: "Disputes",
-                    url: `/dashboard/brands/${brandId}/support/disputes`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                },
-                {
                     title: "Verification",
                     url: `/dashboard/brands/${brandId}/verification`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
@@ -1094,6 +1084,23 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     title: "Memberships",
                     url: `/dashboard/brands/${brandId}/memberships`,
                     permissions: BitFieldBrandPermission.ADMINISTRATOR,
+                },
+            ],
+        },
+        {
+            title: "Support",
+            url: "#",
+            icon: "LifeBuoy",
+            items: [
+                {
+                    title: "Support",
+                    url: `/dashboard/brands/${brandId}/support?queue=support`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Disputes",
+                    url: `/dashboard/brands/${brandId}/support/disputes`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
             ],
         },

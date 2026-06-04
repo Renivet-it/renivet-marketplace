@@ -270,24 +270,43 @@ class OrderQuery {
         if (statusTab && statusTab !== "all") {
             switch (statusTab) {
                 case "ready_to_pickup":
-                    // orders.status = 'pending' OR orderShipments.status = 'pending' (any pending status)
+                    // Ready excludes pickup-scheduled shipments so scheduled orders only appear in Pickup Scheduled.
                     whereConditions.push(
-                        or(
-                            eq(orders.status, "pending"),
-                            inArray(
-                                orders.id,
-                                db
-                                    .select({ orderId: orderShipments.orderId })
-                                    .from(orderShipments)
-                                    .where(eq(orderShipments.status, "pending"))
-                            )
+                        and(
+                            or(
+                                eq(orders.status, "pending"),
+                                inArray(
+                                    orders.id,
+                                    db
+                                        .select({
+                                            orderId: orderShipments.orderId,
+                                        })
+                                        .from(orderShipments)
+                                        .where(
+                                            and(
+                                                eq(
+                                                    orderShipments.status,
+                                                    "pending"
+                                                ),
+                                                eq(
+                                                    orderShipments.isPickupScheduled,
+                                                    false
+                                                )
+                                            )
+                                        )
+                                )
+                            ),
+                            sql`${orders.id} NOT IN (
+                                SELECT order_id FROM order_shipments
+                                WHERE is_pickup_scheduled = true
+                                   OR status = 'pickup_scheduled'
+                            )`
                         )
                     );
                     break;
 
                 case "pickup_scheduled":
-                    // orders.status = 'pending' AND orderShipments.isPickupScheduled = true AND orderShipments.status = 'pending'
-                    whereConditions.push(eq(orders.status, "pending"));
+                    // Pickup scheduled includes either the flag or the normalized shipment status.
                     whereConditions.push(
                         inArray(
                             orders.id,
@@ -295,12 +314,15 @@ class OrderQuery {
                                 .select({ orderId: orderShipments.orderId })
                                 .from(orderShipments)
                                 .where(
-                                    and(
+                                    or(
                                         eq(
                                             orderShipments.isPickupScheduled,
                                             true
                                         ),
-                                        eq(orderShipments.status, "pending")
+                                        eq(
+                                            orderShipments.status,
+                                            "pickup_scheduled"
+                                        )
                                     )
                                 )
                         )
@@ -505,38 +527,58 @@ class OrderQuery {
             // All orders
             db.$count(orders, baseFilter),
 
-            // Ready to pickup: orders.status = 'pending' OR orderShipments.status = 'pending'
+            // Ready to pickup: pending orders/shipments that are not pickup scheduled.
             db.$count(
                 orders,
                 and(
-                    or(
-                        eq(orders.status, "pending"),
-                        inArray(
-                            orders.id,
-                            db
-                                .select({ orderId: orderShipments.orderId })
-                                .from(orderShipments)
-                                .where(eq(orderShipments.status, "pending"))
-                        )
+                    and(
+                        or(
+                            eq(orders.status, "pending"),
+                            inArray(
+                                orders.id,
+                                db
+                                    .select({ orderId: orderShipments.orderId })
+                                    .from(orderShipments)
+                                    .where(
+                                        and(
+                                            eq(
+                                                orderShipments.status,
+                                                "pending"
+                                            ),
+                                            eq(
+                                                orderShipments.isPickupScheduled,
+                                                false
+                                            )
+                                        )
+                                    )
+                            )
+                        ),
+                        sql`${orders.id} NOT IN (
+                            SELECT order_id FROM order_shipments
+                            WHERE is_pickup_scheduled = true
+                               OR status = 'pickup_scheduled'
+                        )`
                     ),
                     baseFilter
                 )
             ),
 
-            // Pickup scheduled: orders.status = 'pending' AND orderShipments.isPickupScheduled = true
+            // Pickup scheduled: shipment is flagged scheduled or has pickup_scheduled status.
             db.$count(
                 orders,
                 and(
-                    eq(orders.status, "pending"),
                     inArray(
                         orders.id,
                         db
                             .select({ orderId: orderShipments.orderId })
                             .from(orderShipments)
                             .where(
-                                and(
+                                or(
                                     eq(orderShipments.isPickupScheduled, true),
-                                    eq(orderShipments.status, "pending")
+                                    eq(
+                                        orderShipments.status,
+                                        "pickup_scheduled"
+                                    )
                                 )
                             )
                     ),

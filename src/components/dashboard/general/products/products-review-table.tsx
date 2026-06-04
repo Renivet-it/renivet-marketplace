@@ -47,6 +47,7 @@ import {
 } from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
 import {
+    cn,
     convertPaiseToRupees,
     convertValueToLabel,
     formatPriceTag,
@@ -111,12 +112,12 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "title",
-        header: () => <div className="min-w-[16rem]">Title</div>,
+        header: () => <div className="min-w-[22rem]">Title</div>,
         enableHiding: false,
         cell: ({ row }) => (
-            <div className="min-w-[16rem] max-w-[20rem] px-2 py-1">
+            <div className="min-w-[22rem] max-w-[30rem] px-2 py-1">
                 <p
-                    className="line-clamp-2 break-words leading-snug"
+                    className="line-clamp-2 break-words text-sm font-medium leading-snug text-slate-900"
                     title={row.original.title}
                 >
                     {row.original.title}
@@ -134,7 +135,7 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
         cell: ({ row }) => {
             const data = row.original;
             return (
-                <span className="whitespace-nowrap">
+                <span className="whitespace-nowrap font-mono text-xs text-slate-600">
                     {data.nativeSku || "N/A"}
                 </span>
             );
@@ -152,7 +153,11 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
                     true
                 );
 
-                return <span>{price}</span>;
+                return (
+                    <span className="whitespace-nowrap font-semibold text-slate-950">
+                        {price}
+                    </span>
+                );
             }
 
             const minPriceRaw = Math.min(...data.variants.map((x) => x.price));
@@ -167,9 +172,15 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
                 true
             );
 
-            if (minPriceRaw === maxPriceRaw) return <span>{minPrice}</span>;
+            if (minPriceRaw === maxPriceRaw) {
+                return (
+                    <span className="whitespace-nowrap font-semibold text-slate-950">
+                        {minPrice}
+                    </span>
+                );
+            }
             return (
-                <span className="whitespace-nowrap">
+                <span className="whitespace-nowrap font-semibold text-slate-950">
                     {minPrice} - {maxPrice}
                 </span>
             );
@@ -631,11 +642,19 @@ export function ProductsReviewTable({
     };
 
     return (
-        <div className="space-y-4">
-            <div className="rounded-lg border bg-card p-3">
-                <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-6">
+        <div className="w-full rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-200 bg-slate-50/70 p-4">
+                <div
+                    className={cn(
+                        "grid gap-3 md:grid-cols-2",
+                        isBrandScoped
+                            ? "xl:grid-cols-[minmax(22rem,1.6fr)_12rem_12rem_12rem_auto]"
+                            : "xl:grid-cols-[minmax(20rem,1.5fr)_12rem_12rem_12rem_14rem_auto]"
+                    )}
+                >
                     <Input
                         placeholder="Search by title or SKU..."
+                        className="bg-white"
                         value={
                             (table
                                 .getColumn("title")
@@ -668,7 +687,7 @@ export function ProductsReviewTable({
                             setVerificationStatus(nextValue);
                         }}
                     >
-                        <SelectTrigger className="capitalize">
+                        <SelectTrigger className="bg-white capitalize">
                             <SelectValue placeholder="Search by status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -688,7 +707,7 @@ export function ProductsReviewTable({
                             setImageFilter(value)
                         }
                     >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Image" />
                         </SelectTrigger>
                         <SelectContent>
@@ -705,7 +724,7 @@ export function ProductsReviewTable({
                             setVisiblityFilter(value)
                         }
                     >
-                        <SelectTrigger>
+                        <SelectTrigger className="bg-white">
                             <SelectValue placeholder="Filter by Visibility" />
                         </SelectTrigger>
                         <SelectContent>
@@ -719,7 +738,7 @@ export function ProductsReviewTable({
                             <DropdownMenuTrigger asChild>
                                 <Button
                                     variant="outline"
-                                    className="w-full justify-start"
+                                    className="w-full justify-start bg-white"
                                 >
                                     {brandIds.length > 0
                                         ? `${brandIds.length} brand(s) selected`
@@ -782,7 +801,7 @@ export function ProductsReviewTable({
                     <Button
                         variant="outline"
                         onClick={clearAllFilters}
-                        className="w-full xl:w-auto"
+                        className="w-full bg-white xl:w-auto"
                     >
                         <Icons.ListRestart className="size-4" />
                         Clear all filters
@@ -790,40 +809,48 @@ export function ProductsReviewTable({
                 </div>
             </div>
 
-            {selectedProducts.length > 0 && (
-                <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-card p-2">
-                    <Badge variant="secondary">
-                        {selectedProducts.length} selected
-                    </Badge>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={copySelectedProductIds}
-                    >
-                        <Icons.Copy className="size-4" />
-                        Copy selected IDs
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => table.resetRowSelection()}
-                    >
-                        <Icons.X className="size-4" />
-                        Clear selection
-                    </Button>
+            <div className="flex flex-col gap-3 border-b border-slate-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-h-9">
+                    {selectedProducts.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary">
+                                {selectedProducts.length} selected
+                            </Badge>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={copySelectedProductIds}
+                            >
+                                <Icons.Copy className="size-4" />
+                                Copy IDs
+                            </Button>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => table.resetRowSelection()}
+                            >
+                                <Icons.X className="size-4" />
+                                Clear
+                            </Button>
+                        </div>
+                    ) : (
+                        <p className="flex h-9 items-center text-sm text-muted-foreground">
+                            {count} product{count === 1 ? "" : "s"} found
+                        </p>
+                    )}
                 </div>
-            )}
 
-            <div className="flex justify-end">
                 <DataTableViewOptions table={table} />
             </div>
 
-            <DataTable
-                columns={tableColumns}
-                table={table}
-                pages={pages}
-                count={count}
-            />
+            <div className="overflow-hidden">
+                <DataTable
+                    columns={tableColumns}
+                    table={table}
+                    pages={pages}
+                    count={count}
+                />
+            </div>
         </div>
     );
 }

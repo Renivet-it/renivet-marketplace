@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 
 export default function Page(props: PageProps) {
     return (
-        <DashShell className="max-w-7xl">
+        <DashShell className="max-w-none px-4 md:px-8 xl:px-10">
             <Suspense fallback={<AnalyticsLoadingSkeleton />}>
                 <AnalyticsFetch {...props} />
             </Suspense>
@@ -48,9 +48,11 @@ async function AnalyticsFetch({ params }: PageProps) {
     // if (!isBrandSubscribed) return <NotSubscribedCard bId={bId} />;
 
     return (
-        <div className="space-y-6">
-            <div>
-                <h1 className="text-3xl font-bold tracking-tight">Analytics Dashboard</h1>
+        <div className="mx-auto w-full max-w-[1320px] space-y-6">
+            <div className="flex flex-col gap-2">
+                <h1 className="text-3xl font-semibold tracking-tight">
+                    Analytics Dashboard
+                </h1>
                 <p className="text-muted-foreground mt-2">
                     Track your sales, orders, and performance metrics
                 </p>
@@ -98,9 +100,9 @@ function AnalyticsLoadingSkeleton() {
                     <div key={i} className="h-32 bg-muted rounded-lg" />
                 ))}
             </div>
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="flex flex-col gap-4">
                 {[...Array(2)].map((_, i) => (
-                    <div key={i} className="h-80 bg-muted rounded-lg" />
+                    <div key={i} className="h-80 w-full rounded-lg bg-muted" />
                 ))}
             </div>
         </div>
