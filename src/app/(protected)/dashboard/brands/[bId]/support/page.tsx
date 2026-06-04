@@ -9,11 +9,16 @@ import { useUploadThing } from "@/lib/uploadthing";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import {
+    AlertCircle,
+    CreditCard,
     FileImage,
+    ImagePlus,
     LifeBuoy,
     MessageSquareText,
     Package,
+    PackageSearch,
     Plus,
+    Settings,
     ShieldCheck,
     Sparkles,
 } from "lucide-react";
@@ -32,6 +37,39 @@ type UploadedAttachment = {
     sizeBytes?: string;
     fileKey?: string;
 };
+
+const supportIssueOptions = [
+    {
+        value: "orders",
+        label: "Orders",
+        description: "Shipment, pickup, delivery, cancellation, or RTO help.",
+        icon: PackageSearch,
+    },
+    {
+        value: "products",
+        label: "Products",
+        description: "Catalogue, stock, approval, media, or variant issues.",
+        icon: Package,
+    },
+    {
+        value: "payouts",
+        label: "Payouts",
+        description: "Settlements, invoices, deductions, or payment queries.",
+        icon: CreditCard,
+    },
+    {
+        value: "account",
+        label: "Account",
+        description: "Brand profile, members, access, or verification help.",
+        icon: Settings,
+    },
+    {
+        value: "operations",
+        label: "Operations",
+        description: "Packaging, pickup readiness, and day-to-day operations.",
+        icon: AlertCircle,
+    },
+] as const;
 
 function buildSupportDisplayTitle(input: {
     title?: string | null;
@@ -65,12 +103,19 @@ export default function BrandSupportPage() {
     const [statusFilter, setStatusFilter] = useState("all");
     const [newTitle, setNewTitle] = useState("");
     const [newIssueType, setNewIssueType] = useState("orders");
+    const [newPriority, setNewPriority] = useState<
+        "low" | "normal" | "high" | "critical"
+    >("normal");
     const [newDescription, setNewDescription] = useState("");
+    const [newAttachments, setNewAttachments] = useState<UploadedAttachment[]>(
+        []
+    );
     const [replyText, setReplyText] = useState("");
     const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
     const [replacementNote, setReplacementNote] = useState("");
     const [isUploading, setIsUploading] = useState(false);
-    const fileInputRef = useRef<HTMLInputElement>(null);
+    const newFileInputRef = useRef<HTMLInputElement>(null);
+    const replyFileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         setQueue(queueParam === "disputes" ? "disputes" : "support");
@@ -121,7 +166,9 @@ export default function BrandSupportPage() {
                 toast.success("Support request created");
                 setNewTitle("");
                 setNewIssueType("orders");
+                setNewPriority("normal");
                 setNewDescription("");
+                setNewAttachments([]);
                 setSelectedId(ticket.id);
                 supportTicketsQuery.refetch();
             },
@@ -150,21 +197,31 @@ export default function BrandSupportPage() {
             onError: (error) => toast.error(error.message),
         });
 
-    const uploadAttachments = async (files: File[]) => {
+    const uploadAttachments = async (
+        files: File[],
+        target: "new" | "reply" = "reply"
+    ) => {
         setIsUploading(true);
         try {
             const uploaded = await startUpload(files);
             if (!uploaded?.length) throw new Error("Upload failed");
-            setAttachments((current) => [
-                ...current,
-                ...uploaded.map((file) => ({
-                    filename: file.name,
-                    url: file.url ?? file.appUrl,
-                    contentType: file.type,
-                    sizeBytes: String(file.size),
-                    fileKey: file.key,
-                })),
-            ]);
+            const nextAttachments = uploaded.map((file) => ({
+                filename: file.name,
+                url: file.url ?? file.appUrl,
+                contentType: file.type,
+                sizeBytes: String(file.size),
+                fileKey: file.key,
+            }));
+
+            if (target === "new") {
+                setNewAttachments((current) => [
+                    ...current,
+                    ...nextAttachments,
+                ]);
+                return;
+            }
+
+            setAttachments((current) => [...current, ...nextAttachments]);
         } catch (error) {
             toast.error(
                 error instanceof Error ? error.message : "Upload failed"
@@ -184,20 +241,24 @@ export default function BrandSupportPage() {
     const selectedDispute = disputeQuery.data;
 
     return (
-        <div className="space-y-6 p-6">
-            <section className="rounded-[28px] border border-slate-200 bg-gradient-to-br from-white via-[#F7FBFF] to-[#EEF5FF] p-6 shadow-sm">
+        <div className="space-y-5 p-6">
+            <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                        <div className="inline-flex items-center gap-2 rounded-full border border-[#CFE3F8] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#4A84B8]">
+                        <div className="inline-flex items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
                             <LifeBuoy className="size-3.5" />
                             Brand Support
                         </div>
-                        <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-                            Support requests and approved disputes for your team
+                        <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">
+                            Support center
                         </h1>
+                        <p className="mt-1 text-sm text-slate-500">
+                            Raise tickets with screenshots, track replies, and
+                            handle approved disputes.
+                        </p>
                     </div>
 
-                    <div className="flex gap-2 rounded-full border border-slate-200 bg-white p-1">
+                    <div className="flex gap-2 rounded-md border border-slate-200 bg-slate-50 p-1">
                         <button
                             onClick={() => {
                                 const basePath = pathname.endsWith("/disputes")
@@ -210,7 +271,7 @@ export default function BrandSupportPage() {
                             className={cn(
                                 "rounded-full px-4 py-2 text-sm font-medium transition",
                                 queue === "support"
-                                    ? "bg-[#5B9BD5] text-white"
+                                    ? "bg-slate-900 text-white"
                                     : "text-slate-600 hover:bg-slate-50"
                             )}
                         >
@@ -228,7 +289,7 @@ export default function BrandSupportPage() {
                             className={cn(
                                 "rounded-full px-4 py-2 text-sm font-medium transition",
                                 queue === "disputes"
-                                    ? "bg-[#5B9BD5] text-white"
+                                    ? "bg-slate-900 text-white"
                                     : "text-slate-600 hover:bg-slate-50"
                             )}
                         >
@@ -238,8 +299,8 @@ export default function BrandSupportPage() {
                 </div>
             </section>
 
-            <div className="grid gap-6 xl:grid-cols-[340px_1fr]">
-                <Card className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="grid gap-5 xl:grid-cols-[380px_1fr]">
+                <Card className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="space-y-4">
                         <Input
                             value={search}
@@ -273,10 +334,16 @@ export default function BrandSupportPage() {
                     </div>
 
                     {queue === "support" && (
-                        <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#4A84B8]">
-                                Raise brand support
-                            </p>
+                        <div className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                    New support request
+                                </p>
+                                <p className="mt-1 text-sm text-slate-600">
+                                    Add images, invoices, or screenshots so the
+                                    support team can act faster.
+                                </p>
+                            </div>
                             <div className="mt-3 space-y-3">
                                 <Input
                                     value={newTitle}
@@ -284,21 +351,60 @@ export default function BrandSupportPage() {
                                         setNewTitle(event.target.value)
                                     }
                                     placeholder="Ticket title"
-                                    className="rounded-2xl bg-white"
+                                    className="bg-white"
                                 />
+                                <div className="grid gap-2">
+                                    {supportIssueOptions.map((option) => {
+                                        const Icon = option.icon;
+                                        const isSelected =
+                                            newIssueType === option.value;
+
+                                        return (
+                                            <button
+                                                key={option.value}
+                                                type="button"
+                                                onClick={() =>
+                                                    setNewIssueType(
+                                                        option.value
+                                                    )
+                                                }
+                                                className={cn(
+                                                    "flex gap-3 rounded-md border bg-white p-3 text-left transition",
+                                                    isSelected
+                                                        ? "border-slate-900 ring-1 ring-slate-900"
+                                                        : "border-slate-200 hover:border-slate-300"
+                                                )}
+                                            >
+                                                <Icon className="mt-0.5 size-4 shrink-0 text-slate-600" />
+                                                <span>
+                                                    <span className="block text-sm font-semibold text-slate-900">
+                                                        {option.label}
+                                                    </span>
+                                                    <span className="mt-0.5 block text-xs leading-5 text-slate-500">
+                                                        {option.description}
+                                                    </span>
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                                 <select
-                                    value={newIssueType}
+                                    value={newPriority}
                                     onChange={(event) =>
-                                        setNewIssueType(event.target.value)
+                                        setNewPriority(
+                                            event.target
+                                                .value as typeof newPriority
+                                        )
                                     }
-                                    className="h-11 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900"
+                                    className="h-10 w-full rounded-md border border-slate-200 bg-white px-3 text-sm text-slate-900"
                                 >
-                                    <option value="orders">Orders</option>
-                                    <option value="payouts">Payouts</option>
-                                    <option value="products">Products</option>
-                                    <option value="account">Account</option>
-                                    <option value="operations">
-                                        Operations
+                                    <option value="low">Low priority</option>
+                                    <option value="normal">
+                                        Normal priority
+                                    </option>
+                                    <option value="high">High priority</option>
+                                    <option value="critical">
+                                        Critical priority
                                     </option>
                                 </select>
                                 <textarea
@@ -308,22 +414,100 @@ export default function BrandSupportPage() {
                                     }
                                     rows={4}
                                     placeholder="Describe the issue"
-                                    className="w-full rounded-[20px] border border-slate-200 bg-white px-4 py-4 text-sm text-slate-900"
+                                    className="w-full rounded-md border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900"
                                 />
+                                <div className="rounded-md border border-dashed border-slate-300 bg-white p-3">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex min-w-0 items-center gap-2 text-sm text-slate-600">
+                                            <ImagePlus className="size-4 shrink-0" />
+                                            <span>Add images or files</span>
+                                        </div>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="h-8 px-3 text-xs"
+                                            onClick={() =>
+                                                newFileInputRef.current?.click()
+                                            }
+                                            disabled={isUploading}
+                                        >
+                                            {isUploading
+                                                ? "Uploading..."
+                                                : "Upload"}
+                                        </Button>
+                                    </div>
+                                    <input
+                                        ref={newFileInputRef}
+                                        type="file"
+                                        multiple
+                                        accept={generatePermittedFileTypes(
+                                            routeConfig
+                                        ).fileTypes.join()}
+                                        className="hidden"
+                                        onChange={(event) => {
+                                            const files = Array.from(
+                                                event.target.files ?? []
+                                            );
+                                            if (!files.length) return;
+                                            void uploadAttachments(
+                                                files,
+                                                "new"
+                                            );
+                                            event.currentTarget.value = "";
+                                        }}
+                                    />
+                                    {newAttachments.length > 0 && (
+                                        <div className="mt-3 grid gap-2">
+                                            {newAttachments.map(
+                                                (attachment) => (
+                                                    <AttachmentRow
+                                                        key={attachment.url}
+                                                        attachment={attachment}
+                                                        onRemove={() =>
+                                                            setNewAttachments(
+                                                                (current) =>
+                                                                    current.filter(
+                                                                        (
+                                                                            item
+                                                                        ) =>
+                                                                            item.url !==
+                                                                            attachment.url
+                                                                    )
+                                                            )
+                                                        }
+                                                    />
+                                                )
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
                                 <Button
                                     onClick={() =>
                                         createTicketMutation.mutate({
                                             title: newTitle,
                                             issueType: newIssueType,
-                                            issueLabel: newIssueType,
+                                            issueLabel:
+                                                supportIssueOptions.find(
+                                                    (option) =>
+                                                        option.value ===
+                                                        newIssueType
+                                                )?.label ?? newIssueType,
                                             description: newDescription,
+                                            priority: newPriority,
+                                            attachments: newAttachments,
                                         })
                                     }
-                                    className="w-full rounded-full"
-                                    disabled={!newTitle.trim()}
+                                    className="w-full"
+                                    disabled={
+                                        !newTitle.trim() ||
+                                        createTicketMutation.isPending ||
+                                        isUploading
+                                    }
                                 >
                                     <Plus className="mr-2 size-4" />
-                                    Create support request
+                                    {createTicketMutation.isPending
+                                        ? "Creating..."
+                                        : "Create support request"}
                                 </Button>
                             </div>
                         </div>
@@ -379,7 +563,7 @@ export default function BrandSupportPage() {
                     </div>
                 </Card>
 
-                <Card className="rounded-[28px] border border-slate-200 bg-white p-6 shadow-sm">
+                <Card className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
                     {queue === "support" && selectedSupport && (
                         <div className="space-y-6">
                             <div className="border-b border-slate-100 pb-6">
@@ -391,7 +575,6 @@ export default function BrandSupportPage() {
                                         title: selectedSupport.title,
                                         issueLabel: selectedSupport.issueLabel,
                                         issueType: selectedSupport.issueType,
-                                        orderId: selectedSupport.orderId,
                                     })}
                                 </h2>
                                 <p className="mt-2 text-sm text-slate-500">
@@ -490,7 +673,7 @@ export default function BrandSupportPage() {
                                             variant="outline"
                                             className="rounded-full"
                                             onClick={() =>
-                                                fileInputRef.current?.click()
+                                                replyFileInputRef.current?.click()
                                             }
                                             disabled={isUploading}
                                         >
@@ -500,7 +683,7 @@ export default function BrandSupportPage() {
                                         </Button>
                                     </div>
                                     <input
-                                        ref={fileInputRef}
+                                        ref={replyFileInputRef}
                                         type="file"
                                         multiple
                                         accept={generatePermittedFileTypes(
@@ -707,6 +890,32 @@ function StatusBadge({ status }: { status: string }) {
         >
             {status.replace(/_/g, " ")}
         </Badge>
+    );
+}
+
+function AttachmentRow({
+    attachment,
+    onRemove,
+}: {
+    attachment: UploadedAttachment;
+    onRemove: () => void;
+}) {
+    return (
+        <div className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="flex min-w-0 items-center gap-2">
+                <FileImage className="size-4 shrink-0 text-slate-500" />
+                <span className="truncate text-sm text-slate-700">
+                    {attachment.filename}
+                </span>
+            </div>
+            <button
+                type="button"
+                onClick={onRemove}
+                className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400 hover:text-slate-700"
+            >
+                Remove
+            </button>
+        </div>
     );
 }
 

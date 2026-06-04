@@ -1049,59 +1049,9 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
                 },
                 {
-                    title: "Unicommerce Settings",
-                    url: `/dashboard/brands/${brandId}/unicommerce`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Unicommerce Authentication",
-                    url: `/dashboard/brands/${brandId}/unicommerce/authentication`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Unicommerce Inventory",
-                    url: `/dashboard/brands/${brandId}/unicommerce/inventory`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Unicommerce Orders",
-                    url: `/dashboard/brands/${brandId}/unicommerce/orders`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Unicommerce Returns",
-                    url: `/dashboard/brands/${brandId}/unicommerce/returns`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Unicommerce Catalog",
-                    url: `/dashboard/brands/${brandId}/unicommerce/catalog`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Unicommerce API Explorer",
-                    url: `/dashboard/brands/${brandId}/unicommerce/api-explorer`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Unicommerce Response Logs",
-                    url: `/dashboard/brands/${brandId}/unicommerce/logs`,
-                    permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
                     title: "Product - Packaging Types",
                     url: `/dashboard/brands/${brandId}/packing-rules`,
                     permissions: BitFieldBrandPermission.MANAGE_INVITES,
-                },
-                {
-                    title: "Support",
-                    url: `/dashboard/brands/${brandId}/support?queue=support`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                },
-                {
-                    title: "Disputes",
-                    url: `/dashboard/brands/${brandId}/support/disputes`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
                 {
                     title: "Verification",
@@ -1138,6 +1088,23 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
             ],
         },
         {
+            title: "Support",
+            url: "#",
+            icon: "LifeBuoy",
+            items: [
+                {
+                    title: "Support",
+                    url: `/dashboard/brands/${brandId}/support?queue=support`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+                {
+                    title: "Disputes",
+                    url: `/dashboard/brands/${brandId}/support/disputes`,
+                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
+                },
+            ],
+        },
+        {
             title: "Store",
             url: "#",
             icon: "Store",
@@ -1155,44 +1122,6 @@ export function generateBrandSideNav(brandId: string): BrandSidebarConfig[] {
                 {
                     title: "Orders",
                     url: `/dashboard/brands/${brandId}/orders`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                },
-            ],
-        },
-
-        {
-            title: "Orders",
-            url: "#",
-            icon: "Package",
-            items: [
-                {
-                    title: "New Orders",
-                    url: `/dashboard/brands/${brandId}/orders/new`,
-                    permissions: BitFieldBrandPermission.MANAGE_BRANDING,
-                },
-                // {
-                //     title: "Added to Pickup",
-                //     url: `/dashboard/brands/${brandId}/orders/added-to-pickup`,
-                //     permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                // },
-                {
-                    title: "Shipped Orders",
-                    url: `/dashboard/brands/${brandId}/orders/shipped`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                },
-                {
-                    title: "Delivered Orders",
-                    url: `/dashboard/brands/${brandId}/orders/delivered`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                },
-                {
-                    title: "RTO Orders",
-                    url: `/dashboard/brands/${brandId}/orders/rto`,
-                    permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
-                },
-                {
-                    title: "Cancelled Orders",
-                    url: `/dashboard/brands/${brandId}/orders/cancelled`,
                     permissions: BitFieldBrandPermission.MANAGE_PRODUCTS,
                 },
             ],

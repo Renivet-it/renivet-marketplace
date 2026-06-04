@@ -1,7 +1,5 @@
-import {
-    ProductsAction,
-    ProductsTable,
-} from "@/components/dashboard/brands/products";
+import { ProductsAction } from "@/components/dashboard/brands/products";
+import { ProductsReviewTable } from "@/components/dashboard/general/products";
 import { DashShell } from "@/components/globals/layouts";
 import { ProductSearchSkuModal } from "@/components/globals/modals";
 import { TableSkeleton } from "@/components/globals/skeletons";
@@ -29,13 +27,19 @@ interface PageProps {
         page?: string;
         limit?: string;
         search?: string;
+        verificationStatus?:
+            | "all"
+            | "idle"
+            | "pending"
+            | "approved"
+            | "rejected";
     }>;
     params: Promise<{ bId: string }>;
 }
 
 export default function Page(props: PageProps) {
     return (
-        <DashShell className="max-w-7xl">
+        <DashShell className="max-w-none px-0 md:px-2 lg:px-3">
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
                     <h1 className="text-2xl font-bold">Products</h1>
@@ -100,22 +104,28 @@ async function ProductsFetch({ searchParams, params }: PageProps) {
         page: pageRaw,
         limit: limitRaw,
         search: searchRaw,
+        verificationStatus: verificationStatusRaw,
     } = await searchParams;
     const { bId } = await params;
 
     const limit =
-        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
+        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 15;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const search = searchRaw?.length ? searchRaw : undefined;
+    const verificationStatus =
+        verificationStatusRaw && verificationStatusRaw !== "all"
+            ? verificationStatusRaw
+            : undefined;
 
     const data = await productQueries.getProducts({
         brandIds: [bId],
         limit,
         page,
         search,
+        verificationStatus,
     });
 
-    return <ProductsTable brandId={bId} initialData={data} />;
+    return <ProductsReviewTable brandId={bId} initialData={data} />;
 }
 
 async function ProductsActionFetch({ params }: PageProps) {
