@@ -306,7 +306,9 @@ class OrderQuery {
                     break;
 
                 case "pickup_scheduled":
-                    // Pickup scheduled includes either the flag or the normalized shipment status.
+                    // Pickup scheduled includes active scheduled pickups only.
+                    whereConditions.push(ne(orders.status, "delivered"));
+                    whereConditions.push(ne(orders.status, "cancelled"));
                     whereConditions.push(
                         inArray(
                             orders.id,
@@ -314,15 +316,20 @@ class OrderQuery {
                                 .select({ orderId: orderShipments.orderId })
                                 .from(orderShipments)
                                 .where(
-                                    or(
-                                        eq(
-                                            orderShipments.isPickupScheduled,
-                                            true
+                                    and(
+                                        or(
+                                            eq(
+                                                orderShipments.isPickupScheduled,
+                                                true
+                                            ),
+                                            eq(
+                                                orderShipments.status,
+                                                "pickup_scheduled"
+                                            )
                                         ),
-                                        eq(
-                                            orderShipments.status,
-                                            "pickup_scheduled"
-                                        )
+                                        ne(orderShipments.status, "delivered"),
+                                        ne(orderShipments.status, "cancelled"),
+                                        ne(orderShipments.status, "rto_delivered")
                                     )
                                 )
                         )
@@ -563,21 +570,34 @@ class OrderQuery {
                 )
             ),
 
-            // Pickup scheduled: shipment is flagged scheduled or has pickup_scheduled status.
+            // Pickup scheduled: active scheduled pickups only; delivered/cancelled shipments do not belong here.
             db.$count(
                 orders,
                 and(
+                    ne(orders.status, "delivered"),
+                    ne(orders.status, "cancelled"),
                     inArray(
                         orders.id,
                         db
                             .select({ orderId: orderShipments.orderId })
                             .from(orderShipments)
                             .where(
-                                or(
-                                    eq(orderShipments.isPickupScheduled, true),
-                                    eq(
+                                and(
+                                    or(
+                                        eq(
+                                            orderShipments.isPickupScheduled,
+                                            true
+                                        ),
+                                        eq(
+                                            orderShipments.status,
+                                            "pickup_scheduled"
+                                        )
+                                    ),
+                                    ne(orderShipments.status, "delivered"),
+                                    ne(orderShipments.status, "cancelled"),
+                                    ne(
                                         orderShipments.status,
-                                        "pickup_scheduled"
+                                        "rto_delivered"
                                     )
                                 )
                             )
