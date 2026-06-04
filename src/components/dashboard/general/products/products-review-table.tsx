@@ -1,5 +1,6 @@
 "use client";
 
+import { ProductAction as BrandProductAction } from "@/components/dashboard/brands/products/product-action";
 import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
@@ -14,6 +15,13 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog-dash";
 import { DialogHeader } from "@/components/ui/dialog-general";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input-dash";
 import {
     Select,
@@ -65,15 +73,8 @@ import {
     useQueryState,
 } from "nuqs";
 import { useMemo, useState } from "react";
-import { ProductAction } from "./product-admin-action";
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuSeparator,
-    DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
+import { ProductAction } from "./product-admin-action";
 
 export type TableProduct = ProductWithBrand & {
     stock: number;
@@ -84,7 +85,7 @@ export type TableProduct = ProductWithBrand & {
 type ImageFilter = "with" | "without" | "all";
 type VisiblityFilter = "private" | "public" | "all";
 
-const columns: ColumnDef<TableProduct>[] = [
+const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     {
         id: "select",
         enableHiding: false,
@@ -115,7 +116,7 @@ const columns: ColumnDef<TableProduct>[] = [
         cell: ({ row }) => (
             <div className="min-w-[16rem] max-w-[20rem] px-2 py-1">
                 <p
-                    className="line-clamp-2 leading-snug break-words"
+                    className="line-clamp-2 break-words leading-snug"
                     title={row.original.title}
                 >
                     {row.original.title}
@@ -396,7 +397,11 @@ const columns: ColumnDef<TableProduct>[] = [
                                     asChild
                                 >
                                     <Link
-                                        href={`/dashboard/general/products/preview-form/${data.id}`}
+                                        href={
+                                            isBrandScoped
+                                                ? `/dashboard/brands/${data.brandId}/products/p/${data.id}`
+                                                : `/dashboard/general/products/preview-form/${data.id}`
+                                        }
                                         target="_blank"
                                     >
                                         <Icons.Edit className="size-4" />
@@ -436,9 +441,21 @@ const columns: ColumnDef<TableProduct>[] = [
                         </TooltipProvider>
                     )}
 
-                    <ProductAction
-                        product={{ ...data, visibility: data.visibility ?? true }}
-                    />
+                    {isBrandScoped ? (
+                        <BrandProductAction
+                            product={{
+                                ...data,
+                                visibility: data.visibility ?? true,
+                            }}
+                        />
+                    ) : (
+                        <ProductAction
+                            product={{
+                                ...data,
+                                visibility: data.visibility ?? true,
+                            }}
+                        />
+                    )}
                 </div>
             );
         },
@@ -461,9 +478,15 @@ interface PageProps {
         data: CachedBrand[];
         count: number;
     };
+    brandId?: string;
 }
 
-export function ProductsReviewTable({ initialData, brandData }: PageProps) {
+export function ProductsReviewTable({
+    initialData,
+    brandData,
+    brandId,
+}: PageProps) {
+    const isBrandScoped = Boolean(brandId);
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(15));
     const [search, setSearch] = useQueryState("search", {
@@ -509,13 +532,20 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
             search,
         },
         {
+            enabled: !isBrandScoped,
             initialData: brandData, // Use brandData prop
         }
     );
+    const queryInitialData = useMemo(
+        () => ({
+            ...initialData,
+            recommendationSource: null,
+            topBrandMatch: null,
+        }),
+        [initialData]
+    );
 
-    const {
-        data: queryData,
-    } = trpc.brands.products.getProducts.useQuery(
+    const { data: queryData } = trpc.brands.products.getProducts.useQuery(
         {
             limit,
             page,
@@ -524,9 +554,13 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                 verificationStatus === "all" ? undefined : verificationStatus,
             productImage,
             productVisiblity,
-            brandIds: brandIds.length > 0 ? brandIds : undefined,
+            brandIds: isBrandScoped
+                ? [brandId ?? ""]
+                : brandIds.length > 0
+                  ? brandIds
+                  : undefined,
         },
-        { initialData }
+        { initialData: queryInitialData }
     );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
@@ -545,10 +579,14 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
     );
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
+    const tableColumns = useMemo(
+        () => getColumns(isBrandScoped),
+        [isBrandScoped]
+    );
 
     const table = useReactTable({
         data,
-        columns,
+        columns: tableColumns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
@@ -565,9 +603,9 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
         },
     });
 
-    const selectedProducts = table.getSelectedRowModel().rows.map(
-        (row) => row.original
-    );
+    const selectedProducts = table
+        .getSelectedRowModel()
+        .rows.map((row) => row.original);
 
     const clearAllFilters = () => {
         table.resetColumnFilters();
@@ -575,7 +613,7 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
         void setVerificationStatus("all");
         void setImageFilter("all");
         void setVisiblityFilter("all");
-        void setBrandIds([]);
+        if (!isBrandScoped) void setBrandIds([]);
         void table.resetRowSelection();
     };
 
@@ -619,18 +657,15 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                             verificationStatus
                         }
                         onValueChange={(value) => {
-                            const nextValue =
-                                value as
-                                    | "all"
-                                    | TableProduct["verificationStatus"];
+                            const nextValue = value as
+                                | "all"
+                                | TableProduct["verificationStatus"];
                             table
                                 .getColumn("verificationStatus")
                                 ?.setFilterValue(
                                     nextValue === "all" ? undefined : nextValue
                                 );
-                            setVerificationStatus(
-                                nextValue
-                            );
+                            setVerificationStatus(nextValue);
                         }}
                     >
                         <SelectTrigger className="capitalize">
@@ -638,11 +673,13 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                         </SelectTrigger>
                         <SelectContent>
                             <SelectItem value="all">All Statuses</SelectItem>
-                            {["idle", "pending", "approved", "rejected"].map((x) => (
-                                <SelectItem key={x} value={x}>
-                                    {convertValueToLabel(x)}
-                                </SelectItem>
-                            ))}
+                            {["idle", "pending", "approved", "rejected"].map(
+                                (x) => (
+                                    <SelectItem key={x} value={x}>
+                                        {convertValueToLabel(x)}
+                                    </SelectItem>
+                                )
+                            )}
                         </SelectContent>
                     </Select>
                     <Select
@@ -677,54 +714,70 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                             <SelectItem value="all">All</SelectItem>
                         </SelectContent>
                     </Select>
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="outline" className="w-full justify-start">
-                                {brandIds.length > 0
-                                    ? `${brandIds.length} brand(s) selected`
-                                    : "Filter by brands"}
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent className="max-h-80 w-60 overflow-y-auto">
-                            {brandIds.length > 0 && (
-                                <>
-                                    <DropdownMenuItem
-                                        onSelect={(event) => {
-                                            event.preventDefault();
-                                            setBrandIds([]);
-                                        }}
-                                    >
-                                        <Icons.X className="size-4" />
-                                        Clear brand filter
-                                    </DropdownMenuItem>
-                                    <DropdownMenuSeparator />
-                                </>
-                            )}
-
-                            {brandsData?.data?.map((brand) => (
-                                <DropdownMenuItem
-                                    key={brand.id}
-                                    asChild
-                                    onSelect={(event) => event.preventDefault()}
+                    {!isBrandScoped && (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="w-full justify-start"
                                 >
-                                    <label className="flex cursor-pointer items-center gap-2">
-                                        <Checkbox
-                                            checked={brandIds.includes(brand.id)}
-                                            onCheckedChange={(checked) => {
-                                                const nextBrandIds = checked
-                                                    ? [...brandIds, brand.id]
-                                                    : brandIds.filter(
-                                                          (id) => id !== brand.id
-                                                      );
-                                                void setBrandIds(nextBrandIds);
+                                    {brandIds.length > 0
+                                        ? `${brandIds.length} brand(s) selected`
+                                        : "Filter by brands"}
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="max-h-80 w-60 overflow-y-auto">
+                                {brandIds.length > 0 && (
+                                    <>
+                                        <DropdownMenuItem
+                                            onSelect={(event) => {
+                                                event.preventDefault();
+                                                setBrandIds([]);
                                             }}
-                                        />
-                                        <span>{brand.name}</span>
-                                    </label>
-                                </DropdownMenuItem>
-                            ))}
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                                        >
+                                            <Icons.X className="size-4" />
+                                            Clear brand filter
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                    </>
+                                )}
+
+                                {brandsData?.data?.map((brand) => (
+                                    <DropdownMenuItem
+                                        key={brand.id}
+                                        asChild
+                                        onSelect={(event) =>
+                                            event.preventDefault()
+                                        }
+                                    >
+                                        <label className="flex cursor-pointer items-center gap-2">
+                                            <Checkbox
+                                                checked={brandIds.includes(
+                                                    brand.id
+                                                )}
+                                                onCheckedChange={(checked) => {
+                                                    const nextBrandIds = checked
+                                                        ? [
+                                                              ...brandIds,
+                                                              brand.id,
+                                                          ]
+                                                        : brandIds.filter(
+                                                              (id) =>
+                                                                  id !==
+                                                                  brand.id
+                                                          );
+                                                    void setBrandIds(
+                                                        nextBrandIds
+                                                    );
+                                                }}
+                                            />
+                                            <span>{brand.name}</span>
+                                        </label>
+                                    </DropdownMenuItem>
+                                ))}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
 
                     <Button
                         variant="outline"
@@ -742,7 +795,11 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
                     <Badge variant="secondary">
                         {selectedProducts.length} selected
                     </Badge>
-                    <Button variant="outline" size="sm" onClick={copySelectedProductIds}>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={copySelectedProductIds}
+                    >
                         <Icons.Copy className="size-4" />
                         Copy selected IDs
                     </Button>
@@ -762,7 +819,7 @@ export function ProductsReviewTable({ initialData, brandData }: PageProps) {
             </div>
 
             <DataTable
-                columns={columns as ColumnDef<TableProduct>[]}
+                columns={tableColumns}
                 table={table}
                 pages={pages}
                 count={count}

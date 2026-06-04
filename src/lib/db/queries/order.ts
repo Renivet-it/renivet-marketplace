@@ -99,7 +99,9 @@ const sanitizeOrderQuantities = (order: any) => ({
 
 const parseOrderArraySafely = (ordersData: any[]): OrderWithItemAndBrand[] => {
     const sanitizedOrders = ordersData.map(sanitizeOrderQuantities);
-    const parsed = orderWithItemAndBrandSchema.array().safeParse(sanitizedOrders);
+    const parsed = orderWithItemAndBrandSchema
+        .array()
+        .safeParse(sanitizedOrders);
 
     if (parsed.success) {
         return parsed.data;
@@ -457,9 +459,11 @@ class OrderQuery {
     async getOrderStatusCounts({
         startDate,
         endDate,
+        brandIds,
     }: {
         startDate?: string | Date;
         endDate?: string | Date;
+        brandIds?: string[];
     } = {}) {
         const dateFilter =
             startDate && endDate
@@ -472,6 +476,20 @@ class OrderQuery {
                   : endDate
                     ? lte(orders.createdAt, new Date(endDate))
                     : undefined;
+        const brandFilter = brandIds?.length
+            ? inArray(
+                  orders.id,
+                  db
+                      .select({ id: orderItems.orderId })
+                      .from(orderItems)
+                      .innerJoin(
+                          productTable,
+                          eq(orderItems.productId, productTable.id)
+                      )
+                      .where(inArray(productTable.brandId, brandIds))
+              )
+            : undefined;
+        const baseFilter = and(dateFilter, brandFilter);
 
         // Get counts for each status tab efficiently
         const [
@@ -485,7 +503,7 @@ class OrderQuery {
             notFulfilledCount,
         ] = await Promise.all([
             // All orders
-            db.$count(orders, dateFilter),
+            db.$count(orders, baseFilter),
 
             // Ready to pickup: orders.status = 'pending' OR orderShipments.status = 'pending'
             db.$count(
@@ -501,7 +519,7 @@ class OrderQuery {
                                 .where(eq(orderShipments.status, "pending"))
                         )
                     ),
-                    dateFilter
+                    baseFilter
                 )
             ),
 
@@ -522,7 +540,7 @@ class OrderQuery {
                                 )
                             )
                     ),
-                    dateFilter
+                    baseFilter
                 )
             ),
 
@@ -535,15 +553,15 @@ class OrderQuery {
                         WHERE status = 'pending'
                     )`,
                     eq(orders.status, "processing"),
-                    dateFilter
+                    baseFilter
                 )
             ),
 
             // Delivered
-            db.$count(orders, and(eq(orders.status, "delivered"), dateFilter)),
+            db.$count(orders, and(eq(orders.status, "delivered"), baseFilter)),
 
             // Cancelled
-            db.$count(orders, and(eq(orders.status, "cancelled"), dateFilter)),
+            db.$count(orders, and(eq(orders.status, "cancelled"), baseFilter)),
 
             // RTO: is_return_label_generated = true OR is_replacement_label_generated = true
             db.$count(
@@ -567,7 +585,7 @@ class OrderQuery {
                                 )
                             )
                     ),
-                    dateFilter
+                    baseFilter
                 )
             ),
 
@@ -581,7 +599,7 @@ class OrderQuery {
                         SELECT order_id FROM order_shipments
                         WHERE status = 'delivered'
                     )`,
-                    dateFilter
+                    baseFilter
                 )
             ),
         ]);
@@ -749,47 +767,50 @@ class OrderQuery {
             return {
                 data: ordersForBrand
                     .map((item) => ({
-                    id: item.id,
-                    userId: item.userId,
-                    firstName: item.firstName,
-                    lastName: item.lastName,
-                    phone: item.phone,
-                    shiprocketOrderId: item.shiprocketOrderId ?? undefined,
-                    shiprocketShipmentId:
-                        item.shiprocketShipmentId ?? undefined,
-                    awbNumber: item.awbNumber ?? undefined,
-                    uploadWbn: item.uploadWbn ?? undefined,
-                    delhiveryClientId: item.delhiveryClientId ?? undefined,
-                    delhiverySortCode: item.delhiverySortCode ?? undefined,
-                    givenLength: item.givenLength,
-                    givenWidth: item.givenWidth,
-                    givenHeight: item.givenHeight,
-                    isAwbGenerated: toBooleanLike(item.isAwbGenerated),
-                    courierName: item.courierName ?? undefined,
-                    receiptId: item.receiptId,
-                    paymentId: item.paymentId,
-                    paymentMethod: item.paymentMethod,
-                    paymentStatus: item.paymentStatus,
-                    status: item.status,
-                    addressId: item.addressId,
-                    totalItems: item.totalItems,
-                    taxAmount: item.taxAmount,
-                    deliveryAmount: item.deliveryAmount,
-                    discountAmount: item.discountAmount,
-                    totalAmount: item.totalAmount,
-                    isReturnLabelGenerated: toBooleanLike(item.isReturnLabelGenerated),
-                    isReplacementLabelGenerated:
-                        toBooleanLike(item.isReplacementLabelGenerated),
-                    street: item.street,
-                    city: item.city,
-                    state: item.state,
-                    zip: item.zip,
-                    brandId: item.brandId,
-                    productId: item.productId,
-                    shipmentStatus: item.shipmentStatus,
-                    isRto: item.isRto, // ⭐ MAIN FLAG
-                    createdAt: item.createdAt,
-                    updatedAt: item.updatedAt,
+                        id: item.id,
+                        userId: item.userId,
+                        firstName: item.firstName,
+                        lastName: item.lastName,
+                        phone: item.phone,
+                        shiprocketOrderId: item.shiprocketOrderId ?? undefined,
+                        shiprocketShipmentId:
+                            item.shiprocketShipmentId ?? undefined,
+                        awbNumber: item.awbNumber ?? undefined,
+                        uploadWbn: item.uploadWbn ?? undefined,
+                        delhiveryClientId: item.delhiveryClientId ?? undefined,
+                        delhiverySortCode: item.delhiverySortCode ?? undefined,
+                        givenLength: item.givenLength,
+                        givenWidth: item.givenWidth,
+                        givenHeight: item.givenHeight,
+                        isAwbGenerated: toBooleanLike(item.isAwbGenerated),
+                        courierName: item.courierName ?? undefined,
+                        receiptId: item.receiptId,
+                        paymentId: item.paymentId,
+                        paymentMethod: item.paymentMethod,
+                        paymentStatus: item.paymentStatus,
+                        status: item.status,
+                        addressId: item.addressId,
+                        totalItems: item.totalItems,
+                        taxAmount: item.taxAmount,
+                        deliveryAmount: item.deliveryAmount,
+                        discountAmount: item.discountAmount,
+                        totalAmount: item.totalAmount,
+                        isReturnLabelGenerated: toBooleanLike(
+                            item.isReturnLabelGenerated
+                        ),
+                        isReplacementLabelGenerated: toBooleanLike(
+                            item.isReplacementLabelGenerated
+                        ),
+                        street: item.street,
+                        city: item.city,
+                        state: item.state,
+                        zip: item.zip,
+                        brandId: item.brandId,
+                        productId: item.productId,
+                        shipmentStatus: item.shipmentStatus,
+                        isRto: item.isRto, // ⭐ MAIN FLAG
+                        createdAt: item.createdAt,
+                        updatedAt: item.updatedAt,
                     }))
                     .map((item) => ({
                         ...item,

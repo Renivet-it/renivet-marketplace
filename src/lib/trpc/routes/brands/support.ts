@@ -8,6 +8,10 @@ import {
     userSupportMessages,
     userSupportTickets,
 } from "@/lib/db/schema";
+import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
 import { createDisputeReplacementOrder } from "@/lib/support/dispute-replacement-order";
 import {
     buildAdminSupportHref,
@@ -15,7 +19,6 @@ import {
     notifyAdmins,
     notifyUser,
 } from "@/lib/support/utils";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { and, desc, eq, ilike, inArray } from "drizzle-orm";
 import { z } from "zod";
@@ -57,7 +60,10 @@ export const brandSupportRouter = createTRPCRouter({
             })
         )
         .query(async ({ ctx, input }) => {
-            const filters = [eq(supportTickets.brandId, ctx.user.brand.id)];
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
+            const filters = [eq(supportTickets.brandId, brand.id)];
 
             if (input.search?.trim()) {
                 filters.push(
@@ -87,11 +93,14 @@ export const brandSupportRouter = createTRPCRouter({
     getTicket: protectedProcedure
         .input(z.string())
         .query(async ({ ctx, input: ticketId }) => {
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
             const row = await db.query.supportTickets.findFirst({
                 where: eq(supportTickets.id, ticketId),
             });
 
-            if (!row || row.brandId !== ctx.user.brand.id) {
+            if (!row || row.brandId !== brand.id) {
                 throw new Error("Unauthorized");
             }
 
@@ -115,13 +124,17 @@ export const brandSupportRouter = createTRPCRouter({
                 priority: z
                     .enum(["low", "normal", "high", "critical"])
                     .optional(),
+                attachments: z.array(attachmentSchema).default([]),
             })
         )
         .mutation(async ({ ctx, input }) => {
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
             const row = await db
                 .insert(supportTickets)
                 .values({
-                    brandId: ctx.user.brand.id,
+                    brandId: brand.id,
                     title: input.title.trim(),
                     issueType: input.issueType,
                     issueLabel: input.issueLabel ?? null,
@@ -134,23 +147,29 @@ export const brandSupportRouter = createTRPCRouter({
                 .returning()
                 .then((res) => res[0]);
 
-            if (input.description?.trim()) {
-                await db.insert(supportMessages).values({
-                    ticketId: row.id,
-                    sender: "brand",
-                    senderId: ctx.user.id,
-                    text: input.description.trim(),
-                });
+            if (input.description?.trim() || input.attachments.length) {
+                const inserted = await db
+                    .insert(supportMessages)
+                    .values({
+                        ticketId: row.id,
+                        sender: "brand",
+                        senderId: ctx.user.id,
+                        text: input.description?.trim() || "Shared attachments",
+                    })
+                    .returning()
+                    .then((res) => res[0]);
+
+                await attachBrandMessageFiles(inserted.id, input.attachments);
             }
 
             await notifyAdmins({
                 actorId: ctx.user.id,
                 type: "support.brand_ticket.created",
                 title: "New brand support request",
-                body: `${ctx.user.brand.name} raised "${row.title}"`,
+                body: `${brand.name} raised "${row.title}"`,
                 href: buildAdminSupportHref(row.id, "brand"),
                 emailSubject: `New brand support request: ${row.title}`,
-                emailIntro: `${ctx.user.brand.name} created a new brand support request.`,
+                emailIntro: `${brand.name} created a new brand support request.`,
                 emailDetails: [
                     `Ticket: ${row.id}`,
                     `Issue type: ${row.issueType}`,
@@ -160,7 +179,7 @@ export const brandSupportRouter = createTRPCRouter({
                 ],
                 metadata: {
                     ticketId: row.id,
-                    brandId: ctx.user.brand.id,
+                    brandId: brand.id,
                 },
             });
             await auditEntityChange({
@@ -183,7 +202,7 @@ export const brandSupportRouter = createTRPCRouter({
                 entityType: "support_ticket",
                 entityId: row.id,
                 title: "New brand support ticket",
-                message: `${ctx.user.brand.name} raised "${row.title}".`,
+                message: `${brand.name} raised "${row.title}".`,
                 ownerRole: "support_manager",
                 channels: ["admin", "email", "whatsapp"],
                 dedupeKey: `ticket:new:brand:${row.id}`,
@@ -200,11 +219,14 @@ export const brandSupportRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
             const ticket = await db.query.supportTickets.findFirst({
                 where: eq(supportTickets.id, input.ticketId),
             });
 
-            if (!ticket || ticket.brandId !== ctx.user.brand.id) {
+            if (!ticket || ticket.brandId !== brand.id) {
                 throw new Error("Unauthorized");
             }
 
@@ -243,10 +265,10 @@ export const brandSupportRouter = createTRPCRouter({
                 actorId: ctx.user.id,
                 type: "support.brand_ticket.reply",
                 title: "Brand replied to support case",
-                body: `${ctx.user.brand.name} replied on "${ticket.title}"`,
+                body: `${brand.name} replied on "${ticket.title}"`,
                 href: buildAdminSupportHref(ticket.id, "brand"),
                 emailSubject: `Brand reply on support case ${ticket.id}`,
-                emailIntro: `${ctx.user.brand.name} replied to a brand support case.`,
+                emailIntro: `${brand.name} replied to a brand support case.`,
                 emailDetails: [
                     `Ticket: ${ticket.id}`,
                     `Message: ${input.text.trim().slice(0, 140)}`,
@@ -261,11 +283,14 @@ export const brandSupportRouter = createTRPCRouter({
     getMessages: protectedProcedure
         .input(z.string())
         .query(async ({ ctx, input: ticketId }) => {
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
             const ticket = await db.query.supportTickets.findFirst({
                 where: eq(supportTickets.id, ticketId),
             });
 
-            if (!ticket || ticket.brandId !== ctx.user.brand.id) {
+            if (!ticket || ticket.brandId !== brand.id) {
                 throw new Error("Unauthorized");
             }
 
@@ -310,9 +335,12 @@ export const brandSupportRouter = createTRPCRouter({
             })
         )
         .query(async ({ ctx, input }) => {
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
             const disputes = await db.query.userSupportDisputes.findMany({
                 where: and(
-                    eq(userSupportDisputes.brandId, ctx.user.brand.id),
+                    eq(userSupportDisputes.brandId, brand.id),
                     input.status && input.status !== "all"
                         ? eq(userSupportDisputes.status, input.status)
                         : undefined
@@ -341,10 +369,13 @@ export const brandSupportRouter = createTRPCRouter({
     getDispute: protectedProcedure
         .input(z.string())
         .query(async ({ ctx, input: disputeId }) => {
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
             const dispute = await db.query.userSupportDisputes.findFirst({
                 where: eq(userSupportDisputes.id, disputeId),
             });
-            if (!dispute || dispute.brandId !== ctx.user.brand.id) {
+            if (!dispute || dispute.brandId !== brand.id) {
                 throw new Error("Dispute not found");
             }
 
@@ -369,10 +400,13 @@ export const brandSupportRouter = createTRPCRouter({
             })
         )
         .mutation(async ({ ctx, input }) => {
+            const brand = ctx.user.brand;
+            if (!brand) throw new Error("Brand context not found");
+
             const dispute = await db.query.userSupportDisputes.findFirst({
                 where: eq(userSupportDisputes.id, input.disputeId),
             });
-            if (!dispute || dispute.brandId !== ctx.user.brand.id) {
+            if (!dispute || dispute.brandId !== brand.id) {
                 throw new Error("Dispute not found");
             }
             if (dispute.replacementOrderId) {
@@ -391,7 +425,7 @@ export const brandSupportRouter = createTRPCRouter({
             }
             const { replacementOrderId } = await createDisputeReplacementOrder({
                 sourceOrder: order,
-                brandId: ctx.user.brand.id,
+                brandId: brand.id,
                 orderItemId: dispute.orderItemId,
             });
 
@@ -403,7 +437,7 @@ export const brandSupportRouter = createTRPCRouter({
                     actionCompletedAt: new Date(),
                     updatedAt: new Date(),
                     metadata: {
-                        createdByBrandId: ctx.user.brand.id,
+                        createdByBrandId: brand.id,
                         note: input.note ?? null,
                     },
                 })
@@ -433,10 +467,10 @@ export const brandSupportRouter = createTRPCRouter({
                 actorId: ctx.user.id,
                 type: "support.dispute.replacement_created",
                 title: "Brand created a dispute replacement order",
-                body: `${ctx.user.brand.name} created replacement order ${replacementOrderId}`,
+                body: `${brand.name} created replacement order ${replacementOrderId}`,
                 href: buildAdminSupportHref(ticket.id, "user"),
                 emailSubject: `Replacement order created for dispute ${dispute.id}`,
-                emailIntro: `${ctx.user.brand.name} created a replacement order from an approved dispute.`,
+                emailIntro: `${brand.name} created a replacement order from an approved dispute.`,
                 emailDetails: [
                     `Original order: ${dispute.orderId}`,
                     `Replacement order: ${replacementOrderId}`,

@@ -1,7 +1,5 @@
-import {
-    ProductsAction,
-    ProductsTable,
-} from "@/components/dashboard/brands/products";
+import { ProductsAction } from "@/components/dashboard/brands/products";
+import { ProductsReviewTable } from "@/components/dashboard/general/products";
 import { DashShell } from "@/components/globals/layouts";
 import { ProductSearchSkuModal } from "@/components/globals/modals";
 import { TableSkeleton } from "@/components/globals/skeletons";
@@ -29,6 +27,12 @@ interface PageProps {
         page?: string;
         limit?: string;
         search?: string;
+        verificationStatus?:
+            | "all"
+            | "idle"
+            | "pending"
+            | "approved"
+            | "rejected";
     }>;
     params: Promise<{ bId: string }>;
 }
@@ -100,22 +104,28 @@ async function ProductsFetch({ searchParams, params }: PageProps) {
         page: pageRaw,
         limit: limitRaw,
         search: searchRaw,
+        verificationStatus: verificationStatusRaw,
     } = await searchParams;
     const { bId } = await params;
 
     const limit =
-        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 10;
+        limitRaw && !isNaN(parseInt(limitRaw)) ? parseInt(limitRaw) : 15;
     const page = pageRaw && !isNaN(parseInt(pageRaw)) ? parseInt(pageRaw) : 1;
     const search = searchRaw?.length ? searchRaw : undefined;
+    const verificationStatus =
+        verificationStatusRaw && verificationStatusRaw !== "all"
+            ? verificationStatusRaw
+            : undefined;
 
     const data = await productQueries.getProducts({
         brandIds: [bId],
         limit,
         page,
         search,
+        verificationStatus,
     });
 
-    return <ProductsTable brandId={bId} initialData={data} />;
+    return <ProductsReviewTable brandId={bId} initialData={data} />;
 }
 
 async function ProductsActionFetch({ params }: PageProps) {
