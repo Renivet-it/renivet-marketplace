@@ -45,6 +45,7 @@ export const ordersRouter = createTRPCRouter({
         .input(
             z.object({
                 brandId: z.string(),
+                search: z.string().optional(),
                 startDate: z.string().optional(),
                 endDate: z.string().optional(),
             })
@@ -55,6 +56,7 @@ export const ordersRouter = createTRPCRouter({
         .query(async ({ input, ctx }) => {
             return ctx.queries.orders.getOrderStatusCounts({
                 brandIds: [input.brandId],
+                search: input.search,
                 startDate: input.startDate,
                 endDate: input.endDate,
             });

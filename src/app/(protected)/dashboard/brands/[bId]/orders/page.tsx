@@ -15,6 +15,8 @@ interface PageProps {
         page?: string;
         limit?: string;
         search?: string;
+        startDate?: string;
+        endDate?: string;
         statusTab?:
             | "all"
             | "ready_to_pickup"
@@ -54,6 +56,8 @@ async function OrdersFetch({ params, searchParams }: PageProps) {
         page: pageRaw,
         limit: limitRaw,
         search: searchRaw,
+        startDate,
+        endDate,
         statusTab: statusTabRaw,
     } = await searchParams;
 
@@ -68,6 +72,8 @@ async function OrdersFetch({ params, searchParams }: PageProps) {
         limit,
         page,
         search,
+        startDate,
+        endDate,
         statusTab,
     });
 

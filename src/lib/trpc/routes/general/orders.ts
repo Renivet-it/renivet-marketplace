@@ -10,8 +10,11 @@ import {
     cancelOrder as cancelDelhiveryOrder,
     createOrder as createDelhiveryOrder,
 } from "@/lib/delhivery/orders";
+import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
 import { razorpay } from "@/lib/razorpay";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import {
     analytics,
     brandCache,
@@ -131,10 +134,20 @@ export const ordersRouter = createTRPCRouter({
             return data;
         }),
     getOrderStatusCounts: protectedProcedure
+        .input(
+            z
+                .object({
+                    search: z.string().optional(),
+                    brandIds: z.array(productSchema.shape.brandId).optional(),
+                    startDate: z.string().optional(),
+                    endDate: z.string().optional(),
+                })
+                .optional()
+        )
         .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
-        .query(async ({ ctx }) => {
+        .query(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const counts = await queries.orders.getOrderStatusCounts();
+            const counts = await queries.orders.getOrderStatusCounts(input);
             return counts;
         }),
     getOrdersByUserId: protectedProcedure
@@ -1150,7 +1163,10 @@ export const ordersRouter = createTRPCRouter({
                 });
             }
 
-            const updated = await queries.orders.updateOrderStatus(input.orderId, input.values);
+            const updated = await queries.orders.updateOrderStatus(
+                input.orderId,
+                input.values
+            );
             await auditEntityChange({
                 actorId: ctx.user.id,
                 actionType: "order_status_changed",
@@ -1295,7 +1311,9 @@ export const ordersRouter = createTRPCRouter({
             );
             await Promise.all(
                 updatedOrders.map((updated) => {
-                    const before = existingOrders.find((order) => order.id === updated.id);
+                    const before = existingOrders.find(
+                        (order) => order.id === updated.id
+                    );
                     return auditEntityChange({
                         actorId: ctx.user.id,
                         actionType: "order_status_changed",
@@ -1310,7 +1328,8 @@ export const ordersRouter = createTRPCRouter({
                         afterValue: {
                             status: updated.status,
                             paymentStatus: updated.paymentStatus,
-                            cancellationReasonCode: updated.cancellationReasonCode,
+                            cancellationReasonCode:
+                                updated.cancellationReasonCode,
                             manualOverrideReason: updated.manualOverrideReason,
                         },
                         reason:
