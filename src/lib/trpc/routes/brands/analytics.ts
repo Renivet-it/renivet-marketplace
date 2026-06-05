@@ -1,5 +1,6 @@
 import { BitFieldBrandPermission } from "@/config/permissions";
 import { db } from "@/lib/db";
+import { orderQueries } from "@/lib/db/queries";
 import {
     orderItems,
     orders,
@@ -52,14 +53,10 @@ export const analyticsRouter = createTRPCRouter({
 
             const sinceISO = since.toISOString(); // ⭐ FIX HERE
 
-            // Total Orders
-            const ordersCount = await db.execute(sql`
-          SELECT COUNT(*)::int AS count
-          FROM ${orderShipments} os
-          JOIN ${orders} o ON os.order_id = o.id
-          WHERE os.brand_id = ${brandId}
-          AND o.created_at >= ${sinceISO}
-      `);
+            const orderStatusCounts = await orderQueries.getOrderStatusCounts({
+                brandIds: [brandId],
+                startDate: sinceISO,
+            });
 
             // Revenue from this brand's shipment items only.
             const revenue = await db.execute(sql`
@@ -75,16 +72,6 @@ export const analyticsRouter = createTRPCRouter({
           AND o.created_at >= ${sinceISO}
       `);
 
-            // Returns
-            const returns = await db.execute(sql`
-          SELECT COUNT(*)::int AS count
-          FROM ${orderShipments} os
-          JOIN ${orders} o ON os.order_id = o.id
-          WHERE os.brand_id = ${brandId}
-          AND o.status = 'RETURNED'
-          AND o.created_at >= ${sinceISO}
-      `);
-
             // Active Products
             const activeProducts = await db.execute(sql`
           SELECT COUNT(*)::int AS count
@@ -94,41 +81,15 @@ export const analyticsRouter = createTRPCRouter({
           AND is_deleted = false
       `);
 
-            const orderStatusCounts = await db.execute(sql`
-          SELECT
-              COUNT(*) FILTER (
-                  WHERE o.status = 'pending'
-                    AND os.status = 'pending'
-                    AND COALESCE(os.is_pickup_scheduled, false) = false
-              )::int AS new_orders,
-              COUNT(*) FILTER (
-                  WHERE COALESCE(os.is_pickup_scheduled, false) = true
-                     OR os.status = 'pickup_scheduled'
-              )::int AS pickup_scheduled,
-              COUNT(*) FILTER (
-                  WHERE os.status = 'in_transit'
-              )::int AS in_transit,
-              COUNT(*) FILTER (
-                  WHERE o.status = 'delivered'
-                     OR os.status = 'delivered'
-              )::int AS delivered
-          FROM ${orderShipments} os
-          JOIN ${orders} o ON os.order_id = o.id
-          WHERE os.brand_id = ${brandId}
-          AND o.created_at >= ${sinceISO}
-      `);
-
             return {
-                totalOrders: Number(ordersCount[0]?.count ?? 0),
+                totalOrders: orderStatusCounts.all,
                 totalRevenue: Number(revenue[0]?.sum ?? 0) / 100,
-                returnRate: Number(returns[0]?.count ?? 0),
+                returnRate: orderStatusCounts.rto,
                 activeProducts: Number(activeProducts[0]?.count ?? 0),
-                newOrders: Number(orderStatusCounts[0]?.new_orders ?? 0),
-                pickupScheduled: Number(
-                    orderStatusCounts[0]?.pickup_scheduled ?? 0
-                ),
-                inTransit: Number(orderStatusCounts[0]?.in_transit ?? 0),
-                delivered: Number(orderStatusCounts[0]?.delivered ?? 0),
+                newOrders: orderStatusCounts.ready_to_pickup,
+                pickupScheduled: orderStatusCounts.pickup_scheduled,
+                inTransit: orderStatusCounts.shipped,
+                delivered: orderStatusCounts.delivered,
             };
         }),
 
