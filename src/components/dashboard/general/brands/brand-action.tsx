@@ -1,7 +1,14 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import { Icons } from "@/components/icons";
+import {
+    AlertDialog,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog-dash";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
@@ -29,6 +36,7 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea-dash";
@@ -102,6 +110,8 @@ type EditConfidentialData = z.infer<typeof editConfidentialSchema>;
 export function BrandAction({ brand }: PageProps) {
     const router = useRouter();
     const [isOpen, setIsOpen] = useState(false);
+    const [isDelistOpen, setIsDelistOpen] = useState(false);
+    const [isRelistOpen, setIsRelistOpen] = useState(false);
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
@@ -252,6 +262,46 @@ export function BrandAction({ brand }: PageProps) {
             },
         });
 
+    const { mutate: delistBrandProducts, isPending: isDelistingProducts } =
+        trpc.general.brands.delistBrandProducts.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Delisting brand products...");
+                return { toastId };
+            },
+            onSuccess: (data, _, { toastId }) => {
+                toast.success(
+                    `${data.count} product${data.count === 1 ? "" : "s"} delisted`,
+                    { id: toastId }
+                );
+                setIsDelistOpen(false);
+                router.refresh();
+                refetch();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    const { mutate: relistBrandProducts, isPending: isRelistingProducts } =
+        trpc.general.brands.relistBrandProducts.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Relisting brand products...");
+                return { toastId };
+            },
+            onSuccess: (data, _, { toastId }) => {
+                toast.success(
+                    `${data.count} product${data.count === 1 ? "" : "s"} relisted`,
+                    { id: toastId }
+                );
+                setIsRelistOpen(false);
+                router.refresh();
+                refetch();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
     const handleBrandSubmit = (values: EditBrandData) => {
         updateBrand({
             id: brand.id,
@@ -316,676 +366,821 @@ export function BrandAction({ brand }: PageProps) {
     };
 
     return (
-        <Sheet open={isOpen} onOpenChange={setIsOpen}>
-            <SheetTrigger asChild>
-                <Button variant="ghost" className="size-8 p-0">
-                    <Icons.Settings2 className="size-4" />
-                    <span className="sr-only">Actions</span>
-                </Button>
-            </SheetTrigger>
+        <>
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
+                <SheetTrigger asChild>
+                    <Button variant="ghost" className="size-8 p-0">
+                        <Icons.Settings2 className="size-4" />
+                        <span className="sr-only">Actions</span>
+                    </Button>
+                </SheetTrigger>
 
-            <SheetContent className="w-full overflow-y-auto p-4 sm:max-w-xl">
-                <SheetHeader>
-                    <SheetTitle className="sr-only hidden">
-                        Brand Actions
-                    </SheetTitle>
+                <SheetContent className="w-full overflow-y-auto p-4 sm:max-w-xl">
+                    <SheetHeader>
+                        <SheetTitle className="sr-only hidden">
+                            Brand Actions
+                        </SheetTitle>
 
-                    <div className="flex items-center gap-3 text-start">
-                        <Avatar className="size-12">
-                            <AvatarImage src={brand.logoUrl} alt={brand.name} />
-                            <AvatarFallback>{brand.name[0]}</AvatarFallback>
-                        </Avatar>
+                        <div className="flex items-center gap-3 text-start">
+                            <Avatar className="size-12">
+                                <AvatarImage
+                                    src={brand.logoUrl}
+                                    alt={brand.name}
+                                />
+                                <AvatarFallback>{brand.name[0]}</AvatarFallback>
+                            </Avatar>
 
-                        <div className="flex-1">
-                            <p className="text-base font-semibold">
-                                {brand.name}
+                            <div className="flex-1">
+                                <p className="text-base font-semibold">
+                                    {brand.name}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {brand.email}
+                                </p>
+                            </div>
+                            {getVerificationBadge()}
+                        </div>
+                    </SheetHeader>
+
+                    <div className="mt-4 grid grid-cols-3 items-center divide-x text-center">
+                        {[
+                            {
+                                label: "Email",
+                                value: brand.email,
+                                icon: Icons.Mail,
+                            },
+                            {
+                                label: "Phone",
+                                value: brand.phone,
+                                icon: Icons.Phone,
+                            },
+                            {
+                                label: "Website",
+                                value: brand.website,
+                                icon: Icons.Globe,
+                            },
+                        ].map(({ label, value, icon: Icon }) => (
+                            <button
+                                className={cn(
+                                    "flex flex-col items-center gap-1 p-2 text-xs",
+                                    !value &&
+                                        "cursor-not-allowed text-foreground/50"
+                                )}
+                                key={label}
+                                disabled={!value}
+                                onClick={() => {
+                                    if (value) {
+                                        navigator.clipboard.writeText(value);
+                                        toast.success(
+                                            `${label} copied to clipboard`
+                                        );
+                                    }
+                                }}
+                            >
+                                <Icon
+                                    className={cn(
+                                        "size-4",
+                                        !value && "text-foreground/50"
+                                    )}
+                                />
+                                Copy {label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <Separator className="my-4" />
+
+                    {/* Brand Details */}
+                    <div className="mb-4 space-y-2 text-sm">
+                        <p className="font-medium">Brand Overview</p>
+                        <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                    Owner
+                                </span>
+                                <span className="font-medium">
+                                    {brand.ownerName}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                    Members
+                                </span>
+                                <span className="font-medium">
+                                    {brand.memberCount}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                    Subscription
+                                </span>
+                                <span className="font-medium">
+                                    {brand.subscribedTo}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-muted-foreground">
+                                    Created
+                                </span>
+                                <span className="font-medium">
+                                    {format(
+                                        new Date(brand.createdAt),
+                                        "MMM dd, yyyy"
+                                    )}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Brand Status Toggle */}
+                    <div className="mb-4 flex items-center justify-between rounded-md border p-3">
+                        <div>
+                            <p className="text-sm font-medium">Brand Status</p>
+                            <p className="text-xs text-muted-foreground">
+                                {brand.isActive
+                                    ? "Brand is currently active and visible"
+                                    : "Brand is deactivated and hidden"}
+                            </p>
+                        </div>
+                        <Switch
+                            checked={brand.isActive}
+                            disabled={isUpdatingActiveStatus}
+                            onCheckedChange={(checked) => {
+                                updateActiveStatus({
+                                    id: brand.id,
+                                    isActive: checked,
+                                });
+                            }}
+                        />
+                    </div>
+
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-destructive/25 bg-destructive/5 p-3">
+                        <div>
+                            <p className="text-sm font-medium">
+                                Temporary Delist Products
                             </p>
                             <p className="text-xs text-muted-foreground">
-                                {brand.email}
+                                Remove all active products from this
+                                brand&apos;s marketplace listing.
                             </p>
                         </div>
-                        {getVerificationBadge()}
-                    </div>
-                </SheetHeader>
-
-                <div className="mt-4 grid grid-cols-3 items-center divide-x text-center">
-                    {[
-                        {
-                            label: "Email",
-                            value: brand.email,
-                            icon: Icons.Mail,
-                        },
-                        {
-                            label: "Phone",
-                            value: brand.phone,
-                            icon: Icons.Phone,
-                        },
-                        {
-                            label: "Website",
-                            value: brand.website,
-                            icon: Icons.Globe,
-                        },
-                    ].map(({ label, value, icon: Icon }) => (
-                        <button
-                            className={cn(
-                                "flex flex-col items-center gap-1 p-2 text-xs",
-                                !value &&
-                                    "cursor-not-allowed text-foreground/50"
-                            )}
-                            key={label}
-                            disabled={!value}
-                            onClick={() => {
-                                if (value) {
-                                    navigator.clipboard.writeText(value);
-                                    toast.success(
-                                        `${label} copied to clipboard`
-                                    );
-                                }
-                            }}
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={isDelistingProducts}
+                            onClick={() => setIsDelistOpen(true)}
                         >
-                            <Icon
-                                className={cn(
-                                    "size-4",
-                                    !value && "text-foreground/50"
-                                )}
-                            />
-                            Copy {label}
-                        </button>
-                    ))}
-                </div>
-
-                <Separator className="my-4" />
-
-                {/* Brand Details */}
-                <div className="mb-4 space-y-2 text-sm">
-                    <p className="font-medium">Brand Overview</p>
-                    <div className="grid grid-cols-2 gap-2 rounded-md bg-muted p-3">
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">Owner</span>
-                            <span className="font-medium">
-                                {brand.ownerName}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                                Members
-                            </span>
-                            <span className="font-medium">
-                                {brand.memberCount}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                                Subscription
-                            </span>
-                            <span className="font-medium">
-                                {brand.subscribedTo}
-                            </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <span className="text-muted-foreground">
-                                Created
-                            </span>
-                            <span className="font-medium">
-                                {format(
-                                    new Date(brand.createdAt),
-                                    "MMM dd, yyyy"
-                                )}
-                            </span>
-                        </div>
+                            {isDelistingProducts ? (
+                                <Spinner className="animate-spin" />
+                            ) : (
+                                <Icons.EyeOff className="size-4" />
+                            )}
+                            Delist All
+                        </Button>
                     </div>
-                </div>
 
-                {/* Brand Status Toggle */}
-                <div className="mb-4 flex items-center justify-between rounded-md border p-3">
-                    <div>
-                        <p className="text-sm font-medium">Brand Status</p>
-                        <p className="text-xs text-muted-foreground">
-                            {brand.isActive
-                                ? "Brand is currently active and visible"
-                                : "Brand is deactivated and hidden"}
-                        </p>
-                    </div>
-                    <Switch
-                        checked={brand.isActive}
-                        disabled={isUpdatingActiveStatus}
-                        onCheckedChange={(checked) => {
-                            updateActiveStatus({
-                                id: brand.id,
-                                isActive: checked,
-                            });
-                        }}
-                    />
-                </div>
-
-                <Tabs defaultValue="brand" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="brand">Brand Info</TabsTrigger>
-                        <TabsTrigger value="confidential">
-                            Confidential
-                        </TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="brand" className="mt-4 space-y-4">
-                        <Form {...brandForm}>
-                            <form
-                                onSubmit={brandForm.handleSubmit(
-                                    handleBrandSubmit
-                                )}
-                                className="space-y-4"
-                            >
-                                <FormField
-                                    control={brandForm.control}
-                                    name="bio"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Bio</FormLabel>
-                                            <FormControl>
-                                                <Textarea
-                                                    {...field}
-                                                    placeholder="Brand description..."
-                                                    minRows={3}
-                                                    maxLength={255}
-                                                    value={field.value ?? ""}
-                                                    disabled={isUpdatingBrand}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <FormField
-                                    control={brandForm.control}
-                                    name="website"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Website</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="https://example.com"
-                                                    value={field.value ?? ""}
-                                                    disabled={isUpdatingBrand}
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-
-                                <Button
-                                    type="submit"
-                                    className="w-full"
-                                    disabled={
-                                        isUpdatingBrand ||
-                                        !brandForm.formState.isDirty
-                                    }
-                                >
-                                    {isUpdatingBrand && (
-                                        <Spinner className="animate-spin" />
-                                    )}
-                                    Save Brand Info
-                                </Button>
-                            </form>
-                        </Form>
-
-                        <Separator />
-
-                        <div className="flex flex-col gap-2">
-                            <Button
-                                variant="outline"
-                                asChild
-                                className="w-full"
-                            >
-                                <Link
-                                    href={`/dashboard/general/brands/verifications/${brand.id}`}
-                                >
-                                    <Icons.Shield className="size-4" />
-                                    View Verification
-                                </Link>
-                            </Button>
-                            <Button
-                                variant="outline"
-                                asChild
-                                className="w-full"
-                            >
-                                <Link
-                                    href={`/brands/${brand.slug}`}
-                                    target="_blank"
-                                >
-                                    <Icons.ExternalLink className="size-4" />
-                                    View Public Page
-                                </Link>
-                            </Button>
+                    <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-green-500/25 bg-green-500/5 p-3">
+                        <div>
+                            <p className="text-sm font-medium">
+                                Relist Products
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                Put all inactive products from this brand back
+                                on the marketplace listing.
+                            </p>
                         </div>
-                    </TabsContent>
+                        <Button
+                            size="sm"
+                            disabled={isRelistingProducts}
+                            onClick={() => setIsRelistOpen(true)}
+                        >
+                            {isRelistingProducts ? (
+                                <Spinner className="animate-spin" />
+                            ) : (
+                                <Icons.Eye className="size-4" />
+                            )}
+                            Relist All
+                        </Button>
+                    </div>
 
-                    <TabsContent
-                        value="confidential"
-                        className="mt-4 space-y-4"
-                    >
-                        {!confidentialData ? (
-                            <div className="flex items-center justify-center py-8">
-                                <Spinner className="size-6 animate-spin" />
-                            </div>
-                        ) : (
-                            <>
-                                {!confidentialData && (
-                                    <div className="rounded-md bg-blue-100 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
-                                        <strong>Note:</strong> This brand has
-                                        not submitted any confidential data yet.
-                                        You can start by filling the details
-                                        below.
-                                    </div>
-                                )}
+                    <Tabs defaultValue="brand" className="w-full">
+                        <TabsList className="grid w-full grid-cols-2">
+                            <TabsTrigger value="brand">Brand Info</TabsTrigger>
+                            <TabsTrigger value="confidential">
+                                Confidential
+                            </TabsTrigger>
+                        </TabsList>
 
-                                <Form {...confidentialForm}>
-                                    <form
-                                        onSubmit={confidentialForm.handleSubmit(
-                                            handleConfidentialSubmit
+                        <TabsContent value="brand" className="mt-4 space-y-4">
+                            <Form {...brandForm}>
+                                <form
+                                    onSubmit={brandForm.handleSubmit(
+                                        handleBrandSubmit
+                                    )}
+                                    className="space-y-4"
+                                >
+                                    <FormField
+                                        control={brandForm.control}
+                                        name="bio"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Bio</FormLabel>
+                                                <FormControl>
+                                                    <Textarea
+                                                        {...field}
+                                                        placeholder="Brand description..."
+                                                        minRows={3}
+                                                        maxLength={255}
+                                                        value={
+                                                            field.value ?? ""
+                                                        }
+                                                        disabled={
+                                                            isUpdatingBrand
+                                                        }
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
                                         )}
-                                        className="space-y-4"
+                                    />
+
+                                    <FormField
+                                        control={brandForm.control}
+                                        name="website"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Website</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="https://example.com"
+                                                        value={
+                                                            field.value ?? ""
+                                                        }
+                                                        disabled={
+                                                            isUpdatingBrand
+                                                        }
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+
+                                    <Button
+                                        type="submit"
+                                        className="w-full"
+                                        disabled={
+                                            isUpdatingBrand ||
+                                            !brandForm.formState.isDirty
+                                        }
                                     >
-                                        {/* Business Info */}
-                                        <div className="space-y-3">
-                                            <p className="text-sm font-medium">
-                                                Business Information
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="gstin"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                GSTIN
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="pan"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                PAN
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
-                                        </div>
+                                        {isUpdatingBrand && (
+                                            <Spinner className="animate-spin" />
+                                        )}
+                                        Save Brand Info
+                                    </Button>
+                                </form>
+                            </Form>
 
-                                        {/* Bank Details */}
-                                        <div className="space-y-3">
-                                            <p className="text-sm font-medium">
-                                                Bank Details
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="bankName"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                Bank Name
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="bankAccountHolderName"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                Account Holder
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="bankAccountNumber"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                Account Number
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="bankIfscCode"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                IFSC Code
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
-                                        </div>
+                            <Separator />
 
-                                        {/* Signatory */}
-                                        <div className="space-y-3">
-                                            <p className="text-sm font-medium">
-                                                Authorized Signatory
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="authorizedSignatoryName"
-                                                    render={({ field }) => (
-                                                        <FormItem className="col-span-2">
-                                                            <FormLabel>
-                                                                Name
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="authorizedSignatoryEmail"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                Email
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    type="email"
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="authorizedSignatoryPhone"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                Phone
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
-                                        </div>
+                            <div className="flex flex-col gap-2">
+                                <Button
+                                    variant="outline"
+                                    asChild
+                                    className="w-full"
+                                >
+                                    <Link
+                                        href={`/dashboard/general/brands/verifications/${brand.id}`}
+                                    >
+                                        <Icons.Shield className="size-4" />
+                                        View Verification
+                                    </Link>
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    asChild
+                                    className="w-full"
+                                >
+                                    <Link
+                                        href={`/brands/${brand.slug}`}
+                                        target="_blank"
+                                    >
+                                        <Icons.ExternalLink className="size-4" />
+                                        View Public Page
+                                    </Link>
+                                </Button>
+                            </div>
+                        </TabsContent>
 
-                                        {/* Office Address */}
-                                        <div className="space-y-3">
-                                            <p className="text-sm font-medium">
-                                                Office Address
-                                            </p>
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="addressLine1"
-                                                    render={({ field }) => (
-                                                        <FormItem className="col-span-2">
-                                                            <FormLabel>
-                                                                Address Line 1
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="addressLine2"
-                                                    render={({ field }) => (
-                                                        <FormItem className="col-span-2">
-                                                            <FormLabel>
-                                                                Address Line 2
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    value={
-                                                                        field.value ??
-                                                                        ""
-                                                                    }
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="city"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                City
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="state"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                State
-                                                            </FormLabel>
-                                                            <Select
-                                                                onValueChange={
-                                                                    field.onChange
-                                                                }
-                                                                value={
-                                                                    field.value
-                                                                }
-                                                                disabled={
-                                                                    isUpdatingConfidential
-                                                                }
-                                                            >
-                                                                <SelectTrigger>
-                                                                    <FormControl>
-                                                                        <SelectValue placeholder="Select state" />
-                                                                    </FormControl>
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {states.map(
-                                                                        (
-                                                                            state
-                                                                        ) => (
-                                                                            <SelectItem
-                                                                                key={
-                                                                                    state.isoCode
-                                                                                }
-                                                                                value={
-                                                                                    state.name
-                                                                                }
-                                                                            >
-                                                                                {
-                                                                                    state.name
-                                                                                }
-                                                                            </SelectItem>
-                                                                        )
-                                                                    )}
-                                                                </SelectContent>
-                                                            </Select>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <FormField
-                                                    control={
-                                                        confidentialForm.control
-                                                    }
-                                                    name="postalCode"
-                                                    render={({ field }) => (
-                                                        <FormItem>
-                                                            <FormLabel>
-                                                                Postal Code
-                                                            </FormLabel>
-                                                            <FormControl>
-                                                                <Input
-                                                                    {...field}
-                                                                    disabled={
-                                                                        isUpdatingConfidential
-                                                                    }
-                                                                />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                            </div>
+                        <TabsContent
+                            value="confidential"
+                            className="mt-4 space-y-4"
+                        >
+                            {!confidentialData ? (
+                                <div className="flex items-center justify-center py-8">
+                                    <Spinner className="size-6 animate-spin" />
+                                </div>
+                            ) : (
+                                <>
+                                    {!confidentialData && (
+                                        <div className="rounded-md bg-blue-100 p-3 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-200">
+                                            <strong>Note:</strong> This brand
+                                            has not submitted any confidential
+                                            data yet. You can start by filling
+                                            the details below.
                                         </div>
+                                    )}
 
-                                        <Button
-                                            type="submit"
-                                            className="w-full"
-                                            disabled={
-                                                isUpdatingConfidential ||
-                                                !confidentialForm.formState
-                                                    .isDirty
-                                            }
-                                        >
-                                            {isUpdatingConfidential && (
-                                                <Spinner className="animate-spin" />
+                                    <Form {...confidentialForm}>
+                                        <form
+                                            onSubmit={confidentialForm.handleSubmit(
+                                                handleConfidentialSubmit
                                             )}
-                                            Save Confidential Details
-                                        </Button>
-                                    </form>
-                                </Form>
-                            </>
-                        )}
-                    </TabsContent>
-                </Tabs>
-            </SheetContent>
-        </Sheet>
+                                            className="space-y-4"
+                                        >
+                                            {/* Business Info */}
+                                            <div className="space-y-3">
+                                                <p className="text-sm font-medium">
+                                                    Business Information
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="gstin"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    GSTIN
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="pan"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    PAN
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Bank Details */}
+                                            <div className="space-y-3">
+                                                <p className="text-sm font-medium">
+                                                    Bank Details
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="bankName"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Bank Name
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="bankAccountHolderName"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Account
+                                                                    Holder
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="bankAccountNumber"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Account
+                                                                    Number
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="bankIfscCode"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    IFSC Code
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Signatory */}
+                                            <div className="space-y-3">
+                                                <p className="text-sm font-medium">
+                                                    Authorized Signatory
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="authorizedSignatoryName"
+                                                        render={({ field }) => (
+                                                            <FormItem className="col-span-2">
+                                                                <FormLabel>
+                                                                    Name
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="authorizedSignatoryEmail"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Email
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        type="email"
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="authorizedSignatoryPhone"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Phone
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Office Address */}
+                                            <div className="space-y-3">
+                                                <p className="text-sm font-medium">
+                                                    Office Address
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="addressLine1"
+                                                        render={({ field }) => (
+                                                            <FormItem className="col-span-2">
+                                                                <FormLabel>
+                                                                    Address Line
+                                                                    1
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="addressLine2"
+                                                        render={({ field }) => (
+                                                            <FormItem className="col-span-2">
+                                                                <FormLabel>
+                                                                    Address Line
+                                                                    2
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        value={
+                                                                            field.value ??
+                                                                            ""
+                                                                        }
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="city"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    City
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="state"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    State
+                                                                </FormLabel>
+                                                                <Select
+                                                                    onValueChange={
+                                                                        field.onChange
+                                                                    }
+                                                                    value={
+                                                                        field.value
+                                                                    }
+                                                                    disabled={
+                                                                        isUpdatingConfidential
+                                                                    }
+                                                                >
+                                                                    <SelectTrigger>
+                                                                        <FormControl>
+                                                                            <SelectValue placeholder="Select state" />
+                                                                        </FormControl>
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {states.map(
+                                                                            (
+                                                                                state
+                                                                            ) => (
+                                                                                <SelectItem
+                                                                                    key={
+                                                                                        state.isoCode
+                                                                                    }
+                                                                                    value={
+                                                                                        state.name
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        state.name
+                                                                                    }
+                                                                                </SelectItem>
+                                                                            )
+                                                                        )}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="postalCode"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Postal Code
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <Button
+                                                type="submit"
+                                                className="w-full"
+                                                disabled={
+                                                    isUpdatingConfidential ||
+                                                    !confidentialForm.formState
+                                                        .isDirty
+                                                }
+                                            >
+                                                {isUpdatingConfidential && (
+                                                    <Spinner className="animate-spin" />
+                                                )}
+                                                Save Confidential Details
+                                            </Button>
+                                        </form>
+                                    </Form>
+                                </>
+                            )}
+                        </TabsContent>
+                    </Tabs>
+                </SheetContent>
+            </Sheet>
+            <AlertDialog open={isDelistOpen} onOpenChange={setIsDelistOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Delist all products for {brand.name}?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will remove every active, non-deleted product
+                            from this brand&apos;s marketplace listing. It will
+                            not delete the products, and they can be listed
+                            again later.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isDelistingProducts}
+                            onClick={() => setIsDelistOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="destructive"
+                            size="sm"
+                            disabled={isDelistingProducts}
+                            onClick={() =>
+                                delistBrandProducts({ id: brand.id })
+                            }
+                        >
+                            {isDelistingProducts && (
+                                <Spinner className="animate-spin" />
+                            )}
+                            Delist Products
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={isRelistOpen} onOpenChange={setIsRelistOpen}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>
+                            Relist all products for {brand.name}?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will put every inactive, non-deleted product
+                            from this brand back on the marketplace listing.
+                            Products still need to be published, available, and
+                            approved to be purchasable.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+
+                    <AlertDialogFooter>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={isRelistingProducts}
+                            onClick={() => setIsRelistOpen(false)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            size="sm"
+                            disabled={isRelistingProducts}
+                            onClick={() =>
+                                relistBrandProducts({ id: brand.id })
+                            }
+                        >
+                            {isRelistingProducts && (
+                                <Spinner className="animate-spin" />
+                            )}
+                            Relist Products
+                        </Button>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </>
     );
 }

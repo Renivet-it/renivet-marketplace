@@ -190,10 +190,7 @@ class ProductQuery {
                     sku: productVariants.sku,
                 })
                 .from(productVariants)
-                .innerJoin(
-                    products,
-                    eq(productVariants.productId, products.id)
-                )
+                .innerJoin(products, eq(productVariants.productId, products.id))
                 .where(
                     and(
                         inArray(productVariants.sku, skus),
@@ -229,7 +226,9 @@ class ProductQuery {
                                 quantity,
                                 updatedAt: new Date(),
                             })
-                            .where(eq(productVariants.id, variantMap.get(sku)!));
+                            .where(
+                                eq(productVariants.id, variantMap.get(sku)!)
+                            );
                         updatedVariants += 1;
                         return;
                     }
@@ -764,8 +763,7 @@ class ProductQuery {
         const normalizedColors = colors?.map((c) => c.toLowerCase());
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
         // Best Sellers should include all products; media-only filtering can hide many items.
-        const shouldRequireMedia =
-            !!requireMedia && sortBy !== "best-sellers";
+        const shouldRequireMedia = !!requireMedia && sortBy !== "best-sellers";
         // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
 
@@ -802,7 +800,10 @@ class ProductQuery {
                 const brandRow = Array.isArray(brandResult)
                     ? brandResult[0]
                     : brandResult?.rows?.[0];
-                if (brandRow && Number(brandRow.distance) < BRAND_MATCH_THRESHOLD) {
+                if (
+                    brandRow &&
+                    Number(brandRow.distance) < BRAND_MATCH_THRESHOLD
+                ) {
                     topBrandMatch = {
                         id: brandRow.id,
                         name: brandRow.name,
@@ -818,7 +819,10 @@ class ProductQuery {
 
             // Fetch absolute best products from the Advanced RAG Python backend
             try {
-                console.log("[getProducts] Hitting Advanced RAG Engine for query:", processedSearch);
+                console.log(
+                    "[getProducts] Hitting Advanced RAG Engine for query:",
+                    processedSearch
+                );
                 const response = await fetch(
                     `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
                     { next: { revalidate: 60 } }
@@ -828,7 +832,9 @@ class ProductQuery {
                     const data = await response.json();
                     if (Array.isArray(data)) {
                         ragProductIds = data.map((d: any) => String(d.id));
-                        console.log(`[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`);
+                        console.log(
+                            `[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`
+                        );
                     }
                 }
             } catch (error) {
@@ -1054,10 +1060,13 @@ class ProductQuery {
         // 🟩 Step 2: semantic relevance (using Advanced RAG order)
         if (isRagSearchActive && ragProductIds.length > 0) {
             // Sort exactly by the relevance order determined by the AI engine
-            const cases = ragProductIds.map((id, index) => `WHEN products.id::text = '${id}' THEN ${index}`).join(' ');
-            orderBy.push(
-                sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`
-            );
+            const cases = ragProductIds
+                .map(
+                    (id, index) =>
+                        `WHEN products.id::text = '${id}' THEN ${index}`
+                )
+                .join(" ");
+            orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);
         }
 
         // 🟪 Step 2.5: Sort by discount percentage when discount filter is applied
@@ -1142,24 +1151,28 @@ class ProductQuery {
                 offset: (page - 1) * limit,
                 orderBy,
             }),
-            db
-                .select({ count: count() })
-                .from(products)
-                .where(whereClause),
+            db.select({ count: count() }).from(products).where(whereClause),
         ]);
 
         // --- Media mapping ---
         const mediaKeys = new Set<string>();
         for (const product of data) {
-            product.media.forEach((m) => mediaKeys.add(`media:${m.id}:${product.brandId}`));
+            product.media.forEach((m) =>
+                mediaKeys.add(`media:${m.id}:${product.brandId}`)
+            );
             product.variants.forEach((v) => {
-                if (v.image) mediaKeys.add(`media:${v.image}:${product.brandId}`);
+                if (v.image)
+                    mediaKeys.add(`media:${v.image}:${product.brandId}`);
             });
             if (product.sustainabilityCertificate)
-                mediaKeys.add(`media:${product.sustainabilityCertificate}:${product.brandId}`);
+                mediaKeys.add(
+                    `media:${product.sustainabilityCertificate}:${product.brandId}`
+                );
         }
 
-        const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
+        const mediaItems = await mediaCache.getByExactKeys(
+            Array.from(mediaKeys)
+        );
         const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
 
         const enhancedData = data.map((product) => ({
@@ -1468,14 +1481,21 @@ class ProductQuery {
         // Media handling - same as getProducts
         const mediaKeys = new Set<string>();
         for (const product of data) {
-            product.media.forEach((media) => mediaKeys.add(`media:${media.id}:${product.brandId}`));
+            product.media.forEach((media) =>
+                mediaKeys.add(`media:${media.id}:${product.brandId}`)
+            );
             product.variants.forEach((variant) => {
-                if (variant.image) mediaKeys.add(`media:${variant.image}:${product.brandId}`);
+                if (variant.image)
+                    mediaKeys.add(`media:${variant.image}:${product.brandId}`);
             });
             if (product.sustainabilityCertificate)
-                mediaKeys.add(`media:${product.sustainabilityCertificate}:${product.brandId}`);
+                mediaKeys.add(
+                    `media:${product.sustainabilityCertificate}:${product.brandId}`
+                );
         }
-        const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
+        const mediaItems = await mediaCache.getByExactKeys(
+            Array.from(mediaKeys)
+        );
         const mediaMap = new Map(
             mediaItems.data.map((item) => [item.id, item])
         );
@@ -1573,17 +1593,24 @@ class ProductQuery {
         });
         if (!data) return null;
         const mediaKeys = new Set<string>();
-        data.media.forEach((media) => mediaKeys.add(`media:${media.id}:${data.brandId}`));
+        data.media.forEach((media) =>
+            mediaKeys.add(`media:${media.id}:${data.brandId}`)
+        );
         data.sizeChartMedia?.forEach((media) =>
             mediaKeys.add(`media:${media.id}:${data.brandId}`)
         );
         data.variants.forEach((variant) => {
-            if (variant.image) mediaKeys.add(`media:${variant.image}:${data.brandId}`);
+            if (variant.image)
+                mediaKeys.add(`media:${variant.image}:${data.brandId}`);
         });
         if (data.sustainabilityCertificate)
-            mediaKeys.add(`media:${data.sustainabilityCertificate}:${data.brandId}`);
+            mediaKeys.add(
+                `media:${data.sustainabilityCertificate}:${data.brandId}`
+            );
 
-        const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
+        const mediaItems = await mediaCache.getByExactKeys(
+            Array.from(mediaKeys)
+        );
         const mediaMap = new Map(
             mediaItems.data.map((item) => [item.id, item])
         );
@@ -1907,7 +1934,8 @@ class ProductQuery {
 
             if (suggestionText) {
                 try {
-                    const suggestionEmbeddingArray = await getEmbedding(suggestionText);
+                    const suggestionEmbeddingArray =
+                        await getEmbedding(suggestionText);
                     if (
                         Array.isArray(suggestionEmbeddingArray) &&
                         suggestionEmbeddingArray.length === 384
@@ -1915,7 +1943,10 @@ class ProductQuery {
                         searchSuggestionEmbeddings = suggestionEmbeddingArray;
                     }
                 } catch (error) {
-                    console.error("Error generating suggestion embedding:", error);
+                    console.error(
+                        "Error generating suggestion embedding:",
+                        error
+                    );
                 }
             }
 
@@ -1949,12 +1980,19 @@ class ProductQuery {
                         embedding768Array.length === 768
                     ) {
                         semanticSearchEmbeddings = embedding768Array;
-                        console.log(`Generated 768 embedding for product ${values.title}: ${semanticSearchEmbeddings.length} dimensions`);
+                        console.log(
+                            `Generated 768 embedding for product ${values.title}: ${semanticSearchEmbeddings.length} dimensions`
+                        );
                     } else {
-                        console.error(`Invalid 768 embedding for product ${values.title}.`);
+                        console.error(
+                            `Invalid 768 embedding for product ${values.title}.`
+                        );
                     }
                 } catch (error) {
-                    console.error(`Error generating 768 embedding for product ${values.title}:`, error);
+                    console.error(
+                        `Error generating 768 embedding for product ${values.title}:`,
+                        error
+                    );
                 }
             } else {
                 console.warn(
@@ -2063,8 +2101,10 @@ class ProductQuery {
                     values.map((value) => ({
                         ...value,
                         embeddings: value.embeddings, // Include embeddings
-                        semanticSearchEmbeddings: value.semanticSearchEmbeddings,
-                        searchSuggestionEmbeddings: value.searchSuggestionEmbeddings,
+                        semanticSearchEmbeddings:
+                            value.semanticSearchEmbeddings,
+                        searchSuggestionEmbeddings:
+                            value.searchSuggestionEmbeddings,
                     }))
                 )
                 .returning()
@@ -2394,15 +2434,20 @@ class ProductQuery {
 
                     if (suggestionText) {
                         try {
-                            const suggestionEmbeddingArray = await getEmbedding(suggestionText);
+                            const suggestionEmbeddingArray =
+                                await getEmbedding(suggestionText);
                             if (
                                 Array.isArray(suggestionEmbeddingArray) &&
                                 suggestionEmbeddingArray.length === 384
                             ) {
-                                searchSuggestionEmbeddings = suggestionEmbeddingArray;
+                                searchSuggestionEmbeddings =
+                                    suggestionEmbeddingArray;
                             }
                         } catch (error) {
-                            console.error("Error generating suggestion embedding:", error);
+                            console.error(
+                                "Error generating suggestion embedding:",
+                                error
+                            );
                         }
                     }
 
@@ -2430,18 +2475,26 @@ class ProductQuery {
                         }
 
                         try {
-                            const embedding768Array = await getEmbedding768(text);
+                            const embedding768Array =
+                                await getEmbedding768(text);
                             if (
                                 Array.isArray(embedding768Array) &&
                                 embedding768Array.length === 768
                             ) {
                                 semanticSearchEmbeddings = embedding768Array;
-                                console.log(`Generated 768 embedding for product ${productId}: ${semanticSearchEmbeddings.length} dimensions`);
+                                console.log(
+                                    `Generated 768 embedding for product ${productId}: ${semanticSearchEmbeddings.length} dimensions`
+                                );
                             } else {
-                                console.error(`Invalid 768 embedding for product ${productId}.`);
+                                console.error(
+                                    `Invalid 768 embedding for product ${productId}.`
+                                );
                             }
                         } catch (error) {
-                            console.error(`Error generating 768 embedding for product ${productId}:`, error);
+                            console.error(
+                                `Error generating 768 embedding for product ${productId}:`,
+                                error
+                            );
                         }
                     } else {
                         console.warn(
@@ -2870,6 +2923,28 @@ class ProductQuery {
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);
+
+        return data;
+    }
+
+    async updateBrandProductsActivationStatus(
+        brandId: string,
+        isActive: boolean
+    ) {
+        const data = await db
+            .update(products)
+            .set({
+                isActive,
+                updatedAt: new Date(),
+            })
+            .where(
+                and(
+                    eq(products.brandId, brandId),
+                    eq(products.isDeleted, false),
+                    eq(products.isActive, !isActive)
+                )
+            )
+            .returning({ id: products.id });
 
         return data;
     }
@@ -4320,7 +4395,11 @@ class ProductQuery {
             .then((res) => res[0]);
     }
 
-    async trackProductView(productId: string, brandId: string, userId?: string) {
+    async trackProductView(
+        productId: string,
+        brandId: string,
+        userId?: string
+    ) {
         return db
             .insert(productEvents)
             .values({
@@ -4441,15 +4520,18 @@ class ProductQuery {
                 viewCount: sql<number>`COALESCE(${viewsAgg.count}, 0)`.as(
                     "view_count"
                 ),
-                wishlistCount: sql<number>`COALESCE(${wishlistAgg.count}, 0)`.as(
-                    "wishlist_count"
-                ),
-                addToCartCount: sql<number>`COALESCE(${addToCartAgg.count}, 0)`.as(
-                    "add_to_cart_count"
-                ),
-                purchaseCount: sql<number>`COALESCE(${purchaseAgg.count}, 0)`.as(
-                    "purchase_count"
-                ),
+                wishlistCount:
+                    sql<number>`COALESCE(${wishlistAgg.count}, 0)`.as(
+                        "wishlist_count"
+                    ),
+                addToCartCount:
+                    sql<number>`COALESCE(${addToCartAgg.count}, 0)`.as(
+                        "add_to_cart_count"
+                    ),
+                purchaseCount:
+                    sql<number>`COALESCE(${purchaseAgg.count}, 0)`.as(
+                        "purchase_count"
+                    ),
             })
             .from(products)
             .leftJoin(viewsAgg, eq(viewsAgg.productId, products.id))

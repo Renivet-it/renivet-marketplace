@@ -65,23 +65,16 @@ const columns: ColumnDef<TableBrand>[] = [
         header: "Status",
         cell: ({ row }) => {
             const brand = row.original;
-            const hasRazorpay = Boolean(brand.rzpAccountId?.trim());
-            const isActive = brand.isActive && hasRazorpay;
-            const statusLabel = !brand.isActive
-                ? "Inactive"
-                : !hasRazorpay
-                ? "Razorpay Pending"
-                : "Active";
 
             return (
                 <span
                     className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        isActive
+                        brand.isActive
                             ? "bg-green-100 text-green-800"
                             : "bg-amber-100 text-amber-800"
                     }`}
                 >
-                    {statusLabel}
+                    {brand.isActive ? "Active" : "Inactive"}
                 </span>
             );
         },
@@ -122,9 +115,7 @@ export function BrandsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.brands.getBrands.useQuery(
+    const { data: queryData } = trpc.general.brands.getBrands.useQuery(
         { page, limit, search },
         { initialData }
     );
