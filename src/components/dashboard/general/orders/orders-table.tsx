@@ -145,31 +145,31 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const data = row.original;
 
             return (
-                <div className="min-w-[220px] space-y-1.5">
-                    <div className="font-semibold text-sky-700">
+                <div className="max-w-[180px] space-y-1 text-xs">
+                    <div className="truncate font-semibold text-sky-700">
                         <OrderSingle order={data} />
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="whitespace-nowrap text-[11px] text-muted-foreground">
                         {format(new Date(data.createdAt), "dd MMM yyyy")}{" "}
                         <span className="px-1">|</span>{" "}
                         {format(new Date(data.createdAt), "hh:mm a")}
                     </div>
-                    <div className="text-xs font-medium text-slate-600">
+                    <div className="text-[11px] font-medium text-slate-600">
                         {data.shipments?.[0]?.courierName ||
                             data.courierName ||
                             "CUSTOM"}
                     </div>
-                    <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                    <div className="flex flex-wrap items-center gap-1 pt-1">
                         <Badge
                             variant="outline"
-                            className="rounded-md border-violet-100 bg-violet-50 px-2 py-0.5 font-medium text-violet-700"
+                            className="rounded-md border-violet-100 bg-violet-50 px-1.5 py-0 text-[11px] font-medium text-violet-700"
                         >
                             Smart Order
                         </Badge>
                         {getOrderSourceLabel(data.paymentMethod) && (
                             <Badge
                                 variant="outline"
-                                className="rounded-md border-rose-100 bg-rose-50 px-2 py-0.5 font-medium text-rose-700"
+                                className="rounded-md border-rose-100 bg-rose-50 px-1.5 py-0 text-[11px] font-medium text-rose-700"
                             >
                                 {getOrderSourceLabel(data.paymentMethod)}
                             </Badge>
@@ -190,14 +190,14 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                     .join(" ") || data.address?.fullName;
 
             return (
-                <div className="min-w-[190px] space-y-1">
-                    <div className="font-medium text-slate-900">
+                <div className="max-w-[170px] space-y-0.5 text-xs">
+                    <div className="truncate font-medium text-slate-900">
                         {customerName || "Unknown customer"}
                     </div>
-                    <div className="max-w-[190px] truncate text-xs text-muted-foreground">
+                    <div className="truncate text-[11px] text-muted-foreground">
                         {data.user?.email || "No email"}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[11px] text-muted-foreground">
                         {data.address?.phone || data.user?.phone || "No phone"}
                     </div>
                 </div>
@@ -211,7 +211,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const data = row.original;
 
             return (
-                <div className="min-w-[130px] space-y-1.5">
+                <div className="max-w-[130px] space-y-1 text-xs">
                     <div className="font-semibold text-slate-950">
                         {formatPriceTag(
                             +convertPaiseToRupees(data.totalAmount),
@@ -221,14 +221,14 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                     <Badge
                         variant="outline"
                         className={cn(
-                            "rounded px-2 py-0.5 font-medium",
+                            "rounded px-1.5 py-0 text-[11px] font-medium",
                             getPaymentStatusClassName(data.paymentStatus)
                         )}
                     >
                         {convertValueToLabel(data.paymentStatus)}
                     </Badge>
                     {getOrderSourceLabel(data.paymentMethod) && (
-                        <div className="text-xs font-medium text-rose-700">
+                        <div className="text-[11px] font-medium text-rose-700">
                             {getOrderSourceLabel(data.paymentMethod)}
                         </div>
                     )}
@@ -245,11 +245,11 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const brandName = data.items[0]?.product?.brand?.name;
 
             return (
-                <div className="min-w-[220px] space-y-1">
+                <div className="max-w-[180px] space-y-0.5 text-xs">
                     <button className="border-b border-dashed border-slate-500 text-sm font-medium text-slate-800">
                         {brandName || "Pickup Address"}
                     </button>
-                    <div className="flex max-w-[220px] items-center gap-1 truncate text-xs text-muted-foreground">
+                    <div className="flex max-w-[180px] items-center gap-1 truncate text-[11px] text-muted-foreground">
                         <MapPin className="size-3 shrink-0" />
                         <span className="truncate">
                             {[
@@ -262,7 +262,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                         </span>
                     </div>
                     {shipment?.pickupTokenNumber && (
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-[11px] text-muted-foreground">
                             Pickup token: {shipment.pickupTokenNumber}
                         </div>
                     )}
@@ -290,14 +290,14 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const shipmentDisplayStatus = getShipmentDisplayStatus(shipment);
 
             return (
-                <div className="min-w-[220px] space-y-1.5">
-                    <div className="flex items-center gap-2 font-medium text-slate-900">
+                <div className="max-w-[205px] space-y-1 text-xs">
+                    <div className="flex items-center gap-1.5 font-medium text-slate-900">
                         <Truck className="size-4 text-sky-600" />
                         <span className="truncate">
                             {courier || "Courier pending"}
                         </span>
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="truncate text-[11px] text-muted-foreground">
                         AWB #{" "}
                         {awb ? (
                             <Link
@@ -310,17 +310,17 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                             "Not Assigned"
                         )}
                     </div>
-                    <div className="flex items-center gap-2 font-medium text-slate-900">
+                    <div className="flex items-center gap-1.5 font-medium text-slate-900">
                         <PackageCheck className="size-4 text-emerald-600" />
                         {`${length} x ${width} x ${height} cm`}
                     </div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-[11px] text-muted-foreground">
                         Vol. weight: {volumetricWeight} g
                     </div>
                     <Badge
                         variant="outline"
                         className={cn(
-                            "rounded px-2 py-0.5 font-medium",
+                            "rounded px-1.5 py-0 text-[11px] font-medium",
                             getShipmentStatusClassName(shipmentDisplayStatus)
                         )}
                     >
@@ -341,7 +341,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                 <Badge
                     variant="outline"
                     className={cn(
-                        "rounded-md px-2.5 py-1 font-semibold",
+                        "rounded-md px-1.5 py-0.5 text-[11px] font-semibold",
                         getOrderStatusClassName(data.status)
                     )}
                 >
@@ -504,14 +504,25 @@ export function OrdersTable({
     );
 
     // Fetch counts for each status tab
+    const statusCountFilters = {
+        search,
+        startDate: startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+        endDate: endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+    };
     const adminStatusCountsQuery =
-        trpc.general.orders.getOrderStatusCounts.useQuery(undefined, {
-            enabled: !isBrandScoped,
-            refetchOnWindowFocus: false,
-        });
+        trpc.general.orders.getOrderStatusCounts.useQuery(
+            {
+                ...statusCountFilters,
+                brandIds: brandIds.length > 0 ? brandIds : undefined,
+            },
+            {
+                enabled: !isBrandScoped,
+                refetchOnWindowFocus: false,
+            }
+        );
     const brandStatusCountsQuery =
         trpc.brands.orders.getOrderStatusCounts.useQuery(
-            { brandId: brandId ?? "" },
+            { brandId: brandId ?? "", ...statusCountFilters },
             {
                 enabled: isBrandScoped,
                 refetchOnWindowFocus: false,
@@ -1046,13 +1057,13 @@ export function OrdersTable({
                     }}
                     className="w-full"
                 >
-                    <TabsList className="flex h-auto w-full justify-start gap-8 overflow-x-auto border-none bg-transparent p-0">
+                    <TabsList className="flex h-auto w-full justify-start gap-6 overflow-x-auto border-none bg-transparent p-0">
                         {STATUS_TABS.map((tab) => (
                             <TabsTrigger
                                 key={tab.value}
                                 value={tab.value}
                                 className={cn(
-                                    "relative rounded-none border-b-2 border-transparent bg-transparent px-0 py-3 text-sm font-medium shadow-none transition-colors",
+                                    "relative rounded-none border-b-2 border-transparent bg-transparent px-0 py-3 text-xs font-medium shadow-none transition-colors lg:text-sm",
                                     "data-[state=active]:border-violet-500 data-[state=active]:bg-transparent data-[state=active]:text-violet-600 data-[state=active]:shadow-none",
                                     "data-[state=inactive]:text-slate-500 data-[state=inactive]:hover:bg-transparent data-[state=inactive]:hover:text-slate-950",
                                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
@@ -1095,7 +1106,8 @@ export function OrdersTable({
                         <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search by order ID..."
-                            className="w-full pl-11"
+                            className="w-full pr-3"
+                            style={{ paddingLeft: "2.75rem" }}
                             value={search}
                             onChange={(e) => {
                                 table
@@ -1321,9 +1333,10 @@ export function OrdersTable({
                     pages={pages}
                     count={count}
                     className="gap-3"
-                    headerClassName="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"
+                    tableClassName="table-fixed text-xs"
+                    headerClassName="bg-slate-50 px-3 py-3 text-xs uppercase tracking-wide text-slate-500"
                     rowClassName="hover:bg-sky-50/40"
-                    cellClassName="py-3 align-top"
+                    cellClassName="px-3 py-3 align-top"
                     perPage={perPage}
                     onPerPageChange={(value) => {
                         setPerPage(value);

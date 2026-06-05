@@ -329,7 +329,10 @@ class OrderQuery {
                                         ),
                                         ne(orderShipments.status, "delivered"),
                                         ne(orderShipments.status, "cancelled"),
-                                        ne(orderShipments.status, "rto_delivered")
+                                        ne(
+                                            orderShipments.status,
+                                            "rto_delivered"
+                                        )
                                     )
                                 )
                         )
@@ -486,14 +489,19 @@ class OrderQuery {
     }
 
     async getOrderStatusCounts({
+        search,
         startDate,
         endDate,
         brandIds,
     }: {
+        search?: string;
         startDate?: string | Date;
         endDate?: string | Date;
         brandIds?: string[];
     } = {}) {
+        const searchFilter = search
+            ? ilike(orders.id, `%${search}%`)
+            : undefined;
         const dateFilter =
             startDate && endDate
                 ? and(
@@ -518,7 +526,7 @@ class OrderQuery {
                       .where(inArray(productTable.brandId, brandIds))
               )
             : undefined;
-        const baseFilter = and(dateFilter, brandFilter);
+        const baseFilter = and(searchFilter, dateFilter, brandFilter);
 
         // Get counts for each status tab efficiently
         const [
@@ -595,10 +603,7 @@ class OrderQuery {
                                     ),
                                     ne(orderShipments.status, "delivered"),
                                     ne(orderShipments.status, "cancelled"),
-                                    ne(
-                                        orderShipments.status,
-                                        "rto_delivered"
-                                    )
+                                    ne(orderShipments.status, "rto_delivered")
                                 )
                             )
                     ),
