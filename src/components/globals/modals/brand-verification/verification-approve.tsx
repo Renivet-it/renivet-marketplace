@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/alert-dialog-dash";
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
-import { handleClientError, wait } from "@/lib/utils";
+import { handleClientError } from "@/lib/utils";
 import { BrandConfidentialWithBrand } from "@/lib/validations";
 import { useRouter } from "next/navigation";
 import { Dispatch, SetStateAction } from "react";
@@ -33,22 +33,16 @@ export function VerificationApproveModal({
         trpc.general.brands.verifications.approveVerification.useMutation({
             onMutate: () => {
                 const toastId = toast.loading(
-                    "Linking brand to Razorpay & approving verification..."
+                    "Approving brand verification..."
                 );
                 return { toastId };
             },
             onSuccess: async (_, __, { toastId }) => {
-                toast.success(
-                    "Brand linked to Razorpay, please complete the KYC as soon as possible, else brand will not be able to receive payments, redirecting...",
-                    { id: toastId, duration: 3000 }
-                );
+                toast.success("Brand verification approved successfully.", {
+                    id: toastId,
+                });
                 setIsOpen(false);
                 router.refresh();
-                await wait(3000);
-                window.open(
-                    "https://dashboard.razorpay.com/app/route/accounts",
-                    "_blank"
-                );
             },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
@@ -60,13 +54,12 @@ export function VerificationApproveModal({
             <AlertDialogContent>
                 <AlertDialogHeader>
                     <AlertDialogTitle>
-                        Are you sure you want to approve this verification
-                        request and link this brand to Razorpay?
+                        Are you sure you want to approve this brand verification
+                        request?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
-                        This action will link the brand to Razorpay. Remember to
-                        complete the KYC as soon as possible, else brand will
-                        not be able to receive payments.
+                        This action will mark the brand verification as approved
+                        and remove it from the pending verification queue.
                     </AlertDialogDescription>
                 </AlertDialogHeader>
 
@@ -87,15 +80,11 @@ export function VerificationApproveModal({
                         disabled={isApproving}
                         onClick={() =>
                             approveVerification({
-                                ...data,
-                                email: data.brand.email,
-                                name: data.brand.name,
-                                phone: data.brand.phone,
-                                ownerId: data.brand.ownerId,
+                                id: data.id,
                             })
                         }
                     >
-                        Link to Razorpay
+                        Approve Verification
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>

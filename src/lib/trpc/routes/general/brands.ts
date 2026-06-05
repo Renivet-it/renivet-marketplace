@@ -5,8 +5,11 @@ import {
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
 import { posthog } from "@/lib/posthog/client";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import {
@@ -30,7 +33,6 @@ import {
     brandConfidentialSchema,
     brandRequestSchema,
     createBrandRequestSchema,
-    linkBrandToRazorpaySchema,
     updateBrandConfidentialByAdminSchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
@@ -397,7 +399,7 @@ export const brandRequestsRouter = createTRPCRouter({
                 reason:
                     data.status === "approved"
                         ? "BRD_ACTIVATED"
-                        : data.rejectionReason ?? "BRD_OFFBOARDED_BREACH",
+                        : (data.rejectionReason ?? "BRD_OFFBOARDED_BREACH"),
             });
 
             return true;
@@ -560,7 +562,11 @@ export const brandVerificationsRouter = createTRPCRouter({
             return updatedBrandConfidential;
         }),
     approveVerification: protectedProcedure
-        .input(linkBrandToRazorpaySchema)
+        .input(
+            z.object({
+                id: z.string().uuid(),
+            })
+        )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
@@ -595,8 +601,6 @@ export const brandVerificationsRouter = createTRPCRouter({
                     message: "Brand verification is already rejected",
                 });
 
-            await queries.brands.linkBrandToRazorpay(input);
-
             const updatedBrandConfidential = await Promise.all([
                 queries.brandConfidentials.updateBrandConfidentialStatus(id, {
                     status: "approved",
@@ -609,7 +613,10 @@ export const brandVerificationsRouter = createTRPCRouter({
                 actionType: "brand_kyc_verified",
                 entityType: "brand_confidential",
                 entityId: id,
-                beforeValue: { verificationStatus: existingBrandConfidential.verificationStatus },
+                beforeValue: {
+                    verificationStatus:
+                        existingBrandConfidential.verificationStatus,
+                },
                 afterValue: { verificationStatus: "approved" },
                 reason: "BRD_ACTIVATED",
             });
@@ -692,7 +699,10 @@ export const brandVerificationsRouter = createTRPCRouter({
                 actionType: "brand_kyc_rejected",
                 entityType: "brand_confidential",
                 entityId: id,
-                beforeValue: { verificationStatus: existingBrandConfidential.verificationStatus },
+                beforeValue: {
+                    verificationStatus:
+                        existingBrandConfidential.verificationStatus,
+                },
                 afterValue: {
                     verificationStatus: "rejected",
                     rejectedReason,
@@ -818,5 +828,77 @@ export const brandsRouter = createTRPCRouter({
             });
 
             return { success: true, isActive };
+        }),
+    delistBrandProducts: protectedProcedure
+        .input(
+            z.object({
+                id: z.string().uuid("Invalid brand ID"),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingBrand = await brandCache.get(id);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            const updatedProducts =
+                await queries.products.updateBrandProductsActivationStatus(
+                    id,
+                    false
+                );
+
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "brand_products_delisted",
+                entityType: "brand",
+                entityId: id,
+                beforeValue: { brandName: existingBrand.name },
+                afterValue: { delistedProductCount: updatedProducts.length },
+                reason: "ADMIN_BULK_DELIST_PRODUCTS",
+            });
+
+            return { success: true, count: updatedProducts.length };
+        }),
+    relistBrandProducts: protectedProcedure
+        .input(
+            z.object({
+                id: z.string().uuid("Invalid brand ID"),
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ ctx, input }) => {
+            const { queries } = ctx;
+            const { id } = input;
+
+            const existingBrand = await brandCache.get(id);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            const updatedProducts =
+                await queries.products.updateBrandProductsActivationStatus(
+                    id,
+                    true
+                );
+
+            await auditEntityChange({
+                actorId: ctx.user.id,
+                actionType: "brand_products_relisted",
+                entityType: "brand",
+                entityId: id,
+                beforeValue: { brandName: existingBrand.name },
+                afterValue: { relistedProductCount: updatedProducts.length },
+                reason: "ADMIN_BULK_RELIST_PRODUCTS",
+            });
+
+            return { success: true, count: updatedProducts.length };
         }),
 });
