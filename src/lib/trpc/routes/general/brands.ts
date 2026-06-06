@@ -9,6 +9,7 @@ import {
     auditEntityChange,
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
+import { brandStatusReasonCodes } from "@/lib/monitoring-sla/reason-codes";
 import { posthog } from "@/lib/posthog/client";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
@@ -789,12 +790,16 @@ export const brandsRouter = createTRPCRouter({
             z.object({
                 id: z.string().uuid("Invalid brand ID"),
                 isActive: z.boolean(),
+                statusReasonCode: z.enum(brandStatusReasonCodes).optional(),
             })
         )
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
             const { id, isActive } = input;
+            const statusReasonCode =
+                input.statusReasonCode ??
+                (isActive ? "BRD_ACTIVATED" : "BRD_PAUSED_REQUEST");
 
             const existingBrand = await brandCache.get(id);
             if (!existingBrand)
@@ -803,7 +808,10 @@ export const brandsRouter = createTRPCRouter({
                     message: "Brand not found",
                 });
 
-            await queries.brands.updateBrand(id, { isActive });
+            await queries.brands.updateBrand(id, {
+                isActive,
+                statusReasonCode,
+            });
             await brandCache.remove(id);
             await auditEntityChange({
                 actorId: ctx.user.id,
@@ -811,8 +819,8 @@ export const brandsRouter = createTRPCRouter({
                 entityType: "brand",
                 entityId: id,
                 beforeValue: { isActive: existingBrand.isActive },
-                afterValue: { isActive },
-                reason: isActive ? "BRD_ACTIVATED" : "BRD_PAUSED_REQUEST",
+                afterValue: { isActive, statusReasonCode },
+                reason: statusReasonCode,
             });
             await createOperationalAlert({
                 actorId: ctx.user.id,

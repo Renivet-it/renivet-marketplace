@@ -43,7 +43,9 @@ async function assertMonitoringAccess() {
     if (!userId) notFound();
 
     const user = await userCache.get(userId);
-    const permissions = user ? getUserPermissions(user.roles).sitePermissions : 0;
+    const permissions = user
+        ? getUserPermissions(user.roles).sitePermissions
+        : 0;
     const allowed = hasPermission(
         permissions,
         [
@@ -180,13 +182,43 @@ const metricConfig = {
     },
     platformUptime24h: {
         label: "Uptime 24H",
-        sublabel: "Manual until uptime source connected",
+        sublabel: "Alert-derived platform signal",
         icon: Gauge,
     },
     ordersWtd: {
         label: "Orders WTD",
         sublabel: "Business week activity",
         icon: Activity,
+    },
+    gmvWtd: {
+        label: "GMV WTD",
+        sublabel: "Paid/order value this week",
+        icon: Gauge,
+    },
+    aovWtd: {
+        label: "AOV WTD",
+        sublabel: "Average order value",
+        icon: Gauge,
+    },
+    newCustomersWtd: {
+        label: "Customers WTD",
+        sublabel: "Unique ordering customers",
+        icon: UsersRound,
+    },
+    activeBrands: {
+        label: "Active Brands",
+        sublabel: "Live brand accounts",
+        icon: UsersRound,
+    },
+    inactiveOrPendingBrands: {
+        label: "Brand Follow-up",
+        sublabel: "Inactive or unverified",
+        icon: AlertTriangle,
+    },
+    pendingRefundAmount: {
+        label: "Pending Refund Amt",
+        sublabel: "Refund value awaiting action",
+        icon: FileText,
     },
     openAlerts: {
         label: "Open Alerts",
@@ -287,11 +319,22 @@ export default async function MonitoringSlaPage({
     const alertPage = Math.max(1, Number(alertPageRaw ?? "1") || 1);
     const alertPageSize = 10;
 
-    const [health, alertsPage, alertSummary, evidence] = await Promise.all([
+    const [
+        health,
+        alertsPage,
+        alertSummary,
+        evidence,
+        brandHealth,
+        marketingPerformance,
+        monthlyStrategic,
+    ] = await Promise.all([
         monitoringSlaQueries.getDailyHealth(),
         monitoringSlaQueries.getActiveAlertsPage(alertPage, alertPageSize),
         monitoringSlaQueries.getAlertSummary(),
         monitoringSlaQueries.getRecentEvidence(),
+        monitoringSlaQueries.getBrandHealth(),
+        monitoringSlaQueries.getMarketingPerformance(),
+        monitoringSlaQueries.getMonthlyStrategic(),
     ]);
     const alerts = alertsPage.rows;
     const pageCount = alertsPage.pageCount;
@@ -310,11 +353,13 @@ export default async function MonitoringSlaPage({
     const currentMonth = new Date().toISOString().slice(0, 7);
     const generatedExportHref =
         noticeRaw === "compliance-export"
-            ? `/api/admin/monitoring-sla/compliance-export?${new URLSearchParams({
-                  exportMonth: generatedExportMonthRaw || currentMonth,
-                  exportType: generatedExportTypeRaw || "alerts",
-                  format: "xlsx",
-              }).toString()}`
+            ? `/api/admin/monitoring-sla/compliance-export?${new URLSearchParams(
+                  {
+                      exportMonth: generatedExportMonthRaw || currentMonth,
+                      exportType: generatedExportTypeRaw || "alerts",
+                      format: "xlsx",
+                  }
+              ).toString()}`
             : null;
     const metricEntries = Object.entries(health.metrics) as Array<
         [keyof typeof metricConfig, number | string]
@@ -379,11 +424,12 @@ export default async function MonitoringSlaPage({
                                     Operations Command Center
                                 </h1>
                                 <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
-                                    {health.metrics.criticalAlerts} critical alerts,
-                                    {" "}
-                                    {health.metrics.openAlerts} open alerts,{" "}
-                                    {health.metrics.openTickets} open tickets,{" "}
-                                    {health.metrics.refundsPendingProcessing} pending refunds
+                                    {health.metrics.criticalAlerts} critical
+                                    alerts, {health.metrics.openAlerts} open
+                                    alerts, {health.metrics.openTickets} open
+                                    tickets,{" "}
+                                    {health.metrics.refundsPendingProcessing}{" "}
+                                    pending refunds
                                 </p>
                             </div>
                         </div>
@@ -449,14 +495,16 @@ export default async function MonitoringSlaPage({
                     <div className={`h-1.5 ${healthStatus.accent}`} />
                     <div className="grid gap-4 p-4 lg:grid-cols-[minmax(220px,0.8fr)_1fr] lg:items-center">
                         <div>
-                            <p className="text-sm font-semibold">Daily Health</p>
+                            <p className="text-sm font-semibold">
+                                Daily Health
+                            </p>
                             <p className="mt-1 text-4xl font-semibold tracking-normal">
                                 {healthStatus.label}
                             </p>
                         </div>
                         <div className="grid gap-3 sm:grid-cols-3">
                             <div>
-                                <p className="text-xs font-semibold uppercase text-current/60">
+                                <p className="text-current/60 text-xs font-semibold uppercase">
                                     Alert Load
                                 </p>
                                 <p className="mt-1 text-lg font-semibold">
@@ -465,16 +513,17 @@ export default async function MonitoringSlaPage({
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold uppercase text-current/60">
+                                <p className="text-current/60 text-xs font-semibold uppercase">
                                     Queue Load
                                 </p>
                                 <p className="mt-1 text-lg font-semibold">
                                     {health.metrics.openTickets} tickets /{" "}
-                                    {health.metrics.refundsPendingProcessing} refunds
+                                    {health.metrics.refundsPendingProcessing}{" "}
+                                    refunds
                                 </p>
                             </div>
                             <div>
-                                <p className="text-xs font-semibold uppercase text-current/60">
+                                <p className="text-current/60 text-xs font-semibold uppercase">
                                     Business Activity
                                 </p>
                                 <p className="mt-1 text-lg font-semibold">
@@ -517,6 +566,174 @@ export default async function MonitoringSlaPage({
                     })}
                 </section>
 
+                <section className="grid gap-4 xl:grid-cols-3">
+                    <div className="rounded-md border bg-white p-4 shadow-sm">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-base font-semibold text-slate-950">
+                                    Brand Health
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    KP Monday review dashboard
+                                </p>
+                            </div>
+                            <UsersRound className="size-5 text-muted-foreground" />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {[
+                                ["Active brands", brandHealth.activeBrands],
+                                ["Paused brands", brandHealth.pausedBrands],
+                                [
+                                    "Pending verification",
+                                    brandHealth.pendingVerification,
+                                ],
+                                ["Active products", brandHealth.activeProducts],
+                                [
+                                    "Brands no orders 30d",
+                                    brandHealth.brandsWithNoOrders30d,
+                                ],
+                                [
+                                    "Certs expiring 30d",
+                                    brandHealth.certExpiring30d,
+                                ],
+                                [
+                                    "Contracts expiring 30d",
+                                    brandHealth.contractExpiring30d,
+                                ],
+                                [
+                                    "Low inventory SKUs",
+                                    brandHealth.lowInventoryVariants,
+                                ],
+                            ].map(([label, value]) => (
+                                <div
+                                    key={label}
+                                    className="rounded-md border bg-slate-50 px-3 py-2"
+                                >
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        {label}
+                                    </p>
+                                    <p className="mt-1 text-xl font-semibold text-slate-950">
+                                        {metricLabel(value)}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="rounded-md border bg-white p-4 shadow-sm">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-base font-semibold text-slate-950">
+                                    Marketing Performance
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    PS weekly marketing review
+                                </p>
+                            </div>
+                            <Gauge className="size-5 text-muted-foreground" />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {[
+                                ["GMV WTD", marketingPerformance.gmvWtd],
+                                ["Orders WTD", marketingPerformance.ordersWtd],
+                                [
+                                    "Customers WTD",
+                                    marketingPerformance.customersWtd,
+                                ],
+                                ["GMV MTD", marketingPerformance.gmvMtd],
+                                ["Orders MTD", marketingPerformance.ordersMtd],
+                                [
+                                    "Customers MTD",
+                                    marketingPerformance.customersMtd,
+                                ],
+                                [
+                                    "Ad spend",
+                                    marketingPerformance.adSpendIntegration,
+                                ],
+                                ["ROAS", marketingPerformance.roasIntegration],
+                            ].map(([label, value]) => (
+                                <div
+                                    key={label}
+                                    className="rounded-md border bg-slate-50 px-3 py-2"
+                                >
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        {label}
+                                    </p>
+                                    <p className="mt-1 text-xl font-semibold text-slate-950">
+                                        {metricLabel(value)}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="rounded-md border bg-white p-4 shadow-sm">
+                        <div className="mb-4 flex items-center justify-between gap-3">
+                            <div>
+                                <h2 className="text-base font-semibold text-slate-950">
+                                    Monthly Strategic
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Founder review dashboard
+                                </p>
+                            </div>
+                            <ClipboardCheck className="size-5 text-muted-foreground" />
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            {[
+                                [
+                                    "GMV MTD",
+                                    monthlyStrategic.currentMonth.gmv ?? 0,
+                                ],
+                                [
+                                    "Orders MTD",
+                                    monthlyStrategic.currentMonth.orderCount ??
+                                        0,
+                                ],
+                                [
+                                    "Customers MTD",
+                                    monthlyStrategic.currentMonth
+                                        .customerCount ?? 0,
+                                ],
+                                [
+                                    "Prior GMV",
+                                    monthlyStrategic.previousMonth.gmv ?? 0,
+                                ],
+                                [
+                                    "Refund rate",
+                                    `${(
+                                        monthlyStrategic.refundRate * 100
+                                    ).toFixed(1)}%`,
+                                ],
+                                [
+                                    "Compliance exports",
+                                    monthlyStrategic.complianceExportsThisMonth,
+                                ],
+                                [
+                                    "Critical alerts",
+                                    monthlyStrategic.openCriticalAlerts,
+                                ],
+                                [
+                                    "Cohort retention",
+                                    monthlyStrategic.cohortRetentionIntegration,
+                                ],
+                            ].map(([label, value]) => (
+                                <div
+                                    key={label}
+                                    className="rounded-md border bg-slate-50 px-3 py-2"
+                                >
+                                    <p className="text-xs font-medium text-muted-foreground">
+                                        {label}
+                                    </p>
+                                    <p className="mt-1 text-xl font-semibold text-slate-950">
+                                        {metricLabel(value)}
+                                    </p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
                 <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
                     <div className="rounded-md border bg-white shadow-sm">
                         <div className="flex items-center justify-between border-b px-4 py-3">
@@ -543,7 +760,8 @@ export default async function MonitoringSlaPage({
                                             No active alerts
                                         </p>
                                         <p className="mt-1 text-sm text-muted-foreground">
-                                            SLA checks can still create alerts when queues breach thresholds.
+                                            SLA checks can still create alerts
+                                            when queues breach thresholds.
                                         </p>
                                     </div>
                                 </div>
@@ -562,7 +780,8 @@ export default async function MonitoringSlaPage({
                                                     {alert.status}
                                                 </span>
                                                 <span className="truncate text-xs text-muted-foreground">
-                                                    {alert.entityType}: {alert.entityId}
+                                                    {alert.entityType}:{" "}
+                                                    {alert.entityId}
                                                 </span>
                                             </div>
                                             <h3 className="mt-2 font-semibold text-slate-950">
@@ -604,7 +823,8 @@ export default async function MonitoringSlaPage({
                                     Showing{" "}
                                     {Math.min(
                                         alertsPage.total,
-                                        (currentAlertPage - 1) * alertPageSize + 1
+                                        (currentAlertPage - 1) * alertPageSize +
+                                            1
                                     )}
                                     {"-"}
                                     {Math.min(
@@ -616,7 +836,9 @@ export default async function MonitoringSlaPage({
                                 <div className="flex items-center gap-2">
                                     {currentAlertPage > 1 ? (
                                         <Link
-                                            href={makeAlertPageHref(currentAlertPage - 1)}
+                                            href={makeAlertPageHref(
+                                                currentAlertPage - 1
+                                            )}
                                             className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
                                         >
                                             Previous
@@ -628,7 +850,9 @@ export default async function MonitoringSlaPage({
                                     )}
                                     {currentAlertPage < pageCount ? (
                                         <Link
-                                            href={makeAlertPageHref(currentAlertPage + 1)}
+                                            href={makeAlertPageHref(
+                                                currentAlertPage + 1
+                                            )}
                                             className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
                                         >
                                             Next

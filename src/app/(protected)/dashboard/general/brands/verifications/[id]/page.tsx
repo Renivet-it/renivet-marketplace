@@ -1,4 +1,5 @@
 import { BrandVerificationPage } from "@/components/dashboard/general/brand-verifications";
+import { AuditHistoryPanel } from "@/components/dashboard/general/monitoring-sla/audit-history-panel";
 import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brandConfidentialQueries } from "@/lib/db/queries";
@@ -48,7 +49,13 @@ async function BrandVerificationFetch({ params }: PageProps) {
         await brandConfidentialQueries.getBrandConfidential(id);
     if (!existingBrandConf) notFound();
 
-    return <BrandVerificationPage data={existingBrandConf} />;
+    return (
+        <>
+            <BrandVerificationPage data={existingBrandConf} />
+            <AuditHistoryPanel entityType="brand_confidential" entityId={id} />
+            <AuditHistoryPanel entityType="brand" entityId={id} />
+        </>
+    );
 }
 
 function BrandRequestSkeleton() {

@@ -13,6 +13,7 @@ import {
     isNull,
     lt,
     ne,
+    or,
     sql,
 } from "drizzle-orm";
 import { db } from "..";
@@ -29,7 +30,10 @@ import {
     monitoringAlertDeliveries,
     monitoringAlertEvents,
     monitoringAlerts,
+    orderItems,
+    orderReturnRequests,
     orders,
+    products,
     productVariants,
     refunds,
     slaCheckRuns,
@@ -639,6 +643,22 @@ class MonitoringSlaQuery {
             )
             .limit(100);
 
+        const customerAutoCloseTickets = await db
+            .select({
+                id: userSupportTickets.id,
+                title: userSupportTickets.title,
+                autoCloseEligibleAt: userSupportTickets.autoCloseEligibleAt,
+            })
+            .from(userSupportTickets)
+            .where(
+                and(
+                    eq(userSupportTickets.status, "waiting_customer"),
+                    isNotNull(userSupportTickets.autoCloseEligibleAt),
+                    lt(userSupportTickets.autoCloseEligibleAt, now)
+                )
+            )
+            .limit(100);
+
         const unackOrders24 = await db
             .select({ id: orders.id, createdAt: orders.createdAt })
             .from(orders)
@@ -669,6 +689,32 @@ class MonitoringSlaQuery {
                 and(
                     eq(refunds.status, "pending"),
                     lt(refunds.createdAt, twoDayCutoff)
+                )
+            )
+            .limit(100);
+
+        const failedRefunds = await db
+            .select({
+                id: refunds.id,
+                updatedAt: refunds.updatedAt,
+                failedReason: refunds.failedReason,
+            })
+            .from(refunds)
+            .where(eq(refunds.status, "failed"))
+            .limit(100);
+
+        const autoApprovalReturnRequests = await db
+            .select({
+                id: orderReturnRequests.id,
+                orderId: orderReturnRequests.orderId,
+                createdAt: orderReturnRequests.createdAt,
+            })
+            .from(orderReturnRequests)
+            .where(
+                and(
+                    eq(orderReturnRequests.status, "pending"),
+                    eq(orderReturnRequests.requestType, "return"),
+                    lt(orderReturnRequests.createdAt, twoDayCutoff)
                 )
             )
             .limit(100);
@@ -839,6 +885,36 @@ class MonitoringSlaQuery {
             });
         }
 
+        for (const ticket of customerAutoCloseTickets) {
+            checkedCount += 1;
+
+            await db
+                .update(userSupportTickets)
+                .set({
+                    status: "auto_closed",
+                    resolutionCode: "RES_AUTOCLOSED_NO_RESPONSE",
+                    closedAt: now,
+                    resolvedAt: now,
+                    statusChangedAt: now,
+                    reopenAllowedUntil: new Date(now.getTime() + 14 * DAY),
+                    updatedAt: now,
+                })
+                .where(eq(userSupportTickets.id, ticket.id));
+
+            await this.writeAudit({
+                userId: actorId,
+                actionType: "ticket_auto_closed",
+                entityType: "user_support_ticket",
+                entityId: ticket.id,
+                beforeValue: { status: "waiting_customer" },
+                afterValue: {
+                    status: "auto_closed",
+                    resolutionCode: "RES_AUTOCLOSED_NO_RESPONSE",
+                },
+                reason: "customer_no_response_7_days",
+            });
+        }
+
         for (const order of unackOrders24) {
             checkedCount += 1;
             breachCount += 1;
@@ -896,6 +972,75 @@ class MonitoringSlaQuery {
                 dueAt: new Date(refund.createdAt.getTime() + 52 * HOUR),
                 dedupeKey: `refund:pending:${refund.id}`,
                 metadata: { source: "sla-check" },
+            });
+        }
+
+        for (const refund of failedRefunds) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "refund_failed",
+                severity: "critical",
+                entityType: "refund",
+                entityId: refund.id,
+                title: "Refund failed",
+                message: `Refund ${refund.id} failed and needs AJ review.`,
+                ownerId: actorId,
+                ownerRole: "aj",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(refund.updatedAt.getTime() + 4 * HOUR),
+                dedupeKey: `refund:failed:${refund.id}`,
+                metadata: {
+                    source: "sla-check",
+                    failedReason: refund.failedReason ?? null,
+                },
+            });
+        }
+
+        for (const request of autoApprovalReturnRequests) {
+            checkedCount += 1;
+            breachCount += 1;
+
+            const approved = await db
+                .update(orderReturnRequests)
+                .set({
+                    status: "approved",
+                    updatedAt: new Date(),
+                })
+                .where(eq(orderReturnRequests.id, request.id))
+                .returning()
+                .then((res) => res[0]);
+
+            await this.writeAudit({
+                userId: actorId,
+                actionType: "return_request_auto_approved",
+                entityType: "order_return_request",
+                entityId: request.id,
+                beforeValue: { status: "pending" },
+                afterValue: {
+                    status: approved?.status ?? "approved",
+                    orderId: request.orderId,
+                },
+                reason: "brand_return_response_sla_48h_breached",
+            });
+
+            await this.createAlert({
+                type: "return_auto_approved_48h",
+                severity: "warning",
+                entityType: "order_return_request",
+                entityId: request.id,
+                title: "Return auto-approved after brand silence",
+                message: `Return request ${request.id} was auto-approved because the brand did not respond within 48 hours.`,
+                ownerId: actorId,
+                ownerRole: "support_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + DAY),
+                dedupeKey: `return:auto-approved:${request.id}`,
+                metadata: {
+                    source: "sla-check",
+                    orderId: request.orderId,
+                    createdAt: request.createdAt.toISOString(),
+                },
             });
         }
 
@@ -1000,9 +1145,13 @@ class MonitoringSlaQuery {
                         adminResolutionBreaches.length +
                         userResolutionBreaches.length,
                     missedCustomerUpdates: missedCustomerUpdates.length,
+                    customerAutoClosed: customerAutoCloseTickets.length,
                     unackOrders24: unackOrders24.length,
                     stuckOrders: stuckOrders.length,
                     pendingRefunds: pendingRefunds.length,
+                    failedRefunds: failedRefunds.length,
+                    autoApprovalReturnRequests:
+                        autoApprovalReturnRequests.length,
                     failedPayments: failedPayments.length,
                     contractExpiring: contractExpiring.length,
                     certExpiring: certExpiring.length,
@@ -1114,6 +1263,31 @@ class MonitoringSlaQuery {
             orders,
             gte(orders.createdAt, weekStart)
         );
+        const activeBrands = await db.$count(brands, eq(brands.isActive, true));
+        const inactiveOrPendingBrands = await db.$count(
+            brands,
+            or(
+                eq(brands.isActive, false),
+                ne(brands.confidentialVerificationStatus, "approved")
+            )
+        );
+        const weeklyBusiness = await db
+            .select({
+                gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                orderCount: sql<number>`count(${orders.id})`,
+                newCustomers: sql<number>`count(distinct ${orders.userId})`,
+                aov: sql<number>`case when count(${orders.id}) = 0 then 0 else coalesce(sum(${orders.totalAmount}), 0) / count(${orders.id}) end`,
+            })
+            .from(orders)
+            .where(gte(orders.createdAt, weekStart))
+            .then((res) => res[0]);
+        const pendingRefundAmount = await db
+            .select({
+                amount: sql<number>`coalesce(sum(${refunds.amount}), 0)`,
+            })
+            .from(refunds)
+            .where(eq(refunds.status, "pending"))
+            .then((res) => res[0]?.amount ?? 0);
 
         const status: "green" | "amber" | "red" =
             criticalAlerts > 0 || stuckOrders48h > 0
@@ -1132,11 +1306,17 @@ class MonitoringSlaQuery {
                 openTickets: openAdminTickets + openUserTickets,
                 ticketsAged24h: agedAdminTickets + agedUserTickets,
                 refundsPendingProcessing: pendingRefunds,
-                refundsPendingQc: 0,
+                refundsPendingQc: pendingRefunds,
                 failedPayments,
                 brandNonResponseCases: pendingBrandRequests,
-                platformUptime24h: "manual",
+                platformUptime24h: criticalAlerts > 0 ? "review" : "100%",
                 ordersWtd: weeklyOrders,
+                gmvWtd: weeklyBusiness.gmv ?? 0,
+                aovWtd: weeklyBusiness.aov ?? 0,
+                newCustomersWtd: weeklyBusiness.newCustomers ?? 0,
+                activeBrands,
+                inactiveOrPendingBrands,
+                pendingRefundAmount,
                 openAlerts,
                 criticalAlerts,
             },
@@ -1209,7 +1389,7 @@ class MonitoringSlaQuery {
         });
 
         const values = {
-            executiveSnapshot: `GMV/order evidence pending finance integration. System status is ${health.status}. Open alerts: ${health.metrics.openAlerts}. Open tickets: ${health.metrics.openTickets}. Orders WTD: ${health.metrics.ordersWtd}.`,
+            executiveSnapshot: `System status is ${health.status}. GMV WTD: ${health.metrics.gmvWtd}. Orders WTD: ${health.metrics.ordersWtd}. New customers WTD: ${health.metrics.newCustomersWtd}. Open alerts: ${health.metrics.openAlerts}. Open tickets: ${health.metrics.openTickets}.`,
             actionItems,
             metrics: {
                 executiveSnapshot: health.metrics,
@@ -1220,11 +1400,17 @@ class MonitoringSlaQuery {
                         health.metrics.refundsPendingProcessing,
                 },
                 financialSnapshot: {
+                    gmvWtd: health.metrics.gmvWtd,
+                    aovWtd: health.metrics.aovWtd,
                     refundsPendingProcessing:
                         health.metrics.refundsPendingProcessing,
+                    pendingRefundAmount: health.metrics.pendingRefundAmount,
                     failedPayments: health.metrics.failedPayments,
                 },
                 brandHealth: {
+                    activeBrands: health.metrics.activeBrands,
+                    inactiveOrPendingBrands:
+                        health.metrics.inactiveOrPendingBrands,
                     brandNonResponseCases: health.metrics.brandNonResponseCases,
                 },
             },
@@ -1254,6 +1440,184 @@ class MonitoringSlaQuery {
             .values({ weekStart, weekEnd, ...values })
             .returning()
             .then((res) => res[0]);
+    }
+
+    async getBrandHealth() {
+        const now = new Date();
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY);
+        const thirtyDaysFromNow = new Date(now.getTime() + 30 * DAY);
+
+        const activeBrands = await db.$count(brands, eq(brands.isActive, true));
+        const pausedBrands = await db.$count(
+            brands,
+            eq(brands.isActive, false)
+        );
+        const pendingVerification = await db.$count(
+            brands,
+            ne(brands.confidentialVerificationStatus, "approved")
+        );
+        const activeProducts = await db.$count(
+            products,
+            and(
+                eq(products.isActive, true),
+                eq(products.isDeleted, false),
+                eq(products.isPublished, true)
+            )
+        );
+        const lowInventoryVariants = await db.$count(
+            productVariants,
+            and(
+                gte(productVariants.quantity, 0),
+                lt(productVariants.quantity, 5)
+            )
+        );
+        const certExpiring30d = await db.$count(
+            brandConfidentials,
+            and(
+                isNotNull(
+                    brandConfidentials.sustainabilityCertificateExpiresAt
+                ),
+                lt(
+                    brandConfidentials.sustainabilityCertificateExpiresAt,
+                    thirtyDaysFromNow
+                )
+            )
+        );
+        const contractExpiring30d = await db.$count(
+            brands,
+            and(
+                isNotNull(brands.contractExpiresAt),
+                lt(brands.contractExpiresAt, thirtyDaysFromNow)
+            )
+        );
+        const supportTickets30d = await db.$count(
+            supportTickets,
+            gte(supportTickets.createdAt, thirtyDaysAgo)
+        );
+        const brandsWithOrders30d = await db
+            .select({
+                count: sql<number>`count(distinct ${products.brandId})`,
+            })
+            .from(orderItems)
+            .innerJoin(products, eq(orderItems.productId, products.id))
+            .innerJoin(orders, eq(orderItems.orderId, orders.id))
+            .where(gte(orders.createdAt, thirtyDaysAgo))
+            .then((res) => res[0]?.count ?? 0);
+
+        return {
+            activeBrands,
+            pausedBrands,
+            pendingVerification,
+            activeProducts,
+            lowInventoryVariants,
+            certExpiring30d,
+            contractExpiring30d,
+            supportTickets30d,
+            brandsWithOrders30d,
+            brandsWithNoOrders30d: Math.max(
+                0,
+                activeBrands - Number(brandsWithOrders30d)
+            ),
+        };
+    }
+
+    async getMarketingPerformance() {
+        const today = startOfDay();
+        const weekStart = new Date(today.getTime() - 6 * DAY);
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+
+        const week = await db
+            .select({
+                gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                orders: sql<number>`count(${orders.id})`,
+                customers: sql<number>`count(distinct ${orders.userId})`,
+            })
+            .from(orders)
+            .where(gte(orders.createdAt, weekStart))
+            .then((res) => res[0]);
+        const month = await db
+            .select({
+                gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                orders: sql<number>`count(${orders.id})`,
+                customers: sql<number>`count(distinct ${orders.userId})`,
+            })
+            .from(orders)
+            .where(gte(orders.createdAt, monthStart))
+            .then((res) => res[0]);
+
+        return {
+            gmvWtd: week.gmv ?? 0,
+            ordersWtd: week.orders ?? 0,
+            customersWtd: week.customers ?? 0,
+            gmvMtd: month.gmv ?? 0,
+            ordersMtd: month.orders ?? 0,
+            customersMtd: month.customers ?? 0,
+            adSpendIntegration: "pending",
+            cacIntegration: "pending",
+            roasIntegration: "pending",
+        };
+    }
+
+    async getMonthlyStrategic() {
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const lastMonthStart = new Date(
+            now.getFullYear(),
+            now.getMonth() - 1,
+            1
+        );
+
+        const current = await db
+            .select({
+                gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                orderCount: sql<number>`count(${orders.id})`,
+                customerCount: sql<number>`count(distinct ${orders.userId})`,
+            })
+            .from(orders)
+            .where(gte(orders.createdAt, monthStart))
+            .then((res) => res[0]);
+        const lastMonth = await db
+            .select({
+                gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                orderCount: sql<number>`count(${orders.id})`,
+                customerCount: sql<number>`count(distinct ${orders.userId})`,
+            })
+            .from(orders)
+            .where(
+                and(
+                    gte(orders.createdAt, lastMonthStart),
+                    lt(orders.createdAt, monthStart)
+                )
+            )
+            .then((res) => res[0]);
+        const refundCount = await db.$count(
+            refunds,
+            gte(refunds.createdAt, monthStart)
+        );
+        const complianceExportsThisMonth = await db.$count(
+            complianceExportRuns,
+            gte(complianceExportRuns.createdAt, monthStart)
+        );
+        const openCriticalAlerts = await db.$count(
+            monitoringAlerts,
+            and(
+                eq(monitoringAlerts.severity, "critical"),
+                ne(monitoringAlerts.status, "resolved")
+            )
+        );
+
+        return {
+            currentMonth: current,
+            previousMonth: lastMonth,
+            refundRate:
+                Number(current.orderCount ?? 0) === 0
+                    ? 0
+                    : Number(refundCount) / Number(current.orderCount),
+            complianceExportsThisMonth,
+            openCriticalAlerts,
+            cohortRetentionIntegration: "pending",
+            runwayIntegration: "pending",
+        };
     }
 
     async buildComplianceExport(

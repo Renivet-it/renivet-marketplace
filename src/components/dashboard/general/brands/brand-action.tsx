@@ -40,6 +40,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea-dash";
+import { brandStatusReasonCodes } from "@/lib/monitoring-sla/reason-codes";
 import { trpc } from "@/lib/trpc/client";
 import { cn, handleClientError } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -112,6 +113,9 @@ export function BrandAction({ brand }: PageProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [isDelistOpen, setIsDelistOpen] = useState(false);
     const [isRelistOpen, setIsRelistOpen] = useState(false);
+    const [brandStatusReasonCode, setBrandStatusReasonCode] = useState(
+        brand.isActive ? "BRD_PAUSED_REQUEST" : "BRD_ACTIVATED"
+    );
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
@@ -493,25 +497,52 @@ export function BrandAction({ brand }: PageProps) {
                     </div>
 
                     {/* Brand Status Toggle */}
-                    <div className="mb-4 flex items-center justify-between rounded-md border p-3">
-                        <div>
-                            <p className="text-sm font-medium">Brand Status</p>
-                            <p className="text-xs text-muted-foreground">
-                                {brand.isActive
-                                    ? "Brand is currently active and visible"
-                                    : "Brand is deactivated and hidden"}
-                            </p>
+                    <div className="mb-4 grid gap-3 rounded-md border p-3">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-medium">
+                                    Brand Status
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {brand.isActive
+                                        ? "Brand is currently active and visible"
+                                        : "Brand is deactivated and hidden"}
+                                </p>
+                            </div>
+                            <Switch
+                                checked={brand.isActive}
+                                disabled={isUpdatingActiveStatus}
+                                onCheckedChange={(checked) => {
+                                    updateActiveStatus({
+                                        id: brand.id,
+                                        isActive: checked,
+                                        statusReasonCode:
+                                            brandStatusReasonCode as (typeof brandStatusReasonCodes)[number],
+                                    });
+                                }}
+                            />
                         </div>
-                        <Switch
-                            checked={brand.isActive}
-                            disabled={isUpdatingActiveStatus}
-                            onCheckedChange={(checked) => {
-                                updateActiveStatus({
-                                    id: brand.id,
-                                    isActive: checked,
-                                });
-                            }}
-                        />
+                        <div className="grid gap-1.5">
+                            <p className="text-xs font-medium text-muted-foreground">
+                                Required reason code
+                            </p>
+                            <Select
+                                value={brandStatusReasonCode}
+                                onValueChange={setBrandStatusReasonCode}
+                                disabled={isUpdatingActiveStatus}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select reason code" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {brandStatusReasonCodes.map((code) => (
+                                        <SelectItem key={code} value={code}>
+                                            {code}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
                     </div>
 
                     <div className="mb-4 flex items-center justify-between gap-3 rounded-md border border-destructive/25 bg-destructive/5 p-3">
