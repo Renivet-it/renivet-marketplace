@@ -60,7 +60,7 @@ const statusTabs: Array<{ key: StatusTab; label: string }> = [
 const channelLabels: Record<SupportChannel, string> = {
     web_form: "Web form",
     email: "Support email",
-    instagram_dm: "Instagram DM",
+    instagram_dm: "Instagram DM (Direct Message)",
     whatsapp_business: "WhatsApp Business",
     order_page: "Order page",
     admin_manual: "Admin manual",
@@ -524,10 +524,13 @@ export default function AdminSupportPage() {
             onError: (error) => toast.error(error.message),
         });
     const monthlyReviewMutation =
-        trpc.general.adminSupportRouter.generateMonthlyPatternReview.useMutation({
-            onSuccess: () => toast.success("Support monthly pattern review generated"),
-            onError: (error) => toast.error(error.message),
-        });
+        trpc.general.adminSupportRouter.generateMonthlyPatternReview.useMutation(
+            {
+                onSuccess: () =>
+                    toast.success("Support monthly pattern review generated"),
+                onError: (error) => toast.error(error.message),
+            }
+        );
 
     const queueItems: any[] = useMemo(() => {
         if (queue === "user") return userTicketsQuery.data?.data ?? [];
@@ -678,27 +681,31 @@ export default function AdminSupportPage() {
                         },
                         {
                             label: "Aged >24H (24 Hours)",
-                            value: supportHealthQuery.data?.agedTickets24h ?? "-",
+                            value:
+                                supportHealthQuery.data?.agedTickets24h ?? "-",
                         },
                         {
                             label: "Approaching SLA (Service Level Agreement)",
-                            value: supportHealthQuery.data?.approachingSla ?? "-",
+                            value:
+                                supportHealthQuery.data?.approachingSla ?? "-",
                         },
                         {
                             label: "Breached SLA (Service Level Agreement)",
                             value: supportHealthQuery.data?.breachedSla ?? "-",
                         },
                         {
-                            label: "CSAT (Customer Satisfaction) 7D",
+                            label: "CSAT (Customer Satisfaction) 7D (7 Days)",
                             value:
-                                supportHealthQuery.data?.csatAverage == null
+                                supportHealthQuery.data?.csatAverage === null
                                     ? "-"
-                                    : supportHealthQuery.data.csatAverage.toFixed(1),
+                                    : supportHealthQuery.data.csatAverage.toFixed(
+                                          1
+                                      ),
                         },
                         {
                             label: "SLA Hit Rate (Service Level Agreement)",
                             value:
-                                supportHealthQuery.data?.slaHitRate == null
+                                supportHealthQuery.data?.slaHitRate === null
                                     ? "-"
                                     : `${supportHealthQuery.data.slaHitRate}%`,
                         },
@@ -718,31 +725,34 @@ export default function AdminSupportPage() {
                 </section>
 
                 <section className="flex flex-wrap items-center gap-2">
-                    {(["morning", "midday", "eod"] as const).map((checkType) => (
-                        <Button
-                            key={checkType}
-                            variant="outline"
-                            className="rounded-full bg-white"
-                            onClick={() =>
-                                dailyCheckInMutation.mutate({
-                                    checkType,
-                                    summary: `${checkType} support queue check`,
-                                })
-                            }
-                        >
-                            Log{" "}
-                            {checkType === "eod"
-                                ? "EOD (End Of Day)"
-                                : checkType}{" "}
-                            check
-                        </Button>
-                    ))}
+                    {(["morning", "midday", "eod"] as const).map(
+                        (checkType) => (
+                            <Button
+                                key={checkType}
+                                variant="outline"
+                                className="rounded-full bg-white"
+                                onClick={() =>
+                                    dailyCheckInMutation.mutate({
+                                        checkType,
+                                        summary: `${checkType} support queue check`,
+                                    })
+                                }
+                            >
+                                Log{" "}
+                                {checkType === "eod"
+                                    ? "EOD (End Of Day)"
+                                    : checkType}{" "}
+                                check
+                            </Button>
+                        )
+                    )}
                     <Button
                         variant="outline"
                         className="rounded-full bg-white"
                         onClick={() =>
                             weeklySummaryMutation.mutate({
-                                summary: "Friday customer support weekly summary",
+                                summary:
+                                    "Friday customer support weekly summary",
                             })
                         }
                     >
@@ -809,7 +819,9 @@ export default function AdminSupportPage() {
                                     <Button
                                         type="button"
                                         onClick={() =>
-                                            setManualIntakeOpen((value) => !value)
+                                            setManualIntakeOpen(
+                                                (value) => !value
+                                            )
                                         }
                                         className="h-12 rounded-2xl bg-[#1F2937] px-4 text-white hover:bg-[#111827]"
                                     >
@@ -853,7 +865,10 @@ export default function AdminSupportPage() {
                                         className="h-11 rounded-2xl border border-[#D7E2EF] bg-white px-3 text-sm text-slate-800"
                                     >
                                         {SUPPORT_CHANNELS.map((channel) => (
-                                            <option key={channel} value={channel}>
+                                            <option
+                                                key={channel}
+                                                value={channel}
+                                            >
                                                 {channelLabels[channel]}
                                             </option>
                                         ))}
@@ -916,7 +931,9 @@ export default function AdminSupportPage() {
                                     <Button
                                         type="button"
                                         onClick={handleManualTicketSubmit}
-                                        disabled={manualTicketMutation.isPending}
+                                        disabled={
+                                            manualTicketMutation.isPending
+                                        }
                                         className="h-11 rounded-2xl bg-[#0F766E] px-5 text-white hover:bg-[#115E59]"
                                     >
                                         {manualTicketMutation.isPending

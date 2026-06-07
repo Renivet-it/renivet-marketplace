@@ -24,18 +24,24 @@ import {
     brandConfidentials,
     brandRequests,
     brands,
+    carrierClaims,
+    codReconciliationItems,
+    codReconciliationRuns,
     complianceExportFiles,
     complianceExportRuns,
     dailyHealthSnapshots,
+    fraudReviews,
     monitoringAlertDeliveries,
     monitoringAlertEvents,
     monitoringAlerts,
     orderItems,
     orderReturnRequests,
     orders,
+    orderShipments,
     products,
     productVariants,
     refunds,
+    rtoDispositions,
     slaCheckRuns,
     supportTickets,
     userRoles,
@@ -509,9 +515,17 @@ class MonitoringSlaQuery {
 
         const now = new Date();
         const twoHourCutoff = new Date(now.getTime() - 2 * HOUR);
+        const fourHourCutoff = new Date(now.getTime() - 4 * HOUR);
+        const sixHourCutoff = new Date(now.getTime() - 6 * HOUR);
+        const eighteenHourCutoff = new Date(now.getTime() - 18 * HOUR);
         const dayCutoff = new Date(now.getTime() - DAY);
         const twoDayCutoff = new Date(now.getTime() - 2 * DAY);
+        const threeDayCutoff = new Date(now.getTime() - 3 * DAY);
+        const sevenDayCutoff = new Date(now.getTime() - 7 * DAY);
+        const fourteenDayCutoff = new Date(now.getTime() - 14 * DAY);
+        const fortyFiveDayCutoff = new Date(now.getTime() - 45 * DAY);
         const thirtyDayCutoff = new Date(now.getTime() + 30 * DAY);
+        const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY);
         let checkedCount = 0;
         let breachCount = 0;
 
@@ -671,6 +685,36 @@ class MonitoringSlaQuery {
             )
             .limit(100);
 
+        const brandAckAtRisk18 = await db
+            .select({ id: orders.id, createdAt: orders.createdAt })
+            .from(orders)
+            .where(
+                and(
+                    inArray(orders.status, ["pending", "processing"]),
+                    isNull(orders.brandAcknowledgedAt),
+                    lt(orders.createdAt, eighteenHourCutoff),
+                    gte(orders.createdAt, dayCutoff)
+                )
+            )
+            .limit(100);
+
+        const brandSilenceAutoCancels = await db
+            .select({
+                id: orders.id,
+                createdAt: orders.createdAt,
+                paymentStatus: orders.paymentStatus,
+                status: orders.status,
+            })
+            .from(orders)
+            .where(
+                and(
+                    inArray(orders.status, ["pending", "processing"]),
+                    isNull(orders.brandAcknowledgedAt),
+                    lt(orders.createdAt, twoDayCutoff)
+                )
+            )
+            .limit(100);
+
         const stuckOrders = await db
             .select({ id: orders.id, updatedAt: orders.updatedAt })
             .from(orders)
@@ -681,6 +725,199 @@ class MonitoringSlaQuery {
                 )
             )
             .limit(100);
+
+        const stuckOrders72 = await db
+            .select({
+                id: orders.id,
+                status: orders.status,
+                updatedAt: orders.updatedAt,
+            })
+            .from(orders)
+            .where(
+                and(
+                    inArray(orders.status, [
+                        "pending",
+                        "processing",
+                        "shipped",
+                    ]),
+                    lt(orders.updatedAt, threeDayCutoff)
+                )
+            )
+            .limit(100);
+
+        const codFraudReviewBreaches = await db
+            .select({
+                id: fraudReviews.orderId,
+                reviewId: fraudReviews.id,
+                createdAt: fraudReviews.createdAt,
+                totalAmount: orders.totalAmount,
+            })
+            .from(fraudReviews)
+            .innerJoin(orders, eq(orders.id, fraudReviews.orderId))
+            .where(
+                and(
+                    eq(fraudReviews.status, "pending"),
+                    or(
+                        lt(fraudReviews.dueAt, now),
+                        lt(fraudReviews.createdAt, fourHourCutoff)
+                    )
+                )
+            )
+            .limit(100);
+
+        const staleTrackingShipments = await db
+            .select({
+                id: orderShipments.id,
+                orderId: orderShipments.orderId,
+                status: orderShipments.status,
+                updatedAt: orderShipments.updatedAt,
+            })
+            .from(orderShipments)
+            .where(
+                and(
+                    inArray(orderShipments.status, [
+                        "in_transit",
+                        "out_for_delivery",
+                    ]),
+                    lt(orderShipments.updatedAt, sixHourCutoff)
+                )
+            )
+            .limit(100);
+
+        const rtoDispositionBreaches = await db
+            .select({
+                id: rtoDispositions.id,
+                orderId: rtoDispositions.orderId,
+                status: rtoDispositions.status,
+                updatedAt: rtoDispositions.updatedAt,
+            })
+            .from(rtoDispositions)
+            .where(
+                and(
+                    inArray(rtoDispositions.status, ["pending", "recovering"]),
+                    or(
+                        lt(rtoDispositions.dispositionDueAt, now),
+                        lt(rtoDispositions.createdAt, sevenDayCutoff)
+                    )
+                )
+            )
+            .limit(100);
+
+        const returnQcBreaches = await db
+            .select({
+                id: orderReturnRequests.id,
+                orderId: orderReturnRequests.orderId,
+                updatedAt: orderReturnRequests.updatedAt,
+            })
+            .from(orderReturnRequests)
+            .where(
+                and(
+                    eq(orderReturnRequests.status, "processing"),
+                    lt(orderReturnRequests.updatedAt, twoDayCutoff)
+                )
+            )
+            .limit(100);
+
+        const carrierClaimBreaches = await db
+            .select({
+                id: carrierClaims.id,
+                orderId: carrierClaims.orderId,
+                updatedAt: carrierClaims.updatedAt,
+            })
+            .from(carrierClaims)
+            .where(
+                and(
+                    inArray(carrierClaims.status, ["filed", "in_review"]),
+                    or(
+                        lt(carrierClaims.dueAt, now),
+                        lt(carrierClaims.updatedAt, fortyFiveDayCutoff)
+                    )
+                )
+            )
+            .limit(100);
+
+        const codReconciliation14 = await db
+            .select({
+                id: codReconciliationItems.orderId,
+                itemId: codReconciliationItems.id,
+                totalAmount: codReconciliationItems.codAmount,
+                updatedAt: codReconciliationItems.updatedAt,
+            })
+            .from(codReconciliationItems)
+            .where(
+                and(
+                    inArray(codReconciliationItems.status, [
+                        "pending",
+                        "missing",
+                        "disputed",
+                    ]),
+                    lt(codReconciliationItems.updatedAt, fourteenDayCutoff),
+                    gte(codReconciliationItems.updatedAt, thirtyDaysAgo)
+                )
+            )
+            .limit(100);
+
+        const codReconciliation30 = await db
+            .select({
+                id: codReconciliationItems.orderId,
+                itemId: codReconciliationItems.id,
+                totalAmount: codReconciliationItems.codAmount,
+                updatedAt: codReconciliationItems.updatedAt,
+            })
+            .from(codReconciliationItems)
+            .where(
+                and(
+                    inArray(codReconciliationItems.status, [
+                        "pending",
+                        "missing",
+                        "disputed",
+                    ]),
+                    lt(codReconciliationItems.updatedAt, thirtyDaysAgo)
+                )
+            )
+            .limit(100);
+
+        const recentCodRuns = await db
+            .select({ id: codReconciliationRuns.id })
+            .from(codReconciliationRuns)
+            .where(gte(codReconciliationRuns.runDate, sevenDayCutoff))
+            .limit(1);
+        const codReconciliationSkipped =
+            now.getDay() === 5 && recentCodRuns.length === 0;
+
+        const brandAckDelayRows = await db
+            .select({
+                orderId: orders.id,
+                brandId: products.brandId,
+            })
+            .from(orders)
+            .innerJoin(orderItems, eq(orderItems.orderId, orders.id))
+            .innerJoin(products, eq(products.id, orderItems.productId))
+            .where(
+                and(
+                    inArray(orders.status, ["pending", "processing"]),
+                    isNull(orders.brandAcknowledgedAt),
+                    lt(orders.createdAt, dayCutoff),
+                    gte(orders.createdAt, fourteenDayCutoff)
+                )
+            )
+            .limit(500);
+        const brandAckDelayCounts = new Map<
+            string,
+            { brandId: string; orderIds: Set<string> }
+        >();
+        for (const row of brandAckDelayRows) {
+            if (!row.brandId) continue;
+            const current = brandAckDelayCounts.get(row.brandId) ?? {
+                brandId: row.brandId,
+                orderIds: new Set<string>(),
+            };
+            current.orderIds.add(row.orderId);
+            brandAckDelayCounts.set(row.brandId, current);
+        }
+        const repeatedBrandAckDelays = Array.from(
+            brandAckDelayCounts.values()
+        ).filter((item) => item.orderIds.size >= 3);
 
         const pendingRefunds = await db
             .select({ id: refunds.id, createdAt: refunds.createdAt })
@@ -915,6 +1152,25 @@ class MonitoringSlaQuery {
             });
         }
 
+        for (const order of brandAckAtRisk18) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "brand_ack_at_risk_18h",
+                severity: "warning",
+                entityType: "order",
+                entityId: order.id,
+                title: "Brand acknowledgement approaching SLA",
+                message: `Order ${order.id} has crossed 18 hours without brand acknowledgement. Chase the brand before the 24-hour SLA breach.`,
+                ownerId: actorId,
+                ownerRole: "order_manager",
+                channels: ["admin", "email"],
+                dueAt: new Date(order.createdAt.getTime() + DAY),
+                dedupeKey: `order:brand-ack-risk:${order.id}`,
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+        }
+
         for (const order of unackOrders24) {
             checkedCount += 1;
             breachCount += 1;
@@ -937,6 +1193,66 @@ class MonitoringSlaQuery {
             });
         }
 
+        for (const order of brandSilenceAutoCancels) {
+            checkedCount += 1;
+            breachCount += 1;
+
+            await db
+                .update(orders)
+                .set({
+                    status: "cancelled",
+                    paymentStatus:
+                        order.paymentStatus === "paid"
+                            ? "refund_pending"
+                            : order.paymentStatus,
+                    cancellationReasonCode: "CAN_BRAND_NO_RESPONSE",
+                    manualOverrideReason:
+                        "Auto-cancelled by Order Ops SLA after brand silence for more than 48 hours.",
+                    updatedAt: now,
+                })
+                .where(eq(orders.id, order.id));
+
+            await this.writeAudit({
+                userId: actorId,
+                actionType: "order_auto_cancelled_brand_no_response",
+                entityType: "order",
+                entityId: order.id,
+                beforeValue: {
+                    status: order.status,
+                    paymentStatus: order.paymentStatus,
+                },
+                afterValue: {
+                    status: "cancelled",
+                    paymentStatus:
+                        order.paymentStatus === "paid"
+                            ? "refund_pending"
+                            : order.paymentStatus,
+                    cancellationReasonCode: "CAN_BRAND_NO_RESPONSE",
+                },
+                reason: "brand_ack_sla_48h_breached",
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+
+            await this.createAlert({
+                type: "order_auto_cancelled_brand_no_response",
+                severity: "critical",
+                entityType: "order",
+                entityId: order.id,
+                title: "Order auto-cancelled after brand silence",
+                message: `Order ${order.id} was auto-cancelled because the brand did not acknowledge within 48 hours. Refund follow-up is required for prepaid orders.`,
+                ownerId: actorId,
+                ownerRole: "order_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + 4 * HOUR),
+                dedupeKey: `order:auto-cancel-brand-no-response:${order.id}`,
+                metadata: {
+                    source: "sla-check",
+                    chapter: "order-ops",
+                    cancellationReasonCode: "CAN_BRAND_NO_RESPONSE",
+                },
+            });
+        }
+
         for (const order of stuckOrders) {
             checkedCount += 1;
             breachCount += 1;
@@ -953,6 +1269,216 @@ class MonitoringSlaQuery {
                 dueAt: new Date(order.updatedAt.getTime() + 52 * HOUR),
                 dedupeKey: `order:stuck:${order.id}`,
                 metadata: { source: "sla-check" },
+            });
+        }
+
+        for (const order of stuckOrders72) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "stuck_order_customer_choice_due",
+                severity: "critical",
+                entityType: "order",
+                entityId: order.id,
+                title: "Customer choice message due for stuck order",
+                message: `Order ${order.id} has been stuck in ${order.status} for more than 72 hours. Send the customer a wait/refund choice message.`,
+                ownerId: actorId,
+                ownerRole: "order_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + 4 * HOUR),
+                dedupeKey: `order:stuck-72h:${order.id}`,
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+        }
+
+        for (const order of codFraudReviewBreaches) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "fraud_screening_breach",
+                severity: "critical",
+                entityType: "order",
+                entityId: order.id,
+                title: "COD fraud review SLA breached",
+                message: `COD order ${order.id} has been awaiting fraud screening for more than 4 hours. Review risk signals and cancel with CAN_FRAUD_FLAG if needed.`,
+                ownerId: actorId,
+                ownerRole: "order_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + 2 * HOUR),
+                dedupeKey: `order:cod-fraud-review:${order.id}`,
+                metadata: {
+                    source: "sla-check",
+                    chapter: "order-ops",
+                    fraudReviewId: order.reviewId,
+                    totalAmount: order.totalAmount,
+                },
+            });
+        }
+
+        for (const shipment of staleTrackingShipments) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "shipment_tracking_stale_6h",
+                severity: "warning",
+                entityType: "order_shipment",
+                entityId: shipment.id,
+                title: "Shipment tracking update stale",
+                message: `Shipment for order ${shipment.orderId} has not received a tracking update within 6 hours while ${shipment.status}. Check Delhivery/Shiprocket sync.`,
+                ownerId: actorId,
+                ownerRole: "order_manager",
+                channels: ["admin", "email"],
+                dueAt: new Date(now.getTime() + 4 * HOUR),
+                dedupeKey: `shipment:tracking-stale:${shipment.id}`,
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+        }
+
+        for (const shipment of rtoDispositionBreaches) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "rto_disposition_breach",
+                severity: "critical",
+                entityType: "rto_disposition",
+                entityId: shipment.id,
+                title: "RTO disposition pending beyond 7 days",
+                message: `RTO disposition for order ${shipment.orderId} has been in ${shipment.status} beyond the 7-day SLA.`,
+                ownerId: actorId,
+                ownerRole: "order_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + 4 * HOUR),
+                dedupeKey: `rto:disposition:${shipment.id}`,
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+        }
+
+        for (const request of returnQcBreaches) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "return_qc_breach",
+                severity: "warning",
+                entityType: "order_return_request",
+                entityId: request.id,
+                title: "Return QC pending beyond 48 hours",
+                message: `Return request ${request.id} for order ${request.orderId} is still in quality check after 48 hours.`,
+                ownerId: actorId,
+                ownerRole: "support_manager",
+                channels: ["admin", "email"],
+                dueAt: new Date(now.getTime() + 4 * HOUR),
+                dedupeKey: `return:qc-breach:${request.id}`,
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+        }
+
+        for (const shipment of carrierClaimBreaches) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "carrier_claim_45d_breach",
+                severity: "critical",
+                entityType: "carrier_claim",
+                entityId: shipment.id,
+                title: "Carrier claim pending beyond 45 days",
+                message: `Carrier claim for order ${shipment.orderId} is pending beyond the 45-day SLA. Chase the carrier claim outcome.`,
+                ownerId: actorId,
+                ownerRole: "order_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + 4 * HOUR),
+                dedupeKey: `carrier-claim:45d:${shipment.id}`,
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+        }
+
+        for (const order of codReconciliation14) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "cod_reconciliation_pending_14d",
+                severity: "warning",
+                entityType: "order",
+                entityId: order.id,
+                title: "COD reconciliation pending beyond 14 days",
+                message: `Delivered COD order ${order.id} has not been cleared in the weekly reconciliation window.`,
+                ownerId: actorId,
+                ownerRole: "finance",
+                channels: ["admin", "email"],
+                dueAt: new Date(now.getTime() + 3 * DAY),
+                dedupeKey: `order:cod-recon-14d:${order.id}`,
+                metadata: {
+                    source: "sla-check",
+                    chapter: "order-ops",
+                    codReconciliationItemId: order.itemId,
+                    totalAmount: order.totalAmount,
+                },
+            });
+        }
+
+        for (const order of codReconciliation30) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "cod_reconciliation_pending_30d",
+                severity: "critical",
+                entityType: "order",
+                entityId: order.id,
+                title: "COD reconciliation pending beyond 30 days",
+                message: `Delivered COD order ${order.id} has crossed the 30-day finance escalation threshold.`,
+                ownerId: actorId,
+                ownerRole: "finance",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + DAY),
+                dedupeKey: `order:cod-recon-30d:${order.id}`,
+                metadata: {
+                    source: "sla-check",
+                    chapter: "order-ops",
+                    codReconciliationItemId: order.itemId,
+                    totalAmount: order.totalAmount,
+                },
+            });
+        }
+
+        if (codReconciliationSkipped) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "cod_reconciliation_skipped",
+                severity: "critical",
+                entityType: "cod_reconciliation_run",
+                entityId: new Date().toISOString().slice(0, 10),
+                title: "COD reconciliation log missing",
+                message:
+                    "No COD reconciliation run was created in the last 7 days. Chapter 4 requires the Thursday 3 PM reconciliation session with AJ.",
+                ownerId: actorId,
+                ownerRole: "finance",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + 4 * HOUR),
+                dedupeKey: `cod-recon:skipped:${new Date().toISOString().slice(0, 10)}`,
+                metadata: { source: "sla-check", chapter: "order-ops" },
+            });
+        }
+
+        for (const brand of repeatedBrandAckDelays) {
+            checkedCount += 1;
+            breachCount += 1;
+            await this.createAlert({
+                type: "brand_ack_delay_pattern",
+                severity: "critical",
+                entityType: "brand",
+                entityId: brand.brandId,
+                title: "Repeated brand acknowledgement delays",
+                message: `Brand ${brand.brandId} has ${brand.orderIds.size} orders delayed beyond acknowledgement SLA in the last 14 days. Escalate to KP.`,
+                ownerId: actorId,
+                ownerRole: "brand_manager",
+                channels: ["admin", "email", "whatsapp"],
+                dueAt: new Date(now.getTime() + DAY),
+                dedupeKey: `brand:ack-delay-pattern:${brand.brandId}:${new Date().toISOString().slice(0, 10)}`,
+                metadata: {
+                    source: "sla-check",
+                    chapter: "order-ops",
+                    orderIds: Array.from(brand.orderIds),
+                },
             });
         }
 
@@ -1146,8 +1672,20 @@ class MonitoringSlaQuery {
                         userResolutionBreaches.length,
                     missedCustomerUpdates: missedCustomerUpdates.length,
                     customerAutoClosed: customerAutoCloseTickets.length,
+                    brandAckAtRisk18: brandAckAtRisk18.length,
                     unackOrders24: unackOrders24.length,
+                    brandSilenceAutoCancels: brandSilenceAutoCancels.length,
                     stuckOrders: stuckOrders.length,
+                    stuckOrders72: stuckOrders72.length,
+                    codFraudReviewBreaches: codFraudReviewBreaches.length,
+                    staleTrackingShipments: staleTrackingShipments.length,
+                    rtoDispositionBreaches: rtoDispositionBreaches.length,
+                    returnQcBreaches: returnQcBreaches.length,
+                    carrierClaimBreaches: carrierClaimBreaches.length,
+                    codReconciliation14: codReconciliation14.length,
+                    codReconciliation30: codReconciliation30.length,
+                    codReconciliationSkipped,
+                    repeatedBrandAckDelays: repeatedBrandAckDelays.length,
                     pendingRefunds: pendingRefunds.length,
                     failedRefunds: failedRefunds.length,
                     autoApprovalReturnRequests:
@@ -1188,8 +1726,13 @@ class MonitoringSlaQuery {
     async getDailyHealth() {
         const today = startOfDay();
         const weekStart = new Date(today.getTime() - 6 * DAY);
+        const yesterday = new Date(today.getTime() - DAY);
+        const fourHourCutoff = new Date(Date.now() - 4 * HOUR);
+        const eighteenHourCutoff = new Date(Date.now() - 18 * HOUR);
         const dayCutoff = new Date(Date.now() - DAY);
         const twoDayCutoff = new Date(Date.now() - 2 * DAY);
+        const sevenDayCutoff = new Date(Date.now() - 7 * DAY);
+        const fourteenDayCutoff = new Date(Date.now() - 14 * DAY);
 
         const ordersPlaced24h = await db.$count(
             orders,
@@ -1203,6 +1746,25 @@ class MonitoringSlaQuery {
                 lt(orders.createdAt, dayCutoff)
             )
         );
+        const brandAckAtRisk18h = await db.$count(
+            orders,
+            and(
+                inArray(orders.status, ["pending", "processing"]),
+                isNull(orders.brandAcknowledgedAt),
+                lt(orders.createdAt, eighteenHourCutoff),
+                gte(orders.createdAt, dayCutoff)
+            )
+        );
+        const codFraudReviewQueue = await db.$count(
+            fraudReviews,
+            and(
+                eq(fraudReviews.status, "pending"),
+                or(
+                    lt(fraudReviews.dueAt, new Date()),
+                    lt(fraudReviews.createdAt, fourHourCutoff)
+                )
+            )
+        );
         const ordersShipped24h = await db.$count(
             orders,
             and(eq(orders.status, "shipped"), gte(orders.updatedAt, today))
@@ -1214,6 +1776,57 @@ class MonitoringSlaQuery {
                 lt(orders.updatedAt, twoDayCutoff)
             )
         );
+        const rtoInTransit = await db.$count(
+            orderShipments,
+            eq(orderShipments.status, "rto_initiated")
+        );
+        const rtoDispositionPending7d = await db.$count(
+            rtoDispositions,
+            and(
+                inArray(rtoDispositions.status, ["pending", "recovering"]),
+                or(
+                    lt(rtoDispositions.dispositionDueAt, new Date()),
+                    lt(rtoDispositions.createdAt, sevenDayCutoff)
+                )
+            )
+        );
+        const deliveredToday = await db.$count(
+            orders,
+            and(eq(orders.status, "delivered"), gte(orders.updatedAt, today))
+        );
+        const failedDeliveryToday = await db.$count(
+            orderShipments,
+            and(
+                eq(orderShipments.status, "failed"),
+                gte(orderShipments.updatedAt, today)
+            )
+        );
+        const pendingCodAmount = await db
+            .select({
+                amount: sql<number>`coalesce(sum(${codReconciliationItems.codAmount} - ${codReconciliationItems.remittedAmount}), 0)`,
+            })
+            .from(codReconciliationItems)
+            .where(
+                and(
+                    inArray(codReconciliationItems.status, [
+                        "pending",
+                        "missing",
+                        "disputed",
+                        "short_paid",
+                    ]),
+                    lt(codReconciliationItems.updatedAt, fourteenDayCutoff)
+                )
+            )
+            .then((res) => res[0]?.amount ?? 0);
+        const ordersPlacedYesterday = await db.$count(
+            orders,
+            and(gte(orders.createdAt, yesterday), lt(orders.createdAt, today))
+        );
+        const rtoRateSpike =
+            ordersPlacedYesterday > 0 &&
+            rtoInTransit / ordersPlacedYesterday > 0.2
+                ? "review"
+                : "normal";
         const openAlerts = await db.$count(
             monitoringAlerts,
             ne(monitoringAlerts.status, "resolved")
@@ -1300,9 +1913,17 @@ class MonitoringSlaQuery {
             status,
             metrics: {
                 ordersPlaced24h,
+                brandAckAtRisk18h,
                 ordersUnacknowledged24h: ordersUnack24h,
+                codFraudReviewQueue,
                 ordersShipped24h,
                 stuckOrders48h,
+                rtoInTransit,
+                rtoDispositionPending7d,
+                pendingCodAmount,
+                deliveredToday,
+                failedDeliveryToday,
+                rtoRateSpike,
                 openTickets: openAdminTickets + openUserTickets,
                 ticketsAged24h: agedAdminTickets + agedUserTickets,
                 refundsPendingProcessing: pendingRefunds,

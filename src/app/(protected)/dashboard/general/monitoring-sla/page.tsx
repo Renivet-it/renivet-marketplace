@@ -134,101 +134,169 @@ const metricConfig = {
         label: "Orders 24H",
         sublabel: "Placed since midnight",
         icon: Activity,
+        href: "/dashboard/general/order-ops",
+    },
+    brandAckAtRisk18h: {
+        label: "Ack Risk 18H",
+        sublabel: "Brand ack at risk",
+        icon: TimerReset,
+        href: "/dashboard/general/order-ops",
     },
     ordersUnacknowledged24h: {
         label: "Unack Orders",
         sublabel: "Brand acknowledgement >24h",
         icon: TimerReset,
+        href: "/dashboard/general/order-ops",
+    },
+    codFraudReviewQueue: {
+        label: "COD (Cash On Delivery) Review",
+        sublabel: "Fraud screen >4h",
+        icon: ShieldCheck,
+        href: "/dashboard/general/order-ops",
     },
     ordersShipped24h: {
         label: "Shipped 24H",
         sublabel: "Orders moved to shipped",
         icon: Gauge,
+        href: "/dashboard/general/orders",
     },
     stuckOrders48h: {
         label: "Stuck Orders",
         sublabel: "No movement >48h",
         icon: AlertTriangle,
+        href: "/dashboard/general/order-ops",
+    },
+    rtoInTransit: {
+        label: "RTO (Return To Origin)",
+        sublabel: "In transit",
+        icon: Gauge,
+        href: "/dashboard/general/order-ops",
+    },
+    rtoDispositionPending7d: {
+        label: "RTO (Return To Origin) 7D",
+        sublabel: "Disposition pending",
+        icon: AlertTriangle,
+        href: "/dashboard/general/order-ops",
+    },
+    pendingCodAmount: {
+        label: "Pending COD (Cash On Delivery)",
+        sublabel: "Finance reconciliation",
+        icon: FileText,
+        href: "/dashboard/general/order-ops",
+    },
+    deliveredToday: {
+        label: "Delivered Today",
+        sublabel: "Completed shipments",
+        icon: CheckCircle2,
+        href: "/dashboard/general/order-ops",
+    },
+    failedDeliveryToday: {
+        label: "Failed Delivery Today",
+        sublabel: "Carrier action needed",
+        icon: AlertTriangle,
+        href: "/dashboard/general/order-ops",
+    },
+    rtoRateSpike: {
+        label: "RTO (Return To Origin) Rate",
+        sublabel: "Spike indicator",
+        icon: Gauge,
+        href: "#active-alerts",
     },
     openTickets: {
         label: "Open Tickets",
         sublabel: "Support queues",
         icon: TimerReset,
+        href: "/dashboard/general/support/user",
     },
     ticketsAged24h: {
         label: "Aged Tickets",
         sublabel: "No response >24h",
         icon: Bell,
+        href: "/dashboard/general/support/user",
     },
     refundsPendingProcessing: {
         label: "Pending Refunds",
         sublabel: "Finance follow-up",
         icon: FileText,
+        href: "/dashboard/general/support/user",
     },
     refundsPendingQc: {
-        label: "Refund QC",
+        label: "Refund QC (Quality Check)",
         sublabel: "Pending quality check",
         icon: ClipboardCheck,
+        href: "/dashboard/general/return-replace",
     },
     failedPayments: {
         label: "Failed Payments",
         sublabel: "Needs payment review",
         icon: AlertTriangle,
+        href: "/dashboard/general/orders",
     },
     brandNonResponseCases: {
         label: "Brand Cases",
         sublabel: "Non-response/onboarding",
         icon: UsersRound,
+        href: "#brand-health",
     },
     platformUptime24h: {
-        label: "Uptime 24H",
+        label: "Uptime 24H (24 Hours)",
         sublabel: "Alert-derived platform signal",
         icon: Gauge,
+        href: "#active-alerts",
     },
     ordersWtd: {
-        label: "Orders WTD",
+        label: "Orders WTD (Week To Date)",
         sublabel: "Business week activity",
         icon: Activity,
+        href: "/dashboard/general/orders",
     },
     gmvWtd: {
-        label: "GMV WTD",
+        label: "GMV (Gross Merchandise Value) WTD (Week To Date)",
         sublabel: "Paid/order value this week",
         icon: Gauge,
+        href: "#marketing-performance",
     },
     aovWtd: {
-        label: "AOV WTD",
+        label: "AOV (Average Order Value) WTD (Week To Date)",
         sublabel: "Average order value",
         icon: Gauge,
+        href: "#marketing-performance",
     },
     newCustomersWtd: {
-        label: "Customers WTD",
+        label: "Customers WTD (Week To Date)",
         sublabel: "Unique ordering customers",
         icon: UsersRound,
+        href: "#marketing-performance",
     },
     activeBrands: {
         label: "Active Brands",
         sublabel: "Live brand accounts",
         icon: UsersRound,
+        href: "/dashboard/general/brands",
     },
     inactiveOrPendingBrands: {
         label: "Brand Follow-up",
         sublabel: "Inactive or unverified",
         icon: AlertTriangle,
+        href: "/dashboard/general/brands",
     },
     pendingRefundAmount: {
         label: "Pending Refund Amt",
         sublabel: "Refund value awaiting action",
         icon: FileText,
+        href: "/dashboard/general/support/user",
     },
     openAlerts: {
         label: "Open Alerts",
         sublabel: "Active system alerts",
         icon: Bell,
+        href: "#active-alerts",
     },
     criticalAlerts: {
         label: "Critical Alerts",
         sublabel: "Needs immediate review",
         icon: AlertTriangle,
+        href: "#active-alerts",
     },
 };
 
@@ -262,7 +330,7 @@ function getStatusConfig(status: "green" | "amber" | "red") {
 function getNoticeConfig(notice?: string) {
     switch (notice) {
         case "sla-run":
-            return "SLA check completed. Alerts, delivery attempts, and evidence were refreshed.";
+            return "SLA (Service Level Agreement) check completed. Alerts, delivery attempts, and evidence were refreshed.";
         case "snapshot":
             return "Daily health snapshot saved.";
         case "weekly-pack":
@@ -361,12 +429,30 @@ export default async function MonitoringSlaPage({
                   }
               ).toString()}`
             : null;
+    const founderReportXlsxHref = `/api/admin/monitoring-sla/founder-report?${new URLSearchParams(
+        {
+            month: currentMonth,
+            format: "xlsx",
+        }
+    ).toString()}`;
+    const founderReportCsvHref = `/api/admin/monitoring-sla/founder-report?${new URLSearchParams(
+        {
+            month: currentMonth,
+            format: "csv",
+        }
+    ).toString()}`;
+    const showFounderReportDownloads = [
+        "sla-run",
+        "snapshot",
+        "weekly-pack",
+        "access-review",
+    ].includes(noticeRaw ?? "");
     const metricEntries = Object.entries(health.metrics) as Array<
         [keyof typeof metricConfig, number | string]
     >;
     const evidenceCards = [
         {
-            title: "SLA Runs",
+            title: "SLA (Service Level Agreement) Runs",
             icon: TimerReset,
             rows: evidence.runs.map((item) => `${item.runKey}: ${item.status}`),
         },
@@ -412,7 +498,8 @@ export default async function MonitoringSlaPage({
                             <div className="min-w-0">
                                 <div className="flex flex-wrap items-center gap-2">
                                     <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                                        Monitoring, Alerts & SLA
+                                        Monitoring, Alerts & SLA (Service Level
+                                        Agreement)
                                     </p>
                                     <span
                                         className={`rounded-full px-2.5 py-1 text-xs font-semibold ${healthStatus.pill}`}
@@ -438,7 +525,7 @@ export default async function MonitoringSlaPage({
                             <form action={runSlaCheck}>
                                 <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:w-auto">
                                     <TimerReset className="size-4" />
-                                    Run SLA
+                                    Run SLA (Service Level Agreement)
                                 </button>
                             </form>
                             <form action={saveDailySnapshot}>
@@ -476,15 +563,35 @@ export default async function MonitoringSlaPage({
                             <p className="mt-0.5 text-sm text-emerald-900">
                                 {notice}
                             </p>
-                            {generatedExportHref && (
-                                <Link
-                                    href={generatedExportHref}
-                                    className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800"
-                                >
-                                    <Download className="size-4" />
-                                    Download Excel
-                                </Link>
-                            )}
+                            <div className="mt-3 flex flex-wrap gap-2">
+                                {generatedExportHref && (
+                                    <Link
+                                        href={generatedExportHref}
+                                        className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800"
+                                    >
+                                        <Download className="size-4" />
+                                        Download Excel
+                                    </Link>
+                                )}
+                                {showFounderReportDownloads && (
+                                    <>
+                                        <Link
+                                            href={founderReportXlsxHref}
+                                            className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800"
+                                        >
+                                            <Download className="size-4" />
+                                            Download Excel Report
+                                        </Link>
+                                        <Link
+                                            href={founderReportCsvHref}
+                                            className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-700 bg-white px-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
+                                        >
+                                            <Download className="size-4" />
+                                            Download CSV Report
+                                        </Link>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </section>
                 )}
@@ -528,7 +635,8 @@ export default async function MonitoringSlaPage({
                                 </p>
                                 <p className="mt-1 text-lg font-semibold">
                                     {health.metrics.ordersPlaced24h} today /{" "}
-                                    {health.metrics.ordersWtd} WTD
+                                    {health.metrics.ordersWtd} WTD (Week To
+                                    Date)
                                 </p>
                             </div>
                         </div>
@@ -541,13 +649,15 @@ export default async function MonitoringSlaPage({
                         const Icon = config.icon;
 
                         return (
-                            <div
+                            <Link
                                 key={key}
-                                className="rounded-md border bg-white p-4 shadow-sm"
+                                href={config.href}
+                                className="group rounded-md border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                aria-label={`Open relevant section for ${config.label}`}
                             >
                                 <div className="flex items-start justify-between gap-3">
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-700">
+                                        <p className="text-sm font-semibold text-slate-700 group-hover:text-slate-950">
                                             {config.label}
                                         </p>
                                         <p className="mt-1 text-xs text-muted-foreground">
@@ -561,20 +671,23 @@ export default async function MonitoringSlaPage({
                                 <p className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">
                                     {metricLabel(value)}
                                 </p>
-                            </div>
+                            </Link>
                         );
                     })}
                 </section>
 
                 <section className="grid gap-4 xl:grid-cols-3">
-                    <div className="rounded-md border bg-white p-4 shadow-sm">
+                    <div
+                        id="brand-health"
+                        className="scroll-mt-24 rounded-md border bg-white p-4 shadow-sm"
+                    >
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-base font-semibold text-slate-950">
                                     Brand Health
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    KP Monday review dashboard
+                                    Brand owner Monday review dashboard
                                 </p>
                             </div>
                             <UsersRound className="size-5 text-muted-foreground" />
@@ -620,7 +733,10 @@ export default async function MonitoringSlaPage({
                         </div>
                     </div>
 
-                    <div className="rounded-md border bg-white p-4 shadow-sm">
+                    <div
+                        id="marketing-performance"
+                        className="scroll-mt-24 rounded-md border bg-white p-4 shadow-sm"
+                    >
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-base font-semibold text-slate-950">
@@ -634,23 +750,38 @@ export default async function MonitoringSlaPage({
                         </div>
                         <div className="grid gap-3 sm:grid-cols-2">
                             {[
-                                ["GMV WTD", marketingPerformance.gmvWtd],
-                                ["Orders WTD", marketingPerformance.ordersWtd],
                                 [
-                                    "Customers WTD",
+                                    "GMV (Gross Merchandise Value) WTD (Week To Date)",
+                                    marketingPerformance.gmvWtd,
+                                ],
+                                [
+                                    "Orders WTD (Week To Date)",
+                                    marketingPerformance.ordersWtd,
+                                ],
+                                [
+                                    "Customers WTD (Week To Date)",
                                     marketingPerformance.customersWtd,
                                 ],
-                                ["GMV MTD", marketingPerformance.gmvMtd],
-                                ["Orders MTD", marketingPerformance.ordersMtd],
                                 [
-                                    "Customers MTD",
+                                    "GMV (Gross Merchandise Value) MTD (Month To Date)",
+                                    marketingPerformance.gmvMtd,
+                                ],
+                                [
+                                    "Orders MTD (Month To Date)",
+                                    marketingPerformance.ordersMtd,
+                                ],
+                                [
+                                    "Customers MTD (Month To Date)",
                                     marketingPerformance.customersMtd,
                                 ],
                                 [
                                     "Ad spend",
                                     marketingPerformance.adSpendIntegration,
                                 ],
-                                ["ROAS", marketingPerformance.roasIntegration],
+                                [
+                                    "ROAS (Return On Ad Spend)",
+                                    marketingPerformance.roasIntegration,
+                                ],
                             ].map(([label, value]) => (
                                 <div
                                     key={label}
@@ -667,7 +798,10 @@ export default async function MonitoringSlaPage({
                         </div>
                     </div>
 
-                    <div className="rounded-md border bg-white p-4 shadow-sm">
+                    <div
+                        id="monthly-strategic"
+                        className="scroll-mt-24 rounded-md border bg-white p-4 shadow-sm"
+                    >
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-base font-semibold text-slate-950">
@@ -682,21 +816,21 @@ export default async function MonitoringSlaPage({
                         <div className="grid gap-3 sm:grid-cols-2">
                             {[
                                 [
-                                    "GMV MTD",
+                                    "GMV (Gross Merchandise Value) MTD (Month To Date)",
                                     monthlyStrategic.currentMonth.gmv ?? 0,
                                 ],
                                 [
-                                    "Orders MTD",
+                                    "Orders MTD (Month To Date)",
                                     monthlyStrategic.currentMonth.orderCount ??
                                         0,
                                 ],
                                 [
-                                    "Customers MTD",
+                                    "Customers MTD (Month To Date)",
                                     monthlyStrategic.currentMonth
                                         .customerCount ?? 0,
                                 ],
                                 [
-                                    "Prior GMV",
+                                    "Prior GMV (Gross Merchandise Value)",
                                     monthlyStrategic.previousMonth.gmv ?? 0,
                                 ],
                                 [
@@ -735,7 +869,10 @@ export default async function MonitoringSlaPage({
                 </section>
 
                 <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
-                    <div className="rounded-md border bg-white shadow-sm">
+                    <div
+                        id="active-alerts"
+                        className="scroll-mt-24 rounded-md border bg-white shadow-sm"
+                    >
                         <div className="flex items-center justify-between border-b px-4 py-3">
                             <div>
                                 <h2 className="text-base font-semibold text-slate-950">
@@ -760,8 +897,9 @@ export default async function MonitoringSlaPage({
                                             No active alerts
                                         </p>
                                         <p className="mt-1 text-sm text-muted-foreground">
-                                            SLA checks can still create alerts
-                                            when queues breach thresholds.
+                                            SLA (Service Level Agreement) checks
+                                            can still create alerts when queues
+                                            breach thresholds.
                                         </p>
                                     </div>
                                 </div>
@@ -964,6 +1102,36 @@ export default async function MonitoringSlaPage({
                                 </button>
                             </div>
                         </form>
+
+                        <div className="rounded-md border bg-white p-4 shadow-sm">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <h2 className="text-base font-semibold text-slate-950">
+                                        Founder Report
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        Download generated monitoring records
+                                    </p>
+                                </div>
+                                <Download className="size-5 text-muted-foreground" />
+                            </div>
+                            <div className="mt-4 grid gap-2">
+                                <a
+                                    href={founderReportXlsxHref}
+                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                                >
+                                    <Download className="size-4" />
+                                    Download Excel Report
+                                </a>
+                                <a
+                                    href={founderReportCsvHref}
+                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                                >
+                                    <Download className="size-4" />
+                                    Download CSV Report
+                                </a>
+                            </div>
+                        </div>
                     </aside>
                 </section>
 

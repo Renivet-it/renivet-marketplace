@@ -1632,6 +1632,13 @@
       "when": 1780415888245,
       "tag": "0232_unknown_yellowjacket",
       "breakpoints": true
+    },
+    {
+      "idx": 233,
+      "version": "7",
+      "when": 1780779262000,
+      "tag": "0233_happy_blazing_skull",
+      "breakpoints": true
     }
   ]
 }

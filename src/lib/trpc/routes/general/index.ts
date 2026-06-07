@@ -9,6 +9,7 @@ export * from "./legal";
 export * from "./newsletter-subscribers";
 export * from "./notifications";
 export * from "./orders";
+export * from "./order-ops";
 export * from "./plan";
 export * from "./product-review";
 export * from "./product-types";
