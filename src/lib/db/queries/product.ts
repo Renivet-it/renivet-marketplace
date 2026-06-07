@@ -136,6 +136,25 @@ const parseSingleProductSafely = (productData: any): ProductWithBrand => {
     return sanitizedProduct as ProductWithBrand;
 };
 
+const publicProductBrandIsActiveFilter = sql`EXISTS (
+    SELECT 1
+    FROM brands b
+    WHERE b.id = ${products.brandId}
+      AND b.is_active = true
+)`;
+
+const isPublicProductVisible = (product: any) =>
+    !!product &&
+    product.isActive === true &&
+    product.isAvailable === true &&
+    product.isPublished === true &&
+    product.isDeleted === false &&
+    product.verificationStatus === "approved" &&
+    product.brand?.isActive === true;
+
+const isPublicSectionProductRow = (row: { product?: any }) =>
+    isPublicProductVisible(row.product);
+
 interface CreateWomenPageFeaturedProduct {
     productId: string;
 }
@@ -889,6 +908,13 @@ class ProductQuery {
         // --- Build filters ---
         const filters = [
             searchQuery,
+            isActive === true &&
+            isAvailable === true &&
+            isPublished === true &&
+            isDeleted === false &&
+            verificationStatus === "approved"
+                ? publicProductBrandIsActiveFilter
+                : undefined,
             !!brandIds?.length
                 ? inArray(products.brandId, brandIds)
                 : undefined,
@@ -1314,6 +1340,13 @@ class ProductQuery {
         const filters = [
             // Always exclude deleted products (assuming you have deletedAt field)
             searchQuery,
+            isActive === true &&
+            isAvailable === true &&
+            isPublished === true &&
+            verificationStatus === "approved" &&
+            productVisiblity === "public"
+                ? publicProductBrandIsActiveFilter
+                : undefined,
             !!brandIds?.length
                 ? inArray(products.brandId, brandIds)
                 : undefined,
@@ -1574,6 +1607,18 @@ class ProductQuery {
             },
             where: and(
                 eq(products.id, productId),
+                isPublished === true && verificationStatus === "approved"
+                    ? publicProductBrandIsActiveFilter
+                    : undefined,
+                isPublished === true && verificationStatus === "approved"
+                    ? eq(products.isActive, true)
+                    : undefined,
+                isPublished === true && verificationStatus === "approved"
+                    ? eq(products.isAvailable, true)
+                    : undefined,
+                isPublished === true && verificationStatus === "approved"
+                    ? eq(products.isDeleted, false)
+                    : undefined,
                 isDeleted !== undefined
                     ? eq(products.isDeleted, isDeleted)
                     : undefined,
@@ -1798,6 +1843,18 @@ class ProductQuery {
             },
             where: and(
                 eq(products.slug, slug),
+                isPublished === true && verificationStatus === "approved"
+                    ? publicProductBrandIsActiveFilter
+                    : undefined,
+                isPublished === true && verificationStatus === "approved"
+                    ? eq(products.isActive, true)
+                    : undefined,
+                isPublished === true && verificationStatus === "approved"
+                    ? eq(products.isAvailable, true)
+                    : undefined,
+                isPublished === true && verificationStatus === "approved"
+                    ? eq(products.isDeleted, false)
+                    : undefined,
                 isDeleted !== undefined
                     ? eq(products.isDeleted, isDeleted)
                     : undefined,
@@ -3283,8 +3340,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3298,7 +3356,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3352,8 +3410,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3367,7 +3426,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3421,8 +3480,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3436,7 +3496,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3491,8 +3551,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3506,7 +3567,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3580,8 +3641,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3595,7 +3657,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3649,8 +3711,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3664,7 +3727,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3718,8 +3781,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3733,7 +3797,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3787,8 +3851,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3802,7 +3867,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3856,8 +3921,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3871,7 +3937,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3925,8 +3991,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -3940,7 +4007,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -3994,8 +4061,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -4009,7 +4077,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -4063,8 +4131,9 @@ class ProductQuery {
             },
         });
 
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media.forEach((media) => mediaIds.add(media.id));
             product.variants.forEach((variant) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -4078,7 +4147,7 @@ class ProductQuery {
             mediaItems.data.map((item) => [item.id, item])
         );
 
-        const enhancedData = data.map(({ product, ...rest }) => ({
+        const enhancedData = publicData.map(({ product, ...rest }) => ({
             ...rest,
             product: {
                 ...product,
@@ -4206,8 +4275,9 @@ class ProductQuery {
         });
 
         // 2) Collect media IDs
+        const publicData = data.filter(isPublicSectionProductRow);
         const mediaIds = new Set<string>();
-        for (const { product } of data) {
+        for (const { product } of publicData) {
             product.media?.forEach((m) => mediaIds.add(m.id));
             product.variants?.forEach((variant: any) => {
                 if (variant.image) mediaIds.add(variant.image);
@@ -4224,7 +4294,7 @@ class ProductQuery {
         );
 
         // 4) Enhance products with media + policies
-        const enhancedData = data.map(({ product, ...rest }: any) => ({
+        const enhancedData = publicData.map(({ product, ...rest }: any) => ({
             ...rest,
             product: {
                 ...product,

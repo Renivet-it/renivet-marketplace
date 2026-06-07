@@ -72,6 +72,13 @@ const TIME_WINDOWS = {
     SEARCH_HISTORY_DAYS: 14,
 } as const;
 
+const activeBrandFilter = sql`EXISTS (
+    SELECT 1
+    FROM brands b
+    WHERE b.id = ${products.brandId}
+      AND b.is_active = true
+)`;
+
 class RecommendationQuery {
     /**
      * Main entry point for getting personalized recommendations
@@ -360,6 +367,7 @@ class RecommendationQuery {
                     eq(products.isAvailable, true),
                     eq(products.isDeleted, false),
                     eq(products.verificationStatus, "approved"),
+                    activeBrandFilter,
                     hasMedia(products, "media"),
                     exclusionFilter
                 ),
@@ -484,6 +492,7 @@ class RecommendationQuery {
                     eq(products.isAvailable, true),
                     eq(products.isDeleted, false),
                     eq(products.verificationStatus, "approved"),
+                    activeBrandFilter,
                     hasMedia(products, "media"),
                     // NOTE: No category filter - we ORDER BY category match instead
                     exclusionFilter
@@ -648,6 +657,7 @@ class RecommendationQuery {
                     eq(products.isAvailable, true),
                     eq(products.isDeleted, false),
                     eq(products.verificationStatus, "approved"),
+                    activeBrandFilter,
                     hasMedia(products, "media"),
                     // NOTE: We don't filter by category - instead we ORDER BY category match
                     // This allows clicked products to appear AND brings similar products higher
@@ -796,6 +806,7 @@ class RecommendationQuery {
                     eq(products.isAvailable, true),
                     eq(products.isDeleted, false),
                     eq(products.verificationStatus, "approved"),
+                    activeBrandFilter,
                     hasMedia(products, "media"),
                     categoryFilter,
                     exclusionFilter
@@ -866,6 +877,7 @@ class RecommendationQuery {
                     eq(products.isAvailable, true),
                     eq(products.isDeleted, false),
                     eq(products.verificationStatus, "approved"),
+                    activeBrandFilter,
                     hasMedia(products, "media"),
                     exclusionFilter
                 ),
@@ -898,19 +910,7 @@ class RecommendationQuery {
      * Enhance products with media items from cache
      */
     private async enhanceProductsWithMedia(
-        data: Array<{
-            media?: Array<{ id: string }>;
-            variants?: Array<{ image?: string | null }>;
-            sustainabilityCertificate?: string | null;
-            returnExchangePolicy?: {
-                returnable?: boolean;
-                returnDescription?: string | null;
-                exchangeable?: boolean;
-                exchangeDescription?: string | null;
-            } | null;
-            specifications?: Array<{ key: string; value: string }>;
-            [key: string]: unknown;
-        }>
+        data: any[]
     ): Promise<ProductWithBrand[]> {
         if (data.length === 0) return [];
 
@@ -918,21 +918,27 @@ class RecommendationQuery {
             const mediaKeys = new Set<string>();
             for (const product of data) {
                 const bId = String(product.brandId);
-                product.media?.forEach((m) => mediaKeys.add(`media:${m.id}:${bId}`));
-                product.variants?.forEach((v) => {
+                product.media?.forEach((m: any) =>
+                    mediaKeys.add(`media:${m.id}:${bId}`)
+                );
+                product.variants?.forEach((v: any) => {
                     if (v.image) mediaKeys.add(`media:${v.image}:${bId}`);
                 });
                 if (product.sustainabilityCertificate)
-                    mediaKeys.add(`media:${product.sustainabilityCertificate}:${bId}`);
+                    mediaKeys.add(
+                        `media:${product.sustainabilityCertificate}:${bId}`
+                    );
             }
 
-            const mediaItems = await mediaCache.getByExactKeys(Array.from(mediaKeys));
+            const mediaItems = await mediaCache.getByExactKeys(
+                Array.from(mediaKeys)
+            );
             const mediaMap = new Map(mediaItems.data.map((i) => [i.id, i]));
 
             const enhancedData = data.map((product) => ({
                 ...product,
                 media:
-                    product.media?.map((m) => ({
+                    product.media?.map((m: any) => ({
                         ...m,
                         mediaItem: mediaMap.get(m.id),
                     })) || [],
@@ -940,7 +946,7 @@ class RecommendationQuery {
                     ? mediaMap.get(product.sustainabilityCertificate)
                     : null,
                 variants:
-                    product.variants?.map((v) => ({
+                    product.variants?.map((v: any) => ({
                         ...v,
                         mediaItem: v.image ? mediaMap.get(v.image) : null,
                     })) || [],
@@ -952,7 +958,7 @@ class RecommendationQuery {
                 exchangeDescription:
                     product.returnExchangePolicy?.exchangeDescription ?? null,
                 specifications:
-                    product.specifications?.map((s) => ({
+                    product.specifications?.map((s: any) => ({
                         key: s.key,
                         value: s.value,
                     })) || [],
