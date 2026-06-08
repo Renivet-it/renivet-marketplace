@@ -10,7 +10,6 @@ import {
     ColumnFiltersState,
     getCoreRowModel,
     getFilteredRowModel,
-    getPaginationRowModel,
     getSortedRowModel,
     SortingState,
     useReactTable,
@@ -102,7 +101,7 @@ interface PageProps {
 }
 
 export function BrandsTable({ initialData }: PageProps) {
-    const [page] = useQueryState("page", parseAsInteger.withDefault(1));
+    const [page, setPage] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search, setSearch] = useQueryState("search", {
         defaultValue: "",
@@ -143,18 +142,23 @@ export function BrandsTable({ initialData }: PageProps) {
         data,
         columns,
         getCoreRowModel: getCoreRowModel(),
-        getPaginationRowModel: getPaginationRowModel(),
         onSortingChange: setSorting,
         getSortedRowModel: getSortedRowModel(),
         onColumnFiltersChange: setColumnFilters,
         getFilteredRowModel: getFilteredRowModel(),
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
+        pageCount: pages,
+        manualPagination: true,
         state: {
             sorting,
             columnFilters,
             columnVisibility,
             rowSelection,
+            pagination: {
+                pageIndex: page - 1,
+                pageSize: limit,
+            },
         },
     });
 
@@ -174,6 +178,7 @@ export function BrandsTable({ initialData }: PageProps) {
                                 .getColumn("name")
                                 ?.setFilterValue(event.target.value);
                             setSearch(event.target.value);
+                            setPage(1);
                         }}
                     />
                 </div>
