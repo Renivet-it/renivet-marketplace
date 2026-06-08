@@ -1,5 +1,4 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import {
     ApiResponse,
@@ -20,6 +19,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
+import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc/client";
 import { cn, generatePickupLocationCode } from "@/lib/utils";
 import { format } from "date-fns";
@@ -155,10 +155,11 @@ export default function OrderShipment({
     const shipment = order.shipments?.[0];
     const isDelhivery = Boolean(shipment?.uploadWbn || shipment?.awbNumber);
     const packingRule = resolveBrandPackingRule(order);
-    const { data: packingTypesData } = trpc.general.packingTypes.getAll.useQuery(
-        { page: 1, limit: 100 },
-        { enabled: isSheetOpen && isDelhivery }
-    );
+    const { data: packingTypesData } =
+        trpc.general.packingTypes.getAll.useQuery(
+            { page: 1, limit: 100 },
+            { enabled: isSheetOpen && isDelhivery }
+        );
     const updateDelhiveryDimensions =
         trpc.general.orders.updateDelhiveryDimensions.useMutation();
     const orderItem = order.items[0];
@@ -174,11 +175,12 @@ export default function OrderShipment({
         savedLength > 0 && savedWidth > 0 && savedHeight > 0
             ? volumetricWeightGrams(savedLength, savedWidth, savedHeight)
             : 0;
-    const requiresPackageSelection =
-        isDelhivery && savedVolumetricWeight <= 0;
+    const requiresPackageSelection = isDelhivery && savedVolumetricWeight <= 0;
     const packingTypes = packingTypesData?.data ?? [];
     const selectedPackingType =
-        packingTypes.find((packingType) => packingType.id === selectedPackingTypeId) ??
+        packingTypes.find(
+            (packingType) => packingType.id === selectedPackingTypeId
+        ) ??
         (selectedPackingTypeId === packingRule?.packingType?.id
             ? packingRule?.packingType
             : null) ??
@@ -265,7 +267,9 @@ export default function OrderShipment({
                 }
 
                 if (!awbNumber) {
-                    toast.error("AWB number is missing for this Delhivery order.");
+                    toast.error(
+                        "AWB number is missing for this Delhivery order."
+                    );
                     return;
                 }
 
@@ -480,13 +484,16 @@ export default function OrderShipment({
                                         Package Details
                                     </div>
                                     <div className="mt-1 text-xs text-slate-600">
-                                        Saved: {savedLength} x {savedWidth} x {savedHeight} cm
+                                        Saved: {savedLength} x {savedWidth} x{" "}
+                                        {savedHeight} cm
                                         {" · "}
                                         {savedVolumetricWeight} g
                                     </div>
                                     {requiresPackageSelection && (
                                         <div className="mt-2 text-xs font-medium text-amber-700">
-                                            Volumetric weight is 0 g, so choose a packing type or enter custom LBH before shipping.
+                                            Volumetric weight is 0 g, so choose
+                                            a packing type or enter custom LBH
+                                            before shipping.
                                         </div>
                                     )}
                                     {requiresPackageSelection && (
@@ -519,10 +526,13 @@ export default function OrderShipment({
                                             {packageMode === "packing_type" && (
                                                 <div className="space-y-2">
                                                     <select
-                                                        value={selectedPackingTypeId}
+                                                        value={
+                                                            selectedPackingTypeId
+                                                        }
                                                         onChange={(event) =>
                                                             setSelectedPackingTypeId(
-                                                                event.target.value
+                                                                event.target
+                                                                    .value
                                                             )
                                                         }
                                                         className="w-full rounded-md border p-2 text-sm"
@@ -532,34 +542,67 @@ export default function OrderShipment({
                                                         </option>
                                                         {packingRule?.packingType && (
                                                             <option
-                                                                value={packingRule.packingType.id}
+                                                                value={
+                                                                    packingRule
+                                                                        .packingType
+                                                                        .id
+                                                                }
                                                             >
-                                                                {packingRule.packingType.name} (Suggested)
+                                                                {
+                                                                    packingRule
+                                                                        .packingType
+                                                                        .name
+                                                                }{" "}
+                                                                (Suggested)
                                                             </option>
                                                         )}
                                                         {packingTypes
                                                             .filter(
                                                                 (packingType) =>
                                                                     packingType.id !==
-                                                                    packingRule?.packingType?.id
+                                                                    packingRule
+                                                                        ?.packingType
+                                                                        ?.id
                                                             )
-                                                            .map((packingType) => (
-                                                                <option
-                                                                    key={packingType.id}
-                                                                    value={packingType.id}
-                                                                >
-                                                                    {packingType.name}
-                                                                </option>
-                                                            ))}
+                                                            .map(
+                                                                (
+                                                                    packingType
+                                                                ) => (
+                                                                    <option
+                                                                        key={
+                                                                            packingType.id
+                                                                        }
+                                                                        value={
+                                                                            packingType.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            packingType.name
+                                                                        }
+                                                                    </option>
+                                                                )
+                                                            )}
                                                     </select>
 
                                                     <div className="text-xs text-slate-600">
                                                         Calculated:{" "}
-                                                        {packingTypeDimensions.length} x{" "}
-                                                        {packingTypeDimensions.width} x{" "}
-                                                        {packingTypeDimensions.height} cm
+                                                        {
+                                                            packingTypeDimensions.length
+                                                        }{" "}
+                                                        x{" "}
+                                                        {
+                                                            packingTypeDimensions.width
+                                                        }{" "}
+                                                        x{" "}
+                                                        {
+                                                            packingTypeDimensions.height
+                                                        }{" "}
+                                                        cm
                                                         {" · "}
-                                                        {packingTypeDimensions.volumetricWeight} g
+                                                        {
+                                                            packingTypeDimensions.volumetricWeight
+                                                        }{" "}
+                                                        g
                                                     </div>
                                                 </div>
                                             )}
@@ -571,7 +614,8 @@ export default function OrderShipment({
                                                             value={customLength}
                                                             onChange={(event) =>
                                                                 setCustomLength(
-                                                                    event.target.value
+                                                                    event.target
+                                                                        .value
                                                                 )
                                                             }
                                                             placeholder="Length"
@@ -582,7 +626,8 @@ export default function OrderShipment({
                                                             value={customWidth}
                                                             onChange={(event) =>
                                                                 setCustomWidth(
-                                                                    event.target.value
+                                                                    event.target
+                                                                        .value
                                                                 )
                                                             }
                                                             placeholder="Width"
@@ -593,7 +638,8 @@ export default function OrderShipment({
                                                             value={customHeight}
                                                             onChange={(event) =>
                                                                 setCustomHeight(
-                                                                    event.target.value
+                                                                    event.target
+                                                                        .value
                                                                 )
                                                             }
                                                             placeholder="Height"
@@ -603,21 +649,35 @@ export default function OrderShipment({
                                                     </div>
                                                     <div className="text-xs text-slate-600">
                                                         Calculated:{" "}
-                                                        {customDimensions.length} x{" "}
-                                                        {customDimensions.width} x{" "}
-                                                        {customDimensions.height} cm
+                                                        {
+                                                            customDimensions.length
+                                                        }{" "}
+                                                        x{" "}
+                                                        {customDimensions.width}{" "}
+                                                        x{" "}
+                                                        {
+                                                            customDimensions.height
+                                                        }{" "}
+                                                        cm
                                                         {" · "}
-                                                        {customVolumetricWeight} g
+                                                        {
+                                                            customVolumetricWeight
+                                                        }{" "}
+                                                        g
                                                     </div>
                                                 </div>
                                             )}
 
                                             <div className="text-xs font-medium text-slate-700">
-                                                Shipping with: {activeDimensions.length} x{" "}
+                                                Shipping with:{" "}
+                                                {activeDimensions.length} x{" "}
                                                 {activeDimensions.width} x{" "}
                                                 {activeDimensions.height} cm
                                                 {" · "}
-                                                {activeDimensions.volumetricWeight} g
+                                                {
+                                                    activeDimensions.volumetricWeight
+                                                }{" "}
+                                                g
                                             </div>
                                         </div>
                                     )}

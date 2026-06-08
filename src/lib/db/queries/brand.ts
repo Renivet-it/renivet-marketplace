@@ -62,14 +62,15 @@ class BrandQuery {
         const products = data.flatMap((brand) =>
             // @ts-ignore
             brand.pageSections.flatMap((section) =>
-            // @ts-ignore
+                // @ts-ignore
                 section.sectionProducts.map(({ product }) => product)
             )
         );
 
         const mediaIds = new Set<string>();
         for (const product of products) {
-            mediaIds.add(product?.media[0].id);
+            const mediaId = product?.media?.[0]?.id;
+            if (mediaId) mediaIds.add(mediaId);
         }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
@@ -81,26 +82,27 @@ class BrandQuery {
             ...product,
             media: [
                 {
-                    ...product?.media[0],
-                    mediaItem: mediaMap.get(product?.media[0].id),
+                    ...(product?.media?.[0] ?? {}),
+                    mediaItem: product?.media?.[0]?.id
+                        ? mediaMap.get(product?.media?.[0]?.id ?? "")
+                        : undefined,
                 },
             ],
         }));
 
-        const parsed: CachedBrand[] = cachedBrandSchema.array().parse(
-            // @ts-ignore
-            data.map(({ members, roles, bannedMembers, ...rest }) => ({
+        const mapped = data.map(
+            ({ members, roles, bannedMembers, ...rest }) => ({
                 ...rest,
-            // @ts-ignore
+                // @ts-ignore
                 members: members.map(({ member }) => member),
-            // @ts-ignore
+                // @ts-ignore
                 roles: roles.map(({ role }) => role),
-            // @ts-ignore
+                // @ts-ignore
                 bannedMembers: bannedMembers.map(({ member }) => member),
-            // @ts-ignore
+                // @ts-ignore
                 pageSections: rest.pageSections.map((section) => ({
                     ...section,
-            // @ts-ignore
+                    // @ts-ignore
                     sectionProducts: section.sectionProducts.map((sp) => ({
                         ...sp,
                         product: enhancedProducts.find(
@@ -108,10 +110,11 @@ class BrandQuery {
                         ),
                     })),
                 })),
-            }))
+            })
         );
+        const parsed = cachedBrandSchema.array().safeParse(mapped);
 
-        return parsed;
+        return parsed.success ? parsed.data : (mapped as CachedBrand[]);
     }
 
     async getBrands({
@@ -128,10 +131,10 @@ class BrandQuery {
                 owner: true,
                 confidential: true,
                 packingRules: {
-          with: {
-            packingType: true,
-          },
-        },
+                    with: {
+                        packingType: true,
+                    },
+                },
                 members: {
                     with: {
                         member: true,
@@ -188,14 +191,15 @@ class BrandQuery {
         const products = data.flatMap((brand) =>
             // @ts-ignore
             brand.pageSections.flatMap((section) =>
-            // @ts-ignore
+                // @ts-ignore
                 section.sectionProducts.map(({ product }) => product)
             )
         );
 
         const mediaIds = new Set<string>();
         for (const product of products) {
-            mediaIds.add(product?.media[0].id);
+            const mediaId = product?.media?.[0]?.id;
+            if (mediaId) mediaIds.add(mediaId);
         }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
@@ -207,26 +211,27 @@ class BrandQuery {
             ...product,
             media: [
                 {
-                    ...product?.media[0],
-                    mediaItem: mediaMap.get(product?.media[0].id),
+                    ...(product?.media?.[0] ?? {}),
+                    mediaItem: product?.media?.[0]?.id
+                        ? mediaMap.get(product?.media?.[0]?.id ?? "")
+                        : undefined,
                 },
             ],
         }));
 
-        const parsed: CachedBrand[] = cachedBrandSchema.array().parse(
-            // @ts-ignore
-            data.map(({ members, roles, bannedMembers, ...rest }) => ({
+        const mapped = data.map(
+            ({ members, roles, bannedMembers, ...rest }) => ({
                 ...rest,
-            // @ts-ignore
+                // @ts-ignore
                 members: members.map(({ member }) => member),
-            // @ts-ignore
+                // @ts-ignore
                 roles: roles.map(({ role }) => role),
-            // @ts-ignore
+                // @ts-ignore
                 bannedMembers: bannedMembers.map(({ member }) => member),
-            // @ts-ignore
+                // @ts-ignore
                 pageSections: rest.pageSections.map((section) => ({
                     ...section,
-            // @ts-ignore
+                    // @ts-ignore
                     sectionProducts: section.sectionProducts.map((sp) => ({
                         ...sp,
                         product: enhancedProducts.find(
@@ -234,11 +239,12 @@ class BrandQuery {
                         ),
                     })),
                 })),
-            }))
+            })
         );
+        const parsed = cachedBrandSchema.array().safeParse(mapped);
 
         return {
-            data: parsed,
+            data: parsed.success ? parsed.data : (mapped as CachedBrand[]),
             count: +data?.[0]?.count || 0,
         };
     }
@@ -285,7 +291,7 @@ class BrandQuery {
             },
         });
         if (!data) return null;
-            // @ts-ignore
+        // @ts-ignore
         const products = data.pageSections.flatMap((section) =>
             // @ts-ignore
             section.sectionProducts.map(({ product }) => product)
@@ -293,25 +299,28 @@ class BrandQuery {
 
         const mediaIds = new Set<string>();
         for (const product of products) {
-            mediaIds.add(product?.media[0].id);
+            const mediaId = product?.media?.[0]?.id;
+            if (mediaId) mediaIds.add(mediaId);
         }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
         const mediaMap = new Map(
             mediaItems.data.map((item) => [item.id, item])
         );
-            // @ts-ignore
+        // @ts-ignore
         const enhancedProducts = products.map((product) => ({
             ...product,
             media: [
                 {
-                    ...product?.media[0],
-                    mediaItem: mediaMap.get(product?.media[0].id),
+                    ...(product?.media?.[0] ?? {}),
+                    mediaItem: product?.media?.[0]?.id
+                        ? mediaMap.get(product?.media?.[0]?.id ?? "")
+                        : undefined,
                 },
             ],
         }));
 
-        return cachedBrandSchema.parse({
+        const mapped = {
             ...data,
             // @ts-ignore
             members: data.members.map(({ member }) => member),
@@ -322,16 +331,19 @@ class BrandQuery {
             // @ts-ignore
             pageSections: data.pageSections.map((section) => ({
                 ...section,
-            // @ts-ignore
+                // @ts-ignore
                 sectionProducts: section.sectionProducts.map((sp) => ({
                     ...sp,
                     product: enhancedProducts.find(
-            // @ts-ignore
+                        // @ts-ignore
                         (product) => product.id === sp.productId
                     ),
                 })),
             })),
-        });
+        };
+        const parsed = cachedBrandSchema.safeParse(mapped);
+
+        return parsed.success ? parsed.data : (mapped as CachedBrand);
     }
 
     async getBrandBySlug(slug: string) {
@@ -375,7 +387,7 @@ class BrandQuery {
                     gst: values.gstin,
                 },
             });
-console.log(account, "account razorpay request");
+            console.log(account, "account razorpay request");
             const data = await db
                 .update(brands)
                 .set({
@@ -385,11 +397,11 @@ console.log(account, "account razorpay request");
                 .where(eq(brands.id, values.id))
                 .returning()
                 .then((res) => res[0]);
-console.log(data, "account razorpay response update");
+            console.log(data, "account razorpay response update");
 
             return data;
         } catch (error) {
-console.log(error, "account razorpay error");
+            console.log(error, "account razorpay error");
 
             if (
                 Object.prototype.hasOwnProperty.call(error, "error") &&

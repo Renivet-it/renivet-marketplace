@@ -41,14 +41,14 @@ export function OrderAction({ order, onAction }: PageProps) {
         // });
         trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery(
             {
-              shipmentId: order.shipments?.[0]?.shiprocketShipmentId
-                ? Number(order.shipments[0].shiprocketShipmentId)
-                : 0,
+                shipmentId: order.shipments?.[0]?.shiprocketShipmentId
+                    ? Number(order.shipments[0].shiprocketShipmentId)
+                    : 0,
             },
             {
-              enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
+                enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
             }
-          );
+        );
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
     const [isManifestModalOpen, setIsManifestModalOpen] = useState(false);
@@ -72,7 +72,9 @@ export function OrderAction({ order, onAction }: PageProps) {
     const handleDownload = async (type: "invoice" | "label" | "manifest") => {
         try {
             if (type === "invoice") {
-                const response = await generateInvoice(order.shipments[0].shiprocketOrderId);
+                const response = await generateInvoice(
+                    order.shipments[0].shiprocketOrderId
+                );
                 const link = document.createElement("a");
                 link.href = response.invoiceUrl;
                 link.download = `invoice_${order.shipments[0].shiprocketOrderId}.pdf`;
@@ -104,23 +106,28 @@ export function OrderAction({ order, onAction }: PageProps) {
                 toast.success("Manifest download started");
             }
         } catch (error: any) {
-        console.error(`Error downloading ${type}:`, error);
-        let errorMessage = `Failed to download ${type}. Please try again.`;
-        // Check for specific manifest already generated error
-        if (type === "manifest" &&
-            (error.message?.includes("already generated") ||
-             error.message?.includes("already downloaded") ||
-             error.response?.data?.message?.includes("already generated"))) {
-            errorMessage = "Manifest has already been generated and can only be downloaded once.";
+            console.error(`Error downloading ${type}:`, error);
+            let errorMessage = `Failed to download ${type}. Please try again.`;
+            // Check for specific manifest already generated error
+            if (
+                type === "manifest" &&
+                (error.message?.includes("already generated") ||
+                    error.message?.includes("already downloaded") ||
+                    error.response?.data?.message?.includes(
+                        "already generated"
+                    ))
+            ) {
+                errorMessage =
+                    "Manifest has already been generated and can only be downloaded once.";
+            }
+            // Otherwise show the server error if available
+            else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+            toast.error(errorMessage);
         }
-        // Otherwise show the server error if available
-        else if (error.response?.data?.message) {
-            errorMessage = error.response.data.message;
-        } else if (error.message) {
-            errorMessage = error.message;
-        }
-        toast.error(errorMessage);
-    }
     };
 
     return (

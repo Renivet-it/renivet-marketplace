@@ -1,12 +1,12 @@
+import { MostPopularBestSellerAction } from "@/components/dashboard/general/products/most-popular-best-seller-action";
+import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
 import { DashShell } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
-import { MostPopularBestSellerAction } from "@/components/dashboard/general/products/most-popular-best-seller-action";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button-dash";
 import { productQueries } from "@/lib/db/queries";
 import { cn, formatINR, normalizeBrandName } from "@/lib/utils";
 import { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -121,11 +121,10 @@ export default async function Page() {
                                         <td className="p-4 align-top">
                                             <div className="flex min-w-[280px] items-start gap-3">
                                                 <div className="relative size-14 overflow-hidden rounded-lg border bg-muted">
-                                                    <Image
+                                                    <SafeAdminImage
                                                         src={imageUrl}
                                                         alt={product.title}
                                                         fill
-                                                        sizes="56px"
                                                         className="object-cover"
                                                     />
                                                 </div>

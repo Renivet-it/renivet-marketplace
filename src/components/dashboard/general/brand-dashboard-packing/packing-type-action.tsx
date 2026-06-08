@@ -1,75 +1,74 @@
 "use client";
 
+import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
 } from "@/components/ui/dialog-dash";
-import { Icons } from "@/components/icons";
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { trpc } from "@/lib/trpc/client";
-import { toast } from "sonner";
 import { useState } from "react";
+import { toast } from "sonner";
 import { BrandProductPackingForm } from "./packing-type-form";
 import { TableBrandProductPacking } from "./packing-types-table";
 
 export function BrandProductPackingAction({
-  row,
+    row,
 }: {
-  row: TableBrandProductPacking;
+    row: TableBrandProductPacking;
 }) {
-  const utils = trpc.useUtils();
-  const [open, setOpen] = useState(false);
+    const utils = trpc.useUtils();
+    const [open, setOpen] = useState(false);
 
-  const deleteMutation =
-    trpc.brand.delete.useMutation({
-      onSuccess: () => {
-        toast.success("Rule deleted");
-        utils.brand.getAll.invalidate();
-      },
+    const deleteMutation = trpc.brand.delete.useMutation({
+        onSuccess: () => {
+            toast.success("Rule deleted");
+            utils.brand.getAll.invalidate();
+        },
     });
 
-  return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button size="icon" variant="ghost">
-            <Icons.MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
+    return (
+        <>
+            <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button size="icon" variant="ghost">
+                        <Icons.MoreVertical className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
 
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem onClick={() => setOpen(true)}>
-            Edit
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            className="text-destructive"
-            onClick={() => deleteMutation.mutate({ id: row.id })}
-          >
-            Delete
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setOpen(true)}>
+                        Edit
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={() => deleteMutation.mutate({ id: row.id })}
+                    >
+                        Delete
+                    </DropdownMenuItem>
+                </DropdownMenuContent>
+            </DropdownMenu>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Packing Rule</DialogTitle>
-          </DialogHeader>
+            <Dialog open={open} onOpenChange={setOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Edit Packing Rule</DialogTitle>
+                    </DialogHeader>
 
-          <BrandProductPackingForm
-            id={row.id}
-            onSuccess={() => setOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
-    </>
-  );
+                    <BrandProductPackingForm
+                        id={row.id}
+                        onSuccess={() => setOpen(false)}
+                    />
+                </DialogContent>
+            </Dialog>
+        </>
+    );
 }

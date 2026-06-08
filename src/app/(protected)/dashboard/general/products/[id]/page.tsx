@@ -1,8 +1,9 @@
+import { AuditHistoryPanel } from "@/components/dashboard/general/monitoring-sla/audit-history-panel";
 import {
     ProductActionPage,
     ProductReviewPage,
 } from "@/components/dashboard/general/products";
-import { AuditHistoryPanel } from "@/components/dashboard/general/monitoring-sla/audit-history-panel";
+import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
 import { DashShell } from "@/components/globals/layouts";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,7 +19,6 @@ import { brandCache, userCache } from "@/lib/redis/methods";
 import { convertValueToLabel } from "@/lib/utils";
 import { format } from "date-fns";
 import { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -162,7 +162,7 @@ async function ProductReviewFetch({ params }: PageProps) {
 
                                     <PopoverContent className="overflow-hidden p-0">
                                         <div className="aspect-square size-full overflow-hidden">
-                                            <Image
+                                            <SafeAdminImage
                                                 src={
                                                     existingProduct.brand
                                                         .logoUrl

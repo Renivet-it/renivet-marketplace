@@ -131,7 +131,7 @@ export const brandSchema = z.object({
     ),
     statusReasonCode: z.preprocess(
         convertEmptyStringToNull,
-        z.string().nullable()
+        z.string().nullable().optional()
     ),
     // confidentialData: brandConfidentialSchema.optional(),
     createdAt: z

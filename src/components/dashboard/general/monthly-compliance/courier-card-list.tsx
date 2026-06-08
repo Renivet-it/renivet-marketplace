@@ -13,7 +13,11 @@ interface CourierCardListProps {
 }
 
 // Dummy wrapper to render courier list from API
-export default function CourierCardList({ couriers, selectedCourierId, onCourierSelect }: CourierCardListProps) {
+export default function CourierCardList({
+    couriers,
+    selectedCourierId,
+    onCourierSelect,
+}: CourierCardListProps) {
     return (
         <ScrollArea className="h-[calc(100vh-200px)] w-full pr-2">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

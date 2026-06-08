@@ -84,9 +84,7 @@ export function TicketsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.tickets.getTickets.useQuery(
+    const { data: queryData } = trpc.general.tickets.getTickets.useQuery(
         { page, limit, search },
         { initialData }
     );

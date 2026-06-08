@@ -95,17 +95,16 @@ export function MarketingStripsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.content.marketingStrips.getMarketingStrips.useQuery(
-        { page, limit, search, isActive },
-        {
-            initialData: {
-                data: initialData.data,
-                count: initialData.count,
-            },
-        }
-    );
+    const { data: queryData } =
+        trpc.general.content.marketingStrips.getMarketingStrips.useQuery(
+            { page, limit, search, isActive },
+            {
+                initialData: {
+                    data: initialData.data,
+                    count: initialData.count,
+                },
+            }
+        );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 

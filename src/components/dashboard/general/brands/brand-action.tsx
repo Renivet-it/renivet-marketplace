@@ -1,5 +1,6 @@
 "use client";
 
+import { isRenderableImageUrl } from "@/components/dashboard/general/safe-admin-image";
 import { Icons } from "@/components/icons";
 import {
     AlertDialog,
@@ -388,7 +389,11 @@ export function BrandAction({ brand }: PageProps) {
                         <div className="flex items-center gap-3 text-start">
                             <Avatar className="size-12">
                                 <AvatarImage
-                                    src={brand.logoUrl}
+                                    src={
+                                        isRenderableImageUrl(brand.logoUrl)
+                                            ? brand.logoUrl
+                                            : undefined
+                                    }
                                     alt={brand.name}
                                 />
                                 <AvatarFallback>{brand.name[0]}</AvatarFallback>

@@ -107,17 +107,16 @@ export function AdvertisementsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.content.advertisements.getAdvertisements.useQuery(
-        { page, limit, search, isPublished },
-        {
-            initialData: {
-                data: initialData.data,
-                count: initialData.count,
-            },
-        }
-    );
+    const { data: queryData } =
+        trpc.general.content.advertisements.getAdvertisements.useQuery(
+            { page, limit, search, isPublished },
+            {
+                initialData: {
+                    data: initialData.data,
+                    count: initialData.count,
+                },
+            }
+        );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 

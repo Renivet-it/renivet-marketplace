@@ -4,10 +4,6 @@ import { CachedBrand, cachedBrandSchema } from "@/lib/validations";
 import { redis } from "..";
 
 class BrandCache {
-    set: any;
-    set(id: any, arg1: { delhiveryWarehouseName: string; }) {
-        throw new Error("Method not implemented.");
-    }
     private genKey: (...args: string[]) => string;
 
     constructor() {
@@ -34,30 +30,50 @@ class BrandCache {
         if (!keys.length) return [];
 
         const cachedBrands = await redis.mget(...keys);
-        return cachedBrandSchema
+        const parsed = cachedBrandSchema
             .array()
-            .parse(
+            .safeParse(
                 cachedBrands
                     .map((brand) => parseToJSON<CachedBrand>(brand))
                     .filter((brand): brand is CachedBrand => brand !== null)
             );
+
+        if (parsed.success) return parsed.data;
+
+        await this.drop();
+        const dbBrands = await brandQueries.getAllBrands();
+        if (!dbBrands.length) return [];
+
+        await this.addBulk(dbBrands);
+        return dbBrands;
     }
 
     async get(id: string) {
         const cachedBrandRaw = await redis.get(this.genKey(id));
-        let cachedBrand = cachedBrandSchema
+        const cachedBrandJson = parseToJSON<CachedBrand>(cachedBrandRaw);
+        const parsedCachedBrand = cachedBrandSchema
             .nullable()
-            .parse(parseToJSON<CachedBrand>(cachedBrandRaw));
+            .safeParse(cachedBrandJson);
+        let cachedBrand = parsedCachedBrand.success
+            ? parsedCachedBrand.data
+            : null;
+
+        if (!parsedCachedBrand.success) {
+            await this.remove(id);
+        }
 
         if (!cachedBrand) {
             const dbBrand = await brandQueries.getBrand(id);
             if (!dbBrand) return null;
 
-            cachedBrand = cachedBrandSchema.parse({
+            const parsedDbBrand = cachedBrandSchema.safeParse({
                 ...dbBrand,
                 createdAt: dbBrand.createdAt.toString(),
                 updatedAt: dbBrand.updatedAt.toString(),
             });
+            cachedBrand = parsedDbBrand.success
+                ? parsedDbBrand.data
+                : (dbBrand as CachedBrand);
             await this.add(cachedBrand);
         }
 

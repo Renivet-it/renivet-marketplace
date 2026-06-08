@@ -24,9 +24,14 @@ export async function AuditHistoryPanel({
                     </p>
                 ) : (
                     logs.map((log) => (
-                        <div key={log.id} className="grid gap-1 px-4 py-3 text-sm">
+                        <div
+                            key={log.id}
+                            className="grid gap-1 px-4 py-3 text-sm"
+                        >
                             <div className="flex flex-wrap items-center justify-between gap-2">
-                                <span className="font-medium">{log.actionType}</span>
+                                <span className="font-medium">
+                                    {log.actionType}
+                                </span>
                                 <span className="text-xs text-muted-foreground">
                                     {log.timestampUtc.toISOString()}
                                 </span>

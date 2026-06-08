@@ -171,8 +171,8 @@ export function DecodeXForm({
             <div className="rounded-lg border p-4">
                 <h3 className="text-base font-semibold">Mapping Scope</h3>
                 <p className="mt-1 text-xs text-muted-foreground">
-                    This applies to all products under the selected
-                    brand and sub-category.
+                    This applies to all products under the selected brand and
+                    sub-category.
                 </p>
 
                 <div className="mt-4 grid gap-4 md:grid-cols-2">
@@ -303,7 +303,9 @@ export function DecodeXForm({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="unset">Not specified</SelectItem>
+                                <SelectItem value="unset">
+                                    Not specified
+                                </SelectItem>
                                 <SelectItem value="yes">Yes</SelectItem>
                                 <SelectItem value="no">No</SelectItem>
                             </SelectContent>
@@ -326,7 +328,9 @@ export function DecodeXForm({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="unset">Not specified</SelectItem>
+                                <SelectItem value="unset">
+                                    Not specified
+                                </SelectItem>
                                 <SelectItem value="yes">Yes</SelectItem>
                                 <SelectItem value="no">No</SelectItem>
                             </SelectContent>
@@ -349,7 +353,9 @@ export function DecodeXForm({
                                 <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="unset">Not specified</SelectItem>
+                                <SelectItem value="unset">
+                                    Not specified
+                                </SelectItem>
                                 <SelectItem value="yes">Yes</SelectItem>
                                 <SelectItem value="no">No</SelectItem>
                             </SelectContent>
@@ -359,7 +365,9 @@ export function DecodeXForm({
             </div>
 
             <div className="rounded-lg border p-4">
-                <h3 className="text-base font-semibold">Story Behind the Product</h3>
+                <h3 className="text-base font-semibold">
+                    Story Behind the Product
+                </h3>
 
                 <div className="mt-4 grid gap-4">
                     <Field label="Story - The Human">
@@ -405,7 +413,9 @@ export function DecodeXForm({
             </div>
 
             <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {id ? "Update DecodeX Configuration" : "Save DecodeX Configuration"}
+                {id
+                    ? "Update DecodeX Configuration"
+                    : "Save DecodeX Configuration"}
             </Button>
         </form>
     );

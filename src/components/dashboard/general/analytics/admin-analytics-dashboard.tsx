@@ -1,9 +1,14 @@
-
 "use client";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle,
+} from "@/components/ui/card";
 import {
     Dialog,
     DialogContent,
@@ -66,7 +71,12 @@ type LandingSectionFilters = {
     limit: number;
 };
 
-type DashboardSection = "overview" | "webanalytics" | "reports" | "freeform" | "all";
+type DashboardSection =
+    | "overview"
+    | "webanalytics"
+    | "reports"
+    | "freeform"
+    | "all";
 
 const DATE_LABEL: Record<AnalyticsDatePreset, string> = {
     "7d": "Last 7 days",
@@ -142,15 +152,19 @@ const money = (value: number) =>
         maximumFractionDigits: 2,
     }).format(value || 0);
 
-const percent = (value: number) => `${Number.isFinite(value) ? value.toFixed(2) : "0.00"}%`;
+const percent = (value: number) =>
+    `${Number.isFinite(value) ? value.toFixed(2) : "0.00"}%`;
 
 const escapeCsv = (value: unknown) => {
     const raw = String(value ?? "");
-    return `"${raw.replace(/"/g, "\"\"")}"`;
+    return `"${raw.replace(/"/g, '""')}"`;
 };
 
 const buildCsv = (headers: string[], rows: Array<Array<unknown>>) =>
-    [headers.map(escapeCsv).join(","), ...rows.map((row) => row.map(escapeCsv).join(","))].join("\n");
+    [
+        headers.map(escapeCsv).join(","),
+        ...rows.map((row) => row.map(escapeCsv).join(",")),
+    ].join("\n");
 
 const downloadCsvFile = (fileName: string, csv: string) => {
     if (typeof window === "undefined") return;
@@ -167,7 +181,10 @@ const downloadCsvFile = (fileName: string, csv: string) => {
 };
 
 const parseDatePreset = (value: string | null): AnalyticsDatePreset => {
-    if (value && ANALYTICS_DATE_PRESETS.includes(value as AnalyticsDatePreset)) {
+    if (
+        value &&
+        ANALYTICS_DATE_PRESETS.includes(value as AnalyticsDatePreset)
+    ) {
         return value as AnalyticsDatePreset;
     }
     return "30d";
@@ -180,7 +197,9 @@ const parseComparison = (value: string | null): AnalyticsComparison => {
     return "previous_period";
 };
 
-const parseFiltersFromSearchParams = (searchParams: SearchParamReader): Filters => {
+const parseFiltersFromSearchParams = (
+    searchParams: SearchParamReader
+): Filters => {
     const datePreset = parseDatePreset(searchParams.get("datePreset"));
     const comparison = parseComparison(searchParams.get("comparison"));
 
@@ -248,10 +267,16 @@ function Delta({ value }: { value: number }) {
         <span
             className={cn(
                 "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold",
-                positive ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"
+                positive
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-rose-100 text-rose-700"
             )}
         >
-            {positive ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+            {positive ? (
+                <TrendingUp className="h-3.5 w-3.5" />
+            ) : (
+                <TrendingDown className="h-3.5 w-3.5" />
+            )}
             {Math.abs(value).toFixed(2)}%
         </span>
     );
@@ -284,38 +309,42 @@ export function AdminAnalyticsDashboard() {
         sortDirection: "desc",
     }));
 
-    const [landingSectionFilters, setLandingSectionFilters] = useState<LandingSectionFilters>({
-        search: "",
-        type: "all",
-        minSessions: 0,
-        hideInternal: true,
-        sortBy: "sessions",
-        sortDirection: "desc",
-        limit: 20,
-    });
+    const [landingSectionFilters, setLandingSectionFilters] =
+        useState<LandingSectionFilters>({
+            search: "",
+            type: "all",
+            minSessions: 0,
+            hideInternal: true,
+            sortBy: "sessions",
+            sortDirection: "desc",
+            limit: 20,
+        });
 
-    const [isNotFulfilledDialogOpen, setIsNotFulfilledDialogOpen] = useState(false);
+    const [isNotFulfilledDialogOpen, setIsNotFulfilledDialogOpen] =
+        useState(false);
 
     const notFulfilledRange = useMemo(
         () => getOrdersDateRangeFromFilters(filters),
         [filters]
     );
 
-    const notFulfilledOrders = trpc.general.analytics.getNotFulfilledOrders.useQuery(
-        {
-            startDate: notFulfilledRange.startDate ?? "",
-            endDate: notFulfilledRange.endDate ?? "",
-            limit: 100,
-        },
-        {
-            enabled:
-                isNotFulfilledDialogOpen &&
-                Boolean(notFulfilledRange.startDate) &&
-                Boolean(notFulfilledRange.endDate),
-        }
-    );
+    const notFulfilledOrders =
+        trpc.general.analytics.getNotFulfilledOrders.useQuery(
+            {
+                startDate: notFulfilledRange.startDate ?? "",
+                endDate: notFulfilledRange.endDate ?? "",
+                limit: 100,
+            },
+            {
+                enabled:
+                    isNotFulfilledDialogOpen &&
+                    Boolean(notFulfilledRange.startDate) &&
+                    Boolean(notFulfilledRange.endDate),
+            }
+        );
 
-    const [activeSection, setActiveSection] = useState<DashboardSection>("overview");
+    const [activeSection, setActiveSection] =
+        useState<DashboardSection>("overview");
 
     const hasValidDateRange =
         filters.datePreset !== "custom" ||
@@ -325,14 +354,20 @@ export function AdminAnalyticsDashboard() {
         applied.datePreset !== "custom" ||
         (Boolean(applied.startDate) && Boolean(applied.endDate));
 
-    const landingQueryLimit = Math.min(100, Math.max(landingSectionFilters.limit * 3, 40));
+    const landingQueryLimit = Math.min(
+        100,
+        Math.max(landingSectionFilters.limit * 3, 40)
+    );
 
     const overview = trpc.general.analytics.getOverview.useQuery(filters, {
         enabled: hasValidDateRange,
     });
-    const behavior = trpc.general.analytics.getBehaviorOverview.useQuery(filters, {
-        enabled: hasValidDateRange,
-    });
+    const behavior = trpc.general.analytics.getBehaviorOverview.useQuery(
+        filters,
+        {
+            enabled: hasValidDateRange,
+        }
+    );
     const landing = trpc.general.analytics.getLandingPagePerformance.useQuery(
         { ...filters, limit: landingQueryLimit },
         { enabled: hasValidDateRange }
@@ -340,19 +375,26 @@ export function AdminAnalyticsDashboard() {
     const series = trpc.general.analytics.getSalesTimeSeries.useQuery(filters, {
         enabled: hasValidDateRange,
     });
-    const breakdown = trpc.general.analytics.getSalesBreakdown.useQuery(filters, {
-        enabled: hasValidDateRange,
-    });
+    const breakdown = trpc.general.analytics.getSalesBreakdown.useQuery(
+        filters,
+        {
+            enabled: hasValidDateRange,
+        }
+    );
     const reports = trpc.general.analytics.getReportLibrary.useQuery();
     const saveReport = trpc.general.analytics.saveReport.useMutation({
         onSuccess: async () => {
             await reports.refetch();
         },
     });
-    const freeform = trpc.general.analytics.runFreeformReport.useQuery(applied, {
-        enabled: hasValidAppliedDateRange,
-    });
-    const refreshSnapshots = trpc.general.analytics.refreshSnapshots.useMutation();
+    const freeform = trpc.general.analytics.runFreeformReport.useQuery(
+        applied,
+        {
+            enabled: hasValidAppliedDateRange,
+        }
+    );
+    const refreshSnapshots =
+        trpc.general.analytics.refreshSnapshots.useMutation();
 
     const landingRows = useMemo(
         () => (landing.data ?? []) as LandingRow[],
@@ -368,7 +410,9 @@ export function AdminAnalyticsDashboard() {
             "checkout_conversion_over_time",
         ];
 
-        const byId = new Map((reports.data ?? []).map((report) => [report.id, report]));
+        const byId = new Map(
+            (reports.data ?? []).map((report) => [report.id, report])
+        );
         return allowedIds.flatMap((id) => {
             const report = byId.get(id);
             return report ? [report] : [];
@@ -389,37 +433,56 @@ export function AdminAnalyticsDashboard() {
 
     const landingSectionRows = useMemo(() => {
         const q = landingSectionFilters.search.trim().toLowerCase();
-        const normalizePath = (value: string) => String(value ?? "").trim() || "unknown";
+        const normalizePath = (value: string) =>
+            String(value ?? "").trim() || "unknown";
 
         const normalized = landingRows.map((row) => {
             const path = normalizePath(row.landingPath);
-            const type = String(row.landingType ?? "unknown").trim() || "unknown";
-            const sessions = Number.isFinite(Number(row.sessions)) ? Number(row.sessions) : 0;
-            const visitors = Number.isFinite(Number(row.visitors)) ? Number(row.visitors) : 0;
+            const type =
+                String(row.landingType ?? "unknown").trim() || "unknown";
+            const sessions = Number.isFinite(Number(row.sessions))
+                ? Number(row.sessions)
+                : 0;
+            const visitors = Number.isFinite(Number(row.visitors))
+                ? Number(row.visitors)
+                : 0;
 
             return {
                 landingPath: path,
                 landingType: type,
                 sessions,
                 visitors,
-                productTitle: String(row.productTitle ?? "").trim() || undefined,
-                productBrandName: String(row.productBrandName ?? "").trim() || undefined,
-                productSubcategoryName: String(row.productSubcategoryName ?? "").trim() || undefined,
-                productCategoryName: String(row.productCategoryName ?? "").trim() || undefined,
+                productTitle:
+                    String(row.productTitle ?? "").trim() || undefined,
+                productBrandName:
+                    String(row.productBrandName ?? "").trim() || undefined,
+                productSubcategoryName:
+                    String(row.productSubcategoryName ?? "").trim() ||
+                    undefined,
+                productCategoryName:
+                    String(row.productCategoryName ?? "").trim() || undefined,
             };
         });
 
-        const totalVisibleSessions = normalized.reduce((sum, row) => sum + row.sessions, 0);
+        const totalVisibleSessions = normalized.reduce(
+            (sum, row) => sum + row.sessions,
+            0
+        );
         const internalPrefixes = ["/dashboard", "/auth", "/api", "/admin"];
 
         const filtered = normalized.filter((row) => {
-            if (landingSectionFilters.type !== "all" && row.landingType !== landingSectionFilters.type) {
+            if (
+                landingSectionFilters.type !== "all" &&
+                row.landingType !== landingSectionFilters.type
+            ) {
                 return false;
             }
 
             if (
                 landingSectionFilters.hideInternal &&
-                internalPrefixes.some((prefix) => row.landingPath.startsWith(prefix))
+                internalPrefixes.some((prefix) =>
+                    row.landingPath.startsWith(prefix)
+                )
             ) {
                 return false;
             }
@@ -439,7 +502,13 @@ export function AdminAnalyticsDashboard() {
                 .join(" ")
                 .toLowerCase();
 
-            if (q && !(row.landingPath.toLowerCase().includes(q) || searchableDetails.includes(q))) {
+            if (
+                q &&
+                !(
+                    row.landingPath.toLowerCase().includes(q) ||
+                    searchableDetails.includes(q)
+                )
+            ) {
                 return false;
             }
 
@@ -448,11 +517,16 @@ export function AdminAnalyticsDashboard() {
 
         const withDerived = filtered.map((row) => ({
             ...row,
-            sessionShare: totalVisibleSessions > 0 ? (row.sessions / totalVisibleSessions) * 100 : 0,
-            visitorRate: row.sessions > 0 ? (row.visitors / row.sessions) * 100 : 0,
+            sessionShare:
+                totalVisibleSessions > 0
+                    ? (row.sessions / totalVisibleSessions) * 100
+                    : 0,
+            visitorRate:
+                row.sessions > 0 ? (row.visitors / row.sessions) * 100 : 0,
         }));
 
-        const direction = landingSectionFilters.sortDirection === "asc" ? 1 : -1;
+        const direction =
+            landingSectionFilters.sortDirection === "asc" ? 1 : -1;
         withDerived.sort((a, b) => {
             if (landingSectionFilters.sortBy === "visitors") {
                 return (a.visitors - b.visitors) * direction;
@@ -495,7 +569,9 @@ export function AdminAnalyticsDashboard() {
     const toggleMetric = (metric: FreeformMetric) => {
         setDraft((prev) => {
             const exists = prev.metrics.includes(metric);
-            const next = exists ? prev.metrics.filter((m) => m !== metric) : [...prev.metrics, metric];
+            const next = exists
+                ? prev.metrics.filter((m) => m !== metric)
+                : [...prev.metrics, metric];
             return { ...prev, metrics: next.length ? next : [metric] };
         });
     };
@@ -514,7 +590,10 @@ export function AdminAnalyticsDashboard() {
         });
     };
 
-    const reportFilterQuery = useMemo(() => buildFilterQuery(filters), [filters]);
+    const reportFilterQuery = useMemo(
+        () => buildFilterQuery(filters),
+        [filters]
+    );
 
     const getReportHref = useCallback(
         (reportId: string) =>
@@ -526,36 +605,112 @@ export function AdminAnalyticsDashboard() {
 
     const exportOverviewSnapshot = useCallback(() => {
         const rows: Array<Array<unknown>> = [
-            ["overview", "gross_sales", overview.data?.grossSales ?? 0, overview.data?.comparison.grossSales ?? 0],
+            [
+                "overview",
+                "gross_sales",
+                overview.data?.grossSales ?? 0,
+                overview.data?.comparison.grossSales ?? 0,
+            ],
             [
                 "overview",
                 "returning_customer_rate",
                 overview.data?.returningCustomerRate ?? 0,
                 overview.data?.comparison.returningCustomerRate ?? 0,
             ],
-            ["overview", "orders_fulfilled", overview.data?.ordersFulfilled ?? 0, overview.data?.comparison.ordersFulfilled ?? 0],
-            ["overview", "orders", overview.data?.orders ?? 0, overview.data?.comparison.orders ?? 0],
-            ["webanalytics", "sessions", behavior.data?.sessions ?? 0, behavior.data?.comparison.sessions ?? 0],
-            ["webanalytics", "visitors", behavior.data?.visitors ?? 0, behavior.data?.comparison.visitors ?? 0],
+            [
+                "overview",
+                "orders_fulfilled",
+                overview.data?.ordersFulfilled ?? 0,
+                overview.data?.comparison.ordersFulfilled ?? 0,
+            ],
+            [
+                "overview",
+                "orders",
+                overview.data?.orders ?? 0,
+                overview.data?.comparison.orders ?? 0,
+            ],
+            [
+                "webanalytics",
+                "sessions",
+                behavior.data?.sessions ?? 0,
+                behavior.data?.comparison.sessions ?? 0,
+            ],
+            [
+                "webanalytics",
+                "visitors",
+                behavior.data?.visitors ?? 0,
+                behavior.data?.comparison.visitors ?? 0,
+            ],
             [
                 "webanalytics",
                 "checkout_conversion_rate",
                 behavior.data?.checkoutConversionRate ?? 0,
                 behavior.data?.comparison.checkoutConversionRate ?? 0,
             ],
-            ["webanalytics", "bounce_rate", behavior.data?.bounceRate ?? 0, behavior.data?.comparison.bounceRate ?? 0],
-            ["sales_breakdown", "gross_sales", breakdown.data?.grossSales ?? 0, breakdown.data?.comparison.grossSales ?? 0],
-            ["sales_breakdown", "discounts", breakdown.data?.discounts ?? 0, breakdown.data?.comparison.discounts ?? 0],
-            ["sales_breakdown", "returns", breakdown.data?.returns ?? 0, breakdown.data?.comparison.returns ?? 0],
-            ["sales_breakdown", "net_sales", breakdown.data?.netSales ?? 0, breakdown.data?.comparison.netSales ?? 0],
-            ["sales_breakdown", "shipping", breakdown.data?.shipping ?? 0, breakdown.data?.comparison.shipping ?? 0],
-            ["sales_breakdown", "taxes", breakdown.data?.taxes ?? 0, breakdown.data?.comparison.taxes ?? 0],
-            ["sales_breakdown", "total_sales", breakdown.data?.totalSales ?? 0, breakdown.data?.comparison.totalSales ?? 0],
-            ...chartData.map((point) => ["sales_time_series", point.date, point.totalSales, point.previousTotalSales]),
+            [
+                "webanalytics",
+                "bounce_rate",
+                behavior.data?.bounceRate ?? 0,
+                behavior.data?.comparison.bounceRate ?? 0,
+            ],
+            [
+                "sales_breakdown",
+                "gross_sales",
+                breakdown.data?.grossSales ?? 0,
+                breakdown.data?.comparison.grossSales ?? 0,
+            ],
+            [
+                "sales_breakdown",
+                "discounts",
+                breakdown.data?.discounts ?? 0,
+                breakdown.data?.comparison.discounts ?? 0,
+            ],
+            [
+                "sales_breakdown",
+                "returns",
+                breakdown.data?.returns ?? 0,
+                breakdown.data?.comparison.returns ?? 0,
+            ],
+            [
+                "sales_breakdown",
+                "net_sales",
+                breakdown.data?.netSales ?? 0,
+                breakdown.data?.comparison.netSales ?? 0,
+            ],
+            [
+                "sales_breakdown",
+                "shipping",
+                breakdown.data?.shipping ?? 0,
+                breakdown.data?.comparison.shipping ?? 0,
+            ],
+            [
+                "sales_breakdown",
+                "taxes",
+                breakdown.data?.taxes ?? 0,
+                breakdown.data?.comparison.taxes ?? 0,
+            ],
+            [
+                "sales_breakdown",
+                "total_sales",
+                breakdown.data?.totalSales ?? 0,
+                breakdown.data?.comparison.totalSales ?? 0,
+            ],
+            ...chartData.map((point) => [
+                "sales_time_series",
+                point.date,
+                point.totalSales,
+                point.previousTotalSales,
+            ]),
         ];
 
-        const csv = buildCsv(["section", "metric", "value", "comparison_value"], rows);
-        downloadCsvFile(`analytics-overview-${buildFileSuffix(filters)}.csv`, csv);
+        const csv = buildCsv(
+            ["section", "metric", "value", "comparison_value"],
+            rows
+        );
+        downloadCsvFile(
+            `analytics-overview-${buildFileSuffix(filters)}.csv`,
+            csv
+        );
     }, [behavior.data, breakdown.data, chartData, filters, overview.data]);
 
     const exportLanding = useCallback(() => {
@@ -588,21 +743,36 @@ export function AdminAnalyticsDashboard() {
             rows
         );
 
-        downloadCsvFile(`landing-performance-${buildFileSuffix(filters)}.csv`, csv);
+        downloadCsvFile(
+            `landing-performance-${buildFileSuffix(filters)}.csv`,
+            csv
+        );
     }, [filters, landingSectionRows.rows]);
 
     const exportReports = useCallback(() => {
         const csv = buildCsv(
             ["name", "category", "created_by", "last_viewed"],
-            reportRows.map((report) => [report.name, report.category, report.createdBy, report.lastViewed])
+            reportRows.map((report) => [
+                report.name,
+                report.category,
+                report.createdBy,
+                report.lastViewed,
+            ])
         );
-        downloadCsvFile(`analytics-reports-${buildFileSuffix(filters)}.csv`, csv);
+        downloadCsvFile(
+            `analytics-reports-${buildFileSuffix(filters)}.csv`,
+            csv
+        );
     }, [filters, reportRows]);
 
     const exportFreeform = useCallback(() => {
-        const dimensionLabel = DIM_LABEL[freeform.data?.dimension ?? applied.dimension];
+        const dimensionLabel =
+            DIM_LABEL[freeform.data?.dimension ?? applied.dimension];
         const csv = buildCsv(
-            [dimensionLabel, ...freeformMetrics.map((metric) => METRIC_LABEL[metric])],
+            [
+                dimensionLabel,
+                ...freeformMetrics.map((metric) => METRIC_LABEL[metric]),
+            ],
             (freeform.data?.rows ?? []).map((row) => [
                 row.dimension,
                 ...freeformMetrics.map((metric) => row.metrics[metric] ?? 0),
@@ -616,30 +786,52 @@ export function AdminAnalyticsDashboard() {
         <div className="space-y-6">
             <div className="space-y-1">
                 <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
-                <p className="text-sm text-muted-foreground">Unified sales analytics with freeform reporting.</p>
+                <p className="text-sm text-muted-foreground">
+                    Unified sales analytics with freeform reporting.
+                </p>
             </div>
 
             <Card>
                 <CardContent className="flex flex-wrap items-end gap-3 p-3">
                     <div className="min-w-[180px] flex-1 space-y-1">
-                        <label className="text-xs font-semibold uppercase text-muted-foreground">Date range</label>
+                        <label className="text-xs font-semibold uppercase text-muted-foreground">
+                            Date range
+                        </label>
                         <select
                             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                             value={filters.datePreset}
                             onChange={(e) => {
-                                const datePreset = e.target.value as AnalyticsDatePreset;
+                                const datePreset = e.target
+                                    .value as AnalyticsDatePreset;
                                 const today = toInputDate(new Date());
-                                const defaultStartDate = toInputDate(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
+                                const defaultStartDate = toInputDate(
+                                    new Date(
+                                        Date.now() - 6 * 24 * 60 * 60 * 1000
+                                    )
+                                );
                                 const extra =
                                     datePreset === "custom"
                                         ? {
-                                              startDate: filters.startDate ?? defaultStartDate,
+                                              startDate:
+                                                  filters.startDate ??
+                                                  defaultStartDate,
                                               endDate: filters.endDate ?? today,
                                           }
-                                        : { startDate: undefined, endDate: undefined };
+                                        : {
+                                              startDate: undefined,
+                                              endDate: undefined,
+                                          };
 
-                                setFilters((prev) => ({ ...prev, datePreset, ...extra }));
-                                setDraft((prev) => ({ ...prev, datePreset, ...extra }));
+                                setFilters((prev) => ({
+                                    ...prev,
+                                    datePreset,
+                                    ...extra,
+                                }));
+                                setDraft((prev) => ({
+                                    ...prev,
+                                    datePreset,
+                                    ...extra,
+                                }));
                             }}
                         >
                             {ANALYTICS_DATE_PRESETS.map((preset) => (
@@ -651,12 +843,15 @@ export function AdminAnalyticsDashboard() {
                     </div>
 
                     <div className="min-w-[180px] flex-1 space-y-1">
-                        <label className="text-xs font-semibold uppercase text-muted-foreground">Comparison</label>
+                        <label className="text-xs font-semibold uppercase text-muted-foreground">
+                            Comparison
+                        </label>
                         <select
                             className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                             value={filters.comparison}
                             onChange={(e) => {
-                                const comparison = e.target.value as AnalyticsComparison;
+                                const comparison = e.target
+                                    .value as AnalyticsComparison;
                                 setFilters((prev) => ({ ...prev, comparison }));
                                 setDraft((prev) => ({ ...prev, comparison }));
                             }}
@@ -672,28 +867,46 @@ export function AdminAnalyticsDashboard() {
                     {filters.datePreset === "custom" ? (
                         <>
                             <div className="min-w-[170px] space-y-1">
-                                <label className="text-xs font-semibold uppercase text-muted-foreground">Start date</label>
+                                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                                    Start date
+                                </label>
                                 <input
                                     type="date"
                                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                                     value={filters.startDate ?? ""}
                                     onChange={(e) => {
-                                        const startDate = e.target.value || undefined;
-                                        setFilters((prev) => ({ ...prev, startDate }));
-                                        setDraft((prev) => ({ ...prev, startDate }));
+                                        const startDate =
+                                            e.target.value || undefined;
+                                        setFilters((prev) => ({
+                                            ...prev,
+                                            startDate,
+                                        }));
+                                        setDraft((prev) => ({
+                                            ...prev,
+                                            startDate,
+                                        }));
                                     }}
                                 />
                             </div>
                             <div className="min-w-[170px] space-y-1">
-                                <label className="text-xs font-semibold uppercase text-muted-foreground">End date</label>
+                                <label className="text-xs font-semibold uppercase text-muted-foreground">
+                                    End date
+                                </label>
                                 <input
                                     type="date"
                                     className="w-full rounded-md border bg-background px-3 py-2 text-sm"
                                     value={filters.endDate ?? ""}
                                     onChange={(e) => {
-                                        const endDate = e.target.value || undefined;
-                                        setFilters((prev) => ({ ...prev, endDate }));
-                                        setDraft((prev) => ({ ...prev, endDate }));
+                                        const endDate =
+                                            e.target.value || undefined;
+                                        setFilters((prev) => ({
+                                            ...prev,
+                                            endDate,
+                                        }));
+                                        setDraft((prev) => ({
+                                            ...prev,
+                                            endDate,
+                                        }));
                                     }}
                                 />
                             </div>
@@ -701,7 +914,10 @@ export function AdminAnalyticsDashboard() {
                     ) : null}
 
                     <div className="ml-auto flex items-center gap-2">
-                        <Button variant="outline" onClick={exportOverviewSnapshot}>
+                        <Button
+                            variant="outline"
+                            onClick={exportOverviewSnapshot}
+                        >
                             Export to Excel
                         </Button>
                         <Button
@@ -715,7 +931,9 @@ export function AdminAnalyticsDashboard() {
                             }
                             disabled={refreshSnapshots.isPending}
                         >
-                            {refreshSnapshots.isPending ? "Refreshing snapshots..." : "Refresh snapshots"}
+                            {refreshSnapshots.isPending
+                                ? "Refreshing snapshots..."
+                                : "Refresh snapshots"}
                         </Button>
                     </div>
                 </CardContent>
@@ -723,7 +941,9 @@ export function AdminAnalyticsDashboard() {
 
             <Card>
                 <CardContent className="flex flex-wrap items-center gap-3 p-4">
-                    <span className="mr-2 text-sm font-semibold uppercase text-muted-foreground">Section menu</span>
+                    <span className="mr-2 text-sm font-semibold uppercase text-muted-foreground">
+                        Section menu
+                    </span>
                     {sectionOptions.map((section) => (
                         <button
                             key={section.key}
@@ -744,14 +964,18 @@ export function AdminAnalyticsDashboard() {
 
             {loading ? (
                 <Card>
-                    <CardContent className="p-6 text-sm text-muted-foreground">Loading dashboard data...</CardContent>
+                    <CardContent className="p-6 text-sm text-muted-foreground">
+                        Loading dashboard data...
+                    </CardContent>
                 </Card>
             ) : (
                 <>
                     <div
                         className={cn(
                             "grid gap-4 md:grid-cols-2 xl:grid-cols-4",
-                            activeSection !== "all" && activeSection !== "overview" && "hidden"
+                            activeSection !== "all" &&
+                                activeSection !== "overview" &&
+                                "hidden"
                         )}
                     >
                         <Kpi
@@ -761,20 +985,31 @@ export function AdminAnalyticsDashboard() {
                         />
                         <Kpi
                             title="Returning customer rate"
-                            value={percent(overview.data?.returningCustomerRate ?? 0)}
-                            change={overview.data?.comparison.returningCustomerRate ?? 0}
+                            value={percent(
+                                overview.data?.returningCustomerRate ?? 0
+                            )}
+                            change={
+                                overview.data?.comparison
+                                    .returningCustomerRate ?? 0
+                            }
                             subtext={`${overview.data?.returningCustomers ?? 0} returning / ${overview.data?.newCustomers ?? 0} new`}
                         />
                         <Kpi
                             title="Orders fulfilled"
-                            value={(overview.data?.ordersFulfilled ?? 0).toLocaleString()}
-                            change={overview.data?.comparison.ordersFulfilled ?? 0}
+                            value={(
+                                overview.data?.ordersFulfilled ?? 0
+                            ).toLocaleString()}
+                            change={
+                                overview.data?.comparison.ordersFulfilled ?? 0
+                            }
                             subtext="Click to view not fulfilled orders"
                             onClick={() => setIsNotFulfilledDialogOpen(true)}
                         />
                         <Kpi
                             title="Orders"
-                            value={(overview.data?.orders ?? 0).toLocaleString()}
+                            value={(
+                                overview.data?.orders ?? 0
+                            ).toLocaleString()}
                             change={overview.data?.comparison.orders ?? 0}
                         />
                     </div>
@@ -782,23 +1017,34 @@ export function AdminAnalyticsDashboard() {
                     <div
                         className={cn(
                             "grid gap-4 md:grid-cols-2 xl:grid-cols-4",
-                            activeSection !== "all" && activeSection !== "webanalytics" && "hidden"
+                            activeSection !== "all" &&
+                                activeSection !== "webanalytics" &&
+                                "hidden"
                         )}
                     >
                         <Kpi
                             title="Sessions"
-                            value={(behavior.data?.sessions ?? 0).toLocaleString()}
+                            value={(
+                                behavior.data?.sessions ?? 0
+                            ).toLocaleString()}
                             change={behavior.data?.comparison.sessions ?? 0}
                         />
                         <Kpi
                             title="Visitors"
-                            value={(behavior.data?.visitors ?? 0).toLocaleString()}
+                            value={(
+                                behavior.data?.visitors ?? 0
+                            ).toLocaleString()}
                             change={behavior.data?.comparison.visitors ?? 0}
                         />
                         <Kpi
                             title="Checkout conversion"
-                            value={percent(behavior.data?.checkoutConversionRate ?? 0)}
-                            change={behavior.data?.comparison.checkoutConversionRate ?? 0}
+                            value={percent(
+                                behavior.data?.checkoutConversionRate ?? 0
+                            )}
+                            change={
+                                behavior.data?.comparison
+                                    .checkoutConversionRate ?? 0
+                            }
                         />
                         <Kpi
                             title="Bounce rate"
@@ -810,14 +1056,19 @@ export function AdminAnalyticsDashboard() {
                     <div
                         className={cn(
                             "grid gap-4 xl:grid-cols-[2fr_1fr]",
-                            activeSection !== "all" && activeSection !== "overview" && "hidden"
+                            activeSection !== "all" &&
+                                activeSection !== "overview" &&
+                                "hidden"
                         )}
                     >
                         <Card>
                             <CardHeader>
                                 <CardTitle>Total sales over time</CardTitle>
                                 <CardDescription>
-                                    {DATE_LABEL[filters.datePreset]} with {COMP_LABEL[filters.comparison].toLowerCase()}
+                                    {DATE_LABEL[filters.datePreset]} with{" "}
+                                    {COMP_LABEL[
+                                        filters.comparison
+                                    ].toLowerCase()}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="h-[340px]">
@@ -825,8 +1076,17 @@ export function AdminAnalyticsDashboard() {
                                     <LineChart data={chartData}>
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="date" />
-                                        <YAxis tickFormatter={(v) => `INR ${Number(v).toLocaleString()}`} />
-                                        <Tooltip formatter={(value: number, name) => [money(Number(value)), name]} />
+                                        <YAxis
+                                            tickFormatter={(v) =>
+                                                `INR ${Number(v).toLocaleString()}`
+                                            }
+                                        />
+                                        <Tooltip
+                                            formatter={(
+                                                value: number,
+                                                name
+                                            ) => [money(Number(value)), name]}
+                                        />
                                         <Legend />
                                         <Line
                                             type="monotone"
@@ -855,22 +1115,79 @@ export function AdminAnalyticsDashboard() {
                                 <CardTitle>Total sales breakdown</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-3">
-                                <Breakdown label="Gross sales" value={breakdown.data?.grossSales ?? 0} change={breakdown.data?.comparison.grossSales ?? 0} />
-                                <Breakdown label="Discounts" value={breakdown.data?.discounts ?? 0} change={breakdown.data?.comparison.discounts ?? 0} negative />
-                                <Breakdown label="Returns" value={breakdown.data?.returns ?? 0} change={breakdown.data?.comparison.returns ?? 0} negative />
-                                <Breakdown label="Net sales" value={breakdown.data?.netSales ?? 0} change={breakdown.data?.comparison.netSales ?? 0} />
-                                <Breakdown label="Shipping" value={breakdown.data?.shipping ?? 0} change={breakdown.data?.comparison.shipping ?? 0} />
-                                <Breakdown label="Taxes" value={breakdown.data?.taxes ?? 0} change={breakdown.data?.comparison.taxes ?? 0} />
-                                <Breakdown label="Total sales" value={breakdown.data?.totalSales ?? 0} change={breakdown.data?.comparison.totalSales ?? 0} strong />
+                                <Breakdown
+                                    label="Gross sales"
+                                    value={breakdown.data?.grossSales ?? 0}
+                                    change={
+                                        breakdown.data?.comparison.grossSales ??
+                                        0
+                                    }
+                                />
+                                <Breakdown
+                                    label="Discounts"
+                                    value={breakdown.data?.discounts ?? 0}
+                                    change={
+                                        breakdown.data?.comparison.discounts ??
+                                        0
+                                    }
+                                    negative
+                                />
+                                <Breakdown
+                                    label="Returns"
+                                    value={breakdown.data?.returns ?? 0}
+                                    change={
+                                        breakdown.data?.comparison.returns ?? 0
+                                    }
+                                    negative
+                                />
+                                <Breakdown
+                                    label="Net sales"
+                                    value={breakdown.data?.netSales ?? 0}
+                                    change={
+                                        breakdown.data?.comparison.netSales ?? 0
+                                    }
+                                />
+                                <Breakdown
+                                    label="Shipping"
+                                    value={breakdown.data?.shipping ?? 0}
+                                    change={
+                                        breakdown.data?.comparison.shipping ?? 0
+                                    }
+                                />
+                                <Breakdown
+                                    label="Taxes"
+                                    value={breakdown.data?.taxes ?? 0}
+                                    change={
+                                        breakdown.data?.comparison.taxes ?? 0
+                                    }
+                                />
+                                <Breakdown
+                                    label="Total sales"
+                                    value={breakdown.data?.totalSales ?? 0}
+                                    change={
+                                        breakdown.data?.comparison.totalSales ??
+                                        0
+                                    }
+                                    strong
+                                />
                             </CardContent>
                         </Card>
                     </div>
 
-                    <Card className={cn(activeSection !== "all" && activeSection !== "webanalytics" && "hidden")}>
+                    <Card
+                        className={cn(
+                            activeSection !== "all" &&
+                                activeSection !== "webanalytics" &&
+                                "hidden"
+                        )}
+                    >
                         <CardHeader className="flex-row items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Landing page performance</CardTitle>
-                                <CardDescription>Top landing paths by sessions with dedicated PostHog filters.</CardDescription>
+                                <CardDescription>
+                                    Top landing paths by sessions with dedicated
+                                    PostHog filters.
+                                </CardDescription>
                             </div>
                             <Button variant="outline" onClick={exportLanding}>
                                 Export to Excel
@@ -879,12 +1196,19 @@ export function AdminAnalyticsDashboard() {
                         <CardContent className="space-y-5">
                             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
                                 <div className="space-y-1 xl:col-span-2">
-                                    <label className="text-xs font-semibold uppercase text-muted-foreground">Search path/type</label>
+                                    <label className="text-xs font-semibold uppercase text-muted-foreground">
+                                        Search path/type
+                                    </label>
                                     <input
                                         type="text"
                                         value={landingSectionFilters.search}
                                         onChange={(e) =>
-                                            setLandingSectionFilters((prev) => ({ ...prev, search: e.target.value }))
+                                            setLandingSectionFilters(
+                                                (prev) => ({
+                                                    ...prev,
+                                                    search: e.target.value,
+                                                })
+                                            )
                                         }
                                         placeholder="/shop, /men, page"
                                         className="w-full rounded-md border bg-background px-3 py-2 text-sm"
@@ -904,7 +1228,10 @@ export function AdminAnalyticsDashboard() {
                                         { value: "all", label: "All types" },
                                         { value: "page", label: "Page" },
                                         { value: "product", label: "Product" },
-                                        { value: "collection", label: "Collection" },
+                                        {
+                                            value: "collection",
+                                            label: "Collection",
+                                        },
                                         { value: "unknown", label: "Unknown" },
                                         { value: "summary", label: "Summary" },
                                     ]}
@@ -912,11 +1239,16 @@ export function AdminAnalyticsDashboard() {
 
                                 <InputBlock
                                     label="Min sessions"
-                                    value={String(landingSectionFilters.minSessions)}
+                                    value={String(
+                                        landingSectionFilters.minSessions
+                                    )}
                                     onChange={(value) =>
                                         setLandingSectionFilters((prev) => ({
                                             ...prev,
-                                            minSessions: Math.max(0, Number(value || 0)),
+                                            minSessions: Math.max(
+                                                0,
+                                                Number(value || 0)
+                                            ),
                                         }))
                                     }
                                 />
@@ -931,22 +1263,40 @@ export function AdminAnalyticsDashboard() {
                                         }))
                                     }
                                     options={[
-                                        { value: "sessions", label: "Sessions" },
-                                        { value: "visitors", label: "Visitors" },
-                                        { value: "sessionShare", label: "Session share" },
-                                        { value: "visitorRate", label: "Visitor rate" },
+                                        {
+                                            value: "sessions",
+                                            label: "Sessions",
+                                        },
+                                        {
+                                            value: "visitors",
+                                            label: "Visitors",
+                                        },
+                                        {
+                                            value: "sessionShare",
+                                            label: "Session share",
+                                        },
+                                        {
+                                            value: "visitorRate",
+                                            label: "Visitor rate",
+                                        },
                                     ]}
                                 />
 
                                 <div className="grid grid-cols-2 gap-2">
                                     <SelectBlock
                                         label="Direction"
-                                        value={landingSectionFilters.sortDirection}
+                                        value={
+                                            landingSectionFilters.sortDirection
+                                        }
                                         onChange={(value) =>
-                                            setLandingSectionFilters((prev) => ({
-                                                ...prev,
-                                                sortDirection: value as "asc" | "desc",
-                                            }))
+                                            setLandingSectionFilters(
+                                                (prev) => ({
+                                                    ...prev,
+                                                    sortDirection: value as
+                                                        | "asc"
+                                                        | "desc",
+                                                })
+                                            )
                                         }
                                         options={[
                                             { value: "desc", label: "Desc" },
@@ -955,12 +1305,22 @@ export function AdminAnalyticsDashboard() {
                                     />
                                     <InputBlock
                                         label="Rows"
-                                        value={String(landingSectionFilters.limit)}
+                                        value={String(
+                                            landingSectionFilters.limit
+                                        )}
                                         onChange={(value) =>
-                                            setLandingSectionFilters((prev) => ({
-                                                ...prev,
-                                                limit: Math.max(5, Math.min(Number(value || 20), 100)),
-                                            }))
+                                            setLandingSectionFilters(
+                                                (prev) => ({
+                                                    ...prev,
+                                                    limit: Math.max(
+                                                        5,
+                                                        Math.min(
+                                                            Number(value || 20),
+                                                            100
+                                                        )
+                                                    ),
+                                                })
+                                            )
                                         }
                                     />
                                 </div>
@@ -970,20 +1330,29 @@ export function AdminAnalyticsDashboard() {
                                 <label className="inline-flex items-center gap-2 text-sm text-muted-foreground">
                                     <input
                                         type="checkbox"
-                                        checked={landingSectionFilters.hideInternal}
+                                        checked={
+                                            landingSectionFilters.hideInternal
+                                        }
                                         onChange={(e) =>
-                                            setLandingSectionFilters((prev) => ({
-                                                ...prev,
-                                                hideInternal: e.target.checked,
-                                            }))
+                                            setLandingSectionFilters(
+                                                (prev) => ({
+                                                    ...prev,
+                                                    hideInternal:
+                                                        e.target.checked,
+                                                })
+                                            )
                                         }
                                         className="h-4 w-4 rounded border"
                                     />
-                                    Hide internal paths (/dashboard, /auth, /api)
+                                    Hide internal paths (/dashboard, /auth,
+                                    /api)
                                 </label>
 
                                 <p className="text-xs text-muted-foreground">
-                                    Showing {landingSectionRows.rows.length} of {landingSectionRows.totalRowsBeforeLimit} rows - total sessions {landingSectionRows.totalSessions.toLocaleString()}
+                                    Showing {landingSectionRows.rows.length} of{" "}
+                                    {landingSectionRows.totalRowsBeforeLimit}{" "}
+                                    rows - total sessions{" "}
+                                    {landingSectionRows.totalSessions.toLocaleString()}
                                 </p>
                             </div>
 
@@ -991,37 +1360,97 @@ export function AdminAnalyticsDashboard() {
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-                                            <th className="px-2 py-2">Landing path</th>
+                                            <th className="px-2 py-2">
+                                                Landing path
+                                            </th>
                                             <th className="px-2 py-2">Type</th>
                                             <th className="px-2 py-2">Brand</th>
-                                            <th className="px-2 py-2">Product title</th>
-                                            <th className="px-2 py-2">Category</th>
-                                            <th className="px-2 py-2">Subcategory</th>
-                                            <th className="px-2 py-2 text-right">Sessions</th>
-                                            <th className="px-2 py-2 text-right">Visitors</th>
-                                            <th className="px-2 py-2 text-right">Session share</th>
-                                            <th className="px-2 py-2 text-right">Visitor rate</th>
+                                            <th className="px-2 py-2">
+                                                Product title
+                                            </th>
+                                            <th className="px-2 py-2">
+                                                Category
+                                            </th>
+                                            <th className="px-2 py-2">
+                                                Subcategory
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                                Sessions
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                                Visitors
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                                Session share
+                                            </th>
+                                            <th className="px-2 py-2 text-right">
+                                                Visitor rate
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {landingSectionRows.rows.map((row) => (
-                                            <tr key={`${row.landingPath}-${row.landingType}`} className="border-b">
-                                                <td className="px-2 py-2 font-medium">{row.landingPath}</td>
-                                                <td className="px-2 py-2">{row.landingType}</td>
-                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productBrandName ?? "-" : "-"}</td>
-                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productTitle ?? "-" : "-"}</td>
-                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productCategoryName ?? "-" : "-"}</td>
-                                                <td className="px-2 py-2">{row.landingType === "product" ? row.productSubcategoryName ?? "-" : "-"}</td>
-                                                <td className="px-2 py-2 text-right">{row.sessions.toLocaleString()}</td>
-                                                <td className="px-2 py-2 text-right">{row.visitors.toLocaleString()}</td>
-                                                <td className="px-2 py-2 text-right">{percent(row.sessionShare)}</td>
-                                                <td className="px-2 py-2 text-right">{percent(row.visitorRate)}</td>
+                                            <tr
+                                                key={`${row.landingPath}-${row.landingType}`}
+                                                className="border-b"
+                                            >
+                                                <td className="px-2 py-2 font-medium">
+                                                    {row.landingPath}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {row.landingType}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {row.landingType ===
+                                                    "product"
+                                                        ? (row.productBrandName ??
+                                                          "-")
+                                                        : "-"}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {row.landingType ===
+                                                    "product"
+                                                        ? (row.productTitle ??
+                                                          "-")
+                                                        : "-"}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {row.landingType ===
+                                                    "product"
+                                                        ? (row.productCategoryName ??
+                                                          "-")
+                                                        : "-"}
+                                                </td>
+                                                <td className="px-2 py-2">
+                                                    {row.landingType ===
+                                                    "product"
+                                                        ? (row.productSubcategoryName ??
+                                                          "-")
+                                                        : "-"}
+                                                </td>
+                                                <td className="px-2 py-2 text-right">
+                                                    {row.sessions.toLocaleString()}
+                                                </td>
+                                                <td className="px-2 py-2 text-right">
+                                                    {row.visitors.toLocaleString()}
+                                                </td>
+                                                <td className="px-2 py-2 text-right">
+                                                    {percent(row.sessionShare)}
+                                                </td>
+                                                <td className="px-2 py-2 text-right">
+                                                    {percent(row.visitorRate)}
+                                                </td>
                                             </tr>
                                         ))}
-                                        {landingSectionRows.rows.length === 0 ? (
+                                        {landingSectionRows.rows.length ===
+                                        0 ? (
                                             <tr>
-                                                <td className="px-2 py-6 text-center text-muted-foreground" colSpan={10}>
-                                                    {behavior.data?.source === "unconfigured"
+                                                <td
+                                                    className="px-2 py-6 text-center text-muted-foreground"
+                                                    colSpan={10}
+                                                >
+                                                    {behavior.data?.source ===
+                                                    "unconfigured"
                                                         ? "PostHog behavior query API is not configured yet."
                                                         : "No landing rows match the selected landing filters."}
                                                 </td>
@@ -1033,16 +1462,35 @@ export function AdminAnalyticsDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className={cn(activeSection !== "all" && activeSection !== "reports" && "hidden")}>
+                    <Card
+                        className={cn(
+                            activeSection !== "all" &&
+                                activeSection !== "reports" &&
+                                "hidden"
+                        )}
+                    >
                         <CardHeader className="flex-row items-center justify-between">
                             <div>
                                 <CardTitle>Reports</CardTitle>
-                                <CardDescription>Curated report templates (red-box selection).</CardDescription>
+                                <CardDescription>
+                                    Curated report templates (red-box
+                                    selection).
+                                </CardDescription>
                             </div>
                             <div className="flex items-center gap-2">
-                                <Button variant="outline" onClick={exportReports}>Export to Excel</Button>
-                                <Button onClick={saveCurrentReport} disabled={saveReport.isPending}>
-                                    {saveReport.isPending ? "Saving..." : "Save current report"}
+                                <Button
+                                    variant="outline"
+                                    onClick={exportReports}
+                                >
+                                    Export to Excel
+                                </Button>
+                                <Button
+                                    onClick={saveCurrentReport}
+                                    disabled={saveReport.isPending}
+                                >
+                                    {saveReport.isPending
+                                        ? "Saving..."
+                                        : "Save current report"}
                                 </Button>
                             </div>
                         </CardHeader>
@@ -1052,22 +1500,57 @@ export function AdminAnalyticsDashboard() {
                                     <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
                                         <th className="px-2 py-2">Name</th>
                                         <th className="px-2 py-2">Category</th>
-                                        <th className="px-2 py-2">Created by</th>
-                                        <th className="px-2 py-2">Last viewed</th>
-                                        <th className="px-2 py-2 text-right">Actions</th>
+                                        <th className="px-2 py-2">
+                                            Created by
+                                        </th>
+                                        <th className="px-2 py-2">
+                                            Last viewed
+                                        </th>
+                                        <th className="px-2 py-2 text-right">
+                                            Actions
+                                        </th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {reportRows.map((report) => (
-                                        <tr key={report.id} className="border-b">
-                                            <td className="px-2 py-2 font-medium"><Link className="hover:underline" href={getReportHref(report.id)}>{report.name}</Link></td>
-                                            <td className="px-2 py-2"><Badge variant="outline">{report.category}</Badge></td>
-                                            <td className="px-2 py-2">{report.createdBy}</td>
-                                            <td className="px-2 py-2">{report.lastViewed}</td>
+                                        <tr
+                                            key={report.id}
+                                            className="border-b"
+                                        >
+                                            <td className="px-2 py-2 font-medium">
+                                                <Link
+                                                    className="hover:underline"
+                                                    href={getReportHref(
+                                                        report.id
+                                                    )}
+                                                >
+                                                    {report.name}
+                                                </Link>
+                                            </td>
+                                            <td className="px-2 py-2">
+                                                <Badge variant="outline">
+                                                    {report.category}
+                                                </Badge>
+                                            </td>
+                                            <td className="px-2 py-2">
+                                                {report.createdBy}
+                                            </td>
+                                            <td className="px-2 py-2">
+                                                {report.lastViewed}
+                                            </td>
                                             <td className="px-2 py-2">
                                                 <div className="flex justify-end gap-2">
-                                                    <Button className="h-7 px-2 text-xs" asChild>
-                                                        <Link href={getReportHref(report.id)}>Open</Link>
+                                                    <Button
+                                                        className="h-7 px-2 text-xs"
+                                                        asChild
+                                                    >
+                                                        <Link
+                                                            href={getReportHref(
+                                                                report.id
+                                                            )}
+                                                        >
+                                                            Open
+                                                        </Link>
                                                     </Button>
                                                 </div>
                                             </td>
@@ -1078,20 +1561,95 @@ export function AdminAnalyticsDashboard() {
                         </CardContent>
                     </Card>
 
-                    <Card className={cn(activeSection !== "all" && activeSection !== "freeform" && "hidden")}>
+                    <Card
+                        className={cn(
+                            activeSection !== "all" &&
+                                activeSection !== "freeform" &&
+                                "hidden"
+                        )}
+                    >
                         <CardHeader className="flex-row items-center justify-between gap-3">
                             <div>
                                 <CardTitle>Freeform report</CardTitle>
-                                <CardDescription>Choose metrics and dimension, then run.</CardDescription>
+                                <CardDescription>
+                                    Choose metrics and dimension, then run.
+                                </CardDescription>
                             </div>
-                            <Button variant="outline" onClick={exportFreeform}>Export to Excel</Button>
+                            <Button variant="outline" onClick={exportFreeform}>
+                                Export to Excel
+                            </Button>
                         </CardHeader>
                         <CardContent className="space-y-4">
                             <div className="grid gap-3 md:grid-cols-4">
-                                <SelectBlock label="Dimension" value={draft.dimension} onChange={(value) => setDraft((prev) => ({ ...prev, dimension: value as FreeformDimension }))} options={FREEFORM_DIMENSIONS.map((d) => ({ value: d, label: DIM_LABEL[d] }))} />
-                                <InputBlock label="Limit" value={String(draft.limit)} onChange={(value) => setDraft((prev) => ({ ...prev, limit: Math.max(1, Math.min(Number(value || 20), 200)) }))} />
-                                <SelectBlock label="Sort by" value={draft.sortBy} onChange={(value) => setDraft((prev) => ({ ...prev, sortBy: value as FreeformMetric | "dimension" }))} options={[{ value: "dimension", label: "Dimension" }, ...FREEFORM_METRICS.map((m) => ({ value: m, label: METRIC_LABEL[m] }))]} />
-                                <SelectBlock label="Direction" value={draft.sortDirection} onChange={(value) => setDraft((prev) => ({ ...prev, sortDirection: value as "asc" | "desc" }))} options={[{ value: "desc", label: "Descending" }, { value: "asc", label: "Ascending" }]} />
+                                <SelectBlock
+                                    label="Dimension"
+                                    value={draft.dimension}
+                                    onChange={(value) =>
+                                        setDraft((prev) => ({
+                                            ...prev,
+                                            dimension:
+                                                value as FreeformDimension,
+                                        }))
+                                    }
+                                    options={FREEFORM_DIMENSIONS.map((d) => ({
+                                        value: d,
+                                        label: DIM_LABEL[d],
+                                    }))}
+                                />
+                                <InputBlock
+                                    label="Limit"
+                                    value={String(draft.limit)}
+                                    onChange={(value) =>
+                                        setDraft((prev) => ({
+                                            ...prev,
+                                            limit: Math.max(
+                                                1,
+                                                Math.min(
+                                                    Number(value || 20),
+                                                    200
+                                                )
+                                            ),
+                                        }))
+                                    }
+                                />
+                                <SelectBlock
+                                    label="Sort by"
+                                    value={draft.sortBy}
+                                    onChange={(value) =>
+                                        setDraft((prev) => ({
+                                            ...prev,
+                                            sortBy: value as
+                                                | FreeformMetric
+                                                | "dimension",
+                                        }))
+                                    }
+                                    options={[
+                                        {
+                                            value: "dimension",
+                                            label: "Dimension",
+                                        },
+                                        ...FREEFORM_METRICS.map((m) => ({
+                                            value: m,
+                                            label: METRIC_LABEL[m],
+                                        })),
+                                    ]}
+                                />
+                                <SelectBlock
+                                    label="Direction"
+                                    value={draft.sortDirection}
+                                    onChange={(value) =>
+                                        setDraft((prev) => ({
+                                            ...prev,
+                                            sortDirection: value as
+                                                | "asc"
+                                                | "desc",
+                                        }))
+                                    }
+                                    options={[
+                                        { value: "desc", label: "Descending" },
+                                        { value: "asc", label: "Ascending" },
+                                    ]}
+                                />
                             </div>
 
                             <div className="flex flex-wrap gap-2">
@@ -1102,7 +1660,9 @@ export function AdminAnalyticsDashboard() {
                                         onClick={() => toggleMetric(metric)}
                                         className={cn(
                                             "rounded-full border px-3 py-1 text-xs font-medium",
-                                            draft.metrics.includes(metric) ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground/80"
+                                            draft.metrics.includes(metric)
+                                                ? "border-primary bg-primary/10 text-primary"
+                                                : "border-border text-foreground/80"
                                         )}
                                     >
                                         {METRIC_LABEL[metric]}
@@ -1111,44 +1671,109 @@ export function AdminAnalyticsDashboard() {
                             </div>
 
                             <div className="flex justify-end">
-                                <Button onClick={() => setApplied({ ...draft, datePreset: filters.datePreset, comparison: filters.comparison, startDate: filters.startDate, endDate: filters.endDate })}>Run report</Button>
+                                <Button
+                                    onClick={() =>
+                                        setApplied({
+                                            ...draft,
+                                            datePreset: filters.datePreset,
+                                            comparison: filters.comparison,
+                                            startDate: filters.startDate,
+                                            endDate: filters.endDate,
+                                        })
+                                    }
+                                >
+                                    Run report
+                                </Button>
                             </div>
 
                             <div className="overflow-x-auto rounded-md border">
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b bg-muted/40 text-left text-xs uppercase tracking-wide text-muted-foreground">
-                                            <th className="px-3 py-2">{DIM_LABEL[freeform.data?.dimension ?? applied.dimension]}</th>
+                                            <th className="px-3 py-2">
+                                                {
+                                                    DIM_LABEL[
+                                                        freeform.data
+                                                            ?.dimension ??
+                                                            applied.dimension
+                                                    ]
+                                                }
+                                            </th>
                                             {freeformMetrics.map((metric) => (
-                                                <th key={metric} className="px-3 py-2 text-right">{METRIC_LABEL[metric]}</th>
+                                                <th
+                                                    key={metric}
+                                                    className="px-3 py-2 text-right"
+                                                >
+                                                    {METRIC_LABEL[metric]}
+                                                </th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {freeform.isLoading ? (
                                             <tr>
-                                                <td colSpan={freeformMetricColSpan} className="px-3 py-8 text-center text-muted-foreground">Running freeform report...</td>
+                                                <td
+                                                    colSpan={
+                                                        freeformMetricColSpan
+                                                    }
+                                                    className="px-3 py-8 text-center text-muted-foreground"
+                                                >
+                                                    Running freeform report...
+                                                </td>
                                             </tr>
                                         ) : null}
 
-                                        {!freeform.isLoading && (freeform.data?.rows.length ?? 0) === 0 ? (
+                                        {!freeform.isLoading &&
+                                        (freeform.data?.rows.length ?? 0) ===
+                                            0 ? (
                                             <tr>
-                                                <td colSpan={freeformMetricColSpan} className="px-3 py-8 text-center text-muted-foreground">No rows found.</td>
+                                                <td
+                                                    colSpan={
+                                                        freeformMetricColSpan
+                                                    }
+                                                    className="px-3 py-8 text-center text-muted-foreground"
+                                                >
+                                                    No rows found.
+                                                </td>
                                             </tr>
                                         ) : null}
 
-                                        {(freeform.data?.rows ?? []).map((row) => (
-                                            <tr key={row.dimension} className="border-b">
-                                                <td className="px-3 py-2 font-medium">{row.dimension}</td>
-                                                {freeformMetrics.map((metric) => (
-                                                    <td key={metric} className="px-3 py-2 text-right">
-                                                        {CURRENCY_METRICS.includes(metric)
-                                                            ? money(row.metrics[metric])
-                                                            : Number(row.metrics[metric] ?? 0).toLocaleString()}
+                                        {(freeform.data?.rows ?? []).map(
+                                            (row) => (
+                                                <tr
+                                                    key={row.dimension}
+                                                    className="border-b"
+                                                >
+                                                    <td className="px-3 py-2 font-medium">
+                                                        {row.dimension}
                                                     </td>
-                                                ))}
-                                            </tr>
-                                        ))}
+                                                    {freeformMetrics.map(
+                                                        (metric) => (
+                                                            <td
+                                                                key={metric}
+                                                                className="px-3 py-2 text-right"
+                                                            >
+                                                                {CURRENCY_METRICS.includes(
+                                                                    metric
+                                                                )
+                                                                    ? money(
+                                                                          row
+                                                                              .metrics[
+                                                                              metric
+                                                                          ]
+                                                                      )
+                                                                    : Number(
+                                                                          row
+                                                                              .metrics[
+                                                                              metric
+                                                                          ] ?? 0
+                                                                      ).toLocaleString()}
+                                                            </td>
+                                                        )
+                                                    )}
+                                                </tr>
+                                            )
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
@@ -1156,57 +1781,103 @@ export function AdminAnalyticsDashboard() {
                     </Card>
                 </>
             )}
-            <Dialog open={isNotFulfilledDialogOpen} onOpenChange={setIsNotFulfilledDialogOpen}>
+            <Dialog
+                open={isNotFulfilledDialogOpen}
+                onOpenChange={setIsNotFulfilledDialogOpen}
+            >
                 <DialogContent className="max-w-4xl">
                     <DialogHeader>
                         <DialogTitle>Not Fulfilled Orders</DialogTitle>
                         <DialogDescription>
-                            {notFulfilledRange.startDate && notFulfilledRange.endDate
+                            {notFulfilledRange.startDate &&
+                            notFulfilledRange.endDate
                                 ? `Orders without delivered shipment from ${notFulfilledRange.startDate} to ${notFulfilledRange.endDate}.`
                                 : "Select a valid date range to view not fulfilled orders."}
                         </DialogDescription>
                     </DialogHeader>
 
-                    {!notFulfilledRange.startDate || !notFulfilledRange.endDate ? (
+                    {!notFulfilledRange.startDate ||
+                    !notFulfilledRange.endDate ? (
                         <p className="text-sm text-muted-foreground">
                             Choose a valid date range first.
                         </p>
                     ) : notFulfilledOrders.isLoading ? (
-                        <p className="text-sm text-muted-foreground">Loading not fulfilled orders...</p>
+                        <p className="text-sm text-muted-foreground">
+                            Loading not fulfilled orders...
+                        </p>
                     ) : notFulfilledOrders.error ? (
-                        <p className="text-sm text-rose-600">Unable to load not fulfilled orders right now.</p>
+                        <p className="text-sm text-rose-600">
+                            Unable to load not fulfilled orders right now.
+                        </p>
                     ) : (notFulfilledOrders.data?.data.length ?? 0) === 0 ? (
-                        <p className="text-sm text-muted-foreground">No not fulfilled orders found for this date range.</p>
+                        <p className="text-sm text-muted-foreground">
+                            No not fulfilled orders found for this date range.
+                        </p>
                     ) : (
                         <div className="space-y-3">
                             <div className="text-xs text-muted-foreground">
-                                Showing {(notFulfilledOrders.data?.data.length ?? 0).toLocaleString()} of {(notFulfilledOrders.data?.count ?? 0).toLocaleString()} orders.
+                                Showing{" "}
+                                {(
+                                    notFulfilledOrders.data?.data.length ?? 0
+                                ).toLocaleString()}{" "}
+                                of{" "}
+                                {(
+                                    notFulfilledOrders.data?.count ?? 0
+                                ).toLocaleString()}{" "}
+                                orders.
                             </div>
                             <div className="max-h-[420px] overflow-auto rounded-md border">
                                 <table className="w-full text-sm">
                                     <thead className="sticky top-0 bg-background">
                                         <tr className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-                                            <th className="px-3 py-2">Order ID</th>
-                                            <th className="px-3 py-2">Customer</th>
-                                            <th className="px-3 py-2">Status</th>
-                                            <th className="px-3 py-2">Created</th>
+                                            <th className="px-3 py-2">
+                                                Order ID
+                                            </th>
+                                            <th className="px-3 py-2">
+                                                Customer
+                                            </th>
+                                            <th className="px-3 py-2">
+                                                Status
+                                            </th>
+                                            <th className="px-3 py-2">
+                                                Created
+                                            </th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {(notFulfilledOrders.data?.data ?? []).map((order) => {
-                                            const customer = `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim();
-                                            const status = String(order.status ?? "").replace(/_/g, " ");
+                                        {(
+                                            notFulfilledOrders.data?.data ?? []
+                                        ).map((order) => {
+                                            const customer =
+                                                `${order.user?.firstName ?? ""} ${order.user?.lastName ?? ""}`.trim();
+                                            const status = String(
+                                                order.status ?? ""
+                                            ).replace(/_/g, " ");
                                             return (
-                                                <tr key={order.id} className="border-b">
-                                                    <td className="px-3 py-2 font-mono text-xs">{order.id}</td>
-                                                    <td className="px-3 py-2">{customer || "N/A"}</td>
-                                                    <td className="px-3 py-2 capitalize">{status || "N/A"}</td>
+                                                <tr
+                                                    key={order.id}
+                                                    className="border-b"
+                                                >
+                                                    <td className="px-3 py-2 font-mono text-xs">
+                                                        {order.id}
+                                                    </td>
                                                     <td className="px-3 py-2">
-                                                        {new Date(order.createdAt).toLocaleDateString("en-IN", {
-                                                            day: "2-digit",
-                                                            month: "short",
-                                                            year: "numeric",
-                                                        })}
+                                                        {customer || "N/A"}
+                                                    </td>
+                                                    <td className="px-3 py-2 capitalize">
+                                                        {status || "N/A"}
+                                                    </td>
+                                                    <td className="px-3 py-2">
+                                                        {new Date(
+                                                            order.createdAt
+                                                        ).toLocaleDateString(
+                                                            "en-IN",
+                                                            {
+                                                                day: "2-digit",
+                                                                month: "short",
+                                                                year: "numeric",
+                                                            }
+                                                        )}
                                                     </td>
                                                 </tr>
                                             );
@@ -1239,7 +1910,10 @@ function Kpi({
 
     return (
         <Card
-            className={cn(interactive && "cursor-pointer transition-shadow hover:shadow-md")}
+            className={cn(
+                interactive &&
+                    "cursor-pointer transition-shadow hover:shadow-md"
+            )}
             onClick={onClick}
             role={interactive ? "button" : undefined}
             tabIndex={interactive ? 0 : undefined}
@@ -1260,46 +1934,100 @@ function Kpi({
             </CardHeader>
             <CardContent className="flex items-center justify-between">
                 <Delta value={change} />
-                {subtext ? <p className="text-xs text-muted-foreground">{subtext}</p> : null}
+                {subtext ? (
+                    <p className="text-xs text-muted-foreground">{subtext}</p>
+                ) : null}
             </CardContent>
         </Card>
     );
 }
-function Breakdown({ label, value, change, negative, strong }: { label: string; value: number; change: number; negative?: boolean; strong?: boolean }) {
+function Breakdown({
+    label,
+    value,
+    change,
+    negative,
+    strong,
+}: {
+    label: string;
+    value: number;
+    change: number;
+    negative?: boolean;
+    strong?: boolean;
+}) {
     return (
         <div className="flex items-center justify-between gap-3">
             <div className="space-y-0.5">
-                <p className={cn("text-sm", strong ? "font-semibold" : "text-muted-foreground")}>{label}</p>
-                <p className="text-lg font-semibold">{negative ? "-" : ""}{money(Math.abs(value))}</p>
+                <p
+                    className={cn(
+                        "text-sm",
+                        strong ? "font-semibold" : "text-muted-foreground"
+                    )}
+                >
+                    {label}
+                </p>
+                <p className="text-lg font-semibold">
+                    {negative ? "-" : ""}
+                    {money(Math.abs(value))}
+                </p>
             </div>
             <Delta value={change} />
         </div>
     );
 }
 
-function SelectBlock({ label, value, onChange, options }: { label: string; value: string; onChange: (value: string) => void; options: { value: string; label: string }[] }) {
+function SelectBlock({
+    label,
+    value,
+    onChange,
+    options,
+}: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: string }[];
+}) {
     return (
         <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">{label}</label>
-            <select className="w-full rounded-md border bg-background px-3 py-2.5 text-sm" value={value} onChange={(e) => onChange(e.target.value)}>
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+                {label}
+            </label>
+            <select
+                className="w-full rounded-md border bg-background px-3 py-2.5 text-sm"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+            >
                 {options.map((option) => (
-                    <option key={option.value} value={option.value}>{option.label}</option>
+                    <option key={option.value} value={option.value}>
+                        {option.label}
+                    </option>
                 ))}
             </select>
         </div>
     );
 }
 
-function InputBlock({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+function InputBlock({
+    label,
+    value,
+    onChange,
+}: {
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+}) {
     return (
         <div className="space-y-1">
-            <label className="text-xs font-semibold uppercase text-muted-foreground">{label}</label>
-            <input type="number" min={1} max={200} className="w-full rounded-md border bg-background px-3 py-2.5 text-sm" value={value} onChange={(e) => onChange(e.target.value)} />
+            <label className="text-xs font-semibold uppercase text-muted-foreground">
+                {label}
+            </label>
+            <input
+                type="number"
+                min={1}
+                max={200}
+                className="w-full rounded-md border bg-background px-3 py-2.5 text-sm"
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+            />
         </div>
     );
 }
-
-
-
-
-

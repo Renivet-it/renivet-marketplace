@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
 import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import {
@@ -21,7 +22,6 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import Image from "next/image";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { ShopByCategoryAction } from "./shop-by-category-action";
@@ -38,7 +38,7 @@ const columns: ColumnDef<TableShopByCategory>[] = [
                 <Popover>
                     <PopoverTrigger asChild>
                         <button className="relative size-10 overflow-hidden rounded-md">
-                            <Image
+                            <SafeAdminImage
                                 src={data.imageUrl}
                                 alt="Product"
                                 fill
@@ -48,7 +48,7 @@ const columns: ColumnDef<TableShopByCategory>[] = [
                     </PopoverTrigger>
                     <PopoverContent className="w-80 overflow-hidden p-0">
                         <div className="relative aspect-[4/5] w-full overflow-hidden">
-                            <Image
+                            <SafeAdminImage
                                 src={data.imageUrl}
                                 alt="Product"
                                 fill
@@ -104,7 +104,7 @@ export function ShopByCategoriesTable({ initialData }: PageProps) {
     const [rowSelection, setRowSelection] = useState({});
 
     const { data = [], isLoading } =
-    // @ts-ignore
+        // @ts-ignore
         trpc.general.content.menBrandSeasonalSaleRouter.getwomenHomeBanners.useQuery(
             { page, limit },
             {

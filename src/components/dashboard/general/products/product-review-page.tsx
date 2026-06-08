@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
 import { Icons } from "@/components/icons";
 import {
     Accordion,
@@ -41,7 +42,6 @@ import {
 import { ProductWithBrand } from "@/lib/validations";
 import { format } from "date-fns";
 import Autoplay from "embla-carousel-autoplay";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -288,7 +288,7 @@ export function ProductReviewPage({ className, product, ...props }: PageProps) {
                                             className="h-full p-0"
                                         >
                                             <div className="relative size-full">
-                                                <Image
+                                                <SafeAdminImage
                                                     src={m.url}
                                                     alt={m.alt || m.name}
                                                     width={2000}

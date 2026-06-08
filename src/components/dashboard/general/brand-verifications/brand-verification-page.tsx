@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
 import { BrandConfidentialEditAdmin } from "@/components/globals/forms";
 import {
     VerificationApproveModal,
@@ -24,7 +25,6 @@ import {
 import { convertValueToLabel } from "@/lib/utils";
 import { BrandConfidentialWithBrand } from "@/lib/validations";
 import { format } from "date-fns";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 
@@ -127,7 +127,7 @@ export function BrandVerificationPage({ data }: PageProps) {
 
                                     <PopoverContent className="overflow-hidden p-0">
                                         <div className="aspect-square size-full overflow-hidden">
-                                            <Image
+                                            <SafeAdminImage
                                                 src={data.brand.logoUrl}
                                                 alt={data.brand.name}
                                                 width={500}
