@@ -1243,24 +1243,9 @@ class MonitoringSlaQuery {
             checkedCount += 1;
             breachCount += 1;
 
-            await db
-                .update(orders)
-                .set({
-                    status: "cancelled",
-                    paymentStatus:
-                        order.paymentStatus === "paid"
-                            ? "refund_pending"
-                            : order.paymentStatus,
-                    cancellationReasonCode: "CAN_BRAND_NO_RESPONSE",
-                    manualOverrideReason:
-                        "Auto-cancelled by Order Ops SLA after brand silence for more than 48 hours.",
-                    updatedAt: now,
-                })
-                .where(eq(orders.id, order.id));
-
             await this.writeAudit({
                 userId: actorId,
-                actionType: "order_auto_cancelled_brand_no_response",
+                actionType: "order_brand_silence_escalated",
                 entityType: "order",
                 entityId: order.id,
                 beforeValue: {
@@ -1268,33 +1253,30 @@ class MonitoringSlaQuery {
                     paymentStatus: order.paymentStatus,
                 },
                 afterValue: {
-                    status: "cancelled",
-                    paymentStatus:
-                        order.paymentStatus === "paid"
-                            ? "refund_pending"
-                            : order.paymentStatus,
-                    cancellationReasonCode: "CAN_BRAND_NO_RESPONSE",
+                    status: order.status,
+                    paymentStatus: order.paymentStatus,
+                    escalationReasonCode: "CAN_BRAND_NO_RESPONSE",
                 },
                 reason: "brand_ack_sla_48h_breached",
                 metadata: { source: "sla-check", chapter: "order-ops" },
             });
 
             await this.createAlert({
-                type: "order_auto_cancelled_brand_no_response",
+                type: "order_brand_silence_48h",
                 severity: "critical",
                 entityType: "order",
                 entityId: order.id,
-                title: "Order auto-cancelled after brand silence",
-                message: `Order ${order.id} was auto-cancelled because the brand did not acknowledge within 48 hours. Refund follow-up is required for prepaid orders.`,
+                title: "Brand silent for 48 hours on order",
+                message: `Order ${order.id} has crossed 48 hours without brand acknowledgement. Escalate immediately, but do not treat it as a delivery or customer cancellation.`,
                 ownerId: actorId,
                 ownerRole: "order_manager",
                 channels: ["admin", "email", "whatsapp"],
                 dueAt: new Date(now.getTime() + 4 * HOUR),
-                dedupeKey: `order:auto-cancel-brand-no-response:${order.id}`,
+                dedupeKey: `order:brand-silence-48h:${order.id}`,
                 metadata: {
                     source: "sla-check",
                     chapter: "order-ops",
-                    cancellationReasonCode: "CAN_BRAND_NO_RESPONSE",
+                    escalationReasonCode: "CAN_BRAND_NO_RESPONSE",
                 },
             });
         }

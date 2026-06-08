@@ -68,6 +68,8 @@ export const orderSchema = z.object({
         "refunded",
         "refund_failed",
     ]),
+    cancellationReasonCode: z.string().nullable().optional(),
+    manualOverrideReason: z.string().nullable().optional(),
     status: z.enum([
         "pending",
         "processing",
