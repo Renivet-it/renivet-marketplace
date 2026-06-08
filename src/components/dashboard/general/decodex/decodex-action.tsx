@@ -54,7 +54,10 @@ export function DecodeXAction({ row }: { row: TableDecodeXRow }) {
                     <DropdownMenuItem onClick={() => setOpen(true)}>
                         Edit
                     </DropdownMenuItem>
-                    <DropdownMenuItem className="text-destructive" onClick={onDelete}>
+                    <DropdownMenuItem
+                        className="text-destructive"
+                        onClick={onDelete}
+                    >
                         Delete
                     </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -72,4 +75,3 @@ export function DecodeXAction({ row }: { row: TableDecodeXRow }) {
         </>
     );
 }
-

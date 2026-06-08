@@ -5,7 +5,11 @@ import { DataTable } from "@/components/ui/data-table";
 import { DataTableViewOptions } from "@/components/ui/data-table-dash";
 import { Input } from "@/components/ui/input-dash";
 import { trpc } from "@/lib/trpc/client";
-import { ColumnDef, getCoreRowModel, useReactTable } from "@tanstack/react-table";
+import {
+    ColumnDef,
+    getCoreRowModel,
+    useReactTable,
+} from "@tanstack/react-table";
 import { format } from "date-fns";
 import { parseAsInteger, parseAsString, useQueryState } from "nuqs";
 import { useMemo } from "react";
@@ -70,12 +74,15 @@ const columns: ColumnDef<TableDecodeXRow>[] = [
     {
         id: "shareable",
         header: "Cert Shareable",
-        cell: ({ row }) => <BoolBadge value={row.original.certificationShareable} />,
+        cell: ({ row }) => (
+            <BoolBadge value={row.original.certificationShareable} />
+        ),
     },
     {
         accessorKey: "updatedAt",
         header: "Updated",
-        cell: ({ row }) => format(new Date(row.original.updatedAt), "MMM dd, yyyy"),
+        cell: ({ row }) =>
+            format(new Date(row.original.updatedAt), "MMM dd, yyyy"),
     },
     {
         id: "actions",
@@ -114,7 +121,10 @@ export function DecodeXTable() {
         [count, page, limit]
     );
 
-    const to = useMemo(() => Math.min(page * limit, count), [count, page, limit]);
+    const to = useMemo(
+        () => Math.min(page * limit, count),
+        [count, page, limit]
+    );
 
     const table = useReactTable({
         data: rows,
@@ -151,7 +161,8 @@ export function DecodeXTable() {
                     />
 
                     <p className="text-sm text-muted-foreground">
-                        Showing <strong>{from}</strong>-<strong>{to}</strong> of <strong>{count}</strong> results
+                        Showing <strong>{from}</strong>-<strong>{to}</strong> of{" "}
+                        <strong>{count}</strong> results
                     </p>
                 </>
             )}

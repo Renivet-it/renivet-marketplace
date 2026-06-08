@@ -34,19 +34,17 @@ interface PageProps {
 }
 
 export function OrderAction({ order, onAction }: PageProps) {
-    const {
-        data: orderShipmentDetails,
-        refetch: refetchOrderShipmentDetails
-    } = trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery(
-        {
-            shipmentId: order.shipments?.[0]?.shiprocketShipmentId
-                ? Number(order.shipments[0].shiprocketShipmentId)
-                : 0,
-        },
-        {
-            enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
-        }
-    );
+    const { data: orderShipmentDetails, refetch: refetchOrderShipmentDetails } =
+        trpc.general.orders.getOrderShipmentDetailsByShipmentId.useQuery(
+            {
+                shipmentId: order.shipments?.[0]?.shiprocketShipmentId
+                    ? Number(order.shipments[0].shiprocketShipmentId)
+                    : 0,
+            },
+            {
+                enabled: !!order.shipments?.[0]?.shiprocketShipmentId,
+            }
+        );
 
     const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
     const [isLabelModalOpen, setIsLabelModalOpen] = useState(false);
@@ -71,16 +69,31 @@ export function OrderAction({ order, onAction }: PageProps) {
     const handleDownload = async (type: "invoice" | "label" | "manifest") => {
         try {
             if (type === "invoice") {
-                const response = await generateInvoice(order.shipments[0].shiprocketOrderId);
-                downloadFile(response.invoiceUrl, `invoice_${order.shipments[0].shiprocketOrderId}.pdf`);
+                const response = await generateInvoice(
+                    order.shipments[0].shiprocketOrderId
+                );
+                downloadFile(
+                    response.invoiceUrl,
+                    `invoice_${order.shipments[0].shiprocketOrderId}.pdf`
+                );
                 toast.success("Invoice download started");
             } else if (type === "label") {
-                const response = await generateLabel(order.shipments[0].shiprocketShipmentId);
-                downloadFile(response.labelUrl, `label_${order.shipments[0].shiprocketShipmentId}.pdf`);
+                const response = await generateLabel(
+                    order.shipments[0].shiprocketShipmentId
+                );
+                downloadFile(
+                    response.labelUrl,
+                    `label_${order.shipments[0].shiprocketShipmentId}.pdf`
+                );
                 toast.success("Label download started");
             } else if (type === "manifest") {
-                const response = await generateManifest(order.shipments[0].shiprocketShipmentId);
-                downloadFile(response.manifestUrl, `manifest_${order.shipments[0].shiprocketShipmentId}.pdf`);
+                const response = await generateManifest(
+                    order.shipments[0].shiprocketShipmentId
+                );
+                downloadFile(
+                    response.manifestUrl,
+                    `manifest_${order.shipments[0].shiprocketShipmentId}.pdf`
+                );
                 toast.success("Manifest download started");
             }
         } catch (error: any) {
@@ -90,9 +103,12 @@ export function OrderAction({ order, onAction }: PageProps) {
                 type === "manifest" &&
                 (error.message?.includes("already generated") ||
                     error.message?.includes("already downloaded") ||
-                    error.response?.data?.message?.includes("already generated"))
+                    error.response?.data?.message?.includes(
+                        "already generated"
+                    ))
             ) {
-                errorMessage = "Manifest has already been generated and can only be downloaded once.";
+                errorMessage =
+                    "Manifest has already been generated and can only be downloaded once.";
             } else if (error.response?.data?.message) {
                 errorMessage = error.response.data.message;
             } else if (error.message) {
@@ -135,16 +151,25 @@ export function OrderAction({ order, onAction }: PageProps) {
             </DropdownMenu>
 
             {/* Invoice Modal */}
-            <Dialog open={isInvoiceModalOpen} onOpenChange={setIsInvoiceModalOpen}>
+            <Dialog
+                open={isInvoiceModalOpen}
+                onOpenChange={setIsInvoiceModalOpen}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Download Invoice</DialogTitle>
                         <DialogDescription>
-                            Are you sure you want to download the invoice for this order?
+                            Are you sure you want to download the invoice for
+                            this order?
                         </DialogDescription>
                     </DialogHeader>
                     <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsInvoiceModalOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="outline"
+                            onClick={() => setIsInvoiceModalOpen(false)}
+                        >
+                            Cancel
+                        </Button>
                         <Button
                             onClick={async () => {
                                 await handleDownload("invoice");
@@ -156,7 +181,6 @@ export function OrderAction({ order, onAction }: PageProps) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
-
 
             {/* Shipment Component */}
             <OrderShipment

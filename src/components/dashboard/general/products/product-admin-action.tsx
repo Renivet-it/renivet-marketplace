@@ -13,12 +13,12 @@ import {
     toggleHomeHeroProduct,
     toggleHomeNewArrivalsProduct,
     toggleHomePageProduct,
-    toggleUnder999,
     toggleHomeYouMayAlsoLikeProduct,
     toggleHomeYouMayLoveProduct,
     toggleKidsFetchSection,
     toggleMenStyleWithSubstance,
     toggleSummerCollection,
+    toggleUnder999,
     toggleWomenStyleWithSubstance,
     updateSectionPosition,
     type ProductSectionKey,
@@ -33,8 +33,6 @@ import {
 } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
-import { Input } from "@/components/ui/input-general";
-import { Label } from "@/components/ui/label";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -48,6 +46,8 @@ import {
     DropdownMenuSubTrigger,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input-general";
+import { Label } from "@/components/ui/label";
 import { trpc } from "@/lib/trpc/client";
 import Link from "next/link";
 import { parseAsInteger, useQueryState } from "nuqs";
@@ -93,7 +93,6 @@ interface PageProps {
     };
 }
 
-
 function SectionPositionToggle({
     productId,
     label,
@@ -113,7 +112,10 @@ function SectionPositionToggle({
     isLoading: boolean;
     sectionKey: ProductSectionKey;
     onToggle: (position?: number) => Promise<void>;
-    onUpdatePosition: (section: ProductSectionKey, position: number) => Promise<void>;
+    onUpdatePosition: (
+        section: ProductSectionKey,
+        position: number
+    ) => Promise<void>;
     currentPosition?: number;
     extraSuffix?: string;
 }) {
@@ -155,28 +157,71 @@ function SectionPositionToggle({
         <DropdownMenuSub onOpenChange={handleOpenChange}>
             <DropdownMenuSubTrigger disabled={isLoading}>
                 <Icon className="mr-2 size-4" />
-                <span>{isActive ? `Edit / Remove from ${label}` : `Add to ${label}`}{(extraSuffix ? ` ${extraSuffix}` : "")}</span>
+                <span>
+                    {isActive
+                        ? `Edit / Remove from ${label}`
+                        : `Add to ${label}`}
+                    {extraSuffix ? ` ${extraSuffix}` : ""}
+                </span>
             </DropdownMenuSubTrigger>
             <DropdownMenuPortal>
                 <DropdownMenuSubContent className="w-56 p-2">
                     {isActive ? (
                         <div className="flex flex-col gap-3">
-                            <Label className="text-xs font-semibold text-muted-foreground">Update Sequence</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground">
+                                Update Sequence
+                            </Label>
                             <div className="flex items-center gap-2">
-                                <Input type="number" min={1} value={pos} onChange={e => setPos(Number(e.target.value))} className="h-8" />
-                                <Button size="sm" disabled={isLoading} onClick={() => onUpdatePosition(sectionKey, pos)}>Update</Button>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    value={pos}
+                                    onChange={(e) =>
+                                        setPos(Number(e.target.value))
+                                    }
+                                    className="h-8"
+                                />
+                                <Button
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() =>
+                                        onUpdatePosition(sectionKey, pos)
+                                    }
+                                >
+                                    Update
+                                </Button>
                             </div>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem disabled={isLoading} onClick={() => onToggle()} className="text-red-500 focus:text-red-500 justify-center cursor-pointer">
+                            <DropdownMenuItem
+                                disabled={isLoading}
+                                onClick={() => onToggle()}
+                                className="cursor-pointer justify-center text-red-500 focus:text-red-500"
+                            >
                                 Remove from section
                             </DropdownMenuItem>
                         </div>
                     ) : (
                         <div className="flex flex-col gap-3">
-                            <Label className="text-xs font-semibold text-muted-foreground">Select Sequence Position</Label>
+                            <Label className="text-xs font-semibold text-muted-foreground">
+                                Select Sequence Position
+                            </Label>
                             <div className="flex items-center gap-2">
-                                <Input type="number" min={1} value={pos} onChange={e => setPos(Number(e.target.value))} className="h-8" />
-                                <Button size="sm" disabled={isLoading} onClick={() => onToggle(pos)}>Confirm Add</Button>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    value={pos}
+                                    onChange={(e) =>
+                                        setPos(Number(e.target.value))
+                                    }
+                                    className="h-8"
+                                />
+                                <Button
+                                    size="sm"
+                                    disabled={isLoading}
+                                    onClick={() => onToggle(pos)}
+                                >
+                                    Confirm Add
+                                </Button>
                             </div>
                         </div>
                     )}
@@ -209,10 +254,17 @@ export function ProductAction({ product }: PageProps) {
         page,
         search,
     });
-    const handleUpdatePosition = async (section: ProductSectionKey, position: number) => {
+    const handleUpdatePosition = async (
+        section: ProductSectionKey,
+        position: number
+    ) => {
         setIsLoading(true);
         try {
-            const result = await updateSectionPosition(product.id, section, position);
+            const result = await updateSectionPosition(
+                product.id,
+                section,
+                position
+            );
             if (result.success) {
                 refetch();
                 toast.success(result.message);
@@ -225,7 +277,6 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-
 
     const handleToggleBestSeller = async (position?: number) => {
         setIsLoading(true);
@@ -480,7 +531,9 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-    const handletoggleHomeAndLivingNewArrivalsSection = async (position?: number) => {
+    const handletoggleHomeAndLivingNewArrivalsSection = async (
+        position?: number
+    ) => {
         setIsLoading(true);
         try {
             const result = await toggleHomeAndLivingNewArrivalsSection(
@@ -500,7 +553,9 @@ export function ProductAction({ product }: PageProps) {
             setIsLoading(false);
         }
     };
-    const handletoggleHomeAndLivingTopPicksSection = async (position?: number) => {
+    const handletoggleHomeAndLivingTopPicksSection = async (
+        position?: number
+    ) => {
         setIsLoading(true);
         try {
             const result = await toggleHomeAndLivingTopPicksSection(
@@ -693,21 +748,170 @@ export function ProductAction({ product }: PageProps) {
                     </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuGroup>
-                        <SectionPositionToggle productId={product.id} label="Best Sellers" icon={Icons.Star} isActive={product.isBestSeller ?? false} isLoading={isLoading} sectionKey="bestSeller" onToggle={handleToggleBestSeller} onUpdatePosition={handleUpdatePosition} currentPosition={product.bestSellerPosition} />
-                        <SectionPositionToggle productId={product.id} label="Under 999 section" icon={Icons.DollarSign} isActive={product.isUnder999 ?? false} isLoading={isLoading} sectionKey="under999" onToggle={handleToggleUnder999} onUpdatePosition={handleUpdatePosition} currentPosition={product.under999Position} />
-                        <SectionPositionToggle productId={product.id} label="Featured Women" icon={Icons.Star} isActive={product.isFeaturedWomen ?? false} isLoading={isLoading} sectionKey="featuredWomen" onToggle={handleToggleFeatured} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="Hero Home Page" icon={Icons.Star} isActive={product.isHomeHeroProducts ?? false} isLoading={isLoading} sectionKey="homeHero" onToggle={handleToggleProductHeroHomePage} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="You may love these products Home Page" icon={Icons.Star} isActive={product.isHomeLoveTheseProducts ?? false} isLoading={isLoading} sectionKey="homeLoveThese" onToggle={handleToggleYouMayLoveThese} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="You may also like these products Home Page" icon={Icons.Star} isActive={product.isHomeYouMayAlsoLikeTheseProducts ?? false} isLoading={isLoading} sectionKey="homeMayAlsoLike" onToggle={handleToggleYouMayAlsoLikeThese} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="bottom products Home Page" icon={Icons.Star} isActive={product.isHomePageProduct ?? false} isLoading={isLoading} sectionKey="homePageList" onToggle={handleToggleHomePageMainProduct} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="Featured Men" icon={Icons.Star} isActive={product.isFeaturedMen ?? false} isLoading={isLoading} sectionKey="featuredMen" onToggle={handleToggleFeaturedMen} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="Style With Substance (Women)" icon={Icons.Layers} isActive={product.isStyleWithSubstanceWoMen ?? false} isLoading={isLoading} sectionKey="styleWithSubstanceWomen" onToggle={handleToggleWomenStyleWithSubstance} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="Style With Substance (Men)" icon={Icons.Layers} isActive={product.isStyleWithSubstanceMen ?? false} isLoading={isLoading} sectionKey="styleWithSubstanceMen" onToggle={handleToggleMenStyleWithSubstance} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="Product Feature (Kids)" icon={Icons.Layers} isActive={product.iskidsFetchSection ?? false} isLoading={isLoading} sectionKey="kidsFetch" onToggle={handleToggleKidsFetchProducts} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="New Arrivals (Home living)" icon={Icons.Layers} isActive={product.isHomeAndLivingSectionNewArrival ?? false} isLoading={isLoading} sectionKey="homeLivingNewArrival" onToggle={handletoggleHomeAndLivingNewArrivalsSection} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="Top Picks(Home living)" icon={Icons.Layers} isActive={product.isHomeAndLivingSectionTopPicks ?? false} isLoading={isLoading} sectionKey="homeLivingTopPicks" onToggle={handletoggleHomeAndLivingTopPicksSection} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="New Arrivals(Beauty Personal)" icon={Icons.Layers} isActive={product.isBeautyNewArrival ?? false} isLoading={isLoading} sectionKey="beautyNewArrivals" onToggle={handletoggleBeautyNewArrivalSection} onUpdatePosition={handleUpdatePosition} />
-                        <SectionPositionToggle productId={product.id} label="Top Picks(Beauty Personal)" icon={Icons.Layers} isActive={product.isBeautyTopPicks ?? false} isLoading={isLoading} sectionKey="beautyTopPicks" onToggle={handletoggleBeautyTopPickSection} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Best Sellers"
+                            icon={Icons.Star}
+                            isActive={product.isBestSeller ?? false}
+                            isLoading={isLoading}
+                            sectionKey="bestSeller"
+                            onToggle={handleToggleBestSeller}
+                            onUpdatePosition={handleUpdatePosition}
+                            currentPosition={product.bestSellerPosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Under 999 section"
+                            icon={Icons.DollarSign}
+                            isActive={product.isUnder999 ?? false}
+                            isLoading={isLoading}
+                            sectionKey="under999"
+                            onToggle={handleToggleUnder999}
+                            onUpdatePosition={handleUpdatePosition}
+                            currentPosition={product.under999Position}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Featured Women"
+                            icon={Icons.Star}
+                            isActive={product.isFeaturedWomen ?? false}
+                            isLoading={isLoading}
+                            sectionKey="featuredWomen"
+                            onToggle={handleToggleFeatured}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Hero Home Page"
+                            icon={Icons.Star}
+                            isActive={product.isHomeHeroProducts ?? false}
+                            isLoading={isLoading}
+                            sectionKey="homeHero"
+                            onToggle={handleToggleProductHeroHomePage}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="You may love these products Home Page"
+                            icon={Icons.Star}
+                            isActive={product.isHomeLoveTheseProducts ?? false}
+                            isLoading={isLoading}
+                            sectionKey="homeLoveThese"
+                            onToggle={handleToggleYouMayLoveThese}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="You may also like these products Home Page"
+                            icon={Icons.Star}
+                            isActive={
+                                product.isHomeYouMayAlsoLikeTheseProducts ??
+                                false
+                            }
+                            isLoading={isLoading}
+                            sectionKey="homeMayAlsoLike"
+                            onToggle={handleToggleYouMayAlsoLikeThese}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="bottom products Home Page"
+                            icon={Icons.Star}
+                            isActive={product.isHomePageProduct ?? false}
+                            isLoading={isLoading}
+                            sectionKey="homePageList"
+                            onToggle={handleToggleHomePageMainProduct}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Featured Men"
+                            icon={Icons.Star}
+                            isActive={product.isFeaturedMen ?? false}
+                            isLoading={isLoading}
+                            sectionKey="featuredMen"
+                            onToggle={handleToggleFeaturedMen}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Style With Substance (Women)"
+                            icon={Icons.Layers}
+                            isActive={
+                                product.isStyleWithSubstanceWoMen ?? false
+                            }
+                            isLoading={isLoading}
+                            sectionKey="styleWithSubstanceWomen"
+                            onToggle={handleToggleWomenStyleWithSubstance}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Style With Substance (Men)"
+                            icon={Icons.Layers}
+                            isActive={product.isStyleWithSubstanceMen ?? false}
+                            isLoading={isLoading}
+                            sectionKey="styleWithSubstanceMen"
+                            onToggle={handleToggleMenStyleWithSubstance}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Product Feature (Kids)"
+                            icon={Icons.Layers}
+                            isActive={product.iskidsFetchSection ?? false}
+                            isLoading={isLoading}
+                            sectionKey="kidsFetch"
+                            onToggle={handleToggleKidsFetchProducts}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="New Arrivals (Home living)"
+                            icon={Icons.Layers}
+                            isActive={
+                                product.isHomeAndLivingSectionNewArrival ??
+                                false
+                            }
+                            isLoading={isLoading}
+                            sectionKey="homeLivingNewArrival"
+                            onToggle={
+                                handletoggleHomeAndLivingNewArrivalsSection
+                            }
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Top Picks(Home living)"
+                            icon={Icons.Layers}
+                            isActive={
+                                product.isHomeAndLivingSectionTopPicks ?? false
+                            }
+                            isLoading={isLoading}
+                            sectionKey="homeLivingTopPicks"
+                            onToggle={handletoggleHomeAndLivingTopPicksSection}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="New Arrivals(Beauty Personal)"
+                            icon={Icons.Layers}
+                            isActive={product.isBeautyNewArrival ?? false}
+                            isLoading={isLoading}
+                            sectionKey="beautyNewArrivals"
+                            onToggle={handletoggleBeautyNewArrivalSection}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Top Picks(Beauty Personal)"
+                            icon={Icons.Layers}
+                            isActive={product.isBeautyTopPicks ?? false}
+                            isLoading={isLoading}
+                            sectionKey="beautyTopPicks"
+                            onToggle={handletoggleBeautyTopPickSection}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
                         <DropdownMenuItem
                             onClick={handleToggleSummerCollection}
                             disabled={isLoading}
@@ -734,7 +938,9 @@ export function ProductAction({ product }: PageProps) {
                                     typeof result.position === "number" &&
                                     result.position > 0
                                 ) {
-                                    setNewArrivalsPos(Math.floor(result.position));
+                                    setNewArrivalsPos(
+                                        Math.floor(result.position)
+                                    );
                                 }
                             }}
                         >
@@ -746,8 +952,20 @@ export function ProductAction({ product }: PageProps) {
                             <DropdownMenuPortal>
                                 <DropdownMenuSubContent>
                                     <div className="flex flex-col gap-3 p-2 pb-0">
-                                        <Label className="text-xs font-semibold text-muted-foreground">Sequence Position</Label>
-                                        <Input type="number" min={1} value={newArrivalsPos} onChange={e => setNewArrivalsPos(Number(e.target.value))} className="h-8" />
+                                        <Label className="text-xs font-semibold text-muted-foreground">
+                                            Sequence Position
+                                        </Label>
+                                        <Input
+                                            type="number"
+                                            min={1}
+                                            value={newArrivalsPos}
+                                            onChange={(e) =>
+                                                setNewArrivalsPos(
+                                                    Number(e.target.value)
+                                                )
+                                            }
+                                            className="h-8"
+                                        />
                                     </div>
                                     <DropdownMenuLabel>
                                         Select a Category
@@ -758,13 +976,12 @@ export function ProductAction({ product }: PageProps) {
                                     {NEW_ARRIVALS_CATEGORIES.map((category) => (
                                         <DropdownMenuItem
                                             key={category}
-                                            onClick={
-                                                () =>
-                                                    handletoggleHomeNewArrivalsProduct(
-                                                        category,
-                                                        true,
-                                                        newArrivalsPos
-                                                    )
+                                            onClick={() =>
+                                                handletoggleHomeNewArrivalsProduct(
+                                                    category,
+                                                    true,
+                                                    newArrivalsPos
+                                                )
                                             }
                                             disabled={isLoading}
                                         >
@@ -810,7 +1027,18 @@ export function ProductAction({ product }: PageProps) {
 
                         {/* --- End of Refactored Section --- */}
 
-                        <SectionPositionToggle productId={product.id} label="Event Exibition Page" icon={Icons.Layers} isActive={product.isAddedInEventProductPage ?? false} isLoading={isLoading} sectionKey="eventPage" onToggle={handlenewEventPageSectionProduct} onUpdatePosition={handleUpdatePosition} />
+                        <SectionPositionToggle
+                            productId={product.id}
+                            label="Event Exibition Page"
+                            icon={Icons.Layers}
+                            isActive={
+                                product.isAddedInEventProductPage ?? false
+                            }
+                            isLoading={isLoading}
+                            sectionKey="eventPage"
+                            onToggle={handlenewEventPageSectionProduct}
+                            onUpdatePosition={handleUpdatePosition}
+                        />
 
                         {product.verificationStatus === "idle" && (
                             <DropdownMenuItem
@@ -898,4 +1126,3 @@ export function ProductAction({ product }: PageProps) {
         </>
     );
 }
-

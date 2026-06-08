@@ -102,12 +102,11 @@ export function SubscribersTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.newsletterSubscribers.getNewsletterSubscribers.useQuery(
-        { page, limit, search, isActive },
-        { initialData }
-    );
+    const { data: queryData } =
+        trpc.general.newsletterSubscribers.getNewsletterSubscribers.useQuery(
+            { page, limit, search, isActive },
+            { initialData }
+        );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 

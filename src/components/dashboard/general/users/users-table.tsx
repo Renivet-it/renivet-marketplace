@@ -37,15 +37,21 @@ const getAddressPhone = (user: UserWithAddressesRolesAndBrand) =>
     "N/A";
 
 const escapeCsvValue = (value: string | number | null | undefined) => {
-    const stringValue = value === null || value === undefined ? "" : String(value);
-    return `"${stringValue.replace(/"/g, "\"\"")}"`;
+    const stringValue =
+        value === null || value === undefined ? "" : String(value);
+    return `"${stringValue.replace(/"/g, '""')}"`;
 };
 
-const downloadCsv = (fileName: string, rows: Record<string, string | number>[]) => {
+const downloadCsv = (
+    fileName: string,
+    rows: Record<string, string | number>[]
+) => {
     const headers = Object.keys(rows[0] ?? {});
     const csv = [
         headers.map(escapeCsvValue).join(","),
-        ...rows.map((row) => headers.map((header) => escapeCsvValue(row[header])).join(",")),
+        ...rows.map((row) =>
+            headers.map((header) => escapeCsvValue(row[header])).join(",")
+        ),
     ].join("\n");
 
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
@@ -151,9 +157,7 @@ export function UsersTable({ initialData }: PageProps) {
 
     trpc.general.roles.getRoles.useQuery();
 
-    const {
-        data: queryData,
-    } = trpc.general.users.getUsers.useQuery(
+    const { data: queryData } = trpc.general.users.getUsers.useQuery(
         { page, limit, search },
         { initialData }
     );

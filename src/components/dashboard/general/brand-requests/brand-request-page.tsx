@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
 import {
     RequestApproveModal,
     RequestRejectModal,
@@ -19,7 +20,6 @@ import { BrandRequestWithOwner } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import Player from "next-video/player";
-import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -256,7 +256,7 @@ export function BrandRequestPage({ request }: PageProps) {
 
                                     <PopoverContent className="overflow-hidden p-0">
                                         <div className="relative aspect-square size-full overflow-hidden">
-                                            <Image
+                                            <SafeAdminImage
                                                 src={request.logoUrl}
                                                 alt={request.name}
                                                 width={500}

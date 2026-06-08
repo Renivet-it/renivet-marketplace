@@ -17,7 +17,6 @@ import {
     cn,
     convertPaiseToRupees,
     formatINR,
-    formatPriceTag,
     normalizeBrandName,
 } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
@@ -88,6 +87,7 @@ const PLACEHOLDER_IMAGE_URL =
 
 export function ProductCard({
     className,
+    isWishlisted,
     product,
     userId,
     ...props
@@ -185,7 +185,8 @@ export function ProductCard({
             );
             const targetVariant =
                 matchingVariants.find(
-                    (variant) => !variant.isDeleted && (variant.quantity ?? 0) > 0
+                    (variant) =>
+                        !variant.isDeleted && (variant.quantity ?? 0) > 0
                 ) ?? matchingVariants[0];
 
             return {
@@ -203,7 +204,10 @@ export function ProductCard({
         const inStockSizes = sizePills.filter((size) => size.inStock);
         const sourceSizes = inStockSizes.length > 0 ? inStockSizes : sizePills;
         const visibleSizes = sourceSizes.slice(0, 4);
-        const remainingCount = Math.max(sourceSizes.length - visibleSizes.length, 0);
+        const remainingCount = Math.max(
+            sourceSizes.length - visibleSizes.length,
+            0
+        );
 
         return {
             visibleSizes,
@@ -364,6 +368,7 @@ export function ProductCard({
     return (
         <div
             className={cn("", className)}
+            data-wishlist-state={isWishlisted ? "saved" : "none"}
             title={product.title}
             {...props}
             onMouseEnter={() => setIsProductHovered(true)}

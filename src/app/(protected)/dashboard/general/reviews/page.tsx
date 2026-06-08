@@ -1,5 +1,6 @@
 "use client";
 
+import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
 import {
@@ -20,7 +21,6 @@ import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
 import { format } from "date-fns";
 import { Check, MoreHorizontal, Plus, Star, Trash2, X } from "lucide-react";
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -409,7 +409,7 @@ export default function AdminReviewsPage() {
                                                                         key={i}
                                                                         className="relative h-8 w-8 overflow-hidden rounded"
                                                                     >
-                                                                        <Image
+                                                                        <SafeAdminImage
                                                                             src={
                                                                                 img
                                                                             }

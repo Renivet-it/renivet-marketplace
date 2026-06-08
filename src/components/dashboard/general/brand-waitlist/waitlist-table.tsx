@@ -82,12 +82,11 @@ export function WaitlistTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.brandsWaitlist.getBrandsWaitlist.useQuery(
-        { page, limit, search },
-        { initialData }
-    );
+    const { data: queryData } =
+        trpc.general.brandsWaitlist.getBrandsWaitlist.useQuery(
+            { page, limit, search },
+            { initialData }
+        );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 

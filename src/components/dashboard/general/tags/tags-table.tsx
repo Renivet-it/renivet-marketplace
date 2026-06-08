@@ -72,9 +72,7 @@ export function TagsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.tags.getTags.useQuery(undefined, {
+    const { data: queryData } = trpc.general.tags.getTags.useQuery(undefined, {
         initialData,
     });
     const dataRaw = queryData?.data ?? [];

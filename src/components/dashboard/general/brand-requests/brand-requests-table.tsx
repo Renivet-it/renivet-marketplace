@@ -129,12 +129,11 @@ export function BrandRequestsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.brands.requests.getRequests.useQuery(
-        { page, limit, search, status },
-        { initialData }
-    );
+    const { data: queryData } =
+        trpc.general.brands.requests.getRequests.useQuery(
+            { page, limit, search, status },
+            { initialData }
+        );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 

@@ -81,11 +81,10 @@ export function ProductTypesTable({
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.productTypes.getProductTypes.useQuery(undefined, {
-        initialData,
-    });
+    const { data: queryData } =
+        trpc.general.productTypes.getProductTypes.useQuery(undefined, {
+            initialData,
+        });
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 

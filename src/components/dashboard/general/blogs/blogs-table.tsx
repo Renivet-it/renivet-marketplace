@@ -119,9 +119,7 @@ export function BlogsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.blogs.getBlogs.useQuery(
+    const { data: queryData } = trpc.general.blogs.getBlogs.useQuery(
         { page, limit, search, isPublished },
         { initialData }
     );

@@ -80,11 +80,12 @@ export function CategoriesTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: queryData,
-    } = trpc.general.categories.getCategories.useQuery(undefined, {
-        initialData,
-    });
+    const { data: queryData } = trpc.general.categories.getCategories.useQuery(
+        undefined,
+        {
+            initialData,
+        }
+    );
     const dataRaw = queryData?.data ?? [];
     const count = queryData?.count ?? 0;
 
