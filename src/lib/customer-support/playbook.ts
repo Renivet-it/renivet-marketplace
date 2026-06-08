@@ -336,11 +336,67 @@ Best,
 Customer Support - Renivet`,
 };
 
+const SUPPORT_ISSUE_CATEGORY_MAP: Record<
+    string,
+    keyof typeof SUPPORT_CATEGORY_MATRIX
+> = {
+    order: "ORDER_DELAYED",
+    shipping: "ORDER_DELAYED",
+    payment: "PAYMENT_FAILED",
+    product: "PRODUCT_NOT_AS_DESCRIBED",
+    account: "ACCOUNT_LOGIN_ISSUE",
+    other: "OTHER",
+    where_is_my_order: "ORDER_DELAYED",
+    wrong_item: "PRODUCT_WRONG_ITEM",
+    item_damaged: "PRODUCT_DAMAGED",
+    return_exchange: "RETURN_REQUEST",
+    cancel_order: "ORDER_CANCEL_REQUEST",
+    tracking_delay: "ORDER_DELAYED",
+    not_delivered: "ORDER_NOT_RECEIVED",
+    address_change: "ORDER_MODIFY_REQUEST",
+    refund_status: "REFUND_STATUS",
+    payment_failed: "PAYMENT_FAILED",
+    double_charge: "PAYMENT_FAILED",
+    product_info: "PRE_PURCHASE_QUERY",
+    size_help: "SIZE_FIT_HELP",
+    quality_issue: "PRODUCT_DEFECTIVE",
+    login_issue: "ACCOUNT_LOGIN_ISSUE",
+    profile_update: "ACCOUNT_LOGIN_ISSUE",
+    general_query: "OTHER",
+};
+
 export function getSupportCategoryConfig(category?: string | null) {
-    return SUPPORT_CATEGORY_MATRIX[category ?? ""] ?? SUPPORT_CATEGORY_MATRIX.OTHER;
+    return (
+        SUPPORT_CATEGORY_MATRIX[category ?? ""] ?? SUPPORT_CATEGORY_MATRIX.OTHER
+    );
 }
 
-export function normalizeSupportStatus(status?: string | null): SupportTicketStatus {
+export function normalizeSupportCategory(input?: {
+    category?: string | null;
+    issueType?: string | null;
+    text?: string | null;
+}) {
+    const criticalCategory = input?.text
+        ? detectCriticalSupportCategory(input.text)
+        : null;
+    if (criticalCategory) return criticalCategory;
+
+    const issueCategory = input?.issueType
+        ? SUPPORT_ISSUE_CATEGORY_MAP[input.issueType]
+        : null;
+    if (issueCategory) return issueCategory;
+
+    const category = input?.category;
+    if (category && category in SUPPORT_CATEGORY_MATRIX) return category;
+
+    return category
+        ? (SUPPORT_ISSUE_CATEGORY_MAP[category] ?? "OTHER")
+        : "OTHER";
+}
+
+export function normalizeSupportStatus(
+    status?: string | null
+): SupportTicketStatus {
     if (!status) return "new";
     if ((SUPPORT_TICKET_STATUSES as readonly string[]).includes(status)) {
         return status as SupportTicketStatus;
@@ -351,9 +407,13 @@ export function normalizeSupportStatus(status?: string | null): SupportTicketSta
 export function detectCriticalSupportCategory(text: string) {
     const lower = text.toLowerCase();
     if (
-        ["consumer court", "consumer forum", "legal action", "lawyer", "police"].some(
-            (item) => lower.includes(item)
-        )
+        [
+            "consumer court",
+            "consumer forum",
+            "legal action",
+            "lawyer",
+            "police",
+        ].some((item) => lower.includes(item))
     ) {
         return "LEGAL_THREAT";
     }
@@ -416,16 +476,22 @@ export function calculateFirstResponseDueAt(
     createdAt = new Date()
 ) {
     const config = getSupportCategoryConfig(category);
-    if (config.priority === "critical") return addMinutes(createdAt, config.firstResponseMinutes);
+    if (config.priority === "critical")
+        return addMinutes(createdAt, config.firstResponseMinutes);
     if (isWithinWorkingHours(createdAt)) {
         return addMinutes(createdAt, config.firstResponseMinutes);
     }
     return nextWorkingHumanResponseStart(createdAt);
 }
 
-export function calculateResolutionDueAt(category: string, createdAt = new Date()) {
+export function calculateResolutionDueAt(
+    category: string,
+    createdAt = new Date()
+) {
     const config = getSupportCategoryConfig(category);
-    return config.resolutionMinutes ? addMinutes(createdAt, config.resolutionMinutes) : null;
+    return config.resolutionMinutes
+        ? addMinutes(createdAt, config.resolutionMinutes)
+        : null;
 }
 
 export function calculateCustomerUpdateDueAt(date = new Date()) {

@@ -1,3 +1,16 @@
+import {
+    calculateCustomerAutoCloseEligibleAt,
+    calculateCustomerUpdateDueAt,
+    calculateFirstResponseDueAt,
+    calculateReopenAllowedUntil,
+    calculateResolutionDueAt,
+    getSupportCategoryConfig,
+    normalizeSupportCategory,
+    SUPPORT_CHANNELS,
+    SUPPORT_RESOLUTION_CODES,
+    SUPPORT_TEMPLATE_LIBRARY,
+    SUPPORT_TICKET_STATUSES,
+} from "@/lib/customer-support/playbook";
 import { db } from "@/lib/db";
 import {
     brands,
@@ -7,8 +20,8 @@ import {
     supportMessages,
     supportMonthlyPatternReviews,
     supportTickets,
-    supportWeeklySummaries,
     supportTicketStatusHistory,
+    supportWeeklySummaries,
     users,
     userSupportAttachments,
     userSupportDisputes,
@@ -16,32 +29,32 @@ import {
     userSupportMessages,
     userSupportTickets,
 } from "@/lib/db/schema";
+import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
 import { createDisputeReplacementOrder } from "@/lib/support/dispute-replacement-order";
 import {
-    buildBrandDisputeHref,
-    buildBrandSupportHref,
     buildAdminSupportHref,
+    buildBrandSupportHref,
     buildSupportHref,
     notifyBrandUsers,
     notifyUser,
 } from "@/lib/support/utils";
-import {
-    calculateCustomerAutoCloseEligibleAt,
-    calculateCustomerUpdateDueAt,
-    calculateFirstResponseDueAt,
-    calculateReopenAllowedUntil,
-    calculateResolutionDueAt,
-    detectCriticalSupportCategory,
-    getSupportCategoryConfig,
-    SUPPORT_CHANNELS,
-    SUPPORT_RESOLUTION_CODES,
-    SUPPORT_TEMPLATE_LIBRARY,
-    SUPPORT_TICKET_STATUSES,
-} from "@/lib/customer-support/playbook";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { generateId } from "@/lib/utils";
-import { and, desc, eq, gte, ilike, inArray, isNotNull, lt, or, sql } from "drizzle-orm";
+import {
+    and,
+    desc,
+    eq,
+    gte,
+    ilike,
+    inArray,
+    isNotNull,
+    lt,
+    or,
+    sql,
+} from "drizzle-orm";
 import { z } from "zod";
 
 const attachmentSchema = z.object({
@@ -232,8 +245,7 @@ async function computeSupportHealth() {
         }),
         db
             .select({
-                average:
-                    sql<number>`ROUND(AVG(${userSupportTickets.csatScore}) * 100)`,
+                average: sql<number>`ROUND(AVG(${userSupportTickets.csatScore}) * 100)`,
                 count: sql<number>`COUNT(${userSupportTickets.csatScore})`,
             })
             .from(userSupportTickets)
@@ -258,7 +270,9 @@ async function computeSupportHealth() {
             ticket.firstRespondedAt <= ticket.firstResponseDueAt
     );
     const slaHitRate = ticketsWithDueDate.length
-        ? Math.round((ticketsWithinSla.length / ticketsWithDueDate.length) * 100)
+        ? Math.round(
+              (ticketsWithinSla.length / ticketsWithDueDate.length) * 100
+          )
         : 100;
 
     return {
@@ -328,7 +342,10 @@ export const adminSupportRouter = createTRPCRouter({
                 and(
                     inArray(userSupportTickets.status, activeSupportStatuses),
                     isNotNull(userSupportTickets.firstResponseDueAt),
-                    lt(userSupportTickets.firstResponseDueAt, approachingCutoff),
+                    lt(
+                        userSupportTickets.firstResponseDueAt,
+                        approachingCutoff
+                    ),
                     gte(userSupportTickets.firstResponseDueAt, now)
                 )
             ),
@@ -369,8 +386,7 @@ export const adminSupportRouter = createTRPCRouter({
             }),
             db
                 .select({
-                    average:
-                        sql<number>`ROUND(AVG(${userSupportTickets.csatScore}) * 100)`,
+                    average: sql<number>`ROUND(AVG(${userSupportTickets.csatScore}) * 100)`,
                     count: sql<number>`COUNT(${userSupportTickets.csatScore})`,
                 })
                 .from(userSupportTickets)
@@ -395,7 +411,9 @@ export const adminSupportRouter = createTRPCRouter({
                 ticket.firstRespondedAt <= ticket.firstResponseDueAt
         );
         const slaHitRate = ticketsWithDueDate.length
-            ? Math.round((ticketsWithinSla.length / ticketsWithDueDate.length) * 100)
+            ? Math.round(
+                  (ticketsWithinSla.length / ticketsWithDueDate.length) * 100
+              )
             : 100;
 
         return {
@@ -515,8 +533,10 @@ export const adminSupportRouter = createTRPCRouter({
                 );
             const avgFirstResponseMinutes = firstResponseMinutes.length
                 ? Math.round(
-                      firstResponseMinutes.reduce((sum, value) => sum + value, 0) /
-                          firstResponseMinutes.length
+                      firstResponseMinutes.reduce(
+                          (sum, value) => sum + value,
+                          0
+                      ) / firstResponseMinutes.length
                   )
                 : null;
 
@@ -533,12 +553,13 @@ export const adminSupportRouter = createTRPCRouter({
                     openTicketsAtWeekEnd: health.openTickets,
                     agedTickets48h: health.agedTickets48h,
                     slaBreaches: health.breachedSla,
-                    escalatedToAj: weekTickets.filter((ticket) => ticket.escalatedAt)
-                        .length,
+                    escalatedToAj: weekTickets.filter(
+                        (ticket) => ticket.escalatedAt
+                    ).length,
                     avgFirstResponseMinutes,
                     slaHitRate: health.slaHitRate,
                     csatAverage:
-                        health.csatAverage == null
+                        health.csatAverage === null
                             ? null
                             : Math.round(health.csatAverage * 100),
                     topCategories,
@@ -563,14 +584,18 @@ export const adminSupportRouter = createTRPCRouter({
     generateMonthlyPatternReview: protectedProcedure
         .input(
             z.object({
-                reviewMonth: z.string().regex(/^\d{4}-\d{2}$/).optional(),
+                reviewMonth: z
+                    .string()
+                    .regex(/^\d{4}-\d{2}$/)
+                    .optional(),
                 learnings: z.string().optional(),
                 driveLink: z.string().url().optional(),
                 actionItems: z.array(z.string()).default([]),
             })
         )
         .mutation(async ({ ctx, input }) => {
-            const month = input.reviewMonth ?? new Date().toISOString().slice(0, 7);
+            const month =
+                input.reviewMonth ?? new Date().toISOString().slice(0, 7);
             const [year, monthIndex] = month.split("-").map(Number);
             const start = new Date(year, monthIndex - 1, 1);
             const end = new Date(year, monthIndex, 1);
@@ -623,7 +648,10 @@ export const adminSupportRouter = createTRPCRouter({
                     csatAverage: average(
                         rows
                             .map((row) => row.csatScore)
-                            .filter((score): score is number => typeof score === "number")
+                            .filter(
+                                (score): score is number =>
+                                    typeof score === "number"
+                            )
                     ),
                     firstTouchResolutionRate: rows.length
                         ? Math.round(
@@ -689,16 +717,22 @@ export const adminSupportRouter = createTRPCRouter({
         )
         .mutation(async ({ ctx, input }) => {
             const customer = await db.query.users.findFirst({
-                where: or(eq(users.id, input.customer), eq(users.email, input.customer)),
+                where: or(
+                    eq(users.id, input.customer),
+                    eq(users.email, input.customer)
+                ),
             });
             if (!customer) {
-                throw new Error("Customer not found. Use the customer user ID or email already in Renivet.");
+                throw new Error(
+                    "Customer not found. Use the customer user ID or email already in Renivet."
+                );
             }
 
-            const detectedCategory = detectCriticalSupportCategory(
-                `${input.subject} ${input.description}`
-            );
-            const category = detectedCategory ?? input.category;
+            const category = normalizeSupportCategory({
+                category: input.category,
+                issueType: input.category,
+                text: `${input.subject} ${input.description}`,
+            });
             const config = getSupportCategoryConfig(category);
             const now = new Date();
             const critical = config.priority === "critical";
@@ -719,15 +753,18 @@ export const adminSupportRouter = createTRPCRouter({
                     sourceChannel: input.sourceChannel,
                     priority: config.priority,
                     status: critical ? "escalated" : "acknowledged",
-                    assignedAdminId:
-                        critical
-                            ? process.env.AJ_USER_ID || ctx.user.id
-                            : process.env.SUPPORT_INTERN_USER_ID || ctx.user.id,
-                    firstResponseDueAt: calculateFirstResponseDueAt(category, now),
+                    assignedAdminId: critical
+                        ? process.env.AJ_USER_ID || ctx.user.id
+                        : process.env.SUPPORT_INTERN_USER_ID || ctx.user.id,
+                    firstResponseDueAt: calculateFirstResponseDueAt(
+                        category,
+                        now
+                    ),
                     resolutionDueAt: calculateResolutionDueAt(category, now),
                     autoAckSentAt: now,
                     autoAckTemplateKey: "AUTO_ACK",
-                    autoCloseEligibleAt: calculateCustomerAutoCloseEligibleAt(now),
+                    autoCloseEligibleAt:
+                        calculateCustomerAutoCloseEligibleAt(now),
                     escalatedAt: critical ? now : null,
                     escalationOwner: critical ? "AJ" : null,
                     latestMessageAt: now,
@@ -746,7 +783,10 @@ export const adminSupportRouter = createTRPCRouter({
                     senderId: customer.id,
                     text: input.description.trim(),
                     messageType: "message",
-                    metadata: { sourceChannel: input.sourceChannel, createdByAdminId: ctx.user.id },
+                    metadata: {
+                        sourceChannel: input.sourceChannel,
+                        createdByAdminId: ctx.user.id,
+                    },
                 },
                 {
                     ticketId: row.id,
@@ -754,7 +794,10 @@ export const adminSupportRouter = createTRPCRouter({
                     senderId: "support-bot",
                     text: buildAutomatedSupportReply(row.id),
                     messageType: "system",
-                    metadata: { template: "AUTO_ACK", sourceChannel: input.sourceChannel },
+                    metadata: {
+                        template: "AUTO_ACK",
+                        sourceChannel: input.sourceChannel,
+                    },
                 },
             ]);
 
@@ -766,14 +809,18 @@ export const adminSupportRouter = createTRPCRouter({
                 body: `We created support case ${row.id.slice(0, 8)} from your ${input.sourceChannel.replaceAll("_", " ")} message.`,
                 href: buildSupportHref(row.id),
                 emailSubject: `Renivet support case ${row.id.slice(0, 8)} created`,
-                emailIntro: "We have logged your message as a Renivet support case.",
+                emailIntro:
+                    "We have logged your message as a Renivet support case.",
                 emailDetails: [
                     `Case: ${row.id}`,
                     `Channel: ${input.sourceChannel}`,
                     `Category: ${formatSupportCategoryLabel(category)}`,
                     `Subject: ${row.title}`,
                 ],
-                metadata: { ticketId: row.id, sourceChannel: input.sourceChannel },
+                metadata: {
+                    ticketId: row.id,
+                    sourceChannel: input.sourceChannel,
+                },
             });
 
             await auditEntityChange({
@@ -916,7 +963,9 @@ export const adminSupportRouter = createTRPCRouter({
                 terminalStatuses.includes(input.status as any) &&
                 !input.resolutionCode
             ) {
-                throw new Error("Resolution code is required before closing a support ticket.");
+                throw new Error(
+                    "Resolution code is required before closing a support ticket."
+                );
             }
 
             const updated = await db
@@ -932,7 +981,9 @@ export const adminSupportRouter = createTRPCRouter({
                     closedAt: ["closed", "auto_closed"].includes(input.status)
                         ? new Date()
                         : existing.closedAt,
-                    reopenAllowedUntil: terminalStatuses.includes(input.status as any)
+                    reopenAllowedUntil: terminalStatuses.includes(
+                        input.status as any
+                    )
                         ? calculateReopenAllowedUntil()
                         : existing.reopenAllowedUntil,
                     csatSentAt: terminalStatuses.includes(input.status as any)
@@ -1035,9 +1086,7 @@ export const adminSupportRouter = createTRPCRouter({
                         "closed",
                         "declined",
                         "auto_closed",
-                    ].includes(
-                        ticket.status
-                    )
+                    ].includes(ticket.status)
                         ? ticket.status
                         : "waiting_brand",
                     updatedAt: new Date(),
@@ -1173,8 +1222,11 @@ export const adminSupportRouter = createTRPCRouter({
                 data: rows.map((row) => ({
                     ...row,
                     userName:
-                        `${userMap.get(row.userId)?.firstName ?? ""} ${userMap.get(row.userId)?.lastName ?? ""}`.trim(),
-                    userEmail: userMap.get(row.userId)?.email ?? "",
+                        `${userMap.get(row.userId)?.firstName ?? ""} ${userMap.get(row.userId)?.lastName ?? ""}`.trim() ||
+                        String(row.intakeContext?.contactName ?? ""),
+                    userEmail:
+                        userMap.get(row.userId)?.email ??
+                        String(row.intakeContext?.contactEmail ?? ""),
                 })),
                 count: rows.length,
             };
@@ -1264,7 +1316,9 @@ export const adminSupportRouter = createTRPCRouter({
                 terminalStatuses.includes(input.status as any) &&
                 !input.resolutionCode
             ) {
-                throw new Error("Resolution code is required before closing a customer support ticket.");
+                throw new Error(
+                    "Resolution code is required before closing a customer support ticket."
+                );
             }
 
             const updated = await db
@@ -1288,7 +1342,9 @@ export const adminSupportRouter = createTRPCRouter({
                         input.status === "waiting_customer"
                             ? calculateCustomerAutoCloseEligibleAt()
                             : existing.autoCloseEligibleAt,
-                    reopenAllowedUntil: terminalStatuses.includes(input.status as any)
+                    reopenAllowedUntil: terminalStatuses.includes(
+                        input.status as any
+                    )
                         ? calculateReopenAllowedUntil()
                         : existing.reopenAllowedUntil,
                     csatSentAt: terminalStatuses.includes(input.status as any)
@@ -1388,9 +1444,7 @@ export const adminSupportRouter = createTRPCRouter({
                         "refunded",
                         "replaced",
                         "auto_closed",
-                    ].includes(
-                        ticket.status
-                    )
+                    ].includes(ticket.status)
                         ? ticket.status
                         : ticket.status === "waiting_brand"
                           ? "waiting_brand"
@@ -1468,7 +1522,9 @@ export const adminSupportRouter = createTRPCRouter({
                 actionType: "ticket_assigned",
                 entityType: "user_support_ticket",
                 entityId: input.ticketId,
-                beforeValue: { assignedAdminId: before?.assignedAdminId ?? null },
+                beforeValue: {
+                    assignedAdminId: before?.assignedAdminId ?? null,
+                },
                 afterValue: { assignedAdminId: input.adminId },
                 reason: "ticket_assignment",
             });
@@ -1555,6 +1611,7 @@ export const adminSupportRouter = createTRPCRouter({
                         })
                     )
                     .default([]),
+                kpJointApprovalConfirmed: z.boolean().default(false),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -1578,6 +1635,36 @@ export const adminSupportRouter = createTRPCRouter({
                 throw new Error(
                     "The linked order could not be loaded for this support ticket."
                 );
+            }
+
+            const refundExposure = Number(sourceOrder.totalAmount ?? 0);
+            const refundApprovalTier =
+                refundExposure <= 1500
+                    ? "support"
+                    : refundExposure <= 5000
+                      ? "aj"
+                      : "aj_kp";
+
+            if (input.disputeType === "refund") {
+                const ajUserId = process.env.AJ_USER_ID;
+                if (
+                    refundApprovalTier !== "support" &&
+                    ajUserId &&
+                    ctx.user.id !== ajUserId
+                ) {
+                    throw new Error(
+                        "Refunds above ₹1,500 require AJ approval before the support case can be approved."
+                    );
+                }
+
+                if (
+                    refundApprovalTier === "aj_kp" &&
+                    !input.kpJointApprovalConfirmed
+                ) {
+                    throw new Error(
+                        "Refunds above ₹5,000 require AJ + KP joint approval confirmation."
+                    );
+                }
             }
 
             const linkedOrderItem = ticket.orderItemId
@@ -1633,9 +1720,12 @@ export const adminSupportRouter = createTRPCRouter({
                 replacementOrderId = createdReplacement.replacementOrderId;
             }
 
+            const isRefundDispute = input.disputeType === "refund";
             const disputeStatus = replacementOrderId
                 ? "replacement_created"
-                : "approved_for_brand_action";
+                : isRefundDispute
+                  ? "approved_for_refund_processing"
+                  : "approved_for_brand_action";
 
             const dispute = existing
                 ? await db
@@ -1652,6 +1742,19 @@ export const adminSupportRouter = createTRPCRouter({
                               ? new Date()
                               : existing.actionCompletedAt,
                           replacementOrderId,
+                          metadata: {
+                              ...(existing.metadata ?? {}),
+                              refundApprovalTier:
+                                  input.disputeType === "refund"
+                                      ? refundApprovalTier
+                                      : null,
+                              refundExposure:
+                                  input.disputeType === "refund"
+                                      ? refundExposure
+                                      : null,
+                              kpJointApprovalConfirmed:
+                                  input.kpJointApprovalConfirmed,
+                          },
                           updatedAt: new Date(),
                       })
                       .where(eq(userSupportDisputes.id, existing.id))
@@ -1675,6 +1778,18 @@ export const adminSupportRouter = createTRPCRouter({
                               ? new Date()
                               : null,
                           replacementOrderId,
+                          metadata: {
+                              refundApprovalTier:
+                                  input.disputeType === "refund"
+                                      ? refundApprovalTier
+                                      : null,
+                              refundExposure:
+                                  input.disputeType === "refund"
+                                      ? refundExposure
+                                      : null,
+                              kpJointApprovalConfirmed:
+                                  input.kpJointApprovalConfirmed,
+                          },
                       })
                       .returning()
                       .then((res) => res[0]);
@@ -1682,12 +1797,20 @@ export const adminSupportRouter = createTRPCRouter({
             await db
                 .update(userSupportTickets)
                 .set({
-                    brandActionRequired: true,
+                    brandActionRequired: !isRefundDispute,
                     brandActionStatus: replacementOrderId
                         ? "replacement_created"
-                        : "awaiting_brand_action",
-                    status: replacementOrderId ? "replaced" : "waiting_brand",
-                    resolutionCode: replacementOrderId ? "RES_REPLACEMENT" : null,
+                        : isRefundDispute
+                          ? "not_required"
+                          : "awaiting_brand_action",
+                    status: replacementOrderId
+                        ? "replaced"
+                        : isRefundDispute
+                          ? "waiting_internal"
+                          : "waiting_brand",
+                    resolutionCode: replacementOrderId
+                        ? "RES_REPLACEMENT"
+                        : null,
                     linkedReplacementOrderId: replacementOrderId,
                     unreadByUser: "true",
                     unreadByAdmin: "true",
@@ -1716,43 +1839,68 @@ export const adminSupportRouter = createTRPCRouter({
                 });
             }
 
-            await notifyBrandUsers({
-                brandId: resolvedBrandId,
+            await auditEntityChange({
                 actorId: ctx.user.id,
-                type: "support.dispute.approved",
-                title: replacementOrderId
-                    ? "A dispute replacement order was created"
-                    : "A dispute needs brand action",
-                body: replacementOrderId
-                    ? `Replacement order ${replacementOrderId} was created for "${ticket.title}"`
-                    : `Admin approved support case "${ticket.title}" for brand action`,
-                href: buildBrandSupportHref(resolvedBrandId, ticket.id),
-                emailSubject: replacementOrderId
-                    ? `Replacement order created for support case ${ticket.id}`
-                    : `Brand action needed for support case ${ticket.id}`,
-                emailIntro: replacementOrderId
-                    ? "A dispute-linked replacement order was automatically created and is now ready for brand fulfilment."
-                    : "A customer support case has been approved for brand action.",
-                emailDetails: replacementOrderId
-                    ? [
-                          `Ticket: ${ticket.id}`,
-                          `Original order: ${ticket.orderId}`,
-                          `Replacement order: ${replacementOrderId}`,
-                          `Requested action: ${input.disputeType}`,
-                          `Admin summary: ${input.summary}`,
-                      ]
-                    : [
-                          `Ticket: ${ticket.id}`,
-                          `Order: ${ticket.orderId}`,
-                          `Requested action: ${input.disputeType}`,
-                          `Admin summary: ${input.summary}`,
-                      ],
-                metadata: {
-                    ticketId: ticket.id,
-                    disputeId: dispute.id,
-                    replacementOrderId,
+                actionType: "support_dispute_approved",
+                entityType: "user_support_ticket",
+                entityId: ticket.id,
+                beforeValue: {
+                    status: ticket.status,
+                    existingDisputeId: existing?.id ?? null,
                 },
+                afterValue: {
+                    disputeId: dispute.id,
+                    disputeType: input.disputeType,
+                    disputeStatus,
+                    replacementOrderId,
+                    refundApprovalTier: isRefundDispute
+                        ? refundApprovalTier
+                        : null,
+                    refundExposure: isRefundDispute ? refundExposure : null,
+                    kpJointApprovalConfirmed: input.kpJointApprovalConfirmed,
+                },
+                reason: input.summary,
             });
+
+            if (!isRefundDispute) {
+                await notifyBrandUsers({
+                    brandId: resolvedBrandId,
+                    actorId: ctx.user.id,
+                    type: "support.dispute.approved",
+                    title: replacementOrderId
+                        ? "A dispute replacement order was created"
+                        : "A dispute needs brand action",
+                    body: replacementOrderId
+                        ? `Replacement order ${replacementOrderId} was created for "${ticket.title}"`
+                        : `Admin approved support case "${ticket.title}" for brand action`,
+                    href: buildBrandSupportHref(resolvedBrandId, ticket.id),
+                    emailSubject: replacementOrderId
+                        ? `Replacement order created for support case ${ticket.id}`
+                        : `Brand action needed for support case ${ticket.id}`,
+                    emailIntro: replacementOrderId
+                        ? "A dispute-linked replacement order was automatically created and is now ready for brand fulfilment."
+                        : "A customer support case has been approved for brand action.",
+                    emailDetails: replacementOrderId
+                        ? [
+                              `Ticket: ${ticket.id}`,
+                              `Original order: ${ticket.orderId}`,
+                              `Replacement order: ${replacementOrderId}`,
+                              `Requested action: ${input.disputeType}`,
+                              `Admin summary: ${input.summary}`,
+                          ]
+                        : [
+                              `Ticket: ${ticket.id}`,
+                              `Order: ${ticket.orderId}`,
+                              `Requested action: ${input.disputeType}`,
+                              `Admin summary: ${input.summary}`,
+                          ],
+                    metadata: {
+                        ticketId: ticket.id,
+                        disputeId: dispute.id,
+                        replacementOrderId,
+                    },
+                });
+            }
 
             await notifyUser({
                 userId: ticket.userId,
@@ -1761,29 +1909,66 @@ export const adminSupportRouter = createTRPCRouter({
                 title: "Your support case moved forward",
                 body: replacementOrderId
                     ? `We approved your case and created replacement order ${replacementOrderId}.`
-                    : "We approved your case and asked the brand to take action.",
+                    : isRefundDispute
+                      ? "We approved your refund case and moved it to internal processing."
+                      : "We approved your case and asked the brand to take action.",
                 href: buildSupportHref(ticket.id),
                 emailSubject: replacementOrderId
                     ? "Replacement order created for your support case"
-                    : "Support case approved for next action",
+                    : isRefundDispute
+                      ? "Refund case approved for processing"
+                      : "Support case approved for next action",
                 emailIntro: replacementOrderId
                     ? "We reviewed your case and created a replacement order for you."
-                    : "We reviewed your support case and moved it forward for the next action.",
+                    : isRefundDispute
+                      ? "We reviewed your support case and approved it for refund processing."
+                      : "We reviewed your support case and moved it forward for the next action.",
                 emailDetails: replacementOrderId
                     ? [
                           `Case: ${ticket.title}`,
                           `Replacement order: ${replacementOrderId}`,
                           "Next step: the brand will fulfil this replacement order.",
                       ]
-                    : [
-                          `Case: ${ticket.title}`,
-                          "Next step: the brand has been notified to act on it.",
-                      ],
+                    : isRefundDispute
+                      ? [
+                            `Case: ${ticket.title}`,
+                            `Approval tier: ${refundApprovalTier.replace("_", "+").toUpperCase()}`,
+                            "Next step: our team will process the refund and update you.",
+                        ]
+                      : [
+                            `Case: ${ticket.title}`,
+                            "Next step: the brand has been notified to act on it.",
+                        ],
                 metadata: {
                     ticketId: ticket.id,
                     replacementOrderId,
                 },
             });
+
+            if (input.disputeType === "refund") {
+                await createOperationalAlert({
+                    actorId: ctx.user.id,
+                    type: "refund_dispute_approved",
+                    severity:
+                        refundApprovalTier === "support" ? "info" : "warning",
+                    entityType: "user_support_ticket",
+                    entityId: ticket.id,
+                    title: "Refund support case approved",
+                    message: `Refund case ${ticket.id} was approved at ${refundApprovalTier.replace("_", "+").toUpperCase()} tier for ₹${refundExposure}.`,
+                    ownerRole:
+                        refundApprovalTier === "support"
+                            ? "support_manager"
+                            : "aj",
+                    channels: ["admin", "email"],
+                    dedupeKey: `support:refund-approved:${ticket.id}`,
+                    metadata: {
+                        refundApprovalTier,
+                        refundExposure,
+                        kpJointApprovalConfirmed:
+                            input.kpJointApprovalConfirmed,
+                    },
+                });
+            }
 
             return {
                 ...dispute,

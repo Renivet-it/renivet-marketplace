@@ -129,6 +129,10 @@ export const brandSchema = z.object({
             })
             .nullable()
     ),
+    statusReasonCode: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().nullable()
+    ),
     // confidentialData: brandConfidentialSchema.optional(),
     createdAt: z
         .union([z.string(), z.date()], {
@@ -152,17 +156,22 @@ export const createBrandSchema = brandSchema.omit({
     confidentialVerificationStatus: true,
     confidentialVerificationRejectedReason: true,
     confidentialVerificationRejectedAt: true,
+    statusReasonCode: true,
     createdAt: true,
     updatedAt: true,
 });
 
-export const updateBrandSchema = brandSchema.pick({
-    bio: true,
-    coverUrl: true,
-    logoUrl: true,
-    website: true,
-    rzpAccountId: true,
-});
+export const updateBrandSchema = brandSchema
+    .pick({
+        bio: true,
+        coverUrl: true,
+        isActive: true,
+        logoUrl: true,
+        statusReasonCode: true,
+        website: true,
+        rzpAccountId: true,
+    })
+    .partial();
 
 export const updateBrandConfidentialStatusSchema = brandSchema
     .pick({

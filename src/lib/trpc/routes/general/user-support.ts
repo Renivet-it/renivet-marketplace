@@ -1,3 +1,12 @@
+import {
+    calculateCustomerAutoCloseEligibleAt,
+    calculateFirstResponseDueAt,
+    calculateResolutionDueAt,
+    getSupportCategoryConfig,
+    normalizeSupportCategory,
+    SUPPORT_CHANNELS,
+    SUPPORT_TEMPLATE_LIBRARY,
+} from "@/lib/customer-support/playbook";
 import { db } from "@/lib/db";
 import {
     orderItems,
@@ -7,20 +16,14 @@ import {
     userSupportTickets,
 } from "@/lib/db/schema";
 import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
+import {
     buildAdminSupportHref,
     buildSupportHref,
     notifyAdmins,
 } from "@/lib/support/utils";
-import {
-    calculateCustomerAutoCloseEligibleAt,
-    calculateFirstResponseDueAt,
-    calculateResolutionDueAt,
-    detectCriticalSupportCategory,
-    getSupportCategoryConfig,
-    SUPPORT_CHANNELS,
-    SUPPORT_TEMPLATE_LIBRARY,
-} from "@/lib/customer-support/playbook";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { and, desc, eq, inArray, SQL } from "drizzle-orm";
 import { z } from "zod";
@@ -117,14 +120,16 @@ export const userSupportRouter = createTRPCRouter({
                     issueType: input.issueType,
                     orderId: input.orderId,
                 });
-            const criticalCategory = detectCriticalSupportCategory(
-                [title, input.description].filter(Boolean).join(" ")
-            );
-            const normalizedCategory = criticalCategory ?? input.category;
+            const normalizedCategory = normalizeSupportCategory({
+                category: input.category,
+                issueType: input.issueType,
+                text: [title, input.description].filter(Boolean).join(" "),
+            });
             const categoryConfig = getSupportCategoryConfig(normalizedCategory);
             const createdAt = new Date();
             const assignedAdminId =
-                categoryConfig.requiresAj || categoryConfig.priority === "critical"
+                categoryConfig.requiresAj ||
+                categoryConfig.priority === "critical"
                     ? process.env.AJ_USER_ID ||
                       process.env.SUPPORT_MANAGER_USER_ID ||
                       process.env.SUPPORT_INTERN_USER_ID ||
@@ -160,15 +165,16 @@ export const userSupportRouter = createTRPCRouter({
                     ),
                     autoAckSentAt: createdAt,
                     autoAckTemplateKey: "AUTO_ACK",
-                    autoCloseEligibleAt: calculateCustomerAutoCloseEligibleAt(
-                        createdAt
-                    ),
+                    autoCloseEligibleAt:
+                        calculateCustomerAutoCloseEligibleAt(createdAt),
                     status:
                         categoryConfig.priority === "critical"
                             ? "escalated"
                             : "acknowledged",
                     escalatedAt:
-                        categoryConfig.priority === "critical" ? createdAt : null,
+                        categoryConfig.priority === "critical"
+                            ? createdAt
+                            : null,
                     escalationOwner:
                         categoryConfig.priority === "critical" ? "AJ" : null,
                     intakeContext: input.intakeContext ?? null,
@@ -489,7 +495,10 @@ export const userSupportRouter = createTRPCRouter({
                 actionType: "csat_response_received",
                 entityType: "user_support_ticket",
                 entityId: ticket.id,
-                afterValue: { score: input.score, comment: input.comment ?? null },
+                afterValue: {
+                    score: input.score,
+                    comment: input.comment ?? null,
+                },
                 reason: "customer_support_csat",
             });
 

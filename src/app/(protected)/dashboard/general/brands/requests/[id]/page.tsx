@@ -1,4 +1,5 @@
 import { BrandRequestPage } from "@/components/dashboard/general/brand-requests";
+import { AuditHistoryPanel } from "@/components/dashboard/general/monitoring-sla/audit-history-panel";
 import { DashShell } from "@/components/globals/layouts";
 import { Skeleton } from "@/components/ui/skeleton";
 import { brandRequestQueries } from "@/lib/db/queries";
@@ -46,7 +47,12 @@ async function BrandRequestFetch({ params }: PageProps) {
     const existingBrandRequest = await brandRequestQueries.getBrandRequest(id);
     if (!existingBrandRequest) notFound();
 
-    return <BrandRequestPage request={existingBrandRequest} />;
+    return (
+        <>
+            <BrandRequestPage request={existingBrandRequest} />
+            <AuditHistoryPanel entityType="brand_request" entityId={id} />
+        </>
+    );
 }
 
 function BrandRequestSkeleton() {
