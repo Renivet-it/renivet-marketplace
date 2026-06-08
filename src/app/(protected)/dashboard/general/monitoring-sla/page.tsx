@@ -260,6 +260,7 @@ const metricConfig: Record<string, MetricCardConfig> = {
         sublabel: "Finance reconciliation",
         icon: FileText,
         href: "/dashboard/general/order-ops",
+        formatter: rupeeLabelFromPaise,
     },
     deliveredToday: {
         label: "Delivered Today",
@@ -332,12 +333,14 @@ const metricConfig: Record<string, MetricCardConfig> = {
         sublabel: "Paid/order value this week",
         icon: Gauge,
         href: "/dashboard/general/monitoring-sla?dashboard=weekly",
+        formatter: rupeeLabelFromPaise,
     },
     aovWtd: {
         label: "AOV (Average Order Value) WTD",
         sublabel: "Average order value",
         icon: Gauge,
         href: "/dashboard/general/monitoring-sla?dashboard=weekly",
+        formatter: rupeeLabelFromPaise,
     },
     newCustomersWtd: {
         label: "Customers WTD",
@@ -984,9 +987,9 @@ export default async function MonitoringSlaPage({
                                     title: "Business WTD",
                                     icon: ClipboardCheck,
                                     rows: [
-                                        ["GMV", health.metrics.gmvWtd],
+                                        ["GMV", rupeeLabelFromPaise(health.metrics.gmvWtd)],
                                         ["Orders", health.metrics.ordersWtd],
-                                        ["AOV", health.metrics.aovWtd],
+                                        ["AOV", rupeeLabelFromPaise(health.metrics.aovWtd)],
                                         [
                                             "Customers",
                                             health.metrics.newCustomersWtd,
@@ -1049,13 +1052,13 @@ export default async function MonitoringSlaPage({
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                                 {[
-                                    ["GMV", weeklyBusiness.gmv],
+                                    ["GMV", rupeeLabelFromPaise(weeklyBusiness.gmv)],
                                     [
                                         "GMV WoW",
                                         `${weeklyBusiness.gmvWoW.toFixed(1)}%`,
                                     ],
                                     ["Orders", weeklyBusiness.orderCount],
-                                    ["AOV", weeklyBusiness.aov],
+                                    ["AOV", rupeeLabelFromPaise(weeklyBusiness.aov)],
                                     ["Customers", weeklyBusiness.customerCount],
                                     [
                                         "Repeat customers",
@@ -1142,7 +1145,7 @@ export default async function MonitoringSlaPage({
                                                         {row.name}
                                                     </span>
                                                     <span className="font-semibold text-slate-950">
-                                                        {metricLabel(row.gmv)}
+                                                        {rupeeLabelFromPaise(row.gmv)}
                                                     </span>
                                                 </div>
                                             ))
@@ -1242,7 +1245,7 @@ export default async function MonitoringSlaPage({
                             {[
                                 [
                                     "GMV (Gross Merchandise Value) WTD (Week To Date)",
-                                    marketingPerformance.gmvWtd,
+                                    rupeeLabelFromPaise(marketingPerformance.gmvWtd),
                                 ],
                                 [
                                     "Orders WTD (Week To Date)",
@@ -1254,7 +1257,7 @@ export default async function MonitoringSlaPage({
                                 ],
                                 [
                                     "GMV (Gross Merchandise Value) MTD (Month To Date)",
-                                    marketingPerformance.gmvMtd,
+                                    rupeeLabelFromPaise(marketingPerformance.gmvMtd),
                                 ],
                                 [
                                     "Orders MTD (Month To Date)",
@@ -1309,7 +1312,7 @@ export default async function MonitoringSlaPage({
                             {[
                                 [
                                     "GMV (Gross Merchandise Value) MTD (Month To Date)",
-                                    monthlyStrategic.currentMonth.gmv ?? 0,
+                                    rupeeLabelFromPaise(monthlyStrategic.currentMonth.gmv ?? 0),
                                 ],
                                 [
                                     "Orders MTD (Month To Date)",
@@ -1323,7 +1326,7 @@ export default async function MonitoringSlaPage({
                                 ],
                                 [
                                     "Prior GMV (Gross Merchandise Value)",
-                                    monthlyStrategic.previousMonth.gmv ?? 0,
+                                    rupeeLabelFromPaise(monthlyStrategic.previousMonth.gmv ?? 0),
                                 ],
                                 [
                                     "Refund rate",
@@ -1347,17 +1350,15 @@ export default async function MonitoringSlaPage({
                                 ],
                                 [
                                     "Contribution/order",
-                                    Math.round(
-                                        monthlyStrategic.contributionMarginPerOrder
-                                    ),
+                                    rupeeLabelFromPaise(monthlyStrategic.contributionMarginPerOrder),
                                 ],
                                 [
                                     "Contribution margin",
-                                    monthlyStrategic.contributionMargin,
+                                    rupeeLabelFromPaise(monthlyStrategic.contributionMargin),
                                 ],
                                 [
                                     "Headcount efficiency",
-                                    monthlyStrategic.headcountEfficiency.value,
+                                    rupeeLabelFromPaise(monthlyStrategic.headcountEfficiency.value),
                                 ],
                                 ["Runway", monthlyStrategic.runway],
                                 [
@@ -1493,11 +1494,11 @@ export default async function MonitoringSlaPage({
                                                     </p>
                                                     <p className="mt-1 text-muted-foreground">
                                                         Current{" "}
-                                                        {metricLabel(
+                                                        {rupeeLabelFromPaise(
                                                             row.currentRevenue
                                                         )}{" "}
                                                         · Previous{" "}
-                                                        {metricLabel(
+                                                        {rupeeLabelFromPaise(
                                                             row.previousRevenue
                                                         )}
                                                     </p>

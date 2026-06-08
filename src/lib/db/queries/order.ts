@@ -232,6 +232,15 @@ class OrderQuery {
             | "not_fulfilled";
     }) {
         const whereConditions = [];
+        const actualCancelledOrderCondition = or(
+            eq(orders.cancellationReasonCode, "CAN_CUSTOMER_REQUEST"),
+            inArray(
+                orders.id,
+                db.select({ orderId: orderShipments.orderId })
+                    .from(orderShipments)
+                    .where(eq(orderShipments.status, "cancelled"))
+            )
+        );
 
         if (search) {
             whereConditions.push(ilike(orders.id, `%${search}%`));
@@ -359,6 +368,7 @@ class OrderQuery {
                     break;
                 case "cancelled":
                     whereConditions.push(eq(orders.status, "cancelled"));
+                    whereConditions.push(actualCancelledOrderCondition);
                     break;
                 case "rto":
                     // orderShipments.is_return_label_generated = true OR orderShipments.is_replacement_label_generated = true
@@ -502,6 +512,15 @@ class OrderQuery {
         const searchFilter = search
             ? ilike(orders.id, `%${search}%`)
             : undefined;
+        const actualCancelledOrderCondition = or(
+            eq(orders.cancellationReasonCode, "CAN_CUSTOMER_REQUEST"),
+            inArray(
+                orders.id,
+                db.select({ orderId: orderShipments.orderId })
+                    .from(orderShipments)
+                    .where(eq(orderShipments.status, "cancelled"))
+            )
+        );
         const dateFilter =
             startDate && endDate
                 ? and(
@@ -628,7 +647,14 @@ class OrderQuery {
             db.$count(orders, and(eq(orders.status, "delivered"), baseFilter)),
 
             // Cancelled
-            db.$count(orders, and(eq(orders.status, "cancelled"), baseFilter)),
+            db.$count(
+                orders,
+                and(
+                    eq(orders.status, "cancelled"),
+                    actualCancelledOrderCondition,
+                    baseFilter
+                )
+            ),
 
             // RTO: is_return_label_generated = true OR is_replacement_label_generated = true
             db.$count(

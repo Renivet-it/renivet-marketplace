@@ -71,6 +71,21 @@ type StatusTab = (typeof STATUS_TABS)[number]["value"];
 
 export type TableOrder = OrderWithItemAndBrand;
 
+const isActualCancelledOrder = (order: TableOrder) =>
+    order.status === "cancelled" &&
+    (order.cancellationReasonCode === "CAN_CUSTOMER_REQUEST" ||
+        order.shipments?.some((shipment) => shipment.status === "cancelled"));
+
+const getDisplayedOrderStatus = (order: TableOrder): TableOrder["status"] => {
+    if (order.status !== "cancelled") return order.status;
+    if (isActualCancelledOrder(order)) return "cancelled";
+    if (order.shipments?.some((shipment) => shipment.status === "delivered")) {
+        return "delivered";
+    }
+
+    return "processing";
+};
+
 const getOrderStatusClassName = (status: TableOrder["status"]) =>
     ({
         pending: "border-amber-200 bg-amber-50 text-amber-700",
@@ -337,15 +352,16 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
         header: "Status",
         cell: ({ row }) => {
             const data = row.original;
+            const displayedStatus = getDisplayedOrderStatus(data);
             return (
                 <Badge
                     variant="outline"
                     className={cn(
                         "rounded-md px-1.5 py-0.5 text-[11px] font-semibold",
-                        getOrderStatusClassName(data.status)
+                        getOrderStatusClassName(displayedStatus)
                     )}
                 >
-                    {convertValueToLabel(data.status)}
+                    {convertValueToLabel(displayedStatus)}
                 </Badge>
             );
         },
