@@ -1,6 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
-import { auditLogQueries } from "@/lib/db/queries";
 import { db } from "@/lib/db";
+import { auditLogQueries } from "@/lib/db/queries";
 import { users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
@@ -9,12 +9,29 @@ import { inArray } from "drizzle-orm";
 import { History, Search } from "lucide-react";
 import { notFound } from "next/navigation";
 
+const auditDateTimeFormatter = new Intl.DateTimeFormat("en-US", {
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    month: "short",
+    second: "2-digit",
+    timeZone: "UTC",
+    timeZoneName: "short",
+    year: "numeric",
+});
+
+function formatAuditDateTime(date: Date) {
+    return auditDateTimeFormatter.format(date);
+}
+
 async function assertAuditAccess() {
     const { userId } = await auth();
     if (!userId) notFound();
 
     const user = await userCache.get(userId);
-    const permissions = user ? getUserPermissions(user.roles).sitePermissions : 0;
+    const permissions = user
+        ? getUserPermissions(user.roles).sitePermissions
+        : 0;
     const allowed = hasPermission(
         permissions,
         [
@@ -35,9 +52,12 @@ export default async function AuditLogPage({
 }) {
     await assertAuditAccess();
     const params = await searchParams;
-    const entityType = typeof params.entityType === "string" ? params.entityType : undefined;
-    const entityId = typeof params.entityId === "string" ? params.entityId : undefined;
-    const actionType = typeof params.actionType === "string" ? params.actionType : undefined;
+    const entityType =
+        typeof params.entityType === "string" ? params.entityType : undefined;
+    const entityId =
+        typeof params.entityId === "string" ? params.entityId : undefined;
+    const actionType =
+        typeof params.actionType === "string" ? params.actionType : undefined;
     const q = typeof params.q === "string" ? params.q : undefined;
     const logs = await auditLogQueries.list({
         entityType,
@@ -50,7 +70,9 @@ export default async function AuditLogPage({
         ...new Set(
             logs
                 .map((log) => log.userId)
-                .filter((userId): userId is string => Boolean(userId?.startsWith("user_")))
+                .filter((userId): userId is string =>
+                    Boolean(userId?.startsWith("user_"))
+                )
         ),
     ];
     const actorRows = actorIds.length
@@ -94,7 +116,9 @@ export default async function AuditLogPage({
                                 Audit Log
                             </h1>
                             <p className="mt-1 text-sm text-muted-foreground">
-                                Append-only operational history for decisions, state changes, overrides, and compliance evidence.
+                                Append-only operational history for decisions,
+                                state changes, overrides, and compliance
+                                evidence.
                             </p>
                         </div>
                     </div>
@@ -103,19 +127,35 @@ export default async function AuditLogPage({
                 <form className="grid gap-3 rounded-md border bg-white p-4 shadow-sm md:grid-cols-5">
                     <label className="grid gap-1.5 text-sm font-medium">
                         Entity Type
-                        <input name="entityType" defaultValue={entityType} className="h-10 rounded-md border px-3 text-sm font-normal" />
+                        <input
+                            name="entityType"
+                            defaultValue={entityType}
+                            className="h-10 rounded-md border px-3 text-sm font-normal"
+                        />
                     </label>
                     <label className="grid gap-1.5 text-sm font-medium">
                         Entity ID
-                        <input name="entityId" defaultValue={entityId} className="h-10 rounded-md border px-3 text-sm font-normal" />
+                        <input
+                            name="entityId"
+                            defaultValue={entityId}
+                            className="h-10 rounded-md border px-3 text-sm font-normal"
+                        />
                     </label>
                     <label className="grid gap-1.5 text-sm font-medium">
                         Action
-                        <input name="actionType" defaultValue={actionType} className="h-10 rounded-md border px-3 text-sm font-normal" />
+                        <input
+                            name="actionType"
+                            defaultValue={actionType}
+                            className="h-10 rounded-md border px-3 text-sm font-normal"
+                        />
                     </label>
                     <label className="grid gap-1.5 text-sm font-medium">
                         Reason Search
-                        <input name="q" defaultValue={q} className="h-10 rounded-md border px-3 text-sm font-normal" />
+                        <input
+                            name="q"
+                            defaultValue={q}
+                            className="h-10 rounded-md border px-3 text-sm font-normal"
+                        />
                     </label>
                     <div className="flex items-end">
                         <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white">
@@ -125,30 +165,52 @@ export default async function AuditLogPage({
                     </div>
                 </form>
 
-                <section className="overflow-hidden rounded-md border bg-white shadow-sm">
-                    <div className="grid grid-cols-[180px_180px_220px_1fr_220px] gap-3 border-b bg-slate-100 px-4 py-3 text-xs font-semibold uppercase text-slate-600">
-                        <span>Time UTC</span>
-                        <span>Action</span>
-                        <span>Entity</span>
-                        <span>Reason</span>
-                        <span>Actor</span>
-                    </div>
-                    <div className="divide-y">
-                        {logs.length === 0 ? (
-                            <p className="p-6 text-sm text-muted-foreground">No audit rows found.</p>
-                        ) : (
-                            logs.map((log) => (
-                                <div key={log.id} className="grid grid-cols-[180px_180px_220px_1fr_220px] gap-3 px-4 py-3 text-sm">
-                                    <span className="text-muted-foreground">{log.timestampUtc.toISOString()}</span>
-                                    <span className="font-medium text-slate-900">{log.actionType}</span>
-                                    <span className="truncate text-slate-700">
-                                        {log.entityType}:{log.entityId}
-                                    </span>
-                                    <span className="truncate text-muted-foreground">{log.reason ?? "-"}</span>
-                                    <span className="truncate text-muted-foreground">{getActorLabel(log.userId) ?? "system"}</span>
-                                </div>
-                            ))
-                        )}
+                <section className="overflow-x-auto rounded-md border bg-white shadow-sm">
+                    <div className="min-w-[980px]">
+                        <div className="grid grid-cols-[190px_minmax(220px,0.9fr)_minmax(260px,1.1fr)_minmax(240px,1fr)_180px] gap-3 border-b bg-slate-100 px-4 py-3 text-xs font-semibold uppercase text-slate-600">
+                            <span className="min-w-0">Time (UTC)</span>
+                            <span className="min-w-0">Action</span>
+                            <span className="min-w-0">Entity</span>
+                            <span className="min-w-0">Reason</span>
+                            <span className="min-w-0">Actor</span>
+                        </div>
+                        <div className="divide-y">
+                            {logs.length === 0 ? (
+                                <p className="p-6 text-sm text-muted-foreground">
+                                    No audit rows found.
+                                </p>
+                            ) : (
+                                logs.map((log) => (
+                                    <div
+                                        key={log.id}
+                                        className="grid grid-cols-[190px_minmax(220px,0.9fr)_minmax(260px,1.1fr)_minmax(240px,1fr)_180px] gap-3 px-4 py-3 text-sm"
+                                    >
+                                        <time
+                                            dateTime={log.timestampUtc.toISOString()}
+                                            className="min-w-0 text-muted-foreground"
+                                            title={log.timestampUtc.toISOString()}
+                                        >
+                                            {formatAuditDateTime(
+                                                log.timestampUtc
+                                            )}
+                                        </time>
+                                        <span className="min-w-0 break-all font-medium text-slate-900">
+                                            {log.actionType}
+                                        </span>
+                                        <span className="min-w-0 break-all text-slate-700">
+                                            {log.entityType}:{log.entityId}
+                                        </span>
+                                        <span className="min-w-0 break-words text-muted-foreground">
+                                            {log.reason ?? "-"}
+                                        </span>
+                                        <span className="min-w-0 truncate text-muted-foreground">
+                                            {getActorLabel(log.userId) ??
+                                                "system"}
+                                        </span>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </section>
             </div>

@@ -23,6 +23,41 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 
 const pagePath = "/dashboard/general/monitoring-sla";
+const alertSeverities = ["critical", "warning", "info"] as const;
+
+type AlertSeverity = (typeof alertSeverities)[number];
+
+const alertSeverityTabs: Array<{
+    value: AlertSeverity | "all";
+    label: string;
+    className: string;
+    activeClassName: string;
+}> = [
+    {
+        value: "all",
+        label: "All",
+        className: "border-slate-200 bg-white text-slate-700",
+        activeClassName: "border-slate-950 bg-slate-950 text-white",
+    },
+    {
+        value: "critical",
+        label: "Critical",
+        className: "border-red-200 bg-red-50 text-red-800",
+        activeClassName: "border-red-700 bg-red-700 text-white",
+    },
+    {
+        value: "warning",
+        label: "Warning",
+        className: "border-amber-200 bg-amber-50 text-amber-800",
+        activeClassName: "border-amber-600 bg-amber-500 text-white",
+    },
+    {
+        value: "info",
+        label: "Info",
+        className: "border-sky-200 bg-sky-50 text-sky-800",
+        activeClassName: "border-sky-700 bg-sky-700 text-white",
+    },
+];
 
 function finishAction(
     notice: string,
@@ -62,6 +97,9 @@ async function assertMonitoringAccess() {
 
 async function acknowledgeAlert(formData: FormData) {
     "use server";
+    const activeAlertSeverity = String(
+        formData.get("activeAlertSeverity") ?? ""
+    );
     await monitoringSlaQueries.updateAlertStatus("acknowledged", {
         alertId: String(formData.get("alertId")),
         actorId: await getActor(),
@@ -70,11 +108,17 @@ async function acknowledgeAlert(formData: FormData) {
             formData.get("notes") ?? "Acknowledged from monitoring dashboard"
         ),
     });
-    finishAction("alert-acknowledged");
+    finishAction(
+        "alert-acknowledged",
+        activeAlertSeverity ? { activeAlertSeverity } : {}
+    );
 }
 
 async function resolveAlert(formData: FormData) {
     "use server";
+    const activeAlertSeverity = String(
+        formData.get("activeAlertSeverity") ?? ""
+    );
     await monitoringSlaQueries.updateAlertStatus("resolved", {
         alertId: String(formData.get("alertId")),
         actorId: await getActor(),
@@ -83,7 +127,10 @@ async function resolveAlert(formData: FormData) {
             formData.get("notes") ?? "Resolved from monitoring dashboard"
         ),
     });
-    finishAction("alert-resolved");
+    finishAction(
+        "alert-resolved",
+        activeAlertSeverity ? { activeAlertSeverity } : {}
+    );
 }
 
 async function runSlaCheck() {
@@ -374,6 +421,9 @@ export default async function MonitoringSlaPage({
     const alertPageRaw = Array.isArray(params.alertPage)
         ? params.alertPage[0]
         : params.alertPage;
+    const activeAlertSeverityRaw = Array.isArray(params.activeAlertSeverity)
+        ? params.activeAlertSeverity[0]
+        : params.activeAlertSeverity;
     const noticeRaw = Array.isArray(params.notice)
         ? params.notice[0]
         : params.notice;
@@ -386,6 +436,11 @@ export default async function MonitoringSlaPage({
     const notice = getNoticeConfig(noticeRaw);
     const alertPage = Math.max(1, Number(alertPageRaw ?? "1") || 1);
     const alertPageSize = 10;
+    const activeAlertSeverity = alertSeverities.includes(
+        activeAlertSeverityRaw as AlertSeverity
+    )
+        ? (activeAlertSeverityRaw as AlertSeverity)
+        : undefined;
 
     const [
         health,
@@ -397,7 +452,11 @@ export default async function MonitoringSlaPage({
         monthlyStrategic,
     ] = await Promise.all([
         monitoringSlaQueries.getDailyHealth(),
-        monitoringSlaQueries.getActiveAlertsPage(alertPage, alertPageSize),
+        monitoringSlaQueries.getActiveAlertsPage(
+            alertPage,
+            alertPageSize,
+            activeAlertSeverity
+        ),
         monitoringSlaQueries.getAlertSummary(),
         monitoringSlaQueries.getRecentEvidence(),
         monitoringSlaQueries.getBrandHealth(),
@@ -407,6 +466,20 @@ export default async function MonitoringSlaPage({
     const alerts = alertsPage.rows;
     const pageCount = alertsPage.pageCount;
     const currentAlertPage = Math.min(alertsPage.page, pageCount);
+    const alertSeverityCounts = alertSummary.reduce<
+        Record<AlertSeverity | "all", number>
+    >(
+        (counts, row) => {
+            if (row.status === "resolved") return counts;
+            counts.all += Number(row.count);
+            counts[row.severity] += Number(row.count);
+            return counts;
+        },
+        { all: 0, critical: 0, warning: 0, info: 0 }
+    );
+    const activeAlertSeverityLabel = activeAlertSeverity
+        ? `${activeAlertSeverity} `
+        : "";
     const makeAlertPageHref = (page: number) => {
         const nextParams = new URLSearchParams();
         for (const [key, value] of Object.entries(params)) {
@@ -415,6 +488,24 @@ export default async function MonitoringSlaPage({
         }
         nextParams.set("alertPage", String(page));
         return `/dashboard/general/monitoring-sla?${nextParams.toString()}`;
+    };
+    const makeAlertSeverityHref = (severity: AlertSeverity | "all") => {
+        const nextParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(params)) {
+            if (
+                !value ||
+                key === "alertPage" ||
+                key === "notice" ||
+                key === "activeAlertSeverity"
+            ) {
+                continue;
+            }
+            nextParams.set(key, Array.isArray(value) ? value[0] : value);
+        }
+        if (severity !== "all") {
+            nextParams.set("activeAlertSeverity", severity);
+        }
+        return `/dashboard/general/monitoring-sla?${nextParams.toString()}#active-alerts`;
     };
 
     const healthStatus = getStatusConfig(health.status);
@@ -879,12 +970,44 @@ export default async function MonitoringSlaPage({
                                     Active Alerts
                                 </h2>
                                 <p className="text-sm text-muted-foreground">
-                                    {alertsPage.total} unresolved alert
+                                    {alertsPage.total}{" "}
+                                    {activeAlertSeverityLabel}unresolved alert
                                     {alertsPage.total === 1 ? "" : "s"} · page{" "}
                                     {currentAlertPage} of {pageCount}
                                 </p>
                             </div>
                             <Bell className="size-5 text-muted-foreground" />
+                        </div>
+                        <div className="flex gap-2 overflow-x-auto border-b px-4 py-3">
+                            {alertSeverityTabs.map((tab) => {
+                                const isActive =
+                                    (tab.value === "all" &&
+                                        !activeAlertSeverity) ||
+                                    tab.value === activeAlertSeverity;
+
+                                return (
+                                    <Link
+                                        key={tab.value}
+                                        href={makeAlertSeverityHref(tab.value)}
+                                        className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3 text-sm font-semibold transition ${
+                                            isActive
+                                                ? tab.activeClassName
+                                                : tab.className
+                                        }`}
+                                    >
+                                        <span>{tab.label}</span>
+                                        <span
+                                            className={`rounded-full px-2 py-0.5 text-xs ${
+                                                isActive
+                                                    ? "bg-white/20 text-current"
+                                                    : "bg-white/80 text-current"
+                                            }`}
+                                        >
+                                            {alertSeverityCounts[tab.value]}
+                                        </span>
+                                    </Link>
+                                );
+                            })}
                         </div>
                         <div className="divide-y">
                             {alerts.length === 0 ? (
@@ -936,6 +1059,15 @@ export default async function MonitoringSlaPage({
                                                     name="alertId"
                                                     value={alert.id}
                                                 />
+                                                {activeAlertSeverity ? (
+                                                    <input
+                                                        type="hidden"
+                                                        name="activeAlertSeverity"
+                                                        value={
+                                                            activeAlertSeverity
+                                                        }
+                                                    />
+                                                ) : null}
                                                 <button className="h-9 rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">
                                                     Acknowledge
                                                 </button>
@@ -946,6 +1078,15 @@ export default async function MonitoringSlaPage({
                                                     name="alertId"
                                                     value={alert.id}
                                                 />
+                                                {activeAlertSeverity ? (
+                                                    <input
+                                                        type="hidden"
+                                                        name="activeAlertSeverity"
+                                                        value={
+                                                            activeAlertSeverity
+                                                        }
+                                                    />
+                                                ) : null}
                                                 <button className="h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800">
                                                     Resolve
                                                 </button>
