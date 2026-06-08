@@ -24,8 +24,18 @@ import { notFound, redirect } from "next/navigation";
 
 const pagePath = "/dashboard/general/monitoring-sla";
 const alertSeverities = ["critical", "warning", "info"] as const;
+const dashboardTabs = [
+    { value: "daily-ops", label: "Daily Ops" },
+    { value: "daily-health-summary", label: "Daily Health Summary" },
+    { value: "weekly", label: "Weekly Business" },
+    { value: "monthly", label: "Monthly Strategic" },
+    { value: "brand", label: "Brand Health" },
+    { value: "marketing", label: "Marketing Performance" },
+    { value: "alerts", label: "Alerts" },
+] as const;
 
 type AlertSeverity = (typeof alertSeverities)[number];
+type DashboardTab = (typeof dashboardTabs)[number]["value"];
 
 const alertSeverityTabs: Array<{
     value: AlertSeverity | "all";
@@ -110,7 +120,9 @@ async function acknowledgeAlert(formData: FormData) {
     });
     finishAction(
         "alert-acknowledged",
-        activeAlertSeverity ? { activeAlertSeverity } : {}
+        activeAlertSeverity
+            ? { activeAlertSeverity, dashboard: "alerts" }
+            : { dashboard: "alerts" }
     );
 }
 
@@ -129,7 +141,9 @@ async function resolveAlert(formData: FormData) {
     });
     finishAction(
         "alert-resolved",
-        activeAlertSeverity ? { activeAlertSeverity } : {}
+        activeAlertSeverity
+            ? { activeAlertSeverity, dashboard: "alerts" }
+            : { dashboard: "alerts" }
     );
 }
 
@@ -176,7 +190,23 @@ function metricLabel(value: number | string) {
     return typeof value === "number" ? value.toLocaleString("en-IN") : value;
 }
 
-const metricConfig = {
+function rupeeLabelFromPaise(value: number | string) {
+    const amount = typeof value === "number" ? value : Number(value);
+    if (!Number.isFinite(amount)) return "₹0";
+    return `₹${(amount / 100).toLocaleString("en-IN", {
+        maximumFractionDigits: 2,
+    })}`;
+}
+
+type MetricCardConfig = {
+    label: string;
+    sublabel: string;
+    icon: typeof Activity;
+    href: string;
+    formatter?: (value: number | string) => string;
+};
+
+const metricConfig: Record<string, MetricCardConfig> = {
     ordersPlaced24h: {
         label: "Orders 24H",
         sublabel: "Placed since midnight",
@@ -190,8 +220,8 @@ const metricConfig = {
         href: "/dashboard/general/order-ops",
     },
     ordersUnacknowledged24h: {
-        label: "Unack Orders",
-        sublabel: "Brand acknowledgement >24h",
+        label: "Unmoved Orders",
+        sublabel: "Own status unchanged >24h, excluding pickup",
         icon: TimerReset,
         href: "/dashboard/general/order-ops",
     },
@@ -209,7 +239,7 @@ const metricConfig = {
     },
     stuckOrders48h: {
         label: "Stuck Orders",
-        sublabel: "No movement >48h",
+        sublabel: "Pickup >48h or delivery >96h",
         icon: AlertTriangle,
         href: "/dashboard/general/order-ops",
     },
@@ -247,18 +277,18 @@ const metricConfig = {
         label: "RTO (Return To Origin) Rate",
         sublabel: "Spike indicator",
         icon: Gauge,
-        href: "#active-alerts",
+        href: "/dashboard/general/order-ops",
     },
     openTickets: {
         label: "Open Tickets",
         sublabel: "Support queues",
-        icon: TimerReset,
+        icon: Bell,
         href: "/dashboard/general/support/user",
     },
     ticketsAged24h: {
         label: "Aged Tickets",
         sublabel: "No response >24h",
-        icon: Bell,
+        icon: TimerReset,
         href: "/dashboard/general/support/user",
     },
     refundsPendingProcessing: {
@@ -283,13 +313,13 @@ const metricConfig = {
         label: "Brand Cases",
         sublabel: "Non-response/onboarding",
         icon: UsersRound,
-        href: "#brand-health",
+        href: "/dashboard/general/brands",
     },
     platformUptime24h: {
         label: "Uptime 24H (24 Hours)",
         sublabel: "Alert-derived platform signal",
         icon: Gauge,
-        href: "#active-alerts",
+        href: "/dashboard/general/monitoring-sla?dashboard=alerts",
     },
     ordersWtd: {
         label: "Orders WTD (Week To Date)",
@@ -298,22 +328,22 @@ const metricConfig = {
         href: "/dashboard/general/orders",
     },
     gmvWtd: {
-        label: "GMV (Gross Merchandise Value) WTD (Week To Date)",
+        label: "GMV (Gross Merchandise Value) WTD",
         sublabel: "Paid/order value this week",
         icon: Gauge,
-        href: "#marketing-performance",
+        href: "/dashboard/general/monitoring-sla?dashboard=weekly",
     },
     aovWtd: {
-        label: "AOV (Average Order Value) WTD (Week To Date)",
+        label: "AOV (Average Order Value) WTD",
         sublabel: "Average order value",
         icon: Gauge,
-        href: "#marketing-performance",
+        href: "/dashboard/general/monitoring-sla?dashboard=weekly",
     },
     newCustomersWtd: {
-        label: "Customers WTD (Week To Date)",
+        label: "Customers WTD",
         sublabel: "Unique ordering customers",
         icon: UsersRound,
-        href: "#marketing-performance",
+        href: "/dashboard/general/monitoring-sla?dashboard=weekly",
     },
     activeBrands: {
         label: "Active Brands",
@@ -332,18 +362,19 @@ const metricConfig = {
         sublabel: "Refund value awaiting action",
         icon: FileText,
         href: "/dashboard/general/support/user",
+        formatter: rupeeLabelFromPaise,
     },
     openAlerts: {
         label: "Open Alerts",
         sublabel: "Active system alerts",
         icon: Bell,
-        href: "#active-alerts",
+        href: "/dashboard/general/monitoring-sla?dashboard=alerts",
     },
     criticalAlerts: {
         label: "Critical Alerts",
         sublabel: "Needs immediate review",
         icon: AlertTriangle,
-        href: "#active-alerts",
+        href: "/dashboard/general/monitoring-sla?dashboard=alerts",
     },
 };
 
@@ -427,6 +458,9 @@ export default async function MonitoringSlaPage({
     const noticeRaw = Array.isArray(params.notice)
         ? params.notice[0]
         : params.notice;
+    const dashboardRaw = Array.isArray(params.dashboard)
+        ? params.dashboard[0]
+        : params.dashboard;
     const generatedExportMonthRaw = Array.isArray(params.exportMonth)
         ? params.exportMonth[0]
         : params.exportMonth;
@@ -434,6 +468,11 @@ export default async function MonitoringSlaPage({
         ? params.exportType[0]
         : params.exportType;
     const notice = getNoticeConfig(noticeRaw);
+    const activeDashboard = dashboardTabs.some(
+        (tab) => tab.value === dashboardRaw
+    )
+        ? (dashboardRaw as DashboardTab)
+        : "daily-health-summary";
     const alertPage = Math.max(1, Number(alertPageRaw ?? "1") || 1);
     const alertPageSize = 10;
     const activeAlertSeverity = alertSeverities.includes(
@@ -447,6 +486,7 @@ export default async function MonitoringSlaPage({
         alertsPage,
         alertSummary,
         evidence,
+        weeklyBusiness,
         brandHealth,
         marketingPerformance,
         monthlyStrategic,
@@ -459,6 +499,7 @@ export default async function MonitoringSlaPage({
         ),
         monitoringSlaQueries.getAlertSummary(),
         monitoringSlaQueries.getRecentEvidence(),
+        monitoringSlaQueries.getWeeklyBusiness(),
         monitoringSlaQueries.getBrandHealth(),
         monitoringSlaQueries.getMarketingPerformance(),
         monitoringSlaQueries.getMonthlyStrategic(),
@@ -507,6 +548,15 @@ export default async function MonitoringSlaPage({
         }
         return `/dashboard/general/monitoring-sla?${nextParams.toString()}#active-alerts`;
     };
+    const makeDashboardHref = (dashboard: DashboardTab) => {
+        const nextParams = new URLSearchParams();
+        for (const [key, value] of Object.entries(params)) {
+            if (!value || key === "notice" || key === "dashboard") continue;
+            nextParams.set(key, Array.isArray(value) ? value[0] : value);
+        }
+        nextParams.set("dashboard", dashboard);
+        return `${pagePath}?${nextParams.toString()}`;
+    };
 
     const healthStatus = getStatusConfig(health.status);
     const currentMonth = new Date().toISOString().slice(0, 7);
@@ -532,6 +582,11 @@ export default async function MonitoringSlaPage({
             format: "csv",
         }
     ).toString()}`;
+    const dailyLastRefresh = new Intl.DateTimeFormat("en-IN", {
+        dateStyle: "medium",
+        timeStyle: "short",
+        timeZone: "Asia/Kolkata",
+    }).format(new Date());
     const showFounderReportDownloads = [
         "sla-run",
         "snapshot",
@@ -687,90 +742,432 @@ export default async function MonitoringSlaPage({
                     </section>
                 )}
 
-                <section
-                    className={`overflow-hidden rounded-md border shadow-sm ${healthStatus.className}`}
-                >
-                    <div className={`h-1.5 ${healthStatus.accent}`} />
-                    <div className="grid gap-4 p-4 lg:grid-cols-[minmax(220px,0.8fr)_1fr] lg:items-center">
-                        <div>
-                            <p className="text-sm font-semibold">
-                                Daily Health
-                            </p>
-                            <p className="mt-1 text-4xl font-semibold tracking-normal">
-                                {healthStatus.label}
-                            </p>
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-3">
-                            <div>
-                                <p className="text-current/60 text-xs font-semibold uppercase">
-                                    Alert Load
-                                </p>
-                                <p className="mt-1 text-lg font-semibold">
-                                    {health.metrics.openAlerts} open /{" "}
-                                    {health.metrics.criticalAlerts} critical
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-current/60 text-xs font-semibold uppercase">
-                                    Queue Load
-                                </p>
-                                <p className="mt-1 text-lg font-semibold">
-                                    {health.metrics.openTickets} tickets /{" "}
-                                    {health.metrics.refundsPendingProcessing}{" "}
-                                    refunds
-                                </p>
-                            </div>
-                            <div>
-                                <p className="text-current/60 text-xs font-semibold uppercase">
-                                    Business Activity
-                                </p>
-                                <p className="mt-1 text-lg font-semibold">
-                                    {health.metrics.ordersPlaced24h} today /{" "}
-                                    {health.metrics.ordersWtd} WTD (Week To
-                                    Date)
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-                    {metricEntries.map(([key, value]) => {
-                        const config = metricConfig[key];
-                        const Icon = config.icon;
-
+                <nav className="flex flex-wrap gap-2 rounded-md border bg-white p-2 shadow-sm">
+                    {dashboardTabs.map((tab) => {
+                        const active = activeDashboard === tab.value;
                         return (
                             <Link
-                                key={key}
-                                href={config.href}
-                                className="group rounded-md border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300"
-                                aria-label={`Open relevant section for ${config.label}`}
+                                key={tab.value}
+                                href={makeDashboardHref(tab.value)}
+                                className={`rounded-md px-3 py-2 text-sm font-semibold transition ${
+                                    active
+                                        ? "bg-slate-950 text-white"
+                                        : "text-slate-700 hover:bg-slate-100"
+                                }`}
                             >
-                                <div className="flex items-start justify-between gap-3">
-                                    <div>
-                                        <p className="text-sm font-semibold text-slate-700 group-hover:text-slate-950">
-                                            {config.label}
-                                        </p>
-                                        <p className="mt-1 text-xs text-muted-foreground">
-                                            {config.sublabel}
-                                        </p>
-                                    </div>
-                                    <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700">
-                                        <Icon className="size-4" />
-                                    </div>
-                                </div>
-                                <p className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">
-                                    {metricLabel(value)}
-                                </p>
+                                {tab.label}
                             </Link>
                         );
                     })}
-                </section>
+                </nav>
 
-                <section className="grid gap-4 xl:grid-cols-3">
+                {activeDashboard === "daily-ops" && (
+                    <>
+                        <section
+                            className={`overflow-hidden rounded-md border shadow-sm ${healthStatus.className}`}
+                        >
+                            <div className={`h-1.5 ${healthStatus.accent}`} />
+                            <div className="grid gap-4 p-4 lg:grid-cols-[minmax(220px,0.8fr)_1fr] lg:items-center">
+                                <div>
+                                    <p className="text-sm font-semibold">
+                                        Daily Ops Dashboard
+                                    </p>
+                                    <p className="mt-1 text-4xl font-semibold tracking-normal">
+                                        {healthStatus.label}
+                                    </p>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-3">
+                                    <div>
+                                        <p className="text-current/60 text-xs font-semibold uppercase">
+                                            Alert Load
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold">
+                                            {health.metrics.openAlerts} open /{" "}
+                                            {health.metrics.criticalAlerts}{" "}
+                                            critical
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-current/60 text-xs font-semibold uppercase">
+                                            Queue Load
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold">
+                                            {health.metrics.openTickets} tickets
+                                            /{" "}
+                                            {
+                                                health.metrics
+                                                    .refundsPendingProcessing
+                                            }{" "}
+                                            refunds
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-current/60 text-xs font-semibold uppercase">
+                                            Business Activity
+                                        </p>
+                                        <p className="mt-1 text-lg font-semibold">
+                                            {health.metrics.ordersPlaced24h}{" "}
+                                            today / {health.metrics.ordersWtd}{" "}
+                                            WTD (Week To Date)
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
+                            {metricEntries.map(([key, value]) => {
+                                const config = metricConfig[key];
+                                const Icon = config.icon;
+
+                                return (
+                                    <Link
+                                        key={key}
+                                        href={config.href}
+                                        className="group rounded-md border bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300"
+                                        aria-label={`Open relevant section for ${config.label}`}
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-700 group-hover:text-slate-950">
+                                                    {config.label}
+                                                </p>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    {config.sublabel}
+                                                </p>
+                                            </div>
+                                            <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-700">
+                                                <Icon className="size-4" />
+                                            </div>
+                                        </div>
+                                        <p className="mt-4 text-3xl font-semibold tracking-normal text-slate-950">
+                                            {config.formatter
+                                                ? config.formatter(value)
+                                                : metricLabel(value)}
+                                        </p>
+                                    </Link>
+                                );
+                            })}
+                        </section>
+                    </>
+                )}
+
+                {activeDashboard === "daily-health-summary" && (
+                    <section className="rounded-md border bg-white shadow-sm">
+                        <div className="flex flex-col gap-3 border-b px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase text-muted-foreground">
+                                    Renivet Daily Health
+                                </p>
+                                <h2 className="mt-1 text-xl font-semibold text-slate-950">
+                                    Single-screen operations pulse
+                                </h2>
+                            </div>
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span
+                                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${healthStatus.pill}`}
+                                >
+                                    {healthStatus.label}
+                                </span>
+                                <form action={runSlaCheck}>
+                                    <button className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white hover:bg-slate-800">
+                                        <TimerReset className="size-4" />
+                                        Refresh
+                                    </button>
+                                </form>
+                                <Link
+                                    href="/dashboard/general/monitoring-sla?dashboard=alerts"
+                                    className="inline-flex h-9 items-center justify-center rounded-md border px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                                >
+                                    Configure
+                                </Link>
+                            </div>
+                        </div>
+                        <div className="grid gap-4 p-4 lg:grid-cols-2 xl:grid-cols-3">
+                            {[
+                                {
+                                    title: "Orders",
+                                    icon: Activity,
+                                    rows: [
+                                        [
+                                            "New 24h",
+                                            health.metrics.ordersPlaced24h,
+                                        ],
+                                        [
+                                            "Shipped 24h",
+                                            health.metrics.ordersShipped24h,
+                                        ],
+                                        [
+                                            "Stuck",
+                                            health.metrics.stuckOrders48h,
+                                        ],
+                                        [
+                                            "Unmoved >24h",
+                                            health.metrics
+                                                .ordersUnacknowledged24h,
+                                        ],
+                                    ],
+                                },
+                                {
+                                    title: "Tickets",
+                                    icon: Bell,
+                                    rows: [
+                                        ["Open", health.metrics.openTickets],
+                                        [
+                                            "Over SLA",
+                                            health.metrics.ticketsAged24h,
+                                        ],
+                                        [
+                                            "Critical alerts",
+                                            health.metrics.criticalAlerts,
+                                        ],
+                                    ],
+                                },
+                                {
+                                    title: "Refunds",
+                                    icon: FileText,
+                                    rows: [
+                                        [
+                                            "Pending",
+                                            health.metrics
+                                                .refundsPendingProcessing,
+                                        ],
+                                        [
+                                            "QC pending",
+                                            health.metrics.refundsPendingQc,
+                                        ],
+                                        [
+                                            "Pending amount",
+                                            rupeeLabelFromPaise(
+                                                health.metrics
+                                                    .pendingRefundAmount
+                                            ),
+                                        ],
+                                    ],
+                                },
+                                {
+                                    title: "Brands",
+                                    icon: UsersRound,
+                                    rows: [
+                                        ["Active", health.metrics.activeBrands],
+                                        [
+                                            "Non-response",
+                                            health.metrics
+                                                .brandNonResponseCases,
+                                        ],
+                                        [
+                                            "Follow-up",
+                                            health.metrics
+                                                .inactiveOrPendingBrands,
+                                        ],
+                                    ],
+                                },
+                                {
+                                    title: "Platform",
+                                    icon: Gauge,
+                                    rows: [
+                                        [
+                                            "Uptime 24h",
+                                            health.metrics.platformUptime24h,
+                                        ],
+                                        [
+                                            "Open alerts",
+                                            health.metrics.openAlerts,
+                                        ],
+                                        [
+                                            "COD review",
+                                            health.metrics.codFraudReviewQueue,
+                                        ],
+                                    ],
+                                },
+                                {
+                                    title: "Business WTD",
+                                    icon: ClipboardCheck,
+                                    rows: [
+                                        ["GMV", health.metrics.gmvWtd],
+                                        ["Orders", health.metrics.ordersWtd],
+                                        ["AOV", health.metrics.aovWtd],
+                                        [
+                                            "Customers",
+                                            health.metrics.newCustomersWtd,
+                                        ],
+                                    ],
+                                },
+                            ].map((group) => {
+                                const Icon = group.icon;
+                                return (
+                                    <div
+                                        key={group.title}
+                                        className="rounded-md border bg-slate-50 p-4"
+                                    >
+                                        <div className="mb-3 flex items-center justify-between gap-3">
+                                            <h3 className="font-semibold text-slate-950">
+                                                {group.title}
+                                            </h3>
+                                            <div className="flex size-9 items-center justify-center rounded-md bg-white text-slate-700">
+                                                <Icon className="size-4" />
+                                            </div>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {group.rows.map(
+                                                ([label, value]) => (
+                                                    <div
+                                                        key={`${group.title}-${label}`}
+                                                        className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm"
+                                                    >
+                                                        <span className="text-muted-foreground">
+                                                            {label}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-950">
+                                                            {metricLabel(value)}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                        <div className="border-t px-4 py-3 text-xs text-muted-foreground">
+                            Last refresh: {dailyLastRefresh}
+                        </div>
+                    </section>
+                )}
+
+                {activeDashboard === "weekly" && (
+                    <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                        <div className="rounded-md border bg-white p-4 shadow-sm">
+                            <div className="mb-4">
+                                <h2 className="text-base font-semibold text-slate-950">
+                                    Weekly Business
+                                </h2>
+                                <p className="text-sm text-muted-foreground">
+                                    {weeklyBusiness.weekStart} to{" "}
+                                    {weeklyBusiness.weekEnd}
+                                </p>
+                            </div>
+                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                                {[
+                                    ["GMV", weeklyBusiness.gmv],
+                                    [
+                                        "GMV WoW",
+                                        `${weeklyBusiness.gmvWoW.toFixed(1)}%`,
+                                    ],
+                                    ["Orders", weeklyBusiness.orderCount],
+                                    ["AOV", weeklyBusiness.aov],
+                                    ["Customers", weeklyBusiness.customerCount],
+                                    [
+                                        "Repeat customers",
+                                        weeklyBusiness.repeatCustomers,
+                                    ],
+                                    [
+                                        "Active brands",
+                                        weeklyBusiness.activeBrands,
+                                    ],
+                                    [
+                                        "SLA breaches",
+                                        weeklyBusiness.slaBreachCount,
+                                    ],
+                                    [
+                                        "Support open",
+                                        weeklyBusiness.supportOpenTickets,
+                                    ],
+                                    [
+                                        "Refund rate",
+                                        `${(weeklyBusiness.refundRate * 100).toFixed(1)}%`,
+                                    ],
+                                    [
+                                        "Refund amount",
+                                        rupeeLabelFromPaise(
+                                            weeklyBusiness.refundAmount
+                                        ),
+                                    ],
+                                    ["RTO rate", weeklyBusiness.rtoRate],
+                                    [
+                                        "Conversion funnel",
+                                        weeklyBusiness.conversionFunnelIntegration,
+                                    ],
+                                    ["CAC", weeklyBusiness.cacIntegration],
+                                    ["ROAS", weeklyBusiness.roasIntegration],
+                                ].map(([label, value]) => (
+                                    <div
+                                        key={label}
+                                        className="rounded-md border bg-slate-50 px-3 py-2"
+                                    >
+                                        <p className="text-xs font-medium text-muted-foreground">
+                                            {label}
+                                        </p>
+                                        <p className="mt-1 text-xl font-semibold text-slate-950">
+                                            {metricLabel(value)}
+                                        </p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="space-y-4">
+                            {[
+                                ["Top brands", weeklyBusiness.topBrands],
+                                ["Bottom brands", weeklyBusiness.bottomBrands],
+                            ].map(([title, rows]) => (
+                                <div
+                                    key={title as string}
+                                    className="rounded-md border bg-white p-4 shadow-sm"
+                                >
+                                    <h3 className="text-sm font-semibold text-slate-950">
+                                        {title as string}
+                                    </h3>
+                                    <div className="mt-3 space-y-2">
+                                        {(
+                                            rows as Array<{
+                                                name: string;
+                                                gmv: number;
+                                            }>
+                                        ).length === 0 ? (
+                                            <p className="text-sm text-muted-foreground">
+                                                No weekly sales yet.
+                                            </p>
+                                        ) : (
+                                            (
+                                                rows as Array<{
+                                                    name: string;
+                                                    gmv: number;
+                                                }>
+                                            ).map((row) => (
+                                                <div
+                                                    key={`${title}-${row.name}`}
+                                                    className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                >
+                                                    <span className="truncate text-slate-700">
+                                                        {row.name}
+                                                    </span>
+                                                    <span className="font-semibold text-slate-950">
+                                                        {metricLabel(row.gmv)}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </section>
+                )}
+
+                <section
+                    className={
+                        activeDashboard === "brand" ||
+                        activeDashboard === "marketing" ||
+                        activeDashboard === "monthly"
+                            ? "grid gap-4 xl:grid-cols-3"
+                            : "hidden"
+                    }
+                >
                     <div
                         id="brand-health"
-                        className="scroll-mt-24 rounded-md border bg-white p-4 shadow-sm"
+                        className={`scroll-mt-24 rounded-md border bg-white p-4 shadow-sm ${
+                            activeDashboard === "brand" ? "" : "hidden"
+                        }`}
                     >
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
@@ -826,7 +1223,9 @@ export default async function MonitoringSlaPage({
 
                     <div
                         id="marketing-performance"
-                        className="scroll-mt-24 rounded-md border bg-white p-4 shadow-sm"
+                        className={`scroll-mt-24 rounded-md border bg-white p-4 shadow-sm ${
+                            activeDashboard === "marketing" ? "" : "hidden"
+                        }`}
                     >
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
@@ -891,7 +1290,9 @@ export default async function MonitoringSlaPage({
 
                     <div
                         id="monthly-strategic"
-                        className="scroll-mt-24 rounded-md border bg-white p-4 shadow-sm"
+                        className={`scroll-mt-24 rounded-md border bg-white p-4 shadow-sm xl:col-span-3 ${
+                            activeDashboard === "monthly" ? "" : "hidden"
+                        }`}
                     >
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
@@ -904,7 +1305,7 @@ export default async function MonitoringSlaPage({
                             </div>
                             <ClipboardCheck className="size-5 text-muted-foreground" />
                         </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
                             {[
                                 [
                                     "GMV (Gross Merchandise Value) MTD (Month To Date)",
@@ -939,8 +1340,46 @@ export default async function MonitoringSlaPage({
                                     monthlyStrategic.openCriticalAlerts,
                                 ],
                                 [
-                                    "Cohort retention",
-                                    monthlyStrategic.cohortRetentionIntegration,
+                                    "Brand churn rate",
+                                    `${(
+                                        monthlyStrategic.brandChurnRate * 100
+                                    ).toFixed(1)}%`,
+                                ],
+                                [
+                                    "Contribution/order",
+                                    Math.round(
+                                        monthlyStrategic.contributionMarginPerOrder
+                                    ),
+                                ],
+                                [
+                                    "Contribution margin",
+                                    monthlyStrategic.contributionMargin,
+                                ],
+                                [
+                                    "Headcount efficiency",
+                                    monthlyStrategic.headcountEfficiency.value,
+                                ],
+                                ["Runway", monthlyStrategic.runway],
+                                [
+                                    "Compliance evidence",
+                                    monthlyStrategic.complianceStatusSnapshot
+                                        .evidenceEvents,
+                                ],
+                                [
+                                    "Sustainability cert coverage",
+                                    `${(
+                                        monthlyStrategic
+                                            .sustainabilityClaimsAudit
+                                            .certCoverage * 100
+                                    ).toFixed(1)}%`,
+                                ],
+                                [
+                                    "Product approval coverage",
+                                    `${(
+                                        monthlyStrategic
+                                            .sustainabilityClaimsAudit
+                                            .approvalCoverage * 100
+                                    ).toFixed(1)}%`,
                                 ],
                             ].map(([label, value]) => (
                                 <div
@@ -956,346 +1395,486 @@ export default async function MonitoringSlaPage({
                                 </div>
                             ))}
                         </div>
+                        <div className="mt-4 grid gap-4 xl:grid-cols-3">
+                            <div className="rounded-md border bg-slate-50 p-3">
+                                <h3 className="text-sm font-semibold text-slate-950">
+                                    Cohort Retention
+                                </h3>
+                                <div className="mt-3 space-y-2">
+                                    {monthlyStrategic.cohortRetention.length ===
+                                    0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            No cohort data yet.
+                                        </p>
+                                    ) : (
+                                        monthlyStrategic.cohortRetention.map(
+                                            (row) => (
+                                                <div
+                                                    key={row.cohort}
+                                                    className="rounded-md bg-white px-3 py-2 text-sm"
+                                                >
+                                                    <p className="font-semibold text-slate-900">
+                                                        {row.cohort} · M0{" "}
+                                                        {row.m0Users}
+                                                    </p>
+                                                    <p className="mt-1 text-muted-foreground">
+                                                        M1{" "}
+                                                        {(
+                                                            row.m1Rate * 100
+                                                        ).toFixed(1)}
+                                                        % · M2{" "}
+                                                        {(
+                                                            row.m2Rate * 100
+                                                        ).toFixed(1)}
+                                                        % · M3{" "}
+                                                        {(
+                                                            row.m3Rate * 100
+                                                        ).toFixed(1)}
+                                                        %
+                                                    </p>
+                                                </div>
+                                            )
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                            <div className="rounded-md border bg-slate-50 p-3">
+                                <h3 className="text-sm font-semibold text-slate-950">
+                                    Gross Margin By Category
+                                </h3>
+                                <div className="mt-3 space-y-2">
+                                    {monthlyStrategic.grossMarginByCategory
+                                        .length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            No category sales this month.
+                                        </p>
+                                    ) : (
+                                        monthlyStrategic.grossMarginByCategory.map(
+                                            (row) => (
+                                                <div
+                                                    key={row.category}
+                                                    className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm"
+                                                >
+                                                    <span className="truncate text-slate-700">
+                                                        {row.category}
+                                                    </span>
+                                                    <span className="font-semibold text-slate-950">
+                                                        {(
+                                                            row.grossMargin *
+                                                            100
+                                                        ).toFixed(1)}
+                                                        %
+                                                    </span>
+                                                </div>
+                                            )
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                            <div className="rounded-md border bg-slate-50 p-3">
+                                <h3 className="text-sm font-semibold text-slate-950">
+                                    Category Mix Evolution
+                                </h3>
+                                <div className="mt-3 space-y-2">
+                                    {monthlyStrategic.categoryMixEvolution
+                                        .length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            No category mix data yet.
+                                        </p>
+                                    ) : (
+                                        monthlyStrategic.categoryMixEvolution.map(
+                                            (row) => (
+                                                <div
+                                                    key={row.category}
+                                                    className="rounded-md bg-white px-3 py-2 text-sm"
+                                                >
+                                                    <p className="font-semibold text-slate-900">
+                                                        {row.category}
+                                                    </p>
+                                                    <p className="mt-1 text-muted-foreground">
+                                                        Current{" "}
+                                                        {metricLabel(
+                                                            row.currentRevenue
+                                                        )}{" "}
+                                                        · Previous{" "}
+                                                        {metricLabel(
+                                                            row.previousRevenue
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                        <p className="mt-3 text-xs text-muted-foreground">
+                            {monthlyStrategic.headcountEfficiency.note}
+                        </p>
                     </div>
                 </section>
 
-                <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
-                    <div
-                        id="active-alerts"
-                        className="scroll-mt-24 rounded-md border bg-white shadow-sm"
-                    >
-                        <div className="flex items-center justify-between border-b px-4 py-3">
-                            <div>
-                                <h2 className="text-base font-semibold text-slate-950">
-                                    Active Alerts
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    {alertsPage.total}{" "}
-                                    {activeAlertSeverityLabel}unresolved alert
-                                    {alertsPage.total === 1 ? "" : "s"} · page{" "}
-                                    {currentAlertPage} of {pageCount}
-                                </p>
-                            </div>
-                            <Bell className="size-5 text-muted-foreground" />
-                        </div>
-                        <div className="flex gap-2 overflow-x-auto border-b px-4 py-3">
-                            {alertSeverityTabs.map((tab) => {
-                                const isActive =
-                                    (tab.value === "all" &&
-                                        !activeAlertSeverity) ||
-                                    tab.value === activeAlertSeverity;
-
-                                return (
-                                    <Link
-                                        key={tab.value}
-                                        href={makeAlertSeverityHref(tab.value)}
-                                        className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3 text-sm font-semibold transition ${
-                                            isActive
-                                                ? tab.activeClassName
-                                                : tab.className
-                                        }`}
-                                    >
-                                        <span>{tab.label}</span>
-                                        <span
-                                            className={`rounded-full px-2 py-0.5 text-xs ${
-                                                isActive
-                                                    ? "bg-white/20 text-current"
-                                                    : "bg-white/80 text-current"
-                                            }`}
-                                        >
-                                            {alertSeverityCounts[tab.value]}
-                                        </span>
-                                    </Link>
-                                );
-                            })}
-                        </div>
-                        <div className="divide-y">
-                            {alerts.length === 0 ? (
-                                <div className="flex min-h-44 flex-col items-center justify-center gap-3 p-6 text-center">
-                                    <div className="flex size-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
-                                        <CheckCircle2 className="size-5" />
-                                    </div>
+                {activeDashboard === "alerts" && (
+                    <>
+                        <section className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(360px,0.65fr)]">
+                            <div
+                                id="active-alerts"
+                                className="scroll-mt-24 rounded-md border bg-white shadow-sm"
+                            >
+                                <div className="flex items-center justify-between border-b px-4 py-3">
                                     <div>
-                                        <p className="font-semibold text-slate-900">
-                                            No active alerts
-                                        </p>
-                                        <p className="mt-1 text-sm text-muted-foreground">
-                                            SLA (Service Level Agreement) checks
-                                            can still create alerts when queues
-                                            breach thresholds.
+                                        <h2 className="text-base font-semibold text-slate-950">
+                                            Active Alerts
+                                        </h2>
+                                        <p className="text-sm text-muted-foreground">
+                                            {alertsPage.total}{" "}
+                                            {activeAlertSeverityLabel}unresolved
+                                            alert
+                                            {alertsPage.total === 1
+                                                ? ""
+                                                : "s"}{" "}
+                                            · page {currentAlertPage} of{" "}
+                                            {pageCount}
                                         </p>
                                     </div>
+                                    <Bell className="size-5 text-muted-foreground" />
                                 </div>
-                            ) : (
-                                alerts.map((alert) => (
-                                    <div
-                                        key={alert.id}
-                                        className="grid gap-4 p-4 lg:grid-cols-[1fr_auto]"
-                                    >
-                                        <div className="min-w-0">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase text-slate-700">
-                                                    {alert.severity}
-                                                </span>
-                                                <span className="rounded-full border px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                                                    {alert.status}
-                                                </span>
-                                                <span className="truncate text-xs text-muted-foreground">
-                                                    {alert.entityType}:{" "}
-                                                    {alert.entityId}
-                                                </span>
-                                            </div>
-                                            <h3 className="mt-2 font-semibold text-slate-950">
-                                                {alert.title}
-                                            </h3>
-                                            <p className="mt-1 text-sm text-muted-foreground">
-                                                {alert.message}
-                                            </p>
-                                        </div>
-                                        <div className="flex items-start gap-2">
-                                            <form action={acknowledgeAlert}>
-                                                <input
-                                                    type="hidden"
-                                                    name="alertId"
-                                                    value={alert.id}
-                                                />
-                                                {activeAlertSeverity ? (
-                                                    <input
-                                                        type="hidden"
-                                                        name="activeAlertSeverity"
-                                                        value={
-                                                            activeAlertSeverity
-                                                        }
-                                                    />
-                                                ) : null}
-                                                <button className="h-9 rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">
-                                                    Acknowledge
-                                                </button>
-                                            </form>
-                                            <form action={resolveAlert}>
-                                                <input
-                                                    type="hidden"
-                                                    name="alertId"
-                                                    value={alert.id}
-                                                />
-                                                {activeAlertSeverity ? (
-                                                    <input
-                                                        type="hidden"
-                                                        name="activeAlertSeverity"
-                                                        value={
-                                                            activeAlertSeverity
-                                                        }
-                                                    />
-                                                ) : null}
-                                                <button className="h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800">
-                                                    Resolve
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                ))
-                            )}
-                        </div>
-                        {alertsPage.total > alertPageSize && (
-                            <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                                <p className="text-sm text-muted-foreground">
-                                    Showing{" "}
-                                    {Math.min(
-                                        alertsPage.total,
-                                        (currentAlertPage - 1) * alertPageSize +
-                                            1
-                                    )}
-                                    {"-"}
-                                    {Math.min(
-                                        alertsPage.total,
-                                        currentAlertPage * alertPageSize
-                                    )}{" "}
-                                    of {alertsPage.total}
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    {currentAlertPage > 1 ? (
-                                        <Link
-                                            href={makeAlertPageHref(
-                                                currentAlertPage - 1
-                                            )}
-                                            className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                                        >
-                                            Previous
-                                        </Link>
-                                    ) : (
-                                        <span className="inline-flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm font-semibold text-slate-400">
-                                            Previous
-                                        </span>
-                                    )}
-                                    {currentAlertPage < pageCount ? (
-                                        <Link
-                                            href={makeAlertPageHref(
-                                                currentAlertPage + 1
-                                            )}
-                                            className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                                        >
-                                            Next
-                                        </Link>
-                                    ) : (
-                                        <span className="inline-flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm font-semibold text-slate-400">
-                                            Next
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                        )}
-                    </div>
+                                <div className="flex gap-2 overflow-x-auto border-b px-4 py-3">
+                                    {alertSeverityTabs.map((tab) => {
+                                        const isActive =
+                                            (tab.value === "all" &&
+                                                !activeAlertSeverity) ||
+                                            tab.value === activeAlertSeverity;
 
-                    <aside className="grid gap-4 lg:grid-cols-2 xl:grid-cols-1">
-                        <div className="rounded-md border bg-white p-4 shadow-sm">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <h2 className="text-base font-semibold text-slate-950">
-                                        Alert Mix
-                                    </h2>
-                                    <p className="text-sm text-muted-foreground">
-                                        Status by severity
-                                    </p>
+                                        return (
+                                            <Link
+                                                key={tab.value}
+                                                href={makeAlertSeverityHref(
+                                                    tab.value
+                                                )}
+                                                className={`inline-flex h-9 shrink-0 items-center gap-2 rounded-full border px-3 text-sm font-semibold transition ${
+                                                    isActive
+                                                        ? tab.activeClassName
+                                                        : tab.className
+                                                }`}
+                                            >
+                                                <span>{tab.label}</span>
+                                                <span
+                                                    className={`rounded-full px-2 py-0.5 text-xs ${
+                                                        isActive
+                                                            ? "bg-white/20 text-current"
+                                                            : "bg-white/80 text-current"
+                                                    }`}
+                                                >
+                                                    {
+                                                        alertSeverityCounts[
+                                                            tab.value
+                                                        ]
+                                                    }
+                                                </span>
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
-                                <History className="size-5 text-muted-foreground" />
-                            </div>
-                            <div className="mt-4 space-y-2">
-                                {alertSummary.length === 0 ? (
-                                    <div className="rounded-md bg-slate-50 px-3 py-6 text-center text-sm text-muted-foreground">
-                                        No alert history
-                                    </div>
-                                ) : (
-                                    alertSummary.map((row) => (
-                                        <div
-                                            key={`${row.status}-${row.severity}`}
-                                            className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
-                                        >
-                                            <span className="capitalize text-slate-700">
-                                                {row.status} / {row.severity}
-                                            </span>
-                                            <span className="font-semibold text-slate-950">
-                                                {Number(row.count)}
-                                            </span>
+                                <div className="divide-y">
+                                    {alerts.length === 0 ? (
+                                        <div className="flex min-h-44 flex-col items-center justify-center gap-3 p-6 text-center">
+                                            <div className="flex size-11 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                                                <CheckCircle2 className="size-5" />
+                                            </div>
+                                            <div>
+                                                <p className="font-semibold text-slate-900">
+                                                    No active alerts
+                                                </p>
+                                                <p className="mt-1 text-sm text-muted-foreground">
+                                                    SLA (Service Level
+                                                    Agreement) checks can still
+                                                    create alerts when queues
+                                                    breach thresholds.
+                                                </p>
+                                            </div>
                                         </div>
-                                    ))
+                                    ) : (
+                                        alerts.map((alert) => (
+                                            <div
+                                                key={alert.id}
+                                                className="grid gap-4 p-4 lg:grid-cols-[1fr_auto]"
+                                            >
+                                                <div className="min-w-0">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold uppercase text-slate-700">
+                                                            {alert.severity}
+                                                        </span>
+                                                        <span className="rounded-full border px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                                                            {alert.status}
+                                                        </span>
+                                                        <span className="truncate text-xs text-muted-foreground">
+                                                            {alert.entityType}:{" "}
+                                                            {alert.entityId}
+                                                        </span>
+                                                    </div>
+                                                    <h3 className="mt-2 font-semibold text-slate-950">
+                                                        {alert.title}
+                                                    </h3>
+                                                    <p className="mt-1 text-sm text-muted-foreground">
+                                                        {alert.message}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-start gap-2">
+                                                    <form
+                                                        action={
+                                                            acknowledgeAlert
+                                                        }
+                                                    >
+                                                        <input
+                                                            type="hidden"
+                                                            name="alertId"
+                                                            value={alert.id}
+                                                        />
+                                                        {activeAlertSeverity ? (
+                                                            <input
+                                                                type="hidden"
+                                                                name="activeAlertSeverity"
+                                                                value={
+                                                                    activeAlertSeverity
+                                                                }
+                                                            />
+                                                        ) : null}
+                                                        <button className="h-9 rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50">
+                                                            Acknowledge
+                                                        </button>
+                                                    </form>
+                                                    <form action={resolveAlert}>
+                                                        <input
+                                                            type="hidden"
+                                                            name="alertId"
+                                                            value={alert.id}
+                                                        />
+                                                        {activeAlertSeverity ? (
+                                                            <input
+                                                                type="hidden"
+                                                                name="activeAlertSeverity"
+                                                                value={
+                                                                    activeAlertSeverity
+                                                                }
+                                                            />
+                                                        ) : null}
+                                                        <button className="h-9 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800">
+                                                            Resolve
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                {alertsPage.total > alertPageSize && (
+                                    <div className="flex flex-col gap-3 border-t px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                        <p className="text-sm text-muted-foreground">
+                                            Showing{" "}
+                                            {Math.min(
+                                                alertsPage.total,
+                                                (currentAlertPage - 1) *
+                                                    alertPageSize +
+                                                    1
+                                            )}
+                                            {"-"}
+                                            {Math.min(
+                                                alertsPage.total,
+                                                currentAlertPage * alertPageSize
+                                            )}{" "}
+                                            of {alertsPage.total}
+                                        </p>
+                                        <div className="flex items-center gap-2">
+                                            {currentAlertPage > 1 ? (
+                                                <Link
+                                                    href={makeAlertPageHref(
+                                                        currentAlertPage - 1
+                                                    )}
+                                                    className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                                                >
+                                                    Previous
+                                                </Link>
+                                            ) : (
+                                                <span className="inline-flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm font-semibold text-slate-400">
+                                                    Previous
+                                                </span>
+                                            )}
+                                            {currentAlertPage < pageCount ? (
+                                                <Link
+                                                    href={makeAlertPageHref(
+                                                        currentAlertPage + 1
+                                                    )}
+                                                    className="inline-flex h-9 items-center rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                                                >
+                                                    Next
+                                                </Link>
+                                            ) : (
+                                                <span className="inline-flex h-9 items-center rounded-md border bg-slate-50 px-3 text-sm font-semibold text-slate-400">
+                                                    Next
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
                             </div>
-                        </div>
 
-                        <form
-                            action={generateComplianceExport}
-                            className="rounded-md border bg-white p-4 shadow-sm"
-                        >
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <h2 className="text-base font-semibold text-slate-950">
-                                        Compliance Export
-                                    </h2>
-                                    <p className="text-sm text-muted-foreground">
-                                        Generate monthly audit evidence
-                                    </p>
+                            <aside className="grid gap-4 lg:grid-cols-2 xl:grid-cols-1">
+                                <div className="rounded-md border bg-white p-4 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <h2 className="text-base font-semibold text-slate-950">
+                                                Alert Mix
+                                            </h2>
+                                            <p className="text-sm text-muted-foreground">
+                                                Status by severity
+                                            </p>
+                                        </div>
+                                        <History className="size-5 text-muted-foreground" />
+                                    </div>
+                                    <div className="mt-4 space-y-2">
+                                        {alertSummary.length === 0 ? (
+                                            <div className="rounded-md bg-slate-50 px-3 py-6 text-center text-sm text-muted-foreground">
+                                                No alert history
+                                            </div>
+                                        ) : (
+                                            alertSummary.map((row) => (
+                                                <div
+                                                    key={`${row.status}-${row.severity}`}
+                                                    className="flex items-center justify-between rounded-md border px-3 py-2 text-sm"
+                                                >
+                                                    <span className="capitalize text-slate-700">
+                                                        {row.status} /{" "}
+                                                        {row.severity}
+                                                    </span>
+                                                    <span className="font-semibold text-slate-950">
+                                                        {Number(row.count)}
+                                                    </span>
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
                                 </div>
-                                <Download className="size-5 text-muted-foreground" />
-                            </div>
-                            <div className="mt-4 grid gap-3">
-                                <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-                                    Month
-                                    <input
-                                        className="h-11 rounded-md border bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-slate-400"
-                                        name="exportMonth"
-                                        type="month"
-                                        defaultValue={currentMonth}
-                                    />
-                                </label>
-                                <label className="grid gap-1.5 text-sm font-medium text-slate-700">
-                                    Export Type
-                                    <select
-                                        className="h-11 rounded-md border bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-slate-400"
-                                        name="exportType"
+
+                                <form
+                                    action={generateComplianceExport}
+                                    className="rounded-md border bg-white p-4 shadow-sm"
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <h2 className="text-base font-semibold text-slate-950">
+                                                Compliance Export
+                                            </h2>
+                                            <p className="text-sm text-muted-foreground">
+                                                Generate monthly audit evidence
+                                            </p>
+                                        </div>
+                                        <Download className="size-5 text-muted-foreground" />
+                                    </div>
+                                    <div className="mt-4 grid gap-3">
+                                        <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                                            Month
+                                            <input
+                                                className="h-11 rounded-md border bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-slate-400"
+                                                name="exportMonth"
+                                                type="month"
+                                                defaultValue={currentMonth}
+                                            />
+                                        </label>
+                                        <label className="grid gap-1.5 text-sm font-medium text-slate-700">
+                                            Export Type
+                                            <select
+                                                className="h-11 rounded-md border bg-white px-3 text-sm font-normal text-slate-900 outline-none transition focus:border-slate-400"
+                                                name="exportType"
+                                            >
+                                                <option value="refunds">
+                                                    Refunds
+                                                </option>
+                                                <option value="brand-actions">
+                                                    Brand Actions
+                                                </option>
+                                                <option value="access-changes">
+                                                    Access Changes
+                                                </option>
+                                                <option value="manual-overrides">
+                                                    Manual Overrides
+                                                </option>
+                                                <option value="sustainability-claims">
+                                                    Sustainability Claims
+                                                </option>
+                                                <option value="data-deletion-requests">
+                                                    Data Deletion Requests
+                                                </option>
+                                                <option value="customer-escalations">
+                                                    Customer Escalations
+                                                </option>
+                                                <option value="alerts">
+                                                    Alerts and Overrides
+                                                </option>
+                                            </select>
+                                        </label>
+                                        <button className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
+                                            <Download className="size-4" />
+                                            Generate Export
+                                        </button>
+                                    </div>
+                                </form>
+
+                                <div className="rounded-md border bg-white p-4 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <h2 className="text-base font-semibold text-slate-950">
+                                                Founder Report
+                                            </h2>
+                                            <p className="text-sm text-muted-foreground">
+                                                Download generated monitoring
+                                                records
+                                            </p>
+                                        </div>
+                                        <Download className="size-5 text-muted-foreground" />
+                                    </div>
+                                    <div className="mt-4 grid gap-2">
+                                        <a
+                                            href={founderReportXlsxHref}
+                                            className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
+                                        >
+                                            <Download className="size-4" />
+                                            Download Excel Report
+                                        </a>
+                                        <a
+                                            href={founderReportCsvHref}
+                                            className="inline-flex h-11 items-center justify-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
+                                        >
+                                            <Download className="size-4" />
+                                            Download CSV Report
+                                        </a>
+                                    </div>
+                                </div>
+                            </aside>
+                        </section>
+
+                        <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
+                            {evidenceCards.map((card) => {
+                                const Icon = card.icon;
+
+                                return (
+                                    <div
+                                        key={card.title}
+                                        className="min-h-32 rounded-md border bg-white p-4 shadow-sm"
                                     >
-                                        <option value="refunds">Refunds</option>
-                                        <option value="brand-actions">
-                                            Brand Actions
-                                        </option>
-                                        <option value="access-changes">
-                                            Access Changes
-                                        </option>
-                                        <option value="manual-overrides">
-                                            Manual Overrides
-                                        </option>
-                                        <option value="sustainability-claims">
-                                            Sustainability Claims
-                                        </option>
-                                        <option value="data-deletion-requests">
-                                            Data Deletion Requests
-                                        </option>
-                                        <option value="customer-escalations">
-                                            Customer Escalations
-                                        </option>
-                                        <option value="alerts">
-                                            Alerts and Overrides
-                                        </option>
-                                    </select>
-                                </label>
-                                <button className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800">
-                                    <Download className="size-4" />
-                                    Generate Export
-                                </button>
-                            </div>
-                        </form>
-
-                        <div className="rounded-md border bg-white p-4 shadow-sm">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <h2 className="text-base font-semibold text-slate-950">
-                                        Founder Report
-                                    </h2>
-                                    <p className="text-sm text-muted-foreground">
-                                        Download generated monitoring records
-                                    </p>
-                                </div>
-                                <Download className="size-5 text-muted-foreground" />
-                            </div>
-                            <div className="mt-4 grid gap-2">
-                                <a
-                                    href={founderReportXlsxHref}
-                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800"
-                                >
-                                    <Download className="size-4" />
-                                    Download Excel Report
-                                </a>
-                                <a
-                                    href={founderReportCsvHref}
-                                    className="inline-flex h-11 items-center justify-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50"
-                                >
-                                    <Download className="size-4" />
-                                    Download CSV Report
-                                </a>
-                            </div>
-                        </div>
-                    </aside>
-                </section>
-
-                <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-                    {evidenceCards.map((card) => {
-                        const Icon = card.icon;
-
-                        return (
-                            <div
-                                key={card.title}
-                                className="min-h-32 rounded-md border bg-white p-4 shadow-sm"
-                            >
-                                <div className="mb-4 flex items-center justify-between gap-3">
-                                    <h2 className="text-sm font-semibold text-slate-950">
-                                        {card.title}
-                                    </h2>
-                                    <Icon className="size-4 text-muted-foreground" />
-                                </div>
-                                <EvidenceList rows={card.rows} />
-                            </div>
-                        );
-                    })}
-                </section>
+                                        <div className="mb-4 flex items-center justify-between gap-3">
+                                            <h2 className="text-sm font-semibold text-slate-950">
+                                                {card.title}
+                                            </h2>
+                                            <Icon className="size-4 text-muted-foreground" />
+                                        </div>
+                                        <EvidenceList rows={card.rows} />
+                                    </div>
+                                );
+                            })}
+                        </section>
+                    </>
+                )}
             </div>
         </main>
     );
