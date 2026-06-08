@@ -25,6 +25,7 @@ import {
     brandRequests,
     brands,
     carrierClaims,
+    categories,
     codReconciliationItems,
     codReconciliationRuns,
     complianceExportFiles,
@@ -167,6 +168,10 @@ function addYears(date: Date, years: number) {
     const d = new Date(date);
     d.setFullYear(d.getFullYear() + years);
     return d;
+}
+
+function toSqlDateTime(value: Date) {
+    return value.toISOString().replace("T", " ").slice(0, 19);
 }
 
 function csvEscape(value: unknown) {
@@ -531,7 +536,7 @@ class MonitoringSlaQuery {
         const eighteenHourCutoff = new Date(now.getTime() - 18 * HOUR);
         const dayCutoff = new Date(now.getTime() - DAY);
         const twoDayCutoff = new Date(now.getTime() - 2 * DAY);
-        const threeDayCutoff = new Date(now.getTime() - 3 * DAY);
+        const fourDayCutoff = new Date(now.getTime() - 4 * DAY);
         const sevenDayCutoff = new Date(now.getTime() - 7 * DAY);
         const fourteenDayCutoff = new Date(now.getTime() - 14 * DAY);
         const fortyFiveDayCutoff = new Date(now.getTime() - 45 * DAY);
@@ -685,26 +690,29 @@ class MonitoringSlaQuery {
             .limit(100);
 
         const unackOrders24 = await db
-            .select({ id: orders.id, createdAt: orders.createdAt })
+            .select({ id: orders.id, updatedAt: orders.updatedAt })
             .from(orders)
+            .leftJoin(orderShipments, eq(orderShipments.orderId, orders.id))
             .where(
                 and(
                     inArray(orders.status, ["pending", "processing"]),
-                    isNull(orders.brandAcknowledgedAt),
-                    lt(orders.createdAt, dayCutoff)
+                    lt(orders.updatedAt, dayCutoff),
+                    sql`coalesce(${orderShipments.status}, '') not like 'pickup%'`
                 )
             )
             .limit(100);
 
         const brandAckAtRisk18 = await db
-            .select({ id: orders.id, createdAt: orders.createdAt })
+            .select({ id: orders.id, updatedAt: orders.updatedAt })
             .from(orders)
+            .leftJoin(orderShipments, eq(orderShipments.orderId, orders.id))
             .where(
                 and(
                     inArray(orders.status, ["pending", "processing"]),
                     isNull(orders.brandAcknowledgedAt),
-                    lt(orders.createdAt, eighteenHourCutoff),
-                    gte(orders.createdAt, dayCutoff)
+                    lt(orders.updatedAt, eighteenHourCutoff),
+                    gte(orders.updatedAt, dayCutoff),
+                    sql`coalesce(${orderShipments.status}, '') not like 'pickup%'`
                 )
             )
             .limit(100);
@@ -717,41 +725,65 @@ class MonitoringSlaQuery {
                 status: orders.status,
             })
             .from(orders)
+            .leftJoin(orderShipments, eq(orderShipments.orderId, orders.id))
             .where(
                 and(
                     inArray(orders.status, ["pending", "processing"]),
                     isNull(orders.brandAcknowledgedAt),
-                    lt(orders.createdAt, twoDayCutoff)
+                    lt(orders.updatedAt, twoDayCutoff),
+                    sql`coalesce(${orderShipments.status}, '') not like 'pickup%'`
                 )
             )
             .limit(100);
 
         const stuckOrders = await db
-            .select({ id: orders.id, updatedAt: orders.updatedAt })
+            .select({
+                id: orders.id,
+                status: orders.status,
+                createdAt: orders.createdAt,
+                shipmentStatus: orderShipments.status,
+            })
             .from(orders)
+            .leftJoin(orderShipments, eq(orderShipments.orderId, orders.id))
             .where(
                 and(
-                    inArray(orders.status, ["pending", "processing"]),
-                    lt(orders.updatedAt, twoDayCutoff)
+                    ne(orders.status, "cancelled"),
+                    ne(orders.status, "delivered"),
+                    isNotNull(orderShipments.pickupScheduledDate),
+                    inArray(orderShipments.status, [
+                        "pickup_scheduled",
+                        "pickup_generated",
+                        "pickup_queued",
+                        "pickup_exception",
+                        "pickup_rescheduled",
+                        "processing",
+                        "pending",
+                    ]),
+                    lt(orderShipments.pickupScheduledDate, twoDayCutoff)
                 )
             )
             .limit(100);
 
-        const stuckOrders72 = await db
+        const stuckDelivery96 = await db
             .select({
                 id: orders.id,
                 status: orders.status,
                 updatedAt: orders.updatedAt,
+                shipmentStatus: orderShipments.status,
             })
             .from(orders)
+            .innerJoin(orderShipments, eq(orderShipments.orderId, orders.id))
             .where(
                 and(
-                    inArray(orders.status, [
-                        "pending",
-                        "processing",
-                        "shipped",
+                    ne(orders.status, "cancelled"),
+                    ne(orders.status, "delivered"),
+                    isNotNull(orderShipments.shipmentDate),
+                    inArray(orderShipments.status, [
+                        "pickup_completed",
+                        "in_transit",
+                        "out_for_delivery",
                     ]),
-                    lt(orders.updatedAt, threeDayCutoff)
+                    lt(orderShipments.shipmentDate, fourDayCutoff)
                 )
             )
             .limit(100);
@@ -1176,7 +1208,7 @@ class MonitoringSlaQuery {
                 ownerId: actorId,
                 ownerRole: "order_manager",
                 channels: ["admin", "email"],
-                dueAt: new Date(order.createdAt.getTime() + DAY),
+                dueAt: new Date(order.updatedAt.getTime() + DAY),
                 dedupeKey: `order:brand-ack-risk:${order.id}`,
                 metadata: { source: "sla-check", chapter: "order-ops" },
             });
@@ -1188,19 +1220,22 @@ class MonitoringSlaQuery {
             await this.createAlert({
                 type: "order_unacknowledged_24h",
                 severity:
-                    now.getTime() - order.createdAt.getTime() > 2 * DAY
+                    now.getTime() - order.updatedAt.getTime() > 2 * DAY
                         ? "critical"
                         : "warning",
                 entityType: "order",
                 entityId: order.id,
-                title: "Order not acknowledged by brand",
-                message: `Order ${order.id} has not been acknowledged within 24 hours.`,
+                title: "Order status unmoved for 24 hours",
+                message: `Order ${order.id} has not moved in Renivet status for 24 hours and is not in pickup flow.`,
                 ownerId: actorId,
                 ownerRole: "order_manager",
                 channels: ["admin", "email", "whatsapp"],
-                dueAt: new Date(order.createdAt.getTime() + 28 * HOUR),
+                dueAt: new Date(order.updatedAt.getTime() + 28 * HOUR),
                 dedupeKey: `order:unack:${order.id}`,
-                metadata: { source: "sla-check" },
+                metadata: {
+                    source: "sla-check",
+                    rule: "own_status_unmoved_excluding_pickup",
+                },
             });
         }
 
@@ -1272,18 +1307,22 @@ class MonitoringSlaQuery {
                 severity: "critical",
                 entityType: "order",
                 entityId: order.id,
-                title: "Order stuck with no movement",
-                message: `Order ${order.id} has no status movement for more than 48 hours.`,
+                title: "Order not picked up within 48 hours",
+                message: `Order ${order.id} has not reached pickup completed / in-transit state within 48 hours.`,
                 ownerId: actorId,
                 ownerRole: "order_manager",
                 channels: ["admin", "email", "whatsapp"],
-                dueAt: new Date(order.updatedAt.getTime() + 52 * HOUR),
+                dueAt: new Date(now.getTime() + 4 * HOUR),
                 dedupeKey: `order:stuck:${order.id}`,
-                metadata: { source: "sla-check" },
+                metadata: {
+                    source: "sla-check",
+                    rule: "pickup_not_completed_48h",
+                    shipmentStatus: order.shipmentStatus,
+                },
             });
         }
 
-        for (const order of stuckOrders72) {
+        for (const order of stuckDelivery96) {
             checkedCount += 1;
             breachCount += 1;
             await this.createAlert({
@@ -1291,14 +1330,19 @@ class MonitoringSlaQuery {
                 severity: "critical",
                 entityType: "order",
                 entityId: order.id,
-                title: "Customer choice message due for stuck order",
-                message: `Order ${order.id} has been stuck in ${order.status} for more than 72 hours. Send the customer a wait/refund choice message.`,
+                title: "Order not delivered within 96 hours",
+                message: `Order ${order.id} has been picked up but not delivered within 96 hours. Check carrier status and message the customer if needed.`,
                 ownerId: actorId,
                 ownerRole: "order_manager",
                 channels: ["admin", "email", "whatsapp"],
                 dueAt: new Date(now.getTime() + 4 * HOUR),
-                dedupeKey: `order:stuck-72h:${order.id}`,
-                metadata: { source: "sla-check", chapter: "order-ops" },
+                dedupeKey: `order:delivery-96h:${order.id}`,
+                metadata: {
+                    source: "sla-check",
+                    chapter: "order-ops",
+                    rule: "delivery_not_completed_96h",
+                    shipmentStatus: order.shipmentStatus,
+                },
             });
         }
 
@@ -1687,7 +1731,7 @@ class MonitoringSlaQuery {
                     unackOrders24: unackOrders24.length,
                     brandSilenceAutoCancels: brandSilenceAutoCancels.length,
                     stuckOrders: stuckOrders.length,
-                    stuckOrders72: stuckOrders72.length,
+                    stuckDelivery96: stuckDelivery96.length,
                     codFraudReviewBreaches: codFraudReviewBreaches.length,
                     staleTrackingShipments: staleTrackingShipments.length,
                     rtoDispositionBreaches: rtoDispositionBreaches.length,
@@ -1742,6 +1786,7 @@ class MonitoringSlaQuery {
         const eighteenHourCutoff = new Date(Date.now() - 18 * HOUR);
         const dayCutoff = new Date(Date.now() - DAY);
         const twoDayCutoff = new Date(Date.now() - 2 * DAY);
+        const fourDayCutoff = new Date(Date.now() - 4 * DAY);
         const sevenDayCutoff = new Date(Date.now() - 7 * DAY);
         const fourteenDayCutoff = new Date(Date.now() - 14 * DAY);
 
@@ -1749,23 +1794,32 @@ class MonitoringSlaQuery {
             orders,
             gte(orders.createdAt, today)
         );
-        const ordersUnack24h = await db.$count(
-            orders,
-            and(
-                inArray(orders.status, ["pending", "processing"]),
-                isNull(orders.brandAcknowledgedAt),
-                lt(orders.createdAt, dayCutoff)
+        const ordersUnack24h = await db
+            .select({ count: sql<number>`count(distinct ${orders.id})` })
+            .from(orders)
+            .leftJoin(orderShipments, eq(orderShipments.orderId, orders.id))
+            .where(
+                and(
+                    inArray(orders.status, ["pending", "processing"]),
+                    lt(orders.updatedAt, dayCutoff),
+                    sql`coalesce(${orderShipments.status}, '') not like 'pickup%'`
+                )
             )
-        );
-        const brandAckAtRisk18h = await db.$count(
-            orders,
-            and(
-                inArray(orders.status, ["pending", "processing"]),
-                isNull(orders.brandAcknowledgedAt),
-                lt(orders.createdAt, eighteenHourCutoff),
-                gte(orders.createdAt, dayCutoff)
+            .then((res) => res[0]?.count ?? 0);
+        const brandAckAtRisk18h = await db
+            .select({ count: sql<number>`count(distinct ${orders.id})` })
+            .from(orders)
+            .leftJoin(orderShipments, eq(orderShipments.orderId, orders.id))
+            .where(
+                and(
+                    inArray(orders.status, ["pending", "processing"]),
+                    isNull(orders.brandAcknowledgedAt),
+                    lt(orders.updatedAt, eighteenHourCutoff),
+                    gte(orders.updatedAt, dayCutoff),
+                    sql`coalesce(${orderShipments.status}, '') not like 'pickup%'`
+                )
             )
-        );
+            .then((res) => res[0]?.count ?? 0);
         const codFraudReviewQueue = await db.$count(
             fraudReviews,
             and(
@@ -1780,13 +1834,47 @@ class MonitoringSlaQuery {
             orders,
             and(eq(orders.status, "shipped"), gte(orders.updatedAt, today))
         );
-        const stuckOrders48h = await db.$count(
-            orders,
-            and(
-                inArray(orders.status, ["pending", "processing"]),
-                lt(orders.updatedAt, twoDayCutoff)
+        const pickupStuck48h = await db
+            .select({ count: sql<number>`count(distinct ${orders.id})` })
+            .from(orders)
+            .leftJoin(orderShipments, eq(orderShipments.orderId, orders.id))
+            .where(
+                and(
+                    ne(orders.status, "cancelled"),
+                    ne(orders.status, "delivered"),
+                    isNotNull(orderShipments.pickupScheduledDate),
+                    inArray(orderShipments.status, [
+                        "pickup_scheduled",
+                        "pickup_generated",
+                        "pickup_queued",
+                        "pickup_exception",
+                        "pickup_rescheduled",
+                        "processing",
+                        "pending",
+                    ]),
+                    lt(orderShipments.pickupScheduledDate, twoDayCutoff)
+                )
             )
-        );
+            .then((res) => res[0]?.count ?? 0);
+        const deliveryStuck96h = await db
+            .select({ count: sql<number>`count(distinct ${orders.id})` })
+            .from(orders)
+            .innerJoin(orderShipments, eq(orderShipments.orderId, orders.id))
+            .where(
+                and(
+                    ne(orders.status, "cancelled"),
+                    ne(orders.status, "delivered"),
+                    isNotNull(orderShipments.shipmentDate),
+                    inArray(orderShipments.status, [
+                        "pickup_completed",
+                        "in_transit",
+                        "out_for_delivery",
+                    ]),
+                    lt(orderShipments.shipmentDate, fourDayCutoff)
+                )
+            )
+            .then((res) => res[0]?.count ?? 0);
+        const stuckOrders48h = pickupStuck48h + deliveryStuck96h;
         const rtoInTransit = await db.$count(
             orderShipments,
             eq(orderShipments.status, "rto_initiated")
@@ -2009,8 +2097,8 @@ class MonitoringSlaQuery {
                 ? "Clear support tickets aged over 24 hours."
                 : "Keep ticket first response SLA green.",
             health.metrics.ordersUnacknowledged24h
-                ? "Chase brands on unacknowledged orders."
-                : "No brand acknowledgement backlog.",
+                ? "Review orders whose Renivet status has not moved for 24 hours, excluding pickup flow."
+                : "No 24-hour unmoved order backlog.",
         ];
 
         const existing = await db.query.weeklyReportingPacks.findFirst({
@@ -2072,6 +2160,169 @@ class MonitoringSlaQuery {
             .values({ weekStart, weekEnd, ...values })
             .returning()
             .then((res) => res[0]);
+    }
+
+    async getWeeklyBusiness() {
+        const today = startOfDay();
+        const weekStart = new Date(today.getTime() - 6 * DAY);
+        const previousWeekStart = new Date(weekStart.getTime() - 7 * DAY);
+        const previousWeekEnd = weekStart;
+        const weekStartSql = toSqlDateTime(weekStart);
+
+        const [currentWeek, previousWeek] = await Promise.all([
+            db
+                .select({
+                    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                    orderCount: sql<number>`count(${orders.id})`,
+                    customerCount: sql<number>`count(distinct ${orders.userId})`,
+                    repeatCustomers: sql<number>`count(distinct case when first_orders.first_order_at < ${weekStartSql} then ${orders.userId} end)`,
+                    aov: sql<number>`case when count(${orders.id}) = 0 then 0 else coalesce(sum(${orders.totalAmount}), 0) / count(${orders.id}) end`,
+                })
+                .from(orders)
+                .leftJoin(
+                    sql`(
+                        select user_id, min(created_at) as first_order_at
+                        from ${orders}
+                        where status <> 'cancelled' and payment_status <> 'failed'
+                        group by user_id
+                    ) first_orders`,
+                    sql`first_orders.user_id = ${orders.userId}`
+                )
+                .where(
+                    and(
+                        gte(orders.createdAt, weekStart),
+                        ne(orders.status, "cancelled"),
+                        ne(orders.paymentStatus, "failed")
+                    )
+                )
+                .then((res) => res[0]),
+            db
+                .select({
+                    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                    orderCount: sql<number>`count(${orders.id})`,
+                    aov: sql<number>`case when count(${orders.id}) = 0 then 0 else coalesce(sum(${orders.totalAmount}), 0) / count(${orders.id}) end`,
+                })
+                .from(orders)
+                .where(
+                    and(
+                        gte(orders.createdAt, previousWeekStart),
+                        lt(orders.createdAt, previousWeekEnd),
+                        ne(orders.status, "cancelled"),
+                        ne(orders.paymentStatus, "failed")
+                    )
+                )
+                .then((res) => res[0]),
+        ]);
+
+        const [
+            activeBrands,
+            supportAdminOpen,
+            supportUserOpen,
+            refundStats,
+            slaBreaches,
+            topBrands,
+            bottomBrands,
+        ] = await Promise.all([
+            db.$count(brands, eq(brands.isActive, true)),
+            db.$count(
+                supportTickets,
+                inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES)
+            ),
+            db.$count(
+                userSupportTickets,
+                inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES)
+            ),
+            db
+                .select({
+                    count: sql<number>`count(${refunds.id})`,
+                    amount: sql<number>`coalesce(sum(${refunds.amount}), 0)`,
+                })
+                .from(refunds)
+                .where(gte(refunds.createdAt, weekStart))
+                .then((res) => res[0]),
+            db.$count(
+                monitoringAlerts,
+                and(
+                    gte(monitoringAlerts.createdAt, weekStart),
+                    eq(monitoringAlerts.severity, "critical")
+                )
+            ),
+            db.execute(sql`
+                select b.name as brand_name, coalesce(sum(o.total_amount), 0)::int as gmv
+                from ${brands} b
+                inner join ${products} p on p.brand_id = b.id
+                inner join ${orderItems} oi on oi.product_id = p.id
+                inner join ${orders} o on o.id = oi.order_id
+                where o.created_at >= ${weekStartSql}
+                  and o.status <> 'cancelled'
+                  and o.payment_status <> 'failed'
+                group by b.id, b.name
+                order by gmv desc
+                limit 5
+            `),
+            db.execute(sql`
+                select b.name as brand_name, coalesce(sum(o.total_amount), 0)::int as gmv
+                from ${brands} b
+                inner join ${products} p on p.brand_id = b.id
+                inner join ${orderItems} oi on oi.product_id = p.id
+                inner join ${orders} o on o.id = oi.order_id
+                where o.created_at >= ${weekStartSql}
+                  and o.status <> 'cancelled'
+                  and o.payment_status <> 'failed'
+                group by b.id, b.name
+                order by gmv asc
+                limit 5
+            `),
+        ]);
+
+        const currentGmv = Number(currentWeek.gmv ?? 0);
+        const previousGmv = Number(previousWeek.gmv ?? 0);
+        const gmvWoW =
+            previousGmv === 0
+                ? currentGmv > 0
+                    ? 100
+                    : 0
+                : ((currentGmv - previousGmv) / previousGmv) * 100;
+        const orderCount = Number(currentWeek.orderCount ?? 0);
+
+        return {
+            weekStart: weekStart.toISOString().slice(0, 10),
+            weekEnd: today.toISOString().slice(0, 10),
+            gmv: currentGmv,
+            previousGmv,
+            gmvWoW,
+            orderCount,
+            previousOrderCount: Number(previousWeek.orderCount ?? 0),
+            aov: Number(currentWeek.aov ?? 0),
+            previousAov: Number(previousWeek.aov ?? 0),
+            customerCount: Number(currentWeek.customerCount ?? 0),
+            repeatCustomers: Number(currentWeek.repeatCustomers ?? 0),
+            conversionFunnelIntegration:
+                "Needs visit/cart/checkout analytics feed",
+            cacIntegration: "Needs ad spend import",
+            roasIntegration: "Needs ad spend import",
+            activeBrands,
+            supportOpenTickets: supportAdminOpen + supportUserOpen,
+            refundRate:
+                orderCount === 0
+                    ? 0
+                    : Number(refundStats.count ?? 0) / orderCount,
+            refundAmount: Number(refundStats.amount ?? 0),
+            rtoRate: "Needs delivered/RTO shipment baseline",
+            slaBreachCount: slaBreaches,
+            topBrands: Array.from(
+                topBrands as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                name: String(row.brand_name ?? "Unknown"),
+                gmv: Number(row.gmv ?? 0),
+            })),
+            bottomBrands: Array.from(
+                bottomBrands as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                name: String(row.brand_name ?? "Unknown"),
+                gmv: Number(row.gmv ?? 0),
+            })),
+        };
     }
 
     async getBrandHealth() {
@@ -2193,11 +2444,21 @@ class MonitoringSlaQuery {
     async getMonthlyStrategic() {
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const nextMonthStart = new Date(
+            now.getFullYear(),
+            now.getMonth() + 1,
+            1
+        );
         const lastMonthStart = new Date(
             now.getFullYear(),
             now.getMonth() - 1,
             1
         );
+        const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+        const monthStartSql = toSqlDateTime(monthStart);
+        const nextMonthStartSql = toSqlDateTime(nextMonthStart);
+        const lastMonthStartSql = toSqlDateTime(lastMonthStart);
+        const sixMonthsAgoSql = toSqlDateTime(sixMonthsAgo);
 
         const current = await db
             .select({
@@ -2237,6 +2498,165 @@ class MonitoringSlaQuery {
                 ne(monitoringAlerts.status, "resolved")
             )
         );
+        const [
+            cohortRows,
+            brandChurnRows,
+            contributionRows,
+            categoryRows,
+            categoryMixRows,
+            complianceRows,
+            sustainabilityRows,
+        ] = await Promise.all([
+            db.execute(sql`
+                with first_orders as (
+                    select user_id, date_trunc('month', min(created_at)) as cohort_month
+                    from ${orders}
+                    where status <> 'cancelled' and payment_status <> 'failed'
+                    group by user_id
+                ),
+                cohort_users as (
+                    select *
+                    from first_orders
+                    where cohort_month >= date_trunc('month', ${sixMonthsAgoSql}::timestamp)
+                      and cohort_month < date_trunc('month', ${nextMonthStartSql}::timestamp)
+                ),
+                orders_by_user_month as (
+                    select distinct user_id, date_trunc('month', created_at) as order_month
+                    from ${orders}
+                    where status <> 'cancelled' and payment_status <> 'failed'
+                )
+                select
+                    to_char(cu.cohort_month, 'YYYY-MM') as cohort,
+                    count(*)::int as m0_users,
+                    count(distinct case when obum.order_month = cu.cohort_month + interval '1 month' then cu.user_id end)::int as m1_users,
+                    count(distinct case when obum.order_month = cu.cohort_month + interval '2 months' then cu.user_id end)::int as m2_users,
+                    count(distinct case when obum.order_month = cu.cohort_month + interval '3 months' then cu.user_id end)::int as m3_users
+                from cohort_users cu
+                left join orders_by_user_month obum on obum.user_id = cu.user_id
+                group by cu.cohort_month
+                order by cu.cohort_month desc
+                limit 6
+            `),
+            db.execute(sql`
+                with prior_active as (
+                    select distinct p.brand_id
+                    from ${orders} o
+                    inner join ${orderItems} oi on oi.order_id = o.id
+                    inner join ${products} p on p.id = oi.product_id
+                    where o.created_at >= ${lastMonthStartSql}
+                      and o.created_at < ${monthStartSql}
+                      and o.status <> 'cancelled'
+                      and o.payment_status <> 'failed'
+                ),
+                current_active as (
+                    select distinct p.brand_id
+                    from ${orders} o
+                    inner join ${orderItems} oi on oi.order_id = o.id
+                    inner join ${products} p on p.id = oi.product_id
+                    where o.created_at >= ${monthStartSql}
+                      and o.status <> 'cancelled'
+                      and o.payment_status <> 'failed'
+                )
+                select
+                    count(pa.brand_id)::int as prior_active,
+                    count(case when ca.brand_id is null then 1 end)::int as churned
+                from prior_active pa
+                left join current_active ca on ca.brand_id = pa.brand_id
+            `),
+            db.execute(sql`
+                select
+                    coalesce(sum(o.total_amount), 0)::int as revenue,
+                    coalesce(sum(coalesce(p.cost_per_item, pv.cost_per_item, 0) * oi.quantity), 0)::int as product_cost,
+                    coalesce(sum(o.delivery_amount), 0)::int as shipping,
+                    count(distinct o.id)::int as orders_count
+                from ${orders} o
+                inner join ${orderItems} oi on oi.order_id = o.id
+                inner join ${products} p on p.id = oi.product_id
+                left join ${productVariants} pv on pv.id = oi.variant_id
+                where o.created_at >= ${monthStartSql}
+                  and o.status <> 'cancelled'
+                  and o.payment_status <> 'failed'
+            `),
+            db.execute(sql`
+                select
+                    c.name as category_name,
+                    coalesce(sum(o.total_amount), 0)::int as revenue,
+                    coalesce(sum(coalesce(p.cost_per_item, pv.cost_per_item, 0) * oi.quantity), 0)::int as product_cost,
+                    count(distinct o.id)::int as orders_count
+                from ${orders} o
+                inner join ${orderItems} oi on oi.order_id = o.id
+                inner join ${products} p on p.id = oi.product_id
+                left join ${productVariants} pv on pv.id = oi.variant_id
+                inner join ${categories} c on c.id = p.category_id
+                where o.created_at >= ${monthStartSql}
+                  and o.status <> 'cancelled'
+                  and o.payment_status <> 'failed'
+                group by c.id, c.name
+                order by revenue desc
+                limit 6
+            `),
+            db.execute(sql`
+                select
+                    c.name as category_name,
+                    coalesce(sum(case when o.created_at >= ${monthStartSql} then o.total_amount else 0 end), 0)::int as current_revenue,
+                    coalesce(sum(case when o.created_at >= ${lastMonthStartSql} and o.created_at < ${monthStartSql} then o.total_amount else 0 end), 0)::int as previous_revenue
+                from ${orders} o
+                inner join ${orderItems} oi on oi.order_id = o.id
+                inner join ${products} p on p.id = oi.product_id
+                inner join ${categories} c on c.id = p.category_id
+                where o.created_at >= ${lastMonthStartSql}
+                  and o.status <> 'cancelled'
+                  and o.payment_status <> 'failed'
+                group by c.id, c.name
+                order by current_revenue desc
+                limit 6
+            `),
+            db.execute(sql`
+                select
+                    count(case when entity_type in ('compliance_export', 'access_review') then 1 end)::int as evidence_events,
+                    count(case when entity_type = 'compliance_export' then 1 end)::int as compliance_exports,
+                    count(case when entity_type = 'access_review' then 1 end)::int as access_reviews
+                from ${auditLogs}
+                where timestamp_utc >= ${monthStartSql}
+            `),
+            db.execute(sql`
+                select
+                    count(*)::int as live_products,
+                    count(case when nullif(sustainability_certificate, '') is not null then 1 end)::int as products_with_cert,
+                    count(case when verification_status = 'approved' then 1 end)::int as approved_products
+                from ${products}
+                where is_deleted = false
+                  and is_active = true
+                  and is_published = true
+            `),
+        ]);
+
+        const contribution =
+            Array.from(
+                contributionRows as Iterable<Record<string, unknown>>
+            )[0] ?? {};
+        const revenue = Number(contribution.revenue ?? 0);
+        const productCost = Number(contribution.product_cost ?? 0);
+        const shipping = Number(contribution.shipping ?? 0);
+        const contributionMargin = revenue - productCost - shipping;
+        const contributionOrderCount = Number(contribution.orders_count ?? 0);
+        const brandChurn =
+            Array.from(
+                brandChurnRows as Iterable<Record<string, unknown>>
+            )[0] ?? {};
+        const priorActiveBrands = Number(brandChurn.prior_active ?? 0);
+        const churnedBrands = Number(brandChurn.churned ?? 0);
+        const compliance =
+            Array.from(
+                complianceRows as Iterable<Record<string, unknown>>
+            )[0] ?? {};
+        const sustainability =
+            Array.from(
+                sustainabilityRows as Iterable<Record<string, unknown>>
+            )[0] ?? {};
+        const liveProducts = Number(sustainability.live_products ?? 0);
+        const productsWithCert = Number(sustainability.products_with_cert ?? 0);
+        const approvedProducts = Number(sustainability.approved_products ?? 0);
 
         return {
             currentMonth: current,
@@ -2247,8 +2667,75 @@ class MonitoringSlaQuery {
                     : Number(refundCount) / Number(current.orderCount),
             complianceExportsThisMonth,
             openCriticalAlerts,
-            cohortRetentionIntegration: "pending",
-            runwayIntegration: "pending",
+            cohortRetention: Array.from(
+                cohortRows as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                cohort: String(row.cohort ?? ""),
+                m0Users: Number(row.m0_users ?? 0),
+                m1Rate:
+                    Number(row.m0_users ?? 0) === 0
+                        ? 0
+                        : Number(row.m1_users ?? 0) / Number(row.m0_users),
+                m2Rate:
+                    Number(row.m0_users ?? 0) === 0
+                        ? 0
+                        : Number(row.m2_users ?? 0) / Number(row.m0_users),
+                m3Rate:
+                    Number(row.m0_users ?? 0) === 0
+                        ? 0
+                        : Number(row.m3_users ?? 0) / Number(row.m0_users),
+            })),
+            brandChurnRate:
+                priorActiveBrands === 0 ? 0 : churnedBrands / priorActiveBrands,
+            churnedBrands,
+            priorActiveBrands,
+            contributionMarginPerOrder:
+                contributionOrderCount === 0
+                    ? 0
+                    : contributionMargin / contributionOrderCount,
+            contributionMargin,
+            grossMarginByCategory: Array.from(
+                categoryRows as Iterable<Record<string, unknown>>
+            ).map((row) => {
+                const categoryRevenue = Number(row.revenue ?? 0);
+                const categoryCost = Number(row.product_cost ?? 0);
+                return {
+                    category: String(row.category_name ?? "Uncategorized"),
+                    revenue: categoryRevenue,
+                    grossMargin:
+                        categoryRevenue === 0
+                            ? 0
+                            : (categoryRevenue - categoryCost) /
+                              categoryRevenue,
+                };
+            }),
+            categoryMixEvolution: Array.from(
+                categoryMixRows as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                category: String(row.category_name ?? "Uncategorized"),
+                currentRevenue: Number(row.current_revenue ?? 0),
+                previousRevenue: Number(row.previous_revenue ?? 0),
+            })),
+            headcountEfficiency: {
+                value: Number(current.gmv ?? 0),
+                note: "Assumes 1 FTE-equivalent until headcount config is added",
+            },
+            runway: "Needs cash-on-hand and monthly burn finance inputs",
+            complianceStatusSnapshot: {
+                evidenceEvents: Number(compliance.evidence_events ?? 0),
+                complianceExports: Number(compliance.compliance_exports ?? 0),
+                accessReviews: Number(compliance.access_reviews ?? 0),
+                openCriticalAlerts,
+            },
+            sustainabilityClaimsAudit: {
+                liveProducts,
+                productsWithCert,
+                approvedProducts,
+                certCoverage:
+                    liveProducts === 0 ? 0 : productsWithCert / liveProducts,
+                approvalCoverage:
+                    liveProducts === 0 ? 0 : approvedProducts / liveProducts,
+            },
         };
     }
 
