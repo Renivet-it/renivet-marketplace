@@ -453,9 +453,12 @@ class MonitoringSlaQuery {
         return alert;
     }
 
-    async getActiveAlerts(limit = 50, offset = 0) {
+    async getActiveAlerts(limit = 50, offset = 0, severity?: AlertSeverity) {
         return db.query.monitoringAlerts.findMany({
-            where: ne(monitoringAlerts.status, "resolved"),
+            where: and(
+                ne(monitoringAlerts.status, "resolved"),
+                severity ? eq(monitoringAlerts.severity, severity) : undefined
+            ),
             orderBy: [
                 desc(monitoringAlerts.severity),
                 desc(monitoringAlerts.createdAt),
@@ -465,16 +468,24 @@ class MonitoringSlaQuery {
         });
     }
 
-    async getActiveAlertsPage(page = 1, pageSize = 10) {
+    async getActiveAlertsPage(
+        page = 1,
+        pageSize = 10,
+        severity?: AlertSeverity
+    ) {
         const safePage = Math.max(1, page);
         const safePageSize = Math.min(Math.max(5, pageSize), 50);
         const total = await db.$count(
             monitoringAlerts,
-            ne(monitoringAlerts.status, "resolved")
+            and(
+                ne(monitoringAlerts.status, "resolved"),
+                severity ? eq(monitoringAlerts.severity, severity) : undefined
+            )
         );
         const rows = await this.getActiveAlerts(
             safePageSize,
-            (safePage - 1) * safePageSize
+            (safePage - 1) * safePageSize,
+            severity
         );
 
         return {
