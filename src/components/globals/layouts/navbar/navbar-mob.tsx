@@ -413,7 +413,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                                 ? "View your orders"
                                                 : "No active orders"
                                         }
-                                        href="/orders"
+                                        href="/profile/orders"
                                         className="bg-white"
                                     />
                                     <SummaryCard
@@ -421,7 +421,7 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                         title="Shopping Bag"
                                         count={cartCount}
                                         subtitle="Will save 0.8kg CO₂"
-                                        href="/cart"
+                                        href="/mycart"
                                     />
                                 </>
                             ) : (

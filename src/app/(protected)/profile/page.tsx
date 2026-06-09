@@ -229,7 +229,7 @@ export default function OverviewPage() {
                             ? "View your orders"
                             : "No active orders"
                     }
-                    href="/orders"
+                    href="/profile/orders"
                     className="bg-white"
                 >
                     {/* Example of adding badge like in design if needed, checking logic first */}
@@ -240,7 +240,7 @@ export default function OverviewPage() {
                     title="Shopping Bag"
                     count={cartCount}
                     subtitle="Will save 0.8kg CO₂"
-                    href="/cart"
+                    href="/mycart"
                 />
                 <SummaryCard
                     icon={LineChart} // Using LineChart as a proxy for "About Us" graph icon
