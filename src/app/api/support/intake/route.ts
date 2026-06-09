@@ -98,12 +98,17 @@ export async function POST(request: Request) {
             status:
                 config.priority === "critical" ? "escalated" : "acknowledged",
             assignedAdminId:
+                config.requiresAj ||
                 config.priority === "critical"
                     ? process.env.AJ_USER_ID ||
                       process.env.SUPPORT_MANAGER_USER_ID ||
                       process.env.SUPPORT_INTERN_USER_ID ||
                       null
-                    : process.env.SUPPORT_INTERN_USER_ID || null,
+                    : config.defaultOwnerRole === "order_ops"
+                      ? process.env.ORDER_OPS_INTERN_USER_ID ||
+                        process.env.SUPPORT_INTERN_USER_ID ||
+                        null
+                      : process.env.SUPPORT_INTERN_USER_ID || null,
             firstResponseDueAt: calculateFirstResponseDueAt(category, now),
             resolutionDueAt: calculateResolutionDueAt(category, now),
             autoAckSentAt: now,

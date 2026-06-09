@@ -71,6 +71,7 @@ export async function sendDailyOrderSummary() {
             "akshay@renivet.com",
             "kriti@renivet.com",
             "ayanganguly333@gmail.com",
+            "belmontdark8@gmail.com",
         ];
 
         console.log(`📨 Sending emails to: ${recipients.join(", ")}`);

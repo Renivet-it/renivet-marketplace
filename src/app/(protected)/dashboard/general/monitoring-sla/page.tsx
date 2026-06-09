@@ -445,6 +445,60 @@ function EvidenceList({ rows }: { rows: string[] }) {
     );
 }
 
+function signedPercent(value: number) {
+    const prefix = value > 0 ? "+" : "";
+    return `${prefix}${value.toFixed(1)}%`;
+}
+
+function percentFromRatio(value: number) {
+    return `${(value * 100).toFixed(1)}%`;
+}
+
+function minutesLabel(value: number | null | undefined) {
+    const minutes = Number(value ?? 0);
+    if (!Number.isFinite(minutes) || minutes <= 0) return "No data yet";
+    if (minutes < 60) return `${Math.round(minutes)}m`;
+
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = Math.round(minutes % 60);
+    return remainingMinutes ? `${hours}h ${remainingMinutes}m` : `${hours}h`;
+}
+
+function MetricTile({
+    label,
+    value,
+    detail,
+    tone = "neutral",
+}: {
+    label: string;
+    value: string | number;
+    detail?: string;
+    tone?: "neutral" | "good" | "watch" | "bad";
+}) {
+    const toneClass = {
+        neutral: "border-slate-200 bg-white",
+        good: "border-emerald-200 bg-emerald-50",
+        watch: "border-amber-200 bg-amber-50",
+        bad: "border-red-200 bg-red-50",
+    }[tone];
+
+    return (
+        <div className={`rounded-lg border p-4 ${toneClass}`}>
+            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                {label}
+            </p>
+            <p className="mt-2 text-2xl font-semibold text-slate-950">
+                {metricLabel(value)}
+            </p>
+            {detail ? (
+                <p className="mt-2 text-sm leading-5 text-slate-600">
+                    {detail}
+                </p>
+            ) : null}
+        </div>
+    );
+}
+
 export default async function MonitoringSlaPage({
     searchParams,
 }: {
@@ -484,29 +538,39 @@ export default async function MonitoringSlaPage({
         ? (activeAlertSeverityRaw as AlertSeverity)
         : undefined;
 
-    const [
-        health,
-        alertsPage,
-        alertSummary,
-        evidence,
-        weeklyBusiness,
-        brandHealth,
-        marketingPerformance,
-        monthlyStrategic,
-    ] = await Promise.all([
-        monitoringSlaQueries.getDailyHealth(),
-        monitoringSlaQueries.getActiveAlertsPage(
-            alertPage,
-            alertPageSize,
-            activeAlertSeverity
-        ),
-        monitoringSlaQueries.getAlertSummary(),
-        monitoringSlaQueries.getRecentEvidence(),
-        monitoringSlaQueries.getWeeklyBusiness(),
-        monitoringSlaQueries.getBrandHealth(),
-        monitoringSlaQueries.getMarketingPerformance(),
-        monitoringSlaQueries.getMonthlyStrategic(),
-    ]);
+    const health = await monitoringSlaQueries.getDailyHealth();
+
+    let alertsPage = { rows: [], pageCount: 0, page: 1 } as any;
+    let alertSummary = [] as any[];
+    let evidence = { runs: [], snapshots: [], packs: [], exports: [], reviews: [] } as any;
+    let weeklyBusiness = null as any;
+    let brandHealth = null as any;
+    let marketingPerformance = null as any;
+    let monthlyStrategic = null as any;
+
+    if (activeDashboard === "alerts") {
+        const [p, s, e] = await Promise.all([
+            monitoringSlaQueries.getActiveAlertsPage(
+                alertPage,
+                alertPageSize,
+                activeAlertSeverity
+            ),
+            monitoringSlaQueries.getAlertSummary(),
+            monitoringSlaQueries.getRecentEvidence(),
+        ]);
+        alertsPage = p;
+        alertSummary = s;
+        evidence = e;
+    } else if (activeDashboard === "weekly") {
+        weeklyBusiness = await monitoringSlaQueries.getWeeklyBusiness();
+    } else if (activeDashboard === "brand") {
+        brandHealth = await monitoringSlaQueries.getBrandHealth();
+    } else if (activeDashboard === "marketing") {
+        marketingPerformance = await monitoringSlaQueries.getMarketingPerformance();
+    } else if (activeDashboard === "monthly") {
+        monthlyStrategic = await monitoringSlaQueries.getMonthlyStrategic();
+    }
+
     const alerts = alertsPage.rows;
     const pageCount = alertsPage.pageCount;
     const currentAlertPage = Math.min(alertsPage.page, pageCount);
@@ -714,30 +778,33 @@ export default async function MonitoringSlaPage({
                             </p>
                             <div className="mt-3 flex flex-wrap gap-2">
                                 {generatedExportHref && (
-                                    <Link
+                                    <a
                                         href={generatedExportHref}
+                                        download
                                         className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800"
                                     >
                                         <Download className="size-4" />
                                         Download Excel
-                                    </Link>
+                                    </a>
                                 )}
                                 {showFounderReportDownloads && (
                                     <>
-                                        <Link
+                                        <a
                                             href={founderReportXlsxHref}
+                                            download={`${currentMonth}-weekly-reporting-pack.xlsx`}
                                             className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-emerald-700 px-3 text-sm font-semibold text-white hover:bg-emerald-800"
                                         >
                                             <Download className="size-4" />
                                             Download Excel Report
-                                        </Link>
-                                        <Link
+                                        </a>
+                                        <a
                                             href={founderReportCsvHref}
+                                            download={`${currentMonth}-weekly-reporting-pack.csv`}
                                             className="inline-flex h-9 items-center justify-center gap-2 rounded-md border border-emerald-700 bg-white px-3 text-sm font-semibold text-emerald-800 hover:bg-emerald-50"
                                         >
                                             <Download className="size-4" />
                                             Download CSV Report
-                                        </Link>
+                                        </a>
                                     </>
                                 )}
                             </div>
@@ -1039,120 +1106,494 @@ export default async function MonitoringSlaPage({
                 )}
 
                 {activeDashboard === "weekly" && (
-                    <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
-                        <div className="rounded-md border bg-white p-4 shadow-sm">
-                            <div className="mb-4">
-                                <h2 className="text-base font-semibold text-slate-950">
-                                    Weekly Business
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    {weeklyBusiness.weekStart} to{" "}
-                                    {weeklyBusiness.weekEnd}
-                                </p>
-                            </div>
-                            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                                {[
-                                    ["GMV", rupeeLabelFromPaise(weeklyBusiness.gmv)],
-                                    [
-                                        "GMV WoW",
-                                        `${weeklyBusiness.gmvWoW.toFixed(1)}%`,
-                                    ],
-                                    ["Orders", weeklyBusiness.orderCount],
-                                    ["AOV", rupeeLabelFromPaise(weeklyBusiness.aov)],
-                                    ["Customers", weeklyBusiness.customerCount],
-                                    [
-                                        "Repeat customers",
-                                        weeklyBusiness.repeatCustomers,
-                                    ],
-                                    [
-                                        "Active brands",
-                                        weeklyBusiness.activeBrands,
-                                    ],
-                                    [
-                                        "SLA breaches",
-                                        weeklyBusiness.slaBreachCount,
-                                    ],
-                                    [
-                                        "Support open",
-                                        weeklyBusiness.supportOpenTickets,
-                                    ],
-                                    [
-                                        "Refund rate",
-                                        `${(weeklyBusiness.refundRate * 100).toFixed(1)}%`,
-                                    ],
-                                    [
-                                        "Refund amount",
-                                        rupeeLabelFromPaise(
-                                            weeklyBusiness.refundAmount
-                                        ),
-                                    ],
-                                    ["RTO rate", weeklyBusiness.rtoRate],
-                                    [
-                                        "Conversion funnel",
-                                        weeklyBusiness.conversionFunnelIntegration,
-                                    ],
-                                    ["CAC", weeklyBusiness.cacIntegration],
-                                    ["ROAS", weeklyBusiness.roasIntegration],
-                                ].map(([label, value]) => (
-                                    <div
-                                        key={label}
-                                        className="rounded-md border bg-slate-50 px-3 py-2"
-                                    >
-                                        <p className="text-xs font-medium text-muted-foreground">
-                                            {label}
+                    <section className="space-y-4">
+                        <div className="overflow-hidden rounded-lg border bg-white shadow-sm">
+                            <div className="border-b bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 p-5 text-white">
+                                <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-200">
+                                            Dashboard 2
                                         </p>
-                                        <p className="mt-1 text-xl font-semibold text-slate-950">
-                                            {metricLabel(value)}
+                                        <h2 className="mt-2 text-2xl font-semibold">
+                                            Weekly Business
+                                        </h2>
+                                        <p className="mt-2 text-sm text-slate-300">
+                                            {weeklyBusiness.weekStart} to{" "}
+                                            {weeklyBusiness.weekEnd}
                                         </p>
                                     </div>
-                                ))}
+                                    <div className="grid gap-2 text-sm text-slate-200 sm:grid-cols-3">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-wide text-slate-400">
+                                                Owner
+                                            </p>
+                                            <p className="font-semibold text-white">
+                                                AJ presents to founders
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs uppercase tracking-wide text-slate-400">
+                                                Source
+                                            </p>
+                                            <p className="font-semibold text-white">
+                                                Admin analytics + Finance
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs uppercase tracking-wide text-slate-400">
+                                                Review
+                                            </p>
+                                            <p className="font-semibold text-white">
+                                                Friday 5pm, 30 minutes
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                                <MetricTile
+                                    label="GMV this week"
+                                    value={rupeeLabelFromPaise(
+                                        weeklyBusiness.gmv
+                                    )}
+                                    detail={`${signedPercent(
+                                        weeklyBusiness.gmvWoW
+                                    )} vs last week · ${signedPercent(
+                                        weeklyBusiness.gmvVsPriorFourWeekAvg
+                                    )} vs prior 4-week avg`}
+                                    tone={
+                                        weeklyBusiness.gmvWoW >= 0
+                                            ? "good"
+                                            : "watch"
+                                    }
+                                />
+                                <MetricTile
+                                    label="Orders"
+                                    value={weeklyBusiness.orderCount}
+                                    detail={`${signedPercent(
+                                        weeklyBusiness.orderVolumeWoW
+                                    )} vs last week · ${
+                                        weeklyBusiness.customerCount -
+                                        weeklyBusiness.repeatCustomers
+                                    } new / ${
+                                        weeklyBusiness.repeatCustomers
+                                    } repeat customers`}
+                                    tone={
+                                        weeklyBusiness.orderVolumeWoW >= 0
+                                            ? "good"
+                                            : "watch"
+                                    }
+                                />
+                                <MetricTile
+                                    label="AOV trend"
+                                    value={rupeeLabelFromPaise(
+                                        weeklyBusiness.aov
+                                    )}
+                                    detail={`${signedPercent(
+                                        weeklyBusiness.aovWoW
+                                    )} vs last week · prior ${rupeeLabelFromPaise(
+                                        weeklyBusiness.previousAov
+                                    )}`}
+                                    tone={
+                                        weeklyBusiness.aovWoW >= 0
+                                            ? "good"
+                                            : "watch"
+                                    }
+                                />
+                                <MetricTile
+                                    label="Active brands"
+                                    value={weeklyBusiness.activeBrands}
+                                    detail={`${weeklyBusiness.sellingBrandsThisWeek} selling this week · ${weeklyBusiness.sellingBrandsPreviousWeek} selling last week`}
+                                />
                             </div>
                         </div>
-                        <div className="space-y-4">
-                            {[
-                                ["Top brands", weeklyBusiness.topBrands],
-                                ["Bottom brands", weeklyBusiness.bottomBrands],
-                            ].map(([title, rows]) => (
-                                <div
-                                    key={title as string}
-                                    className="rounded-md border bg-white p-4 shadow-sm"
-                                >
-                                    <h3 className="text-sm font-semibold text-slate-950">
-                                        {title as string}
-                                    </h3>
-                                    <div className="mt-3 space-y-2">
-                                        {(
-                                            rows as Array<{
-                                                name: string;
-                                                gmv: number;
-                                            }>
-                                        ).length === 0 ? (
+
+                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)]">
+                            <div className="space-y-4">
+                                <div className="rounded-lg border bg-white p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Conversion funnel
+                                            </h3>
                                             <p className="text-sm text-muted-foreground">
-                                                No weekly sales yet.
+                                                Visit to cart to checkout to
+                                                paid order.
                                             </p>
-                                        ) : (
-                                            (
+                                        </div>
+                                        <Gauge className="size-5 text-slate-500" />
+                                    </div>
+                                    <div className="mt-5 grid gap-3 md:grid-cols-4">
+                                        {[
+                                            [
+                                                "Visit",
+                                                weeklyBusiness.conversionFunnel
+                                                    .sessions,
+                                                "Sessions",
+                                            ],
+                                            [
+                                                "Cart",
+                                                weeklyBusiness.conversionFunnel
+                                                    .carts,
+                                                `${percentFromRatio(
+                                                    weeklyBusiness
+                                                        .conversionFunnel
+                                                        .cartRate
+                                                )} from visits`,
+                                            ],
+                                            [
+                                                "Checkout",
+                                                weeklyBusiness.conversionFunnel
+                                                    .checkouts,
+                                                `${percentFromRatio(
+                                                    weeklyBusiness
+                                                        .conversionFunnel
+                                                        .checkoutRate
+                                                )} from carts`,
+                                            ],
+                                            [
+                                                "Paid",
+                                                weeklyBusiness.conversionFunnel
+                                                    .paid,
+                                                `${percentFromRatio(
+                                                    weeklyBusiness
+                                                        .conversionFunnel
+                                                        .paidRate
+                                                )} from checkout`,
+                                            ],
+                                        ].map(([label, value, detail]) => (
+                                            <div
+                                                key={label}
+                                                className="rounded-lg border bg-slate-50 p-4"
+                                            >
+                                                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                    {label}
+                                                </p>
+                                                <p className="mt-2 text-2xl font-semibold text-slate-950">
+                                                    {metricLabel(value)}
+                                                </p>
+                                                <p className="mt-1 text-sm text-slate-600">
+                                                    {detail}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    <div className="rounded-lg border bg-white p-5 shadow-sm">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Customer support metrics
+                                            </h3>
+                                            <Bell className="size-5 text-slate-500" />
+                                        </div>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                            {[
+                                                [
+                                                    "Tickets opened",
+                                                    weeklyBusiness
+                                                        .supportMetrics
+                                                        .ticketsOpened,
+                                                ],
+                                                [
+                                                    "Tickets resolved",
+                                                    weeklyBusiness
+                                                        .supportMetrics
+                                                        .ticketsResolved,
+                                                ],
+                                                [
+                                                    "Open tickets",
+                                                    weeklyBusiness
+                                                        .supportOpenTickets,
+                                                ],
+                                                [
+                                                    "Avg first response",
+                                                    minutesLabel(
+                                                        weeklyBusiness
+                                                            .supportMetrics
+                                                            .avgFirstResponseMinutes
+                                                    ),
+                                                ],
+                                                [
+                                                    "Avg resolution",
+                                                    minutesLabel(
+                                                        weeklyBusiness
+                                                            .supportMetrics
+                                                            .avgResolutionMinutes
+                                                    ),
+                                                ],
+                                                [
+                                                    "CSAT",
+                                                    String(
+                                                        weeklyBusiness
+                                                            .supportMetrics
+                                                            .csatAverage ??
+                                                            "No data yet"
+                                                    ),
+                                                ],
+                                            ].map(([label, value]) => (
+                                                <div
+                                                    key={label}
+                                                    className="rounded-md bg-slate-50 px-3 py-2"
+                                                >
+                                                    <p className="text-xs font-medium text-muted-foreground">
+                                                        {label}
+                                                    </p>
+                                                    <p className="mt-1 text-lg font-semibold text-slate-950">
+                                                        {metricLabel(value)}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-lg border bg-white p-5 shadow-sm">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Refunds and RTO
+                                            </h3>
+                                            <FileText className="size-5 text-slate-500" />
+                                        </div>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                            <MetricTile
+                                                label="Refund rate"
+                                                value={percentFromRatio(
+                                                    weeklyBusiness.refundRate
+                                                )}
+                                                detail={`${weeklyBusiness.refundCount} refunds · ${rupeeLabelFromPaise(
+                                                    weeklyBusiness.refundAmount
+                                                )}`}
+                                                tone={
+                                                    weeklyBusiness.refundRate > 0.1
+                                                        ? "watch"
+                                                        : "neutral"
+                                                }
+                                            />
+                                            <MetricTile
+                                                label="RTO rate"
+                                                value={percentFromRatio(
+                                                    weeklyBusiness.rtoRate
+                                                )}
+                                                detail={`${weeklyBusiness.rtoShipments} RTO · ${weeklyBusiness.deliveredShipments} delivered`}
+                                                tone={
+                                                    weeklyBusiness.rtoRate > 0.1
+                                                        ? "watch"
+                                                        : "neutral"
+                                                }
+                                            />
+                                        </div>
+                                        <div className="mt-4">
+                                            <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                                Refund rate by reason code
+                                            </p>
+                                            <div className="mt-2 space-y-2">
+                                                {weeklyBusiness.refundReasons
+                                                    .length === 0 ? (
+                                                    <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-muted-foreground">
+                                                        No refunds this week.
+                                                    </p>
+                                                ) : (
+                                                    weeklyBusiness.refundReasons.map(
+                                                        (reason) => (
+                                                            <div
+                                                                key={
+                                                                    reason.reasonCode
+                                                                }
+                                                                className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                            >
+                                                                <span className="truncate text-slate-700">
+                                                                    {
+                                                                        reason.reasonCode
+                                                                    }
+                                                                </span>
+                                                                <span className="font-semibold text-slate-950">
+                                                                    {
+                                                                        reason.count
+                                                                    }{" "}
+                                                                    ·{" "}
+                                                                    {rupeeLabelFromPaise(
+                                                                        reason.amount
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                        )
+                                                    )
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    <div className="rounded-lg border bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            CAC by channel
+                                        </h3>
+                                        <div className="mt-4 space-y-2">
+                                            {weeklyBusiness.cacByChannel.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.channel}
+                                                        className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                    >
+                                                        <span className="text-slate-700">
+                                                            {row.channel}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-950">
+                                                            {row.value}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                    <div className="rounded-lg border bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            ROAS by channel
+                                        </h3>
+                                        <div className="mt-4 space-y-2">
+                                            {weeklyBusiness.roasByChannel.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.channel}
+                                                        className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                    >
+                                                        <span className="text-slate-700">
+                                                            {row.channel}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-950">
+                                                            {row.value}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <aside className="space-y-4">
+                                {[
+                                    ["Top 5 brands by GMV", weeklyBusiness.topBrands],
+                                    [
+                                        "Bottom 5 brands by GMV",
+                                        weeklyBusiness.bottomBrands,
+                                    ],
+                                ].map(([title, rows]) => (
+                                    <div
+                                        key={title as string}
+                                        className="rounded-lg border bg-white p-5 shadow-sm"
+                                    >
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            {title as string}
+                                        </h3>
+                                        <div className="mt-4 space-y-2">
+                                            {(
                                                 rows as Array<{
                                                     name: string;
                                                     gmv: number;
                                                 }>
-                                            ).map((row) => (
-                                                <div
-                                                    key={`${title}-${row.name}`}
-                                                    className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
-                                                >
-                                                    <span className="truncate text-slate-700">
-                                                        {row.name}
-                                                    </span>
-                                                    <span className="font-semibold text-slate-950">
-                                                        {rupeeLabelFromPaise(row.gmv)}
-                                                    </span>
-                                                </div>
-                                            ))
+                                            ).length === 0 ? (
+                                                <p className="rounded-md bg-slate-50 px-3 py-6 text-center text-sm text-muted-foreground">
+                                                    No weekly sales yet.
+                                                </p>
+                                            ) : (
+                                                (
+                                                    rows as Array<{
+                                                        name: string;
+                                                        gmv: number;
+                                                    }>
+                                                ).map((row, index) => (
+                                                    <div
+                                                        key={`${title}-${row.name}`}
+                                                        className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                    >
+                                                        <span className="min-w-0 truncate text-slate-700">
+                                                            {index + 1}.{" "}
+                                                            {row.name}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-950">
+                                                            {rupeeLabelFromPaise(
+                                                                row.gmv
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                <div className="rounded-lg border bg-white p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            SLA breach count by function
+                                        </h3>
+                                        <AlertTriangle className="size-5 text-slate-500" />
+                                    </div>
+                                    <div className="mt-4 space-y-2">
+                                        {weeklyBusiness.slaBreachesByFunction
+                                            .length === 0 ? (
+                                            <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">
+                                                No critical SLA breaches this
+                                                week.
+                                            </p>
+                                        ) : (
+                                            weeklyBusiness.slaBreachesByFunction.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.functionName}
+                                                        className="flex items-center justify-between gap-3 rounded-md bg-red-50 px-3 py-2 text-sm"
+                                                    >
+                                                        <span className="capitalize text-red-900">
+                                                            {row.functionName.replaceAll(
+                                                                "_",
+                                                                " "
+                                                            )}
+                                                        </span>
+                                                        <span className="font-semibold text-red-950">
+                                                            {row.count}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )
                                         )}
                                     </div>
                                 </div>
-                            ))}
+
+                                <div className="rounded-lg border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Data sources used
+                                    </h3>
+                                    <div className="mt-3 space-y-2 text-sm text-slate-600">
+                                        <p>
+                                            GMV, orders, AOV, customers: orders
+                                        </p>
+                                        <p>
+                                            Brand ranking: order_items,
+                                            products, brands
+                                        </p>
+                                        <p>
+                                            Funnel: analytics_daily_behavior
+                                        </p>
+                                        <p>
+                                            Support: support_tickets and
+                                            user_support_tickets
+                                        </p>
+                                        <p>
+                                            Refunds: refunds
+                                        </p>
+                                        <p>
+                                            RTO: order_shipments
+                                        </p>
+                                        <p>
+                                            SLA breaches: monitoring_alerts
+                                        </p>
+                                    </div>
+                                </div>
+                            </aside>
                         </div>
                     </section>
                 )}
@@ -1172,6 +1613,8 @@ export default async function MonitoringSlaPage({
                             activeDashboard === "brand" ? "" : "hidden"
                         }`}
                     >
+                        {activeDashboard === "brand" && brandHealth && (
+                            <>
                         <div className="mb-4 flex items-center justify-between gap-3">
                             <div>
                                 <h2 className="text-base font-semibold text-slate-950">
@@ -1194,7 +1637,7 @@ export default async function MonitoringSlaPage({
                                 ["Active products", brandHealth.activeProducts],
                                 [
                                     "Brands no orders 30d",
-                                    brandHealth.brandsWithNoOrders30d,
+                                    brandHealth.brandsWithNoOrders30dCount,
                                 ],
                                 [
                                     "Certs expiring 30d",
@@ -1222,296 +1665,998 @@ export default async function MonitoringSlaPage({
                                 </div>
                             ))}
                         </div>
+                            </>
+                        )}
                     </div>
 
                     <div
                         id="marketing-performance"
-                        className={`scroll-mt-24 rounded-md border bg-white p-4 shadow-sm ${
+                        className={`scroll-mt-24 space-y-4 xl:col-span-3 ${
                             activeDashboard === "marketing" ? "" : "hidden"
                         }`}
                     >
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                            <div>
-                                <h2 className="text-base font-semibold text-slate-950">
-                                    Marketing Performance
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    PS weekly marketing review
-                                </p>
-                            </div>
-                            <Gauge className="size-5 text-muted-foreground" />
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2">
-                            {[
-                                [
-                                    "GMV (Gross Merchandise Value) WTD (Week To Date)",
-                                    rupeeLabelFromPaise(marketingPerformance.gmvWtd),
-                                ],
-                                [
-                                    "Orders WTD (Week To Date)",
-                                    marketingPerformance.ordersWtd,
-                                ],
-                                [
-                                    "Customers WTD (Week To Date)",
-                                    marketingPerformance.customersWtd,
-                                ],
-                                [
-                                    "GMV (Gross Merchandise Value) MTD (Month To Date)",
-                                    rupeeLabelFromPaise(marketingPerformance.gmvMtd),
-                                ],
-                                [
-                                    "Orders MTD (Month To Date)",
-                                    marketingPerformance.ordersMtd,
-                                ],
-                                [
-                                    "Customers MTD (Month To Date)",
-                                    marketingPerformance.customersMtd,
-                                ],
-                                [
-                                    "Ad spend",
-                                    marketingPerformance.adSpendIntegration,
-                                ],
-                                [
-                                    "ROAS (Return On Ad Spend)",
-                                    marketingPerformance.roasIntegration,
-                                ],
-                            ].map(([label, value]) => (
-                                <div
-                                    key={label}
-                                    className="rounded-md border bg-slate-50 px-3 py-2"
-                                >
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        {label}
-                                    </p>
-                                    <p className="mt-1 text-xl font-semibold text-slate-950">
-                                        {metricLabel(value)}
-                                    </p>
+                        {activeDashboard === "marketing" && marketingPerformance && (
+                            <>
+                        <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+                            <div className="bg-[radial-gradient(circle_at_top_left,#fee2e2,transparent_36%),linear-gradient(135deg,#7f1d1d,#111827)] p-6 text-white">
+                                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-rose-100">
+                                            Dashboard 5
+                                        </p>
+                                        <h2 className="mt-2 text-3xl font-semibold tracking-tight">
+                                            Marketing Performance
+                                        </h2>
+                                        <p className="mt-2 max-w-2xl text-sm leading-6 text-rose-50">
+                                            Weekly PS + freelancer review for
+                                            spend, CAC, ROAS, source traffic,
+                                            creatives, content output, and
+                                            campaign performance versus goals.
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-2 rounded-xl border border-white/15 bg-white/10 p-4 text-sm backdrop-blur sm:grid-cols-2 lg:min-w-[460px]">
+                                        {[
+                                            ["Owner", marketingPerformance.owner],
+                                            ["Source", marketingPerformance.source],
+                                            [
+                                                "Review",
+                                                marketingPerformance.reviewCadence,
+                                            ],
+                                            [
+                                                "Window",
+                                                `${marketingPerformance.weekStart} to ${marketingPerformance.weekEnd}`,
+                                            ],
+                                        ].map(([label, value]) => (
+                                            <div key={label}>
+                                                <p className="text-xs uppercase tracking-wide text-rose-100">
+                                                    {label}
+                                                </p>
+                                                <p className="mt-1 font-semibold text-white">
+                                                    {value}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            ))}
+                            </div>
+
+                            <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                                <MetricTile
+                                    label="Spend this week"
+                                    value={rupeeLabelFromPaise(
+                                        marketingPerformance.totalSpend
+                                    )}
+                                    detail={marketingPerformance.integrations.metaAds}
+                                />
+                                <MetricTile
+                                    label="Blended CAC"
+                                    value={
+                                        marketingPerformance.blendedCac === null
+                                            ? "Needs spend + customers"
+                                            : rupeeLabelFromPaise(
+                                                  marketingPerformance.blendedCac
+                                              )
+                                    }
+                                    detail={`${marketingPerformance.customersWtd} customers this week`}
+                                />
+                                <MetricTile
+                                    label="Blended ROAS"
+                                    value={
+                                        marketingPerformance.blendedRoas === null
+                                            ? "Needs spend"
+                                            : `${marketingPerformance.blendedRoas.toFixed(2)}x`
+                                    }
+                                    detail={`${rupeeLabelFromPaise(
+                                        marketingPerformance.gmvWtd
+                                    )} weekly GMV`}
+                                />
+                                <MetricTile
+                                    label="Campaign goal"
+                                    value={`${marketingPerformance.goals.roas.toFixed(
+                                        1
+                                    )}x ROAS`}
+                                    detail={`CAC goal ${rupeeLabelFromPaise(
+                                        marketingPerformance.goals.cac
+                                    )}`}
+                                />
+                            </div>
                         </div>
+
+                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(380px,0.85fr)]">
+                            <div className="space-y-4">
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Spend, CAC, and ROAS by channel
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Meta, Google, organic, and
+                                                partnerships in the required
+                                                order.
+                                            </p>
+                                        </div>
+                                        <Gauge className="size-5 text-slate-500" />
+                                    </div>
+                                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                        {marketingPerformance.channelPerformance.map(
+                                            (row) => (
+                                                <div
+                                                    key={row.channel}
+                                                    className="rounded-lg border bg-slate-50 p-4"
+                                                >
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div>
+                                                            <p className="font-semibold text-slate-950">
+                                                                {row.channel}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-muted-foreground">
+                                                                {row.source}
+                                                            </p>
+                                                        </div>
+                                                        <span className="rounded-full bg-white px-2 py-1 text-xs font-semibold text-slate-700">
+                                                            {row.roas === null
+                                                                ? "No ROAS"
+                                                                : `${row.roas.toFixed(
+                                                                      2
+                                                                  )}x`}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-4 grid grid-cols-3 gap-2 text-sm">
+                                                        <div>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Spend
+                                                            </p>
+                                                            <p className="font-semibold text-slate-950">
+                                                                {rupeeLabelFromPaise(
+                                                                    row.spend
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                CAC
+                                                            </p>
+                                                            <p className="font-semibold text-slate-950">
+                                                                {row.cac === null
+                                                                    ? "N/A"
+                                                                    : rupeeLabelFromPaise(
+                                                                          row.cac
+                                                                      )}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-xs text-muted-foreground">
+                                                                Conv.
+                                                            </p>
+                                                            <p className="font-semibold text-slate-950">
+                                                                {
+                                                                    row.conversions
+                                                                }
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            Traffic by source
+                                        </h3>
+                                        <div className="mt-4 space-y-2">
+                                            {marketingPerformance.trafficBySource
+                                                .length === 0 ? (
+                                                <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                    No source traffic data yet.
+                                                </p>
+                                            ) : (
+                                                marketingPerformance.trafficBySource.map(
+                                                    (row) => (
+                                                        <div
+                                                            key={row.source}
+                                                            className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                        >
+                                                            <span className="capitalize text-slate-700">
+                                                                {row.source.replaceAll(
+                                                                    "_",
+                                                                    " "
+                                                                )}
+                                                            </span>
+                                                            <span className="font-semibold text-slate-950">
+                                                                {row.sessions}{" "}
+                                                                sessions
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            Conversion rate by source
+                                        </h3>
+                                        <div className="mt-4 space-y-2">
+                                            {marketingPerformance.conversionBySource
+                                                .length === 0 ? (
+                                                <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                    No source conversion data
+                                                    yet.
+                                                </p>
+                                            ) : (
+                                                marketingPerformance.conversionBySource.map(
+                                                    (row) => (
+                                                        <div
+                                                            key={row.source}
+                                                            className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                        >
+                                                            <span className="capitalize text-slate-700">
+                                                                {row.source.replaceAll(
+                                                                    "_",
+                                                                    " "
+                                                                )}
+                                                            </span>
+                                                            <span className="font-semibold text-slate-950">
+                                                                {percentFromRatio(
+                                                                    row.conversionRate
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Campaign-level performance vs goal
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance.campaignPerformance
+                                            .length === 0 ? (
+                                            <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                Connect Meta Ads to show
+                                                campaign-level performance.
+                                            </p>
+                                        ) : (
+                                            marketingPerformance.campaignPerformance.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.id}
+                                                        className="rounded-lg border bg-slate-50 p-4"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <p className="font-semibold text-slate-950">
+                                                                {row.name}
+                                                            </p>
+                                                            <span
+                                                                className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                                                    row.goalStatus ===
+                                                                    "On goal"
+                                                                        ? "bg-emerald-100 text-emerald-800"
+                                                                        : "bg-amber-100 text-amber-800"
+                                                                }`}
+                                                            >
+                                                                {row.goalStatus}
+                                                            </span>
+                                                        </div>
+                                                        <p className="mt-2 text-sm text-muted-foreground">
+                                                            Spend{" "}
+                                                            {rupeeLabelFromPaise(
+                                                                row.spend
+                                                            )}{" "}
+                                                            | ROAS{" "}
+                                                            {row.roas === null
+                                                                ? "N/A"
+                                                                : `${row.roas.toFixed(
+                                                                      2
+                                                                  )}x`}{" "}
+                                                            | CAC{" "}
+                                                            {row.cac === null
+                                                                ? "N/A"
+                                                                : rupeeLabelFromPaise(
+                                                                      row.cac
+                                                                  )}
+                                                        </p>
+                                                    </div>
+                                                )
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <aside className="space-y-4">
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Top performing creatives
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance.topCreatives
+                                            .length === 0 ? (
+                                            <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                Connect Meta Ads to show top
+                                                creatives from the last 7 days.
+                                            </p>
+                                        ) : (
+                                            marketingPerformance.topCreatives.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.id}
+                                                        className="rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                    >
+                                                        <p className="font-semibold text-slate-950">
+                                                            {row.name}
+                                                        </p>
+                                                        <p className="mt-1 text-muted-foreground">
+                                                            {row.campaign} |
+                                                            ROAS{" "}
+                                                            {row.roas.toFixed(
+                                                                2
+                                                            )}
+                                                            x | CTR{" "}
+                                                            {percentFromRatio(
+                                                                row.ctr
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                )
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Underperforming creatives
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance
+                                            .underperformingCreatives.length ===
+                                        0 ? (
+                                            <p className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">
+                                                No creative is currently flagged
+                                                for replacement.
+                                            </p>
+                                        ) : (
+                                            marketingPerformance.underperformingCreatives.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.id}
+                                                        className="rounded-md bg-amber-50 px-3 py-2 text-sm"
+                                                    >
+                                                        <p className="font-semibold text-amber-950">
+                                                            {row.name}
+                                                        </p>
+                                                        <p className="mt-1 text-amber-800">
+                                                            Spend{" "}
+                                                            {rupeeLabelFromPaise(
+                                                                row.spend
+                                                            )}{" "}
+                                                            | ROAS{" "}
+                                                            {row.roas.toFixed(
+                                                                2
+                                                            )}
+                                                            x below{" "}
+                                                            {marketingPerformance.goals.roas.toFixed(
+                                                                1
+                                                            )}
+                                                            x goal
+                                                        </p>
+                                                    </div>
+                                                )
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Content output vs target
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance.contentOutput.map(
+                                            (row) => (
+                                                <div
+                                                    key={row.type}
+                                                    className="rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                >
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="font-semibold text-slate-950">
+                                                            {row.type}
+                                                        </span>
+                                                        <span className="font-semibold text-slate-950">
+                                                            {row.count}/
+                                                            {row.target}
+                                                        </span>
+                                                    </div>
+                                                    <p className="mt-1 text-xs text-muted-foreground">
+                                                        {row.source}
+                                                    </p>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Integration keys
+                                    </h3>
+                                    <div className="mt-4 space-y-2 text-sm">
+                                        {[
+                                            ["Meta Ads", marketingPerformance.integrations.metaAds],
+                                            ["Instagram", marketingPerformance.integrations.instagram],
+                                            ["Google Ads", marketingPerformance.integrations.googleAds],
+                                        ].map(([label, value]) => (
+                                            <div
+                                                key={label}
+                                                className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2"
+                                            >
+                                                <span className="font-medium text-slate-700">
+                                                    {label}
+                                                </span>
+                                                <span className="text-right text-slate-950">
+                                                    {value}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </aside>
+                        </div>
+                            </>
+                        )}
                     </div>
 
                     <div
                         id="monthly-strategic"
-                        className={`scroll-mt-24 rounded-md border bg-white p-4 shadow-sm xl:col-span-3 ${
+                        className={`scroll-mt-24 space-y-4 xl:col-span-3 ${
                             activeDashboard === "monthly" ? "" : "hidden"
                         }`}
                     >
-                        <div className="mb-4 flex items-center justify-between gap-3">
-                            <div>
-                                <h2 className="text-base font-semibold text-slate-950">
-                                    Monthly Strategic
-                                </h2>
-                                <p className="text-sm text-muted-foreground">
-                                    Founder review dashboard
-                                </p>
-                            </div>
-                            <ClipboardCheck className="size-5 text-muted-foreground" />
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                            {[
-                                [
-                                    "GMV (Gross Merchandise Value) MTD (Month To Date)",
-                                    rupeeLabelFromPaise(monthlyStrategic.currentMonth.gmv ?? 0),
-                                ],
-                                [
-                                    "Orders MTD (Month To Date)",
-                                    monthlyStrategic.currentMonth.orderCount ??
-                                        0,
-                                ],
-                                [
-                                    "Customers MTD (Month To Date)",
-                                    monthlyStrategic.currentMonth
-                                        .customerCount ?? 0,
-                                ],
-                                [
-                                    "Prior GMV (Gross Merchandise Value)",
-                                    rupeeLabelFromPaise(monthlyStrategic.previousMonth.gmv ?? 0),
-                                ],
-                                [
-                                    "Refund rate",
-                                    `${(
-                                        monthlyStrategic.refundRate * 100
-                                    ).toFixed(1)}%`,
-                                ],
-                                [
-                                    "Compliance exports",
-                                    monthlyStrategic.complianceExportsThisMonth,
-                                ],
-                                [
-                                    "Critical alerts",
-                                    monthlyStrategic.openCriticalAlerts,
-                                ],
-                                [
-                                    "Brand churn rate",
-                                    `${(
-                                        monthlyStrategic.brandChurnRate * 100
-                                    ).toFixed(1)}%`,
-                                ],
-                                [
-                                    "Contribution/order",
-                                    rupeeLabelFromPaise(monthlyStrategic.contributionMarginPerOrder),
-                                ],
-                                [
-                                    "Contribution margin",
-                                    rupeeLabelFromPaise(monthlyStrategic.contributionMargin),
-                                ],
-                                [
-                                    "Headcount efficiency",
-                                    rupeeLabelFromPaise(monthlyStrategic.headcountEfficiency.value),
-                                ],
-                                ["Runway", monthlyStrategic.runway],
-                                [
-                                    "Compliance evidence",
-                                    monthlyStrategic.complianceStatusSnapshot
-                                        .evidenceEvents,
-                                ],
-                                [
-                                    "Sustainability cert coverage",
-                                    `${(
-                                        monthlyStrategic
-                                            .sustainabilityClaimsAudit
-                                            .certCoverage * 100
-                                    ).toFixed(1)}%`,
-                                ],
-                                [
-                                    "Product approval coverage",
-                                    `${(
-                                        monthlyStrategic
-                                            .sustainabilityClaimsAudit
-                                            .approvalCoverage * 100
-                                    ).toFixed(1)}%`,
-                                ],
-                            ].map(([label, value]) => (
-                                <div
-                                    key={label}
-                                    className="rounded-md border bg-slate-50 px-3 py-2"
-                                >
-                                    <p className="text-xs font-medium text-muted-foreground">
-                                        {label}
-                                    </p>
-                                    <p className="mt-1 text-xl font-semibold text-slate-950">
-                                        {metricLabel(value)}
-                                    </p>
-                                </div>
-                            ))}
-                        </div>
-                        <div className="mt-4 grid gap-4 xl:grid-cols-3">
-                            <div className="rounded-md border bg-slate-50 p-3">
-                                <h3 className="text-sm font-semibold text-slate-950">
-                                    Cohort Retention
-                                </h3>
-                                <div className="mt-3 space-y-2">
-                                    {monthlyStrategic.cohortRetention.length ===
-                                    0 ? (
-                                        <p className="text-sm text-muted-foreground">
-                                            No cohort data yet.
+                        {activeDashboard === "monthly" && monthlyStrategic && (
+                            <>
+                        <div className="overflow-hidden rounded-xl border bg-white shadow-sm">
+                            <div className="bg-[radial-gradient(circle_at_top_left,#dcfce7,transparent_35%),linear-gradient(135deg,#064e3b,#0f172a)] p-6 text-white">
+                                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold uppercase tracking-[0.22em] text-emerald-100">
+                                            Dashboard 3
                                         </p>
-                                    ) : (
-                                        monthlyStrategic.cohortRetention.map(
-                                            (row) => (
-                                                <div
-                                                    key={row.cohort}
-                                                    className="rounded-md bg-white px-3 py-2 text-sm"
-                                                >
-                                                    <p className="font-semibold text-slate-900">
-                                                        {row.cohort} · M0{" "}
-                                                        {row.m0Users}
-                                                    </p>
-                                                    <p className="mt-1 text-muted-foreground">
-                                                        M1{" "}
-                                                        {(
-                                                            row.m1Rate * 100
-                                                        ).toFixed(1)}
-                                                        % · M2{" "}
-                                                        {(
-                                                            row.m2Rate * 100
-                                                        ).toFixed(1)}
-                                                        % · M3{" "}
-                                                        {(
-                                                            row.m3Rate * 100
-                                                        ).toFixed(1)}
-                                                        %
-                                                    </p>
-                                                </div>
-                                            )
-                                        )
+                                        <h2 className="mt-2 text-3xl font-semibold tracking-tight">
+                                            Monthly Strategic
+                                        </h2>
+                                        <p className="mt-2 max-w-2xl text-sm leading-6 text-emerald-50">
+                                            Founder review for retention, brand
+                                            churn, unit economics, category mix,
+                                            runway, compliance, and
+                                            sustainability claims.
+                                        </p>
+                                    </div>
+                                    <div className="grid gap-2 rounded-xl border border-white/15 bg-white/10 p-4 text-sm backdrop-blur sm:grid-cols-2 lg:min-w-[460px]">
+                                        {[
+                                            ["Owner", monthlyStrategic.owner],
+                                            ["Source", monthlyStrategic.source],
+                                            [
+                                                "Review",
+                                                monthlyStrategic.reviewCadence,
+                                            ],
+                                            [
+                                                "Time",
+                                                monthlyStrategic.timeToReview,
+                                            ],
+                                        ].map(([label, value]) => (
+                                            <div key={label}>
+                                                <p className="text-xs uppercase tracking-wide text-emerald-100">
+                                                    {label}
+                                                </p>
+                                                <p className="mt-1 font-semibold text-white">
+                                                    {value}
+                                                </p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                                <MetricTile
+                                    label="GMV this month"
+                                    value={rupeeLabelFromPaise(
+                                        monthlyStrategic.currentMonth.gmv
                                     )}
-                                </div>
+                                    detail={`${signedPercent(
+                                        monthlyStrategic.gmvMoM
+                                    )} vs ${monthlyStrategic.previousMonthLabel}`}
+                                    tone={
+                                        monthlyStrategic.gmvMoM >= 0
+                                            ? "good"
+                                            : "watch"
+                                    }
+                                />
+                                <MetricTile
+                                    label="Order volume"
+                                    value={
+                                        monthlyStrategic.currentMonth.orderCount
+                                    }
+                                    detail={`${signedPercent(
+                                        monthlyStrategic.orderMoM
+                                    )} month over month`}
+                                    tone={
+                                        monthlyStrategic.orderMoM >= 0
+                                            ? "good"
+                                            : "watch"
+                                    }
+                                />
+                                <MetricTile
+                                    label="Brand churn rate"
+                                    value={percentFromRatio(
+                                        monthlyStrategic.brandChurnRate
+                                    )}
+                                    detail={`${monthlyStrategic.churnedBrands} churned from ${monthlyStrategic.priorActiveBrands} prior active brands`}
+                                    tone={
+                                        monthlyStrategic.brandChurnRate > 0.15
+                                            ? "bad"
+                                            : monthlyStrategic.brandChurnRate > 0
+                                              ? "watch"
+                                              : "good"
+                                    }
+                                />
+                                <MetricTile
+                                    label="Contribution / order"
+                                    value={rupeeLabelFromPaise(
+                                        monthlyStrategic.contributionMarginPerOrder
+                                    )}
+                                    detail={`${percentFromRatio(
+                                        monthlyStrategic.contributionMarginRate
+                                    )} contribution margin`}
+                                    tone={
+                                        monthlyStrategic.contributionMargin < 0
+                                            ? "bad"
+                                            : "neutral"
+                                    }
+                                />
                             </div>
-                            <div className="rounded-md border bg-slate-50 p-3">
-                                <h3 className="text-sm font-semibold text-slate-950">
-                                    Gross Margin By Category
-                                </h3>
-                                <div className="mt-3 space-y-2">
-                                    {monthlyStrategic.grossMarginByCategory
-                                        .length === 0 ? (
-                                        <p className="text-sm text-muted-foreground">
-                                            No category sales this month.
-                                        </p>
-                                    ) : (
-                                        monthlyStrategic.grossMarginByCategory.map(
-                                            (row) => (
+                        </div>
+
+                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1.25fr)_minmax(360px,0.75fr)]">
+                            <div className="space-y-4">
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Cohort retention
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                M0 to M1 to M2 to M3 for the
+                                                last 6 cohorts.
+                                            </p>
+                                        </div>
+                                        <UsersRound className="size-5 text-slate-500" />
+                                    </div>
+                                    <div className="mt-4 overflow-hidden rounded-lg border">
+                                        <div className="grid grid-cols-5 bg-slate-950 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-white">
+                                            <span>Cohort</span>
+                                            <span className="text-right">M0</span>
+                                            <span className="text-right">M1</span>
+                                            <span className="text-right">M2</span>
+                                            <span className="text-right">M3</span>
+                                        </div>
+                                        {monthlyStrategic.cohortRetention.length ===
+                                        0 ? (
+                                            <p className="bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                No cohort data yet.
+                                            </p>
+                                        ) : (
+                                            monthlyStrategic.cohortRetention.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.cohort}
+                                                        className="grid grid-cols-5 border-t p-3 text-sm"
+                                                    >
+                                                        <span className="font-semibold text-slate-900">
+                                                            {row.cohort}
+                                                        </span>
+                                                        <span className="text-right text-slate-700">
+                                                            {row.m0Users}
+                                                        </span>
+                                                        <span className="text-right font-semibold text-slate-950">
+                                                            {percentFromRatio(
+                                                                row.m1Rate
+                                                            )}
+                                                        </span>
+                                                        <span className="text-right font-semibold text-slate-950">
+                                                            {percentFromRatio(
+                                                                row.m2Rate
+                                                            )}
+                                                        </span>
+                                                        <span className="text-right font-semibold text-slate-950">
+                                                            {percentFromRatio(
+                                                                row.m3Rate
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 lg:grid-cols-2">
+                                    <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Contribution margin per order
+                                            </h3>
+                                            <Gauge className="size-5 text-slate-500" />
+                                        </div>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                            <MetricTile
+                                                label="Order revenue"
+                                                value={rupeeLabelFromPaise(
+                                                    monthlyStrategic
+                                                        .contributionBreakdown
+                                                        .revenue
+                                                )}
+                                                detail={`${monthlyStrategic.contributionBreakdown.orderCount} paid orders`}
+                                            />
+                                            <MetricTile
+                                                label="Contribution margin"
+                                                value={rupeeLabelFromPaise(
+                                                    monthlyStrategic.contributionMargin
+                                                )}
+                                                detail={percentFromRatio(
+                                                    monthlyStrategic.contributionMarginRate
+                                                )}
+                                                tone={
+                                                    monthlyStrategic.contributionMargin < 0
+                                                        ? "bad"
+                                                        : "neutral"
+                                                }
+                                            />
+                                        </div>
+                                        <div className="mt-4 space-y-2">
+                                            {[
+                                                [
+                                                    "Product cost",
+                                                    monthlyStrategic
+                                                        .contributionBreakdown
+                                                        .productCost,
+                                                ],
+                                                [
+                                                    "Shipping / delivery",
+                                                    monthlyStrategic
+                                                        .contributionBreakdown
+                                                        .shipping,
+                                                ],
+                                                [
+                                                    "Platform fee",
+                                                    monthlyStrategic
+                                                        .contributionBreakdown
+                                                        .platformFee,
+                                                ],
+                                                [
+                                                    "Gateway",
+                                                    monthlyStrategic
+                                                        .contributionBreakdown
+                                                        .gateway,
+                                                ],
+                                                [
+                                                    "Packaging",
+                                                    monthlyStrategic
+                                                        .contributionBreakdown
+                                                        .packaging,
+                                                ],
+                                            ].map(([label, value]) => (
                                                 <div
-                                                    key={row.category}
-                                                    className="flex items-center justify-between gap-3 rounded-md bg-white px-3 py-2 text-sm"
+                                                    key={label}
+                                                    className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
                                                 >
-                                                    <span className="truncate text-slate-700">
-                                                        {row.category}
+                                                    <span className="text-slate-700">
+                                                        {label}
                                                     </span>
                                                     <span className="font-semibold text-slate-950">
-                                                        {(
-                                                            row.grossMargin *
-                                                            100
-                                                        ).toFixed(1)}
-                                                        %
+                                                        {rupeeLabelFromPaise(
+                                                            value
+                                                        )}
                                                     </span>
                                                 </div>
-                                            )
-                                        )
-                                    )}
-                                </div>
-                            </div>
-                            <div className="rounded-md border bg-slate-50 p-3">
-                                <h3 className="text-sm font-semibold text-slate-950">
-                                    Category Mix Evolution
-                                </h3>
-                                <div className="mt-3 space-y-2">
-                                    {monthlyStrategic.categoryMixEvolution
-                                        .length === 0 ? (
-                                        <p className="text-sm text-muted-foreground">
-                                            No category mix data yet.
+                                            ))}
+                                        </div>
+                                        <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                                            {
+                                                monthlyStrategic
+                                                    .contributionBreakdown.note
+                                            }
                                         </p>
-                                    ) : (
-                                        monthlyStrategic.categoryMixEvolution.map(
-                                            (row) => (
-                                                <div
-                                                    key={row.category}
-                                                    className="rounded-md bg-white px-3 py-2 text-sm"
-                                                >
-                                                    <p className="font-semibold text-slate-900">
-                                                        {row.category}
-                                                    </p>
-                                                    <p className="mt-1 text-muted-foreground">
-                                                        Current{" "}
-                                                        {rupeeLabelFromPaise(
-                                                            row.currentRevenue
-                                                        )}{" "}
-                                                        · Previous{" "}
-                                                        {rupeeLabelFromPaise(
-                                                            row.previousRevenue
-                                                        )}
-                                                    </p>
-                                                </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Gross margin by category
+                                            </h3>
+                                            <FileText className="size-5 text-slate-500" />
+                                        </div>
+                                        <div className="mt-4 space-y-2">
+                                            {monthlyStrategic
+                                                .grossMarginByCategory
+                                                .length === 0 ? (
+                                                <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                    No category sales this
+                                                    month.
+                                                </p>
+                                            ) : (
+                                                monthlyStrategic.grossMarginByCategory.map(
+                                                    (row) => (
+                                                        <div
+                                                            key={row.category}
+                                                            className="rounded-md bg-slate-50 p-3"
+                                                        >
+                                                            <div className="flex items-center justify-between gap-3 text-sm">
+                                                                <span className="truncate font-semibold text-slate-900">
+                                                                    {
+                                                                        row.category
+                                                                    }
+                                                                </span>
+                                                                <span className="font-semibold text-slate-950">
+                                                                    {percentFromRatio(
+                                                                        row.grossMargin
+                                                                    )}
+                                                                </span>
+                                                            </div>
+                                                            <p className="mt-2 text-xs text-muted-foreground">
+                                                                Revenue{" "}
+                                                                {rupeeLabelFromPaise(
+                                                                    row.revenue
+                                                                )}{" "}
+                                                                | Cost{" "}
+                                                                {rupeeLabelFromPaise(
+                                                                    row.productCost
+                                                                )}
+                                                            </p>
+                                                        </div>
+                                                    )
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div>
+                                            <h3 className="text-base font-semibold text-slate-950">
+                                                Category mix evolution
+                                            </h3>
+                                            <p className="text-sm text-muted-foreground">
+                                                Current category revenue share
+                                                versus previous month.
+                                            </p>
+                                        </div>
+                                        <Activity className="size-5 text-slate-500" />
+                                    </div>
+                                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                        {monthlyStrategic.categoryMixEvolution
+                                            .length === 0 ? (
+                                            <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground lg:col-span-2">
+                                                No category mix data yet.
+                                            </p>
+                                        ) : (
+                                            monthlyStrategic.categoryMixEvolution.map(
+                                                (row) => (
+                                                    <div
+                                                        key={row.category}
+                                                        className="rounded-lg border bg-slate-50 p-4"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <p className="font-semibold text-slate-950">
+                                                                    {
+                                                                        row.category
+                                                                    }
+                                                                </p>
+                                                                <p className="mt-1 text-sm text-muted-foreground">
+                                                                    Share{" "}
+                                                                    {percentFromRatio(
+                                                                        row.currentShare
+                                                                    )}
+                                                                </p>
+                                                            </div>
+                                                            <span
+                                                                className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                                                                    row.revenueChange >=
+                                                                    0
+                                                                        ? "bg-emerald-100 text-emerald-800"
+                                                                        : "bg-amber-100 text-amber-800"
+                                                                }`}
+                                                            >
+                                                                {signedPercent(
+                                                                    row.revenueChange
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                        <div className="mt-3 flex items-center justify-between gap-3 text-sm">
+                                                            <span className="text-slate-600">
+                                                                Current{" "}
+                                                                {rupeeLabelFromPaise(
+                                                                    row.currentRevenue
+                                                                )}
+                                                            </span>
+                                                            <span className="text-slate-600">
+                                                                Prior{" "}
+                                                                {rupeeLabelFromPaise(
+                                                                    row.previousRevenue
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                )
                                             )
-                                        )
-                                    )}
+                                        )}
+                                    </div>
                                 </div>
                             </div>
+
+                            <aside className="space-y-4">
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Headcount efficiency
+                                    </h3>
+                                    <p className="mt-3 text-3xl font-semibold text-slate-950">
+                                        {rupeeLabelFromPaise(
+                                            monthlyStrategic.headcountEfficiency
+                                                .value
+                                        )}
+                                    </p>
+                                    <p className="mt-1 text-sm text-muted-foreground">
+                                        GMV per FTE-equivalent
+                                    </p>
+                                    <p className="mt-3 rounded-md bg-amber-50 p-3 text-sm leading-5 text-amber-900">
+                                        {
+                                            monthlyStrategic.headcountEfficiency
+                                                .note
+                                        }
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Runway
+                                    </h3>
+                                    <p className="mt-3 rounded-md bg-slate-50 p-4 text-sm font-semibold leading-6 text-slate-800">
+                                        {monthlyStrategic.runway}
+                                    </p>
+                                    <p className="mt-3 text-xs leading-5 text-muted-foreground">
+                                        Formula: cash on hand / monthly burn.
+                                    </p>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            Compliance status snapshot
+                                        </h3>
+                                        <ShieldCheck className="size-5 text-slate-500" />
+                                    </div>
+                                    <div className="mt-4 space-y-2">
+                                        {[
+                                            [
+                                                "Filings / exports this month",
+                                                monthlyStrategic
+                                                    .complianceStatusSnapshot
+                                                    .complianceExports,
+                                            ],
+                                            [
+                                                "Access reviews",
+                                                monthlyStrategic
+                                                    .complianceStatusSnapshot
+                                                    .accessReviews,
+                                            ],
+                                            [
+                                                "Evidence events",
+                                                monthlyStrategic
+                                                    .complianceStatusSnapshot
+                                                    .evidenceEvents,
+                                            ],
+                                            [
+                                                "Open critical alerts",
+                                                monthlyStrategic
+                                                    .complianceStatusSnapshot
+                                                    .openCriticalAlerts,
+                                            ],
+                                        ].map(([label, value]) => (
+                                            <div
+                                                key={label}
+                                                className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                            >
+                                                <span className="text-slate-700">
+                                                    {label}
+                                                </span>
+                                                <span className="font-semibold text-slate-950">
+                                                    {metricLabel(value)}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            Sustainability claims audit
+                                        </h3>
+                                        <ClipboardCheck className="size-5 text-slate-500" />
+                                    </div>
+                                    <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+                                        <MetricTile
+                                            label="Valid cert coverage"
+                                            value={percentFromRatio(
+                                                monthlyStrategic
+                                                    .sustainabilityClaimsAudit
+                                                    .certCoverage
+                                            )}
+                                            detail={`${monthlyStrategic.sustainabilityClaimsAudit.productsWithCert} of ${monthlyStrategic.sustainabilityClaimsAudit.liveProducts} live products`}
+                                            tone={
+                                                monthlyStrategic
+                                                    .sustainabilityClaimsAudit
+                                                    .certCoverage >= 0.9
+                                                    ? "good"
+                                                    : "watch"
+                                            }
+                                        />
+                                        <MetricTile
+                                            label="Approved product coverage"
+                                            value={percentFromRatio(
+                                                monthlyStrategic
+                                                    .sustainabilityClaimsAudit
+                                                    .approvalCoverage
+                                            )}
+                                            detail={`${monthlyStrategic.sustainabilityClaimsAudit.approvedProducts} approved live products`}
+                                            tone={
+                                                monthlyStrategic
+                                                    .sustainabilityClaimsAudit
+                                                    .approvalCoverage >= 0.9
+                                                    ? "good"
+                                                    : "watch"
+                                            }
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Data used here
+                                    </h3>
+                                    <div className="mt-4 space-y-2 text-sm text-slate-700">
+                                        {[
+                                            "Orders and order items: GMV, volume, cohorts, churn, category mix, and margins.",
+                                            "Products, variants, categories, and brands: cost, category, sustainability certs, and brand churn.",
+                                            "Refunds: monthly refund rate.",
+                                            "Audit logs, compliance export runs, and monitoring alerts: compliance snapshot.",
+                                            "Finance cash and burn inputs are not stored yet, so runway stays as required input.",
+                                        ].map((item) => (
+                                            <p
+                                                key={item}
+                                                className="rounded-md bg-slate-50 px-3 py-2"
+                                            >
+                                                {item}
+                                            </p>
+                                        ))}
+                                    </div>
+                                </div>
+                            </aside>
                         </div>
-                        <p className="mt-3 text-xs text-muted-foreground">
-                            {monthlyStrategic.headcountEfficiency.note}
-                        </p>
+                            </>
+                        )}
                     </div>
                 </section>
 

@@ -410,21 +410,33 @@ export const userSupportRouter = createTRPCRouter({
 
             await attachFilesToUserMessage(inserted.id, input.attachments);
 
+            const nextPingCount = ticket.customerPingCount + 1;
+            const needsEscalation = nextPingCount > 3 && !ticket.firstRespondedAt;
+
             await db
                 .update(userSupportTickets)
                 .set({
                     unreadByAdmin: "true",
                     latestMessageAt: new Date(),
                     updatedAt: new Date(),
-                    customerPingCount: ticket.customerPingCount + 1,
-                    status:
-                        ticket.status === "waiting_customer"
-                            ? "in_progress"
-                            : ticket.status === "closed" &&
-                                ticket.reopenAllowedUntil &&
-                                ticket.reopenAllowedUntil > new Date()
-                              ? "reopened"
-                              : ticket.status,
+                    customerPingCount: nextPingCount,
+                    status: needsEscalation
+                        ? "escalated"
+                        : ticket.status === "waiting_customer"
+                          ? "in_progress"
+                          : ticket.status === "closed" &&
+                            ticket.reopenAllowedUntil &&
+                            ticket.reopenAllowedUntil > new Date()
+                            ? "reopened"
+                            : ticket.status,
+                    priority: needsEscalation ? "critical" : ticket.priority,
+                    assignedAdminId: needsEscalation
+                        ? process.env.AJ_USER_ID || ticket.assignedAdminId
+                        : ticket.assignedAdminId,
+                    escalatedAt: needsEscalation
+                        ? (ticket.escalatedAt ?? new Date())
+                        : ticket.escalatedAt,
+                    escalationOwner: needsEscalation ? "AJ" : ticket.escalationOwner,
                 })
                 .where(eq(userSupportTickets.id, input.ticketId));
 
@@ -445,7 +457,21 @@ export const userSupportRouter = createTRPCRouter({
                     ticketId: ticket.id,
                 },
             });
-            if (ticket.customerPingCount + 1 > 3 && !ticket.firstRespondedAt) {
+
+            if (needsEscalation) {
+                await createOperationalAlert({
+                    actorId: ctx.user.id,
+                    type: "customer_pinged_repeatedly_escalation",
+                    severity: "critical",
+                    entityType: "user_support_ticket",
+                    entityId: ticket.id,
+                    title: "Customer pinged repeatedly before support response - Escalated",
+                    message: `Ticket ${ticket.id} has ${nextPingCount} customer pings before first response. Auto-escalated to AJ and priority bumped to critical.`,
+                    ownerRole: "aj",
+                    channels: ["admin", "email", "whatsapp"],
+                    dedupeKey: `ticket:pings:escalate:${ticket.id}`,
+                });
+            } else if (nextPingCount > 3 && !ticket.firstRespondedAt) {
                 await createOperationalAlert({
                     actorId: ctx.user.id,
                     type: "customer_pinged_three_times",

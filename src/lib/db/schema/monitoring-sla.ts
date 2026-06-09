@@ -194,6 +194,21 @@ export const dailyHealthSnapshots = pgTable(
     })
 );
 
+export const monitoringSettings = pgTable(
+    "monitoring_settings",
+    {
+        key: text("key").primaryKey().notNull(),
+        value: jsonb("value").$type<Record<string, unknown>>().notNull().default({}),
+        updatedBy: text("updated_by"),
+        ...timestamps,
+    },
+    (table) => ({
+        monitoringSettingsKeyIdx: uniqueIndex("monitoring_settings_key_idx").on(
+            table.key
+        ),
+    })
+);
+
 export const weeklyReportingPacks = pgTable(
     "weekly_reporting_packs",
     {

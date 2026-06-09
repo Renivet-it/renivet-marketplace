@@ -12,6 +12,7 @@ import {
     isNotNull,
     isNull,
     lt,
+    lte,
     ne,
     or,
     sql,
@@ -20,10 +21,13 @@ import { db } from "..";
 import {
     accessReviewItems,
     accessReviewRuns,
+    analyticsDailyBehavior,
+    analyticsLandingPageDaily,
     auditLogs,
     brandConfidentials,
     brandRequests,
     brands,
+    blogs,
     carrierClaims,
     categories,
     codReconciliationItems,
@@ -35,6 +39,7 @@ import {
     monitoringAlertDeliveries,
     monitoringAlertEvents,
     monitoringAlerts,
+    monitoringSettings,
     orderItems,
     orderReturnRequests,
     orders,
@@ -45,6 +50,7 @@ import {
     rtoDispositions,
     slaCheckRuns,
     supportTickets,
+    supportWeeklySummaries,
     userRoles,
     users,
     userSupportTickets,
@@ -104,6 +110,25 @@ const ALERT_WHATSAPP_RECIPIENTS = (process.env.RENIVET_ALERT_WHATSAPP ?? "")
     .map((item) => item.trim())
     .filter(Boolean);
 const MONITORING_DASHBOARD_PATH = "/dashboard/general/monitoring-sla";
+const MARKETING_TARGETS_SETTING_KEY = "marketing_performance_targets";
+
+type MarketingPerformanceTargets = {
+    roasGoal: number;
+    cacGoalPaise: number;
+    reelsTarget: number;
+    postsTarget: number;
+    blogsTarget: number;
+};
+
+function numberSetting(
+    value: unknown,
+    fallback: number,
+    minimum = 0
+) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return fallback;
+    return Math.max(minimum, parsed);
+}
 
 function formatAlertDate(value?: Date | string | null) {
     if (!value) return "Not set";
@@ -557,6 +582,22 @@ class MonitoringSlaQuery {
                     inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES),
                     isNull(supportTickets.assignedAdminId),
                     lt(supportTickets.createdAt, twoHourCutoff)
+                )
+            )
+            .limit(100);
+
+        const unassignedUserTickets = await db
+            .select({
+                id: userSupportTickets.id,
+                title: userSupportTickets.title,
+                createdAt: userSupportTickets.createdAt,
+            })
+            .from(userSupportTickets)
+            .where(
+                and(
+                    inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES),
+                    isNull(userSupportTickets.assignedAdminId),
+                    lt(userSupportTickets.createdAt, twoHourCutoff)
                 )
             )
             .limit(100);
@@ -1055,7 +1096,7 @@ class MonitoringSlaQuery {
             )
             .limit(100);
 
-        for (const ticket of unassignedTickets) {
+        for (const ticket of [...unassignedTickets, ...unassignedUserTickets]) {
             checkedCount += 1;
             breachCount += 1;
             await this.createAlert({
@@ -2149,9 +2190,12 @@ class MonitoringSlaQuery {
         const weekStart = new Date(today.getTime() - 6 * DAY);
         const previousWeekStart = new Date(weekStart.getTime() - 7 * DAY);
         const previousWeekEnd = weekStart;
+        const previousFourWeekStart = new Date(weekStart.getTime() - 28 * DAY);
         const weekStartSql = toSqlDateTime(weekStart);
+        const weekStartKey = weekStart.toISOString().slice(0, 10);
+        const weekEndKey = today.toISOString().slice(0, 10);
 
-        const [currentWeek, previousWeek] = await Promise.all([
+        const [currentWeek, previousWeek, priorFourWeek] = await Promise.all([
             db
                 .select({
                     gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
@@ -2194,18 +2238,73 @@ class MonitoringSlaQuery {
                     )
                 )
                 .then((res) => res[0]),
+            db
+                .select({
+                    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                    orderCount: sql<number>`count(${orders.id})`,
+                    aov: sql<number>`case when count(${orders.id}) = 0 then 0 else coalesce(sum(${orders.totalAmount}), 0) / count(${orders.id}) end`,
+                })
+                .from(orders)
+                .where(
+                    and(
+                        gte(orders.createdAt, previousFourWeekStart),
+                        lt(orders.createdAt, weekStart),
+                        ne(orders.status, "cancelled"),
+                        ne(orders.paymentStatus, "failed")
+                    )
+                )
+                .then((res) => res[0]),
         ]);
 
         const [
             activeBrands,
+            sellingBrandsThisWeek,
+            sellingBrandsPreviousWeek,
             supportAdminOpen,
             supportUserOpen,
+            supportStats,
+            latestSupportSummary,
             refundStats,
+            refundReasonRows,
+            rtoStats,
+            funnelStats,
             slaBreaches,
+            slaBreachesByFunction,
             topBrands,
             bottomBrands,
         ] = await Promise.all([
             db.$count(brands, eq(brands.isActive, true)),
+            db
+                .select({
+                    count: sql<number>`count(distinct ${products.brandId})`,
+                })
+                .from(orderItems)
+                .innerJoin(products, eq(orderItems.productId, products.id))
+                .innerJoin(orders, eq(orderItems.orderId, orders.id))
+                .where(
+                    and(
+                        gte(orders.createdAt, weekStart),
+                        ne(orders.status, "cancelled"),
+                        ne(orders.paymentStatus, "failed")
+                    )
+                )
+                .then((res) => res[0]?.count ?? 0),
+            db
+                .select({
+                    count: sql<number>`count(distinct ${products.brandId})`,
+                })
+                .from(orderItems)
+                .innerJoin(products, eq(orderItems.productId, products.id))
+                .innerJoin(orders, eq(orderItems.orderId, orders.id))
+                .where(
+                    and(
+                        gte(orders.createdAt, previousWeekStart),
+                        lt(orders.createdAt, previousWeekEnd),
+                        ne(orders.status, "cancelled"),
+                        ne(orders.paymentStatus, "failed")
+                    )
+                )
+                .then((res) => res[0]?.count ?? 0),
             db.$count(
                 supportTickets,
                 inArray(supportTickets.status, ACTIVE_SUPPORT_STATUSES)
@@ -2214,6 +2313,43 @@ class MonitoringSlaQuery {
                 userSupportTickets,
                 inArray(userSupportTickets.status, ACTIVE_SUPPORT_STATUSES)
             ),
+            db.execute(sql`
+                with weekly_tickets as (
+                    select
+                        created_at,
+                        first_responded_at,
+                        resolved_at,
+                        csat_score,
+                        status
+                    from ${supportTickets}
+                    where created_at >= ${weekStartSql}::timestamp
+                    union all
+                    select
+                        created_at,
+                        first_responded_at,
+                        resolved_at,
+                        csat_score,
+                        status
+                    from ${userSupportTickets}
+                    where created_at >= ${weekStartSql}::timestamp
+                )
+                select
+                    count(*)::int as tickets_opened,
+                    count(case when resolved_at is not null or status in ('resolved', 'closed') then 1 end)::int as tickets_resolved,
+                    avg(extract(epoch from (first_responded_at - created_at)) / 60)
+                        filter (where first_responded_at is not null)::int as avg_first_response_minutes,
+                    avg(extract(epoch from (resolved_at - created_at)) / 60)
+                        filter (where resolved_at is not null)::int as avg_resolution_minutes,
+                    avg(csat_score) filter (where csat_score is not null)::numeric(10, 2) as csat_average
+                from weekly_tickets
+            `),
+            db.query.supportWeeklySummaries.findFirst({
+                where: and(
+                    eq(supportWeeklySummaries.weekStart, weekStartKey),
+                    eq(supportWeeklySummaries.weekEnd, weekEndKey)
+                ),
+                orderBy: [desc(supportWeeklySummaries.createdAt)],
+            }),
             db
                 .select({
                     count: sql<number>`count(${refunds.id})`,
@@ -2222,6 +2358,39 @@ class MonitoringSlaQuery {
                 .from(refunds)
                 .where(gte(refunds.createdAt, weekStart))
                 .then((res) => res[0]),
+            db
+                .select({
+                    reasonCode: refunds.reasonCode,
+                    count: sql<number>`count(${refunds.id})`,
+                    amount: sql<number>`coalesce(sum(${refunds.amount}), 0)`,
+                })
+                .from(refunds)
+                .where(gte(refunds.createdAt, weekStart))
+                .groupBy(refunds.reasonCode)
+                .orderBy(sql`count(${refunds.id}) desc`)
+                .limit(6),
+            db
+                .select({
+                    delivered: sql<number>`count(case when ${orderShipments.status} = 'delivered' then 1 end)`,
+                    rto: sql<number>`count(case when ${orderShipments.status} in ('rto_initiated', 'rto_delivered') then 1 end)`,
+                })
+                .from(orderShipments)
+                .where(gte(orderShipments.updatedAt, weekStart))
+                .then((res) => res[0]),
+            db
+                .select({
+                    sessions: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessions}), 0)`,
+                    carts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsWithCart}), 0)`,
+                    checkouts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsReachedCheckout}), 0)`,
+                })
+                .from(analyticsDailyBehavior)
+                .where(
+                    and(
+                        gte(analyticsDailyBehavior.dateKey, weekStartKey),
+                        lte(analyticsDailyBehavior.dateKey, weekEndKey)
+                    )
+                )
+                .then((res) => res[0]),
             db.$count(
                 monitoringAlerts,
                 and(
@@ -2229,6 +2398,22 @@ class MonitoringSlaQuery {
                     eq(monitoringAlerts.severity, "critical")
                 )
             ),
+            db
+                .select({
+                    functionName: sql<string>`coalesce(${monitoringAlerts.ownerRole}, ${monitoringAlerts.entityType}, 'unassigned')`,
+                    count: sql<number>`count(${monitoringAlerts.id})`,
+                })
+                .from(monitoringAlerts)
+                .where(
+                    and(
+                        gte(monitoringAlerts.createdAt, weekStart),
+                        eq(monitoringAlerts.severity, "critical")
+                    )
+                )
+                .groupBy(
+                    sql`coalesce(${monitoringAlerts.ownerRole}, ${monitoringAlerts.entityType}, 'unassigned')`
+                )
+                .orderBy(sql`count(${monitoringAlerts.id}) desc`),
             db.execute(sql`
                 select b.name as brand_name, coalesce(sum(o.total_amount), 0)::int as gmv
                 from ${brands} b
@@ -2259,39 +2444,140 @@ class MonitoringSlaQuery {
 
         const currentGmv = Number(currentWeek.gmv ?? 0);
         const previousGmv = Number(previousWeek.gmv ?? 0);
+        const priorFourWeekGmvAvg = Number(priorFourWeek.gmv ?? 0) / 4;
         const gmvWoW =
             previousGmv === 0
                 ? currentGmv > 0
                     ? 100
                     : 0
                 : ((currentGmv - previousGmv) / previousGmv) * 100;
+        const gmvVsPriorFourWeekAvg =
+            priorFourWeekGmvAvg === 0
+                ? currentGmv > 0
+                    ? 100
+                    : 0
+                : ((currentGmv - priorFourWeekGmvAvg) /
+                      priorFourWeekGmvAvg) *
+                  100;
         const orderCount = Number(currentWeek.orderCount ?? 0);
+        const previousOrderCount = Number(previousWeek.orderCount ?? 0);
+        const orderVolumeWoW =
+            previousOrderCount === 0
+                ? orderCount > 0
+                    ? 100
+                    : 0
+                : ((orderCount - previousOrderCount) / previousOrderCount) *
+                  100;
+        const aov = Number(currentWeek.aov ?? 0);
+        const previousAov = Number(previousWeek.aov ?? 0);
+        const aovWoW =
+            previousAov === 0
+                ? aov > 0
+                    ? 100
+                    : 0
+                : ((aov - previousAov) / previousAov) * 100;
+        const supportSummary = Array.from(
+            supportStats as Iterable<Record<string, unknown>>
+        )[0] ?? {};
+        const deliveredShipments = Number(rtoStats.delivered ?? 0);
+        const rtoShipments = Number(rtoStats.rto ?? 0);
+        const shipmentOutcomeCount = deliveredShipments + rtoShipments;
+        const funnelSessions = Number(funnelStats.sessions ?? 0);
+        const funnelCarts = Number(funnelStats.carts ?? 0);
+        const funnelCheckouts = Number(funnelStats.checkouts ?? 0);
 
         return {
             weekStart: weekStart.toISOString().slice(0, 10),
             weekEnd: today.toISOString().slice(0, 10),
             gmv: currentGmv,
             previousGmv,
+            priorFourWeekGmvAvg,
             gmvWoW,
+            gmvVsPriorFourWeekAvg,
             orderCount,
-            previousOrderCount: Number(previousWeek.orderCount ?? 0),
-            aov: Number(currentWeek.aov ?? 0),
-            previousAov: Number(previousWeek.aov ?? 0),
+            previousOrderCount,
+            orderVolumeWoW,
+            aov,
+            previousAov,
+            aovWoW,
             customerCount: Number(currentWeek.customerCount ?? 0),
             repeatCustomers: Number(currentWeek.repeatCustomers ?? 0),
-            conversionFunnelIntegration:
-                "Needs visit/cart/checkout analytics feed",
-            cacIntegration: "Needs ad spend import",
-            roasIntegration: "Needs ad spend import",
+            conversionFunnel: {
+                sessions: funnelSessions,
+                carts: funnelCarts,
+                checkouts: funnelCheckouts,
+                paid: orderCount,
+                cartRate:
+                    funnelSessions === 0 ? 0 : funnelCarts / funnelSessions,
+                checkoutRate:
+                    funnelCarts === 0 ? 0 : funnelCheckouts / funnelCarts,
+                paidRate:
+                    funnelCheckouts === 0
+                        ? 0
+                        : orderCount / funnelCheckouts,
+            },
+            cacByChannel: [
+                { channel: "Meta", value: "Needs ad spend import" },
+                { channel: "Google", value: "Needs ad spend import" },
+                { channel: "Organic", value: "No paid spend" },
+                { channel: "Partnerships", value: "Needs spend import" },
+            ],
+            roasByChannel: [
+                { channel: "Meta", value: "Needs ad spend import" },
+                { channel: "Google", value: "Needs ad spend import" },
+                { channel: "Organic", value: "No paid spend" },
+                { channel: "Partnerships", value: "Needs spend import" },
+            ],
             activeBrands,
+            sellingBrandsThisWeek: Number(sellingBrandsThisWeek),
+            sellingBrandsPreviousWeek: Number(sellingBrandsPreviousWeek),
             supportOpenTickets: supportAdminOpen + supportUserOpen,
+            supportMetrics: {
+                ticketsOpened: Number(
+                    supportSummary.tickets_opened ??
+                        latestSupportSummary?.ticketsOpened ??
+                        0
+                ),
+                ticketsResolved: Number(
+                    supportSummary.tickets_resolved ??
+                        latestSupportSummary?.ticketsResolved ??
+                        0
+                ),
+                avgFirstResponseMinutes: Number(
+                    supportSummary.avg_first_response_minutes ??
+                        latestSupportSummary?.avgFirstResponseMinutes ??
+                        0
+                ),
+                avgResolutionMinutes: Number(
+                    supportSummary.avg_resolution_minutes ?? 0
+                ),
+                csatAverage:
+                    supportSummary.csat_average ??
+                    latestSupportSummary?.csatAverage ??
+                    null,
+            },
             refundRate:
                 orderCount === 0
                     ? 0
                     : Number(refundStats.count ?? 0) / orderCount,
+            refundCount: Number(refundStats.count ?? 0),
             refundAmount: Number(refundStats.amount ?? 0),
-            rtoRate: "Needs delivered/RTO shipment baseline",
+            refundReasons: refundReasonRows.map((row) => ({
+                reasonCode: row.reasonCode ?? "Uncoded",
+                count: Number(row.count ?? 0),
+                amount: Number(row.amount ?? 0),
+            })),
+            rtoRate:
+                shipmentOutcomeCount === 0
+                    ? 0
+                    : rtoShipments / shipmentOutcomeCount,
+            deliveredShipments,
+            rtoShipments,
             slaBreachCount: slaBreaches,
+            slaBreachesByFunction: slaBreachesByFunction.map((row) => ({
+                functionName: String(row.functionName ?? "unassigned"),
+                count: Number(row.count ?? 0),
+            })),
             topBrands: Array.from(
                 topBrands as Iterable<Record<string, unknown>>
             ).map((row) => ({
@@ -2309,117 +2595,925 @@ class MonitoringSlaQuery {
 
     async getBrandHealth() {
         const now = new Date();
+        const today = startOfDay();
+        const weekStart = new Date(today.getTime() - 6 * DAY);
+        const previousFourWeekStart = new Date(weekStart.getTime() - 28 * DAY);
+        const fourteenDaysAgo = new Date(now.getTime() - 14 * DAY);
         const thirtyDaysAgo = new Date(now.getTime() - 30 * DAY);
         const thirtyDaysFromNow = new Date(now.getTime() + 30 * DAY);
+        const sixtyDaysFromNow = new Date(now.getTime() + 60 * DAY);
+        const ninetyDaysFromNow = new Date(now.getTime() + 90 * DAY);
 
-        const activeBrands = await db.$count(brands, eq(brands.isActive, true));
-        const pausedBrands = await db.$count(
-            brands,
-            eq(brands.isActive, false)
-        );
-        const pendingVerification = await db.$count(
-            brands,
-            ne(brands.confidentialVerificationStatus, "approved")
-        );
-        const activeProducts = await db.$count(
-            products,
-            and(
-                eq(products.isActive, true),
-                eq(products.isDeleted, false),
-                eq(products.isPublished, true)
-            )
-        );
-        const lowInventoryVariants = await db.$count(
-            productVariants,
-            and(
-                gte(productVariants.quantity, 0),
-                lt(productVariants.quantity, 5)
-            )
-        );
-        const certExpiring30d = await db.$count(
-            brandConfidentials,
-            and(
-                isNotNull(
-                    brandConfidentials.sustainabilityCertificateExpiresAt
-                ),
-                lt(
-                    brandConfidentials.sustainabilityCertificateExpiresAt,
-                    thirtyDaysFromNow
-                )
-            )
-        );
-        const contractExpiring30d = await db.$count(
-            brands,
-            and(
-                isNotNull(brands.contractExpiresAt),
-                lt(brands.contractExpiresAt, thirtyDaysFromNow)
-            )
-        );
-        const supportTickets30d = await db.$count(
-            supportTickets,
-            gte(supportTickets.createdAt, thirtyDaysAgo)
-        );
-        const brandsWithOrders30d = await db
-            .select({
-                count: sql<number>`count(distinct ${products.brandId})`,
-            })
-            .from(orderItems)
-            .innerJoin(products, eq(orderItems.productId, products.id))
-            .innerJoin(orders, eq(orderItems.orderId, orders.id))
-            .where(gte(orders.createdAt, thirtyDaysAgo))
-            .then((res) => res[0]?.count ?? 0);
-
-        return {
+        const [
             activeBrands,
             pausedBrands,
             pendingVerification,
             activeProducts,
             lowInventoryVariants,
-            certExpiring30d,
-            contractExpiring30d,
+            requestPipelineRows,
+            brandStageRows,
+            daysToGoLiveRows,
+            noOrderRows,
+            decliningSalesRows,
+            certExpiryRows,
+            contractExpiryRows,
+            brandTicketRows,
+            nonResponsiveRows,
+        ] = await Promise.all([
+            db.$count(brands, eq(brands.isActive, true)),
+            db.$count(brands, eq(brands.isActive, false)),
+            db.$count(brands, ne(brands.confidentialVerificationStatus, "approved")),
+            db.$count(
+                products,
+                and(
+                    eq(products.isActive, true),
+                    eq(products.isDeleted, false),
+                    eq(products.isPublished, true)
+                )
+            ),
+            db.$count(
+                productVariants,
+                and(
+                    gte(productVariants.quantity, 0),
+                    lt(productVariants.quantity, 5)
+                )
+            ),
+            db
+                .select({
+                    status: brandRequests.status,
+                    count: sql<number>`count(${brandRequests.id})`,
+                })
+                .from(brandRequests)
+                .groupBy(brandRequests.status),
+            db.execute(sql`
+                select stage, count(*)::int as count
+                from (
+                    select 'outreach' as stage
+                    from ${brandRequests}
+                    where status = 'pending'
+                    union all
+                    select 'discussion' as stage
+                    from ${brandRequests}
+                    where status = 'approved'
+                    union all
+                    select
+                        case
+                            when b.contract_signed_at is null then 'contract'
+                            when b.confidential_verification_status <> 'approved' then 'onboarding'
+                            else 'live'
+                        end as stage
+                    from ${brands} b
+                ) stages
+                group by stage
+            `),
+            db.execute(sql`
+                select
+                    b.id,
+                    b.name,
+                    b.created_at,
+                    b.contract_signed_at,
+                    b.confidential_verification_status,
+                    min(o.created_at) as first_order_at,
+                    case
+                        when min(o.created_at) is not null then extract(day from min(o.created_at) - b.created_at)::int
+                        else extract(day from ${toSqlDateTime(now)}::timestamp - b.created_at)::int
+                    end as days_to_go_live
+                from ${brands} b
+                left join ${products} p on p.brand_id = b.id
+                left join ${orderItems} oi on oi.product_id = p.id
+                left join ${orders} o on o.id = oi.order_id
+                  and o.status <> 'cancelled'
+                  and o.payment_status <> 'failed'
+                where b.is_active = true
+                group by b.id, b.name, b.created_at, b.contract_signed_at, b.confidential_verification_status
+                order by days_to_go_live desc
+                limit 8
+            `),
+            db.execute(sql`
+                with recent_order_brands as (
+                    select distinct p.brand_id
+                    from ${orders} o
+                    inner join ${orderItems} oi on oi.order_id = o.id
+                    inner join ${products} p on p.id = oi.product_id
+                    where o.created_at >= ${toSqlDateTime(thirtyDaysAgo)}
+                      and o.status <> 'cancelled'
+                      and o.payment_status <> 'failed'
+                )
+                select b.id, b.name, b.created_at
+                from ${brands} b
+                left join recent_order_brands rob on rob.brand_id = b.id
+                where b.is_active = true
+                  and rob.brand_id is null
+                order by b.created_at asc
+                limit 10
+            `),
+            db.execute(sql`
+                with brand_sales as (
+                    select
+                        p.brand_id,
+                        coalesce(sum(case when o.created_at >= ${toSqlDateTime(weekStart)} then o.total_amount else 0 end), 0)::int as current_week_gmv,
+                        coalesce(sum(case when o.created_at >= ${toSqlDateTime(previousFourWeekStart)} and o.created_at < ${toSqlDateTime(weekStart)} then o.total_amount else 0 end), 0)::int as prior_4w_gmv
+                    from ${orders} o
+                    inner join ${orderItems} oi on oi.order_id = o.id
+                    inner join ${products} p on p.id = oi.product_id
+                    where o.created_at >= ${toSqlDateTime(previousFourWeekStart)}
+                      and o.status <> 'cancelled'
+                      and o.payment_status <> 'failed'
+                    group by p.brand_id
+                )
+                select
+                    b.id,
+                    b.name,
+                    bs.current_week_gmv,
+                    (bs.prior_4w_gmv / 4)::int as prior_4w_avg,
+                    case
+                        when bs.prior_4w_gmv = 0 then 0
+                        else ((bs.current_week_gmv - (bs.prior_4w_gmv / 4.0)) / (bs.prior_4w_gmv / 4.0)) * 100
+                    end as decline_pct
+                from brand_sales bs
+                inner join ${brands} b on b.id = bs.brand_id
+                where b.is_active = true
+                  and bs.prior_4w_gmv > 0
+                  and bs.current_week_gmv < (bs.prior_4w_gmv / 4.0)
+                order by decline_pct asc
+                limit 10
+            `),
+            db.execute(sql`
+                select
+                    b.id,
+                    b.name,
+                    bc.sustainability_certificate_expires_at as expires_at,
+                    case
+                        when bc.sustainability_certificate_expires_at < ${toSqlDateTime(thirtyDaysFromNow)} then '30'
+                        when bc.sustainability_certificate_expires_at < ${toSqlDateTime(sixtyDaysFromNow)} then '60'
+                        else '90'
+                    end as window
+                from ${brandConfidentials} bc
+                inner join ${brands} b on b.id = bc.id
+                where bc.sustainability_certificate_expires_at is not null
+                  and bc.sustainability_certificate_expires_at < ${toSqlDateTime(ninetyDaysFromNow)}
+                order by bc.sustainability_certificate_expires_at asc
+            `),
+            db.execute(sql`
+                select
+                    id,
+                    name,
+                    contract_expires_at as expires_at,
+                    case
+                        when contract_expires_at < ${toSqlDateTime(thirtyDaysFromNow)} then '30'
+                        when contract_expires_at < ${toSqlDateTime(sixtyDaysFromNow)} then '60'
+                        else '90'
+                    end as window
+                from ${brands}
+                where contract_expires_at is not null
+                  and contract_expires_at < ${toSqlDateTime(ninetyDaysFromNow)}
+                order by contract_expires_at asc
+            `),
+            db
+                .select({
+                    id: supportTickets.id,
+                    brandId: supportTickets.brandId,
+                    brandName: brands.name,
+                    title: supportTickets.title,
+                    status: supportTickets.status,
+                    priority: supportTickets.priority,
+                    createdAt: supportTickets.createdAt,
+                })
+                .from(supportTickets)
+                .leftJoin(brands, eq(brands.id, supportTickets.brandId))
+                .where(gte(supportTickets.createdAt, thirtyDaysAgo))
+                .orderBy(desc(supportTickets.createdAt))
+                .limit(10),
+            db.execute(sql`
+                with last_order as (
+                    select p.brand_id, max(o.created_at) as last_order_at
+                    from ${orders} o
+                    inner join ${orderItems} oi on oi.order_id = o.id
+                    inner join ${products} p on p.id = oi.product_id
+                    where o.status <> 'cancelled'
+                      and o.payment_status <> 'failed'
+                    group by p.brand_id
+                ),
+                last_ticket as (
+                    select brand_id, max(created_at) as last_ticket_at
+                    from ${supportTickets}
+                    group by brand_id
+                )
+                select
+                    b.id,
+                    b.name,
+                    lo.last_order_at,
+                    lt.last_ticket_at,
+                    greatest(coalesce(lo.last_order_at, b.created_at), coalesce(lt.last_ticket_at, b.created_at), b.updated_at) as last_activity_at
+                from ${brands} b
+                left join last_order lo on lo.brand_id = b.id
+                left join last_ticket lt on lt.brand_id = b.id
+                where b.is_active = true
+                  and greatest(coalesce(lo.last_order_at, b.created_at), coalesce(lt.last_ticket_at, b.created_at), b.updated_at) < ${toSqlDateTime(fourteenDaysAgo)}
+                order by last_activity_at asc
+                limit 10
+            `),
+        ]);
+
+        const stageCounts = new Map(
+            Array.from(brandStageRows as Iterable<Record<string, unknown>>).map(
+                (row) => [String(row.stage), Number(row.count ?? 0)]
+            )
+        );
+        const pipelineStages = [
+            "outreach",
+            "discussion",
+            "contract",
+            "onboarding",
+            "live",
+        ].map((stage) => ({
+            stage,
+            count:
+                stage === "live"
+                    ? activeBrands
+                    : Number(stageCounts.get(stage) ?? 0),
+        }));
+        const expiryBuckets = (
+            rows: Iterable<Record<string, unknown>>
+        ) => {
+            const list = Array.from(rows).map((row) => ({
+                id: String(row.id ?? ""),
+                name: String(row.name ?? "Unknown"),
+                expiresAt: row.expires_at
+                    ? new Date(String(row.expires_at)).toISOString().slice(0, 10)
+                    : "Not set",
+                window: String(row.window ?? "90"),
+            }));
+            return {
+                next30: list.filter((row) => row.window === "30"),
+                next60: list.filter((row) => row.window === "60"),
+                next90: list.filter((row) => row.window === "90"),
+                all: list,
+            };
+        };
+        const brandsWithOrders30d = Math.max(
+            0,
+            activeBrands -
+                Array.from(noOrderRows as Iterable<Record<string, unknown>>)
+                    .length
+        );
+        const supportTickets30d = brandTicketRows.length;
+        const certExpiries = expiryBuckets(
+            certExpiryRows as Iterable<Record<string, unknown>>
+        );
+        const contractExpiries = expiryBuckets(
+            contractExpiryRows as Iterable<Record<string, unknown>>
+        );
+
+        return {
+            owner: "KP",
+            reviewCadence: "Every Monday morning",
+            source: "Admin panel brand module",
+            activeBrands,
+            pausedBrands,
+            pendingVerification,
+            activeProducts,
+            lowInventoryVariants,
+            pipelineStages,
+            requestPipeline: requestPipelineRows.map((row) => ({
+                status: row.status,
+                count: Number(row.count ?? 0),
+            })),
+            daysToGoLiveTarget: 14,
+            daysToGoLive: Array.from(
+                daysToGoLiveRows as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                id: String(row.id ?? ""),
+                name: String(row.name ?? "Unknown"),
+                createdAt: row.created_at
+                    ? new Date(String(row.created_at)).toISOString().slice(0, 10)
+                    : "Unknown",
+                contractSignedAt: row.contract_signed_at
+                    ? new Date(String(row.contract_signed_at))
+                          .toISOString()
+                          .slice(0, 10)
+                    : null,
+                verificationStatus: String(
+                    row.confidential_verification_status ?? "idle"
+                ),
+                days: Number(row.days_to_go_live ?? 0),
+                status:
+                    Number(row.days_to_go_live ?? 0) > 14 ? "At risk" : "On track",
+            })),
+            brandsWithNoOrders30d: Array.from(
+                noOrderRows as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                id: String(row.id ?? ""),
+                name: String(row.name ?? "Unknown"),
+                createdAt: row.created_at
+                    ? new Date(String(row.created_at)).toISOString().slice(0, 10)
+                    : "Unknown",
+            })),
+            decliningSales: Array.from(
+                decliningSalesRows as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                id: String(row.id ?? ""),
+                name: String(row.name ?? "Unknown"),
+                currentWeekGmv: Number(row.current_week_gmv ?? 0),
+                priorFourWeekAvg: Number(row.prior_4w_avg ?? 0),
+                declinePct: Number(row.decline_pct ?? 0),
+            })),
+            certExpiries,
+            contractExpiries,
+            certExpiring30d: certExpiries.next30.length,
+            contractExpiring30d: contractExpiries.next30.length,
+            brandSideSupportTickets: brandTicketRows.map((row) => ({
+                id: row.id,
+                brandId: row.brandId,
+                brandName: row.brandName ?? "Unknown brand",
+                title: row.title,
+                status: row.status,
+                priority: row.priority ?? "normal",
+                createdAt: row.createdAt
+                    ? new Date(row.createdAt).toISOString().slice(0, 10)
+                    : "Unknown",
+            })),
+            nonResponsiveBrands: Array.from(
+                nonResponsiveRows as Iterable<Record<string, unknown>>
+            ).map((row) => ({
+                id: String(row.id ?? ""),
+                name: String(row.name ?? "Unknown"),
+                lastOrderAt: row.last_order_at
+                    ? new Date(String(row.last_order_at)).toISOString().slice(0, 10)
+                    : null,
+                lastTicketAt: row.last_ticket_at
+                    ? new Date(String(row.last_ticket_at)).toISOString().slice(0, 10)
+                    : null,
+                lastActivityAt: row.last_activity_at
+                    ? new Date(String(row.last_activity_at))
+                          .toISOString()
+                          .slice(0, 10)
+                    : null,
+            })),
             supportTickets30d,
             brandsWithOrders30d,
-            brandsWithNoOrders30d: Math.max(
-                0,
-                activeBrands - Number(brandsWithOrders30d)
+            brandsWithNoOrders30dCount: Array.from(
+                noOrderRows as Iterable<Record<string, unknown>>
+            ).length,
+            decliningSalesCount: Array.from(
+                decliningSalesRows as Iterable<Record<string, unknown>>
+            ).length,
+            nonResponsiveBrandsCount: Array.from(
+                nonResponsiveRows as Iterable<Record<string, unknown>>
+            ).length,
+            dataNotes: [
+                "Pipeline stages are derived from brand_requests plus brand contract/verification/live status.",
+                "Days-to-go-live uses brand created date to first valid order; in-progress brands use age so far.",
+                "Non-responsive brands are a proxy from last order/support/admin update because no brand-login timestamp exists yet.",
+            ],
+        };
+    }
+
+    async getMarketingPerformanceTargets(): Promise<MarketingPerformanceTargets> {
+        const defaults: MarketingPerformanceTargets = {
+            roasGoal: numberSetting(
+                process.env.MARKETING_CAMPAIGN_ROAS_GOAL,
+                2,
+                0
+            ),
+            cacGoalPaise: numberSetting(
+                process.env.MARKETING_CAMPAIGN_CAC_GOAL_PAISE,
+                150000,
+                0
+            ),
+            reelsTarget: numberSetting(
+                process.env.MARKETING_WEEKLY_REELS_TARGET,
+                3,
+                0
+            ),
+            postsTarget: numberSetting(
+                process.env.MARKETING_WEEKLY_POSTS_TARGET,
+                3,
+                0
+            ),
+            blogsTarget: numberSetting(
+                process.env.MARKETING_WEEKLY_BLOGS_TARGET,
+                1,
+                0
             ),
         };
+        const saved = await db.query.monitoringSettings.findFirst({
+            where: eq(monitoringSettings.key, MARKETING_TARGETS_SETTING_KEY),
+        });
+        const value = saved?.value ?? {};
+
+        return {
+            roasGoal: numberSetting(value.roasGoal, defaults.roasGoal, 0),
+            cacGoalPaise: numberSetting(
+                value.cacGoalPaise,
+                defaults.cacGoalPaise,
+                0
+            ),
+            reelsTarget: Math.round(
+                numberSetting(value.reelsTarget, defaults.reelsTarget, 0)
+            ),
+            postsTarget: Math.round(
+                numberSetting(value.postsTarget, defaults.postsTarget, 0)
+            ),
+            blogsTarget: Math.round(
+                numberSetting(value.blogsTarget, defaults.blogsTarget, 0)
+            ),
+        };
+    }
+
+    async updateMarketingPerformanceTargets({
+        targets,
+        actorId,
+    }: {
+        targets: MarketingPerformanceTargets;
+        actorId: string;
+    }) {
+        const safeTargets: MarketingPerformanceTargets = {
+            roasGoal: numberSetting(targets.roasGoal, 2, 0),
+            cacGoalPaise: Math.round(
+                numberSetting(targets.cacGoalPaise, 150000, 0)
+            ),
+            reelsTarget: Math.round(numberSetting(targets.reelsTarget, 3, 0)),
+            postsTarget: Math.round(numberSetting(targets.postsTarget, 3, 0)),
+            blogsTarget: Math.round(numberSetting(targets.blogsTarget, 1, 0)),
+        };
+
+        await db
+            .insert(monitoringSettings)
+            .values({
+                key: MARKETING_TARGETS_SETTING_KEY,
+                value: safeTargets,
+                updatedBy: actorId,
+            })
+            .onConflictDoUpdate({
+                target: monitoringSettings.key,
+                set: {
+                    value: safeTargets,
+                    updatedBy: actorId,
+                    updatedAt: new Date(),
+                },
+            });
+
+        await auditLogQueries.write({
+            userId: actorId,
+            actionType: "marketing_targets_updated",
+            entityType: "monitoring_settings",
+            entityId: MARKETING_TARGETS_SETTING_KEY,
+            afterValue: safeTargets,
+            reason: "Admin updated Marketing Performance dashboard targets",
+        });
+
+        return safeTargets;
     }
 
     async getMarketingPerformance() {
         const today = startOfDay();
         const weekStart = new Date(today.getTime() - 6 * DAY);
         const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        const weekStartKey = weekStart.toISOString().slice(0, 10);
+        const weekEndKey = today.toISOString().slice(0, 10);
+        const metaToken = process.env.META_ACCESS_TOKEN;
+        const metaAdAccountId = process.env.META_AD_ACCOUNT_ID;
+        const instagramBusinessAccountId =
+            process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
+        const graphVersion = process.env.META_GRAPH_API_VERSION || "v20.0";
+        const targets = await this.getMarketingPerformanceTargets();
+        const roasGoal = targets.roasGoal;
+        const cacGoalPaise = targets.cacGoalPaise;
+        const contentTargets = {
+            reels: targets.reelsTarget,
+            posts: targets.postsTarget,
+            blogs: targets.blogsTarget,
+        };
 
-        const week = await db
-            .select({
-                gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
-                orders: sql<number>`count(${orders.id})`,
-                customers: sql<number>`count(distinct ${orders.userId})`,
+        const fetchMetaInsights = async (params: Record<string, string>) => {
+            if (!metaToken || !metaAdAccountId) return [];
+
+            const normalizedAccountId = metaAdAccountId.startsWith("act_")
+                ? metaAdAccountId
+                : `act_${metaAdAccountId}`;
+            const url = new URL(
+                `https://graph.facebook.com/${graphVersion}/${normalizedAccountId}/insights`
+            );
+            Object.entries({
+                access_token: metaToken,
+                time_range: JSON.stringify({
+                    since: weekStartKey,
+                    until: weekEndKey,
+                }),
+                ...params,
+            }).forEach(([key, value]) => url.searchParams.set(key, value));
+
+            try {
+                const response = await fetch(url, {
+                    next: { revalidate: 900 },
+                });
+                if (!response.ok) return [];
+                const payload = (await response.json()) as {
+                    data?: Array<Record<string, unknown>>;
+                };
+                return payload.data ?? [];
+            } catch {
+                return [];
+            }
+        };
+
+        const readActionCount = (
+            row: Record<string, unknown>,
+            actionTypes: string[]
+        ) => {
+            const actions = Array.isArray(row.actions) ? row.actions : [];
+            return actions.reduce((total, action) => {
+                if (
+                    typeof action === "object" &&
+                    action &&
+                    actionTypes.includes(
+                        String(
+                            (action as Record<string, unknown>).action_type ??
+                                ""
+                        )
+                    )
+                ) {
+                    return (
+                        total +
+                        Number(
+                            (action as Record<string, unknown>).value ?? 0
+                        )
+                    );
+                }
+                return total;
+            }, 0);
+        };
+
+        const readActionValue = (
+            row: Record<string, unknown>,
+            actionTypes: string[]
+        ) => {
+            const values = Array.isArray(row.action_values)
+                ? row.action_values
+                : [];
+            return values.reduce((total, action) => {
+                if (
+                    typeof action === "object" &&
+                    action &&
+                    actionTypes.includes(
+                        String(
+                            (action as Record<string, unknown>).action_type ??
+                                ""
+                        )
+                    )
+                ) {
+                    return (
+                        total +
+                        Number(
+                            (action as Record<string, unknown>).value ?? 0
+                        ) *
+                            100
+                    );
+                }
+                return total;
+            }, 0);
+        };
+
+        const [
+            week,
+            month,
+            behavior,
+            trafficRows,
+            metaChannelRows,
+            metaCreativeRows,
+            metaCampaignRows,
+            blogsPublishedThisWeek,
+            instagramMedia,
+        ] = await Promise.all([
+            db
+                .select({
+                    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                    orders: sql<number>`count(${orders.id})`,
+                    customers: sql<number>`count(distinct ${orders.userId})`,
+                })
+                .from(orders)
+                .where(gte(orders.createdAt, weekStart))
+                .then((res) => res[0]),
+            db
+                .select({
+                    gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
+                    orders: sql<number>`count(${orders.id})`,
+                    customers: sql<number>`count(distinct ${orders.userId})`,
+                })
+                .from(orders)
+                .where(gte(orders.createdAt, monthStart))
+                .then((res) => res[0]),
+            db
+                .select({
+                    sessions: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessions}), 0)`,
+                    visitors: sql<number>`coalesce(sum(${analyticsDailyBehavior.visitors}), 0)`,
+                    carts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsWithCart}), 0)`,
+                    checkouts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsReachedCheckout}), 0)`,
+                })
+                .from(analyticsDailyBehavior)
+                .where(
+                    and(
+                        gte(analyticsDailyBehavior.dateKey, weekStartKey),
+                        lte(analyticsDailyBehavior.dateKey, weekEndKey)
+                    )
+                )
+                .then((res) => res[0]),
+            db
+                .select({
+                    source: analyticsLandingPageDaily.landingType,
+                    sessions: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`,
+                    visitors: sql<number>`coalesce(sum(${analyticsLandingPageDaily.visitors}), 0)`,
+                    carts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsWithCart}), 0)`,
+                    checkouts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsReachedCheckout}), 0)`,
+                })
+                .from(analyticsLandingPageDaily)
+                .where(
+                    and(
+                        gte(analyticsLandingPageDaily.dateKey, weekStartKey),
+                        lte(analyticsLandingPageDaily.dateKey, weekEndKey)
+                    )
+                )
+                .groupBy(analyticsLandingPageDaily.landingType)
+                .orderBy(
+                    desc(
+                        sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`
+                    )
+                )
+                .limit(8),
+            fetchMetaInsights({
+                level: "account",
+                fields: "spend,impressions,clicks,actions,action_values,purchase_roas",
+            }),
+            fetchMetaInsights({
+                level: "ad",
+                fields: "ad_id,ad_name,campaign_name,spend,impressions,clicks,actions,action_values,purchase_roas",
+                limit: "20",
+            }),
+            fetchMetaInsights({
+                level: "campaign",
+                fields: "campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,purchase_roas",
+                limit: "20",
+            }),
+            db.$count(
+                blogs,
+                and(
+                    eq(blogs.isPublished, true),
+                    gte(blogs.publishedAt, weekStart)
+                )
+            ),
+            (async () => {
+                if (!metaToken || !instagramBusinessAccountId) return [];
+                const url = new URL(
+                    `https://graph.facebook.com/${graphVersion}/${instagramBusinessAccountId}/media`
+                );
+                url.searchParams.set("access_token", metaToken);
+                url.searchParams.set(
+                    "fields",
+                    "id,caption,media_type,timestamp,permalink,like_count,comments_count"
+                );
+                url.searchParams.set("limit", "50");
+                try {
+                    const response = await fetch(url, {
+                        next: { revalidate: 900 },
+                    });
+                    if (!response.ok) return [];
+                    const payload = (await response.json()) as {
+                        data?: Array<Record<string, unknown>>;
+                    };
+                    return (payload.data ?? []).filter((item) => {
+                        const timestamp = new Date(String(item.timestamp));
+                        return timestamp >= weekStart;
+                    });
+                } catch {
+                    return [];
+                }
+            })(),
+        ]);
+
+        const purchaseActionTypes = [
+            "purchase",
+            "omni_purchase",
+            "offsite_conversion.fb_pixel_purchase",
+        ];
+        const weekGmv = Number(week.gmv ?? 0);
+        const weekCustomers = Number(week.customers ?? 0);
+        const metaAccount = metaChannelRows[0] ?? {};
+        const metaSpendPaise = Math.round(Number(metaAccount.spend ?? 0) * 100);
+        const metaPurchases = readActionCount(metaAccount, purchaseActionTypes);
+        const metaRevenuePaise = readActionValue(
+            metaAccount,
+            purchaseActionTypes
+        );
+        const organicTrafficSessions = Number(behavior.sessions ?? 0);
+        const paidMetaClicks = Number(metaAccount.clicks ?? 0);
+        const contentCounts = {
+            reels: instagramMedia.filter(
+                (item) => item.media_type === "REELS"
+            ).length,
+            posts: instagramMedia.filter(
+                (item) => item.media_type !== "REELS"
+            ).length,
+            blogs: Number(blogsPublishedThisWeek),
+        };
+
+        const channelRows = [
+            {
+                channel: "Meta",
+                spend: metaSpendPaise,
+                revenue: metaRevenuePaise,
+                conversions: metaPurchases,
+                traffic: paidMetaClicks,
+                source: metaToken && metaAdAccountId ? "Meta Ads API" : "Needs META_ACCESS_TOKEN + META_AD_ACCOUNT_ID",
+            },
+            {
+                channel: "Google",
+                spend: 0,
+                revenue: 0,
+                conversions: 0,
+                traffic: 0,
+                source: "Needs Google Ads integration keys",
+            },
+            {
+                channel: "Organic",
+                spend: 0,
+                revenue: weekGmv,
+                conversions: Number(week.orders ?? 0),
+                traffic: organicTrafficSessions,
+                source: "Admin analytics + orders",
+            },
+            {
+                channel: "Partnerships",
+                spend: 0,
+                revenue: 0,
+                conversions: 0,
+                traffic: 0,
+                source: "Needs partnership spend/import tagging",
+            },
+        ].map((row) => ({
+            ...row,
+            cac:
+                row.spend === 0 || row.conversions === 0
+                    ? null
+                    : row.spend / row.conversions,
+            roas: row.spend === 0 ? null : row.revenue / row.spend,
+        }));
+
+        const creativeRows = metaCreativeRows
+            .map((row) => {
+                const spend = Math.round(Number(row.spend ?? 0) * 100);
+                const revenue = readActionValue(row, purchaseActionTypes);
+                const purchases = readActionCount(row, purchaseActionTypes);
+                const roas = spend === 0 ? 0 : revenue / spend;
+                return {
+                    id: String(row.ad_id ?? row.ad_name ?? "unknown"),
+                    name: String(row.ad_name ?? "Unnamed creative"),
+                    campaign: String(row.campaign_name ?? "Unassigned"),
+                    spend,
+                    impressions: Number(row.impressions ?? 0),
+                    clicks: Number(row.clicks ?? 0),
+                    purchases,
+                    revenue,
+                    roas,
+                    ctr:
+                        Number(row.impressions ?? 0) === 0
+                            ? 0
+                            : Number(row.clicks ?? 0) /
+                              Number(row.impressions),
+                };
             })
-            .from(orders)
-            .where(gte(orders.createdAt, weekStart))
-            .then((res) => res[0]);
-        const month = await db
-            .select({
-                gmv: sql<number>`coalesce(sum(${orders.totalAmount}), 0)`,
-                orders: sql<number>`count(${orders.id})`,
-                customers: sql<number>`count(distinct ${orders.userId})`,
+            .sort((a, b) => b.roas - a.roas);
+
+        const campaignRows = metaCampaignRows
+            .map((row) => {
+                const spend = Math.round(Number(row.spend ?? 0) * 100);
+                const revenue = readActionValue(row, purchaseActionTypes);
+                const purchases = readActionCount(row, purchaseActionTypes);
+                const cac = purchases === 0 ? null : spend / purchases;
+                const roas = spend === 0 ? null : revenue / spend;
+                const goalStatus =
+                    (roas ?? 0) >= roasGoal ||
+                    (cac !== null && cac <= cacGoalPaise)
+                        ? "On goal"
+                        : "Below goal";
+                return {
+                    id: String(row.campaign_id ?? row.campaign_name ?? "unknown"),
+                    name: String(row.campaign_name ?? "Unnamed campaign"),
+                    spend,
+                    revenue,
+                    purchases,
+                    roas,
+                    cac,
+                    goalStatus,
+                };
             })
-            .from(orders)
-            .where(gte(orders.createdAt, monthStart))
-            .then((res) => res[0]);
+            .sort((a, b) => b.spend - a.spend);
 
         return {
-            gmvWtd: week.gmv ?? 0,
-            ordersWtd: week.orders ?? 0,
-            customersWtd: week.customers ?? 0,
-            gmvMtd: month.gmv ?? 0,
-            ordersMtd: month.orders ?? 0,
-            customersMtd: month.customers ?? 0,
-            adSpendIntegration: "pending",
-            cacIntegration: "pending",
-            roasIntegration: "pending",
+            owner: "PS reviews weekly with Performance Marketing freelancer",
+            source: "Admin panel + ad platform data",
+            reviewCadence: "Weekly with freelancer",
+            weekStart: weekStartKey,
+            weekEnd: weekEndKey,
+            gmvWtd: weekGmv,
+            ordersWtd: Number(week.orders ?? 0),
+            customersWtd: weekCustomers,
+            gmvMtd: Number(month.gmv ?? 0),
+            ordersMtd: Number(month.orders ?? 0),
+            customersMtd: Number(month.customers ?? 0),
+            totalSpend: channelRows.reduce((total, row) => total + row.spend, 0),
+            blendedCac:
+                channelRows.reduce((total, row) => total + row.spend, 0) === 0 ||
+                weekCustomers === 0
+                    ? null
+                    : channelRows.reduce((total, row) => total + row.spend, 0) /
+                      weekCustomers,
+            blendedRoas:
+                channelRows.reduce((total, row) => total + row.spend, 0) === 0
+                    ? null
+                    : weekGmv /
+                      channelRows.reduce((total, row) => total + row.spend, 0),
+            trafficBySource: Array.from(
+                trafficRows as Iterable<Record<string, unknown>>
+            ).map((row) => {
+                const sessions = Number(row.sessions ?? 0);
+                const checkouts = Number(row.checkouts ?? 0);
+                return {
+                    source: String(row.source ?? "unknown"),
+                    sessions,
+                    visitors: Number(row.visitors ?? 0),
+                    carts: Number(row.carts ?? 0),
+                    checkouts,
+                    conversionRate:
+                        sessions === 0
+                            ? 0
+                            : Number(week.orders ?? 0) / sessions,
+                    checkoutRate: sessions === 0 ? 0 : checkouts / sessions,
+                };
+            }),
+            conversionBySource: Array.from(
+                trafficRows as Iterable<Record<string, unknown>>
+            ).map((row) => {
+                const sessions = Number(row.sessions ?? 0);
+                return {
+                    source: String(row.source ?? "unknown"),
+                    conversionRate:
+                        sessions === 0
+                            ? 0
+                            : Number(week.orders ?? 0) / sessions,
+                };
+            }),
+            channelPerformance: channelRows,
+            topCreatives: creativeRows.slice(0, 5),
+            underperformingCreatives: creativeRows
+                .filter((row) => row.spend > 0 && row.roas < roasGoal)
+                .sort((a, b) => b.spend - a.spend)
+                .slice(0, 5),
+            contentOutput: [
+                {
+                    type: "Reels",
+                    count: contentCounts.reels,
+                    target: contentTargets.reels,
+                    source:
+                        metaToken && instagramBusinessAccountId
+                            ? "Instagram Graph API"
+                            : "Needs META_ACCESS_TOKEN + INSTAGRAM_BUSINESS_ACCOUNT_ID",
+                },
+                {
+                    type: "Posts",
+                    count: contentCounts.posts,
+                    target: contentTargets.posts,
+                    source:
+                        metaToken && instagramBusinessAccountId
+                            ? "Instagram Graph API"
+                            : "Needs META_ACCESS_TOKEN + INSTAGRAM_BUSINESS_ACCOUNT_ID",
+                },
+                {
+                    type: "Blogs",
+                    count: contentCounts.blogs,
+                    target: contentTargets.blogs,
+                    source: "blogs table",
+                },
+            ],
+            campaignPerformance: campaignRows,
+            goals: {
+                roas: roasGoal,
+                cac: cacGoalPaise,
+                reelsTarget: targets.reelsTarget,
+                postsTarget: targets.postsTarget,
+                blogsTarget: targets.blogsTarget,
+            },
+            integrations: {
+                metaAds:
+                    metaToken && metaAdAccountId
+                        ? "connected"
+                        : "missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID",
+                instagram:
+                    metaToken && instagramBusinessAccountId
+                        ? "connected"
+                        : "missing META_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID",
+                googleAds: "not configured",
+            },
         };
     }
 
@@ -2639,14 +3733,63 @@ class MonitoringSlaQuery {
         const liveProducts = Number(sustainability.live_products ?? 0);
         const productsWithCert = Number(sustainability.products_with_cert ?? 0);
         const approvedProducts = Number(sustainability.approved_products ?? 0);
+        const currentGmv = Number(current.gmv ?? 0);
+        const previousGmv = Number(lastMonth.gmv ?? 0);
+        const currentOrderCount = Number(current.orderCount ?? 0);
+        const currentCustomerCount = Number(current.customerCount ?? 0);
+        const previousOrderCount = Number(lastMonth.orderCount ?? 0);
+        const gmvMoM =
+            previousGmv === 0
+                ? currentGmv > 0
+                    ? 100
+                    : 0
+                : ((currentGmv - previousGmv) / previousGmv) * 100;
+        const orderMoM =
+            previousOrderCount === 0
+                ? currentOrderCount > 0
+                    ? 100
+                    : 0
+                : ((currentOrderCount - previousOrderCount) /
+                      previousOrderCount) *
+                  100;
+        const contributionMarginRate =
+            revenue === 0 ? 0 : contributionMargin / revenue;
+        const categoryMixTotal = Array.from(
+            categoryMixRows as Iterable<Record<string, unknown>>
+        ).reduce(
+            (total, row) => total + Number(row.current_revenue ?? 0),
+            0
+        );
 
         return {
-            currentMonth: current,
-            previousMonth: lastMonth,
+            monthLabel: monthStart.toLocaleDateString("en-IN", {
+                month: "long",
+                year: "numeric",
+            }),
+            previousMonthLabel: lastMonthStart.toLocaleDateString("en-IN", {
+                month: "long",
+                year: "numeric",
+            }),
+            reviewCadence: "1st Monday 10am",
+            timeToReview: "90 minutes",
+            owner: "Each founder presents their function",
+            source: "Composite from all modules",
+            currentMonth: {
+                gmv: currentGmv,
+                orderCount: currentOrderCount,
+                customerCount: currentCustomerCount,
+            },
+            previousMonth: {
+                gmv: previousGmv,
+                orderCount: previousOrderCount,
+                customerCount: Number(lastMonth.customerCount ?? 0),
+            },
+            gmvMoM,
+            orderMoM,
             refundRate:
-                Number(current.orderCount ?? 0) === 0
+                currentOrderCount === 0
                     ? 0
-                    : Number(refundCount) / Number(current.orderCount),
+                    : Number(refundCount) / currentOrderCount,
             complianceExportsThisMonth,
             openCriticalAlerts,
             cohortRetention: Array.from(
@@ -2676,6 +3819,17 @@ class MonitoringSlaQuery {
                     ? 0
                     : contributionMargin / contributionOrderCount,
             contributionMargin,
+            contributionMarginRate,
+            contributionBreakdown: {
+                revenue,
+                productCost,
+                shipping,
+                gateway: 0,
+                packaging: 0,
+                platformFee: 0,
+                orderCount: contributionOrderCount,
+                note: "Platform fee, gateway, and packaging inputs are not stored yet; current contribution subtracts product cost and delivery amount from paid order revenue.",
+            },
             grossMarginByCategory: Array.from(
                 categoryRows as Iterable<Record<string, unknown>>
             ).map((row) => {
@@ -2684,6 +3838,7 @@ class MonitoringSlaQuery {
                 return {
                     category: String(row.category_name ?? "Uncategorized"),
                     revenue: categoryRevenue,
+                    productCost: categoryCost,
                     grossMargin:
                         categoryRevenue === 0
                             ? 0
@@ -2693,13 +3848,30 @@ class MonitoringSlaQuery {
             }),
             categoryMixEvolution: Array.from(
                 categoryMixRows as Iterable<Record<string, unknown>>
-            ).map((row) => ({
-                category: String(row.category_name ?? "Uncategorized"),
-                currentRevenue: Number(row.current_revenue ?? 0),
-                previousRevenue: Number(row.previous_revenue ?? 0),
-            })),
+            ).map((row) => {
+                const currentRevenue = Number(row.current_revenue ?? 0);
+                const previousRevenue = Number(row.previous_revenue ?? 0);
+                return {
+                    category: String(row.category_name ?? "Uncategorized"),
+                    currentRevenue,
+                    previousRevenue,
+                    currentShare:
+                        categoryMixTotal === 0
+                            ? 0
+                            : currentRevenue / categoryMixTotal,
+                    revenueChange:
+                        previousRevenue === 0
+                            ? currentRevenue > 0
+                                ? 100
+                                : 0
+                            : ((currentRevenue - previousRevenue) /
+                                  previousRevenue) *
+                              100,
+                };
+            }),
             headcountEfficiency: {
-                value: Number(current.gmv ?? 0),
+                value: currentGmv,
+                fteEquivalent: 1,
                 note: "Assumes 1 FTE-equivalent until headcount config is added",
             },
             runway: "Needs cash-on-hand and monthly burn finance inputs",

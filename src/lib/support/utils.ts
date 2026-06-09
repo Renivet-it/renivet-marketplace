@@ -87,6 +87,7 @@ export async function getAdminRecipients() {
     const supportForwardEmails = [
         "akshay@renivet.com",
         "ayanganguly333@gmail.com",
+        "belmontdark8@gmail.com",
     ];
 
     return db.query.users.findMany({
