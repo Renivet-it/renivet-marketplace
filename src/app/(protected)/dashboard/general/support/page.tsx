@@ -696,7 +696,7 @@ export default function AdminSupportPage() {
                         {
                             label: "CSAT (Customer Satisfaction) 7D (7 Days)",
                             value:
-                                supportHealthQuery.data?.csatAverage === null
+                                supportHealthQuery.data?.csatAverage == null
                                     ? "-"
                                     : supportHealthQuery.data.csatAverage.toFixed(
                                           1
@@ -705,7 +705,7 @@ export default function AdminSupportPage() {
                         {
                             label: "SLA Hit Rate (Service Level Agreement)",
                             value:
-                                supportHealthQuery.data?.slaHitRate === null
+                                supportHealthQuery.data?.slaHitRate == null
                                     ? "-"
                                     : `${supportHealthQuery.data.slaHitRate}%`,
                         },
