@@ -12,21 +12,21 @@ export async function GET() {
         });
 
         const baseUrl = "https://renivet.com"; // Replace with your actual domain
-        const FALLBACK_IMAGE_URL = "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
 
-        const sanitizeLink = (url: string) => {
-            if (!url) return FALLBACK_IMAGE_URL;
+        const sanitizeLink = (url?: string | null) => {
+            if (!url?.trim()) return null;
             try {
                 // Ensure spaces are encoded and standard URL format is respected
                 const parsed = new URL(url.startsWith("/") ? `${baseUrl}${url}` : url);
                 return parsed.toString();
             } catch {
-                return FALLBACK_IMAGE_URL; // Fallback if link is broken
+                return null;
             }
         };
 
-        const getOptimizedFacebookImageLink = (url: string) => {
+        const getOptimizedFacebookImageLink = (url?: string | null) => {
             const safeUrl = sanitizeLink(url);
+            if (!safeUrl) return null;
             // Route through Next.js image optimizer to keep feed images lighter for Facebook fetch limits
             return `${baseUrl}/_next/image?url=${encodeURIComponent(safeUrl)}&w=1200&q=70`;
         };
@@ -78,6 +78,9 @@ export async function GET() {
                         const rawImageLink = variant.mediaItem?.url || product.media?.[0]?.mediaItem?.url || "";
                         const imageLink = getOptimizedFacebookImageLink(rawImageLink);
 
+                        // Skip variants that do not have a usable image so they are not advertised in Meta.
+                        if (!imageLink) return;
+
                         // Extract color and size from variant dictionary
                         let color = "";
                         let size = "";
@@ -120,6 +123,9 @@ export async function GET() {
 
                 const rawImageLink = product.media?.[0]?.mediaItem?.url || "";
                 const imageLink = getOptimizedFacebookImageLink(rawImageLink);
+
+                // Skip products that do not have a usable image so they are not advertised in Meta.
+                if (!imageLink) return;
 
                 csvRows.push([
                     product.id,
