@@ -3,7 +3,7 @@ import { eq, and, like, sql } from "drizzle-orm";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
 
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
-import { orderReturnRequests, orders, orderItems, users, orderShipments} from "@/lib/db/schema";
+import { orderReturnRequests, orders, orderItems, users, orderShipments, brandConfidentials } from "@/lib/db/schema";
 import { generatePickupLocationCode } from "@/lib/utils";
 import Razorpay from "razorpay";
 function formatIndianWhatsAppNumber(phone: string) {
@@ -62,42 +62,44 @@ export const returnReplaceRouter = createTRPCRouter({
 
 
         // 3️⃣ Fetch order + user
-  const [order] = await ctx.db
-    .select({ id: orders.id, userId: orders.userId })
-    .from(orders)
-    .where(eq(orders.id, input.orderId));
+        const [order] = await ctx.db
+            .select({ id: orders.id, userId: orders.userId })
+            .from(orders)
+            .where(eq(orders.id, input.orderId));
 
-  const [user] = await ctx.db
-    .select({ name: users.firstName, phone: users.phone })
-    .from(users)
-    .where(eq(users.id, order.userId));
+        if (!order) throw new Error("Order not found");
 
-  // 4️⃣ WhatsApp notifications (NON-BLOCKING)
-  const userTemplate =
-    input.requestType === "return"
-      ? "return_initiated_user"
-      : "replace_initiated_user";
-const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+        const [user] = await ctx.db
+            .select({ name: users.firstName, phone: users.phone })
+            .from(users)
+            .where(eq(users.id, order.userId));
 
-  Promise.allSettled([
-    sendWhatsAppMessage({
-      recipientPhoneNumber: formattedUserPhone,
-      templateName: userTemplate,
-      parameters: [user.name, order.id],
-    }),
+        if (user && user.phone) {
+            const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+            const userTemplate =
+                input.requestType === "return"
+                    ? "return_initiated_user"
+                    : "replace_initiated_user";
 
-    sendWhatsAppMessage({
-      recipientPhoneNumber: +918983676772, // Admin number
-      templateName: "return_replace_admin",
-      parameters: [
-        input.requestType.toUpperCase(),
-        order.id,
-        user.name,
-        input.reason ?? "N/A",
-      ],
-    }),
-      ]);
-            return { success: true };
+            Promise.allSettled([
+                sendWhatsAppMessage({
+                    recipientPhoneNumber: formattedUserPhone,
+                    templateName: userTemplate,
+                    parameters: [user.name, order.id],
+                }),
+                sendWhatsAppMessage({
+                    recipientPhoneNumber: "+918983676772", // Admin number
+                    templateName: "return_replace_admin",
+                    parameters: [
+                        input.requestType.toUpperCase(),
+                        order.id,
+                        user.name,
+                        input.reason ?? "N/A",
+                    ],
+                }),
+            ]);
+        }
+        return { success: true };
         }),
 
     // -------------------------------------------------------
@@ -227,24 +229,28 @@ const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
       .from(orders)
       .where(eq(orders.id, request.orderId));
 
+    if (!order) throw new Error("Order not found");
+
     const [user] = await ctx.db
       .select({ name: users.firstName, phone: users.phone })
       .from(users)
       .where(eq(users.id, order.userId));
-const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
 
-    // 3️⃣ WhatsApp (NON-BLOCKING)
-    Promise.allSettled([
-      sendWhatsAppMessage({
-        recipientPhoneNumber: formattedUserPhone, // must be +91 format
-        templateName: "return_replace_approved_user",
-        parameters: [
-          user.name,
-          request.requestType.toUpperCase(), // RETURN / REPLACE
-          order.id,
-        ],
-      }),
-    ]);
+    if (user && user.phone) {
+      const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+      // 3️⃣ WhatsApp (NON-BLOCKING)
+      Promise.allSettled([
+        sendWhatsAppMessage({
+          recipientPhoneNumber: formattedUserPhone, // must be +91 format
+          templateName: "return_replace_approved_user",
+          parameters: [
+            user.name,
+            request.requestType.toUpperCase(), // RETURN / REPLACE
+            order.id,
+          ],
+        }),
+      ]);
+    }
 
     return { success: true };
   }),
@@ -278,24 +284,29 @@ rejectRequest: protectedProcedure
       .from(orders)
       .where(eq(orders.id, request.orderId));
 
+    if (!order) throw new Error("Order not found");
+
     const [user] = await ctx.db
       .select({ name: users.firstName, phone: users.phone })
       .from(users)
       .where(eq(users.id, order.userId));
-const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
-    // 3️⃣ WhatsApp with reject comment
-    Promise.allSettled([
-      sendWhatsAppMessage({
-        recipientPhoneNumber: formattedUserPhone,
-        templateName: "return_replace_rejected_user",
-        parameters: [
-          user.name,
-          request.requestType.toUpperCase(),
-          order.id,
-          input.comment ?? "Request does not meet our return policy",
-        ],
-      }),
-    ]);
+
+    if (user && user.phone) {
+      const formattedUserPhone = formatIndianWhatsAppNumber(user.phone);
+      // 3️⃣ WhatsApp with reject comment
+      Promise.allSettled([
+        sendWhatsAppMessage({
+          recipientPhoneNumber: formattedUserPhone,
+          templateName: "return_replace_rejected_user",
+          parameters: [
+            user.name,
+            request.requestType.toUpperCase(),
+            order.id,
+            input.comment ?? "Request does not meet our return policy",
+          ],
+        }),
+      ]);
+    }
 
     return { success: true };
   }),
@@ -458,7 +469,44 @@ createRTOShipment: protectedProcedure
       throw new Error("Not a return request");
 
     const customer = request.order;
-    const brandConf = request.orderItem.product.brand.confidential;
+    const paymentId = customer.paymentId;
+    const itemPrice = request.orderItem.variant?.price ?? request.orderItem.product.price ?? 0;
+
+    // Playbook Rule: For items under ₹500 (50000 paise), skip reverse pickup. Refund and let customer keep/discard.
+    if (itemPrice < 50000) {
+      console.log(`💰 Item price ${itemPrice / 100} INR is under ₹500. Skipping reverse pickup and issuing refund.`);
+      if (!paymentId) {
+        console.error("❌ No paymentId found for refund");
+      } else {
+        console.log("💰 Initiating full refund for payment:", paymentId);
+        const razorpay = new Razorpay({
+          key_id: process.env.RAZOR_PAY_KEY_ID!,
+          key_secret: process.env.RAZOR_PAY_SECRET_KEY!,
+        });
+        try {
+          const refund = await razorpay.payments.refund(paymentId, {
+            amount: customer.totalAmount,
+          });
+          console.log("💰 Razorpay Refund Response →", refund);
+        } catch (err) {
+          console.error("❌ Razorpay Refund Error →", err);
+        }
+      }
+
+      await ctx.db
+        .update(orderReturnRequests)
+        .set({
+          status: "completed",
+          updatedAt: new Date(),
+        })
+        .where(eq(orderReturnRequests.id, request.id));
+
+      return { success: true, skippedPickup: true };
+    }
+
+    const brandConf = await ctx.db.query.brandConfidentials.findFirst({
+      where: eq(brandConfidentials.id, request.orderItem.product.brandId),
+    });
     if (!brandConf) throw new Error("Brand confidential address missing");
 
     // 🚚 Build Shipment
@@ -474,13 +522,13 @@ createRTOShipment: protectedProcedure
       order: request.orderId,
       payment_mode: "Pickup",
 
-      return_name: brandConf.contactName ?? brandConf.companyName,
+      return_name: brandConf.authorizedSignatoryName,
       return_address: brandConf.addressLine1,
       return_pin: String(brandConf.postalCode),
       return_city: brandConf.city,
       return_state: brandConf.state,
       return_country: "India",
-      return_phone: [brandConf.phone],
+      return_phone: [brandConf.authorizedSignatoryPhone],
 
       quantity: String(request.orderItem.quantity ?? 1),
       shipping_mode: "Surface",
@@ -518,9 +566,6 @@ createRTOShipment: protectedProcedure
     const delhiveryResponse = await resp.json();
     console.log("📩 Delhivery RTO Raw Response →", delhiveryResponse);
 
-   // ⭐ If Delhivery success → initiate Razorpay full refund
-    const paymentId = customer.paymentId; // must exist in your orders table
-
     if (!paymentId) {
       console.error("❌ No paymentId found for refund");
     } else {
@@ -531,16 +576,14 @@ createRTOShipment: protectedProcedure
         key_secret: process.env.RAZOR_PAY_SECRET_KEY!,
       });
 
-       const refund = razorpay.payments.refund(customer.paymentId, {
-         amount: customer.totalAmount, // convert to paise
-       });
-      console.log("💰 Razorpay Refund Response →", refund);
-
-      // Optional: store refund ID in DB
-      // await ctx.db.update(orders).set({
-      //   refundId: refund.id,
-      //   refundStatus: refund.status,
-      // }).where(eq(orders.id, customer.id));
+      try {
+        const refund = await razorpay.payments.refund(paymentId, {
+          amount: customer.totalAmount,
+        });
+        console.log("💰 Razorpay Refund Response →", refund);
+      } catch (err) {
+        console.error("❌ Razorpay Refund Error →", err);
+      }
     }
 
     // Save in DB
@@ -570,9 +613,7 @@ createReplShipment: protectedProcedure
           with: {
             product: {
               with: {
-                brand: {
-                  with: { confidential: true }
-                }
+                brand: true
               }
             },
             variant: true,
@@ -580,21 +621,25 @@ createReplShipment: protectedProcedure
         },
       },
     });
-const newVariant = await ctx.db.query.productVariants.findFirst({
-  where: (v, { eq }) => eq(v.id, request.newVariantId),
-  with: {
-    product: true,
-  },
-});
+
     if (!request) throw new Error("Request not found");
     if (request.requestType !== "replace")
       throw new Error("Not a replace request");
 
     if (!request.newVariantId) throw new Error("New variant ID is required for replace request");
 
+    const newVariant = await ctx.db.query.productVariants.findFirst({
+      where: (v, { eq }) => eq(v.id, request.newVariantId!),
+      with: {
+        product: true,
+      },
+    });
+
     const customer = request.order;
     const product = request.orderItem.product;
-    const brandConf = product.brand.confidential;
+    const brandConf = await ctx.db.query.brandConfidentials.findFirst({
+      where: eq(brandConfidentials.id, product.brandId),
+    });
 
     if (!brandConf) throw new Error("Brand confidential missing");
 
@@ -630,7 +675,7 @@ const newVariantSize = newVariant?.sku || "Default Size";
       return_state: brandConf.state,
       return_pin: String(brandConf.postalCode),
       return_country: "India",
-      return_phone: [brandConf.phone],
+      return_phone: [brandConf.authorizedSignatoryPhone],
 
       shipping_mode: "Surface",
       address_type: "home",
