@@ -29,8 +29,11 @@ import { auth } from "@clerk/nextjs/server";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
 
-function buildContactAutoAck(ticketId: string) {
-    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK.replaceAll("[ID]", ticketId);
+function buildContactAutoAck(ticketId: string, customerName?: string) {
+    const humanizedId = ticketId.split("-")[0].toUpperCase();
+    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK
+        .replaceAll("[Customer Name]", customerName || "Customer")
+        .replaceAll("[ID]", humanizedId);
 }
 
 export const ticketRouter = createTRPCRouter({
@@ -174,7 +177,7 @@ export const ticketRouter = createTRPCRouter({
                     ticketId: supportTicket.id,
                     sender: "system",
                     senderId: "support-bot",
-                    text: buildContactAutoAck(supportTicket.id),
+                    text: buildContactAutoAck(supportTicket.id, input.name),
                     messageType: "system",
                     metadata: { template: "AUTO_ACK" },
                 },
@@ -206,7 +209,7 @@ export const ticketRouter = createTRPCRouter({
                     from: env.RESEND_EMAIL_FROM,
                     to: [input.email],
                     subject: `Renivet support case ${supportTicket.id.slice(0, 8)} created`,
-                    text: buildContactAutoAck(supportTicket.id),
+                    text: buildContactAutoAck(supportTicket.id, input.name),
                 }),
             ]);
 

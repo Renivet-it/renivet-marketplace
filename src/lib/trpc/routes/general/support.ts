@@ -77,8 +77,11 @@ const terminalStatuses = [
     "auto_closed",
 ] as const;
 
-function buildAutomatedSupportReply(ticketId: string) {
-    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK.replaceAll("[ID]", ticketId);
+function buildAutomatedSupportReply(ticketId: string, customerName?: string) {
+    const humanizedId = ticketId.split("-")[0].toUpperCase();
+    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK
+        .replaceAll("[Customer Name]", customerName || "Customer")
+        .replaceAll("[ID]", humanizedId);
 }
 
 function formatSupportCategoryLabel(category: string) {
@@ -792,7 +795,7 @@ export const adminSupportRouter = createTRPCRouter({
                     ticketId: row.id,
                     sender: "system",
                     senderId: "support-bot",
-                    text: buildAutomatedSupportReply(row.id),
+                    text: buildAutomatedSupportReply(row.id, customer.firstName),
                     messageType: "system",
                     metadata: {
                         template: "AUTO_ACK",

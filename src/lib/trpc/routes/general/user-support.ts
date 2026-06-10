@@ -43,8 +43,12 @@ const formatIssueLabel = (issueLabel?: string, issueType?: string) => {
     return issueType.replace(/_/g, " ");
 };
 
-const buildAutomatedSupportReply = (ticketId: string) =>
-    SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK.replaceAll("[ID]", ticketId);
+const buildAutomatedSupportReply = (ticketId: string, customerName?: string) => {
+    const humanizedId = ticketId.split("-")[0].toUpperCase();
+    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK
+        .replaceAll("[Customer Name]", customerName || "Customer")
+        .replaceAll("[ID]", humanizedId);
+};
 
 const buildTicketTitle = (input: {
     issueLabel?: string;
@@ -205,7 +209,7 @@ export const userSupportRouter = createTRPCRouter({
                 );
             }
 
-            const automatedReply = buildAutomatedSupportReply(row.id);
+            const automatedReply = buildAutomatedSupportReply(row.id, ctx.user.firstName);
             await db.insert(userSupportMessages).values({
                 ticketId: row.id,
                 sender: "admin",

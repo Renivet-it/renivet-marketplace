@@ -45,8 +45,11 @@ function isAuthorized(request: Request) {
     return header === `Bearer ${secret}`;
 }
 
-function buildAutoAck(ticketId: string) {
-    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK.replaceAll("[ID]", ticketId);
+function buildAutoAck(ticketId: string, customerName?: string) {
+    const humanizedId = ticketId.split("-")[0].toUpperCase();
+    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK
+        .replaceAll("[Customer Name]", customerName || "Customer")
+        .replaceAll("[ID]", humanizedId);
 }
 
 export async function POST(request: Request) {
@@ -144,7 +147,7 @@ export async function POST(request: Request) {
             ticketId: ticket.id,
             sender: "system",
             senderId: "support-bot",
-            text: buildAutoAck(ticket.id),
+            text: buildAutoAck(ticket.id, existingUser?.firstName || input.customerName || "Customer"),
             messageType: "system",
             metadata: { template: "AUTO_ACK" },
         },
