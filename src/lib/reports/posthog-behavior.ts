@@ -60,13 +60,12 @@ function normalizePostHogApiHost(rawHost?: string | null) {
 }
 
 function getPostHogConfig() {
-    const host = normalizePostHogApiHost(
-        process.env.POSTHOG_API_HOST ?? env.NEXT_PUBLIC_POSTHOG_HOST
-    );
+    const rawHost = process.env.POSTHOG_API_HOST ?? env.NEXT_PUBLIC_POSTHOG_HOST;
+    const host = normalizePostHogApiHost(rawHost) ?? "https://us.posthog.com";
     const projectId = process.env.POSTHOG_PROJECT_ID;
     const personalApiKey = process.env.POSTHOG_PERSONAL_API_KEY;
 
-    if (!host || !projectId || !personalApiKey) {
+    if (!projectId || !personalApiKey) {
         return null;
     }
 

@@ -123,17 +123,21 @@ export function OrderPage({
         }
     }, [order?.address]);
 
+    const itemsTotal = availableItems.reduce((acc, item) => {
+        const itemPrice = item.variantId
+            ? (item.product.variants.find((v) => v.id === item.variantId)
+                  ?.price ??
+              item.product.price ??
+              0)
+            : (item.product.price ?? 0);
+        return acc + itemPrice * item.quantity;
+    }, 0);
+
     const priceList = {
-        items: availableItems.reduce((acc, item) => {
-            const itemPrice = item.variantId
-                ? (item.product.variants.find((v) => v.id === item.variantId)
-                      ?.price ??
-                  item.product.price ??
-                  0)
-                : (item.product.price ?? 0);
-            return acc + itemPrice * item.quantity;
-        }, 0),
-        delivery: order.deliveryAmount,
+        items: itemsTotal,
+        delivery: order.status === "pending" 
+            ? order.deliveryAmount 
+            : Math.max(0, order.totalAmount - (itemsTotal - order.discountAmount)),
         discount: order.discountAmount,
         total: order.totalAmount,
     };

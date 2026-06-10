@@ -153,12 +153,6 @@ async function runSlaCheck() {
     finishAction("sla-run");
 }
 
-async function saveDailySnapshot() {
-    "use server";
-    await monitoringSlaQueries.saveDailySnapshot(await getActor());
-    finishAction("snapshot");
-}
-
 async function generateWeeklyPack() {
     "use server";
     await monitoringSlaQueries.generateWeeklyPack(await getActor());
@@ -739,12 +733,6 @@ export default async function MonitoringSlaPage({
                                 <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-slate-950 px-3 text-sm font-semibold text-white shadow-sm transition hover:bg-slate-800 sm:w-auto">
                                     <TimerReset className="size-4" />
                                     Run SLA (Service Level Agreement)
-                                </button>
-                            </form>
-                            <form action={saveDailySnapshot}>
-                                <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border bg-white px-3 text-sm font-semibold text-slate-800 transition hover:bg-slate-50 sm:w-auto">
-                                    <CalendarCheck className="size-4" />
-                                    Snapshot
                                 </button>
                             </form>
                             <form action={generateWeeklyPack}>

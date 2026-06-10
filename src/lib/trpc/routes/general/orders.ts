@@ -9,6 +9,7 @@ import { orderShipments } from "@/lib/db/schema/order-shipment";
 import {
     cancelOrder as cancelDelhiveryOrder,
     createOrder as createDelhiveryOrder,
+    getShippingCharge,
 } from "@/lib/delhivery/orders";
 import {
     auditEntityChange,
@@ -814,6 +815,44 @@ export const ordersRouter = createTRPCRouter({
                                 "🚚 Delhivery shipment stored in DB:",
                                 shipment
                             );
+
+                            try {
+                                const brandConfidential = await db.query.brandConfidentials.findFirst({
+                                    where: eq(schemas.brandConfidentials.id, item.brandId),
+                                });
+                                const originPin = brandConfidential
+                                    ? Number(brandConfidential.warehousePostalCode || brandConfidential.postalCode)
+                                    : null;
+                                const destPin = Number(existingAddress.zip);
+
+                                if (originPin && destPin) {
+                                    const rateRes = await getShippingCharge({
+                                        md: "E",
+                                        cgm: Math.max(100, Math.round(finalVolumetricWeight)),
+                                        o_pin: originPin,
+                                        d_pin: destPin,
+                                        ss: "Delivered",
+                                    });
+                                    if (rateRes.success && rateRes.totalAmount !== undefined) {
+                                        console.log(`🚚 Delhivery Shipping Charge estimate for order ${newOrder.id}: Rs. ${rateRes.totalAmount}`);
+                                        const actualShippingChargeInPaise = Math.round(Number(rateRes.totalAmount) * 100);
+                                        
+                                        await db
+                                            .update(schemas.orders)
+                                            .set({
+                                                deliveryAmount: actualShippingChargeInPaise,
+                                            })
+                                            .where(eq(schemas.orders.id, newOrder.id));
+                                        console.log(`✅ Updated deliveryAmount for order ${newOrder.id} to ${actualShippingChargeInPaise} paise.`);
+                                    } else {
+                                        console.warn(`⚠ Failed to fetch Delhivery shipping charge for order ${newOrder.id}:`, rateRes.error);
+                                    }
+                                } else {
+                                    console.warn(`⚠ Missing origin pin (${originPin}) or destination pin (${destPin}) for order ${newOrder.id}`);
+                                }
+                            } catch (chargeErr) {
+                                console.error(`❌ Error fetching/saving Delhivery shipping charge for order ${newOrder.id}:`, chargeErr);
+                            }
 
                             // Fetch Order Items for this brand
                             const orderItemsForBrand = await db
