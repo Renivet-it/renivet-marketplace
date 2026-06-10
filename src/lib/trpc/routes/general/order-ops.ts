@@ -3,6 +3,7 @@ import {
     auditEntityChange,
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
+import { executeOrderCancellation } from "@/lib/support/cancel-order-helper";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -97,6 +98,15 @@ async function setOrderOpsState({
     });
 
     if (current?.state === state) return current;
+
+    if (state === "cancelled" || state === "auto_cancelled") {
+        await executeOrderCancellation({
+            orderId,
+            actorId: actorId ?? "system",
+            reasonCode: reasonCode ?? "STATE_TRANSITION_CANCEL",
+            notes: notes ?? "Cancelled via Order Ops transition",
+        });
+    }
 
     if (current) {
         await ctx.db
@@ -408,16 +418,12 @@ export const orderOpsRouter = createTRPCRouter({
                 .then((rows: any[]) => rows[0]);
 
             if (status === "fraud") {
-                await ctx.db
-                    .update(ctx.schemas.orders)
-                    .set({
-                        status: "cancelled",
-                        cancellationReasonCode: "CAN_FRAUD_FLAG",
-                        manualOverrideReason: input.notes,
-                        updatedAt: new Date(),
-                    })
-                    .where(eq(ctx.schemas.orders.id, input.orderId));
-
+                await executeOrderCancellation({
+                    orderId: input.orderId,
+                    actorId: ctx.user.id,
+                    reasonCode: "CAN_FRAUD_FLAG",
+                    notes: input.notes,
+                });
                 for (const [type, value] of [
                     ["phone", input.blocklistPhone],
                     ["address", input.blocklistAddress],

@@ -428,6 +428,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_ORDERS,
             },
             {
+                title: "Order Ops",
+                url: "/dashboard/general/order-ops",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
                 title: "RTO Requests",
                 url: "/dashboard/general/return-replace",
                 permissions:

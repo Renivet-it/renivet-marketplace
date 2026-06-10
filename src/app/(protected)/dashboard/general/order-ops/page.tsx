@@ -11,6 +11,7 @@ import {
     rtoDispositions,
 } from "@/lib/db/schema";
 import { auditEntityChange } from "@/lib/monitoring-sla/audit";
+import { executeOrderCancellation } from "@/lib/support/cancel-order-helper";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
@@ -118,6 +119,15 @@ async function setLifecycleState(formData: FormData) {
     const state = asText(formData.get("state"));
     if (!orderId || !state) finish("Missing order or state");
 
+    if (state === "cancelled" || state === "auto_cancelled") {
+        await executeOrderCancellation({
+            orderId,
+            actorId,
+            reasonCode: asText(formData.get("reasonCode")) ?? "manual_override",
+            notes: asText(formData.get("notes")),
+        });
+    }
+
     const current = await db.query.orderOpsStates.findFirst({
         where: and(
             eq(orderOpsStates.orderId, orderId),
@@ -193,15 +203,12 @@ async function decideFraud(formData: FormData) {
         });
 
     if (decision === "fraud") {
-        await db
-            .update(orders)
-            .set({
-                status: "cancelled",
-                cancellationReasonCode: "CAN_FRAUD_FLAG",
-                manualOverrideReason: asText(formData.get("notes")),
-                updatedAt: new Date(),
-            })
-            .where(eq(orders.id, orderId));
+        await executeOrderCancellation({
+            orderId,
+            actorId,
+            reasonCode,
+            notes: asText(formData.get("notes")),
+        });
     }
 
     await db.insert(orderOpsStates).values({
@@ -368,11 +375,10 @@ function MetricCard({
     );
 }
 
-export default async function OrderOpsPage({
-    searchParams,
-}: {
-    searchParams?: { notice?: string };
+export default async function OrderOpsPage(props: {
+    searchParams?: Promise<{ notice?: string }>;
 }) {
+    const searchParams = await props.searchParams;
     await assertOrderOpsAccess();
 
     const now = new Date();
@@ -584,6 +590,8 @@ export default async function OrderOpsPage({
                             "brand_pending",
                             "brand_chased",
                             "brand_acknowledged",
+                            "cancelled",
+                            "auto_cancelled",
                             "in_production",
                             "ready_to_ship",
                             "shipped",
