@@ -189,3 +189,39 @@ export const createExchange = async (
   await createReturn(originalAwb, "Exchange Requested");
   return await createOrder(newOrder);
 };
+
+/**
+ * Parameters for Delhivery rate calculation API.
+ */
+export interface DelhiveryRateParams {
+  md: "E" | "S"; // Billing mode: E for Express, S for Surface
+  cgm: number;  // Weight in grams
+  o_pin: number; // Origin pincode
+  d_pin: number; // Destination pincode
+  ss: "Delivered" | "RTO" | "DTO"; // Status
+}
+
+/**
+ * Fetch estimated shipping charge from Delhivery
+ */
+export const getShippingCharge = async (params: DelhiveryRateParams) => {
+  try {
+    const res = await delhiveryClient.get("/api/kinko/v1/invoice/charges/.json", {
+      params,
+    });
+    if (Array.isArray(res.data) && res.data.length > 0) {
+      return { success: true, totalAmount: res.data[0].total_amount };
+    }
+    return { success: false, error: "No rate data returned from Delhivery" };
+  } catch (err: any) {
+    console.error(
+      "Delhivery getShippingCharge error:",
+      err.response?.data || err.message
+    );
+    return {
+      success: false,
+      error: err.response?.data || err.message,
+    };
+  }
+};
+
