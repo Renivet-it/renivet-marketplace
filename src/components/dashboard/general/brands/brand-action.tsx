@@ -131,7 +131,7 @@ export function BrandAction({ brand }: PageProps) {
     });
 
     // Fetch confidential data (admin API)
-    const { data: confidentialData } =
+    const { data: confidentialData, isLoading: isConfidentialLoading } =
         trpc.general.brands.verifications.getBrandConfidential.useQuery(
             { id: brand.id },
             { enabled: isOpen }
@@ -714,7 +714,7 @@ export function BrandAction({ brand }: PageProps) {
                             value="confidential"
                             className="mt-4 space-y-4"
                         >
-                            {!confidentialData ? (
+                            {isConfidentialLoading ? (
                                 <div className="flex items-center justify-center py-8">
                                     <Spinner className="size-6 animate-spin" />
                                 </div>
