@@ -96,9 +96,17 @@ class BrandConfidentialQuery {
                 : null,
         }));
 
-        const parsed = brandConfidentialWithBrandSchema
-            .array()
-            .parse(enhancedData);
+        const parsed: any[] = [];
+        for (const item of enhancedData) {
+            const result = brandConfidentialWithBrandSchema.safeParse(item);
+            if (result.success) {
+                parsed.push(result.data);
+            } else {
+                // eslint-disable-next-line no-console
+                console.error("⚠️ brandConfidentialWithBrandSchema validation failed for brand in list:", item.id, result.error.format());
+                parsed.push(item);
+            }
+        }
 
         return {
             data: parsed,
@@ -141,8 +149,13 @@ class BrandConfidentialQuery {
                 : null,
         };
 
-        const parsed = brandConfidentialWithBrandSchema.parse(enhancedData);
-        return parsed;
+        const result = brandConfidentialWithBrandSchema.safeParse(enhancedData);
+        if (!result.success) {
+            // eslint-disable-next-line no-console
+            console.error("⚠️ brandConfidentialWithBrandSchema validation failed for brand:", bId, result.error.format());
+            return enhancedData as any;
+        }
+        return result.data;
     }
 
     async createBrandConfidential(values: CreateBrandConfidential) {
