@@ -210,16 +210,17 @@ export function BrandVerificationPage({ data }: PageProps) {
                                     Bank Account Verification Document
                                 </h5>
 
-                                <Link
-                                    href={
-                                        data.bankAccountVerificationDocument!
-                                            .url
-                                    }
-                                    className="text-sm text-primary underline"
-                                    target="_blank"
-                                >
-                                    View
-                                </Link>
+                                {data.bankAccountVerificationDocument?.url ? (
+                                    <Link
+                                        href={data.bankAccountVerificationDocument.url}
+                                        className="text-sm text-primary underline"
+                                        target="_blank"
+                                    >
+                                        View
+                                    </Link>
+                                ) : (
+                                    <p className="text-sm text-primary">N/A</p>
+                                )}
                             </div>
 
                             <div>
