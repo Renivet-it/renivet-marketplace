@@ -137,11 +137,6 @@ export function BrandConfidentialForm({
     const certificateMedia = mediaRaw.filter(
         (m) => m.type.includes("pdf") || m.type.startsWith("image/")
     );
-    const isFormLocked =
-        isRequestSending ||
-        isRequestResending ||
-        (!!brandConfidential &&
-            brand.confidentialVerificationStatus !== "rejected");
 
     const states = State.getStatesOfCountry("IN");
 
@@ -301,6 +296,62 @@ export function BrandConfidentialForm({
             },
         });
 
+    const { mutate: saveOptionalDetails, isPending: isOptionalSaving } =
+        trpc.brands.confidentials.updateConfidentialDetails.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Saving optional details...");
+                return { toastId };
+            },
+            onSuccess: (_, data, { toastId }) => {
+                toast.success("Optional verification details saved", {
+                    id: toastId,
+                });
+
+                form.reset({
+                    ...data,
+                    udyamRegistrationCertificate:
+                        data.udyamRegistrationCertificate as string | undefined,
+                    iecCertificate: data.iecCertificate as string | undefined,
+                    country: "IN",
+                    addressLine2:
+                        (data.addressLine2 as string | undefined) ?? "",
+                    warehouseAddressLine1:
+                        (data.warehouseAddressLine1 as string | undefined) ??
+                        "",
+                    warehouseAddressLine2:
+                        (data.warehouseAddressLine2 as string | undefined) ??
+                        "",
+                    warehouseCity:
+                        (data.warehouseCity as string | undefined) ?? "",
+                    warehouseState:
+                        (data.warehouseState as string | undefined) ?? "",
+                    warehousePostalCode:
+                        (data.warehousePostalCode as string | undefined) ?? "",
+                    warehouseCountry:
+                        (data.warehouseCountry as string | undefined) ?? "IN",
+                    sustainabilityCertificates:
+                        getDefaultSustainabilityCertificates(
+                            data.sustainabilityCertificates
+                        ),
+                });
+                router.refresh();
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    const isFormLocked =
+        isRequestSending ||
+        isRequestResending ||
+        (!!brandConfidential &&
+            brand.confidentialVerificationStatus !== "rejected");
+    const isOptionalSectionLocked =
+        isRequestSending || isRequestResending || isOptionalSaving;
+    const canSaveOptionalDetails =
+        !!brandConfidential &&
+        brand.confidentialVerificationStatus !== "rejected";
+
     return (
         <>
             <Form {...form}>
@@ -331,13 +382,24 @@ export function BrandConfidentialForm({
                                 : values.warehouseCountry,
                         };
 
-                        return brandConfidential?.verificationStatus ===
+                        if (
+                            brandConfidential?.verificationStatus ===
                             "rejected"
-                            ? resendRequest({
-                                  id: brandConfidential.id,
-                                  values,
-                              })
-                            : sendRequest(values);
+                        ) {
+                            return resendRequest({
+                                id: brandConfidential.id,
+                                values,
+                            });
+                        }
+
+                        if (canSaveOptionalDetails) {
+                            return saveOptionalDetails({
+                                id: brandConfidential.id,
+                                values,
+                            });
+                        }
+
+                        return sendRequest(values);
                     })}
                 >
                     <div className="space-y-4">
@@ -1281,7 +1343,7 @@ export function BrandConfidentialForm({
                                                                     variant="ghost"
                                                                     className="h-9"
                                                                     disabled={
-                                                                        isFormLocked
+                                                                        isOptionalSectionLocked
                                                                     }
                                                                     onClick={() =>
                                                                         updateSustainabilityCertificateSelection(
@@ -1297,7 +1359,7 @@ export function BrandConfidentialForm({
                                                                     variant="outline"
                                                                     className="h-9"
                                                                     disabled={
-                                                                        isFormLocked
+                                                                        isOptionalSectionLocked
                                                                     }
                                                                     onClick={() =>
                                                                         setActiveSustainabilityCertificateKey(
@@ -1317,7 +1379,7 @@ export function BrandConfidentialForm({
                                                                 size="sm"
                                                                 className="text-xs"
                                                                 disabled={
-                                                                    isFormLocked
+                                                                    isOptionalSectionLocked
                                                                 }
                                                                 onClick={() =>
                                                                     setActiveSustainabilityCertificateKey(
@@ -1382,11 +1444,7 @@ export function BrandConfidentialForm({
                                                                 )
                                                             }
                                                             disabled={
-                                                                isRequestSending ||
-                                                                isRequestResending ||
-                                                                (!!brandConfidential &&
-                                                                    brand.confidentialVerificationStatus !==
-                                                                        "rejected")
+                                                                isOptionalSectionLocked
                                                             }
                                                         >
                                                             <Icons.RefreshCcw />
@@ -1406,11 +1464,7 @@ export function BrandConfidentialForm({
                                                             )
                                                         }
                                                         disabled={
-                                                            isRequestSending ||
-                                                            isRequestResending ||
-                                                            (!!brandConfidential &&
-                                                                brand.confidentialVerificationStatus !==
-                                                                    "rejected")
+                                                            isOptionalSectionLocked
                                                         }
                                                     >
                                                         <Icons.CloudUpload />
@@ -1467,11 +1521,7 @@ export function BrandConfidentialForm({
                                                                 )
                                                             }
                                                             disabled={
-                                                                isRequestSending ||
-                                                                isRequestResending ||
-                                                                (!!brandConfidential &&
-                                                                    brand.confidentialVerificationStatus !==
-                                                                        "rejected")
+                                                                isOptionalSectionLocked
                                                             }
                                                         >
                                                             <Icons.RefreshCcw />
@@ -1491,11 +1541,7 @@ export function BrandConfidentialForm({
                                                             )
                                                         }
                                                         disabled={
-                                                            isRequestSending ||
-                                                            isRequestResending ||
-                                                            (!!brandConfidential &&
-                                                                brand.confidentialVerificationStatus !==
-                                                                    "rejected")
+                                                            isOptionalSectionLocked
                                                         }
                                                     >
                                                         <Icons.CloudUpload />
@@ -1554,21 +1600,25 @@ export function BrandConfidentialForm({
                         !brandConfidential) ||
                     (brand.confidentialVerificationStatus === "rejected" &&
                         brandConfidential?.verificationStatus ===
-                            "rejected") ? (
+                            "rejected") ||
+                    canSaveOptionalDetails ? (
                         <Button
                             type="submit"
                             className="w-full"
                             disabled={
                                 isRequestSending ||
                                 isRequestResending ||
+                                isOptionalSaving ||
                                 !form.formState.isDirty
                             }
                         >
-                            {brandConfidential?.verificationStatus ===
-                            "rejected"
+                            {canSaveOptionalDetails
+                                ? "Save Optional Details"
+                                : brandConfidential?.verificationStatus ===
+                                    "rejected"
                                 ? "Resend"
                                 : "Add & Send"}{" "}
-                            for Review
+                            {canSaveOptionalDetails ? "" : "for Review"}
                         </Button>
                     ) : null}
                 </form>

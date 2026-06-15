@@ -1,5 +1,11 @@
 "use client";
 
+import {
+    BRAND_SUSTAINABILITY_CERTIFICATES,
+    BrandSustainabilityCertificateKey,
+} from "@/config/brand-program";
+import { Icons } from "@/components/icons";
+import { MediaSelectModal } from "@/components/globals/modals/brand/media-select";
 import { Button } from "@/components/ui/button-dash";
 import {
     Form,
@@ -22,15 +28,17 @@ import { SheetFooter } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import {
+    BrandMediaItem,
     BrandConfidentialWithBrand,
     UpdateBrandConfidentialByAdmin,
     updateBrandConfidentialByAdminSchema,
 } from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { State } from "country-state-city";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { parseAsInteger, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Dispatch, SetStateAction } from "react";
+import { Dispatch, SetStateAction, useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 
@@ -41,11 +49,75 @@ interface PageProps {
 
 export function BrandConfidentialEditAdmin({ data, setIsOpen }: PageProps) {
     const router = useRouter();
+    const [activeSustainabilityCertificateKey, setActiveSustainabilityCertificateKey] =
+        useState<BrandSustainabilityCertificateKey | null>(null);
+    const [
+        selectedSustainabilityCertificateMedia,
+        setSelectedSustainabilityCertificateMedia,
+    ] = useState<Record<string, BrandMediaItem | null>>(() =>
+        Object.fromEntries(
+            (data.sustainabilityCertificates ?? [])
+                .filter((item) => item.document)
+                .map((item) => [item.key, item.document ?? null])
+        )
+    );
 
     const form = useForm<UpdateBrandConfidentialByAdmin>({
         resolver: zodResolver(updateBrandConfidentialByAdminSchema),
         defaultValues: data,
     });
+
+    const {
+        data: { data: mediaRaw },
+    } = trpc.brands.media.getMediaItems.useQuery(
+        { brandId: data.brand.id },
+        { initialData: { data: [], count: 0 } }
+    );
+    const certificateMedia = mediaRaw.filter(
+        (m) => m.type.includes("pdf") || m.type.startsWith("image/")
+    );
+    const activeSustainabilitySelectedMedia = useMemo(() => {
+        if (!activeSustainabilityCertificateKey) return [];
+
+        const selected =
+            selectedSustainabilityCertificateMedia[
+                activeSustainabilityCertificateKey
+            ];
+
+        return selected ? [selected] : [];
+    }, [
+        activeSustainabilityCertificateKey,
+        selectedSustainabilityCertificateMedia,
+    ]);
+
+    const updateSustainabilityCertificateSelection = (
+        key: BrandSustainabilityCertificateKey,
+        item: BrandMediaItem | null
+    ) => {
+        const nextValue = BRAND_SUSTAINABILITY_CERTIFICATES.map(
+            (certificate) => {
+                const existing = form
+                    .getValues("sustainabilityCertificates")
+                    ?.find((entry) => entry.key === certificate.key);
+
+                return {
+                    key: certificate.key,
+                    documentId:
+                        certificate.key === key
+                            ? item?.id ?? null
+                            : existing?.documentId ?? null,
+                };
+            }
+        );
+
+        form.setValue("sustainabilityCertificates", nextValue, {
+            shouldDirty: true,
+        });
+        setSelectedSustainabilityCertificateMedia((prev) => ({
+            ...prev,
+            [key]: item,
+        }));
+    };
 
     const states = State.getStatesOfCountry("IN");
 
@@ -454,6 +526,109 @@ export function BrandConfidentialEditAdmin({ data, setIsOpen }: PageProps) {
                         </div>
                     </div>
 
+                    <div className="space-y-4">
+                        <h2 className="text-xl font-semibold">
+                            Sustainability Certificates
+                        </h2>
+
+                        <Separator />
+
+                        <div className="space-y-4">
+                            {BRAND_SUSTAINABILITY_CERTIFICATES.map(
+                                (certificate) => {
+                                    const selectedMedia =
+                                        selectedSustainabilityCertificateMedia[
+                                            certificate.key
+                                        ] ??
+                                        data.sustainabilityCertificates.find(
+                                            (item) =>
+                                                item.key === certificate.key
+                                        )?.document ??
+                                        null;
+
+                                    return (
+                                        <div
+                                            key={certificate.key}
+                                            className="space-y-3 rounded-lg border p-4"
+                                        >
+                                            <div className="space-y-1">
+                                                <p className="font-medium">
+                                                    {certificate.label}
+                                                </p>
+                                                <Link
+                                                    href={
+                                                        certificate.verificationUrl
+                                                    }
+                                                    target="_blank"
+                                                    className="break-all text-sm text-primary underline"
+                                                >
+                                                    {
+                                                        certificate.verificationUrl
+                                                    }
+                                                </Link>
+                                            </div>
+
+                                            <div className="rounded-md border border-dashed border-foreground/20 p-4">
+                                                {selectedMedia ? (
+                                                    <div className="space-y-3">
+                                                        <Link
+                                                            href={
+                                                                selectedMedia.url
+                                                            }
+                                                            target="_blank"
+                                                            className="text-sm text-primary underline"
+                                                        >
+                                                            View uploaded file
+                                                        </Link>
+
+                                                        <div className="flex justify-end">
+                                                            <Button
+                                                                type="button"
+                                                                variant="outline"
+                                                                className="h-9"
+                                                                disabled={
+                                                                    isUpdating
+                                                                }
+                                                                onClick={() =>
+                                                                    setActiveSustainabilityCertificateKey(
+                                                                        certificate.key
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Icons.RefreshCcw />
+                                                                Replace
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex min-h-20 items-center justify-center">
+                                                        <Button
+                                                            type="button"
+                                                            size="sm"
+                                                            className="text-xs"
+                                                            disabled={
+                                                                isUpdating
+                                                            }
+                                                            onClick={() =>
+                                                                setActiveSustainabilityCertificateKey(
+                                                                    certificate.key
+                                                                )
+                                                            }
+                                                        >
+                                                            <Icons.CloudUpload />
+                                                            Upload Verification
+                                                            File
+                                                        </Button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+                            )}
+                        </div>
+                    </div>
+
                     <SheetFooter>
                         <Button
                             type="submit"
@@ -465,6 +640,31 @@ export function BrandConfidentialEditAdmin({ data, setIsOpen }: PageProps) {
                     </SheetFooter>
                 </form>
             </Form>
+
+            <MediaSelectModal
+                brandId={data.brand.id}
+                allMedia={certificateMedia}
+                selectedMedia={activeSustainabilitySelectedMedia}
+                isOpen={activeSustainabilityCertificateKey !== null}
+                setIsOpen={(value) => {
+                    const nextValue =
+                        typeof value === "function" ? value(true) : value;
+
+                    if (!nextValue) {
+                        setActiveSustainabilityCertificateKey(null);
+                    }
+                }}
+                accept="application/pdf,image/*"
+                onSelectionComplete={(items) => {
+                    if (!activeSustainabilityCertificateKey) return;
+
+                    updateSustainabilityCertificateSelection(
+                        activeSustainabilityCertificateKey,
+                        items[0] ?? null
+                    );
+                    setActiveSustainabilityCertificateKey(null);
+                }}
+            />
         </>
     );
 }

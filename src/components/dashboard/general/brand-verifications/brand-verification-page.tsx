@@ -1,11 +1,9 @@
 "use client";
 
 import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
-import { BrandConfidentialEditAdmin } from "@/components/globals/forms";
-import {
-    VerificationApproveModal,
-    VerificationRejectModal,
-} from "@/components/globals/modals";
+import { BrandConfidentialEditAdmin } from "@/components/globals/forms/brand-confidential-edit-admin";
+import { VerificationApproveModal } from "@/components/globals/modals/brand-verification/verification-approve";
+import { VerificationRejectModal } from "@/components/globals/modals/brand-verification/verification-reject";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

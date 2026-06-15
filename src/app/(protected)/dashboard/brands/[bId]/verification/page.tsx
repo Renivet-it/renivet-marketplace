@@ -1,4 +1,4 @@
-import { BrandConfidentialForm } from "@/components/globals/forms";
+import { BrandConfidentialForm } from "@/components/globals/forms/brand-confidential";
 import { DashShell } from "@/components/globals/layouts";
 import { Icons } from "@/components/icons";
 import {
