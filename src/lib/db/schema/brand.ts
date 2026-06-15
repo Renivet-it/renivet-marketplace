@@ -4,6 +4,7 @@ import {
     boolean,
     index,
     integer,
+    jsonb,
     pgTable,
     text,
     timestamp,
@@ -82,6 +83,9 @@ export const brands = pgTable(
             "confidential_verification_rejected_at"
         ),
         statusReasonCode: text("status_reason_code"),
+        tierPreviousSnapshot: text("tier_previous_snapshot", {
+            enum: ["tier_1", "tier_2", "tier_3"],
+        }),
         contractSignedAt: timestamp("contract_signed_at"),
         contractExpiresAt: timestamp("contract_expires_at"),
         embeddings: vector("embeddings", { dimensions: 384 }),
@@ -119,6 +123,17 @@ export const brandConfidentials = pgTable(
         authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
         udyamRegistrationCertificate: text("udyam_registration_certificate"),
         iecCertificate: text("iec_certificate"),
+        sustainabilityCertificates: jsonb(
+            "sustainability_certificates"
+        )
+            .$type<
+                Array<{
+                    key: string;
+                    documentId: string | null;
+                }>
+            >()
+            .notNull()
+            .default([]),
         addressLine1: text("address_line1").notNull(),
         addressLine2: text("address_line2"),
         city: text("city").notNull(),

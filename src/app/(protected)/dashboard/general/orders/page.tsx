@@ -52,17 +52,19 @@ const isOrderManagerRole = (
 export default function Page(props: PageProps) {
     return (
         <DashShell className="max-w-[92rem]">
-            <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
-                <div className="space-y-1 text-center md:text-start">
+            <div className="flex flex-col gap-4 sm:gap-5 md:flex-row md:items-start md:justify-between">
+                <div className="space-y-1 text-center md:text-left">
                     <h1 className="text-2xl font-bold">Orders</h1>
                     <p className="text-balance text-sm text-muted-foreground">
                         View all the orders placed by the customers
                     </p>
                 </div>
 
-                <Suspense>
-                    <OrdersDownloadFetch />
-                </Suspense>
+                <div className="flex w-full justify-center md:w-auto md:justify-end">
+                    <Suspense>
+                        <OrdersDownloadFetch />
+                    </Suspense>
+                </div>
             </div>
 
             <Suspense fallback={<TableSkeleton />}>

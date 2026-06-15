@@ -15,6 +15,7 @@ import {
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
+    useSidebar,
 } from "@/components/ui/sidebar";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { cn, hasPermission } from "@/lib/utils";
@@ -47,7 +48,13 @@ export function NavMain({
 }: Props) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { isMobile, setOpenMobile } = useSidebar();
     const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    const handleNavigate = () => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    };
     const normalizeSupportUrl = (url: string) => {
         if (url === "/dashboard/general/support/user") {
             return "/dashboard/general/support?queue=user";
@@ -144,6 +151,7 @@ export function NavMain({
                                                     <Link
                                                         href={subItem.url}
                                                         prefetch
+                                                        onClick={handleNavigate}
                                                         className="block w-full truncate"
                                                         title={subItem.title}
                                                     >

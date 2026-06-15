@@ -160,7 +160,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const data = row.original;
 
             return (
-                <div className="max-w-[180px] space-y-1 text-xs">
+                <div className="max-w-[150px] space-y-1 text-xs sm:max-w-[180px]">
                     <div className="truncate font-semibold text-sky-700">
                         <OrderSingle order={data} />
                     </div>
@@ -205,7 +205,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                     .join(" ") || data.address?.fullName;
 
             return (
-                <div className="max-w-[170px] space-y-0.5 text-xs">
+                <div className="max-w-[150px] space-y-0.5 text-xs sm:max-w-[170px]">
                     <div className="truncate font-medium text-slate-900">
                         {customerName || "Unknown customer"}
                     </div>
@@ -260,11 +260,11 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const brandName = data.items[0]?.product?.brand?.name;
 
             return (
-                <div className="max-w-[180px] space-y-0.5 text-xs">
-                    <button className="border-b border-dashed border-slate-500 text-sm font-medium text-slate-800">
+                <div className="max-w-[150px] space-y-0.5 text-xs sm:max-w-[180px]">
+                    <button className="max-w-full truncate border-b border-dashed border-slate-500 text-left text-xs font-medium text-slate-800 sm:text-sm">
                         {brandName || "Pickup Address"}
                     </button>
-                    <div className="flex max-w-[180px] items-center gap-1 truncate text-[11px] text-muted-foreground">
+                    <div className="flex max-w-[150px] items-center gap-1 truncate text-[11px] text-muted-foreground sm:max-w-[180px]">
                         <MapPin className="size-3 shrink-0" />
                         <span className="truncate">
                             {[
@@ -305,7 +305,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
             const shipmentDisplayStatus = getShipmentDisplayStatus(shipment);
 
             return (
-                <div className="max-w-[205px] space-y-1 text-xs">
+                <div className="max-w-[170px] space-y-1 text-xs sm:max-w-[205px]">
                     <div className="flex items-center gap-1.5 font-medium text-slate-900">
                         <Truck className="size-4 text-sky-600" />
                         <span className="truncate">
@@ -317,7 +317,7 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                         {awb ? (
                             <Link
                                 href={`/dashboard/tracking/${encodeURIComponent(awb)}`}
-                                className="font-medium text-sky-700 underline-offset-2 hover:underline"
+                                className="inline-block max-w-full truncate font-medium text-sky-700 underline-offset-2 hover:underline"
                             >
                                 {awb}
                             </Link>
@@ -1073,13 +1073,14 @@ export function OrdersTable({
                     }}
                     className="w-full"
                 >
-                    <TabsList className="flex h-auto w-full justify-start gap-6 overflow-x-auto border-none bg-transparent p-0">
+                    <div className="-mx-2 overflow-x-auto px-2 pb-1 sm:mx-0 sm:px-0">
+                        <TabsList className="flex h-auto min-w-max flex-nowrap justify-start gap-3 border-none bg-transparent p-0 sm:min-w-full sm:gap-6">
                         {STATUS_TABS.map((tab) => (
                             <TabsTrigger
                                 key={tab.value}
                                 value={tab.value}
                                 className={cn(
-                                    "relative rounded-none border-b-2 border-transparent bg-transparent px-0 py-3 text-xs font-medium shadow-none transition-colors lg:text-sm",
+                                    "relative shrink-0 rounded-none border-b-2 border-transparent bg-transparent px-0 py-3 text-xs font-medium shadow-none transition-colors lg:text-sm",
                                     "data-[state=active]:border-violet-500 data-[state=active]:bg-transparent data-[state=active]:text-violet-600 data-[state=active]:shadow-none",
                                     "data-[state=inactive]:text-slate-500 data-[state=inactive]:hover:bg-transparent data-[state=inactive]:hover:text-slate-950",
                                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
@@ -1109,16 +1110,17 @@ export function OrdersTable({
                                     )}
                             </TabsTrigger>
                         ))}
-                    </TabsList>
+                        </TabsList>
+                    </div>
                 </Tabs>
             </div>
 
             {/* Filter & Actions Section */}
-            <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
                 {/* Filters Group */}
-                <div className="flex flex-wrap items-end gap-4">
+                <div className="flex w-full flex-col gap-4 xl:flex-1">
                     {/* Search Input */}
-                    <div className="relative min-w-[280px]">
+                    <div className="relative w-full">
                         <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                         <Input
                             placeholder="Search by order ID..."
@@ -1133,14 +1135,11 @@ export function OrdersTable({
                             }}
                         />
                     </div>
-                    {/* Date Range */}
-                    <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-end">
-                        <div className="flex items-center gap-2">
-                            <div className="w-[160px]">
-                                <div
-                                    htmlFor="start-date"
-                                    className="text-sm font-medium text-gray-600"
-                                >
+                    <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)_minmax(240px,0.9fr)]">
+                        {/* Date Range */}
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="w-full">
+                                <div className="text-sm font-medium text-gray-600">
                                     Start Date
                                 </div>
                                 <Input
@@ -1161,113 +1160,120 @@ export function OrdersTable({
                                     }
                                 />
                             </div>
-                            <span className="mb-1 hidden text-gray-400 sm:block">
-                                -
-                            </span>
-                        </div>
-                        <div className="w-[160px]">
-                            <div
-                                htmlFor="end-date"
-                                className="text-sm font-medium text-gray-600"
-                            >
-                                End Date
+                            <div className="w-full">
+                                <div className="text-sm font-medium text-gray-600">
+                                    End Date
+                                </div>
+                                <Input
+                                    id="end-date"
+                                    type="date"
+                                    className="mt-1 w-full"
+                                    value={
+                                        endDate
+                                            ? format(endDate, "yyyy-MM-dd")
+                                            : ""
+                                    }
+                                    onChange={(e) =>
+                                        setEndDate(
+                                            e.target.value
+                                                ? new Date(e.target.value)
+                                                : null
+                                        )
+                                    }
+                                />
                             </div>
-                            <Input
-                                id="end-date"
-                                type="date"
-                                className="mt-1 w-full"
-                                value={
-                                    endDate ? format(endDate, "yyyy-MM-dd") : ""
-                                }
-                                onChange={(e) =>
-                                    setEndDate(
-                                        e.target.value
-                                            ? new Date(e.target.value)
-                                            : null
-                                    )
-                                }
-                            />
                         </div>
-                    </div>
-                    {/* Brand Filter */}
-                    {!isBrandScoped && (
-                        <div className="min-w-[240px]">
-                            <div className="mb-1 block text-sm font-medium text-gray-600">
-                                Brand Filter
-                            </div>
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-between"
-                                    >
-                                        {brandIds.length > 0
-                                            ? `${brandIds.length} brand(s) selected`
-                                            : "Select brands"}
-                                        <ChevronDown className="ml-2 h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="max-h-[280px] w-[240px] overflow-y-auto">
-                                    {brandsData?.data?.map((brand) => (
-                                        <DropdownMenuItem
-                                            key={brand.id}
-                                            onSelect={(e) => e.preventDefault()}
-                                            className="flex items-center gap-3"
+
+                        {/* Brand Filter */}
+                        {!isBrandScoped && (
+                            <div className="w-full xl:max-w-[340px]">
+                                <div className="mb-1 block text-sm font-medium text-gray-600">
+                                    Brand Filter
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-between"
                                         >
-                                            <Checkbox
-                                                checked={brandIds.includes(
-                                                    brand.id
-                                                )}
-                                                onCheckedChange={(checked) => {
-                                                    const updated = checked
-                                                        ? [
-                                                              ...brandIds,
-                                                              brand.id,
-                                                          ]
-                                                        : brandIds.filter(
-                                                              (id) =>
-                                                                  id !==
-                                                                  brand.id
-                                                          );
-                                                    setBrandIds(updated);
-                                                    if (updated.length > 0)
-                                                        setBrandFilter("all");
-                                                }}
-                                            />
-                                            <span className="text-sm">
-                                                {brand.name}
-                                            </span>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                    )}
-                    {!isBrandScoped && !isOrderManager && (
-                        <div className="flex items-center gap-2 pb-2">
-                            <Checkbox
-                                id="shipment-flag"
-                                checked={applyShipmentFlag}
-                                onCheckedChange={(checked) =>
-                                    setApplyShipmentFlag(Boolean(checked))
-                                }
-                            />
-                            <Label
-                                htmlFor="shipment-flag"
-                                className="text-sm font-medium"
-                            >
-                                Apply 5% Shipment Adjustment
-                            </Label>
-                        </div>
-                    )}
+                                            {brandIds.length > 0
+                                                ? `${brandIds.length} brand(s) selected`
+                                                : "Select brands"}
+                                            <ChevronDown className="ml-2 size-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent className="max-h-[280px] w-[min(20rem,calc(100vw-2rem))] overflow-y-auto">
+                                        {brandsData?.data?.map((brand) => (
+                                            <DropdownMenuItem
+                                                key={brand.id}
+                                                onSelect={(e) =>
+                                                    e.preventDefault()
+                                                }
+                                                className="flex items-center gap-3"
+                                            >
+                                                <Checkbox
+                                                    checked={brandIds.includes(
+                                                        brand.id
+                                                    )}
+                                                    onCheckedChange={(
+                                                        checked
+                                                    ) => {
+                                                        const updated = checked
+                                                            ? [
+                                                                  ...brandIds,
+                                                                  brand.id,
+                                                              ]
+                                                            : brandIds.filter(
+                                                                  (id) =>
+                                                                      id !==
+                                                                      brand.id
+                                                              );
+                                                        setBrandIds(updated);
+                                                        if (
+                                                            updated.length > 0
+                                                        ) {
+                                                            setBrandFilter(
+                                                                "all"
+                                                            );
+                                                        }
+                                                    }}
+                                                />
+                                                <span className="text-sm">
+                                                    {brand.name}
+                                                </span>
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        )}
+
+                        {!isBrandScoped && !isOrderManager && (
+                            <div className="flex min-h-10 flex-wrap items-start gap-2 rounded-md border border-dashed border-slate-200 bg-slate-50/60 px-3 py-2.5 sm:items-center xl:min-h-[42px]">
+                                <Checkbox
+                                    id="shipment-flag"
+                                    checked={applyShipmentFlag}
+                                    onCheckedChange={(checked) =>
+                                        setApplyShipmentFlag(Boolean(checked))
+                                    }
+                                />
+                                <Label
+                                    htmlFor="shipment-flag"
+                                    className="text-sm font-medium leading-snug"
+                                >
+                                    Apply 5% Shipment Adjustment
+                                </Label>
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Actions Group */}
-                <div className="flex flex-wrap gap-3">
+                <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center xl:w-auto xl:max-w-[520px] xl:justify-end">
                     {!isBrandScoped && !isOrderManager && (
                         <Button
                             onClick={handleDownloadPDF}
-                            className="min-w-[180px]"
+                            className="h-11 w-full sm:w-auto sm:min-w-[220px]"
                             disabled={!isBrandSelected}
                         >
                             Download Consolidated Report
@@ -1277,13 +1283,15 @@ export function OrdersTable({
                         <Button
                             variant="secondary"
                             onClick={handleDownloadBrandPDF}
-                            className="min-w-[180px]"
+                            className="h-11 w-full sm:w-auto sm:min-w-[200px]"
                             disabled={!isBrandSelected}
                         >
                             Download Brand Invoice
                         </Button>
                     )}
-                    <DataTableViewOptions table={table} />
+                    <div className="w-full sm:w-auto [&_button]:h-11 [&_button]:w-full sm:[&_button]:w-auto">
+                        <DataTableViewOptions table={table} />
+                    </div>
                 </div>
             </div>
             <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -1342,17 +1350,18 @@ export function OrdersTable({
                 </DialogContent>
             </Dialog>
             {/* Table Section */}
-            <div className="overflow-hidden rounded-lg border">
+            <div className="w-full">
                 <DataTable
                     columns={columns(refetchOrderData)}
                     table={table}
                     pages={pages}
                     count={count}
                     className="gap-3"
-                    tableClassName="table-fixed text-xs"
-                    headerClassName="bg-slate-50 px-3 py-3 text-xs uppercase tracking-wide text-slate-500"
+                    tableWrapperClassName="rounded-lg border"
+                    tableClassName="min-w-[72rem] table-fixed text-xs sm:min-w-[78rem]"
+                    headerClassName="bg-slate-50 px-2 py-2 text-[11px] uppercase tracking-wide text-slate-500 sm:px-3 sm:py-3 sm:text-xs"
                     rowClassName="hover:bg-sky-50/40"
-                    cellClassName="px-3 py-3 align-top"
+                    cellClassName="px-2 py-2 align-top text-[11px] sm:px-3 sm:py-3 sm:text-xs"
                     perPage={perPage}
                     onPerPageChange={(value) => {
                         setPerPage(value);

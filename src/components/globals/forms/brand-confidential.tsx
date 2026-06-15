@@ -1,5 +1,9 @@
 "use client";
 
+import {
+    BRAND_SUSTAINABILITY_CERTIFICATES,
+    BrandSustainabilityCertificateKey,
+} from "@/config/brand-program";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -31,6 +35,7 @@ import { handleClientError } from "@/lib/utils";
 import {
     BrandConfidentialWithBrand,
     BrandMediaItem,
+    BrandSustainabilityCertificate,
     CachedBrand,
     CreateBrandConfidential,
     createBrandConfidentialSchema,
@@ -39,7 +44,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { State } from "country-state-city";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { MediaSelectModal } from "../modals";
@@ -48,6 +53,42 @@ interface PageProps {
     brand: CachedBrand;
     brandConfidential?: BrandConfidentialWithBrand;
     allMedia: BrandMediaItem[];
+}
+
+const getDefaultSustainabilityCertificates = (
+    certificates?: BrandSustainabilityCertificate[] | null
+) =>
+    BRAND_SUSTAINABILITY_CERTIFICATES.map((certificate) => ({
+        key: certificate.key,
+        documentId:
+            certificates?.find((item) => item.key === certificate.key)
+                ?.documentId ?? null,
+    }));
+
+function VerificationPreview({ media }: { media: BrandMediaItem }) {
+    if (media.type.startsWith("image/")) {
+        return (
+            <img
+                src={media.url}
+                alt={media.alt ?? media.name}
+                className="h-40 w-full rounded-md object-cover"
+            />
+        );
+    }
+
+    return (
+        <object
+            data={media.url}
+            type={media.type}
+            width="100%"
+            height={220}
+            className="rounded-md"
+        >
+            <Link href={media.url} target="_blank" className="underline">
+                View uploaded file
+            </Link>
+        </object>
+    );
 }
 
 export function BrandConfidentialForm({
@@ -72,6 +113,18 @@ export function BrandConfidentialForm({
     const [selectedIecCert, setSelectedIecCert] = useState<
         BrandMediaItem | null | undefined
     >(brandConfidential?.iecCertificate);
+    const [activeSustainabilityCertificateKey, setActiveSustainabilityCertificateKey] =
+        useState<BrandSustainabilityCertificateKey | null>(null);
+    const [
+        selectedSustainabilityCertificateMedia,
+        setSelectedSustainabilityCertificateMedia,
+    ] = useState<Record<string, BrandMediaItem | null>>(() =>
+        Object.fromEntries(
+            (brandConfidential?.sustainabilityCertificates ?? [])
+                .filter((item) => item.document)
+                .map((item) => [item.key, item.document ?? null])
+        )
+    );
 
     const {
         data: { data: mediaRaw },
@@ -81,6 +134,14 @@ export function BrandConfidentialForm({
     );
 
     const docs = mediaRaw.filter((m) => m.type.includes("pdf"));
+    const certificateMedia = mediaRaw.filter(
+        (m) => m.type.includes("pdf") || m.type.startsWith("image/")
+    );
+    const isFormLocked =
+        isRequestSending ||
+        isRequestResending ||
+        (!!brandConfidential &&
+            brand.confidentialVerificationStatus !== "rejected");
 
     const states = State.getStatesOfCountry("IN");
 
@@ -106,6 +167,9 @@ export function BrandConfidentialForm({
             udyamRegistrationCertificate:
                 brandConfidential?.udyamRegistrationCertificate?.id ?? "",
             iecCertificate: brandConfidential?.iecCertificate?.id ?? "",
+            sustainabilityCertificates: getDefaultSustainabilityCertificates(
+                brandConfidential?.sustainabilityCertificates
+            ),
             addressLine1: brandConfidential?.addressLine1 ?? "",
             addressLine2: brandConfidential?.addressLine2 ?? "",
             city: brandConfidential?.city ?? "",
@@ -125,6 +189,51 @@ export function BrandConfidentialForm({
             hasAcceptedTerms: brandConfidential?.hasAcceptedTerms ?? false,
         },
     });
+    const activeSustainabilitySelectedMedia = useMemo(() => {
+        if (!activeSustainabilityCertificateKey) return [];
+
+        const selected =
+            selectedSustainabilityCertificateMedia[
+                activeSustainabilityCertificateKey
+            ];
+
+        return selected ? [selected] : [];
+    }, [
+        activeSustainabilityCertificateKey,
+        selectedSustainabilityCertificateMedia,
+    ]);
+
+    const updateSustainabilityCertificateSelection = (
+        key: BrandSustainabilityCertificateKey,
+        item: BrandMediaItem | null
+    ) => {
+        const nextValue = BRAND_SUSTAINABILITY_CERTIFICATES.map(
+            (certificate) => ({
+                key: certificate.key,
+                documentId:
+                    certificate.key === key ? item?.id ?? null : null,
+            })
+        ).map((certificate) => {
+            if (certificate.key === key) return certificate;
+
+            const existing = form
+                .getValues("sustainabilityCertificates")
+                ?.find((item) => item.key === certificate.key);
+
+            return {
+                key: certificate.key,
+                documentId: existing?.documentId ?? null,
+            };
+        });
+
+        form.setValue("sustainabilityCertificates", nextValue, {
+            shouldDirty: true,
+        });
+        setSelectedSustainabilityCertificateMedia((prev) => ({
+            ...prev,
+            [key]: item,
+        }));
+    };
 
     const { mutate: sendRequest, isPending: isRequestSending } =
         trpc.brands.confidentials.createConfidential.useMutation({
@@ -160,6 +269,10 @@ export function BrandConfidentialForm({
                         (data.warehousePostalCode as string | undefined) ?? "",
                     warehouseCountry:
                         (data.warehouseCountry as string | undefined) ?? "IN",
+                    sustainabilityCertificates:
+                        getDefaultSustainabilityCertificates(
+                            data.sustainabilityCertificates
+                        ),
                 });
                 router.refresh();
             },
@@ -243,15 +356,9 @@ export function BrandConfidentialForm({
                                         <FormLabel>GSTIN</FormLabel>
 
                                         <FormControl>
-                                            <Input
-                                                placeholder="Enter your brand's GST Identification Number"
-                                                disabled={
-                                                    isRequestSending ||
-                                                    isRequestResending ||
-                                                    (!!brandConfidential &&
-                                                        brand.confidentialVerificationStatus !==
-                                                            "rejected")
-                                                }
+                                <Input
+                                    placeholder="Enter your brand's GST Identification Number"
+                                                disabled={isFormLocked}
                                                 {...field}
                                             />
                                         </FormControl>
@@ -271,13 +378,7 @@ export function BrandConfidentialForm({
                                         <FormControl>
                                             <Input
                                                 placeholder="Enter your brand's Permanent Account Number"
-                                                disabled={
-                                                    isRequestSending ||
-                                                    isRequestResending ||
-                                                    (!!brandConfidential &&
-                                                        brand.confidentialVerificationStatus !==
-                                                            "rejected")
-                                                }
+                                                disabled={isFormLocked}
                                                 {...field}
                                             />
                                         </FormControl>
@@ -296,15 +397,9 @@ export function BrandConfidentialForm({
                                             <FormLabel>Bank Name</FormLabel>
 
                                             <FormControl>
-                                                <Input
-                                                    placeholder="Enter your brand's bank name"
-                                                    disabled={
-                                                        isRequestSending ||
-                                                        isRequestResending ||
-                                                        (!!brandConfidential &&
-                                                            brand.confidentialVerificationStatus !==
-                                                                "rejected")
-                                                    }
+                                                    <Input
+                                                        placeholder="Enter your brand's bank name"
+                                                    disabled={isFormLocked}
                                                     {...field}
                                                 />
                                             </FormControl>
@@ -324,15 +419,9 @@ export function BrandConfidentialForm({
                                             </FormLabel>
 
                                             <FormControl>
-                                                <Input
-                                                    placeholder="Enter bank account holder name (with proper casing)"
-                                                    disabled={
-                                                        isRequestSending ||
-                                                        isRequestResending ||
-                                                        (!!brandConfidential &&
-                                                            brand.confidentialVerificationStatus !==
-                                                                "rejected")
-                                                    }
+                                                    <Input
+                                                        placeholder="Enter bank account holder name (with proper casing)"
+                                                    disabled={isFormLocked}
                                                     {...field}
                                                 />
                                             </FormControl>
@@ -1136,6 +1225,120 @@ export function BrandConfidentialForm({
                         <Separator />
 
                         <div className="space-y-6">
+                            <div className="space-y-3 rounded-lg border border-dashed border-slate-300 p-4">
+                                <div className="space-y-1">
+                                    <h3 className="text-base font-semibold">
+                                        Sustainability Certificate Verification
+                                    </h3>
+                                    <p className="text-sm text-muted-foreground">
+                                        Upload certificate photos or PDFs for any
+                                        applicable sustainability claims. These
+                                        are optional, but they help our team
+                                        verify your brand faster.
+                                    </p>
+                                </div>
+
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    {BRAND_SUSTAINABILITY_CERTIFICATES.map(
+                                        (certificate) => {
+                                            const selectedMedia =
+                                                selectedSustainabilityCertificateMedia[
+                                                    certificate.key
+                                                ];
+
+                                            return (
+                                                <div
+                                                    key={certificate.key}
+                                                    className="space-y-3 rounded-lg border p-4"
+                                                >
+                                                    <div className="space-y-1">
+                                                        <p className="font-medium">
+                                                            {certificate.label}
+                                                        </p>
+                                                        <Link
+                                                            href={
+                                                                certificate.verificationUrl
+                                                            }
+                                                            target="_blank"
+                                                            className="break-all text-sm text-primary underline"
+                                                        >
+                                                            {
+                                                                certificate.verificationUrl
+                                                            }
+                                                        </Link>
+                                                    </div>
+
+                                                    {selectedMedia ? (
+                                                        <div className="space-y-3">
+                                                            <VerificationPreview
+                                                                media={
+                                                                    selectedMedia
+                                                                }
+                                                            />
+                                                            <div className="flex flex-wrap justify-end gap-2">
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    className="h-9"
+                                                                    disabled={
+                                                                        isFormLocked
+                                                                    }
+                                                                    onClick={() =>
+                                                                        updateSustainabilityCertificateSelection(
+                                                                            certificate.key,
+                                                                            null
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    Remove
+                                                                </Button>
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="outline"
+                                                                    className="h-9"
+                                                                    disabled={
+                                                                        isFormLocked
+                                                                    }
+                                                                    onClick={() =>
+                                                                        setActiveSustainabilityCertificateKey(
+                                                                            certificate.key
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Icons.RefreshCcw />
+                                                                    Replace
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex min-h-32 items-center justify-center rounded-md border border-dashed border-foreground/40 p-4">
+                                                            <Button
+                                                                type="button"
+                                                                size="sm"
+                                                                className="text-xs"
+                                                                disabled={
+                                                                    isFormLocked
+                                                                }
+                                                                onClick={() =>
+                                                                    setActiveSustainabilityCertificateKey(
+                                                                        certificate.key
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Icons.CloudUpload />
+                                                                Upload
+                                                                Verification
+                                                                File
+                                                            </Button>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            );
+                                        }
+                                    )}
+                                </div>
+                            </div>
+
                             <FormField
                                 control={form.control}
                                 name="udyamRegistrationCertificate"
@@ -1440,6 +1643,31 @@ export function BrandConfidentialForm({
                         shouldDirty: true,
                     });
                     setSelectedIecCert(item);
+                }}
+            />
+
+            <MediaSelectModal
+                brandId={brand.id}
+                allMedia={certificateMedia}
+                selectedMedia={activeSustainabilitySelectedMedia}
+                isOpen={activeSustainabilityCertificateKey !== null}
+                setIsOpen={(value) => {
+                    const nextValue =
+                        typeof value === "function" ? value(true) : value;
+
+                    if (!nextValue) {
+                        setActiveSustainabilityCertificateKey(null);
+                    }
+                }}
+                accept="application/pdf,image/*"
+                onSelectionComplete={(items) => {
+                    if (!activeSustainabilityCertificateKey) return;
+
+                    updateSustainabilityCertificateSelection(
+                        activeSustainabilityCertificateKey,
+                        items[0] ?? null
+                    );
+                    setActiveSustainabilityCertificateKey(null);
                 }}
             />
         </>

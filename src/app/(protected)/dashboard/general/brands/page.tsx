@@ -1,3 +1,4 @@
+import { BRAND_TIER_VALUES } from "@/config/brand-program";
 import {
     BrandsDownload,
     BrandsTable,
@@ -24,6 +25,7 @@ interface PageProps {
         page?: string;
         limit?: string;
         search?: string;
+        tier?: (typeof BRAND_TIER_VALUES)[number];
     }>;
 }
 
@@ -117,6 +119,7 @@ async function BrandsFetch({ searchParams }: PageProps) {
         page: pageRaw,
         limit: limitRaw,
         search: searchRaw,
+        tier,
     } = await searchParams;
 
     const limit =
@@ -128,6 +131,7 @@ async function BrandsFetch({ searchParams }: PageProps) {
         limit,
         page,
         search,
+        tier,
     });
 
     return <BrandsTable initialData={data} />;

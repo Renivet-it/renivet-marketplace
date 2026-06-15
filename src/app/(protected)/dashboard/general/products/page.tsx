@@ -45,7 +45,7 @@ export default function Page(props: PageProps) {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:justify-end">
                     <Suspense>
                         <ProductAddAdminFetch />
                     </Suspense>

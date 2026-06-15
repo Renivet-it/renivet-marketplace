@@ -16,6 +16,10 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, gt, sql } from "drizzle-orm";
 import { z } from "zod";
 
+function sanitizePhoneNumbers(phoneNumbers: string[]) {
+    return phoneNumbers.map((value) => value.trim()).filter(Boolean);
+}
+
 export const rolesRouter = createTRPCRouter({
     getRoles: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.VIEW_ROLES))
@@ -43,8 +47,12 @@ export const rolesRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ROLES))
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
+            const sanitizedInput = {
+                ...input,
+                phoneNumbers: sanitizePhoneNumbers(input.phoneNumbers),
+            };
 
-            const slug = slugify(input.name);
+            const slug = slugify(sanitizedInput.name);
 
             const [cachedRoles, existingRole] = await Promise.all([
                 roleCache.getAll(),
@@ -57,7 +65,7 @@ export const rolesRouter = createTRPCRouter({
                 });
 
             const newRole = await queries.roles.createRole({
-                ...input,
+                ...sanitizedInput,
                 slug,
                 position: cachedRoles.length + 1,
                 isSiteRole: true,
@@ -93,6 +101,10 @@ export const rolesRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
             const { id, data } = input;
+            const sanitizedData = {
+                ...data,
+                phoneNumbers: sanitizePhoneNumbers(data.phoneNumbers),
+            };
 
             const existingRole = await roleCache.get(id);
             if (!existingRole)
@@ -101,7 +113,7 @@ export const rolesRouter = createTRPCRouter({
                     message: "Role not found",
                 });
 
-            const slug = slugify(data.name);
+            const slug = slugify(sanitizedData.name);
 
             const existingOtherRole = await queries.roles.getOtherRole(
                 slug,
@@ -115,7 +127,7 @@ export const rolesRouter = createTRPCRouter({
 
             const [updatedRole] = await Promise.all([
                 queries.roles.updateRole(id, {
-                    ...data,
+                    ...sanitizedData,
                     slug,
                 }),
                 roleCache.remove(id),

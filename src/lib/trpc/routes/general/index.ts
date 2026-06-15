@@ -31,3 +31,4 @@ export * from "./user-support";
 export * from "./decodex";
 
 export * from "./analytics";
+export * from "./whatsapp-notifications";

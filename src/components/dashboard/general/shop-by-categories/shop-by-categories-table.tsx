@@ -103,9 +103,7 @@ export function ShopByCategoriesTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: { data: data, count },
-    } =
+    const { data: queryData } =
         trpc.general.content.homeShopByCategories.getHomeShopByCategories.useQuery(
             { page, limit },
             {
@@ -115,6 +113,9 @@ export function ShopByCategoriesTable({ initialData }: PageProps) {
                 },
             }
         );
+
+    const data = queryData?.data ?? initialData.data ?? [];
+    const count = queryData?.count ?? initialData.count ?? 0;
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 

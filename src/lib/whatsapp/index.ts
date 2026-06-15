@@ -34,7 +34,6 @@ export async function sendWhatsAppMessage({
             contentSid: "HX7925a3c635766f42f372ed1cb76d9453",
             parameterCount: 2, // name, orderId
         },
-
         replace_initiated_user: {
             contentSid: "HXaf68cfd30d177fe5090b89ef1dfc0f48",
             parameterCount: 2, // name, orderId
@@ -54,9 +53,17 @@ export async function sendWhatsAppMessage({
             parameterCount: 4,
         },
 
-       daily_order_summary_2: {
+        daily_order_summary_2: {
             contentSid: "HX6446237c526fb08d9b1be5be7df538be",
             parameterCount: 10,
+        },
+        support_alert: {
+            contentSid: "HX4b8a035fdc5ef83ff4c70f9ae14c4f98",
+            parameterCount: 4,
+        },
+        sla_alert: {
+            contentSid: "HX0bbffb19e0880e32834e3ed4c94c69c9",
+            parameterCount: 4,
         },
     };
 
@@ -64,6 +71,11 @@ export async function sendWhatsAppMessage({
     // @ts-ignore
     if (!templates[templateName]) {
         throw new Error(`Template ${templateName} not found`);
+    }
+
+    // @ts-ignore
+    if (!templates[templateName].contentSid) {
+        throw new Error(`Content SID missing for template ${templateName}`);
     }
 
     // Validate parameter count

@@ -33,6 +33,7 @@ interface DataTableProps<T> {
     bodyClassName?: string;
     rowClassName?: string;
     cellClassName?: string;
+    tableWrapperClassName?: string;
     emptyState?: React.ReactNode;
 }
 
@@ -51,11 +52,14 @@ export function DataTable<T>({
     bodyClassName = "",
     rowClassName = "",
     cellClassName = "",
+    tableWrapperClassName = "",
     emptyState,
 }: DataTableProps<T>) {
     return (
         <div className={`flex flex-col gap-4 ${className}`}>
-            <div className="rounded-md border">
+            <div
+                className={`w-full overflow-x-auto rounded-md border ${tableWrapperClassName}`}
+            >
                 <Table className={tableClassName}>
                     <TableHeader className={headerClassName}>
                         {table.getHeaderGroups().map((headerGroup) => (
@@ -118,9 +122,9 @@ export function DataTable<T>({
             </div>
 
             {(enablePagination || enablePerPage) && (
-                <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     {enablePerPage && (
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <p className="text-sm text-muted-foreground">
                                 Rows per page
                             </p>
@@ -149,7 +153,7 @@ export function DataTable<T>({
                         </div>
                     )}
 
-                    <div className="flex flex-col items-center gap-4 sm:flex-row">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end">
                         <p className="text-sm text-muted-foreground">
                             Showing{" "}
                             {table.getState().pagination.pageIndex * perPage +

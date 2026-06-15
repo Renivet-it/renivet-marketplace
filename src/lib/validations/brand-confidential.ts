@@ -1,7 +1,33 @@
+import {
+    BRAND_SUSTAINABILITY_CERTIFICATES,
+    BrandSustainabilityCertificateKey,
+} from "@/config/brand-program";
 import { z } from "zod";
 import { convertEmptyStringToNull } from "../utils";
 import { brandSchema } from "./brand";
 import { cachedBrandMediaItemSchema } from "./brand-media-item";
+
+const sustainabilityCertificateKeyValues =
+    BRAND_SUSTAINABILITY_CERTIFICATES.map((item) => item.key) as [
+        BrandSustainabilityCertificateKey,
+        ...BrandSustainabilityCertificateKey[],
+    ];
+
+export const brandSustainabilityCertificateSchema = z.object({
+    key: z.enum(sustainabilityCertificateKeyValues),
+    documentId: z.preprocess(
+        convertEmptyStringToNull,
+        z
+            .string({
+                invalid_type_error: "Certificate document ID must be a string",
+            })
+            .uuid("Certificate document ID is invalid")
+            .nullable()
+    ),
+    label: z.string().optional(),
+    verificationUrl: z.string().url().optional(),
+    document: cachedBrandMediaItemSchema.nullish().optional(),
+});
 
 export const brandConfidentialSchema = z.object({
     id: z
@@ -101,6 +127,9 @@ export const brandConfidentialSchema = z.object({
             })
             .nullable()
     ),
+    sustainabilityCertificates: z
+        .array(brandSustainabilityCertificateSchema)
+        .default([]),
     addressLine1: z
         .string({
             required_error: "Address Line 1 is required",
@@ -488,6 +517,9 @@ export const linkBrandToRazorpaySchema = brandConfidentialSchema
     });
 
 export type BrandConfidential = z.infer<typeof brandConfidentialSchema>;
+export type BrandSustainabilityCertificate = z.infer<
+    typeof brandSustainabilityCertificateSchema
+>;
 export type BrandConfidentialWithBrand = z.infer<
     typeof brandConfidentialWithBrandSchema
 >;

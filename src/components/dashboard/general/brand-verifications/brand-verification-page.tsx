@@ -297,6 +297,66 @@ export function BrandVerificationPage({ data }: PageProps) {
 
                 <Card>
                     <CardHeader>
+                        <CardTitle>
+                            Sustainability Verification Certificates
+                        </CardTitle>
+                    </CardHeader>
+
+                    <Separator />
+
+                    <CardContent className="pt-6">
+                        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+                            {data.sustainabilityCertificates.map(
+                                (certificate) => (
+                                    <div
+                                        key={certificate.key}
+                                        className="space-y-2 rounded-lg border p-4"
+                                    >
+                                        <div>
+                                            <h5 className="text-sm font-medium">
+                                                {certificate.label}
+                                            </h5>
+                                            <Link
+                                                href={
+                                                    certificate.verificationUrl ??
+                                                    "#"
+                                                }
+                                                target="_blank"
+                                                className="break-all text-sm text-primary underline"
+                                            >
+                                                {certificate.verificationUrl}
+                                            </Link>
+                                        </div>
+
+                                        <div>
+                                            <h6 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                                Uploaded Evidence
+                                            </h6>
+                                            {certificate.document?.url ? (
+                                                <Link
+                                                    href={
+                                                        certificate.document.url
+                                                    }
+                                                    className="text-sm text-primary underline"
+                                                    target="_blank"
+                                                >
+                                                    View uploaded file
+                                                </Link>
+                                            ) : (
+                                                <p className="text-sm text-muted-foreground">
+                                                    Not provided
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+                                )
+                            )}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader>
                         <CardTitle>Address Information</CardTitle>
                     </CardHeader>
 
