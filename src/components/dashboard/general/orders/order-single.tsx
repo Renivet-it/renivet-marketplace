@@ -60,7 +60,7 @@ export function OrderSingle({ order }: PageProps) {
     return (
         <>
             <button
-                className="text-blue-500 hover:underline"
+                className="max-w-full break-all text-left text-blue-500 hover:underline"
                 onClick={() => setIsOpen(true)}
             >
                 {order.id}

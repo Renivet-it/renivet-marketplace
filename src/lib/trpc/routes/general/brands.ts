@@ -1,3 +1,4 @@
+import { BRAND_TIER_VALUES } from "@/config/brand-program";
 import { env } from "@/../env";
 import { utApi } from "@/app/api/uploadthing/core";
 import {
@@ -328,6 +329,7 @@ export const brandRequestsRouter = createTRPCRouter({
                     brandPermissions:
                         BitFieldBrandPermission.ADMINISTRATOR.toString(),
                     name: "Admin",
+                    phoneNumbers: [],
                     slug: generateBrandRoleSlug("Admin", newBrand.id),
                     position: 1,
                     sitePermissions: "0",
@@ -753,16 +755,18 @@ export const brandsRouter = createTRPCRouter({
                 limit: z.number().int().positive().default(10),
                 page: z.number().int().positive().default(1),
                 search: z.string().optional(),
+                tier: z.enum(BRAND_TIER_VALUES).optional(),
             })
         )
         .query(async ({ ctx, input }) => {
             const { queries } = ctx;
-            const { limit, page, search } = input;
+            const { limit, page, search, tier } = input;
 
             const data = await queries.brands.getBrands({
                 limit,
                 page,
                 search,
+                tier,
             });
 
             return data;

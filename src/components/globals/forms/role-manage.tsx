@@ -48,6 +48,7 @@ export function RoleManageForm({ role, ...props }: PageProps) {
             name: role?.name ?? "",
             sitePermissions: role?.sitePermissions ?? "0",
             brandPermissions: role?.brandPermissions ?? "0",
+            phoneNumbers: role?.phoneNumbers ?? [],
         },
     });
 
@@ -183,6 +184,122 @@ export function RoleManageForm({ role, ...props }: PageProps) {
                         </FormItem>
                     )}
                 />
+
+                {props.type === "site" && (
+                    <FormField
+                        control={form.control}
+                        name="phoneNumbers"
+                        render={({ field }) => (
+                            <FormItem>
+                                <div className="flex items-center justify-between gap-2">
+                                    <FormLabel>
+                                        WhatsApp Receiver Phone Numbers
+                                    </FormLabel>
+
+                                    <Button
+                                        type="button"
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() =>
+                                            field.onChange([
+                                                ...(field.value ?? []),
+                                                "",
+                                            ])
+                                        }
+                                        disabled={
+                                            isSiteRoleCreating ||
+                                            isSiteRoleUpdating ||
+                                            isBrandRoleCreating ||
+                                            isBrandRoleUpdating
+                                        }
+                                    >
+                                        Add Number
+                                    </Button>
+                                </div>
+
+                                <FormControl>
+                                    <div className="space-y-3">
+                                        {(field.value ?? []).length === 0 ? (
+                                            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground">
+                                                No WhatsApp numbers added for
+                                                this role yet.
+                                            </div>
+                                        ) : (
+                                            (field.value ?? []).map(
+                                                (phoneNumber, index) => (
+                                                    <div
+                                                        key={`${index}-${role?.id ?? "new"}`}
+                                                        className="flex items-center gap-2"
+                                                    >
+                                                        <Input
+                                                            value={phoneNumber}
+                                                            placeholder="Enter Indian mobile number"
+                                                            disabled={
+                                                                isSiteRoleCreating ||
+                                                                isSiteRoleUpdating ||
+                                                                isBrandRoleCreating ||
+                                                                isBrandRoleUpdating
+                                                            }
+                                                            onChange={(event) => {
+                                                                const next = [
+                                                                    ...(field.value ??
+                                                                        []),
+                                                                ];
+                                                                next[index] =
+                                                                    event.target.value;
+                                                                field.onChange(
+                                                                    next
+                                                                );
+                                                            }}
+                                                        />
+
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            disabled={
+                                                                isSiteRoleCreating ||
+                                                                isSiteRoleUpdating ||
+                                                                isBrandRoleCreating ||
+                                                                isBrandRoleUpdating
+                                                            }
+                                                            onClick={() =>
+                                                                field.onChange(
+                                                                    (
+                                                                        field.value ??
+                                                                        []
+                                                                    ).filter(
+                                                                        (
+                                                                            _,
+                                                                            valueIndex
+                                                                        ) =>
+                                                                            valueIndex !==
+                                                                            index
+                                                                    )
+                                                                )
+                                                            }
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                )
+                                            )
+                                        )}
+                                    </div>
+                                </FormControl>
+
+                                <p className="text-sm text-muted-foreground">
+                                    Add one or more receiver numbers for this
+                                    site role. These are optional and only used
+                                    when a WhatsApp notification module is
+                                    mapped to the role.
+                                </p>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
 
                 {props.type === "site" && (
                     <FormField

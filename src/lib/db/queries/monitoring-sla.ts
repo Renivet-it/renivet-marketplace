@@ -1,8 +1,18 @@
 import { env } from "@/../env";
+import {
+    DEFAULT_SLA_WHATSAPP_NUMBERS,
+    DEFAULT_SUPPORT_WHATSAPP_NUMBERS,
+} from "@/config/whatsapp-notifications";
+import {
+    WhatsappNotificationModuleKey,
+    WhatsappNotificationModuleSettings,
+    WhatsappNotificationSettings,
+    whatsappNotificationSettingsSchema,
+} from "@/lib/validations";
 import { resend } from "@/lib/resend";
 import { MonitoringAlertEmail } from "@/lib/resend/emails";
 import { getAbsoluteURL } from "@/lib/utils";
-import { sendPlainWhatsAppMessage } from "@/lib/whatsapp";
+import { sendPlainWhatsAppMessage, sendWhatsAppMessage } from "@/lib/whatsapp";
 import {
     and,
     desc,
@@ -45,6 +55,7 @@ import {
     orders,
     orderShipments,
     products,
+    roles,
     productVariants,
     refunds,
     rtoDispositions,
@@ -111,6 +122,7 @@ const ALERT_WHATSAPP_RECIPIENTS = (process.env.RENIVET_ALERT_WHATSAPP ?? "")
     .filter(Boolean);
 const MONITORING_DASHBOARD_PATH = "/dashboard/general/monitoring-sla";
 const MARKETING_TARGETS_SETTING_KEY = "marketing_performance_targets";
+const WHATSAPP_NOTIFICATION_SETTINGS_KEY = "whatsapp_notification_modules";
 
 type MarketingPerformanceTargets = {
     roasGoal: number;
@@ -205,6 +217,79 @@ function csvEscape(value: unknown) {
     return `${quote}${text.replaceAll(quote, quote + quote)}${quote}`;
 }
 
+function normalizeIndianPhoneNumber(value: string) {
+    const digits = value.replace(/\D/g, "");
+
+    if (digits.length === 10) return `+91${digits}`;
+    if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
+    if (value.startsWith("+") && digits.length >= 10) return `+${digits}`;
+    return digits.length >= 10 ? `+${digits}` : null;
+}
+
+function dedupePhoneNumbers(numbers: string[]) {
+    return Array.from(new Set(numbers));
+}
+
+function resolveAlertModule(
+    alert: Pick<
+        typeof monitoringAlerts.$inferSelect,
+        "entityType" | "type" | "ownerRole"
+    >
+): WhatsappNotificationModuleKey | null {
+    const entityType = alert.entityType.toLowerCase();
+    const type = alert.type.toLowerCase();
+    const ownerRole = alert.ownerRole?.toLowerCase() ?? "";
+
+    if (
+        entityType.includes("support") ||
+        type.includes("support") ||
+        ownerRole.includes("support")
+    ) {
+        return "support";
+    }
+
+    if (
+        entityType.includes("sla") ||
+        type.includes("sla") ||
+        ownerRole.includes("sla") ||
+        type.includes("breach") ||
+        type.includes("overdue") ||
+        type.includes("aging")
+    ) {
+        return "sla";
+    }
+
+    return null;
+}
+
+function buildSupportAlertTemplateParameters(
+    alert: Pick<
+        typeof monitoringAlerts.$inferSelect,
+        "title" | "severity" | "message" | "entityId"
+    >
+) {
+    return [
+        alert.severity.toUpperCase(),
+        alert.title,
+        alert.message,
+        alert.entityId,
+    ];
+}
+
+function buildSlaAlertTemplateParameters(
+    alert: Pick<
+        typeof monitoringAlerts.$inferSelect,
+        "title" | "severity" | "message" | "entityId"
+    >
+) {
+    return [
+        alert.severity.toUpperCase(),
+        alert.title,
+        alert.message,
+        alert.entityId,
+    ];
+}
+
 function toCsv<T extends Record<string, unknown>>(
     rows: T[],
     headers?: string[]
@@ -222,6 +307,135 @@ function toCsv<T extends Record<string, unknown>>(
 class MonitoringSlaQuery {
     async writeAudit(input: AuditLogInput) {
         return auditLogQueries.write(input);
+    }
+
+    async getWhatsappNotificationSettings(): Promise<WhatsappNotificationSettings> {
+        const saved = await db.query.monitoringSettings.findFirst({
+            where: eq(
+                monitoringSettings.key,
+                WHATSAPP_NOTIFICATION_SETTINGS_KEY
+            ),
+        });
+
+        const parsed = whatsappNotificationSettingsSchema.safeParse(
+            saved?.value ?? {}
+        );
+
+        if (parsed.success) return parsed.data;
+        return whatsappNotificationSettingsSchema.parse({});
+    }
+
+    async updateWhatsappNotificationModule({
+        module,
+        settings,
+        actorId,
+    }: {
+        module: WhatsappNotificationModuleKey;
+        settings: WhatsappNotificationModuleSettings;
+        actorId: string;
+    }) {
+        const existing = await this.getWhatsappNotificationSettings();
+        const nextSettings = {
+            ...existing,
+            [module]: settings,
+        };
+
+        const parsed = whatsappNotificationSettingsSchema.parse(nextSettings);
+
+        await db
+            .insert(monitoringSettings)
+            .values({
+                key: WHATSAPP_NOTIFICATION_SETTINGS_KEY,
+                value: parsed,
+                updatedBy: actorId,
+            })
+            .onConflictDoUpdate({
+                target: monitoringSettings.key,
+                set: {
+                    value: parsed,
+                    updatedBy: actorId,
+                    updatedAt: new Date(),
+                },
+            });
+
+        await auditLogQueries.write({
+            userId: actorId,
+            actionType: "whatsapp_notification_module_updated",
+            entityType: "monitoring_settings",
+            entityId: WHATSAPP_NOTIFICATION_SETTINGS_KEY,
+            afterValue: {
+                module,
+                settings,
+            },
+            reason: "Admin updated WhatsApp notification module settings",
+        });
+
+        return parsed;
+    }
+
+    async resolveWhatsappRecipientsForAlert(
+        alert: Pick<
+            typeof monitoringAlerts.$inferSelect,
+            "entityType" | "type" | "ownerRole"
+        >
+    ) {
+        const moduleKey = resolveAlertModule(alert);
+        if (!moduleKey) {
+            return {
+                enabled: true,
+                recipients: dedupePhoneNumbers(
+                    ALERT_WHATSAPP_RECIPIENTS.map(normalizeIndianPhoneNumber)
+                        .filter((value): value is string => Boolean(value))
+                ),
+            };
+        }
+
+        const settings = await this.getWhatsappNotificationSettings();
+        const moduleSettings = settings[moduleKey];
+
+        if (!moduleSettings.enabled) {
+            return {
+                enabled: false,
+                recipients: [] as string[],
+            };
+        }
+
+        let recipients: string[] = [];
+
+        if (moduleSettings.roleIds.length > 0) {
+            const matchingRoles = await db.query.roles.findMany({
+                where: and(
+                    eq(roles.isSiteRole, true),
+                    inArray(roles.id, moduleSettings.roleIds)
+                ),
+                columns: {
+                    id: true,
+                    phoneNumbers: true,
+                },
+            });
+
+            recipients = matchingRoles.flatMap((role) =>
+                (role.phoneNumbers ?? [])
+                    .map(normalizeIndianPhoneNumber)
+                    .filter((value): value is string => Boolean(value))
+            );
+        }
+
+        if (recipients.length === 0) {
+            const fallbackNumbers =
+                moduleKey === "sla"
+                    ? DEFAULT_SLA_WHATSAPP_NUMBERS
+                    : DEFAULT_SUPPORT_WHATSAPP_NUMBERS;
+
+            recipients = fallbackNumbers
+                .map(normalizeIndianPhoneNumber)
+                .filter((value): value is string => Boolean(value));
+        }
+
+        return {
+            enabled: true,
+            recipients: dedupePhoneNumbers(recipients),
+        };
     }
 
     async createAlert(input: AlertInput) {
@@ -376,12 +590,52 @@ class MonitoringSlaQuery {
         }
 
         if (channels.includes("whatsapp")) {
-            for (const recipient of ALERT_WHATSAPP_RECIPIENTS) {
+            const alertModule = resolveAlertModule(alert);
+            const whatsappRouting = await this.resolveWhatsappRecipientsForAlert(
+                alert
+            );
+
+            if (!whatsappRouting.enabled) {
+                deliveries.push(
+                    await db
+                        .insert(monitoringAlertDeliveries)
+                        .values({
+                            alertId,
+                            channel: "whatsapp",
+                            recipient: "module-disabled",
+                            status: "skipped",
+                            error: "WhatsApp is disabled for this module",
+                        })
+                        .returning()
+                        .then((res) => res[0])
+                );
+
+                return deliveries;
+            }
+
+            for (const recipient of whatsappRouting.recipients) {
                 try {
-                    const sent = await sendPlainWhatsAppMessage({
-                        recipientPhoneNumber: recipient,
-                        message: `[${alert.severity.toUpperCase()}] ${alert.title}\n${alert.message}`,
-                    });
+                    const sent =
+                        alertModule === "support"
+                            ? await sendWhatsAppMessage({
+                                  recipientPhoneNumber: recipient,
+                                  templateName: "support_alert",
+                                  parameters:
+                                      buildSupportAlertTemplateParameters(
+                                          alert
+                                      ),
+                              })
+                            : alertModule === "sla"
+                              ? await sendWhatsAppMessage({
+                                    recipientPhoneNumber: recipient,
+                                    templateName: "sla_alert",
+                                    parameters:
+                                        buildSlaAlertTemplateParameters(alert),
+                                })
+                            : await sendPlainWhatsAppMessage({
+                                  recipientPhoneNumber: recipient,
+                                  message: buildAlertPlainText(alert),
+                              });
                     deliveries.push(
                         await db
                             .insert(monitoringAlertDeliveries)

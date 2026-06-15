@@ -2,6 +2,7 @@ import { relations } from "drizzle-orm";
 import {
     boolean,
     integer,
+    jsonb,
     pgTable,
     text,
     uniqueIndex,
@@ -18,6 +19,7 @@ export const roles = pgTable("roles", {
     position: integer("position").notNull().default(0),
     sitePermissions: text("site_permissions").notNull(),
     brandPermissions: text("brand_permissions").notNull(),
+    phoneNumbers: jsonb("phone_numbers").$type<string[]>().notNull().default([]),
     isSiteRole: boolean("is_site_role").notNull().default(false),
     ...timestamps,
 });

@@ -48,7 +48,7 @@ export default function Page(props: PageProps) {
                     </p>
                 </div>
 
-                <div className="flex flex-col items-center gap-2 md:flex-row">
+                <div className="flex w-full flex-wrap items-center justify-center gap-2 md:w-auto md:justify-end">
                     <Suspense
                         fallback={
                             <Button disabled className="h-8 text-xs">

@@ -133,6 +133,10 @@ export const brandSchema = z.object({
         convertEmptyStringToNull,
         z.string().nullable().optional()
     ),
+    tierPreviousSnapshot: z.preprocess(
+        convertEmptyStringToNull,
+        z.enum(["tier_1", "tier_2", "tier_3"]).nullable().optional()
+    ),
     // confidentialData: brandConfidentialSchema.optional(),
     createdAt: z
         .union([z.string(), z.date()], {
@@ -157,6 +161,7 @@ export const createBrandSchema = brandSchema.omit({
     confidentialVerificationRejectedReason: true,
     confidentialVerificationRejectedAt: true,
     statusReasonCode: true,
+    tierPreviousSnapshot: true,
     createdAt: true,
     updatedAt: true,
 });
@@ -168,6 +173,7 @@ export const updateBrandSchema = brandSchema
         isActive: true,
         logoUrl: true,
         statusReasonCode: true,
+        tierPreviousSnapshot: true,
         website: true,
         rzpAccountId: true,
     })

@@ -467,6 +467,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_CATEGORIES |
                     BitFieldSitePermission.MANAGE_BRANDS,
             },
+            {
+                title: "WhatsApp Notifications",
+                url: "/dashboard/general/whatsapp-notifications",
+                permissions:
+                    BitFieldSitePermission.VIEW_SETTINGS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+            },
         ],
     },
     {

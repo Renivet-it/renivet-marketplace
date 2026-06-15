@@ -1,0 +1,1 @@
+ALTER TABLE "roles" ADD COLUMN "phone_numbers" jsonb DEFAULT '[]'::jsonb NOT NULL;

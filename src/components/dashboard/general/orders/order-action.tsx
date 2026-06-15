@@ -461,13 +461,13 @@ export function OrderAction({ order, onAction }: PageProps) {
 
     return (
         <>
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-[8.5rem] flex-col items-stretch gap-2 sm:min-w-0 sm:flex-row sm:items-center">
                 {primaryActionLabel ? (
                     <Button
                         variant="outline"
                         onClick={handlePrimaryAction}
                         className={cn(
-                            "h-8 whitespace-nowrap rounded-md px-3 text-xs font-medium shadow-none",
+                            "h-8 w-full whitespace-nowrap rounded-md px-3 text-xs font-medium shadow-none sm:w-auto",
                             shouldShowShipNow
                                 ? "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800"
                                 : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:text-slate-900"
@@ -481,7 +481,7 @@ export function OrderAction({ order, onAction }: PageProps) {
                     <DropdownMenuTrigger asChild>
                         <Button
                             variant="ghost"
-                            className="size-8 p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                            className="h-8 w-full p-0 text-slate-500 hover:bg-slate-100 hover:text-slate-900 sm:size-8 sm:w-auto"
                         >
                             <span className="sr-only">Open menu</span>
                             <Icons.MoreHorizontal className="size-4" />

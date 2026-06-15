@@ -1,5 +1,6 @@
 "use client";
 
+import { BRAND_TIER_VALUES } from "@/config/brand-program";
 import { isRenderableImageUrl } from "@/components/dashboard/general/safe-admin-image";
 import { Icons } from "@/components/icons";
 import {
@@ -49,7 +50,11 @@ import { State } from "country-state-city";
 import { format } from "date-fns";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { parseAsInteger, useQueryState } from "nuqs";
+import {
+    parseAsInteger,
+    parseAsStringLiteral,
+    useQueryState,
+} from "nuqs";
 import { useMemo, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -103,6 +108,16 @@ const editConfidentialSchema = z.object({
     bankAccountVerificationDocument: z.string().nullable().optional(),
     udyamRegistrationCertificate: z.string().nullable().optional(),
     iecCertificate: z.string().nullable().optional(),
+    sustainabilityCertificates: z
+        .array(
+            z.object({
+                key: z.string(),
+                documentId: z.string().nullable(),
+                label: z.string().optional(),
+                verificationUrl: z.string().optional(),
+            })
+        )
+        .default([]),
     hasAcceptedTerms: z.boolean().default(true),
 });
 
@@ -121,6 +136,10 @@ export function BrandAction({ brand }: PageProps) {
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
     const [search] = useQueryState("search", { defaultValue: "" });
+    const [tier] = useQueryState(
+        "tier",
+        parseAsStringLiteral(BRAND_TIER_VALUES).withDefault("tier_1")
+    );
 
     const states = useMemo(() => State.getStatesOfCountry("IN"), []);
 
@@ -128,6 +147,7 @@ export function BrandAction({ brand }: PageProps) {
         page,
         limit,
         search,
+        tier,
     });
 
     // Fetch confidential data (admin API)
@@ -181,6 +201,15 @@ export function BrandAction({ brand }: PageProps) {
                   udyamRegistrationCertificate:
                       confidentialData.udyamRegistrationCertificate?.id || null,
                   iecCertificate: confidentialData.iecCertificate?.id || null,
+                  sustainabilityCertificates:
+                      confidentialData.sustainabilityCertificates.map(
+                          (certificate) => ({
+                              key: certificate.key,
+                              documentId: certificate.documentId,
+                              label: certificate.label,
+                              verificationUrl: certificate.verificationUrl,
+                          })
+                      ),
                   hasAcceptedTerms: confidentialData.hasAcceptedTerms,
               }
             : {
@@ -209,6 +238,7 @@ export function BrandAction({ brand }: PageProps) {
                   bankAccountVerificationDocument: null,
                   udyamRegistrationCertificate: null,
                   iecCertificate: null,
+                  sustainabilityCertificates: [],
                   hasAcceptedTerms: true,
               },
     });

@@ -15,6 +15,7 @@ import {
     SidebarMenuSub,
     SidebarMenuSubButton,
     SidebarMenuSubItem,
+    useSidebar,
 } from "@/components/ui/sidebar";
 import { cn, hasPermission } from "@/lib/utils";
 import Link from "next/link";
@@ -36,7 +37,13 @@ export function NavBrand({
 }: Props) {
     const pathname = usePathname();
     const searchParams = useSearchParams();
+    const { isMobile, setOpenMobile } = useSidebar();
     const currentUrl = `${pathname}${searchParams.toString() ? `?${searchParams.toString()}` : ""}`;
+    const handleNavigate = () => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    };
     const normalizeSupportUrl = (url: string) => {
         if (url.endsWith("/support/disputes")) {
             return url.replace(
@@ -130,8 +137,12 @@ export function NavBrand({
                                                         onClick={(e) => {
                                                             if (
                                                                 subItem.isDisabled
-                                                            )
+                                                            ) {
                                                                 e.preventDefault();
+                                                                return;
+                                                            }
+
+                                                            handleNavigate();
                                                         }}
                                                         className={cn(
                                                             subItem.isDisabled &&

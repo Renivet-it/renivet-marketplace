@@ -1,6 +1,8 @@
+import { BRAND_SUSTAINABILITY_CERTIFICATES } from "@/config/brand-program";
 import { mediaCache } from "@/lib/redis/methods";
 import {
     BrandConfidential,
+    BrandMediaItem,
     brandConfidentialWithBrandSchema,
     CreateBrandConfidential,
     UpdateBrandConfidential,
@@ -9,6 +11,30 @@ import {
 import { and, desc, eq, ilike } from "drizzle-orm";
 import { db } from "..";
 import { brandConfidentials, brands } from "../schema";
+
+const hydrateSustainabilityCertificates = (
+    certificates:
+        | Array<{ key: string; documentId: string | null }>
+        | null
+        | undefined,
+    mediaMap: Map<string, BrandMediaItem>
+) =>
+    BRAND_SUSTAINABILITY_CERTIFICATES.map((certificate) => {
+        const existing = certificates?.find(
+            (item) => item.key === certificate.key
+        );
+
+        return {
+            key: certificate.key,
+            label: certificate.label,
+            verificationUrl: certificate.verificationUrl,
+            documentId: existing?.documentId ?? null,
+            document:
+                existing?.documentId && mediaMap.has(existing.documentId)
+                    ? mediaMap.get(existing.documentId)
+                    : null,
+        };
+    });
 
 class BrandConfidentialQuery {
     async getCount(status?: "pending" | "approved" | "rejected") {
@@ -75,6 +101,9 @@ class BrandConfidentialQuery {
             if (item.udyamRegistrationCertificate)
                 mediaIds.add(item.udyamRegistrationCertificate);
             if (item.iecCertificate) mediaIds.add(item.iecCertificate);
+            for (const certificate of item.sustainabilityCertificates ?? []) {
+                if (certificate.documentId) mediaIds.add(certificate.documentId);
+            }
         }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
@@ -94,6 +123,10 @@ class BrandConfidentialQuery {
             iecCertificate: item.iecCertificate
                 ? mediaMap.get(item.iecCertificate)
                 : null,
+            sustainabilityCertificates: hydrateSustainabilityCertificates(
+                item.sustainabilityCertificates,
+                mediaMap
+            ),
         }));
 
         const parsed: any[] = [];
@@ -129,6 +162,9 @@ class BrandConfidentialQuery {
         if (data.udyamRegistrationCertificate)
             mediaIds.add(data.udyamRegistrationCertificate);
         if (data.iecCertificate) mediaIds.add(data.iecCertificate);
+        for (const certificate of data.sustainabilityCertificates ?? []) {
+            if (certificate.documentId) mediaIds.add(certificate.documentId);
+        }
 
         const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
         const mediaMap = new Map(
@@ -147,6 +183,10 @@ class BrandConfidentialQuery {
             iecCertificate: data.iecCertificate
                 ? mediaMap.get(data.iecCertificate)
                 : null,
+            sustainabilityCertificates: hydrateSustainabilityCertificates(
+                data.sustainabilityCertificates,
+                mediaMap
+            ),
         };
 
         const result = brandConfidentialWithBrandSchema.safeParse(enhancedData);

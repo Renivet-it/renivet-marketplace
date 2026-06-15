@@ -31,6 +31,7 @@ export const roleSchema = z.object({
         required_error: "Brand permissions is required",
         invalid_type_error: "Brand permissions must be a string",
     }),
+    phoneNumbers: z.array(z.string().min(10, "Phone number is too short")).default([]),
     isSiteRole: z.boolean({
         required_error: "Is site role is required",
         invalid_type_error: "Is site role must be a boolean",

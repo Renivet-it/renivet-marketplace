@@ -47,6 +47,7 @@ import {
     ticketRouter,
     usersRouter,
     userSupportRouter,
+    whatsappNotificationsRouter,
 } from "./routes/general";
 import { addressesRouter } from "./routes/general/address";
 import { capiLogsRouter } from "./routes/general/capi";
@@ -89,6 +90,7 @@ export const appRouter = createTRPCRouter({
         search: searchRouter,
         capiLogs: capiLogsRouter,
         decodex: decodeXRouter,
+        whatsappNotifications: whatsappNotificationsRouter,
     }),
     brands: createTRPCRouter({
         analytics: brandAnalyticsRouter,

@@ -15,6 +15,10 @@ import { TRPCError } from "@trpc/server";
 import { and, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 
+function sanitizePhoneNumbers(phoneNumbers: string[]) {
+    return phoneNumbers.map((value) => value.trim()).filter(Boolean);
+}
+
 export const rolesRouter = createTRPCRouter({
     getRoles: protectedProcedure
         .input(
@@ -40,7 +44,11 @@ export const rolesRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldBrandPermission.MANAGE_ROLES, "all", "brand"))
         .mutation(async ({ ctx, input }) => {
             const { db, schemas } = ctx;
-            const { brandId, name } = input;
+            const sanitizedInput = {
+                ...input,
+                phoneNumbers: sanitizePhoneNumbers(input.phoneNumbers),
+            };
+            const { brandId, name } = sanitizedInput;
 
             const existingBrand = await brandCache.get(brandId);
             if (!existingBrand)
@@ -69,7 +77,7 @@ export const rolesRouter = createTRPCRouter({
                 const role = await tx
                     .insert(schemas.roles)
                     .values({
-                        ...input,
+                        ...sanitizedInput,
                         slug,
                         position: +brandRolesCount + 1,
                     })
@@ -101,6 +109,10 @@ export const rolesRouter = createTRPCRouter({
         .mutation(async ({ ctx, input }) => {
             const { queries } = ctx;
             const { roleId, brandId, data } = input;
+            const sanitizedData = {
+                ...data,
+                phoneNumbers: sanitizePhoneNumbers(data.phoneNumbers),
+            };
 
             const existingBrand = await brandCache.get(brandId);
             if (!existingBrand)
@@ -118,7 +130,7 @@ export const rolesRouter = createTRPCRouter({
                     message: "Role not found",
                 });
 
-            const slug = generateBrandRoleSlug(data.name, brandId);
+            const slug = generateBrandRoleSlug(sanitizedData.name, brandId);
 
             const existingOtherRole = existingBrand.roles.find(
                 (role) => role.slug === slug && role.id !== roleId
@@ -131,7 +143,7 @@ export const rolesRouter = createTRPCRouter({
 
             const [updatedRole] = await Promise.all([
                 queries.roles.updateRole(roleId, {
-                    ...data,
+                    ...sanitizedData,
                     slug,
                 }),
                 brandCache.remove(brandId),

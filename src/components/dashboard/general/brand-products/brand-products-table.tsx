@@ -107,9 +107,7 @@ export function BrandProductsTable({ initialData }: PageProps) {
     );
     const [rowSelection, setRowSelection] = useState({});
 
-    const {
-        data: { data: data, count },
-    } = trpc.general.content.homeBrandProducts.getHomeBrandProducts.useQuery(
+    const { data: queryData } = trpc.general.content.homeBrandProducts.getHomeBrandProducts.useQuery(
         { page, limit },
         {
             initialData: {
@@ -118,6 +116,9 @@ export function BrandProductsTable({ initialData }: PageProps) {
             },
         }
     );
+
+    const data = queryData?.data ?? initialData.data ?? [];
+    const count = queryData?.count ?? initialData.count ?? 0;
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
 

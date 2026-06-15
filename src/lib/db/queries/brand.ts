@@ -1,3 +1,8 @@
+import { BrandTier } from "@/config/brand-program";
+import {
+    BrandTierMetrics,
+    computeBrandTier,
+} from "@/lib/brand-tier";
 import { razorpay } from "@/lib/razorpay";
 import { mediaCache } from "@/lib/redis/methods";
 import {
@@ -8,9 +13,211 @@ import {
     UpdateBrand,
     UpdateBrandConfidentialStatus,
 } from "@/lib/validations";
-import { desc, eq, ilike } from "drizzle-orm";
+import {
+    and,
+    desc,
+    eq,
+    gte,
+    ilike,
+    inArray,
+    ne,
+    or,
+    sql,
+} from "drizzle-orm";
 import { db } from "..";
-import { brands } from "../schema";
+import {
+    brands,
+    monitoringAlerts,
+    orderItems,
+    orders,
+    products,
+    userSupportTickets,
+} from "../schema";
+
+type TierCounts = Record<BrandTier, number>;
+
+const createEmptyTierCounts = (): TierCounts => ({
+    tier_1: 0,
+    tier_2: 0,
+    tier_3: 0,
+    tier_0: 0,
+    offboarded: 0,
+});
+
+const getMonthStarts = () => {
+    const now = new Date();
+    const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    return Array.from({ length: 4 }, (_, index) => {
+        const month = new Date(
+            currentMonthStart.getFullYear(),
+            currentMonthStart.getMonth() - (3 - index),
+            1
+        );
+
+        return {
+            key: `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`,
+            start: month,
+        };
+    });
+};
+
+const buildBrandTierMetricsMap = async (brandIds: string[]) => {
+    const metricsMap = new Map<string, BrandTierMetrics>();
+    if (brandIds.length === 0) return metricsMap;
+
+    const monthStarts = getMonthStarts();
+    const gmWindowStart = monthStarts[0].start;
+    const issueWindowStart = new Date();
+    issueWindowStart.setDate(issueWindowStart.getDate() - 90);
+
+    const [
+        monthlyGmvRows,
+        slaRows,
+        openSlaRows,
+        complaintRows,
+    ] = await Promise.all([
+        db
+            .select({
+                brandId: products.brandId,
+                month: sql<string>`to_char(date_trunc('month', ${orders.createdAt}), 'YYYY-MM')`,
+                gmvPaise:
+                    sql<number>`coalesce(sum(${products.price} * ${orderItems.quantity}), 0)`,
+            })
+            .from(orderItems)
+            .innerJoin(orders, eq(orderItems.orderId, orders.id))
+            .innerJoin(products, eq(orderItems.productId, products.id))
+            .where(
+                and(
+                    inArray(products.brandId, brandIds),
+                    gte(orders.createdAt, gmWindowStart),
+                    ne(orders.status, "cancelled"),
+                    inArray(orders.paymentStatus, ["paid", "refund_pending"])
+                )
+            )
+            .groupBy(
+                products.brandId,
+                sql`date_trunc('month', ${orders.createdAt})`
+            ),
+        db
+            .select({
+                brandId: monitoringAlerts.entityId,
+                count: sql<number>`count(*)`,
+                latestAt: sql<Date>`max(${monitoringAlerts.createdAt})`,
+            })
+            .from(monitoringAlerts)
+            .where(
+                and(
+                    eq(monitoringAlerts.entityType, "brand"),
+                    inArray(monitoringAlerts.entityId, brandIds),
+                    gte(monitoringAlerts.createdAt, issueWindowStart),
+                    or(
+                        ilike(monitoringAlerts.type, "%sla%"),
+                        ilike(monitoringAlerts.title, "%sla%"),
+                        ilike(monitoringAlerts.message, "%sla%")
+                    )
+                )
+            )
+            .groupBy(monitoringAlerts.entityId),
+        db
+            .select({
+                brandId: monitoringAlerts.entityId,
+                oldestAt: sql<Date>`min(${monitoringAlerts.createdAt})`,
+            })
+            .from(monitoringAlerts)
+            .where(
+                and(
+                    eq(monitoringAlerts.entityType, "brand"),
+                    inArray(monitoringAlerts.entityId, brandIds),
+                    inArray(monitoringAlerts.status, [
+                        "open",
+                        "acknowledged",
+                        "escalated",
+                    ]),
+                    or(
+                        ilike(monitoringAlerts.type, "%sla%"),
+                        ilike(monitoringAlerts.title, "%sla%"),
+                        ilike(monitoringAlerts.message, "%sla%")
+                    )
+                )
+            )
+            .groupBy(monitoringAlerts.entityId),
+        db
+            .select({
+                brandId: userSupportTickets.brandId,
+                count: sql<number>`count(*)`,
+                oldestAt: sql<Date>`min(${userSupportTickets.createdAt})`,
+                latestAt: sql<Date>`max(${userSupportTickets.createdAt})`,
+            })
+            .from(userSupportTickets)
+            .where(
+                and(
+                    inArray(userSupportTickets.brandId, brandIds),
+                    gte(userSupportTickets.createdAt, issueWindowStart),
+                    or(
+                        ilike(userSupportTickets.category, "%quality%"),
+                        ilike(userSupportTickets.issueType, "%quality%"),
+                        ilike(userSupportTickets.issueLabel, "%quality%"),
+                        ilike(userSupportTickets.title, "%quality%"),
+                        ilike(userSupportTickets.description, "%quality%")
+                    )
+                )
+            )
+            .groupBy(userSupportTickets.brandId),
+    ]);
+
+    for (const brandId of brandIds) {
+        metricsMap.set(brandId, {
+            monthlyGmv: monthStarts.map((month) => ({
+                month: month.key,
+                gmvPaise: 0,
+            })),
+            slaBreaches90d: 0,
+            qualityComplaints90d: 0,
+            hasExpiredSustainabilityCertificate: false,
+            oldestActiveIssueAt: null,
+            lastIssueObservedAt: null,
+        });
+    }
+
+    for (const row of monthlyGmvRows) {
+        const metrics = metricsMap.get(row.brandId);
+        if (!metrics) continue;
+
+        const month = metrics.monthlyGmv.find((item) => item.month === row.month);
+        if (month) {
+            month.gmvPaise = Number(row.gmvPaise ?? 0);
+        }
+    }
+
+    for (const row of slaRows) {
+        const metrics = metricsMap.get(row.brandId);
+        if (!metrics) continue;
+        metrics.slaBreaches90d = Number(row.count ?? 0);
+        metrics.lastIssueObservedAt = row.latestAt ?? metrics.lastIssueObservedAt;
+    }
+
+    for (const row of openSlaRows) {
+        const metrics = metricsMap.get(row.brandId);
+        if (!metrics) continue;
+        metrics.oldestActiveIssueAt = row.oldestAt ?? metrics.oldestActiveIssueAt;
+    }
+
+    for (const row of complaintRows) {
+        if (!row.brandId) continue;
+        const metrics = metricsMap.get(row.brandId);
+        if (!metrics) continue;
+        metrics.qualityComplaints90d = Number(row.count ?? 0);
+        if (!metrics.oldestActiveIssueAt || (row.oldestAt && row.oldestAt < metrics.oldestActiveIssueAt)) {
+            metrics.oldestActiveIssueAt = row.oldestAt ?? metrics.oldestActiveIssueAt;
+        }
+        if (!metrics.lastIssueObservedAt || (row.latestAt && row.latestAt > metrics.lastIssueObservedAt)) {
+            metrics.lastIssueObservedAt = row.latestAt ?? metrics.lastIssueObservedAt;
+        }
+    }
+
+    return metricsMap;
+};
 
 class BrandQuery {
     async getCount() {
@@ -121,10 +328,12 @@ class BrandQuery {
         limit,
         page,
         search,
+        tier,
     }: {
         limit: number;
         page: number;
         search?: string;
+        tier?: BrandTier;
     }) {
         const data = await db.query.brands.findMany({
             with: {
@@ -173,19 +382,7 @@ class BrandQuery {
             where: !!search?.length
                 ? ilike(brands.name, `%${search}%`)
                 : undefined,
-            limit,
-            offset: (page - 1) * limit,
             orderBy: [desc(brands.createdAt)],
-            extras: {
-                count: db
-                    .$count(
-                        brands,
-                        !!search?.length
-                            ? ilike(brands.name, `%${search}%`)
-                            : undefined
-                    )
-                    .as("brand_count"),
-            },
         });
 
         const products = data.flatMap((brand) =>
@@ -242,10 +439,98 @@ class BrandQuery {
             })
         );
         const parsed = cachedBrandSchema.array().safeParse(mapped);
+        const parsedData = parsed.success
+            ? parsed.data
+            : (mapped as CachedBrand[]);
+        const tierMetricsMap = await buildBrandTierMetricsMap(
+            parsedData.map((brand) => brand.id)
+        );
+        const tierCounts = createEmptyTierCounts();
+        const tierSnapshotUpdates: Array<{
+            id: string;
+            tierPreviousSnapshot: Exclude<BrandTier, "tier_0" | "offboarded"> | null;
+        }> = [];
+
+        const enriched = parsedData.map((brand) => {
+            const tierMetrics = tierMetricsMap.get(brand.id) ?? {
+                monthlyGmv: [],
+                slaBreaches90d: 0,
+                qualityComplaints90d: 0,
+                hasExpiredSustainabilityCertificate: false,
+                oldestActiveIssueAt: null,
+                lastIssueObservedAt: null,
+            };
+
+            if (
+                brand.confidential?.sustainabilityCertificateExpiresAt &&
+                new Date(brand.confidential.sustainabilityCertificateExpiresAt) <
+                    new Date()
+            ) {
+                tierMetrics.hasExpiredSustainabilityCertificate = true;
+                tierMetrics.oldestActiveIssueAt =
+                    tierMetrics.oldestActiveIssueAt ??
+                    new Date(brand.confidential.sustainabilityCertificateExpiresAt);
+                tierMetrics.lastIssueObservedAt = new Date(
+                    brand.confidential.sustainabilityCertificateExpiresAt
+                );
+            }
+
+            const computedTierSummary = computeBrandTier(
+                tierMetrics,
+                brand.tierPreviousSnapshot ?? null
+            );
+            const tierSummary = brand.isActive
+                ? computedTierSummary
+                : {
+                      ...computedTierSummary,
+                      tier: "offboarded" as const,
+                      reason:
+                          "Brand is inactive, so it is automatically treated as Offboarded",
+                  };
+
+            if (
+                (brand.tierPreviousSnapshot ?? null) !==
+                tierSummary.previousTierSnapshot
+            ) {
+                tierSnapshotUpdates.push({
+                    id: brand.id,
+                    tierPreviousSnapshot: tierSummary.previousTierSnapshot,
+                });
+            }
+            tierCounts[tierSummary.tier] += 1;
+
+            return {
+                ...brand,
+                tier: tierSummary.tier,
+                tierBase: tierSummary.baseTier,
+                tierReason: tierSummary.reason,
+                tierMetrics,
+            };
+        });
+
+        if (tierSnapshotUpdates.length > 0) {
+            await Promise.all(
+                tierSnapshotUpdates.map((update) =>
+                    db
+                        .update(brands)
+                        .set({
+                            tierPreviousSnapshot: update.tierPreviousSnapshot,
+                            updatedAt: new Date(),
+                        })
+                        .where(eq(brands.id, update.id))
+                )
+            );
+        }
+
+        const filtered = tier
+            ? enriched.filter((brand) => brand.tier === tier)
+            : enriched;
+        const sliced = filtered.slice((page - 1) * limit, page * limit);
 
         return {
-            data: parsed.success ? parsed.data : (mapped as CachedBrand[]),
-            count: +data?.[0]?.count || 0,
+            data: sliced,
+            count: filtered.length,
+            tierCounts,
         };
     }
 

@@ -7,6 +7,7 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    useSidebar,
 } from "@/components/ui/sidebar";
 import { cn, hasPermission } from "@/lib/utils";
 import Link from "next/link";
@@ -32,6 +33,12 @@ export function NavLegal({
     ...props
 }: Props) {
     const pathname = usePathname();
+    const { isMobile, setOpenMobile } = useSidebar();
+    const handleNavigate = () => {
+        if (isMobile) {
+            setOpenMobile(false);
+        }
+    };
 
     const filteredItems = legal.filter((item) => {
         return hasPermission(
@@ -67,7 +74,11 @@ export function NavLegal({
                                 isActive={isActive}
                                 className="h-9 rounded-xl px-3 text-sm font-medium text-sidebar-foreground/80 hover:bg-sidebar-accent/80 hover:text-sidebar-foreground data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-foreground"
                             >
-                                <Link href={item.url} prefetch>
+                                <Link
+                                    href={item.url}
+                                    prefetch
+                                    onClick={handleNavigate}
+                                >
                                     <Icon />
                                     <span>{item.name}</span>
                                 </Link>
