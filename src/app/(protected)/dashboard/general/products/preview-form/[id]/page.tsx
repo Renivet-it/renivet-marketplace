@@ -159,6 +159,7 @@
 //     );
 // }
 
+import { ProductQcPanel } from "@/components/dashboard/general/products";
 import { ProductManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Separator } from "@/components/ui/separator";
@@ -243,15 +244,19 @@ async function ProductEditFetch({ params }: PageProps) {
     if (!cachedBrand) notFound();
 
     return (
-        <ProductManageForm
-            brandId={brandId}
-            brand={cachedBrand}
-            allCategories={categories}
-            allSubCategories={subCategories}
-            allProductTypes={productTypes}
-            allMedia={media.data}
-            product={existingProduct}
-        />
+        <div className="space-y-6">
+            <ProductQcPanel product={existingProduct} />
+
+            <ProductManageForm
+                brandId={brandId}
+                brand={cachedBrand}
+                allCategories={categories}
+                allSubCategories={subCategories}
+                allProductTypes={productTypes}
+                allMedia={media.data}
+                product={existingProduct}
+            />
+        </div>
     );
 }
 

@@ -30,13 +30,15 @@ interface PageProps {
         page?: string;
         limit?: string;
         verificationStatus?: Product["verificationStatus"] | "all";
+        qcStatus?: Product["qcStatus"] | "all";
+        catalogIssue?: "all" | "oos_but_live" | "stale_inventory" | "claim_mismatch";
         search?: string;
     }>;
 }
 
 export default function Page(props: PageProps) {
     return (
-        <DashShell className="max-w-8xl">
+        <DashShell className="max-w-none px-0 md:px-2 lg:px-3">
             <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
                 <div className="space-y-1 text-center md:text-start">
                     <h1 className="text-2xl font-bold">Products</h1>
@@ -69,6 +71,8 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         page: pageRaw,
         limit: limitRaw,
         verificationStatus: verificationStatusRaw,
+        qcStatus: qcStatusRaw,
+        catalogIssue: catalogIssueRaw,
         search: searchRaw,
     } = await searchParams;
 
@@ -79,6 +83,12 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         verificationStatusRaw && verificationStatusRaw !== "all"
             ? verificationStatusRaw
             : undefined;
+    const qcStatus =
+        qcStatusRaw && qcStatusRaw !== "all" ? qcStatusRaw : undefined;
+    const catalogIssue =
+        catalogIssueRaw && catalogIssueRaw !== "all"
+            ? catalogIssueRaw
+            : undefined;
     const search = searchRaw?.length ? searchRaw : undefined;
 
     const data = await productQueries.getProducts({
@@ -86,6 +96,8 @@ async function ProductsReviewFetch({ searchParams }: PageProps) {
         page,
         search,
         verificationStatus,
+        qcStatus,
+        catalogIssue,
     });
 
     return <ProductsReviewTable initialData={data} />;

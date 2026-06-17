@@ -119,6 +119,27 @@ export const enhancedProductMediaSchema = productMediaSchema.extend({
     mediaItem: cachedBrandMediaItemSchema.nullable().optional(),
 });
 
+export const productQcSeveritySchema = z.enum(["info", "warning", "critical"]);
+export const productQcStatusSchema = z.enum(["pass", "warning", "critical"]);
+export const productQcOwnerSchema = z.enum([
+    "catalog_intern",
+    "kp",
+    "system",
+]);
+export const productInventorySourceSchema = z.enum([
+    "manual",
+    "unicommerce",
+    "order_adjustment",
+]);
+export const productQcFindingSchema = z.object({
+    code: z.string().min(1),
+    severity: productQcSeveritySchema,
+    field: z.string().nullable().optional(),
+    title: z.string().min(1),
+    description: z.string().min(1),
+    suggestion: z.string().nullable().optional(),
+});
+
 export const productVerificationStatusSchema = z.enum([
     "idle",
     "pending",
@@ -402,6 +423,41 @@ export const productSchema = z.object({
         })
         .transform((v) => new Date(v))
         .nullable(),
+    qcStatus: productQcStatusSchema.default("pass"),
+    qcScore: z.number().int().min(0).max(100).default(100),
+    qcLastCheckedAt: z
+        .union([z.string(), z.date()], {
+            invalid_type_error: "QC last checked at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable()
+        .optional(),
+    qcFindings: z.array(productQcFindingSchema).default([]),
+    qcSuggestedFixes: z.array(z.string()).default([]),
+    qcReviewedAt: z
+        .union([z.string(), z.date()], {
+            invalid_type_error: "QC reviewed at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable()
+        .optional(),
+    qcReviewedBy: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().nullable().optional()
+    ),
+    qcEscalatedTo: z.preprocess(
+        convertEmptyStringToNull,
+        productQcOwnerSchema.nullable().optional()
+    ),
+    qcOwner: productQcOwnerSchema.default("system"),
+    inventoryLastSyncedAt: z
+        .union([z.string(), z.date()], {
+            invalid_type_error: "Inventory last synced at must be a date",
+        })
+        .transform((v) => new Date(v))
+        .nullable()
+        .optional(),
+    inventorySource: productInventorySourceSchema.default("manual"),
     rejectionReason: z.preprocess(
         convertEmptyStringToNull,
         z
@@ -827,6 +883,17 @@ export const createProductSchema = productSchema
         isFeaturedWomen: true,
         createdAt: true,
         updatedAt: true,
+        qcStatus: true,
+        qcScore: true,
+        qcLastCheckedAt: true,
+        qcFindings: true,
+        qcSuggestedFixes: true,
+        qcReviewedAt: true,
+        qcReviewedBy: true,
+        qcEscalatedTo: true,
+        qcOwner: true,
+        inventoryLastSyncedAt: true,
+        inventorySource: true,
     })
     .extend({
         options: z.array(productOptionSchema),
@@ -979,6 +1046,7 @@ export type CreateProductValue = z.infer<typeof createProductValueSchema>;
 export type UpdateProductJourney = z.infer<typeof updateProductJourneySchema>;
 export type UpdateProductValue = z.infer<typeof updateProductValueSchema>;
 export type ProductMedia = z.infer<typeof productMediaSchema>;
+export type ProductQcFinding = z.infer<typeof productQcFindingSchema>;
 export type ProductOption = z.infer<typeof productOptionSchema>;
 export type ProductVariant = z.infer<typeof productVariantSchema>;
 export type ProductVariantGroup = z.infer<typeof productVariantGroupSchema>;

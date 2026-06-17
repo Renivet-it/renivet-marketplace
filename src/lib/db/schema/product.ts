@@ -2,6 +2,7 @@ import {
     ProductJourneyData,
     ProductMedia,
     ProductOptionValue,
+    ProductQcFinding,
     ProductValueData,
 } from "@/lib/validations";
 import { relations, sql } from "drizzle-orm";
@@ -96,6 +97,37 @@ export const products = pgTable(
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         rejectedAt: timestamp("rejected_at"),
+        qcStatus: text("qc_status", {
+            enum: ["pass", "warning", "critical"],
+        })
+            .notNull()
+            .default("pass"),
+        qcScore: integer("qc_score").notNull().default(100),
+        qcLastCheckedAt: timestamp("qc_last_checked_at"),
+        qcFindings: jsonb("qc_findings")
+            .$type<ProductQcFinding[]>()
+            .notNull()
+            .default([]),
+        qcSuggestedFixes: text("qc_suggested_fixes")
+            .array()
+            .notNull()
+            .default([]),
+        qcReviewedAt: timestamp("qc_reviewed_at"),
+        qcReviewedBy: text("qc_reviewed_by"),
+        qcEscalatedTo: text("qc_escalated_to", {
+            enum: ["catalog_intern", "kp", "system"],
+        }),
+        qcOwner: text("qc_owner", {
+            enum: ["catalog_intern", "kp", "system"],
+        })
+            .notNull()
+            .default("system"),
+        inventoryLastSyncedAt: timestamp("inventory_last_synced_at"),
+        inventorySource: text("inventory_source", {
+            enum: ["manual", "unicommerce", "order_adjustment"],
+        })
+            .notNull()
+            .default("manual"),
         rejectionReason: text("rejection_reason"),
         lastReviewedAt: timestamp("last_reviewed_at"),
         isFeaturedMen: boolean("is_featured_men").default(false), // optional now
@@ -166,6 +198,10 @@ export const products = pgTable(
             .with({
                 lists: 100, // Adjust based on your dataset size
             }),
+        productQcStatusIdx: index("product_qc_status_idx").on(table.qcStatus),
+        productInventorySyncIdx: index("product_inventory_sync_idx").on(
+            table.inventoryLastSyncedAt
+        ),
         semanticSearchEmbeddingIdx: index("semantic_search_embedding_idx")
             .using(
                 "ivfflat",

@@ -34,6 +34,7 @@ export type TableCategoryRequest = CategoryRequestWithBrandAndUser & {
     userName: string;
     brandEmail: string;
     userEmail: string;
+    ageDays: number;
 };
 
 const columns: ColumnDef<TableCategoryRequest>[] = [
@@ -82,6 +83,21 @@ const columns: ColumnDef<TableCategoryRequest>[] = [
         cell: ({ row }) => {
             const data = row.original;
             return format(new Date(data.createdAt), "MMM dd, yyyy");
+        },
+    },
+    {
+        accessorKey: "ageDays",
+        header: "Age",
+        cell: ({ row }) => {
+            const data = row.original;
+
+            return (
+                <Badge
+                    variant={data.ageDays > 7 ? "destructive" : "outline"}
+                >
+                    {data.ageDays}d{data.ageDays > 7 ? " overdue" : ""}
+                </Badge>
+            );
         },
     },
     {
@@ -138,6 +154,13 @@ export function CategoryRequestsTable({ initialData }: PageProps) {
                 brandEmail: x.brand?.email ?? "-",
                 userName: `${x.user?.firstName ?? ""} ${x.user?.lastName ?? ""}`.trim(),
                 userEmail: x.user?.email ?? "-",
+                ageDays: Math.max(
+                    0,
+                    Math.floor(
+                        (Date.now() - new Date(x.createdAt).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                    )
+                ),
             })),
         [dataRaw]
     );

@@ -109,6 +109,7 @@ export const productReviewsRouter = createTRPCRouter({
 
             // Process updates & inserts separately
             const updatePromises = [];
+            const touchedExistingProductIds = new Set<string>();
             const newProducts: any[] = [];
 
             for (const product of inputProducts) {
@@ -194,6 +195,7 @@ export const productReviewsRouter = createTRPCRouter({
                 const existingProductId = existingSKUMap.get(product.sku);
 
                 if (existingProductId) {
+                    touchedExistingProductIds.add(existingProductId);
                     // If product exists, update it
                     updatePromises.push(
                         ctx.db
@@ -445,6 +447,22 @@ export const productReviewsRouter = createTRPCRouter({
                         .insert(productSpecifications)
                         .values(specificationInserts);
                 }
+            }
+
+            if (touchedExistingProductIds.size > 0) {
+                await queries.products.refreshProductAvailabilityAndQc(
+                    Array.from(touchedExistingProductIds),
+                    "manual",
+                    user.id
+                );
+            }
+
+            if (newData.length > 0) {
+                await queries.products.refreshProductAvailabilityAndQc(
+                    newData.map((product) => product.id),
+                    "manual",
+                    user.id
+                );
             }
 
             // Track the event

@@ -1,3 +1,4 @@
+import { ProductQcPanel } from "@/components/dashboard/general/products";
 import { ProductManageForm } from "@/components/globals/forms";
 import { DashShell } from "@/components/globals/layouts";
 import { Separator } from "@/components/ui/separator";
@@ -86,15 +87,19 @@ async function ProductEditFetch({ params }: PageProps) {
     if (existingProduct.brand.id !== bId) notFound();
 
     return (
-        <ProductManageForm
-            brandId={bId}
-            brand={cachedBrand}
-            allCategories={categories}
-            allSubCategories={subCategories}
-            allProductTypes={productTypes}
-            allMedia={media.data}
-            product={existingProduct}
-        />
+        <div className="space-y-6">
+            <ProductQcPanel product={existingProduct} />
+
+            <ProductManageForm
+                brandId={bId}
+                brand={cachedBrand}
+                allCategories={categories}
+                allSubCategories={subCategories}
+                allProductTypes={productTypes}
+                allMedia={media.data}
+                product={existingProduct}
+            />
+        </div>
     );
 }
 

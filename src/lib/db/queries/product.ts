@@ -1,4 +1,9 @@
 import { hasMedia, noMedia } from "@/lib/db/helperfilter";
+import { evaluateCatalogQc } from "@/lib/catalog/qc";
+import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
 import {
     getEmbedding,
     getEmbedding768,
@@ -13,20 +18,17 @@ import {
     Product,
     ProductWithBrand,
     productWithBrandSchema,
-    ReturnExchangePolicy,
     UpdateProduct,
     UpdateProductJourney,
     UpdateProductMediaInput,
     UpdateProductValue,
 } from "@/lib/validations";
-import { InferenceClient } from "@huggingface/inference";
 import {
     and,
     asc,
     count,
     desc,
     eq,
-    exists,
     gte,
     ilike,
     inArray,
@@ -38,6 +40,7 @@ import { db } from "..";
 import {
     beautyNewArrivals,
     beautyTopPicks,
+    backInStockRequests,
     brands,
     categories,
     homeandlivingNewArrival,
@@ -68,7 +71,6 @@ import { categoryQueries } from "./category";
 import { productTypeQueries } from "./product-type";
 import { subCategoryQueries } from "./sub-category";
 
-const token = process.env.HF_TOKEN;
 type EventFilters = {
     page?: number;
     limit?: number;
@@ -84,7 +86,10 @@ type EventFilters = {
     sortOrder?: "asc" | "desc" | undefined;
 };
 
-const hf = new InferenceClient(token);
+type CatalogIssueFilter =
+    | "oos_but_live"
+    | "stale_inventory"
+    | "claim_mismatch";
 
 const toNonNegativeInt = (value: unknown) => {
     const numeric = Number(value);
@@ -135,6 +140,49 @@ const parseSingleProductSafely = (productData: any): ProductWithBrand => {
     );
     return sanitizedProduct as ProductWithBrand;
 };
+
+const getProductStockExpression = () => sql<number>`CASE
+    WHEN ${products.productHasVariants} = true THEN COALESCE((
+        SELECT SUM(${productVariants.quantity})
+        FROM ${productVariants}
+        WHERE ${productVariants.productId} = ${products.id}
+          AND ${productVariants.isDeleted} = false
+    ), 0)
+    ELSE COALESCE(${products.quantity}, 0)
+END`;
+
+const getCatalogIssueFilterQuery = (catalogIssue?: CatalogIssueFilter) => {
+    const stockExpr = getProductStockExpression();
+
+    switch (catalogIssue) {
+        case "oos_but_live":
+            return sql`${products.isAvailable} = true AND ${stockExpr} <= 0`;
+        case "stale_inventory":
+            return sql`COALESCE(${products.inventoryLastSyncedAt}, ${products.updatedAt}) < NOW() - interval '14 days'`;
+        case "claim_mismatch":
+            return sql`${products.qcFindings}::text LIKE '%claim_scope_mismatch%' OR ${products.qcFindings}::text LIKE '%claim_without_brand_scope%'`;
+        default:
+            return undefined;
+    }
+};
+
+const withCatalogQcSnapshot = (product: ProductWithBrand): ProductWithBrand => {
+    const snapshot = evaluateCatalogQc(product);
+
+    return {
+        ...product,
+        qcStatus: snapshot.qcStatus,
+        qcScore: snapshot.qcScore,
+        qcFindings: snapshot.qcFindings,
+        qcSuggestedFixes: snapshot.qcSuggestedFixes,
+        qcOwner: snapshot.qcOwner,
+        qcEscalatedTo: snapshot.qcEscalatedTo,
+        qcLastCheckedAt: product.qcLastCheckedAt ?? new Date(),
+    };
+};
+
+const withCatalogQcSnapshots = (productsData: ProductWithBrand[]) =>
+    productsData.map(withCatalogQcSnapshot);
 
 const publicProductBrandIsActiveFilter = sql`EXISTS (
     SELECT 1
@@ -207,6 +255,7 @@ class ProductQuery {
                 .select({
                     id: productVariants.id,
                     sku: productVariants.sku,
+                    productId: productVariants.productId,
                 })
                 .from(productVariants)
                 .innerJoin(products, eq(productVariants.productId, products.id))
@@ -219,18 +268,19 @@ class ProductQuery {
         ]);
 
         const productMap = new Map<string, string>();
-        const variantMap = new Map<string, string>();
+        const variantMap = new Map<string, { id: string; productId: string }>();
 
         productRows.forEach((row) => {
             if (row.sku) productMap.set(row.sku, row.id);
         });
         variantRows.forEach((row) => {
-            if (row.sku) variantMap.set(row.sku, row.id);
+            if (row.sku) variantMap.set(row.sku, row);
         });
 
         let updatedProducts = 0;
         let updatedVariants = 0;
         const missingSkus: string[] = [];
+        const touchedProductIds = new Set<string>();
 
         await db.transaction(async (tx) => {
             await Promise.all(
@@ -239,28 +289,30 @@ class ProductQuery {
                     const quantity = Math.max(0, Math.trunc(item.quantity));
 
                     if (variantMap.has(sku)) {
+                        const variant = variantMap.get(sku)!;
                         await tx
                             .update(productVariants)
                             .set({
                                 quantity,
                                 updatedAt: new Date(),
                             })
-                            .where(
-                                eq(productVariants.id, variantMap.get(sku)!)
-                            );
+                            .where(eq(productVariants.id, variant.id));
                         updatedVariants += 1;
+                        touchedProductIds.add(variant.productId);
                         return;
                     }
 
                     if (productMap.has(sku)) {
+                        const productId = productMap.get(sku)!;
                         await tx
                             .update(products)
                             .set({
                                 quantity,
                                 updatedAt: new Date(),
                             })
-                            .where(eq(products.id, productMap.get(sku)!));
+                            .where(eq(products.id, productId));
                         updatedProducts += 1;
+                        touchedProductIds.add(productId);
                         return;
                     }
 
@@ -269,8 +321,180 @@ class ProductQuery {
             );
         });
 
+        await this.reconcileAvailabilityForProducts(
+            Array.from(touchedProductIds),
+            "unicommerce"
+        );
+        await this.refreshManyProductQc(Array.from(touchedProductIds));
+
         return { updatedProducts, updatedVariants, missingSkus };
     }
+
+    private async markBackInStockRequestsAsNotified(productId: string) {
+        await db
+            .update(backInStockRequests)
+            .set({
+                status: "notified",
+                updatedAt: new Date(),
+            })
+            .where(
+                and(
+                    eq(backInStockRequests.productId, productId),
+                    eq(backInStockRequests.status, "active")
+                )
+            );
+    }
+
+    private async reconcileAvailabilityForProducts(
+        productIds: string[],
+        inventorySource: "manual" | "unicommerce" | "order_adjustment"
+    ) {
+        if (!productIds.length) return;
+
+        const uniqueProductIds = Array.from(new Set(productIds));
+        const inventoryTouchedAt = new Date();
+        const rows = await db.query.products.findMany({
+            where: inArray(products.id, uniqueProductIds),
+            columns: {
+                id: true,
+                productHasVariants: true,
+                quantity: true,
+                isAvailable: true,
+            },
+            with: {
+                variants: {
+                    columns: {
+                        quantity: true,
+                        isDeleted: true,
+                    },
+                },
+            },
+        });
+
+        for (const row of rows) {
+            const stock = row.productHasVariants
+                ? row.variants
+                      .filter((variant) => !variant.isDeleted)
+                      .reduce(
+                          (total, variant) => total + Math.max(variant.quantity ?? 0, 0),
+                          0
+                      )
+                : Math.max(row.quantity ?? 0, 0);
+            const shouldBeAvailable = stock > 0;
+            const wasUnavailable = row.isAvailable === false;
+
+            await db
+                .update(products)
+                .set({
+                    isAvailable: shouldBeAvailable,
+                    inventoryLastSyncedAt: inventoryTouchedAt,
+                    inventorySource,
+                    updatedAt: new Date(),
+                })
+                .where(eq(products.id, row.id));
+
+            if (shouldBeAvailable && wasUnavailable) {
+                await this.markBackInStockRequestsAsNotified(row.id);
+            }
+        }
+    }
+
+    async refreshProductQc(
+        productId: string,
+        actorId?: string | null
+    ): Promise<ProductWithBrand | null> {
+        const product = await this.getProduct({ productId });
+        if (!product) return null;
+
+        const snapshot = evaluateCatalogQc(product);
+        const previousStatus = product.qcStatus;
+        const previousScore = product.qcScore;
+
+        await db
+            .update(products)
+            .set({
+                qcStatus: snapshot.qcStatus,
+                qcScore: snapshot.qcScore,
+                qcLastCheckedAt: new Date(),
+                qcFindings: snapshot.qcFindings,
+                qcSuggestedFixes: snapshot.qcSuggestedFixes,
+                qcOwner: snapshot.qcOwner,
+                qcEscalatedTo: snapshot.qcEscalatedTo,
+                updatedAt: new Date(),
+            })
+            .where(eq(products.id, productId));
+
+        if (
+            previousStatus !== snapshot.qcStatus ||
+            previousScore !== snapshot.qcScore
+        ) {
+            await auditEntityChange({
+                actorId,
+                actionType: "product_qc_refreshed",
+                entityType: "product",
+                entityId: productId,
+                beforeValue: {
+                    qcStatus: previousStatus,
+                    qcScore: previousScore,
+                },
+                afterValue: {
+                    qcStatus: snapshot.qcStatus,
+                    qcScore: snapshot.qcScore,
+                },
+                reason: "catalog_qc_refresh",
+                metadata: {
+                    findingCount: snapshot.qcFindings.length,
+                },
+            });
+        }
+
+        if (snapshot.qcStatus === "critical") {
+            await createOperationalAlert({
+                actorId,
+                type: "catalog_qc_critical",
+                severity: "critical",
+                entityType: "product",
+                entityId: productId,
+                title: "Critical catalog QC issues detected",
+                message: `${product.title} has critical catalog issues that need attention.`,
+                ownerRole:
+                    snapshot.qcEscalatedTo === "kp"
+                        ? "kp"
+                        : "catalog_intern",
+                dedupeKey: `catalog-qc-critical:${productId}:${snapshot.qcFindings
+                    .map((finding) => finding.code)
+                    .sort()
+                    .join(",")}`,
+                metadata: {
+                    findings: snapshot.qcFindings,
+                    suggestedFixes: snapshot.qcSuggestedFixes,
+                },
+            });
+        }
+
+        return this.getProduct({ productId });
+    }
+
+    async refreshManyProductQc(
+        productIds: string[],
+        actorId?: string | null
+    ): Promise<void> {
+        const uniqueProductIds = Array.from(new Set(productIds));
+        for (const productId of uniqueProductIds) {
+            await this.refreshProductQc(productId, actorId);
+        }
+    }
+
+    async refreshProductAvailabilityAndQc(
+        productIds: string[],
+        inventorySource: "manual" | "unicommerce" | "order_adjustment" = "manual",
+        actorId?: string | null
+    ) {
+        const uniqueProductIds = Array.from(new Set(productIds));
+        await this.reconcileAvailabilityForProducts(uniqueProductIds, inventorySource);
+        await this.refreshManyProductQc(uniqueProductIds, actorId);
+    }
+
     async getProductCount({
         brandId,
         isDeleted,
@@ -361,7 +585,11 @@ class ProductQuery {
 
         const data = await db.query.products.findMany({
             with: {
-                brand: true,
+                brand: {
+                    with: {
+                        confidential: true,
+                    },
+                },
                 variants: true,
                 category: true,
                 subcategory: true,
@@ -425,7 +653,75 @@ class ProductQuery {
             })),
         }));
 
-        return parseProductArraySafely(enhancedData);
+        return withCatalogQcSnapshots(parseProductArraySafely(enhancedData));
+    }
+
+    async getCatalogQcSummary({ brandId }: { brandId?: string } = {}) {
+        const stockExpr = getProductStockExpression();
+        const rows = await db
+            .select({
+                totalProducts: count(products.id),
+                criticalCount:
+                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'critical')`,
+                warningCount:
+                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'warning')`,
+                passCount:
+                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'pass')`,
+                zeroImageCount:
+                    sql<number>`COUNT(*) FILTER (WHERE jsonb_array_length(${products.media}) = 0)`,
+                lowImageCount:
+                    sql<number>`COUNT(*) FILTER (WHERE jsonb_array_length(${products.media}) > 0 AND jsonb_array_length(${products.media}) < 3)`,
+                oosAvailableCount:
+                    sql<number>`COUNT(*) FILTER (WHERE ${products.isAvailable} = true AND ${stockExpr} <= 0)`,
+                staleInventoryCount:
+                    sql<number>`COUNT(*) FILTER (WHERE COALESCE(${products.inventoryLastSyncedAt}, ${products.updatedAt}) < NOW() - interval '14 days')`,
+                claimMismatchCount:
+                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcFindings}::text LIKE '%claim_scope_mismatch%' OR ${products.qcFindings}::text LIKE '%claim_without_brand_scope%')`,
+                suspiciousPricingCount:
+                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcFindings}::text LIKE '%suspicious_discount%')`,
+                avgQcScore: sql<number>`COALESCE(ROUND(AVG(${products.qcScore})), 0)`,
+            })
+            .from(products)
+            .where(
+                and(
+                    eq(products.isDeleted, false),
+                    brandId ? eq(products.brandId, brandId) : undefined
+                )
+            );
+
+        const duplicateGroups = await db.execute(sql`
+            SELECT COUNT(*)::int AS count
+            FROM (
+                SELECT LOWER(TRIM(${products.title})) AS normalized_title, ${products.brandId}
+                FROM ${products}
+                WHERE ${products.isDeleted} = false
+                ${brandId ? sql`AND ${products.brandId} = ${brandId}` : sql``}
+                GROUP BY LOWER(TRIM(${products.title})), ${products.brandId}
+                HAVING COUNT(*) > 1
+            ) duplicate_groups
+        `);
+
+        const duplicateGroupCount = Array.isArray(duplicateGroups)
+            ? Number((duplicateGroups[0] as { count?: number })?.count ?? 0)
+            : Number(
+                  (duplicateGroups as { rows?: Array<{ count?: number }> })?.rows?.[0]
+                      ?.count ?? 0
+              );
+
+        return {
+            totalProducts: Number(rows[0]?.totalProducts ?? 0),
+            criticalCount: Number(rows[0]?.criticalCount ?? 0),
+            warningCount: Number(rows[0]?.warningCount ?? 0),
+            passCount: Number(rows[0]?.passCount ?? 0),
+            zeroImageCount: Number(rows[0]?.zeroImageCount ?? 0),
+            lowImageCount: Number(rows[0]?.lowImageCount ?? 0),
+            oosAvailableCount: Number(rows[0]?.oosAvailableCount ?? 0),
+            staleInventoryCount: Number(rows[0]?.staleInventoryCount ?? 0),
+            claimMismatchCount: Number(rows[0]?.claimMismatchCount ?? 0),
+            suspiciousPricingCount: Number(rows[0]?.suspiciousPricingCount ?? 0),
+            avgQcScore: Number(rows[0]?.avgQcScore ?? 0),
+            duplicateGroupCount,
+        };
     }
 
     // async getProducts({
@@ -715,6 +1011,8 @@ class ProductQuery {
         isPublished,
         isDeleted,
         verificationStatus,
+        qcStatus,
+        catalogIssue,
         sortBy = "createdAt",
         sortOrder = "desc",
         productImage,
@@ -742,6 +1040,8 @@ class ProductQuery {
         isPublished?: boolean;
         isDeleted?: boolean;
         verificationStatus?: Product["verificationStatus"];
+        qcStatus?: Product["qcStatus"];
+        catalogIssue?: CatalogIssueFilter;
         sortBy?: "price" | "createdAt" | "best-sellers";
         sortOrder?: "asc" | "desc";
         productImage?: Product["productImageFilter"];
@@ -963,6 +1263,8 @@ class ProductQuery {
             verificationStatus
                 ? eq(products.verificationStatus, verificationStatus)
                 : undefined,
+            qcStatus ? eq(products.qcStatus, qcStatus) : undefined,
+            getCatalogIssueFilterQuery(catalogIssue),
             productImage
                 ? productImage === "with"
                     ? hasMedia(products, "media")
@@ -1159,7 +1461,11 @@ class ProductQuery {
         const [data, totalRows] = await Promise.all([
             db.query.products.findMany({
                 with: {
-                    brand: true,
+                    brand: {
+                        with: {
+                            confidential: true,
+                        },
+                    },
                     variants: true,
                     category: true,
                     subcategory: true,
@@ -1226,7 +1532,9 @@ class ProductQuery {
             })),
         }));
 
-        const parsed = parseProductArraySafely(enhancedData);
+        const parsed = withCatalogQcSnapshots(
+            parseProductArraySafely(enhancedData)
+        );
 
         // Filter out products with no valid media (where media items don't have URLs)
         // This handles cases where media IDs exist but the actual media was deleted
@@ -1276,6 +1584,8 @@ class ProductQuery {
         isAvailable,
         isPublished,
         verificationStatus,
+        qcStatus,
+        catalogIssue,
         sortBy = "createdAt",
         sortOrder = "desc",
         productImage,
@@ -1303,6 +1613,8 @@ class ProductQuery {
         isAvailable?: boolean;
         isPublished?: boolean;
         verificationStatus?: Product["verificationStatus"];
+        qcStatus?: Product["qcStatus"];
+        catalogIssue?: CatalogIssueFilter;
         sortBy?: "price" | "createdAt";
         sortOrder?: "asc" | "desc";
         productImage?: Product["productImageFilter"];
@@ -1392,6 +1704,8 @@ class ProductQuery {
             verificationStatus
                 ? eq(products.verificationStatus, verificationStatus)
                 : undefined,
+            qcStatus ? eq(products.qcStatus, qcStatus) : undefined,
+            getCatalogIssueFilterQuery(catalogIssue),
             productImage
                 ? productImage === "with"
                     ? hasMedia(products, "media")
@@ -1558,7 +1872,9 @@ class ProductQuery {
             })),
         }));
 
-        const parsed = parseProductArraySafely(enhancedData);
+        const parsed = withCatalogQcSnapshots(
+            parseProductArraySafely(enhancedData)
+        );
         return {
             data: parsed,
             total: parsed.length,
@@ -1583,6 +1899,7 @@ class ProductQuery {
             with: {
                 brand: {
                     with: {
+                        confidential: true,
                         packingRules: {
                             with: {
                                 packingType: true,
@@ -1689,7 +2006,7 @@ class ProductQuery {
             })),
         };
 
-        return parseSingleProductSafely(enhancedData);
+        return withCatalogQcSnapshot(parseSingleProductSafely(enhancedData));
     }
 
     async getProductBySku({
@@ -1917,7 +2234,7 @@ class ProductQuery {
             })),
         };
 
-        return parseSingleProductSafely(enhancedData);
+        return withCatalogQcSnapshot(parseSingleProductSafely(enhancedData));
     }
 
     async createProduct(
@@ -2065,6 +2382,8 @@ class ProductQuery {
                     embeddings, // Include embeddings in the initial insert
                     semanticSearchEmbeddings,
                     searchSuggestionEmbeddings,
+                    inventoryLastSyncedAt: new Date(),
+                    inventorySource: "manual",
                 })
                 .returning()
                 .then((res) => res[0]);
@@ -2135,7 +2454,10 @@ class ProductQuery {
             };
         });
 
-        return data;
+        await this.reconcileAvailabilityForProducts([data.id], "manual");
+        const refreshedProduct = await this.refreshProductQc(data.id);
+
+        return refreshedProduct ?? data;
     }
 
     async bulkCreateProducts(
@@ -2162,6 +2484,8 @@ class ProductQuery {
                             value.semanticSearchEmbeddings,
                         searchSuggestionEmbeddings:
                             value.searchSuggestionEmbeddings,
+                        inventoryLastSyncedAt: new Date(),
+                        inventorySource: "manual",
                     }))
                 )
                 .returning()
@@ -2568,6 +2892,8 @@ class ProductQuery {
                             semanticSearchEmbeddings,
                             searchSuggestionEmbeddings,
                             media: validatedMedia, // Use validated media
+                            inventoryLastSyncedAt: new Date(),
+                            inventorySource: "manual",
                             updatedAt: new Date(),
                         })
                         .where(eq(products.id, productId))
@@ -2598,6 +2924,8 @@ class ProductQuery {
                             .set({
                                 ...values,
                                 media: validatedMedia,
+                                inventoryLastSyncedAt: new Date(),
+                                inventorySource: "manual",
                                 updatedAt: new Date(),
                             })
                             .where(eq(products.id, productId))
@@ -2909,6 +3237,9 @@ class ProductQuery {
                 }
             });
 
+            await this.reconcileAvailabilityForProducts([productId], "manual");
+            await this.refreshProductQc(productId);
+
             return data;
         } catch (error: any) {
             // Log the error to the server console
@@ -2935,6 +3266,8 @@ class ProductQuery {
             .returning()
             .then((res) => res[0]);
 
+        await this.refreshProductQc(productId);
+
         return data;
     }
 
@@ -2943,11 +3276,16 @@ class ProductQuery {
             .update(products)
             .set({
                 isAvailable,
+                inventoryLastSyncedAt: new Date(),
+                inventorySource: "manual",
                 updatedAt: new Date(),
             })
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);
+
+        await this.reconcileAvailabilityForProducts([productId], "manual");
+        await this.refreshProductQc(productId);
 
         return data;
     }
@@ -2967,6 +3305,9 @@ class ProductQuery {
             .returning()
             .then((res) => res[0]);
 
+        await this.reconcileAvailabilityForProducts([productId], "manual");
+        await this.refreshProductQc(productId);
+
         return data;
     }
 
@@ -2980,6 +3321,8 @@ class ProductQuery {
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);
+
+        await this.refreshProductQc(productId);
 
         return data;
     }
@@ -3111,6 +3454,15 @@ class ProductQuery {
                 return results;
             });
 
+            const touchedProductIds = Array.from(
+                new Set(data.map((item) => item.productId))
+            );
+            await this.reconcileAvailabilityForProducts(
+                touchedProductIds,
+                "order_adjustment"
+            );
+            await this.refreshManyProductQc(touchedProductIds);
+
             return {
                 updated: updatedData.filter((x) => x.success),
                 failed: updatedData.filter((x) => !x.success),
@@ -3138,6 +3490,8 @@ class ProductQuery {
             .returning()
             .then((res) => res[0]);
 
+        await this.refreshProductQc(productId);
+
         return data;
     }
 
@@ -3152,6 +3506,8 @@ class ProductQuery {
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);
+
+        await this.refreshProductQc(productId);
 
         return data;
     }
@@ -3169,6 +3525,8 @@ class ProductQuery {
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);
+
+        await this.refreshProductQc(productId);
 
         return data;
     }
