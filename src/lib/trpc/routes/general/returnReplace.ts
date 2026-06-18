@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { eq, and, like, sql } from "drizzle-orm";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
+import { swapRewardService } from "@/lib/services/swap-reward";
 
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { orderReturnRequests, orders, orderItems, users, orderShipments, brandConfidentials } from "@/lib/db/schema";
@@ -322,13 +323,25 @@ rejectRequest: protectedProcedure
             })
         )
         .mutation(async ({ ctx, input }) => {
-            await ctx.db
+            const [request] = await ctx.db
                 .update(orderReturnRequests)
                 .set({
                     status: "completed",
                     updatedAt: new Date(),
                 })
-                .where(eq(orderReturnRequests.id, input.id));
+                .where(eq(orderReturnRequests.id, input.id))
+                .returning();
+
+            if (request?.requestType === "return") {
+                try {
+                    await swapRewardService.revokeStampForOrder(
+                        request.orderId,
+                        "return_completed"
+                    );
+                } catch (error) {
+                    console.error("swap reward revoke failed", error);
+                }
+            }
 
             return { success: true };
         }),

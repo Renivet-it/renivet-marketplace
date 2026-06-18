@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import React from "react";
+import { SwapRewardCard } from "@/components/profile/swap-reward-card";
 
 function SummaryCard({
     icon: Icon,
@@ -209,6 +210,8 @@ export default function OverviewPage() {
                 <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
                 <p className="text-gray-500">Welcome back, {user?.firstName}</p>
             </div>
+
+            <SwapRewardCard />
 
             {/* Summary Cards Grid */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">

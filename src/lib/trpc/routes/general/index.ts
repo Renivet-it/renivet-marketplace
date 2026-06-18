@@ -23,6 +23,7 @@ export * from "./return-exchange-reason";
 export * from "./orders-intent";
 export * from "./returnReplace";
 export * from "./support";
+export * from "./swap-rewards";
 export * from "./packing-types";
 export * from "./brandwise-packingType";
 export * from "./search";

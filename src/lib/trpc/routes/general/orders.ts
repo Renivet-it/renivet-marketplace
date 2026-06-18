@@ -23,6 +23,7 @@ import {
     userCartCache,
 } from "@/lib/redis/methods";
 import { shiprocket } from "@/lib/shiprocket";
+import { swapRewardService } from "@/lib/services/swap-reward";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -131,7 +132,15 @@ export const ordersRouter = createTRPCRouter({
         .query(async ({ ctx, input }) => {
             const { queries } = ctx;
 
-            const data = await queries.orders.getOrders(input);
+            const data = await queries.orders.getOrders({
+                limit: input.limit ?? 10,
+                page: input.page ?? 1,
+                search: input.search,
+                brandIds: input.brandIds,
+                startDate: input.startDate,
+                endDate: input.endDate,
+                statusTab: input.statusTab,
+            });
             return data;
         }),
     getOrderStatusCounts: protectedProcedure
@@ -217,9 +226,11 @@ export const ordersRouter = createTRPCRouter({
                         })
                 ),
                 coupon: z.string().optional(),
-                razorpayOrderId: z.string(),
-                razorpayPaymentId: z.string(),
+                razorpayOrderId: z.string().optional(),
+                razorpayPaymentId: z.string().optional(),
                 intentId: z.string().optional(),
+                isSwapRewardOrder: z.boolean().optional(),
+                swapRewardRedemptionId: z.string().uuid().optional(),
             })
         )
         .use(({ ctx, input, next }) => {
@@ -250,6 +261,44 @@ export const ordersRouter = createTRPCRouter({
             const { queries, user, db, schemas } = ctx;
             console.log("🟢 Received intentId:", input.intentId);
             console.log("🟢 Received request :", input);
+            const rewardCheckout =
+                input.isSwapRewardOrder && input.swapRewardRedemptionId
+                    ? await swapRewardService.getRewardCheckoutSelection(
+                          user.id,
+                          input.swapRewardRedemptionId
+                      )
+                    : null;
+
+            if (input.isSwapRewardOrder) {
+                if (!rewardCheckout) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Reward checkout session is missing",
+                    });
+                }
+
+                if (input.items.length !== 1) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Reward checkout supports exactly one item",
+                    });
+                }
+
+                if (input.totalAmount !== 0) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Reward checkout total must be zero",
+                    });
+                }
+
+                if (input.coupon) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Coupons are not allowed on reward checkout",
+                    });
+                }
+            }
+
             console.log(
                 "🧩 [STEP 1] Mutation start: input received (redact sensitive as needed)"
             );
@@ -368,6 +417,8 @@ export const ordersRouter = createTRPCRouter({
                     // Generate a readable and concise order_id for this item
                     const orderId = generateOrderId(brand.name);
                     console.log("Creating order with new ID:", orderId);
+                    const orderLineTotal = Number((item.price ?? 0) * item.quantity);
+                    const isRewardOrder = !!input.isSwapRewardOrder;
 
                     // NEW: Create order for this single item
                     const newOrder = await queries.orders.createOrder({
@@ -375,9 +426,13 @@ export const ordersRouter = createTRPCRouter({
                         id: orderId,
                         receiptId,
                         userId: user.id,
-                        // Adjust totalAmount to reflect single item
-                        // @ts-ignore
-                        totalAmount: Number(item.price * item.quantity),
+                        totalAmount: isRewardOrder ? 0 : orderLineTotal,
+                        discountAmount: isRewardOrder ? orderLineTotal : input.discountAmount,
+                        isSwapRewardOrder: isRewardOrder,
+                        swapRewardCycle: isRewardOrder
+                            ? rewardCheckout?.state.activeRewardCycle
+                            : null,
+                        rewardRedemptionId: input.swapRewardRedemptionId ?? null,
                     });
                     console.log(
                         "Database order created successfully:",
@@ -836,7 +891,7 @@ export const ordersRouter = createTRPCRouter({
                                     if (rateRes.success && rateRes.totalAmount !== undefined) {
                                         console.log(`🚚 Delhivery Shipping Charge estimate for order ${newOrder.id}: Rs. ${rateRes.totalAmount}`);
                                         const actualShippingChargeInPaise = Math.round(Number(rateRes.totalAmount) * 100);
-                                        
+
                                         await db
                                             .update(schemas.orders)
                                             .set({
@@ -1044,16 +1099,26 @@ export const ordersRouter = createTRPCRouter({
 
                     // NEW: Logic 2 - Set payment state based on payment method
                     const isCodPayment = input.paymentMethod === "COD";
+                    const isRewardPayment = !!input.isSwapRewardOrder;
                     console.log(
-                        `Updating payment state for order ${newOrder.id} (COD: ${isCodPayment})`
+                        `Updating payment state for order ${newOrder.id} (COD: ${isCodPayment}, Reward: ${isRewardPayment})`
                     );
                     try {
                         await queries.orders.updateOrderStatus(newOrder.id, {
-                            paymentId: isCodPayment
-                                ? null
-                                : input.razorpayPaymentId,
-                            paymentMethod: isCodPayment ? "COD" : "online",
-                            paymentStatus: isCodPayment ? "pending" : "paid",
+                            paymentId: isRewardPayment
+                                ? input.swapRewardRedemptionId ?? null
+                                : isCodPayment
+                                  ? null
+                                  : input.razorpayPaymentId ?? null,
+                            paymentMethod: isRewardPayment
+                                ? "reward"
+                                : isCodPayment
+                                  ? "COD"
+                                  : "online",
+                            paymentStatus:
+                                isRewardPayment || !isCodPayment
+                                    ? "paid"
+                                    : "pending",
                             status: "processing",
                         });
                         console.log(
@@ -1121,15 +1186,25 @@ export const ordersRouter = createTRPCRouter({
                         // Log the error but don't fail the mutation
                     }
 
+                    if (isRewardOrder && input.swapRewardRedemptionId) {
+                        await swapRewardService.completeRewardRedemption({
+                            userId: user.id,
+                            redemptionId: input.swapRewardRedemptionId,
+                            orderId: newOrder.id,
+                        });
+                    }
+
                     createdOrders.push(newOrder);
                 }
 
                 // NEW: Clear user cart once after all orders are created
-                await userCartCache.drop(user.id);
-                console.log("Cart cleared for user:", user.id);
+                if (!input.isSwapRewardOrder) {
+                    await userCartCache.drop(user.id);
+                    console.log("Cart cleared for user:", user.id);
+                }
 
                 // NEW: Handle coupon usage (apply to all orders if provided)
-                if (input.coupon) {
+                if (input.coupon && !input.isSwapRewardOrder) {
                     const existingCoupon = await queries.coupons.getCoupon({
                         code: input.coupon,
                         isActive: true,
@@ -1206,6 +1281,23 @@ export const ordersRouter = createTRPCRouter({
                 input.orderId,
                 input.values
             );
+
+            if (
+                input.values.status === "cancelled" &&
+                existingOrder.status === "delivered"
+            ) {
+                try {
+                    await swapRewardService.revokeStampForOrder(
+                        existingOrder.id,
+                        input.values.cancellationReasonCode ??
+                            input.values.manualOverrideReason ??
+                            "order_cancelled"
+                    );
+                } catch (error) {
+                    console.error("swap reward revoke failed", error);
+                }
+            }
+
             await auditEntityChange({
                 actorId: ctx.user.id,
                 actionType: "order_status_changed",
@@ -1659,6 +1751,17 @@ export const ordersRouter = createTRPCRouter({
                 ownerRole: "order_manager",
                 dedupeKey: `order:cancelled:${existingOrder.id}`,
             });
+
+            if (existingOrder.status === "delivered") {
+                try {
+                    await swapRewardService.revokeStampForOrder(
+                        existingOrder.id,
+                        "customer_cancelled_order"
+                    );
+                } catch (error) {
+                    console.error("swap reward revoke failed", error);
+                }
+            }
 
             // Track analytics events
             const uniqueBrandIds = [

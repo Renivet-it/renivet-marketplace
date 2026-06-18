@@ -134,6 +134,9 @@ discountAmount: z
         .union([z.string(), z.number()])
         .transform((val) => Number(val))
         .pipe(z.number().min(0, "Total Amount must be a positive number")),
+    isSwapRewardOrder: z.boolean().optional(),
+    swapRewardCycle: z.number().int().positive().nullable().optional(),
+    rewardRedemptionId: z.string().uuid().nullable().optional(),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

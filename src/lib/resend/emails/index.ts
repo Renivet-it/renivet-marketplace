@@ -19,6 +19,9 @@ import OrderRefundProcessed from "./order-refund-processed";
 import ProductReviewStatusUpdate from "./product-review-status-update";
 import ProductReviewSubmitted from "./product-review-submitted";
 import SupportNotificationEmail from "./support-notification";
+import SwapRewardRedeemedEmail from "./swap-reward-redeemed";
+import SwapRewardStampEarnedEmail from "./swap-reward-stamp-earned";
+import SwapRewardUnlockedEmail from "./swap-reward-unlocked";
 
 export {
     AccountCreated,
@@ -42,4 +45,7 @@ export {
     OrderRefundFailed,
     brandOrderNotification,
     SupportNotificationEmail,
+    SwapRewardRedeemedEmail,
+    SwapRewardStampEarnedEmail,
+    SwapRewardUnlockedEmail,
 };

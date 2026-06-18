@@ -29,6 +29,7 @@ export * from "./razorpay-webhook";
 export * from "./refund";
 export * from "./response";
 export * from "./role";
+export * from "./swap-reward";
 export * from "./tag";
 export * from "./ticket";
 export * from "./user";
