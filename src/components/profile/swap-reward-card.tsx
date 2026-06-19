@@ -77,7 +77,7 @@ export function SwapRewardCard() {
                             </div>
                         </div>
 
-                        <div className="mt-4 flex flex-wrap gap-2.5 lg:mt-5 lg:gap-3">
+                        <div className="mt-4 flex flex-wrap items-center gap-2.5 sm:gap-3 lg:mt-5">
                             {Array.from({ length: TOTAL_STAMPS }).map((_, index) => {
                                 const filled = index < stampCount;
 
@@ -102,7 +102,9 @@ export function SwapRewardCard() {
                                         <span className="relative flex flex-col items-center leading-none">
                                             {filled ? (
                                                 <Renivet
-                                                    className="size-4.5 sm:size-5 lg:size-6"
+                                                    width={18}
+                                                    height={18}
+                                                    className="block sm:!h-5 sm:!w-5 lg:!h-6 lg:!w-6"
                                                     isNegative
                                                 />
                                             ) : (

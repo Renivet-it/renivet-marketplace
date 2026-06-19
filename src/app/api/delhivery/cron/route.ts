@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { orders, orderShipments } from "@/lib/db/schema";
 import { sendOrderShipmentStatusWhatsApp } from "@/lib/whatsapp/order-status";
 import { and, eq, ne, isNotNull, or } from "drizzle-orm";
+import { swapRewardService } from "@/lib/services/swap-reward";
 
 const DELHIVERY_BASE_URL = process.env.DELHIVERY_BASE_URL!;
 const DELHIVERY_TOKEN = process.env.DELHIVERY_TOKEN!;
@@ -101,7 +102,7 @@ export async function GET() {
             let data;
             try {
                 data = JSON.parse(raw);
-            } catch (err) {
+            } catch {
                 console.error("❌ ERROR: Delhivery returned HTML, not JSON");
                 return NextResponse.json(
                     { ok: false, message: "Delhivery returned HTML, not JSON" },
@@ -169,9 +170,26 @@ export async function GET() {
             if (mappedStatus === "delivered") {
                 console.log("📦 Marking ORDER as delivered");
                 await db.update(orders).set({ status: "delivered" }).where(eq(orders.id, ship.orderId));
+                try {
+                    await swapRewardService.earnStampForOrder(ship.orderId);
+                } catch (error) {
+                    console.error("swap reward earn failed from delhivery cron", error);
+                }
             } else if (mappedStatus === "rto_delivered") {
                 console.log("📦 Marking ORDER as cancelled (RTO Delivered)");
                 await db.update(orders).set({ status: "cancelled" }).where(eq(orders.id, ship.orderId));
+
+                try {
+                    await swapRewardService.revokeStampForOrder(
+                        ship.orderId,
+                        "rto_delivered"
+                    );
+                } catch (error) {
+                    console.error(
+                        "swap reward revoke failed from delhivery cron",
+                        error
+                    );
+                }
             } else if (["pickup_completed", "in_transit", "out_for_delivery"].includes(mappedStatus)) {
                 console.log("📦 Marking ORDER as shipped");
                 await db.update(orders).set({ status: "shipped" }).where(eq(orders.id, ship.orderId));
