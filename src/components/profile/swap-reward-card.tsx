@@ -20,54 +20,54 @@ export function SwapRewardCard() {
     const activeCycle = data?.activeRewardCycle ?? 1;
 
     return (
-        <section className="relative overflow-hidden rounded-[30px] border border-[#dfcfb4] bg-[#f8f1e4] shadow-[0_30px_80px_-48px_rgba(92,61,22,0.52)]">
+        <section className="relative overflow-hidden rounded-[26px] border border-[#dfcfb4] bg-[#f8f1e4] shadow-[0_24px_60px_-46px_rgba(92,61,22,0.52)]">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.86),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.58),rgba(245,233,206,0.9))]" />
             <div className="absolute inset-y-0 right-0 hidden w-[34%] bg-[linear-gradient(180deg,rgba(255,252,246,0.95),rgba(244,230,202,0.92))] lg:block" />
             <div className="absolute bottom-0 left-0 size-32 rounded-full bg-[#e0bf7b]/10 blur-3xl" />
             <div className="absolute right-16 top-12 hidden size-36 rounded-full bg-[#cda15f]/10 blur-3xl lg:block" />
 
-            <div className="relative grid gap-0 lg:grid-cols-[minmax(0,1.7fr)_340px]">
-                <div className="p-5 sm:p-6 lg:p-8">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="relative grid gap-0 lg:grid-cols-[minmax(0,1.78fr)_300px]">
+                <div className="p-4 sm:p-5 lg:p-6">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="max-w-2xl">
                             <div className="inline-flex items-center gap-2 rounded-full border border-[#dbc79f] bg-white/80 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6935]">
                                 <Stamp className="size-3.5" />
                                 Swap Rewards
                             </div>
 
-                            <h2 className="mt-4 font-serif text-[1.95rem] font-semibold leading-[1.02] text-[#422c17] sm:text-[2.2rem] lg:max-w-[12ch] lg:text-[3.35rem]">
+                            <h2 className="mt-3 font-serif text-[1.65rem] font-semibold leading-[1.02] text-[#422c17] sm:text-[1.95rem] lg:max-w-[11ch] lg:text-[2.8rem]">
                                 Your Renivet Swap Card
                             </h2>
 
-                            <p className="mt-3 max-w-xl text-sm leading-6 text-[#705938] sm:text-[15px] lg:text-base lg:leading-7">
+                            <p className="leading-5.5 mt-2.5 max-w-xl text-13 text-[#705938] sm:text-sm sm:leading-6 lg:text-[15px] lg:leading-6">
                                 Every delivered order earns one seal. Complete
                                 five verified swaps to unlock a curated reward
                                 worth up to {formatPriceTag(1499)}.
                             </p>
                         </div>
 
-                        <div className="bg-white/72 rounded-[22px] border border-[#e2d4ba] px-4 py-3 lg:hidden">
+                        <div className="bg-white/72 rounded-[18px] border border-[#e2d4ba] px-3.5 py-2.5 lg:hidden">
                             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#977744]">
                                 Cycle {activeCycle.toString().padStart(2, "0")}
                             </p>
-                            <div className="mt-2 flex items-end gap-2">
-                                <span className="text-3xl font-semibold leading-none text-[#3c2814]">
+                            <div className="mt-1.5 flex items-end gap-1.5">
+                                <span className="text-[1.75rem] font-semibold leading-none text-[#3c2814]">
                                     {isLoading ? "--" : stampCount}
                                 </span>
-                                <span className="pb-1 text-sm text-[#8d7245]">
+                                <span className="pb-0.5 text-xs text-[#8d7245]">
                                     / {TOTAL_STAMPS}
                                 </span>
                             </div>
                         </div>
                     </div>
 
-                    <div className="mt-6 rounded-[26px] border border-[#e4d5b8] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,246,235,0.92))] p-4 sm:p-5 lg:mt-8 lg:p-6">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="mt-5 rounded-[22px] border border-[#e4d5b8] bg-[linear-gradient(180deg,rgba(255,255,255,0.72),rgba(252,246,235,0.92))] p-3.5 sm:p-4 lg:mt-6 lg:p-5">
+                        <div className="flex flex-wrap items-center justify-between gap-2.5">
                             <div>
                                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-[#9a7946]">
                                     Stamp Board
                                 </p>
-                                <p className="mt-1 text-sm text-[#7a633c]">
+                                <p className="mt-1 text-13 leading-5 text-[#7a633c] sm:text-sm">
                                     Returned, refunded, or cancelled orders do not count.
                                 </p>
                             </div>
@@ -77,7 +77,7 @@ export function SwapRewardCard() {
                             </div>
                         </div>
 
-                        <div className="mt-5 flex flex-wrap gap-3 lg:mt-6">
+                        <div className="mt-4 flex flex-wrap gap-2.5 lg:mt-5 lg:gap-3">
                             {Array.from({ length: TOTAL_STAMPS }).map((_, index) => {
                                 const filled = index < stampCount;
 
@@ -85,7 +85,7 @@ export function SwapRewardCard() {
                                     <div
                                         key={index}
                                         className={cn(
-                                            "relative flex size-[60px] items-center justify-center rounded-full border sm:size-[66px] lg:size-[78px]",
+                                            "relative flex size-[54px] items-center justify-center rounded-full border sm:size-[58px] lg:size-[68px]",
                                             filled
                                                 ? "-rotate-6 border-[#8d623e] bg-[radial-gradient(circle_at_30%_30%,#b98559,#99683f_60%,#784d2c_100%)] text-[#fff8ed] shadow-[inset_0_0_0_2px_rgba(255,246,228,0.16),0_18px_24px_-20px_rgba(69,44,24,0.9)]"
                                                 : "border-dashed border-[#ddc79e] bg-[#fffaf2] text-[#ad9060]"
@@ -102,15 +102,15 @@ export function SwapRewardCard() {
                                         <span className="relative flex flex-col items-center leading-none">
                                             {filled ? (
                                                 <Renivet
-                                                    className="size-5 sm:size-6 lg:size-7"
+                                                    className="size-4.5 sm:size-5 lg:size-6"
                                                     isNegative
                                                 />
                                             ) : (
-                                                <span className="text-base font-semibold sm:text-lg lg:text-xl">
+                                                <span className="text-sm font-semibold sm:text-base lg:text-lg">
                                                     {index + 1}
                                                 </span>
                                             )}
-                                            <span className="mt-1 text-[8px] uppercase tracking-[0.2em] opacity-80 lg:text-[9px]">
+                                            <span className="mt-1 text-[7px] uppercase tracking-[0.18em] opacity-80 lg:text-[8px]">
                                                 {filled ? "sealed" : "open"}
                                             </span>
                                         </span>
@@ -119,18 +119,18 @@ export function SwapRewardCard() {
                             })}
                         </div>
 
-                        <div className="bg-white/72 mt-5 rounded-[22px] border border-[#e8dcc4] p-4 lg:mt-6 lg:flex lg:items-center lg:justify-between lg:gap-5">
+                        <div className="bg-white/72 mt-4 rounded-[18px] border border-[#e8dcc4] p-3.5 lg:mt-5 lg:flex lg:items-center lg:justify-between lg:gap-4">
                             <div className="flex items-start gap-3">
-                                <div className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-[#f2e4cb] text-[#77532b]">
-                                    <Gift className="size-4" />
+                                <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-[#f2e4cb] text-[#77532b]">
+                                    <Gift className="size-3.5" />
                                 </div>
                                 <div>
-                                    <p className="text-sm font-semibold text-[#402d18] sm:text-[15px] lg:text-base">
+                                    <p className="text-sm font-semibold text-[#402d18] lg:text-[15px]">
                                         {isUnlocked
                                             ? "Your reward is unlocked and ready"
                                             : `Unlock your reward with ${TOTAL_STAMPS} completed stamps`}
                                     </p>
-                                    <p className="mt-1 text-sm leading-6 text-[#7a623d]">
+                                    <p className="sm:leading-5.5 mt-1 text-13 leading-5 text-[#7a623d] sm:text-sm">
                                         {isLoading
                                             ? "Checking your progress now."
                                             : isUnlocked
@@ -143,7 +143,7 @@ export function SwapRewardCard() {
                             {isUnlocked && (
                                 <Button
                                     asChild
-                                    className="mt-4 h-11 w-full rounded-2xl bg-[#8d5b2f] text-white transition hover:bg-[#764825] lg:mt-0 lg:w-auto lg:min-w-[190px]"
+                                    className="mt-3 h-10 w-full rounded-xl bg-[#8d5b2f] text-sm text-white transition hover:bg-[#764825] lg:mt-0 lg:w-auto lg:min-w-[168px]"
                                 >
                                     <Link
                                         href="/profile/rewards"
@@ -158,13 +158,13 @@ export function SwapRewardCard() {
                     </div>
                 </div>
 
-                <aside className="border-t border-[#e5d7bc] bg-[linear-gradient(180deg,rgba(255,251,244,0.88),rgba(245,231,203,0.95))] p-5 sm:p-6 lg:border-l lg:border-t-0 lg:p-8">
-                    <div className="flex items-start justify-between gap-4">
+                <aside className="border-t border-[#e5d7bc] bg-[linear-gradient(180deg,rgba(255,251,244,0.88),rgba(245,231,203,0.95))] p-4 sm:p-5 lg:border-l lg:border-t-0 lg:p-5">
+                    <div className="flex items-start justify-between gap-3">
                         <div>
                             <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#977644]">
                                 Reward Pass
                             </p>
-                            <h3 className="mt-2 font-serif text-2xl font-semibold leading-tight text-[#3d2914] lg:text-[2.2rem]">
+                            <h3 className="mt-1.5 font-serif text-[1.55rem] font-semibold leading-tight text-[#3d2914] lg:text-[1.95rem]">
                                 {isUnlocked ? "Ready to redeem" : "Awaiting completion"}
                             </h3>
                         </div>
@@ -180,42 +180,42 @@ export function SwapRewardCard() {
                         </div>
                     </div>
 
-                    <div className="mt-5 grid gap-3">
-                        <div className="bg-white/76 rounded-[22px] border border-[#e7dac2] p-4">
+                    <div className="mt-4 grid gap-2.5">
+                        <div className="bg-white/76 rounded-[18px] border border-[#e7dac2] p-3.5">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#997945]">
                                 Cycle {activeCycle.toString().padStart(2, "0")}
                             </p>
-                            <div className="mt-2 flex items-end gap-2">
-                                <span className="text-[2.45rem] font-semibold leading-none text-[#3d2915]">
+                            <div className="mt-1.5 flex items-end gap-1.5">
+                                <span className="text-[2rem] font-semibold leading-none text-[#3d2915] lg:text-[2.15rem]">
                                     {isLoading ? "--" : stampCount}
                                 </span>
-                                <span className="pb-1 text-sm text-[#8f7344]">
+                                <span className="pb-0.5 text-xs text-[#8f7344] lg:text-sm">
                                     / {TOTAL_STAMPS} stamps
                                 </span>
                             </div>
-                            <p className="mt-3 text-sm text-[#6f5935]">
+                            <p className="mt-2 text-13 text-[#6f5935] sm:text-sm">
                                 {totalRewardsEarned} reward
                                 {totalRewardsEarned === 1 ? "" : "s"} earned so far.
                             </p>
                         </div>
 
-                        <div className="bg-white/68 rounded-[22px] border border-[#e7dac2] p-4">
+                        <div className="bg-white/68 rounded-[18px] border border-[#e7dac2] p-3.5">
                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#997945]">
                                 Reward value
                             </p>
-                            <p className="mt-2 text-3xl font-semibold text-[#8d5b2f]">
+                            <p className="mt-1.5 text-[2rem] font-semibold text-[#8d5b2f] lg:text-[2.15rem]">
                                 Up to {formatPriceTag(1499)}
                             </p>
                         </div>
 
-                        <div className="rounded-[22px] border border-[#e7dac2] bg-white/55 p-4 text-sm leading-7 text-[#735d38]">
+                        <div className="rounded-[18px] border border-[#e7dac2] bg-white/55 p-3.5 text-13 leading-6 text-[#735d38] sm:text-sm">
                             One reward product per cycle. Once redeemed, your
                             next card begins from zero and starts collecting again.
                         </div>
                     </div>
 
                     {!isUnlocked && (
-                        <div className="mt-5 flex items-start gap-2 rounded-[22px] border border-dashed border-[#dcc9a3] bg-white/50 p-4 text-sm leading-6 text-[#725d39]">
+                        <div className="mt-4 flex items-start gap-2 rounded-[18px] border border-dashed border-[#dcc9a3] bg-white/50 p-3.5 text-13 leading-6 text-[#725d39] sm:text-sm">
                             <Sparkles className="mt-0.5 size-4 shrink-0 text-[#a06f33]" />
                             Keep collecting delivered orders to complete the card.
                         </div>
