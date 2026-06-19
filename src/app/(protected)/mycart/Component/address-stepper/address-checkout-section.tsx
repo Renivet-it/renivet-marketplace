@@ -33,6 +33,11 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
 
+    const { data: activeRewardCartItem } =
+        trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
+
+    const hasRewardCartItem = !!activeRewardCartItem?.selection;
+
     const availableCart = useMemo(
         () =>
             userCart?.filter(
@@ -54,8 +59,8 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
     const itemsToDisplay = availableCart.filter((item) => item.status);
 
     const itemsCount = useMemo(
-        () => itemsToDisplay.reduce((acc, item) => acc + item.quantity, 0) || 0,
-        [itemsToDisplay]
+        () => (itemsToDisplay.reduce((acc, item) => acc + item.quantity, 0) || 0) + (hasRewardCartItem ? 1 : 0),
+        [itemsToDisplay, hasRewardCartItem]
     );
 
     const priceList = useMemo(() => {
@@ -113,8 +118,30 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                     </div>
                 </div>
 
-                {itemsToDisplay.length > 0 ? (
+                {itemsToDisplay.length > 0 || hasRewardCartItem ? (
                     <div className="divide-y divide-gray-50 px-4">
+                        {hasRewardCartItem && activeRewardCartItem?.selection && (
+                            <div className="flex items-center gap-3 py-3">
+                                <div className="relative aspect-square w-12 shrink-0 overflow-hidden rounded-lg border border-[#e0d2b9] bg-[#fffaf2]">
+                                    <Image
+                                        src={activeRewardCartItem.selection.product.media?.[0]?.mediaItem?.url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
+                                        alt={activeRewardCartItem.selection.product.title}
+                                        width={96}
+                                        height={96}
+                                        className="size-full object-contain p-0.5"
+                                    />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <span className="text-[8px] font-semibold uppercase tracking-wider text-[#9b7a46] bg-[#fbf4e8] border border-[#e3d1b4] rounded px-1.5 py-0.5">Reward Item</span>
+                                    <h4 className="truncate text-sm font-medium text-gray-900 mt-1">
+                                        {activeRewardCartItem.selection.product.title}
+                                    </h4>
+                                    <p className="text-xs text-[#7c5831]">
+                                        Qty: 1 · Free
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         {itemsToDisplay.map((item) => {
                             const imgUrl =
                                 item.product.media?.[0]?.mediaItem?.url ??
@@ -265,7 +292,7 @@ export default function AddressCheckoutSection({ userId }: PageProps) {
                 className="group w-full rounded-xl bg-[#95b6da] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#82a3c7] hover:shadow-md"
                 disabled={
                     isUserFetching ||
-                    itemsToDisplay.length === 0 ||
+                    (itemsToDisplay.length === 0 && !hasRewardCartItem) ||
                     !selectedShippingAddress
                 }
                 onClick={() => {

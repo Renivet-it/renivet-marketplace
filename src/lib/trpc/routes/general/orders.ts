@@ -223,6 +223,8 @@ export const ordersRouter = createTRPCRouter({
                             brandId: z.string(),
                             price: productSchema.shape.price,
                             categoryId: categorySchema.shape.id,
+                            isSwapRewardItem: z.boolean().optional(),
+                            swapRewardRedemptionId: z.string().uuid().optional(),
                         })
                 ),
                 coupon: z.string().optional(),
@@ -261,15 +263,43 @@ export const ordersRouter = createTRPCRouter({
             const { queries, user, db, schemas } = ctx;
             console.log("🟢 Received intentId:", input.intentId);
             console.log("🟢 Received request :", input);
-            const rewardCheckout =
-                input.isSwapRewardOrder && input.swapRewardRedemptionId
-                    ? await swapRewardService.getRewardCheckoutSelection(
-                          user.id,
-                          input.swapRewardRedemptionId
-                      )
-                    : null;
+            const rewardItems = input.items.filter(
+                (item) => item.isSwapRewardItem || input.isSwapRewardOrder
+            );
+
+            const rewardRedemptionIds = [
+                ...new Set(
+                    rewardItems
+                        .map(
+                            (item) =>
+                                item.swapRewardRedemptionId ??
+                                input.swapRewardRedemptionId
+                        )
+                        .filter((value): value is string => !!value)
+                ),
+            ];
+
+            const rewardCheckoutMap = new Map<
+                string,
+                Awaited<
+                    ReturnType<typeof swapRewardService.getRewardCheckoutSelection>
+                >
+            >();
+
+            for (const redemptionId of rewardRedemptionIds) {
+                const rewardCheckout =
+                    await swapRewardService.getRewardCheckoutSelection(
+                        user.id,
+                        redemptionId
+                    );
+                rewardCheckoutMap.set(redemptionId, rewardCheckout);
+            }
 
             if (input.isSwapRewardOrder) {
+                const rewardCheckout = input.swapRewardRedemptionId
+                    ? rewardCheckoutMap.get(input.swapRewardRedemptionId)
+                    : null;
+
                 if (!rewardCheckout) {
                     throw new TRPCError({
                         code: "BAD_REQUEST",
@@ -297,6 +327,28 @@ export const ordersRouter = createTRPCRouter({
                         message: "Coupons are not allowed on reward checkout",
                     });
                 }
+            }
+
+            if (rewardItems.length > 1) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Only one reward item can be redeemed per checkout",
+                });
+            }
+
+            if (
+                rewardItems.some(
+                    (item) =>
+                        !(
+                            item.swapRewardRedemptionId ??
+                            input.swapRewardRedemptionId
+                        )
+                )
+            ) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Reward item is missing its redemption session",
+                });
             }
 
             console.log(
@@ -418,7 +470,16 @@ export const ordersRouter = createTRPCRouter({
                     const orderId = generateOrderId(brand.name);
                     console.log("Creating order with new ID:", orderId);
                     const orderLineTotal = Number((item.price ?? 0) * item.quantity);
-                    const isRewardOrder = !!input.isSwapRewardOrder;
+                    const itemRewardRedemptionId =
+                        item.swapRewardRedemptionId ??
+                        (input.isSwapRewardOrder
+                            ? input.swapRewardRedemptionId
+                            : undefined);
+                    const isRewardOrder =
+                        !!item.isSwapRewardItem || !!input.isSwapRewardOrder;
+                    const rewardCheckout = itemRewardRedemptionId
+                        ? rewardCheckoutMap.get(itemRewardRedemptionId)
+                        : null;
 
                     // NEW: Create order for this single item
                     const newOrder = await queries.orders.createOrder({
@@ -432,7 +493,7 @@ export const ordersRouter = createTRPCRouter({
                         swapRewardCycle: isRewardOrder
                             ? rewardCheckout?.state.activeRewardCycle
                             : null,
-                        rewardRedemptionId: input.swapRewardRedemptionId ?? null,
+                        rewardRedemptionId: itemRewardRedemptionId ?? null,
                     });
                     console.log(
                         "Database order created successfully:",
@@ -1099,14 +1160,14 @@ export const ordersRouter = createTRPCRouter({
 
                     // NEW: Logic 2 - Set payment state based on payment method
                     const isCodPayment = input.paymentMethod === "COD";
-                    const isRewardPayment = !!input.isSwapRewardOrder;
+                    const isRewardPayment = isRewardOrder;
                     console.log(
                         `Updating payment state for order ${newOrder.id} (COD: ${isCodPayment}, Reward: ${isRewardPayment})`
                     );
                     try {
                         await queries.orders.updateOrderStatus(newOrder.id, {
                             paymentId: isRewardPayment
-                                ? input.swapRewardRedemptionId ?? null
+                                ? itemRewardRedemptionId ?? null
                                 : isCodPayment
                                   ? null
                                   : input.razorpayPaymentId ?? null,
@@ -1186,10 +1247,10 @@ export const ordersRouter = createTRPCRouter({
                         // Log the error but don't fail the mutation
                     }
 
-                    if (isRewardOrder && input.swapRewardRedemptionId) {
+                    if (isRewardOrder && itemRewardRedemptionId) {
                         await swapRewardService.completeRewardRedemption({
                             userId: user.id,
-                            redemptionId: input.swapRewardRedemptionId,
+                            redemptionId: itemRewardRedemptionId,
                             orderId: newOrder.id,
                         });
                     }

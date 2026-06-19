@@ -35,6 +35,10 @@ function buildRewardCheckoutHref(redemptionId: string) {
     return `/checkout?swap_reward=true&redemption=${redemptionId}`;
 }
 
+function buildRewardCartHref() {
+    return "/mycart";
+}
+
 async function runSideEffect(task: () => Promise<unknown>) {
     try {
         await task();
@@ -422,14 +426,22 @@ class SwapRewardService {
         return updated;
     }
 
-    async listEligibleRewardProducts(search?: string) {
-        return swapRewardQueries.listEligibleRewardProducts(search);
+    async listEligibleRewardProducts(input?: {
+        search?: string;
+        page?: number;
+        limit?: number;
+        brandId?: string;
+        categoryId?: string;
+        sortBy?: "recommended" | "price_asc" | "price_desc" | "newest";
+    }) {
+        return swapRewardQueries.listEligibleRewardProducts(input);
     }
 
     async prepareRewardRedemption(input: {
         userId: string;
         productId: string;
         variantId?: string;
+        mode?: "checkout" | "cart";
     }) {
         const state = await swapRewardQueries.getOrCreateUserReward(input.userId);
         if (state.rewardStatus !== "unlocked") {
@@ -468,6 +480,7 @@ class SwapRewardService {
                       productId: selection.product.id,
                       variantId: selection.variant?.id ?? null,
                       rewardValue: selection.rewardValue,
+                      status: "initiated",
                       updatedAt: new Date(),
                   })
                   .where(eq(rewardRedemptions.id, existing.id))
@@ -485,7 +498,62 @@ class SwapRewardService {
         return {
             redemptionId: redemption.id,
             checkoutHref: buildRewardCheckoutHref(redemption.id),
+            cartHref: buildRewardCartHref(),
         };
+    }
+
+    async getActiveRewardCartSelection(userId: string) {
+        const state = await swapRewardQueries.getOrCreateUserReward(userId);
+        if (state.rewardStatus !== "unlocked") {
+            return null;
+        }
+
+        const redemption =
+            await swapRewardQueries.getActiveRewardRedemptionForUser(userId);
+        if (!redemption) {
+            return null;
+        }
+
+        const selection = await swapRewardQueries.getEligibleRewardSelection({
+            productId: redemption.productId,
+            variantId: redemption.variantId ?? undefined,
+        });
+
+        if (!selection) {
+            return null;
+        }
+
+        return {
+            state,
+            redemption,
+            selection,
+        };
+    }
+
+    async cancelRewardCartSelection(userId: string, redemptionId: string) {
+        const redemption = await db.query.rewardRedemptions.findFirst({
+            where: and(
+                eq(rewardRedemptions.id, redemptionId),
+                eq(rewardRedemptions.userId, userId)
+            ),
+        });
+
+        if (!redemption) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Reward selection not found",
+            });
+        }
+
+        if (redemption.status !== "initiated") {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Reward selection can no longer be removed",
+            });
+        }
+
+        await swapRewardQueries.cancelRewardRedemption(redemption.id);
+        return { success: true };
     }
 
     async getRewardCheckoutSelection(userId: string, redemptionId: string) {

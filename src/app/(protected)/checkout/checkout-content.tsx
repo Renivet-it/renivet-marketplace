@@ -103,6 +103,11 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             }
         );
 
+    const activeRewardCartItemQuery =
+        trpc.general.swapRewards.getActiveRewardCartItem.useQuery(undefined, {
+            enabled: !isSwapReward,
+        });
+
     const { data: activeCoupons, isLoading: isCouponsLoading } =
         trpc.general.coupons.getActiveCoupons.useQuery(undefined, {
             enabled: isCouponExpanded,
@@ -115,12 +120,18 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
             return [
                 {
+                    id: `reward-${checkoutItem.product.id}-${checkoutItem.variant?.id ?? "default"}`,
                     productId: checkoutItem.product.id,
                     variantId: checkoutItem.variant?.id ?? null,
                     quantity: 1,
                     product: checkoutItem.product,
                     variant: checkoutItem.variant,
                     status: true,
+                    isSwapRewardItem: true,
+                    rewardValue: checkoutItem.rewardValue,
+                    swapRewardRedemptionId: rewardCheckoutQuery.data?.redemption.id,
+                    createdAt:
+                        checkoutItem.product.createdAt ?? new Date().toISOString(),
                 },
             ];
         }
@@ -155,7 +166,31 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             return [{ ...buyNowItem, quantity: qty }];
         }
 
-        return filtered;
+        const rewardCartSelection = activeRewardCartItemQuery.data?.selection;
+        const rewardCartRedemption = activeRewardCartItemQuery.data?.redemption;
+
+        if (!rewardCartSelection || !rewardCartRedemption) {
+            return filtered;
+        }
+
+        return [
+            {
+                id: `reward-cart-${rewardCartSelection.product.id}-${rewardCartSelection.variant?.id ?? "default"}`,
+                productId: rewardCartSelection.product.id,
+                variantId: rewardCartSelection.variant?.id ?? null,
+                quantity: 1,
+                product: rewardCartSelection.product,
+                variant: rewardCartSelection.variant,
+                status: true,
+                isSwapRewardItem: true,
+                rewardValue: rewardCartSelection.rewardValue,
+                swapRewardRedemptionId: rewardCartRedemption.id,
+                createdAt:
+                    rewardCartSelection.product.createdAt ??
+                    new Date().toISOString(),
+            },
+            ...filtered,
+        ];
     }, [
         userCart,
         isBuyNow,
@@ -164,7 +199,16 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         buyNowVariantId,
         isSwapReward,
         rewardCheckoutQuery.data,
+        activeRewardCartItemQuery.data,
     ]);
+
+    const hasRewardItem = availableItems.some(
+        (item: any) => item.isSwapRewardItem
+    );
+    const hasPaidItems = availableItems.some(
+        (item: any) => !item.isSwapRewardItem
+    );
+    const isRewardOnlyCheckout = hasRewardItem && !hasPaidItems;
 
     const filteredCoupons = useMemo(() => {
         if (!activeCoupons) return [];
@@ -204,7 +248,8 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             !isBuyNow &&
             !isCartLoading &&
             availableItems.length === 0 &&
-            userCart
+            userCart &&
+            !activeRewardCartItemQuery.isLoading
         ) {
             router.push("/mycart");
         }
@@ -215,6 +260,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         isBuyNow,
         isCartLoading,
         isSwapReward,
+        activeRewardCartItemQuery.isLoading,
     ]);
 
     useEffect(() => {
@@ -245,7 +291,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         }
 
         const items = availableItems.map((item) => {
-            const itemPrice = item.variantId
+            const itemPrice = item.isSwapRewardItem
+                ? 0
+                : item.variantId
                 ? (item.product.variants?.find((v) => v.id === item.variantId)
                       ?.price ??
                   item.product.price ??
@@ -291,7 +339,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 ? rewardCheckoutQuery.data?.selection.rewardValue ?? 0
                 :
             availableItems.reduce((acc, item) => {
-                const itemPrice = item.variantId
+                const itemPrice = item.isSwapRewardItem
+                    ? 0
+                    : item.variantId
                     ? (item.product.variants?.find(
                           (v) => v.id === item.variantId
                       )?.price ??
@@ -416,7 +466,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             ([, brandItems]) => {
                 const brandTotal = brandItems.reduce(
                     (acc: number, item: any) => {
-                        const price = item.variantId
+                        const price = item.isSwapRewardItem
+                            ? 0
+                            : item.variantId
                             ? (item.product.variants?.find(
                                   (v: any) => v.id === item.variantId
                               )?.price ??
@@ -431,7 +483,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 return {
                     userId: user.id,
                     coupon:
-                        paymentMethod === "reward"
+                        paymentMethod === "reward" || !hasPaidItems
                             ? undefined
                             : appliedCoupon?.code,
                     addressId: selectedShippingAddress.id,
@@ -470,6 +522,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         sku: item.variant?.nativeSku ?? item.product.nativeSku,
                         quantity: item.quantity,
                         categoryId: item.product.categoryId,
+                        isSwapRewardItem: !!item.isSwapRewardItem,
+                        swapRewardRedemptionId:
+                            item.swapRewardRedemptionId ?? undefined,
                     })),
                     razorpayOrderId,
                     ...(razorpayPaymentId ? { razorpayPaymentId } : {}),
@@ -498,6 +553,20 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             onSuccess: (_, __, { toastId }) => {
                 toast.success("Product removed from cart", { id: toastId });
                 refetchCart();
+            },
+            onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
+        });
+
+    const { mutate: removeRewardCartItem, isPending: isRemovingRewardCartItem } =
+        trpc.general.swapRewards.removeRewardCartItem.useMutation({
+            onMutate: () => ({
+                toastId: toast.loading("Removing reward from checkout..."),
+            }),
+            onSuccess: async (_, __, ctx) => {
+                toast.success("Reward removed from checkout", {
+                    id: ctx?.toastId,
+                });
+                await activeRewardCartItemQuery.refetch();
             },
             onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
         });
@@ -708,7 +777,14 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const handleRewardOrder = async () => {
         if (!selectedShippingAddress) return toast.error("Address missing");
         if (!user) return toast.error("User missing");
-        if (!rewardRedemptionId) return toast.error("Reward session missing");
+        const rewardItem = availableItems.find(
+            (item: any) => item.isSwapRewardItem
+        ) as any;
+        const activeRewardRedemptionId =
+            rewardRedemptionId ?? rewardItem?.swapRewardRedemptionId;
+
+        if (!activeRewardRedemptionId)
+            return toast.error("Reward session missing");
         if (availableItems.length === 0)
             return toast.error("No reward item available for checkout");
 
@@ -757,6 +833,11 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         if ((!userCart && !isSwapReward) || !selectedShippingAddress)
             return toast.error("Cart or address missing");
         if (!user) return toast.error("User missing");
+
+        if (isRewardOnlyCheckout) {
+            void handleRewardOrder();
+            return;
+        }
 
         const eventId =
             typeof crypto !== "undefined" && crypto.randomUUID
@@ -859,7 +940,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             </div>
 
             <div className="space-y-4 p-4">
-                {isSwapReward && (
+                {(isSwapReward || hasRewardItem) && (
                     <div className="rounded-[24px] border border-[#d8c59e] bg-[linear-gradient(135deg,#f7eddc_0%,#fffaf1_100%)] p-4 text-[#4a3617] shadow-sm">
                         <div className="flex items-start gap-3">
                             <div className="rounded-full bg-white/80 p-2 text-[#9c6d3c]">
@@ -870,9 +951,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                     Swap &amp; Reward checkout
                                 </p>
                                 <p className="mt-1 text-xs leading-5 text-[#7b643b]">
-                                    This redemption is limited to one eligible
-                                    product. Your final payable amount will stay{" "}
-                                    {formatPriceTag(0)}.
+                                    Your reward line stays{" "}
+                                    {formatPriceTag(0)} in checkout, and you can
+                                    still purchase regular items alongside it.
                                 </p>
                             </div>
                         </div>
@@ -884,15 +965,22 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     <OrderProductCard
                         orderItems={availableItems as any}
                         className="border border-gray-100 shadow-none"
-                        isRemoving={isRemovingProduct}
+                        isRemoving={
+                            isRemovingProduct || isRemovingRewardCartItem
+                        }
                         onRemove={
                             !isBuyNow
                                 ? (item: any) =>
-                                      removeProduct({
-                                          userId,
-                                          productId: item.product.id,
-                                          variantId: item.variantId,
-                                      })
+                                      item.isSwapRewardItem
+                                          ? removeRewardCartItem({
+                                                redemptionId:
+                                                    item.swapRewardRedemptionId,
+                                            })
+                                          : removeProduct({
+                                                userId,
+                                                productId: item.product.id,
+                                                variantId: item.variantId,
+                                            })
                                 : undefined
                         }
                     />
@@ -909,7 +997,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     <ShippingAddress className="border-none !bg-transparent p-0 shadow-none" />
                 </div>
 
-                {!isSwapReward && (
+                {!isRewardOnlyCheckout && (
                     <>
                 {/* Coupons */}
                 <div className="mb-2 mt-6 flex items-center gap-2">
@@ -1247,7 +1335,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             {/* Sticky Bottom Bar */}
             <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-gray-200 bg-white p-3 shadow-[0_-4px_6px_-1px_rgb(0,0,0,0.05)]">
                 <div className="mx-auto max-w-2xl space-y-3">
-                    {!isSwapReward && (
+                    {!isRewardOnlyCheckout && (
                     <div className="rounded-xl border border-gray-100 bg-white p-2 px-3 shadow-sm">
                         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
                             Payment Method
@@ -1303,12 +1391,13 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                             isRemoving ||
                             !selectedShippingAddress ||
                             rewardCheckoutQuery.isLoading ||
+                            activeRewardCartItemQuery.isLoading ||
                             availableItems.length === 0
                         }
                     >
                         {isProcessing || isPaymentInitializing
                             ? "Processing..."
-                            : isSwapReward
+                            : isRewardOnlyCheckout
                               ? "Redeem Reward for Free"
                             : selectedPaymentMethod === "cod"
                               ? `Place COD Order ${formatPriceTag(+convertPaiseToRupees(priceList.total))}`

@@ -187,12 +187,16 @@ export function NavbarHome({
         setTimeout(() => setIsCartBumping(false), 300);
     };
 
-    const { isSignedIn } = useAuth();
+    const { isSignedIn, isLoaded } = useAuth();
 
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery(undefined, {
             enabled: !!isSignedIn,
         });
+
+    const isAuthSettled = isLoaded && !isUserFetching;
+    const showUserActions = isAuthSettled && !!user;
+    const showGuestActions = isAuthSettled && !user;
 
     const [
         { data: categories, isPending: isCategoriesFetching },
@@ -827,7 +831,7 @@ export function NavbarHome({
                             </>
                         )}
 
-                        {user ? (
+                        {showUserActions ? (
                             <div className="flex items-center">
                                 <Link
                                     aria-label="Mobile Cart Button"
@@ -1030,7 +1034,7 @@ export function NavbarHome({
                                     </NavbarActionButton>
                                 </div>
                             </div>
-                        ) : (
+                        ) : showGuestActions ? (
                             <>
                                 <Button
                                     className="hidden h-10 rounded-full border-2 border-[#d4af37] bg-transparent px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] md:inline-flex"
@@ -1050,6 +1054,11 @@ export function NavbarHome({
                                     </Button>
                                 </div>
                             </>
+                        ) : (
+                            <div
+                                className="hidden h-10 w-[114px] md:block"
+                                aria-hidden="true"
+                            />
                         )}
                     </div>
                 </nav>

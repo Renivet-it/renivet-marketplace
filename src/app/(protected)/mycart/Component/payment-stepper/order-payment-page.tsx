@@ -82,6 +82,32 @@ export function OrderPage({
 
     const order = isCartPayment ? initialData : fetchedOrder || initialData;
 
+    const { data: activeRewardCartItem } = trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
+
+    const rewardCartItem = useMemo(() => {
+        if (!activeRewardCartItem?.selection) return null;
+        return {
+            id: activeRewardCartItem.redemption.id,
+            product: {
+                ...activeRewardCartItem.selection.product,
+                verificationStatus: "approved",
+                isDeleted: false,
+                isAvailable: true,
+                quantity: 1,
+                price: 0,
+                variants: activeRewardCartItem.selection.product.variants || [],
+                options: activeRewardCartItem.selection.product.options || [],
+            },
+            variant: null,
+            variantId: null,
+            quantity: 1,
+            isSwapRewardItem: true,
+            rewardValue: activeRewardCartItem.selection.rewardValue,
+            swapRewardRedemptionId: activeRewardCartItem.redemption.id,
+            status: true,
+        };
+    }, [activeRewardCartItem]);
+
     const availableItems = useMemo(
         () =>
             userCart?.filter(
@@ -103,6 +129,14 @@ export function OrderPage({
         [userCart]
     );
 
+    const allAvailableItems = useMemo(() => {
+        const items = [...availableItems];
+        if (rewardCartItem) {
+            items.push(rewardCartItem as any);
+        }
+        return items;
+    }, [availableItems, rewardCartItem]);
+
     const unavailableItems =
         userCart?.filter(
             (item) => !availableItems.map((i) => i.id).includes(item.id)
@@ -111,20 +145,24 @@ export function OrderPage({
     console.log("Unavailable Items:", unavailableItems);
 
     const itemsCount = useMemo(
-        () => availableItems.reduce((acc, item) => acc + item.quantity, 0),
-        [availableItems]
+        () => allAvailableItems.reduce((acc, item) => acc + item.quantity, 0),
+        [allAvailableItems]
     );
 
     const priceList = useMemo(() => {
-        const items = availableItems.map((item) => {
-            const itemPrice = item.variantId
+        const items = allAvailableItems.map((item) => {
+            const itemPrice = item.isSwapRewardItem
+                ? 0
+                : item.variantId
                 ? (item.product.variants?.find((v) => v.id === item.variantId)
                       ?.price ??
                   item.product.price ??
                   0)
                 : (item.product.price ?? 0);
 
-            const compareAtPrice = item.variantId
+            const compareAtPrice = item.isSwapRewardItem
+                ? (item.rewardValue ?? 0)
+                : item.variantId
                 ? (item.product.variants?.find((v) => v.id === item.variantId)
                       ?.compareAtPrice ??
                   item.product.compareAtPrice ??
@@ -157,9 +195,9 @@ export function OrderPage({
         );
         console.log("Price List:", priceDetails);
         return priceDetails;
-    }, [availableItems, appliedCoupon]);
+    }, [allAvailableItems, appliedCoupon]);
 
-    const totalQuantity = availableItems.reduce(
+    const totalQuantity = allAvailableItems.reduce(
         (acc, item) => acc + item.quantity,
         0
     );
@@ -273,7 +311,7 @@ export function OrderPage({
     }) => {
         if (!selectedShippingAddress) return [];
 
-        const itemsByBrand = availableItems.reduce(
+        const itemsByBrand = allAvailableItems.reduce(
             (acc, item) => {
                 const brandId = item.product.brandId;
                 if (!acc[brandId]) {
@@ -282,12 +320,14 @@ export function OrderPage({
                 acc[brandId].push(item);
                 return acc;
             },
-            {} as Record<string, typeof availableItems>
+            {} as Record<string, typeof allAvailableItems>
         );
 
         return Object.entries(itemsByBrand).map(([, brandItems]) => {
             const brandTotal = brandItems.reduce((acc, item) => {
-                const price = item.variantId
+                const price = item.isSwapRewardItem
+                    ? 0
+                    : item.variantId
                     ? (item.product.variants?.find(
                           (v) => v.id === item.variantId
                       )?.price ??
@@ -317,7 +357,9 @@ export function OrderPage({
                 shiprocketOrderId: null,
                 shiprocketShipmentId: null,
                 items: brandItems.map((item) => ({
-                    price: item.variantId
+                    price: item.isSwapRewardItem
+                        ? 0
+                        : item.variantId
                         ? (item.product.variants.find(
                               (v) => v.id === item.variantId
                           )?.price ??
@@ -327,9 +369,11 @@ export function OrderPage({
                     brandId: item.product.brandId,
                     productId: item.product.id,
                     variantId: item.variantId,
-                    sku: item.variant?.nativeSku ?? item.product.nativeSku,
+                    sku: item.variant?.nativeSku ?? item.product.nativeSku ?? `sku-${item.product.id}`,
                     quantity: item.quantity,
                     categoryId: item.product.categoryId,
+                    isSwapRewardItem: item.isSwapRewardItem,
+                    swapRewardRedemptionId: item.swapRewardRedemptionId,
                 })),
                 razorpayOrderId,
                 ...(razorpayPaymentId ? { razorpayPaymentId } : {}),
@@ -365,7 +409,7 @@ export function OrderPage({
             mutationFn: async () => {
                 if (!selectedShippingAddress)
                     throw new Error("No shipping address selected");
-                if (availableItems.length === 0)
+                if (allAvailableItems.length === 0)
                     throw new Error("Cart is empty");
 
                 console.log(
@@ -375,18 +419,20 @@ export function OrderPage({
 
                 // Prepare product details for order intent
                 // @ts-ignore
-                const productsForIntent = availableItems.map((item) => ({
+                const productsForIntent = allAvailableItems.map((item) => ({
                     productId: item.product.id,
                     variantId: item.variantId || undefined,
                     quantity: item.quantity,
-                    price: item.variantId
+                    price: item.isSwapRewardItem
+                        ? 0
+                        : item.variantId
                         ? (item.product.variants?.find(
                               (v) => v.id === item.variantId
                           )?.price ??
                           item.product.price ??
                           0)
                         : (item.product.price ?? 0),
-                    sku: item.variant?.nativeSku ?? item.product.nativeSku,
+                    sku: item.variant?.nativeSku ?? item.product.nativeSku ?? `sku-${item.product.id}`,
                 }));
                 console.log("Order intent processed:", productsForIntent);
                 console.log("Order intent user :", user);
@@ -494,7 +540,7 @@ export function OrderPage({
             return;
         }
 
-        if (availableItems.length === 0) {
+        if (allAvailableItems.length === 0) {
             toast.error("Cart is empty");
             return;
         }
@@ -561,8 +607,8 @@ export function OrderPage({
                   Math.random().toString(36).substring(2, 9);
 
         posthog?.capture(POSTHOG_EVENTS.COMMERCE.CHECKOUT_STARTED, {
-            product_ids: availableItems.map((item) => item.product.id),
-            brand_ids: availableItems.map((item) => item.product.brandId),
+            product_ids: allAvailableItems.map((item) => item.product.id),
+            brand_ids: allAvailableItems.map((item) => item.product.brandId),
             total_amount: Number(convertPaiseToRupees(priceList.total)),
             currency: "INR",
             total_items: totalQuantity,
@@ -573,15 +619,17 @@ export function OrderPage({
         fbEvent(
             "InitiateCheckout",
             {
-                content_ids: availableItems.map((item) => item.product.id),
+                content_ids: allAvailableItems.map((item) => item.product.id),
                 value: convertPaiseToRupees(priceList.total), // Convert paise to rupees
                 currency: "INR",
-                contents: availableItems.map((item) => ({
+                contents: allAvailableItems.map((item) => ({
                     id: item.product.id,
                     name: item.product.title,
                     quantity: item.quantity,
                     price:
-                        (item.variantId
+                        (item.isSwapRewardItem
+                            ? 0
+                            : item.variantId
                             ? (item.product.variants?.find(
                                   (v) => v.id === item.variantId
                               )?.price ??
@@ -614,7 +662,7 @@ export function OrderPage({
             eventId,
             userData,
             {
-                content_ids: availableItems.map((item) => item.product.id),
+                content_ids: allAvailableItems.map((item) => item.product.id),
                 content_type: "product",
                 value: parseFloat(convertPaiseToRupees(priceList.total)),
                 currency: "INR",
@@ -773,10 +821,10 @@ export function OrderPage({
                             order?.paymentStatus === "paid" ||
                             order?.status !== "pending" ||
                             !selectedShippingAddress ||
-                            availableItems.length === 0
+                            allAvailableItems.length === 0
                         }
                         variant={
-                            availableItems.length === 0
+                            allAvailableItems.length === 0
                                 ? "destructive"
                                 : order?.paymentStatus === "pending"
                                   ? "default"
@@ -790,7 +838,7 @@ export function OrderPage({
                     >
                         {!selectedShippingAddress
                             ? "Select Address"
-                            : availableItems.length === 0
+                            : allAvailableItems.length === 0
                               ? "Cart is Empty"
                               : order?.paymentStatus === "pending"
                                 ? selectedPaymentMethod === "cod"

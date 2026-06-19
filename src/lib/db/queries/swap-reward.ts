@@ -86,7 +86,16 @@ class SwapRewardQuery {
         });
     }
 
-    async listEligibleRewardProducts(search?: string) {
+    async listEligibleRewardProducts(input?: {
+        search?: string;
+        page?: number;
+        limit?: number;
+        brandId?: string;
+        categoryId?: string;
+        sortBy?: "recommended" | "price_asc" | "price_desc" | "newest";
+    }) {
+        const page = Math.max(1, input?.page ?? 1);
+        const limit = Math.max(1, Math.min(input?.limit ?? 9, 24));
         const productsData = await productQueries.getAllProducts({
             isActive: true,
             isAvailable: true,
@@ -95,7 +104,7 @@ class SwapRewardQuery {
             verificationStatus: "approved",
         });
 
-        const filtered = productsData.filter((product) => {
+        const searchableEligible = productsData.filter((product) => {
             const hasEligibleBasePrice =
                 !product.productHasVariants &&
                 !!product.price &&
@@ -109,16 +118,61 @@ class SwapRewardQuery {
                     variant.quantity > 0
             );
 
-            const matchesSearch = search
+            const matchesSearch = input?.search
                 ? `${product.title} ${product.brand?.name ?? ""}`
                       .toLowerCase()
-                      .includes(search.toLowerCase())
+                      .includes(input.search.toLowerCase())
                 : true;
 
             return matchesSearch && (hasEligibleBasePrice || eligibleVariants.length > 0);
         });
 
-        return filtered.map((product) => ({
+        const filteredByFacets = searchableEligible.filter((product) => {
+            const matchesBrand = input?.brandId
+                ? product.brandId === input.brandId
+                : true;
+            const matchesCategory = input?.categoryId
+                ? product.categoryId === input.categoryId
+                : true;
+
+            return matchesBrand && matchesCategory;
+        });
+
+        const brandFacetSource = input?.categoryId
+            ? searchableEligible.filter(
+                  (product) => product.categoryId === input.categoryId
+              )
+            : searchableEligible;
+
+        const facets = {
+            brands: brandFacetSource
+                .map((product) => product.brand)
+                .filter(
+                    (brand, index, brands) =>
+                        !!brand &&
+                        brands.findIndex((entry) => entry?.id === brand.id) === index
+                )
+                .map((brand) => ({
+                    id: brand!.id,
+                    name: brand!.name,
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name)),
+            categories: searchableEligible
+                .map((product) => product.category)
+                .filter(
+                    (category, index, categories) =>
+                        !!category &&
+                        categories.findIndex((entry) => entry?.id === category.id) ===
+                            index
+                )
+                .map((category) => ({
+                    id: category!.id,
+                    name: category!.name,
+                }))
+                .sort((a, b) => a.name.localeCompare(b.name)),
+        };
+
+        const filtered = filteredByFacets.map((product) => ({
             ...product,
             eligibleVariants: product.variants.filter(
                 (variant) =>
@@ -127,6 +181,41 @@ class SwapRewardQuery {
                     variant.quantity > 0
             ),
         }));
+
+        const sortedItems = [...filtered].sort((left, right) => {
+            const leftPrice =
+                left.eligibleVariants?.[0]?.price ?? left.price ?? Number.MAX_SAFE_INTEGER;
+            const rightPrice =
+                right.eligibleVariants?.[0]?.price ??
+                right.price ??
+                Number.MAX_SAFE_INTEGER;
+
+            switch (input?.sortBy) {
+                case "price_asc":
+                    return leftPrice - rightPrice;
+                case "price_desc":
+                    return rightPrice - leftPrice;
+                case "newest":
+                    return (
+                        new Date(right.createdAt).getTime() -
+                        new Date(left.createdAt).getTime()
+                    );
+                default:
+                    return 0;
+            }
+        });
+
+        const start = (page - 1) * limit;
+        const paginatedItems = sortedItems.slice(start, start + limit);
+
+        return {
+            items: paginatedItems,
+            page,
+            limit,
+            totalCount: sortedItems.length,
+            nextPage: start + limit < sortedItems.length ? page + 1 : null,
+            facets,
+        };
     }
 
     async getEligibleRewardSelection(input: {
@@ -199,6 +288,18 @@ class SwapRewardQuery {
         return redemption ? parseRewardRedemption(redemption) : null;
     }
 
+    async getActiveRewardRedemptionForUser(userId: string) {
+        const redemption = await db.query.rewardRedemptions.findFirst({
+            where: and(
+                eq(rewardRedemptions.userId, userId),
+                eq(rewardRedemptions.status, "initiated")
+            ),
+            orderBy: [desc(rewardRedemptions.updatedAt)],
+        });
+
+        return redemption ? parseRewardRedemption(redemption) : null;
+    }
+
     async completeRewardRedemption(
         id: string,
         values: { orderId: string; status: "completed" | "cancelled" }
@@ -215,6 +316,20 @@ class SwapRewardQuery {
             .then((rows) => rows[0]);
 
         return parseRewardRedemption(updated);
+    }
+
+    async cancelRewardRedemption(id: string) {
+        const updated = await db
+            .update(rewardRedemptions)
+            .set({
+                status: "cancelled",
+                updatedAt: new Date(),
+            })
+            .where(eq(rewardRedemptions.id, id))
+            .returning()
+            .then((rows) => rows[0]);
+
+        return updated ? parseRewardRedemption(updated) : null;
     }
 
     async getRewardAnalytics() {
