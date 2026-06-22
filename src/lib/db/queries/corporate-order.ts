@@ -440,6 +440,135 @@ class CorporateOrderQueries {
         const now = new Date();
 
         await db.transaction(async (tx) => {
+            const productTypeIds = new Set(
+                input.productTypes
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+            const gsmOptionIds = new Set(
+                input.gsmOptions
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+            const fabricCompositionIds = new Set(
+                input.fabricCompositions
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+            const colorOptionIds = new Set(
+                input.colorOptions
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+            const printMethodIds = new Set(
+                input.printMethods
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+            const logoLocationIds = new Set(
+                input.logoLocations
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+            const extraChargeRuleIds = new Set(
+                input.extraChargeRules
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+            const pricingSlabIds = new Set(
+                input.pricingSlabs
+                    .map((item: { id?: string }) => item.id)
+                    .filter(Boolean)
+            );
+
+            const existingPricingSlabs = await tx
+                .select({ id: corporatePricingSlabs.id })
+                .from(corporatePricingSlabs);
+            for (const item of existingPricingSlabs) {
+                if (!pricingSlabIds.has(item.id)) {
+                    await tx
+                        .delete(corporatePricingSlabs)
+                        .where(eq(corporatePricingSlabs.id, item.id));
+                }
+            }
+
+            const existingExtraChargeRules = await tx
+                .select({ id: corporateExtraChargeRules.id })
+                .from(corporateExtraChargeRules);
+            for (const item of existingExtraChargeRules) {
+                if (!extraChargeRuleIds.has(item.id)) {
+                    await tx
+                        .delete(corporateExtraChargeRules)
+                        .where(eq(corporateExtraChargeRules.id, item.id));
+                }
+            }
+
+            const existingLogoLocations = await tx
+                .select({ id: corporateLogoLocations.id })
+                .from(corporateLogoLocations);
+            for (const item of existingLogoLocations) {
+                if (!logoLocationIds.has(item.id)) {
+                    await tx
+                        .delete(corporateLogoLocations)
+                        .where(eq(corporateLogoLocations.id, item.id));
+                }
+            }
+
+            const existingPrintMethods = await tx
+                .select({ id: corporatePrintMethods.id })
+                .from(corporatePrintMethods);
+            for (const item of existingPrintMethods) {
+                if (!printMethodIds.has(item.id)) {
+                    await tx
+                        .delete(corporatePrintMethods)
+                        .where(eq(corporatePrintMethods.id, item.id));
+                }
+            }
+
+            const existingColorOptions = await tx
+                .select({ id: corporateColorOptions.id })
+                .from(corporateColorOptions);
+            for (const item of existingColorOptions) {
+                if (!colorOptionIds.has(item.id)) {
+                    await tx
+                        .delete(corporateColorOptions)
+                        .where(eq(corporateColorOptions.id, item.id));
+                }
+            }
+
+            const existingFabricCompositions = await tx
+                .select({ id: corporateFabricCompositions.id })
+                .from(corporateFabricCompositions);
+            for (const item of existingFabricCompositions) {
+                if (!fabricCompositionIds.has(item.id)) {
+                    await tx
+                        .delete(corporateFabricCompositions)
+                        .where(eq(corporateFabricCompositions.id, item.id));
+                }
+            }
+
+            const existingGsmOptions = await tx
+                .select({ id: corporateGsmOptions.id })
+                .from(corporateGsmOptions);
+            for (const item of existingGsmOptions) {
+                if (!gsmOptionIds.has(item.id)) {
+                    await tx
+                        .delete(corporateGsmOptions)
+                        .where(eq(corporateGsmOptions.id, item.id));
+                }
+            }
+
+            const existingProductTypes = await tx
+                .select({ id: corporateProductTypes.id })
+                .from(corporateProductTypes);
+            for (const item of existingProductTypes) {
+                if (!productTypeIds.has(item.id)) {
+                    await tx
+                        .delete(corporateProductTypes)
+                        .where(eq(corporateProductTypes.id, item.id));
+                }
+            }
+
             for (const item of input.productTypes) {
                 await tx
                     .insert(corporateProductTypes)

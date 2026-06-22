@@ -65,6 +65,12 @@ export const siteConfig: SiteConfig = {
             icon: "BookOpen",
         },
         {
+            name: "Corporate Orders",
+            description: "Order apparel in bulk for your team",
+            href: "/corporate-orders",
+            icon: "Briefcase",
+        },
+        {
             name: "Contact",
             description: "Get in touch with us",
             href: "/contact",
@@ -99,6 +105,10 @@ export const siteConfig: SiteConfig = {
                     {
                         name: "Become a Seller",
                         href: "/become-a-seller",
+                    },
+                    {
+                        name: "Corporate Orders",
+                        href: "/corporate-orders",
                     },
                 ],
             },
