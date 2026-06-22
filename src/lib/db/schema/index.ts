@@ -37,6 +37,7 @@ export * from "./whatsapp";
 export * from "./email";
 export * from "./monitoring-sla";
 export * from "./swap-reward";
+export * from "./corporate-order";
 
 export * from "./analytics";
 export * from "./unicommerce";

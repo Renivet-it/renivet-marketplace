@@ -26,6 +26,7 @@ export * from "./role";
 export * from "./sub-category";
 export * from "./subscriber";
 export * from "./swap-reward";
+export * from "./corporate-order";
 export * from "./tag";
 export * from "./ticket";
 export * from "./user";

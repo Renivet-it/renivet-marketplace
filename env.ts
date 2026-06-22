@@ -54,6 +54,10 @@ export const env = createEnv({
         RENIVET_EMAIL_2: z
             .string({ required_error: "RENIVET_EMAIL_2 is required" })
             .min(1, "RENIVET_EMAIL_2 is required"),
+        CORPORATE_OPS_EMAILS: z.preprocess(
+            (val) => (val === "" ? undefined : val),
+            z.string().optional()
+        ),
 
         SHIPROCKET_LOGIN_EMAIL: z
             .string({ required_error: "SHIPROCKET_LOGIN_EMAIL is required" })
@@ -139,6 +143,7 @@ export const env = createEnv({
         RESEND_EMAIL_FROM: process.env.RESEND_EMAIL_FROM,
         RENIVET_EMAIL_1: process.env.RENIVET_EMAIL_1,
         RENIVET_EMAIL_2: process.env.RENIVET_EMAIL_2,
+        CORPORATE_OPS_EMAILS: process.env.CORPORATE_OPS_EMAILS,
         SHIPROCKET_LOGIN_EMAIL: process.env.SHIPROCKET_LOGIN_EMAIL,
         SHIPROCKET_LOGIN_PASSWORD: process.env.SHIPROCKET_LOGIN_PASSWORD,
         SHIPROCKET_WEBHOOK_API_KEY: process.env.SHIPROCKET_WEBHOOK_API_KEY,
