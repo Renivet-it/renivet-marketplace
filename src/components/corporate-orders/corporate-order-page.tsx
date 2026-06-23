@@ -1,6 +1,7 @@
 "use client";
 
 import { env } from "@/../env";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Spinner } from "@/components/ui/spinner";
@@ -75,6 +76,9 @@ export function CorporateOrderPage() {
         logoLocationIds: [] as string[],
         printMethodId: "",
         extraChargeRuleIds: [] as string[],
+        paymentPreference: "partial_advance" as
+            | "partial_advance"
+            | "full_upfront",
         customerNotes: "",
     });
 
@@ -106,6 +110,15 @@ export function CorporateOrderPage() {
     const selectedColorIds = new Set(form.colorOptionIds);
     const selectedLogoLocationIds = new Set(form.logoLocationIds);
     const selectedExtraChargeRuleIds = new Set(form.extraChargeRuleIds);
+    const configuredAdvancePercent =
+        config ? Math.round(config.settings.advancePercentBps / 100) : 30;
+    const initialPaymentLabel = quote
+        ? quote.balanceDuePaise === 0
+            ? "100% upfront payment"
+            : `${Math.round(quote.advancePercentBps / 100)}% advance payment`
+        : form.paymentPreference === "full_upfront"
+          ? "100% upfront payment"
+          : `${configuredAdvancePercent}% advance payment`;
 
     const canAdvance = useMemo(() => {
         return (
@@ -307,7 +320,7 @@ export function CorporateOrderPage() {
                     contact: form.mobileNumber,
                 },
                 theme: {
-                    color: "#8d5b2f",
+                    color: "#5B9BD5",
                 },
                 handler: async (response: {
                     razorpay_order_id: string;
@@ -348,35 +361,47 @@ export function CorporateOrderPage() {
 
     return (
         <div className="space-y-6">
-            <section className="rounded-[28px] border border-[#e7d7bb] bg-[linear-gradient(135deg,#fffaf1_0%,#f5ead7_50%,#efe1c4_100%)] p-5 shadow-[0_24px_70px_-48px_rgba(88,54,16,0.45)] md:p-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6935]">
-                    Corporate Apparel Orders
-                </p>
-                <h1 className="mt-3 font-serif text-3xl font-semibold text-[#3e2a14] md:text-4xl">
-                    Configure, quote, and place bulk apparel orders
-                </h1>
-                <p className="mt-3 max-w-3xl text-sm leading-6 text-[#6c5737]">
-                    Upload your branding artwork and employee size sheet, review
-                    live pricing, and pay the 30% advance directly on Renivet.
-                </p>
-                <div className="mt-6 grid gap-2 md:grid-cols-5">
-                    {STEPS.map((label, index) => (
-                        <div
-                            key={label}
-                            className={cn(
-                                "rounded-full border px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em]",
-                                index <= step
-                                    ? "border-[#8d5b2f] bg-[#8d5b2f] text-white"
-                                    : "border-[#dbc8a6] bg-white/70 text-[#8b7349]"
-                            )}
+            <section className="rounded-[28px] border border-[#dbe5f0] bg-[linear-gradient(135deg,#ffffff_0%,#f5f9fd_55%,#edf4fb_100%)] p-5 shadow-[0_24px_70px_-48px_rgba(57,91,124,0.28)] md:p-8">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#5B9BD5]">
+                        Corporate Apparel Orders
+                    </p>
+                    <h1 className="mt-3 font-serif text-3xl font-semibold text-[#1f2937] md:text-4xl">
+                        Configure, quote, and place bulk apparel orders
+                    </h1>
+                    <p className="mt-3 max-w-3xl text-sm leading-6 text-[#64748b]">
+                        Upload your branding artwork and employee size sheet,
+                        review live pricing, choose how much to collect now, and
+                        place a polished corporate order in the Renivet flow.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <Badge className="bg-blue-600 text-white hover:bg-blue-600">
+                            Professional bulk ordering
+                        </Badge>
+                        <Badge
+                            variant="outline"
+                            className="border-blue-200 bg-white text-blue-700"
                         >
-                            {label}
-                        </div>
-                    ))}
-                </div>
+                            {initialPaymentLabel}
+                        </Badge>
+                    </div>
+                    <div className="mt-6 grid gap-2 md:grid-cols-5">
+                        {STEPS.map((label, index) => (
+                            <div
+                                key={label}
+                                className={cn(
+                                    "rounded-full border px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em]",
+                                    index <= step
+                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
+                                        : "border-[#d9e4ef] bg-white/80 text-[#64748b]"
+                                )}
+                            >
+                                {label}
+                            </div>
+                        ))}
+                    </div>
             </section>
 
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.65fr)_360px]">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_360px]">
                 <div className="space-y-6">
                     {step === 0 && (
                         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
@@ -545,7 +570,7 @@ export function CorporateOrderPage() {
                                                 className={cn(
                                                     "rounded-full border px-3 py-2 text-sm",
                                                     checked
-                                                        ? "border-[#8d5b2f] bg-[#8d5b2f] text-white"
+                                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
                                                         : "border-slate-200 bg-white text-slate-700"
                                                 )}
                                                 onClick={() =>
@@ -604,7 +629,7 @@ export function CorporateOrderPage() {
                                                 className={cn(
                                                     "rounded-full border px-3 py-2 text-sm",
                                                     checked
-                                                        ? "border-[#8d5b2f] bg-[#8d5b2f] text-white"
+                                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
                                                         : "border-slate-200 bg-white text-slate-700"
                                                 )}
                                                 onClick={() =>
@@ -670,7 +695,7 @@ export function CorporateOrderPage() {
                                                     className={cn(
                                                         "rounded-full border px-3 py-2 text-sm",
                                                         checked
-                                                            ? "border-[#8d5b2f] bg-[#8d5b2f] text-white"
+                                                            ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
                                                             : "border-slate-200 bg-white text-slate-700"
                                                     )}
                                                     onClick={() =>
@@ -696,6 +721,68 @@ export function CorporateOrderPage() {
                                                 </button>
                                             );
                                         })}
+                                </div>
+                            </div>
+                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-sm font-semibold text-slate-900">
+                                    Payment Choice
+                                </p>
+                                <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "rounded-2xl border px-4 py-4 text-left transition-colors",
+                                            form.paymentPreference ===
+                                                "partial_advance"
+                                                ? "border-[#5B9BD5] bg-blue-50"
+                                                : "border-slate-200 bg-white"
+                                        )}
+                                        onClick={() =>
+                                            setForm((current) => ({
+                                                ...current,
+                                                paymentPreference:
+                                                    "partial_advance",
+                                            }))
+                                        }
+                                    >
+                                        <p className="font-semibold text-slate-900">
+                                            Partial payment
+                                        </p>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Pay{" "}
+                                            {Math.round(
+                                                config.settings
+                                                    .advancePercentBps / 100
+                                            )}
+                                            % now and collect the remaining
+                                            balance later.
+                                        </p>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "rounded-2xl border px-4 py-4 text-left transition-colors",
+                                            form.paymentPreference ===
+                                                "full_upfront"
+                                                ? "border-[#5B9BD5] bg-blue-50"
+                                                : "border-slate-200 bg-white"
+                                        )}
+                                        onClick={() =>
+                                            setForm((current) => ({
+                                                ...current,
+                                                paymentPreference:
+                                                    "full_upfront",
+                                            }))
+                                        }
+                                    >
+                                        <p className="font-semibold text-slate-900">
+                                            100% upfront payment
+                                        </p>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Collect the full order value at the
+                                            time of checkout.
+                                        </p>
+                                    </button>
                                 </div>
                             </div>
                             <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
@@ -829,7 +916,8 @@ export function CorporateOrderPage() {
                                         Order Summary
                                     </h2>
                                     <p className="text-sm text-slate-500">
-                                        Review the quote and pay the 30% advance.
+                                        Review the quote and complete your{" "}
+                                        {initialPaymentLabel.toLowerCase()}.
                                     </p>
                                 </div>
                                 <Button
@@ -871,7 +959,11 @@ export function CorporateOrderPage() {
                                         value={formatINR(quote.totalPaise)}
                                     />
                                     <SummaryStat
-                                        label="Advance Payment (30%)"
+                                        label={
+                                            quote.balanceDuePaise === 0
+                                                ? "Amount Due Now"
+                                                : `Initial Payment (${Math.round(quote.advancePercentBps / 100)}%)`
+                                        }
                                         value={formatINR(quote.advancePaidPaise)}
                                     />
                                 </div>
@@ -895,103 +987,113 @@ export function CorporateOrderPage() {
                         </section>
                     )}
 
-                    <div className="flex items-center justify-between">
-                        <Button
-                            variant="outline"
-                            onClick={() => setStep((current) => Math.max(0, current - 1))}
-                            disabled={step === 0 || isPaying}
-                        >
-                            <ChevronLeft className="size-4" />
-                            Back
-                        </Button>
-                        {step < 4 ? (
+                        <div className="flex items-center justify-between">
                             <Button
+                                variant="outline"
                                 onClick={() =>
-                                    setStep((current) =>
-                                        Math.min(STEPS.length - 1, current + 1)
-                                    )
+                                    setStep((current) => Math.max(0, current - 1))
                                 }
-                                disabled={isPaying}
+                                disabled={step === 0 || isPaying}
                             >
-                                Next
-                                <ChevronRight className="size-4" />
+                                <ChevronLeft className="size-4" />
+                                Back
                             </Button>
-                        ) : (
-                            <Button
-                                className="bg-[#8d5b2f] text-white hover:bg-[#764825]"
-                                onClick={handleProceedToPayment}
-                                disabled={isPaying || !quote}
-                            >
-                                {isPaying ? "Opening payment..." : "Pay 30% Advance"}
-                            </Button>
-                        )}
-                    </div>
-                </div>
-
-                <aside className="h-fit rounded-3xl border border-[#e3d3b4] bg-[#f9f2e5] p-5 shadow-sm">
-                    <div className="flex items-center gap-3">
-                        <div className="flex size-10 items-center justify-center rounded-full bg-white text-[#8d5b2f]">
-                            <Upload className="size-5" />
+                            {step < 4 ? (
+                                <Button
+                                    onClick={() =>
+                                        setStep((current) =>
+                                            Math.min(STEPS.length - 1, current + 1)
+                                        )
+                                    }
+                                    disabled={isPaying}
+                                >
+                                    Next
+                                    <ChevronRight className="size-4" />
+                                </Button>
+                            ) : (
+                                <Button
+                                    className="bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
+                                    onClick={handleProceedToPayment}
+                                    disabled={isPaying || !quote}
+                                >
+                                    {isPaying
+                                        ? "Opening payment..."
+                                        : quote?.balanceDuePaise === 0
+                                          ? "Pay 100% Now"
+                                          : `Pay ${Math.round((quote?.advancePercentBps ?? config.settings.advancePercentBps) / 100)}% Now`}
+                                </Button>
+                            )}
                         </div>
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8d6c3d]">
-                                Live Quote
-                            </p>
-                            <h3 className="text-lg font-semibold text-[#3e2a14]">
-                                Corporate order summary
-                            </h3>
-                        </div>
                     </div>
 
-                    <div className="mt-5 space-y-3 text-sm text-[#5d4728]">
-                        <InfoRow
-                            label="Expected timeline"
-                            value={config.settings.expectedTimelineText}
-                        />
-                        <InfoRow
-                            label="GST"
-                            value={`${(config.settings.gstRateBps / 100).toFixed(2)}%`}
-                        />
-                        <InfoRow
-                            label="Advance"
-                            value={`${(config.settings.advancePercentBps / 100).toFixed(0)}%`}
-                        />
-                        <InfoRow
-                            label="Parsed employees"
-                            value={String(employeeRows.length)}
-                        />
-                    </div>
-
-                    {quote && (
-                        <div className="mt-5 rounded-2xl border border-[#e1d1b3] bg-white p-4">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#8d6c3d]">
-                                Payment snapshot
-                            </p>
-                            <div className="mt-3 space-y-2 text-sm text-slate-700">
-                                <InfoRow
-                                    label="Total Order Value"
-                                    value={formatINR(quote.totalPaise)}
-                                />
-                                <InfoRow
-                                    label="Advance Due"
-                                    value={formatINR(quote.advancePaidPaise)}
-                                />
-                                <InfoRow
-                                    label="Balance Due"
-                                    value={formatINR(quote.balanceDuePaise)}
-                                />
+                    <aside className="h-fit rounded-3xl border border-[#dbe5f0] bg-white p-5 shadow-sm xl:sticky xl:top-6">
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-10 items-center justify-center rounded-full bg-blue-50 text-[#5B9BD5]">
+                                <Upload className="size-5" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                    Live Quote
+                                </p>
+                                <h3 className="text-lg font-semibold text-slate-900">
+                                    Corporate order summary
+                                </h3>
                             </div>
                         </div>
-                    )}
 
-                    <div className="mt-5 space-y-2">
-                        <Checkline label="Signed-in order placement" />
-                        <Checkline label="Artwork + employee sheet upload" />
-                        <Checkline label="Live pricing with slabs and extras" />
-                        <Checkline label="Razorpay advance payment" />
-                    </div>
-                </aside>
-            </div>
+                        <div className="mt-5 space-y-3 text-sm text-slate-700">
+                            <InfoRow
+                                label="Expected timeline"
+                                value={config.settings.expectedTimelineText}
+                            />
+                            <InfoRow
+                                label="GST"
+                                value={`${(config.settings.gstRateBps / 100).toFixed(2)}%`}
+                            />
+                            <InfoRow
+                                label="Payment plan"
+                                value={initialPaymentLabel}
+                            />
+                            <InfoRow
+                                label="Parsed employees"
+                                value={String(employeeRows.length)}
+                            />
+                        </div>
+
+                        {quote && (
+                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                    Payment snapshot
+                                </p>
+                                <div className="mt-3 space-y-2 text-sm text-slate-700">
+                                    <InfoRow
+                                        label="Total Order Value"
+                                        value={formatINR(quote.totalPaise)}
+                                    />
+                                    <InfoRow
+                                        label={
+                                            quote.balanceDuePaise === 0
+                                                ? "Paying now"
+                                                : "Initial payment"
+                                        }
+                                        value={formatINR(quote.advancePaidPaise)}
+                                    />
+                                    <InfoRow
+                                        label="Balance Due"
+                                        value={formatINR(quote.balanceDuePaise)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-5 space-y-2">
+                            <Checkline label="Signed-in order placement" />
+                            <Checkline label="Artwork + employee sheet upload" />
+                            <Checkline label="Live pricing with slabs and extras" />
+                            <Checkline label="Razorpay checkout support" />
+                        </div>
+                    </aside>
+                </div>
         </div>
     );
 }
@@ -1019,7 +1121,7 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 function Checkline({ label }: { label: string }) {
     return (
         <div className="flex items-center gap-2 text-sm text-slate-700">
-            <span className="flex size-5 items-center justify-center rounded-full bg-[#8d5b2f] text-white">
+            <span className="flex size-5 items-center justify-center rounded-full bg-[#5B9BD5] text-white">
                 <Check className="size-3" />
             </span>
             <span>{label}</span>

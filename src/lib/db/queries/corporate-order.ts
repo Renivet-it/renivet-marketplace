@@ -425,6 +425,15 @@ class CorporateOrderQueries {
         };
     }
 
+    async listOrdersByUser(userId: string) {
+        const rows = await db.query.corporateOrders.findMany({
+            where: eq(corporateOrders.userId, userId),
+            orderBy: [desc(corporateOrders.createdAt)],
+        });
+
+        return rows.map((row) => this.parseOrder(row));
+    }
+
     async createStatusHistory(
         values: typeof corporateOrderStatusHistory.$inferInsert
     ) {

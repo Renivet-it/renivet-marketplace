@@ -151,6 +151,12 @@ export function ProfileNav({ className, ...props }: GenericProps) {
             count: orders?.length,
         },
         {
+            icon: "Briefcase",
+            name: "corporate-orders",
+            href: "/corporate-orders",
+            label: "Corporate Orders",
+        },
+        {
             icon: "Heart",
             name: "wishlist",
             href: "/wishlist",

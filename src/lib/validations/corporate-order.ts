@@ -39,6 +39,11 @@ export const corporateBalancePaymentStatusSchema = z.enum([
     "paid",
 ]);
 
+export const corporatePaymentPreferenceSchema = z.enum([
+    "partial_advance",
+    "full_upfront",
+]);
+
 export const corporateFileSchema = z.object({
     url: z.string().url(),
     name: z.string().min(1),
@@ -134,6 +139,9 @@ export const corporateOrderFormInputSchema = z.object({
     logoLocationIds: z.array(z.string().uuid()).min(1),
     printMethodId: z.string().uuid(),
     extraChargeRuleIds: z.array(z.string().uuid()).default([]),
+    paymentPreference: corporatePaymentPreferenceSchema.default(
+        "partial_advance"
+    ),
     artworkFile: corporateFileSchema,
     employeeSheetFile: corporateFileSchema,
     employeeRows: z.array(corporateEmployeeRowSchema).min(1),
@@ -241,6 +249,10 @@ export const corporateOrderListInputSchema = z.object({
     limit: z.number().int().positive().max(100).default(10),
     search: z.string().trim().optional(),
     status: corporateOrderStatusSchema.optional(),
+});
+
+export const corporateOrderUserListInputSchema = z.object({
+    userId: z.string().min(1),
 });
 
 export const corporateConfigUpsertInputSchema = z.object({
@@ -353,6 +365,9 @@ export type CorporateOrderWorkflowStatus = z.infer<
 >;
 export type CorporateOrderFormInput = z.infer<
     typeof corporateOrderFormInputSchema
+>;
+export type CorporatePaymentPreference = z.infer<
+    typeof corporatePaymentPreferenceSchema
 >;
 export type CorporateOrderQuote = z.infer<typeof corporateOrderQuoteSchema>;
 export type CorporatePricingSlab = z.infer<typeof corporatePricingSlabSchema>;

@@ -48,6 +48,9 @@ export const corporateOrdersRouter = createTRPCRouter({
                 input.corporateOrderId
             );
         }),
+    listMyOrders: protectedProcedure.query(async ({ ctx }) => {
+        return corporateOrderService.listOrdersForUser(ctx.user.id);
+    }),
     listOrders: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
         .input(corporateOrderListInputSchema)
@@ -92,6 +95,19 @@ export const corporateOrdersRouter = createTRPCRouter({
         )
         .mutation(async ({ input }) => {
             return corporateOrderService.saveBalancePaymentLink(input);
+        }),
+    sendBalancePaymentReminder: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(
+            z.object({
+                corporateOrderId: z.string().uuid(),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            return corporateOrderService.sendBalancePaymentReminder({
+                corporateOrderId: input.corporateOrderId,
+                changedByUserId: ctx.user.id,
+            });
         }),
     listConfig: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_SETTINGS))

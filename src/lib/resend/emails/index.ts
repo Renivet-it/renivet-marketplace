@@ -8,6 +8,7 @@ import BrandVerificationStatusUpdate from "./brand-verification-status-update";
 import BrandVerificationtSubmitted from "./brand-verification-submitted";
 import brandOrderNotification from "./brandOrderNotification";
 import CorporateOrderInternalNotificationEmail from "./corporate-order-internal-notification";
+import CorporateOrderBalanceReminderEmail from "./corporate-order-balance-reminder";
 import CorporateOrderReceivedEmail from "./corporate-order-received";
 import CategoryRequestStatusUpdate from "./category-request-status-update";
 import DailyOrderSummary from "./daily-order-summary";
@@ -35,6 +36,7 @@ export {
     BrandVerificationStatusUpdate,
     BrandVerificationtSubmitted,
     CategoryRequestStatusUpdate,
+    CorporateOrderBalanceReminderEmail,
     CorporateOrderInternalNotificationEmail,
     CorporateOrderReceivedEmail,
     DailyOrderSummary,

@@ -22,6 +22,7 @@ export default function CorporateOrderReceivedEmail({
     pdfHref: string;
     expectedTimelineText: string;
 }) {
+    const paidInFull = order.balanceDuePaise === 0;
     return (
         <Html>
             <Head />
@@ -34,7 +35,10 @@ export default function CorporateOrderReceivedEmail({
                     </Text>
                     <Section>
                         <Text>Order ID: {order.publicOrderId}</Text>
-                        <Text>Amount Paid: {formatINR(order.advancePaidPaise)}</Text>
+                        <Text>
+                            {paidInFull ? "Amount Paid" : "Initial Amount Paid"}:{" "}
+                            {formatINR(order.advancePaidPaise)}
+                        </Text>
                         <Text>Balance Due: {formatINR(order.balanceDuePaise)}</Text>
                         <Text>Expected Timeline: {expectedTimelineText}</Text>
                     </Section>

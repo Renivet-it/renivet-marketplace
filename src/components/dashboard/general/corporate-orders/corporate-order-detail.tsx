@@ -35,6 +35,15 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
             },
             onError: (error) => handleClientError(error),
         });
+    const sendReminder =
+        trpc.general.corporateOrders.sendBalancePaymentReminder.useMutation({
+            onSuccess: async () => {
+                await utils.general.corporateOrders.getOrderById.invalidate({
+                    corporateOrderId: initialData.id,
+                });
+            },
+            onError: (error) => handleClientError(error),
+        });
 
     return (
         <div className="space-y-6">
@@ -229,6 +238,23 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                 {saveBalanceLink.isPending
                                     ? "Saving..."
                                     : "Save Balance Link"}
+                            </Button>
+                            <Button
+                                variant="outline"
+                                onClick={() =>
+                                    sendReminder.mutate({
+                                        corporateOrderId: initialData.id,
+                                    })
+                                }
+                                disabled={
+                                    sendReminder.isPending ||
+                                    !initialData.balanceDuePaise ||
+                                    !balancePaymentLink
+                                }
+                            >
+                                {sendReminder.isPending
+                                    ? "Sending reminder..."
+                                    : "Send Balance Reminder"}
                             </Button>
                         </div>
                     </Panel>

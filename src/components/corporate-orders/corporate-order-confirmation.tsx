@@ -5,24 +5,26 @@ import { formatINR } from "@/lib/utils";
 
 export function CorporateOrderConfirmation({ data }: { data: any }) {
     const { order, settings } = data;
+    const paidInFull = order.balanceDuePaise === 0;
 
     return (
-        <div className="rounded-[28px] border border-[#e7d7bb] bg-[linear-gradient(135deg,#fffaf1_0%,#f5ead7_55%,#efe1c4_100%)] p-6 shadow-[0_24px_70px_-48px_rgba(88,54,16,0.45)] md:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#8a6935]">
+        <div className="rounded-[28px] border border-[#dbe5f0] bg-[linear-gradient(135deg,#ffffff_0%,#f5f9fd_55%,#edf4fb_100%)] p-6 shadow-[0_24px_70px_-48px_rgba(57,91,124,0.28)] md:p-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#5B9BD5]">
                 Corporate Order Confirmed
             </p>
-            <h1 className="mt-3 font-serif text-3xl font-semibold text-[#3e2a14] md:text-4xl">
+            <h1 className="mt-3 font-serif text-3xl font-semibold text-[#1f2937] md:text-4xl">
                 Thank you. Your corporate order has been received.
             </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#6c5737]">
-                We have captured your 30% advance and shared the order with the
-                Renivet operations team for review.
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-[#64748b]">
+                We have captured your{" "}
+                {paidInFull ? "full upfront payment" : "initial payment"} and
+                shared the order with the Renivet operations team for review.
             </p>
 
             <div className="mt-6 grid gap-4 md:grid-cols-2">
                 <Card label="Order ID" value={order.publicOrderId} />
                 <Card
-                    label="Amount Paid"
+                    label={paidInFull ? "Amount Paid" : "Initial Payment"}
                     value={formatINR(order.advancePaidPaise)}
                 />
                 <Card
@@ -38,11 +40,14 @@ export function CorporateOrderConfirmation({ data }: { data: any }) {
             <div className="mt-6 flex flex-wrap gap-3">
                 <Button
                     asChild
-                    className="bg-[#8d5b2f] text-white hover:bg-[#764825]"
+                    className="bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
                 >
                     <a href={`/api/corporate-orders/${order.id}/summary.pdf`}>
                         Download Order Summary PDF
                     </a>
+                </Button>
+                <Button asChild variant="outline">
+                    <a href="/profile/corporate-orders">View Corporate Orders</a>
                 </Button>
                 <Button asChild variant="outline">
                     <a href="/corporate-orders">Place Another Order</a>

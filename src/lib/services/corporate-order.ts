@@ -14,16 +14,19 @@ import {
 import { razorpay } from "@/lib/razorpay";
 import { resend } from "@/lib/resend";
 import {
+    CorporatePaymentPreference,
     CorporateOrderFormInput,
     CorporateOrderWorkflowStatus,
     corporateConfigUpsertInputSchema,
     corporateOrderFormInputSchema,
     corporateOrderListInputSchema,
+    corporateOrderUserListInputSchema,
     corporateOrderQuoteSchema,
     corporatePaymentConfirmationInputSchema,
 } from "@/lib/validations/corporate-order";
 import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
 import {
+    CorporateOrderBalanceReminderEmail,
     CorporateOrderInternalNotificationEmail,
     CorporateOrderReceivedEmail,
 } from "@/lib/resend/emails";
@@ -81,6 +84,17 @@ function parseCorporateOpsEmails() {
     if (envEmails.length > 0) return envEmails;
 
     return [env.RENIVET_EMAIL_1, env.RENIVET_EMAIL_2].filter(Boolean);
+}
+
+function getInitialPaymentLabel(
+    paymentPreference: CorporatePaymentPreference,
+    percentBps: number
+) {
+    if (paymentPreference === "full_upfront" || percentBps >= 10000) {
+        return "100% upfront payment";
+    }
+
+    return `${Math.round(percentBps / 100)}% advance payment`;
 }
 
 class CorporateOrderService {
@@ -162,6 +176,10 @@ class CorporateOrderService {
 
         const employeeCount = parsed.employeeRows.length;
         const quantity = Math.max(parsed.quantity ?? employeeCount, 1);
+        const advancePercentBps =
+            parsed.paymentPreference === "full_upfront"
+                ? 10000
+                : config.settings.advancePercentBps;
 
         const pricingSlab = await db.query.corporatePricingSlabs.findFirst({
             where: and(
@@ -238,7 +256,7 @@ class CorporateOrderService {
         );
         const totalPaise = preTaxPaise + gstPaise;
         const advancePaidPaise = Math.round(
-            (totalPaise * config.settings.advancePercentBps) / 10000
+            (totalPaise * advancePercentBps) / 10000
         );
         const balanceDuePaise = totalPaise - advancePaidPaise;
 
@@ -253,7 +271,7 @@ class CorporateOrderService {
             gstRateBps: config.settings.gstRateBps,
             gstPaise,
             totalPaise,
-            advancePercentBps: config.settings.advancePercentBps,
+            advancePercentBps,
             advancePaidPaise,
             balanceDuePaise,
             unitPricePaise: pricingSlab.unitPricePaise,
@@ -334,6 +352,7 @@ class CorporateOrderService {
                 logoLocations,
                 printMethod,
                 appliedExtraCharges: quote.appliedExtraCharges,
+                paymentPreference: parsed.paymentPreference,
             },
             pricingSnapshot: quote,
             artworkFile: parsed.artworkFile,
@@ -396,7 +415,14 @@ class CorporateOrderService {
                 amount: quote.advancePaidPaise,
                 currency: "INR",
                 name: "Renivet Corporate Orders",
-                description: `Advance payment for ${publicOrderId}`,
+                paymentLabel: getInitialPaymentLabel(
+                    parsed.paymentPreference,
+                    quote.advancePercentBps
+                ),
+                description: `${getInitialPaymentLabel(
+                    parsed.paymentPreference,
+                    quote.advancePercentBps
+                )} for ${publicOrderId}`,
             },
         };
     }
@@ -446,6 +472,8 @@ class CorporateOrderService {
             razorpayPaymentId: parsed.razorpayPaymentId,
             razorpaySignature: parsed.razorpaySignature,
             paymentReference: parsed.razorpayPaymentId,
+            balancePaymentStatus:
+                order.balanceDuePaise === 0 ? "paid" : order.balancePaymentStatus,
         });
 
         if (!updated) {
@@ -534,6 +562,11 @@ class CorporateOrderService {
         return corporateOrderQueries.listOrders(parsed);
     }
 
+    async listOrdersForUser(userId: string) {
+        corporateOrderUserListInputSchema.parse({ userId });
+        return corporateOrderQueries.listOrdersByUser(userId);
+    }
+
     async getOrderById(corporateOrderId: string) {
         const order = await corporateOrderQueries.getOrderById(corporateOrderId);
         if (!order) {
@@ -557,6 +590,13 @@ class CorporateOrderService {
             throw new TRPCError({
                 code: "NOT_FOUND",
                 message: "Corporate order not found",
+            });
+        }
+
+        if (order.balanceDuePaise <= 0) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "This order is already fully paid",
             });
         }
 
@@ -602,6 +642,54 @@ class CorporateOrderService {
         });
 
         return updated;
+    }
+
+    async sendBalancePaymentReminder(input: {
+        corporateOrderId: string;
+        changedByUserId: string;
+    }) {
+        const { corporateOrderId, changedByUserId } = input;
+        const order = await corporateOrderQueries.getOrderById(corporateOrderId);
+        if (!order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+
+        if (!order.balancePaymentLink) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Add a balance payment link before sending a reminder",
+            });
+        }
+
+        if (order.balanceDuePaise <= 0) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "This order has no remaining balance",
+            });
+        }
+
+        await resend.emails.send({
+            from: env.RESEND_EMAIL_FROM,
+            to: order.emailAddress,
+            subject: `Balance payment reminder: ${order.publicOrderId}`,
+            react: CorporateOrderBalanceReminderEmail({
+                order,
+                paymentHref: order.balancePaymentLink,
+            }),
+        });
+
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: order.id,
+            fromStatus: order.status,
+            toStatus: order.status,
+            changedByUserId,
+            note: "Balance payment reminder sent to customer",
+        });
+
+        return { success: true };
     }
 
     async listConfig() {
