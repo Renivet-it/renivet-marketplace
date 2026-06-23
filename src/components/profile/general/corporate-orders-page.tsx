@@ -3,6 +3,7 @@
 import { CorporateOrderPage } from "@/components/corporate-orders/corporate-order-page";
 import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button-general";
 import {
     EmptyPlaceholder,
     EmptyPlaceholderContent,
@@ -10,33 +11,58 @@ import {
     EmptyPlaceholderIcon,
     EmptyPlaceholderTitle,
 } from "@/components/ui/empty-placeholder-general";
-import { convertValueToLabel, formatINR } from "@/lib/utils";
+import { cn, convertValueToLabel, formatINR } from "@/lib/utils";
 import Script from "next/script";
+import { useState } from "react";
 
 export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
+    const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+
     return (
         <div className="min-w-0 flex-1 bg-[#f8f7f4]">
             <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
-                    Corporate Orders
-                </h1>
-                <p className="mt-1 text-sm text-gray-500">
-                    Review corporate apparel requests, place new bulk orders,
-                    download summaries, and complete any remaining balance
-                    payment.
-                </p>
+            <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 md:text-3xl">
+                        Corporate Orders
+                    </h1>
+                    <p className="mt-1 text-sm text-gray-500">
+                        Review corporate apparel requests, place new bulk
+                        orders, download summaries, and complete any remaining
+                        balance payment.
+                    </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <Button
+                        variant={isPlacingOrder ? "outline" : "default"}
+                        onClick={() => setIsPlacingOrder(false)}
+                    >
+                        View Orders
+                    </Button>
+                    <Button onClick={() => setIsPlacingOrder((current) => !current)}>
+                        {isPlacingOrder ? "Hide Order Form" : "Place New Order"}
+                    </Button>
+                </div>
             </div>
 
-            <CorporateOrderPage />
+            {isPlacingOrder ? (
+                <section className="mb-10 space-y-6">
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50/70 px-4 py-3 text-sm text-blue-800">
+                        Fill in the corporate apparel form below to create a new
+                        bulk order request.
+                    </div>
+                    <CorporateOrderPage />
+                </section>
+            ) : null}
 
-            <section className="mt-10 space-y-4">
-                <div>
+            <section className={cn("space-y-4", isPlacingOrder ? "mt-0" : "mt-2")}>
+                <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <h2 className="text-xl font-semibold text-gray-900 md:text-2xl">
                         Your Corporate Orders
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 md:max-w-2xl md:text-right">
                         Track submitted requests, download summaries, and finish
                         any remaining balance payments here.
                     </p>
@@ -52,9 +78,9 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                 No corporate orders yet
                             </EmptyPlaceholderTitle>
                             <EmptyPlaceholderDescription>
-                                Submit your first bulk apparel request above and
-                                we will keep the full payment and status trail
-                                here.
+                                Your placed corporate orders will appear here.
+                                Use `Place New Order` to start your first bulk
+                                apparel request.
                             </EmptyPlaceholderDescription>
                         </EmptyPlaceholderContent>
                     </EmptyPlaceholder>
