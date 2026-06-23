@@ -175,6 +175,248 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 url: "/dashboard/general/blogs",
                 permissions: BitFieldSitePermission.MANAGE_BLOGS,
             },
+            {
+                title: "Advertisements",
+                url: "/dashboard/general/advertisements",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Shop by Category",
+                url: "/dashboard/general/shop-by-category",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+        ],
+    },
+    {
+        title: "Catalog",
+        url: "#",
+        icon: "Package",
+        items: [
+            {
+                title: "Category Requests",
+                url: "/dashboard/general/category-requests",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
+            {
+                title: "Categories",
+                url: "/dashboard/general/categories",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_CATEGORIES,
+            },
+            {
+                title: "Subcategories",
+                url: "/dashboard/general/sub-categories",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_CATEGORIES,
+            },
+            {
+                title: "Product Types",
+                url: "/dashboard/general/product-types",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_CATEGORIES,
+            },
+            {
+                title: "Catalog",
+                url: "/dashboard/general/product-catalogue",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
+            },
+            {
+                title: "Products",
+                url: "/dashboard/general/products",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
+            },
+            {
+                title: "Brand Products",
+                url: "/dashboard/general/brand-products",
+                permissions: BitFieldSitePermission.MANAGE_CONTENT,
+            },
+            {
+                title: "Most Popular Products",
+                url: "/dashboard/general/most-popular-products",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_PRODUCTS,
+            },
+            {
+                title: "Product Reviews",
+                url: "/dashboard/general/reviews",
+                permissions: BitFieldSitePermission.MANAGE_PRODUCTS,
+            },
+            {
+                title: "Tags",
+                url: "/dashboard/general/tags",
+                permissions: BitFieldSitePermission.MANAGE_BLOG_TAGS,
+            },
+        ],
+    },
+    {
+        title: "Orders",
+        url: "#",
+        icon: "ShoppingCart",
+        items: [
+            {
+                title: "Orders",
+                url: "/dashboard/general/orders",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate Orders",
+                url: "/dashboard/general/corporate-orders",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate Order Settings",
+                url: "/dashboard/general/corporate-orders/settings",
+                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+            {
+                title: "Order Ops",
+                url: "/dashboard/general/order-ops",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "RTO Requests",
+                url: "/dashboard/general/return-replace",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Order Intent",
+                url: "/dashboard/general/order-intent",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+        ],
+    },
+    {
+        title: "Customers",
+        url: "#",
+        icon: "Users",
+        items: [
+            {
+                title: "Users",
+                url: "/dashboard/general/users",
+                permissions:
+                    BitFieldSitePermission.VIEW_USERS |
+                    BitFieldSitePermission.MANAGE_USERS,
+            },
+            {
+                title: "Brands",
+                url: "/dashboard/general/brands",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_BRANDS,
+            },
+            {
+                title: "Brand Verifications",
+                url: "/dashboard/general/brands/verifications",
+                permissions:
+                    BitFieldSitePermission.MANAGE_BRANDS |
+                    BitFieldSitePermission.VIEW_BRANDS,
+            },
+            {
+                title: "Waitlist",
+                url: "/dashboard/general/brand-waitlist",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.VIEW_SETTINGS,
+            },
+        ],
+    },
+    {
+        title: "Support",
+        url: "#",
+        icon: "LifeBuoy",
+        items: [
+            {
+                title: "User Support",
+                url: "/dashboard/general/support/user",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Brand Support",
+                url: "/dashboard/general/support/brand",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Disputes",
+                url: "/dashboard/general/support/disputes",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Tickets",
+                url: "/dashboard/general/tickets",
+                permissions:
+                    BitFieldSitePermission.MANAGE_FEEDBACK |
+                    BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+        ],
+    },
+    {
+        title: "Growth",
+        url: "#",
+        icon: "Megaphone",
+        items: [
+            {
+                title: "Bulk Email Campaigns",
+                url: "/dashboard/general/email-campaigns",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
+            {
+                title: "Bulk WhatsApp Messaging",
+                url: "/dashboard/general/whatsapp-messaging",
+                permissions:
+                    BitFieldSitePermission.MANAGE_CATEGORIES |
+                    BitFieldSitePermission.MANAGE_BRANDS,
+            },
+            {
+                title: "WhatsApp Notifications",
+                url: "/dashboard/general/whatsapp-notifications",
+                permissions:
+                    BitFieldSitePermission.VIEW_SETTINGS |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+            {
+                title: "Subscribers",
+                url: "/dashboard/general/subscribers",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.VIEW_SETTINGS,
+            },
+            {
+                title: "Coupons",
+                url: "/dashboard/general/coupons",
+                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
+            {
+                title: "Plans",
+                url: "/dashboard/general/plans",
+                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
+            },
         ],
     },
     {
@@ -224,72 +466,24 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_ORDERS |
                     BitFieldSitePermission.MANAGE_ORDERS,
             },
+            {
+                title: "Compliance Report",
+                url: "/dashboard/general/monthly-compliance",
+                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
+            },
         ],
     },
     {
-        title: "Store Operations",
+        title: "Platform Settings",
         url: "#",
         icon: "Settings2",
         items: [
-            {
-                title: "Advertisements",
-                url: "/dashboard/general/advertisements",
-                permissions: BitFieldSitePermission.MANAGE_CONTENT,
-            },
-            {
-                title: "Brand Products",
-                url: "/dashboard/general/brand-products",
-                permissions: BitFieldSitePermission.MANAGE_CONTENT,
-            },
-            {
-                title: "Product Reviews",
-                url: "/dashboard/general/reviews",
-                permissions: BitFieldSitePermission.MANAGE_PRODUCTS,
-            },
-            {
-                title: "Shop by Category",
-                url: "/dashboard/general/shop-by-category",
-                permissions: BitFieldSitePermission.MANAGE_CONTENT,
-            },
-            {
-                title: "Users",
-                url: "/dashboard/general/users",
-                permissions:
-                    BitFieldSitePermission.VIEW_USERS |
-                    BitFieldSitePermission.MANAGE_USERS,
-            },
-            {
-                title: "Brands",
-                url: "/dashboard/general/brands",
-                permissions:
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_BRANDS,
-            },
-            {
-                title: "Brands Info",
-                url: "/dashboard/general/brands/verifications",
-                permissions:
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_BRANDS,
-            },
             {
                 title: "Roles",
                 url: "/dashboard/general/roles",
                 permissions:
                     BitFieldSitePermission.MANAGE_ROLES |
                     BitFieldSitePermission.VIEW_ROLES,
-            },
-            {
-                title: "Tags",
-                url: "/dashboard/general/tags",
-                permissions: BitFieldSitePermission.MANAGE_BLOG_TAGS,
-            },
-            {
-                title: "Tickets",
-                url: "/dashboard/general/tickets",
-                permissions:
-                    BitFieldSitePermission.MANAGE_FEEDBACK |
-                    BitFieldSitePermission.VIEW_FEEDBACK,
             },
             {
                 title: "Packaging Delta Rules",
@@ -320,193 +514,6 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |
                     BitFieldSitePermission.VIEW_FEEDBACK,
-            },
-            {
-                title: "Subscribers",
-                url: "/dashboard/general/subscribers",
-                permissions:
-                    BitFieldSitePermission.MANAGE_SETTINGS |
-                    BitFieldSitePermission.VIEW_SETTINGS,
-            },
-            {
-                title: "Waitlist",
-                url: "/dashboard/general/brand-waitlist",
-                permissions:
-                    BitFieldSitePermission.MANAGE_SETTINGS |
-                    BitFieldSitePermission.VIEW_SETTINGS,
-            },
-            {
-                title: "Plans",
-                url: "/dashboard/general/plans",
-                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-            {
-                title: "Coupons",
-                url: "/dashboard/general/coupons",
-                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-        ],
-    },
-    {
-        title: "Support",
-        url: "#",
-        icon: "LifeBuoy",
-        items: [
-            {
-                title: "User Support",
-                url: "/dashboard/general/support/user",
-                permissions:
-                    BitFieldSitePermission.MANAGE_FEEDBACK |
-                    BitFieldSitePermission.VIEW_FEEDBACK,
-            },
-            {
-                title: "Brand Support",
-                url: "/dashboard/general/support/brand",
-                permissions:
-                    BitFieldSitePermission.MANAGE_FEEDBACK |
-                    BitFieldSitePermission.VIEW_FEEDBACK,
-            },
-            {
-                title: "Disputes",
-                url: "/dashboard/general/support/disputes",
-                permissions:
-                    BitFieldSitePermission.MANAGE_FEEDBACK |
-                    BitFieldSitePermission.VIEW_FEEDBACK,
-            },
-        ],
-    },
-    {
-        title: "Products",
-        url: "#",
-        icon: "Package",
-        items: [
-            {
-                title: "Category Requests",
-                url: "/dashboard/general/category-requests",
-                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
-            },
-            {
-                title: "Catalog",
-                url: "/dashboard/general/product-catalogue",
-                permissions:
-                    BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.VIEW_PRODUCTS,
-            },
-            {
-                title: "Categories",
-                url: "/dashboard/general/categories",
-                permissions:
-                    BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_CATEGORIES,
-            },
-            {
-                title: "Subcategories",
-                url: "/dashboard/general/sub-categories",
-                permissions:
-                    BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_CATEGORIES,
-            },
-            {
-                title: "Product Types",
-                url: "/dashboard/general/product-types",
-                permissions:
-                    BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_CATEGORIES,
-            },
-            {
-                title: "Products",
-                url: "/dashboard/general/products",
-                permissions:
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_PRODUCTS,
-            },
-            {
-                title: "Most Popular Products",
-                url: "/dashboard/general/most-popular-products",
-                permissions:
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_PRODUCTS,
-            },
-            {
-                title: "Orders",
-                url: "/dashboard/general/orders",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Orders",
-                url: "/dashboard/general/corporate-orders",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Order Settings",
-                url: "/dashboard/general/corporate-orders/settings",
-                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-            {
-                title: "Order Ops",
-                url: "/dashboard/general/order-ops",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "RTO Requests",
-                url: "/dashboard/general/return-replace",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Order Intent",
-                url: "/dashboard/general/order-intent",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-        ],
-    },
-    {
-        title: "Marketing",
-        url: "#",
-        icon: "Megaphone",
-        items: [
-            {
-                title: "Bulk Email Campaigns",
-                url: "/dashboard/general/email-campaigns",
-                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
-            },
-            {
-                title: "Bulk WhatsApp Messaging",
-                url: "/dashboard/general/whatsapp-messaging",
-                permissions:
-                    BitFieldSitePermission.MANAGE_CATEGORIES |
-                    BitFieldSitePermission.MANAGE_BRANDS,
-            },
-            {
-                title: "WhatsApp Notifications",
-                url: "/dashboard/general/whatsapp-notifications",
-                permissions:
-                    BitFieldSitePermission.VIEW_SETTINGS |
-                    BitFieldSitePermission.MANAGE_SETTINGS,
-            },
-        ],
-    },
-    {
-        title: "Accounts",
-        url: "#",
-        icon: "DollarSign",
-        items: [
-            {
-                title: "Compliance Report",
-                url: "/dashboard/general/monthly-compliance",
-                permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
             },
         ],
     },

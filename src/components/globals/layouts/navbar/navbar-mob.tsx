@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { Button } from "@/components/ui/button-general";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
@@ -561,12 +562,37 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                             </button>
                         </div>
                     </div>
-                ) : (
-                    // NOT LOGGED IN VIEW (Keep existing Grid/List for guests)
-                    <div className={cn("space-y-6", "mt-5")}>
-                        <ul
-                            className={cn(
-                                "grid grid-cols-2 items-center gap-4"
+	                ) : (
+	                    // NOT LOGGED IN VIEW (Keep existing Grid/List for guests)
+	                    <div className={cn("space-y-6", "mt-5")}>
+	                        <div className="grid grid-cols-2 gap-3">
+	                            <Button
+	                                className="h-11 rounded-full border border-[#d4af37] bg-transparent text-xs font-bold uppercase tracking-[0.08em] text-[#a68a4a] hover:bg-[#d4af37]/5"
+	                                asChild
+	                            >
+	                                <Link
+	                                    href="/auth/signin"
+	                                    onClick={() => setIsMenuOpen(false)}
+	                                >
+	                                    Login
+	                                </Link>
+	                            </Button>
+	                            <Button
+	                                className="h-11 rounded-full bg-[#2f3720] text-xs font-bold uppercase tracking-[0.08em] text-white hover:bg-[#252c18]"
+	                                asChild
+	                            >
+	                                <Link
+	                                    href="/auth/signup"
+	                                    onClick={() => setIsMenuOpen(false)}
+	                                >
+	                                    Sign Up
+	                                </Link>
+	                            </Button>
+	                        </div>
+
+	                        <ul
+	                            className={cn(
+	                                "grid grid-cols-2 items-center gap-4"
                             )}
                             ref={navListRef}
                         >

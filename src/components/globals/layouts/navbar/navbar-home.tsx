@@ -194,9 +194,8 @@ export function NavbarHome({
             enabled: !!isSignedIn,
         });
 
-    const isAuthSettled = isLoaded && !isUserFetching;
-    const showUserActions = isAuthSettled && !!user;
-    const showGuestActions = isAuthSettled && !user;
+    const showUserActions = isLoaded && !!isSignedIn && !!user;
+    const showGuestActions = isLoaded && !isSignedIn;
 
     const [
         { data: categories, isPending: isCategoriesFetching },
@@ -1044,14 +1043,31 @@ export function NavbarHome({
                                     <Link href="/auth/signin">Login</Link>
                                 </Button>
 
+                                <Button
+                                    className="hidden h-10 rounded-full bg-[#2f3720] px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] md:inline-flex"
+                                    size="sm"
+                                    asChild
+                                >
+                                    <Link href="/auth/signup">Sign Up</Link>
+                                </Button>
+
                                 <div className="flex items-center md:hidden">
-                                    <Button
-                                        className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] sm:px-5"
-                                        size="sm"
-                                        asChild
-                                    >
-                                        <Link href="/auth/signin">Login</Link>
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] sm:px-5"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <Link href="/auth/signin">Login</Link>
+                                        </Button>
+                                        <Button
+                                            className="h-8 rounded-full bg-[#2f3720] px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] sm:px-5"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <Link href="/auth/signup">Sign Up</Link>
+                                        </Button>
+                                    </div>
                                 </div>
                             </>
                         ) : (
