@@ -1,6 +1,7 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { Button } from "@/components/ui/button-general";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { useNavbarStore } from "@/lib/store";
@@ -24,6 +25,7 @@ import {
     HelpCircle,
     LayoutDashboard,
     LineChart,
+    Bell,
     Lock,
     LogOut,
     MapPin,
@@ -291,6 +293,10 @@ export function NavbarMob({ className, ...props }: GenericProps) {
         { userId: user?.id ?? "" },
         { enabled: !!user?.id }
     );
+    const { data: unreadNotifications } =
+        trpc.general.notifications.unreadCount.useQuery(undefined, {
+            enabled: !!user?.id,
+        });
 
     const cartCount =
         userCart?.filter(
@@ -376,13 +382,19 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
-                                    <button
-                                        className="text-gray-400 hover:text-gray-900"
-                                        disabled={isLoggingOut}
-                                        onClick={() => handleLogout()}
-                                    >
-                                        <LogOut className="size-5" />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <UserNotificationMenu
+                                            className="border border-gray-200 bg-white text-gray-700 hover:border-[#d7e6f5] hover:bg-[#f7fbff]"
+                                            align="end"
+                                        />
+                                        <button
+                                            className="text-gray-400 hover:text-gray-900"
+                                            disabled={isLoggingOut}
+                                            onClick={() => handleLogout()}
+                                        >
+                                            <LogOut className="size-5" />
+                                        </button>
+                                    </div>
                                     <Link
                                         href="/personal-details"
                                         onClick={() => setIsMenuOpen(false)}
@@ -398,6 +410,17 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                         <div className="grid grid-cols-2 gap-4">
                             {!isAuthorized ? (
                                 <>
+                                    <SummaryCard
+                                        icon={Bell}
+                                        title="Notifications"
+                                        count={String(unreadNotifications ?? 0)}
+                                        subtitle={
+                                            (unreadNotifications ?? 0) > 0
+                                                ? "Unread updates"
+                                                : "You're all caught up"
+                                        }
+                                        href="/profile/notifications"
+                                    />
                                     <SummaryCard
                                         icon={Heart}
                                         title="Wishlist"

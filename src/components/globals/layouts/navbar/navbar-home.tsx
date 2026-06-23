@@ -21,6 +21,7 @@ import {
     NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { ProductSearch } from "@/components/ui/product-search";
+import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -1000,6 +1001,8 @@ export function NavbarHome({
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
+
+                                    <UserNotificationMenu />
 
                                     <NavbarActionButton
                                         href="/profile/wishlist"
