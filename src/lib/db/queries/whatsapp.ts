@@ -1,4 +1,4 @@
-import { desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "..";
 import { whatsappMessageLogs } from "../schema";
 
@@ -28,6 +28,28 @@ class WhatsAppMessageLogQuery {
             where: inArray(whatsappMessageLogs.sid, sids),
             orderBy: [desc(whatsappMessageLogs.sentAt)],
         });
+    }
+
+    async getLatestLogByTemplateIdentity({
+        phoneNumber,
+        templateKey,
+        templateName,
+    }: {
+        phoneNumber: string;
+        templateKey: string;
+        templateName: string;
+    }) {
+        const logs = await db.query.whatsappMessageLogs.findMany({
+            where: and(
+                eq(whatsappMessageLogs.phoneNumber, phoneNumber),
+                eq(whatsappMessageLogs.templateKey, templateKey),
+                eq(whatsappMessageLogs.templateName, templateName)
+            ),
+            orderBy: [desc(whatsappMessageLogs.sentAt)],
+            limit: 1,
+        });
+
+        return logs[0] ?? null;
     }
 
     async createLog(values: CreateWhatsAppMessageLog) {

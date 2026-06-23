@@ -1,6 +1,7 @@
 import { AuditHistoryPanel } from "@/components/dashboard/general/monitoring-sla/audit-history-panel";
 import {
     ProductActionPage,
+    ProductQcPanel,
     ProductReviewPage,
 } from "@/components/dashboard/general/products";
 import { SafeAdminImage } from "@/components/dashboard/general/safe-admin-image";
@@ -276,6 +277,8 @@ async function ProductReviewFetch({ params }: PageProps) {
                         <ProductReviewPage product={existingProduct} />
                     </CardContent>
                 </Card>
+
+                <ProductQcPanel product={existingProduct} />
 
                 {(existingProduct.verificationStatus === "pending" ||
                     existingProduct.verificationStatus === "approved") && (

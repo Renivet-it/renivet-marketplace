@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orders, orderShipments } from "@/lib/db/schema";
+import { sendOrderShipmentStatusWhatsApp } from "@/lib/whatsapp/order-status";
 import { and, eq, ne, isNotNull } from "drizzle-orm";
 
 const DELHIVERY_BASE_URL = process.env.DELHIVERY_BASE_URL!;
@@ -20,6 +21,12 @@ const DELHIVERY_TO_INTERNAL: Record<string, string> = {
     "Undelivered": "failed",
     "Cancelled": "cancelled",
 };
+
+function getLatestDelhiveryScan(data: any) {
+    const scans = data?.ShipmentData?.[0]?.Shipment?.Scans;
+    if (!Array.isArray(scans) || scans.length === 0) return null;
+    return scans[scans.length - 1]?.ScanDetail?.Scan?.trim() || null;
+}
 
 export async function GET() {
     try {
@@ -82,9 +89,7 @@ export async function GET() {
             }
 
             // Correct scan field
-            const lastScan = scans[scans.length - 1];
-            const delhiveryStatus =
-                lastScan?.ScanDetail?.Scan?.trim() || null;  // 👈 FIXED
+            const delhiveryStatus = getLatestDelhiveryScan(data);
 
             console.log("📌 Latest Scan (Correct):", delhiveryStatus);
 
@@ -131,6 +136,35 @@ export async function GET() {
             if (mappedStatus === "rto_delivered") {
                 console.log("📦 Marking ORDER as cancelled (RTO Delivered)");
                 await db.update(orders).set({ status: "cancelled" }).where(eq(orders.id, ship.orderId));
+            }
+
+            const shouldSendWhatsApp =
+                mappedStatus === "in_transit" ||
+                mappedStatus === "delivered" ||
+                (mappedStatus === "out_for_delivery" &&
+                    delhiveryStatus === "Out For Delivery");
+
+            if (shouldSendWhatsApp) {
+                const orderRecord = await db.query.orders.findFirst({
+                    where: eq(orders.id, ship.orderId),
+                    with: {
+                        user: true,
+                        address: true,
+                    },
+                });
+
+                if (orderRecord) {
+                    await sendOrderShipmentStatusWhatsApp({
+                        phone: orderRecord.user?.phone ?? orderRecord.address?.phone,
+                        customerName:
+                            [orderRecord.user?.firstName, orderRecord.user?.lastName]
+                                .filter(Boolean)
+                                .join(" ") || orderRecord.address?.fullName,
+                        orderId: orderRecord.id,
+                        shipmentStatus: mappedStatus,
+                        awbNumber: ship.awbNumber,
+                    });
+                }
             }
         }
 

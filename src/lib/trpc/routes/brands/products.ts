@@ -5,7 +5,6 @@ import {
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
-import { brandMediaItems } from "@/lib/db/schema";
 import {
     products,
     productSpecifications,
@@ -45,10 +44,9 @@ import {
     updateProductSchema,
     updateProductValueSchema,
 } from "@/lib/validations";
-import { InferenceClient } from "@huggingface/inference";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { and, eq, inArray, ne, or } from "drizzle-orm";
+import { and, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { hasPermission } from "../../../utils";
 
@@ -56,7 +54,12 @@ const token = process.env.HF_TOKEN;
 if (!token) {
     console.error("HF_TOKEN environment variable is not set");
 }
-const client = new InferenceClient(token);
+
+const catalogIssueSchema = z.enum([
+    "oos_but_live",
+    "stale_inventory",
+    "claim_mismatch",
+]);
 
 export const productsRouter = createTRPCRouter({
     getProducts: publicProcedure
@@ -77,6 +80,8 @@ export const productsRouter = createTRPCRouter({
                 isDeleted: productSchema.shape.isDeleted.optional(),
                 verificationStatus:
                     productSchema.shape.verificationStatus.optional(),
+                qcStatus: productSchema.shape.qcStatus.optional(),
+                catalogIssue: catalogIssueSchema.optional(),
                 sortBy: z
                     .enum(["price", "createdAt", "recommended", "best-sellers"])
                     .optional(),
@@ -186,6 +191,8 @@ export const productsRouter = createTRPCRouter({
                 isPublished: productSchema.shape.isPublished.optional(),
                 verificationStatus:
                     productSchema.shape.verificationStatus.optional(),
+                qcStatus: productSchema.shape.qcStatus.optional(),
+                catalogIssue: catalogIssueSchema.optional(),
                 sortBy: z
                     .enum(["price", "createdAt", "recommended", "best-sellers"])
                     .optional(),
@@ -222,6 +229,31 @@ export const productsRouter = createTRPCRouter({
 
             const data = await queries.products.getAllCatalogueProducts(input);
             return data;
+        }),
+    getCatalogQcSummary: publicProcedure
+        .input(
+            z.object({
+                search: z.string().optional(),
+                brandIds: z.array(productSchema.shape.brandId).optional(),
+                verificationStatus:
+                    productSchema.shape.verificationStatus.optional(),
+                qcStatus: productSchema.shape.qcStatus.optional(),
+                catalogIssue: catalogIssueSchema.optional(),
+                productImage: productSchema.shape.productImageFilter,
+                productVisiblity: productSchema.shape.productVisiblityFilter,
+            })
+        )
+        .query(async ({ input, ctx }) => {
+            const { queries } = ctx;
+            return queries.products.getCatalogQcSummary({
+                search: input.search,
+                brandIds: input.brandIds,
+                verificationStatus: input.verificationStatus,
+                qcStatus: input.qcStatus,
+                catalogIssue: input.catalogIssue,
+                productImage: input.productImage,
+                productVisiblity: input.productVisiblity,
+            });
         }),
     getProduct: publicProcedure
         .input(
@@ -559,6 +591,7 @@ export const productsRouter = createTRPCRouter({
             });
             // Process updates & inserts separately
             const updatePromises = [];
+            const touchedExistingProductIds = new Set<string>();
             const newProducts: any[] = [];
 
             for (const product of input) {
@@ -676,6 +709,7 @@ export const productsRouter = createTRPCRouter({
                 const existingProductId = existingSKUMap.get(product.sku);
 
                 if (existingProductId) {
+                    touchedExistingProductIds.add(existingProductId);
                     // If product exists, update it
                     updatePromises.push(
                         ctx.db
@@ -977,6 +1011,22 @@ export const productsRouter = createTRPCRouter({
                         .insert(productSpecifications)
                         .values(specificationInserts);
                 }
+            }
+
+            if (touchedExistingProductIds.size > 0) {
+                await queries.products.refreshProductAvailabilityAndQc(
+                    Array.from(touchedExistingProductIds),
+                    "manual",
+                    user.id
+                );
+            }
+
+            if (newData.length > 0) {
+                await queries.products.refreshProductAvailabilityAndQc(
+                    newData.map((product) => product.id),
+                    "manual",
+                    user.id
+                );
             }
 
             // return data;
@@ -1457,6 +1507,103 @@ export const productsRouter = createTRPCRouter({
             });
 
             return data;
+        }),
+    updateCatalogQcReview: protectedProcedure
+        .input(
+            z.object({
+                productId: productSchema.shape.id,
+                action: z.enum([
+                    "reviewed",
+                    "ignored",
+                    "escalate_catalog",
+                    "escalate_kp",
+                ]),
+            })
+        )
+        .use(
+            isTRPCAuth(
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
+                "all",
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { productId, action } = input;
+            const { queries, user, db } = ctx;
+
+            const existingProduct = await queries.products.getProduct({
+                productId,
+            });
+            if (!existingProduct) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+            }
+
+            const updated = await db
+                .update(products)
+                .set({
+                    qcReviewedAt: new Date(),
+                    qcReviewedBy: user.id,
+                    qcOwner:
+                        action === "escalate_kp"
+                            ? "kp"
+                            : action === "escalate_catalog"
+                              ? "catalog_intern"
+                              : existingProduct.qcStatus === "pass"
+                                ? "system"
+                                : existingProduct.qcOwner,
+                    qcEscalatedTo:
+                        action === "escalate_kp"
+                            ? "kp"
+                            : action === "escalate_catalog"
+                              ? "catalog_intern"
+                              : null,
+                    updatedAt: new Date(),
+                })
+                .where(eq(products.id, productId))
+                .returning()
+                .then((res) => res[0]);
+
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: "product_qc_review_updated",
+                entityType: "product",
+                entityId: productId,
+                beforeValue: {
+                    qcReviewedAt: existingProduct.qcReviewedAt,
+                    qcReviewedBy: existingProduct.qcReviewedBy,
+                    qcOwner: existingProduct.qcOwner,
+                    qcEscalatedTo: existingProduct.qcEscalatedTo,
+                },
+                afterValue: {
+                    qcReviewedAt: updated?.qcReviewedAt ?? null,
+                    qcReviewedBy: updated?.qcReviewedBy ?? null,
+                    qcOwner: updated?.qcOwner ?? null,
+                    qcEscalatedTo: updated?.qcEscalatedTo ?? null,
+                    action,
+                },
+                reason: "catalog_qc_review_updated",
+            });
+
+            if (action === "escalate_catalog" || action === "escalate_kp") {
+                await createOperationalAlert({
+                    actorId: user.id,
+                    type: "catalog_qc_escalation",
+                    severity: action === "escalate_kp" ? "critical" : "warning",
+                    entityType: "product",
+                    entityId: productId,
+                    title: "Catalog QC escalated",
+                    message: `${existingProduct.title} was escalated for catalog QC follow-up.`,
+                    ownerRole:
+                        action === "escalate_kp" ? "kp" : "catalog_intern",
+                    dedupeKey: `catalog-qc-escalation:${productId}:${action}`,
+                });
+            }
+
+            return queries.products.getProduct({ productId });
         }),
     deleteProduct: protectedProcedure
         .input(z.object({ productId: productSchema.shape.id }))

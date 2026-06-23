@@ -38,6 +38,18 @@ export async function sendWhatsAppMessage({
             contentSid: "HXaf68cfd30d177fe5090b89ef1dfc0f48",
             parameterCount: 2, // name, orderId
         },
+        order_shipped_renivet: {
+            contentSid: "HX31498bcca08b9189e980acacfc111612",
+            parameterCount: 4, // name, orderId, awb, trackingUrl
+        },
+        order_out_for_delivery_renivet: {
+            contentSid: "HXe6dbd76be555e01b7a7e528e90f58d81",
+            parameterCount: 4, // name, orderId, awb, trackingUrl
+        },
+        order_delivered_renivet: {
+            contentSid: "HXd3cff6d4a7ad10bd19572685d840a04e",
+            parameterCount: 2, // name, orderId
+        },
 
         return_replace_admin: {
             contentSid: "HX25bb65cc2fcac32492586d10c86bd5d6",

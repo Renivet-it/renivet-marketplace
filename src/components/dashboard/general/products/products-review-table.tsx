@@ -85,6 +85,9 @@ export type TableProduct = ProductWithBrand & {
 
 type ImageFilter = "with" | "without" | "all";
 type VisiblityFilter = "private" | "public" | "all";
+type QcFilter = "all" | "pass" | "warning" | "critical";
+
+const STALE_INVENTORY_DAYS = 14;
 
 const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     {
@@ -112,12 +115,12 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "title",
-        header: () => <div className="min-w-[22rem]">Title</div>,
+        header: () => <div className="min-w-[16rem] text-xs">Title</div>,
         enableHiding: false,
         cell: ({ row }) => (
-            <div className="min-w-[22rem] max-w-[30rem] px-2 py-1">
+            <div className="min-w-[16rem] max-w-[20rem] px-1 py-1">
                 <p
-                    className="line-clamp-2 break-words text-sm font-medium leading-snug text-slate-900"
+                    className="line-clamp-2 break-words text-[13px] font-medium leading-snug text-slate-900"
                     title={row.original.title}
                 >
                     {row.original.title}
@@ -127,15 +130,18 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "brandName",
-        header: "Brand",
+        header: () => <span className="text-xs">Brand</span>,
+        cell: ({ row }) => (
+            <span className="text-[13px] text-slate-800">{row.original.brandName}</span>
+        ),
     },
     {
         accessorKey: "nativeSku",
-        header: "Native SKU",
+        header: () => <span className="text-xs">Native SKU</span>,
         cell: ({ row }) => {
             const data = row.original;
             return (
-                <span className="whitespace-nowrap font-mono text-xs text-slate-600">
+                <span className="whitespace-nowrap font-mono text-[11px] text-slate-600">
                     {data.nativeSku || "N/A"}
                 </span>
             );
@@ -143,7 +149,7 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "price",
-        header: "Price",
+        header: () => <span className="text-xs">Price</span>,
         cell: ({ row }) => {
             const data = row.original;
 
@@ -154,7 +160,7 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
                 );
 
                 return (
-                    <span className="whitespace-nowrap font-semibold text-slate-950">
+                    <span className="whitespace-nowrap text-[13px] font-semibold text-slate-950">
                         {price}
                     </span>
                 );
@@ -174,13 +180,13 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
 
             if (minPriceRaw === maxPriceRaw) {
                 return (
-                    <span className="whitespace-nowrap font-semibold text-slate-950">
+                    <span className="whitespace-nowrap text-[13px] font-semibold text-slate-950">
                         {minPrice}
                     </span>
                 );
             }
             return (
-                <span className="whitespace-nowrap font-semibold text-slate-950">
+                <span className="whitespace-nowrap text-[13px] font-semibold text-slate-950">
                     {minPrice} - {maxPrice}
                 </span>
             );
@@ -188,11 +194,14 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "stock",
-        header: "Stock",
+        header: () => <span className="text-xs">Stock</span>,
+        cell: ({ row }) => (
+            <span className="text-[13px]">{row.original.stock}</span>
+        ),
     },
     {
         accessorKey: "category",
-        header: "Category",
+        header: () => <span className="text-xs">Category</span>,
         cell: ({ row }) => {
             const data = row.original;
             return (
@@ -225,7 +234,7 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "variants",
-        header: "Variants",
+        header: () => <span className="text-xs">Variants</span>,
         cell: ({ row }) => {
             const data = row.original;
 
@@ -334,15 +343,15 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "isAvailable",
-        header: "Available",
+        header: () => <span className="text-xs">Available</span>,
         cell: ({ row }) => {
             const data = row.original;
-            return data.isAvailable ? "Yes" : "No";
+            return <span className="text-[13px]">{data.isAvailable ? "Yes" : "No"}</span>;
         },
     },
     {
         accessorKey: "verificationStatus",
-        header: "Status",
+        header: () => <span className="text-xs">Status</span>,
         cell: ({ row }) => {
             const data = row.original;
 
@@ -355,7 +364,7 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
                               ? "destructive"
                               : "default"
                     }
-                    className="capitalize"
+                    className="text-[11px] capitalize"
                 >
                     {convertValueToLabel(data.verificationStatus)}
                 </Badge>
@@ -363,18 +372,41 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
         },
     },
     {
+        accessorKey: "qcStatus",
+        header: () => <span className="text-xs">QC</span>,
+        cell: ({ row }) => {
+            const data = row.original;
+
+            return (
+                <Badge
+                    variant={
+                        data.qcStatus === "critical"
+                            ? "destructive"
+                            : data.qcStatus === "warning"
+                              ? "default"
+                              : "secondary"
+                    }
+                    className="text-[11px] capitalize"
+                >
+                    {convertValueToLabel(data.qcStatus)}
+                </Badge>
+            );
+        },
+    },
+    {
         accessorKey: "visibility",
-        header: "Visibility",
+        header: () => <span className="text-xs">Visibility</span>,
         cell: ({ row }) => {
             const data = row.original;
             return (
                 <Badge
                     variant={data.visibility ? "secondary" : "outline"}
-                    className={
+                    className={cn(
+                        "text-[11px]",
                         data.visibility
                             ? "bg-sky-100 text-sky-700 hover:bg-sky-100/90"
                             : "bg-slate-100 text-slate-700 hover:bg-slate-100/90"
-                    }
+                    )}
                 >
                     {data.visibility ? "Public" : "Private"}
                 </Badge>
@@ -383,17 +415,21 @@ const getColumns = (isBrandScoped: boolean): ColumnDef<TableProduct>[] => [
     },
     {
         accessorKey: "createdAt",
-        header: "Created At",
+        header: () => <span className="text-xs">Created At</span>,
         cell: ({ row }) => {
             const data = row.original;
-            return format(new Date(data.createdAt), "MMM dd, yyyy");
+            return (
+                <span className="whitespace-nowrap text-[13px]">
+                    {format(new Date(data.createdAt), "MMM dd, yyyy")}
+                </span>
+            );
         },
     },
 
     {
         id: "actions",
         enableHiding: false,
-        header: () => <div className="text-right">Actions</div>,
+        header: () => <div className="text-right text-xs">Actions</div>,
         cell: ({ row }) => {
             const data = row.original;
             return (
@@ -529,6 +565,15 @@ export function ProductsReviewTable({
             "rejected",
         ] as const).withDefault("all")
     );
+    const [qcStatusFilter, setQcStatusFilter] = useQueryState(
+        "qcStatus",
+        parseAsStringLiteral([
+            "all",
+            "pass",
+            "warning",
+            "critical",
+        ] as const).withDefault("all")
+    );
 
     const [sorting, setSorting] = useState<SortingState>([]);
     const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -563,6 +608,7 @@ export function ProductsReviewTable({
             search,
             verificationStatus:
                 verificationStatus === "all" ? undefined : verificationStatus,
+            qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
             productImage,
             productVisiblity,
             brandIds: isBrandScoped
@@ -573,12 +619,29 @@ export function ProductsReviewTable({
         },
         { initialData: queryInitialData }
     );
-    const dataRaw = queryData?.data ?? [];
+    const { data: qcSummary } = trpc.brands.products.getCatalogQcSummary.useQuery(
+        {
+            search: search || undefined,
+            brandIds: isBrandScoped
+                ? [brandId ?? ""]
+                : brandIds.length > 0
+                  ? brandIds
+                  : undefined,
+            verificationStatus:
+                verificationStatus === "all" ? undefined : verificationStatus,
+            qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
+            productImage,
+            productVisiblity,
+        },
+        {
+            staleTime: 30_000,
+        }
+    );
     const count = queryData?.count ?? 0;
 
     const data = useMemo(
         () =>
-            dataRaw.map((x) => ({
+            (queryData?.data ?? []).map((x) => ({
                 ...x,
                 stock: x.productHasVariants
                     ? x.variants.reduce((acc, curr) => acc + curr.quantity, 0)
@@ -586,8 +649,56 @@ export function ProductsReviewTable({
                 brandName: x.brand.name,
                 visibility: x.isPublished,
             })),
-        [dataRaw]
+        [queryData?.data]
     );
+
+    const visibleSummary = useMemo(() => {
+        const now = Date.now();
+        const avgQcScore =
+            data.length > 0
+                ? Math.round(
+                      data.reduce((sum, product) => sum + (product.qcScore ?? 0), 0) /
+                          data.length
+                  )
+                : 0;
+
+        return {
+            avgQcScore,
+            criticalCount: data.filter((product) => product.qcStatus === "critical")
+                .length,
+            warningCount: data.filter((product) => product.qcStatus === "warning")
+                .length,
+            oosAvailableCount: data.filter(
+                (product) => product.isAvailable && product.stock <= 0
+            ).length,
+            staleInventoryCount: data.filter((product) => {
+                const reference = product.inventoryLastSyncedAt ?? product.updatedAt;
+                if (!reference) return false;
+                const ageDays = Math.floor(
+                    (now - new Date(reference).getTime()) / (1000 * 60 * 60 * 24)
+                );
+                return ageDays >= STALE_INVENTORY_DAYS;
+            }).length,
+            claimMismatchCount: data.filter((product) =>
+                (product.qcFindings ?? []).some((finding) =>
+                    ["claim_scope_mismatch", "claim_without_brand_scope"].includes(
+                        finding.code
+                    )
+                )
+            ).length,
+        };
+    }, [data]);
+
+    const summary = qcSummary
+        ? {
+              avgQcScore: qcSummary.avgQcScore,
+              criticalCount: qcSummary.criticalCount,
+              warningCount: qcSummary.warningCount,
+              oosAvailableCount: qcSummary.oosAvailableCount,
+              staleInventoryCount: qcSummary.staleInventoryCount,
+              claimMismatchCount: qcSummary.claimMismatchCount,
+          }
+        : visibleSummary;
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
     const tableColumns = useMemo(
@@ -622,6 +733,7 @@ export function ProductsReviewTable({
         table.resetColumnFilters();
         void setSearch("");
         void setVerificationStatus("all");
+        void setQcStatusFilter("all");
         void setImageFilter("all");
         void setVisiblityFilter("all");
         if (!isBrandScoped) void setBrandIds([]);
@@ -643,13 +755,63 @@ export function ProductsReviewTable({
 
     return (
         <div className="w-full rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="grid gap-3 border-b border-slate-200 bg-slate-50/60 p-4 md:grid-cols-2 xl:grid-cols-6">
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Avg QC Score
+                    </p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">
+                        {summary.avgQcScore}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-red-200 bg-red-50/80 p-3">
+                    <p className="text-xs uppercase tracking-wide text-red-700">
+                        Critical
+                    </p>
+                    <p className="mt-1 text-xl font-semibold text-red-800">
+                        {summary.criticalCount}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-amber-200 bg-amber-50/80 p-3">
+                    <p className="text-xs uppercase tracking-wide text-amber-700">
+                        Warnings
+                    </p>
+                    <p className="mt-1 text-xl font-semibold text-amber-800">
+                        {summary.warningCount}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        OOS But Live
+                    </p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">
+                        {summary.oosAvailableCount}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Stale Inventory
+                    </p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">
+                        {summary.staleInventoryCount}
+                    </p>
+                </div>
+                <div className="rounded-lg border border-slate-200 bg-white p-3">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                        Claim Mismatch
+                    </p>
+                    <p className="mt-1 text-xl font-semibold text-slate-950">
+                        {summary.claimMismatchCount}
+                    </p>
+                </div>
+            </div>
             <div className="border-b border-slate-200 bg-slate-50/70 p-4">
                 <div
                     className={cn(
                         "grid gap-3 md:grid-cols-2",
                         isBrandScoped
-                            ? "xl:grid-cols-[minmax(22rem,1.6fr)_12rem_12rem_12rem_auto]"
-                            : "xl:grid-cols-[minmax(20rem,1.5fr)_12rem_12rem_12rem_14rem_auto]"
+                            ? "xl:grid-cols-[minmax(18rem,1.5fr)_11rem_11rem_11rem_11rem_auto]"
+                            : "xl:grid-cols-[minmax(18rem,1.35fr)_11rem_11rem_11rem_11rem_14rem_auto]"
                     )}
                 >
                     <Input
@@ -716,6 +878,22 @@ export function ProductsReviewTable({
                                 Without Image
                             </SelectItem>
                             <SelectItem value="all">All</SelectItem>
+                        </SelectContent>
+                    </Select>
+                    <Select
+                        value={qcStatusFilter}
+                        onValueChange={(value: QcFilter) =>
+                            setQcStatusFilter(value)
+                        }
+                    >
+                        <SelectTrigger className="bg-white capitalize">
+                            <SelectValue placeholder="Filter by QC" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">All QC</SelectItem>
+                            <SelectItem value="pass">Pass</SelectItem>
+                            <SelectItem value="warning">Warning</SelectItem>
+                            <SelectItem value="critical">Critical</SelectItem>
                         </SelectContent>
                     </Select>
                     <Select
@@ -843,7 +1021,7 @@ export function ProductsReviewTable({
                 <DataTableViewOptions table={table} />
             </div>
 
-            <div className="overflow-hidden">
+            <div className="overflow-x-auto">
                 <DataTable
                     columns={tableColumns}
                     table={table}

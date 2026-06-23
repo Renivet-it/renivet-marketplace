@@ -1380,13 +1380,13 @@ export function ProductManageForm({
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>
-                                                    Harmonized System (HS) code
+                                                    Harmonized System (HSN) code
                                                 </FormLabel>
 
                                                 <FormControl>
                                                     <Input
                                                         {...field}
-                                                        placeholder="Add HS code"
+                                                        placeholder="Add HSN code"
                                                         className="h-9"
                                                         value={
                                                             field.value ?? ""

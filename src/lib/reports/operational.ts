@@ -72,7 +72,7 @@ export interface OperationalReportListResult {
     total: number;
 }
 
-export interface OperationalCsvInput extends OperationalReportFilters {}
+export type OperationalCsvInput = OperationalReportFilters;
 
 export interface OperationalCsvOutput {
     filename: string;
@@ -678,6 +678,7 @@ export async function getOperationalReportList(input: OperationalReportListInput
     };
 }
 async function getCatalogDetails(filters: OperationalCsvInput) {
+    const stockExpr = getProductStockExpression();
     const rows = await db
         .select({
             store: brands.name,
@@ -687,9 +688,16 @@ async function getCatalogDetails(filters: OperationalCsvInput) {
             subCategory: subCategories.name,
             productType: productTypes.name,
             verificationStatus: products.verificationStatus,
+            qcStatus: products.qcStatus,
+            qcScore: products.qcScore,
             isPublished: products.isPublished,
             isActive: products.isActive,
-            stock: sql<number>`COALESCE(${products.quantity}, 0)`,
+            isAvailable: products.isAvailable,
+            stock: stockExpr,
+            claimMismatch:
+                sql<boolean>`${products.qcFindings}::text LIKE '%claim_scope_mismatch%' OR ${products.qcFindings}::text LIKE '%claim_without_brand_scope%'`,
+            inventoryAgeDays:
+                sql<number>`DATE_PART('day', NOW() - COALESCE(${products.inventoryLastSyncedAt}, ${products.updatedAt}))`,
             updatedAt: products.updatedAt,
         })
         .from(products)
@@ -715,9 +723,15 @@ async function getCatalogDetails(filters: OperationalCsvInput) {
         subCategory: row.subCategory ?? "NA",
         productType: row.productType ?? "NA",
         verificationStatus: row.verificationStatus,
+        qcStatus: row.qcStatus,
+        qcScore: toNumber(row.qcScore),
         isPublished: row.isPublished,
         isActive: row.isActive,
+        isAvailable: row.isAvailable,
         stock: toNumber(row.stock),
+        oosButAvailable: Boolean(row.isAvailable) && toNumber(row.stock) <= 0,
+        claimMismatch: Boolean(row.claimMismatch),
+        inventoryAgeDays: toNumber(row.inventoryAgeDays),
         updatedAt: row.updatedAt ? formatDateTime(new Date(row.updatedAt)) : "NA",
     }));
 }
@@ -933,7 +947,7 @@ function getFaqDetails() {
             definition:
                 "Catalog report tracks listing status, publish state, and verification health for each SKU.",
             recommendedUse:
-                "Use daily to find rejected or unpublished products before campaigns.",
+                "Use daily to find QC exceptions, stale inventory, and risky live listings before campaigns.",
         },
         {
             section: "Inventory",
@@ -984,9 +998,15 @@ export async function getOperationalCsvData(
                 "subCategory",
                 "productType",
                 "verificationStatus",
+                "qcStatus",
+                "qcScore",
                 "isPublished",
                 "isActive",
+                "isAvailable",
                 "stock",
+                "oosButAvailable",
+                "claimMismatch",
+                "inventoryAgeDays",
                 "updatedAt",
             ],
             rows,
