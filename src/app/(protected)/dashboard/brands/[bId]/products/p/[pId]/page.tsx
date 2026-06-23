@@ -88,7 +88,10 @@ async function ProductEditFetch({ params }: PageProps) {
 
     return (
         <div className="space-y-6">
-            <ProductQcPanel product={existingProduct} />
+            <ProductQcPanel
+                product={existingProduct}
+                showEscalateToKp={false}
+            />
 
             <ProductManageForm
                 brandId={bId}

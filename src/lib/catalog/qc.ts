@@ -203,11 +203,11 @@ export function evaluateCatalogQc(product: ProductWithBrand): CatalogQcSnapshot 
             code: "missing_hs_code",
             severity: "warning",
             field: "hsCode",
-            title: "HS code is missing",
+            title: "HSN code is missing",
             description:
-                "The product does not have an HS code for operational and classification workflows.",
+                "The product does not have an HSN code for operational and classification workflows.",
             suggestion:
-                "Add the correct HS code for the product type.",
+                "Add the correct HSN code for the product type.",
         });
     }
 

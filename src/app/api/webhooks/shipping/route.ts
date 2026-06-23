@@ -7,6 +7,7 @@ import { analytics, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { OrderDelivered } from "@/lib/resend/emails";
 import { AppError, CResponse, handleError } from "@/lib/utils";
+import { sendOrderShipmentStatusWhatsApp } from "@/lib/whatsapp/order-status";
 import { and, eq } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { z } from "zod";
@@ -135,6 +136,8 @@ async function handleDefaultShipmentFlow(
         with: {
             order: {
                 with: {
+                    address: true,
+                    user: true,
                     items: {
                         with: {
                             product: true,
@@ -224,6 +227,17 @@ async function handleDefaultShipmentFlow(
                 }),
             });
         }
+
+        await sendOrderShipmentStatusWhatsApp({
+            phone: shipment.order.user?.phone ?? shipment.order.address?.phone,
+            customerName:
+                [shipment.order.user?.firstName, shipment.order.user?.lastName]
+                    .filter(Boolean)
+                    .join(" ") || shipment.order.address?.fullName,
+            orderId: shipment.order.id,
+            shipmentStatus: "delivered",
+            awbNumber: shipment.awbNumber,
+        });
     } else if (newStatus === "in_transit" || newStatus === "out_for_delivery") {
         await orderQueries.updateOrderStatus(shipment.order.id, {
             status: "shipped",
@@ -231,5 +245,19 @@ async function handleDefaultShipmentFlow(
             paymentMethod: shipment.order.paymentMethod,
             paymentStatus: shipment.order.paymentStatus,
         });
+
+        if (newStatus === "in_transit") {
+            await sendOrderShipmentStatusWhatsApp({
+                phone:
+                    shipment.order.user?.phone ?? shipment.order.address?.phone,
+                customerName:
+                    [shipment.order.user?.firstName, shipment.order.user?.lastName]
+                        .filter(Boolean)
+                        .join(" ") || shipment.order.address?.fullName,
+                orderId: shipment.order.id,
+                shipmentStatus: "in_transit",
+                awbNumber: shipment.awbNumber,
+            });
+        }
     }
 }

@@ -233,13 +233,26 @@ export const productsRouter = createTRPCRouter({
     getCatalogQcSummary: publicProcedure
         .input(
             z.object({
-                brandId: productSchema.shape.brandId.optional(),
+                search: z.string().optional(),
+                brandIds: z.array(productSchema.shape.brandId).optional(),
+                verificationStatus:
+                    productSchema.shape.verificationStatus.optional(),
+                qcStatus: productSchema.shape.qcStatus.optional(),
+                catalogIssue: catalogIssueSchema.optional(),
+                productImage: productSchema.shape.productImageFilter,
+                productVisiblity: productSchema.shape.productVisiblityFilter,
             })
         )
         .query(async ({ input, ctx }) => {
             const { queries } = ctx;
             return queries.products.getCatalogQcSummary({
-                brandId: input.brandId,
+                search: input.search,
+                brandIds: input.brandIds,
+                verificationStatus: input.verificationStatus,
+                qcStatus: input.qcStatus,
+                catalogIssue: input.catalogIssue,
+                productImage: input.productImage,
+                productVisiblity: input.productVisiblity,
             });
         }),
     getProduct: publicProcedure

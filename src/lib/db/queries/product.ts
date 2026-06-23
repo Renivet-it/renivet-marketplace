@@ -166,6 +166,16 @@ const getCatalogIssueFilterQuery = (catalogIssue?: CatalogIssueFilter) => {
     }
 };
 
+const getCatalogSummarySearchFilter = (search?: string) => {
+    const trimmedSearch = search?.trim();
+    if (!trimmedSearch) return undefined;
+
+    return or(
+        ilike(products.title, `%${trimmedSearch}%`),
+        ilike(products.nativeSku, `%${trimmedSearch}%`)
+    );
+};
+
 const withCatalogQcSnapshot = (product: ProductWithBrand): ProductWithBrand => {
     const snapshot = evaluateCatalogQc(product);
 
@@ -656,8 +666,49 @@ class ProductQuery {
         return withCatalogQcSnapshots(parseProductArraySafely(enhancedData));
     }
 
-    async getCatalogQcSummary({ brandId }: { brandId?: string } = {}) {
+    async getCatalogQcSummary({
+        search,
+        brandIds,
+        verificationStatus,
+        qcStatus,
+        catalogIssue,
+        productImage,
+        productVisiblity,
+    }: {
+        search?: string;
+        brandIds?: string[];
+        verificationStatus?: Product["verificationStatus"];
+        qcStatus?: Product["qcStatus"];
+        catalogIssue?: CatalogIssueFilter;
+        productImage?: Product["productImageFilter"];
+        productVisiblity?: Product["productVisiblityFilter"];
+    } = {}) {
         const stockExpr = getProductStockExpression();
+        const filters = and(
+            eq(products.isDeleted, false),
+            getCatalogSummarySearchFilter(search),
+            !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
+            verificationStatus
+                ? eq(products.verificationStatus, verificationStatus)
+                : undefined,
+            qcStatus ? eq(products.qcStatus, qcStatus) : undefined,
+            getCatalogIssueFilterQuery(catalogIssue),
+            productImage
+                ? productImage === "with"
+                    ? hasMedia(products, "media")
+                    : productImage === "without"
+                      ? noMedia(products, "media")
+                      : undefined
+                : undefined,
+            productVisiblity
+                ? productVisiblity === "public"
+                    ? eq(products.isDeleted, false)
+                    : productVisiblity === "private"
+                      ? eq(products.isDeleted, true)
+                      : undefined
+                : undefined
+        );
+
         const rows = await db
             .select({
                 totalProducts: count(products.id),
@@ -682,20 +733,14 @@ class ProductQuery {
                 avgQcScore: sql<number>`COALESCE(ROUND(AVG(${products.qcScore})), 0)`,
             })
             .from(products)
-            .where(
-                and(
-                    eq(products.isDeleted, false),
-                    brandId ? eq(products.brandId, brandId) : undefined
-                )
-            );
+            .where(filters);
 
         const duplicateGroups = await db.execute(sql`
             SELECT COUNT(*)::int AS count
             FROM (
                 SELECT LOWER(TRIM(${products.title})) AS normalized_title, ${products.brandId}
                 FROM ${products}
-                WHERE ${products.isDeleted} = false
-                ${brandId ? sql`AND ${products.brandId} = ${brandId}` : sql``}
+                WHERE ${filters}
                 GROUP BY LOWER(TRIM(${products.title})), ${products.brandId}
                 HAVING COUNT(*) > 1
             ) duplicate_groups

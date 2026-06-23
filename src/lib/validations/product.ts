@@ -358,9 +358,9 @@ export const productSchema = z.object({
         convertEmptyStringToNull,
         z
             .string({
-                invalid_type_error: "HS code must be a string",
+                invalid_type_error: "HSN code must be a string",
             })
-            .min(1, "HS code must be at least 1 characters long")
+            .min(1, "HSN code must be at least 1 characters long")
             .nullable()
     ),
 
@@ -693,9 +693,9 @@ export const productVariantSchema = z.object({
         convertEmptyStringToNull,
         z
             .string({
-                invalid_type_error: "HS code must be a string",
+                invalid_type_error: "HSN code must be a string",
             })
-            .min(1, "HS code must be at least 1 characters long")
+            .min(1, "HSN code must be at least 1 characters long")
             .nullable()
     ),
     isDeleted: z.boolean({

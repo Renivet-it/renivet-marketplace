@@ -621,7 +621,17 @@ export function ProductsReviewTable({
     );
     const { data: qcSummary } = trpc.brands.products.getCatalogQcSummary.useQuery(
         {
-            brandId: isBrandScoped ? brandId : undefined,
+            search: search || undefined,
+            brandIds: isBrandScoped
+                ? [brandId ?? ""]
+                : brandIds.length > 0
+                  ? brandIds
+                  : undefined,
+            verificationStatus:
+                verificationStatus === "all" ? undefined : verificationStatus,
+            qcStatus: qcStatusFilter === "all" ? undefined : qcStatusFilter,
+            productImage,
+            productVisiblity,
         },
         {
             staleTime: 30_000,
@@ -679,32 +689,16 @@ export function ProductsReviewTable({
         };
     }, [data]);
 
-    const summary = useMemo(
-        () => ({
-            avgQcScore: Math.max(qcSummary?.avgQcScore ?? 0, visibleSummary.avgQcScore),
-            criticalCount: Math.max(
-                qcSummary?.criticalCount ?? 0,
-                visibleSummary.criticalCount
-            ),
-            warningCount: Math.max(
-                qcSummary?.warningCount ?? 0,
-                visibleSummary.warningCount
-            ),
-            oosAvailableCount: Math.max(
-                qcSummary?.oosAvailableCount ?? 0,
-                visibleSummary.oosAvailableCount
-            ),
-            staleInventoryCount: Math.max(
-                qcSummary?.staleInventoryCount ?? 0,
-                visibleSummary.staleInventoryCount
-            ),
-            claimMismatchCount: Math.max(
-                qcSummary?.claimMismatchCount ?? 0,
-                visibleSummary.claimMismatchCount
-            ),
-        }),
-        [qcSummary, visibleSummary]
-    );
+    const summary = qcSummary
+        ? {
+              avgQcScore: qcSummary.avgQcScore,
+              criticalCount: qcSummary.criticalCount,
+              warningCount: qcSummary.warningCount,
+              oosAvailableCount: qcSummary.oosAvailableCount,
+              staleInventoryCount: qcSummary.staleInventoryCount,
+              claimMismatchCount: qcSummary.claimMismatchCount,
+          }
+        : visibleSummary;
 
     const pages = useMemo(() => Math.ceil(count / limit) ?? 1, [count, limit]);
     const tableColumns = useMemo(
