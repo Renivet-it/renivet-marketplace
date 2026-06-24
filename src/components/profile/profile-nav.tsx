@@ -152,9 +152,9 @@ export function ProfileNav({ className, ...props }: GenericProps) {
         },
         {
             icon: "Briefcase",
-            name: "corporate-orders",
-            href: "/corporate-orders",
-            label: "Corporate Orders",
+            name: "corporate",
+            href: "/corporate",
+            label: "Corporate Procurement",
         },
         {
             icon: "Heart",

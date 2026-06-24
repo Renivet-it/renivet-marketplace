@@ -18,6 +18,7 @@ export * from "./category";
 export * from "./clerk-webhook";
 export * from "./coupon";
 export * from "./corporate-order";
+export * from "./corporate-platform";
 export * from "./legal";
 export * from "./marketing-strip";
 export * from "./newsletter-subscriber";

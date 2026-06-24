@@ -66,8 +66,8 @@ export const siteConfig: SiteConfig = {
         },
         {
             name: "Corporate Orders",
-            description: "Order apparel in bulk for your team",
-            href: "/corporate-orders",
+            description: "Corporate procurement, RFQs, quotes, and bulk orders",
+            href: "/corporate",
             icon: "Briefcase",
         },
         {
@@ -108,7 +108,7 @@ export const siteConfig: SiteConfig = {
                     },
                     {
                         name: "Corporate Orders",
-                        href: "/corporate-orders",
+                        href: "/corporate",
                     },
                 ],
             },
@@ -274,6 +274,41 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             {
                 title: "Corporate Orders",
                 url: "/dashboard/general/corporate-orders",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate Command Center",
+                url: "/dashboard/general/corporate",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate RFQs",
+                url: "/dashboard/general/corporate/rfqs",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate Finance",
+                url: "/dashboard/general/corporate/finance",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate Reports",
+                url: "/dashboard/general/corporate/reports",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate Executive",
+                url: "/dashboard/general/corporate/executive",
                 permissions:
                     BitFieldSitePermission.VIEW_ORDERS |
                     BitFieldSitePermission.MANAGE_ORDERS,
