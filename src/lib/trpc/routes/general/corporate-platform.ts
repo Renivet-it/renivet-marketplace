@@ -2,6 +2,7 @@ import { BitFieldSitePermission } from "@/config/permissions";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
 import {
     corporateCatalogListInputSchema,
+    corporateApprovedQuoteOrderInputSchema,
     corporateProfileInputSchema,
     corporateReportInputSchema,
     corporatePurchaseOrderInputSchema,
@@ -82,6 +83,15 @@ export const corporatePlatformRouter = createTRPCRouter({
         .mutation(({ ctx, input }) => {
             return corporatePlatformService.reviewPurchaseOrder(ctx.user.id, input);
         }),
+    createOrderFromApprovedQuote: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateApprovedQuoteOrderInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.createOrderFromApprovedQuote(
+                ctx.user.id,
+                input
+            );
+        }),
     createTask: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateTaskInputSchema)
@@ -144,6 +154,16 @@ export const corporatePlatformRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
         .query(() => {
             return corporatePlatformService.listAdminFinance();
+        }),
+    listAdminBrandOptions: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
+        .query(() => {
+            return corporatePlatformService.listAdminBrandOptions();
+        }),
+    listAdminProfileOptions: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
+        .query(() => {
+            return corporatePlatformService.listAdminProfileOptions();
         }),
     listBrandAssignedOrders: protectedProcedure
         .input(

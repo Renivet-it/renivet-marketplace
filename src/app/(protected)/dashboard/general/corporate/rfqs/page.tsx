@@ -1,3 +1,4 @@
+import { AdminPageIntro } from "@/components/corporate-platform/admin-design";
 import { AdminRfqQueue } from "@/components/corporate-platform/admin-rfq-queue";
 import { DashShell } from "@/components/globals/layouts/shells";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
@@ -10,13 +11,12 @@ export default async function Page() {
 
     return (
         <DashShell>
-            <div className="space-y-4">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Corporate RFQs</h1>
-                    <p className="text-sm text-slate-500">
-                        Queue for review, assignment, and conversion into quotes.
-                    </p>
-                </div>
+            <div className="space-y-6">
+                <AdminPageIntro
+                    eyebrow="Requests For Quotation Workspace"
+                    title="Review requirements, prepare quotes, and manage revisions"
+                    description="Use this workspace to process inbound requests for quotation, distinguish unreviewed work from already-quoted requests, and create structured quote actions without relying on cramped inline tables."
+                />
                 <AdminRfqQueue initialRfqs={rfqs} initialQuotes={quotes} />
             </div>
         </DashShell>

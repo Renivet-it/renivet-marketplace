@@ -1,3 +1,4 @@
+import { AdminPageIntro } from "@/components/corporate-platform/admin-design";
 import { AdminFinanceQueue } from "@/components/corporate-platform/admin-finance-queue";
 import { DashShell } from "@/components/globals/layouts/shells";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
@@ -8,12 +9,11 @@ export default async function Page() {
     return (
         <DashShell>
             <div className="space-y-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Corporate Finance Queue</h1>
-                    <p className="text-sm text-slate-500">
-                        Review payments, refunds, purchase orders, and report outputs.
-                    </p>
-                </div>
+                <AdminPageIntro
+                    eyebrow="Finance And Purchase Orders"
+                    title="Release approved quotes, validate purchase orders, and run finance operations"
+                    description="This workspace now covers both paths after customer approval: direct corporate order release for approved quotes without purchase orders, and enterprise purchase order validation when a buyer uploads official procurement paperwork."
+                />
                 <AdminFinanceQueue initialData={finance} />
             </div>
         </DashShell>

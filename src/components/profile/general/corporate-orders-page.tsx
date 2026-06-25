@@ -30,23 +30,21 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                 <div className="flex flex-col gap-8 p-6 md:p-8 xl:flex-row xl:items-end xl:justify-between">
                     <div className="max-w-3xl">
                         <p className="text-xs font-semibold uppercase tracking-[0.34em] text-[#8f7750]">
-                            Corporate Apparel Orders
+                            Self-Service Ordering
                         </p>
                         <h1 className="mt-3 font-serif text-3xl font-semibold leading-tight text-[#1f2937] md:text-5xl">
-                            Place and manage bulk apparel orders with ease
+                            Configure and place bulk orders with confidence
                         </h1>
                         <p className="mt-4 max-w-2xl text-sm leading-7 text-[#667085] md:text-base">
-                            Create a new corporate order, upload branding files,
-                            review live pricing, and track every placed order
-                            from one dedicated space in your profile.
+                            Use the self-service corporate ordering flow to choose product options, upload branding files, review pricing, and place bulk orders from your profile.
                         </p>
 
                         <div className="mt-5 flex flex-wrap gap-2">
                             <span className="rounded-full border border-[#dbcdb7] bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#6f5b3e]">
-                                Bulk order support
+                                Premium bulk ordering
                             </span>
                             <span className="rounded-full border border-[#d9e7f7] bg-[#f4f8fd] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#4c7fb6]">
-                                Live quote and payment tracking
+                                Live pricing and payment tracking
                             </span>
                         </div>
                     </div>
@@ -92,7 +90,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                         : "text-[#475467] hover:text-[#1f2937]"
                                 )}
                             >
-                                Placed Orders
+                                Order History
                             </button>
                             <button
                                 type="button"
@@ -106,14 +104,14 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                         : "text-[#475467] hover:text-[#1f2937]"
                                 )}
                             >
-                                Place Order
+                                New Self-Service Order
                             </button>
                         </div>
 
                         <p className="text-sm text-[#667085] md:max-w-2xl md:text-right">
                             {isPlacingOrder
-                                ? "Complete the form below to place a new corporate apparel order."
-                                : "Review your placed corporate orders, download summaries, and complete any remaining balance payment here."}
+                                ? "Complete the guided order form below to place a new self-service corporate order."
+                                : "Review placed orders, download summaries, and complete any remaining balance payment here."}
                         </p>
                     </div>
                 </div>
@@ -122,9 +120,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
             {isPlacingOrder ? (
                 <section className="mb-10 space-y-6">
                     <div className="rounded-[24px] border border-[#d7e6f5] bg-[linear-gradient(135deg,rgba(255,255,255,0.92),rgba(239,246,255,0.9))] px-5 py-4 text-sm text-[#3c6f9f] shadow-[0_18px_40px_-36px_rgba(91,155,213,0.55)]">
-                        Fill in the details below to place a new corporate
-                        apparel order, including artwork upload, employee size
-                        sheet, pricing review, and payment.
+                        Fill in the details below to place a new self-service corporate order, including artwork upload, employee size sheet, pricing review, and payment.
                     </div>
                     <CorporateOrderPage />
                 </section>
@@ -135,10 +131,10 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                 <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div>
                         <h2 className="font-serif text-2xl font-semibold text-[#1f2937] md:text-3xl">
-                            Your Corporate Orders
+                            Your Self-Service Orders
                         </h2>
                         <p className="mt-2 text-sm text-[#667085]">
-                            Track submitted requests, download summaries, and
+                            Track submitted orders, download summaries, and
                             finish any remaining balance payments here.
                         </p>
                     </div>
@@ -160,11 +156,11 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                     <Icons.Briefcase className="size-7" />
                                 </div>
                                 <h3 className="mt-6 font-serif text-3xl font-semibold text-[#1f2937]">
-                                    No corporate orders yet
+                                    No self-service orders yet
                                 </h3>
                                 <p className="mt-3 max-w-xl text-sm leading-7 text-[#667085] md:text-base">
-                                    Your placed corporate orders will appear
-                                    here. Use the Place Order tab to create your
+                                    Your placed self-service orders will appear
+                                    here. Use the new self-service order tab to create your
                                     first bulk apparel request.
                                 </p>
                                 <div className="mt-6 flex flex-wrap gap-3">
@@ -172,7 +168,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                         className="bg-[#2f3720] text-white hover:bg-[#252c18]"
                                         onClick={() => setIsPlacingOrder(true)}
                                     >
-                                        Place Your First Order
+                                        Start Your First Order
                                     </Button>
                                     <div className="rounded-full border border-[#d7e6f5] bg-white px-4 py-2 text-sm font-medium text-[#5B9BD5]">
                                         Artwork upload, live quote, Razorpay

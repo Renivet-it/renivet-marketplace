@@ -4,8 +4,8 @@ import { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
-    title: "Corporate RFQ",
-    description: "Submit a corporate RFQ from your profile dashboard.",
+    title: "Corporate Request for Quotation",
+    description: "Submit a corporate request for quotation from your profile dashboard.",
 };
 
 export default async function Page() {

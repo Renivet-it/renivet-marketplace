@@ -17,6 +17,16 @@ type UploadedFile = {
     type: string;
 };
 
+const useCaseOptions = [
+    "Apparel and uniforms",
+    "Corporate gifting",
+    "Event merchandise",
+    "Employee onboarding kits",
+    "Institutional procurement",
+    "Hospitality supply",
+    "Other requirement",
+] as const;
+
 export function CorporateRequestQuoteForm() {
     const router = useRouter();
     const { data: profile } = trpc.general.corporatePlatform.getMyProfile.useQuery();
@@ -88,7 +98,7 @@ export function CorporateRequestQuoteForm() {
                 attachments: uploadedAttachments,
             });
 
-            toast.success(`RFQ ${created.rfqNumber} submitted`);
+            toast.success(`Request for quotation ${created.rfqNumber} submitted`);
             router.push("/profile/corporate");
         } catch (error) {
             handleClientError(error);
@@ -155,16 +165,28 @@ export function CorporateRequestQuoteForm() {
                             }))
                         }
                     />
-                    <Input
-                        placeholder="Use case"
-                        value={form.useCase}
-                        onChange={(e) =>
-                            setForm((current) => ({
-                                ...current,
-                                useCase: e.target.value,
-                            }))
-                        }
-                    />
+                    <label className="rounded-2xl border px-4 py-4 text-sm text-slate-700">
+                        <span className="mb-2 block font-semibold text-slate-900">
+                            Use case
+                        </span>
+                        <select
+                            className="h-10 w-full rounded-md border border-slate-200 bg-white px-3"
+                            value={form.useCase}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    useCase: e.target.value,
+                                }))
+                            }
+                        >
+                            <option value="">Select use case</option>
+                            {useCaseOptions.map((option) => (
+                                <option key={option} value={option}>
+                                    {option}
+                                </option>
+                            ))}
+                        </select>
+                    </label>
                     <Input
                         placeholder="Quantity"
                         type="number"
@@ -192,6 +214,7 @@ export function CorporateRequestQuoteForm() {
                     <Input
                         placeholder="Expected delivery date"
                         type="date"
+                        required
                         value={form.deliveryDate}
                         onChange={(e) =>
                             setForm((current) => ({
@@ -270,11 +293,12 @@ export function CorporateRequestQuoteForm() {
                         Supporting files
                     </p>
                     <p className="mt-1 text-xs text-slate-500">
-                        Upload PDF, PPT, XLSX, JPG, PNG, or ZIP files up to the platform limit.
+                        Upload PDF, PPT, XLSX, JPG, PNG, or ZIP files. Combined attachment size must stay within 50 MB.
                     </p>
                     <input
                         className="mt-4 block w-full text-sm"
                         type="file"
+                        accept=".pdf,.ppt,.pptx,.xlsx,.xls,.jpg,.jpeg,.png,.zip"
                         multiple
                         onChange={(e) =>
                             setAttachments(Array.from(e.target.files ?? []))

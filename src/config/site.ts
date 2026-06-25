@@ -286,7 +286,7 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_ORDERS,
             },
             {
-                title: "Corporate RFQs",
+                title: "Corporate Requests",
                 url: "/dashboard/general/corporate/rfqs",
                 permissions:
                     BitFieldSitePermission.VIEW_ORDERS |

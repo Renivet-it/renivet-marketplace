@@ -276,7 +276,15 @@ export const corporateQuotes = pgTable(
         balanceAmountPaise: integer("balance_amount_paise").notNull().default(0),
         validUntil: date("valid_until"),
         status: text("status", {
-            enum: ["draft", "sent", "customer_review", "approved", "rejected", "expired"],
+            enum: [
+                "draft",
+                "sent",
+                "customer_review",
+                "revision_requested",
+                "approved",
+                "rejected",
+                "expired",
+            ],
         })
             .notNull()
             .default("draft"),
@@ -428,10 +436,20 @@ export const corporatePurchaseOrders = pgTable(
             () => corporateProfiles.id,
             { onDelete: "set null" }
         ),
+        companyName: text("company_name"),
         poValuePaise: integer("po_value_paise").notNull(),
         poDate: date("po_date"),
         deliveryDate: date("delivery_date"),
+        productScopeSummary: text("product_scope_summary"),
+        authorizedSignatoryName: text("authorized_signatory_name"),
+        authorizedSignatoryConfirmed: boolean("authorized_signatory_confirmed")
+            .notNull()
+            .default(false),
         uploadedFileUrl: text("uploaded_file_url"),
+        validationIssues: jsonb("validation_issues")
+            .$type<string[]>()
+            .default([])
+            .notNull(),
         status: text("status", {
             enum: [
                 "po_uploaded",

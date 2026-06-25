@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
     title: "Request Corporate Quote",
-    description: "Submit a managed corporate RFQ to Renivet.",
+    description: "Submit a managed corporate request for quotation to Renivet.",
 };
 
 export default async function Page() {

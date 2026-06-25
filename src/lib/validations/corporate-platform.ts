@@ -3,8 +3,29 @@ import { z } from "zod";
 export const corporatePlatformFileSchema = z.object({
     name: z.string().min(1),
     url: z.string().url(),
-    type: z.string().min(1),
-    size: z.number().int().nonnegative(),
+    type: z
+        .string()
+        .min(1)
+        .refine(
+            (value) =>
+                [
+                    "application/pdf",
+                    "application/vnd.ms-powerpoint",
+                    "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "application/vnd.ms-excel",
+                    "image/jpeg",
+                    "image/png",
+                    "application/zip",
+                    "application/x-zip-compressed",
+                ].includes(value),
+            "Unsupported file type"
+        ),
+    size: z
+        .number()
+        .int()
+        .nonnegative()
+        .max(50 * 1024 * 1024, "File size must be 50 MB or less"),
     key: z.string().min(1).optional(),
 });
 
@@ -72,7 +93,7 @@ export const corporateRfqInputSchema = z.object({
     useCase: z.string().min(2),
     quantity: z.number().int().positive(),
     budgetPerUnitPaise: z.number().int().nonnegative().nullable().optional(),
-    deliveryDate: z.string().date().nullable().optional(),
+    deliveryDate: z.string().date(),
     sustainabilityRequired: z.boolean().default(false),
     brandingRequired: z.boolean().default(true),
     requirementDescription: z.string().min(10),
@@ -80,6 +101,15 @@ export const corporateRfqInputSchema = z.object({
         .enum(["self_service", "rfq", "enterprise_po"])
         .default("rfq"),
     attachments: z.array(corporatePlatformFileSchema).max(6).default([]),
+}).superRefine((value, ctx) => {
+    const totalSize = value.attachments.reduce((sum, file) => sum + file.size, 0);
+    if (totalSize > 50 * 1024 * 1024) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["attachments"],
+            message: "Total attachment size must be 50 MB or less",
+        });
+    }
 });
 
 export const corporateQuoteInputSchema = z.object({
@@ -115,14 +145,18 @@ export const corporateQuoteRevisionInputSchema = z.object({
 });
 
 export const corporatePurchaseOrderInputSchema = z.object({
-    quoteId: z.string().uuid().nullable().optional(),
+    quoteId: z.string().uuid(),
     corporateOrderId: z.string().uuid().nullable().optional(),
-    corporateProfileId: z.string().uuid().nullable().optional(),
+    corporateProfileId: z.string().uuid(),
     poNumber: z.string().min(1),
+    companyName: z.string().min(2),
     poValuePaise: z.number().int().nonnegative(),
     poDate: z.string().date().nullable().optional(),
     deliveryDate: z.string().date().nullable().optional(),
-    uploadedFile: corporatePlatformFileSchema.nullable().optional(),
+    productScopeSummary: z.string().trim().min(5),
+    authorizedSignatoryName: z.string().trim().min(2),
+    authorizedSignatoryConfirmed: z.literal(true),
+    uploadedFile: corporatePlatformFileSchema,
     reviewNotes: z.string().trim().max(1000).nullable().optional(),
 });
 
@@ -135,6 +169,15 @@ export const corporatePurchaseOrderReviewInputSchema = z.object({
         "po_requires_changes",
     ]),
     reviewNotes: z.string().trim().max(1000).nullable().optional(),
+    validationSummary: z
+        .object({
+            companyNameMatches: z.boolean(),
+            orderValueMatches: z.boolean(),
+            deliveryDateFeasible: z.boolean(),
+            productScopeMatches: z.boolean(),
+            authorizedSignatoryPresent: z.boolean(),
+        })
+        .optional(),
 });
 
 export const corporateTaskInputSchema = z.object({
@@ -194,6 +237,10 @@ export const corporateProformaInvoiceInputSchema = z.object({
 
 export const corporateTaxInvoiceInputSchema = z.object({
     orderId: z.string().uuid(),
+});
+
+export const corporateApprovedQuoteOrderInputSchema = z.object({
+    quoteId: z.string().uuid(),
 });
 
 export const corporateReportInputSchema = z.object({
