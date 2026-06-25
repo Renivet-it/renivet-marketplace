@@ -21,9 +21,9 @@ export default function Layout({ children }: LayoutProps) {
             <NavbarHome />
             <main className="flex flex-1 flex-col">
                 <GeneralShell>
-                    <div className="flex flex-col gap-6 md:flex-row">
+                    <div className="flex w-full flex-col gap-6 md:flex-row">
                         <ProfileNav className="h-min shrink-0" />
-                        {children}
+                        <div className="min-w-0 flex-1">{children}</div>
                     </div>
                 </GeneralShell>
             </main>

@@ -98,207 +98,264 @@ export function CorporateRequestQuoteForm() {
     };
 
     return (
-        <div className="space-y-6 rounded-[28px] border border-[#d9e4ef] bg-white p-6 shadow-sm">
-            <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#5B9BD5]">
-                    Request Custom Quote
-                </p>
-                <h1 className="mt-3 font-serif text-3xl font-semibold text-slate-900">
-                    Tell us what your team needs
-                </h1>
-                <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">
-                    Submit your requirements, attach supporting files, and we will
-                    convert the request into a managed corporate procurement workflow.
-                </p>
-            </div>
+        <div className="grid w-full gap-6 xl:grid-cols-[minmax(0,1.8fr)_360px]">
+            <div className="space-y-6 rounded-[28px] border border-[#d9e4ef] bg-white p-6 shadow-sm md:p-8">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#5B9BD5]">
+                        Request Custom Quote
+                    </p>
+                    <h1 className="mt-3 font-serif text-3xl font-semibold text-slate-900 md:text-5xl">
+                        Tell us what your team needs
+                    </h1>
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 md:text-base">
+                        Submit your requirements, attach supporting files, and we will
+                        convert the request into a managed corporate procurement workflow.
+                    </p>
+                </div>
 
-            <div className="grid gap-4 md:grid-cols-2">
-                <Input
-                    placeholder="Company name"
-                    value={form.companyName}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            companyName: e.target.value,
-                        }))
-                    }
-                />
-                <Input
-                    placeholder="Contact person"
-                    value={form.contactPerson}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            contactPerson: e.target.value,
-                        }))
-                    }
-                />
-                <Input
-                    placeholder="Email address"
-                    type="email"
-                    value={form.email}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            email: e.target.value,
-                        }))
-                    }
-                />
-                <Input
-                    placeholder="Phone number"
-                    value={form.phone}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            phone: e.target.value,
-                        }))
-                    }
-                />
-                <Input
-                    placeholder="Use case"
-                    value={form.useCase}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            useCase: e.target.value,
-                        }))
-                    }
-                />
-                <Input
-                    placeholder="Quantity"
-                    type="number"
-                    min="1"
-                    value={form.quantity}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            quantity: Number(e.target.value),
-                        }))
-                    }
-                />
-                <Input
-                    placeholder="Budget per unit (INR)"
-                    type="number"
-                    min="0"
-                    value={form.budgetPerUnit}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            budgetPerUnit: e.target.value,
-                        }))
-                    }
-                />
-                <Input
-                    placeholder="Expected delivery date"
-                    type="date"
-                    value={form.deliveryDate}
-                    onChange={(e) =>
-                        setForm((current) => ({
-                            ...current,
-                            deliveryDate: e.target.value,
-                        }))
-                    }
-                />
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-3">
-                <label className="rounded-2xl border px-4 py-4 text-sm text-slate-700">
-                    <span className="mb-2 block font-semibold text-slate-900">
-                        Procurement mode
-                    </span>
-                    <select
-                        className="h-10 w-full rounded-md border border-slate-200 bg-white px-3"
-                        value={form.procurementMode}
+                <div className="grid gap-4 md:grid-cols-2">
+                    <Input
+                        placeholder="Company name"
+                        value={form.companyName}
                         onChange={(e) =>
                             setForm((current) => ({
                                 ...current,
-                                procurementMode: e.target.value as
-                                    | "self_service"
-                                    | "rfq"
-                                    | "enterprise_po",
+                                companyName: e.target.value,
                             }))
                         }
+                    />
+                    <Input
+                        placeholder="Contact person"
+                        value={form.contactPerson}
+                        onChange={(e) =>
+                            setForm((current) => ({
+                                ...current,
+                                contactPerson: e.target.value,
+                            }))
+                        }
+                    />
+                    <Input
+                        placeholder="Email address"
+                        type="email"
+                        value={form.email}
+                        onChange={(e) =>
+                            setForm((current) => ({
+                                ...current,
+                                email: e.target.value,
+                            }))
+                        }
+                    />
+                    <Input
+                        placeholder="Phone number"
+                        value={form.phone}
+                        onChange={(e) =>
+                            setForm((current) => ({
+                                ...current,
+                                phone: e.target.value,
+                            }))
+                        }
+                    />
+                    <Input
+                        placeholder="Use case"
+                        value={form.useCase}
+                        onChange={(e) =>
+                            setForm((current) => ({
+                                ...current,
+                                useCase: e.target.value,
+                            }))
+                        }
+                    />
+                    <Input
+                        placeholder="Quantity"
+                        type="number"
+                        min="1"
+                        value={form.quantity}
+                        onChange={(e) =>
+                            setForm((current) => ({
+                                ...current,
+                                quantity: Number(e.target.value),
+                            }))
+                        }
+                    />
+                    <Input
+                        placeholder="Budget per unit (INR)"
+                        type="number"
+                        min="0"
+                        value={form.budgetPerUnit}
+                        onChange={(e) =>
+                            setForm((current) => ({
+                                ...current,
+                                budgetPerUnit: e.target.value,
+                            }))
+                        }
+                    />
+                    <Input
+                        placeholder="Expected delivery date"
+                        type="date"
+                        value={form.deliveryDate}
+                        onChange={(e) =>
+                            setForm((current) => ({
+                                ...current,
+                                deliveryDate: e.target.value,
+                            }))
+                        }
+                    />
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                    <label className="rounded-2xl border px-4 py-4 text-sm text-slate-700">
+                        <span className="mb-2 block font-semibold text-slate-900">
+                            Procurement mode
+                        </span>
+                        <select
+                            className="h-10 w-full rounded-md border border-slate-200 bg-white px-3"
+                            value={form.procurementMode}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    procurementMode: e.target.value as
+                                        | "self_service"
+                                        | "rfq"
+                                        | "enterprise_po",
+                                }))
+                            }
+                        >
+                            <option value="rfq">RFQ managed</option>
+                            <option value="self_service">Self service</option>
+                            <option value="enterprise_po">Enterprise with PO</option>
+                        </select>
+                    </label>
+                    <label className="flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm text-slate-700">
+                        <input
+                            type="checkbox"
+                            checked={form.sustainabilityRequired}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    sustainabilityRequired: e.target.checked,
+                                }))
+                            }
+                        />
+                        Sustainability preference required
+                    </label>
+                    <label className="flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm text-slate-700">
+                        <input
+                            type="checkbox"
+                            checked={form.brandingRequired}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    brandingRequired: e.target.checked,
+                                }))
+                            }
+                        />
+                        Custom branding required
+                    </label>
+                </div>
+
+                <textarea
+                    className="min-h-40 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none"
+                    placeholder="Requirement description"
+                    value={form.requirementDescription}
+                    onChange={(e) =>
+                        setForm((current) => ({
+                            ...current,
+                            requirementDescription: e.target.value,
+                        }))
+                    }
+                />
+
+                <div className="rounded-2xl border border-dashed border-slate-300 p-4">
+                    <p className="text-sm font-semibold text-slate-900">
+                        Supporting files
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                        Upload PDF, PPT, XLSX, JPG, PNG, or ZIP files up to the platform limit.
+                    </p>
+                    <input
+                        className="mt-4 block w-full text-sm"
+                        type="file"
+                        multiple
+                        onChange={(e) =>
+                            setAttachments(Array.from(e.target.files ?? []))
+                        }
+                    />
+                    {attachments.length > 0 ? (
+                        <div className="mt-3 space-y-2 text-sm text-slate-600">
+                            {attachments.map((file) => (
+                                <div key={`${file.name}-${file.size}`}>{file.name}</div>
+                            ))}
+                        </div>
+                    ) : null}
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                    <Button
+                        className="bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
+                        onClick={submit}
+                        disabled={isSubmitting}
                     >
-                        <option value="rfq">RFQ managed</option>
-                        <option value="self_service">Self service</option>
-                        <option value="enterprise_po">Enterprise with PO</option>
-                    </select>
-                </label>
-                <label className="flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm text-slate-700">
-                    <input
-                        type="checkbox"
-                        checked={form.sustainabilityRequired}
-                        onChange={(e) =>
-                            setForm((current) => ({
-                                ...current,
-                                sustainabilityRequired: e.target.checked,
-                            }))
-                        }
-                    />
-                    Sustainability preference required
-                </label>
-                <label className="flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm text-slate-700">
-                    <input
-                        type="checkbox"
-                        checked={form.brandingRequired}
-                        onChange={(e) =>
-                            setForm((current) => ({
-                                ...current,
-                                brandingRequired: e.target.checked,
-                            }))
-                        }
-                    />
-                    Custom branding required
-                </label>
+                        {isSubmitting ? "Submitting..." : "Submit RFQ"}
+                    </Button>
+                    <Button asChild variant="outline">
+                        <a href="/profile/corporate">Back to Corporate Dashboard</a>
+                    </Button>
+                </div>
             </div>
 
-            <textarea
-                className="min-h-40 w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm outline-none"
-                placeholder="Requirement description"
-                value={form.requirementDescription}
-                onChange={(e) =>
-                    setForm((current) => ({
-                        ...current,
-                        requirementDescription: e.target.value,
-                    }))
-                }
-            />
-
-            <div className="rounded-2xl border border-dashed border-slate-300 p-4">
-                <p className="text-sm font-semibold text-slate-900">
-                    Supporting files
-                </p>
-                <p className="mt-1 text-xs text-slate-500">
-                    Upload PDF, PPT, XLSX, JPG, PNG, or ZIP files up to the platform limit.
-                </p>
-                <input
-                    className="mt-4 block w-full text-sm"
-                    type="file"
-                    multiple
-                    onChange={(e) =>
-                        setAttachments(Array.from(e.target.files ?? []))
-                    }
+            <div className="space-y-4">
+                <SideCard
+                    title="What gets created"
+                    items={[
+                        "Corporate profile snapshot",
+                        "RFQ record and attachments",
+                        "Quote review workflow",
+                        "PO, QC, dispatch, and finance trail",
+                    ]}
                 />
-                {attachments.length > 0 ? (
-                    <div className="mt-3 space-y-2 text-sm text-slate-600">
-                        {attachments.map((file) => (
-                            <div key={`${file.name}-${file.size}`}>{file.name}</div>
-                        ))}
-                    </div>
-                ) : null}
+                <SideCard
+                    title="Procurement path"
+                    items={[
+                        "RFQ submitted",
+                        "Quote prepared and shared",
+                        "Approval or revision request",
+                        "PO / payment confirmation",
+                        "Production, QC, dispatch",
+                    ]}
+                />
+                <SideCard
+                    title="Before you submit"
+                    items={[
+                        "Confirm quantity and delivery date",
+                        "Attach logo or brief if branding is needed",
+                        "Mention budget expectations clearly",
+                        "Use enterprise mode if PO approval is required",
+                    ]}
+                />
             </div>
+        </div>
+    );
+}
 
-            <div className="flex flex-wrap gap-3">
-                <Button
-                    className="bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
-                    onClick={submit}
-                    disabled={isSubmitting}
-                >
-                    {isSubmitting ? "Submitting..." : "Submit RFQ"}
-                </Button>
-                <Button asChild variant="outline">
-                    <a href="/corporate">Back to Corporate Hub</a>
-                </Button>
+function SideCard({
+    title,
+    items,
+}: {
+    title: string;
+    items: string[];
+}) {
+    return (
+        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+            <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
+            <div className="mt-4 space-y-3">
+                {items.map((item) => (
+                    <div
+                        key={item}
+                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600"
+                    >
+                        {item}
+                    </div>
+                ))}
             </div>
         </div>
     );

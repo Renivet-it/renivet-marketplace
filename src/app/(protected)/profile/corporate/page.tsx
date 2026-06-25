@@ -1,5 +1,4 @@
 import { CustomerCorporateDashboard } from "@/components/corporate-platform/customer-corporate-dashboard";
-import { GeneralShell } from "@/components/globals/layouts/shells";
 import { corporateOrderService } from "@/lib/services/corporate-order";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
 import { auth } from "@clerk/nextjs/server";
@@ -19,14 +18,11 @@ export default async function Page() {
     ]);
 
     return (
-        <GeneralShell>
-            <CustomerCorporateDashboard
-                initialProfile={profile}
-                initialRfqs={rfqs}
-                initialQuotes={quotes}
-                initialOrders={orders}
-            />
-        </GeneralShell>
+        <CustomerCorporateDashboard
+            initialProfile={profile}
+            initialRfqs={rfqs}
+            initialQuotes={quotes}
+            initialOrders={orders}
+        />
     );
 }
-

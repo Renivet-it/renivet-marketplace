@@ -962,6 +962,20 @@ export const corporateRfqsRelations = relations(corporateRfqs, ({ one, many }) =
     quotes: many(corporateQuotes),
 }));
 
+export const corporateRfqDocumentsRelations = relations(
+    corporateRfqDocuments,
+    ({ one }) => ({
+        rfq: one(corporateRfqs, {
+            fields: [corporateRfqDocuments.rfqId],
+            references: [corporateRfqs.id],
+        }),
+        uploadedBy: one(users, {
+            fields: [corporateRfqDocuments.uploadedByUserId],
+            references: [users.id],
+        }),
+    })
+);
+
 export const corporateQuotesRelations = relations(
     corporateQuotes,
     ({ one, many }) => ({
@@ -981,6 +995,20 @@ export const corporateQuotesRelations = relations(
     })
 );
 
+export const corporateQuoteRevisionsRelations = relations(
+    corporateQuoteRevisions,
+    ({ one }) => ({
+        quote: one(corporateQuotes, {
+            fields: [corporateQuoteRevisions.quoteId],
+            references: [corporateQuotes.id],
+        }),
+        createdBy: one(users, {
+            fields: [corporateQuoteRevisions.createdByUserId],
+            references: [users.id],
+        }),
+    })
+);
+
 export const corporateProductConfigsRelations = relations(
     corporateProductConfigs,
     ({ one }) => ({
@@ -991,6 +1019,35 @@ export const corporateProductConfigsRelations = relations(
         brand: one(brands, {
             fields: [corporateProductConfigs.brandId],
             references: [brands.id],
+        }),
+    })
+);
+
+export const corporateQcSubmissionsRelations = relations(
+    corporateQcSubmissions,
+    ({ one, many }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateQcSubmissions.orderId],
+            references: [corporateOrders.id],
+        }),
+        submittedBy: one(users, {
+            fields: [corporateQcSubmissions.submittedByUserId],
+            references: [users.id],
+        }),
+        reviewedBy: one(users, {
+            fields: [corporateQcSubmissions.reviewedByUserId],
+            references: [users.id],
+        }),
+        images: many(corporateQcImages),
+    })
+);
+
+export const corporateQcImagesRelations = relations(
+    corporateQcImages,
+    ({ one }) => ({
+        submission: one(corporateQcSubmissions, {
+            fields: [corporateQcImages.qcSubmissionId],
+            references: [corporateQcSubmissions.id],
         }),
     })
 );

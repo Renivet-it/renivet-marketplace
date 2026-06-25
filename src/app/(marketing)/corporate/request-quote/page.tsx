@@ -1,5 +1,3 @@
-import { CorporateRequestQuoteForm } from "@/components/corporate-platform/request-quote-form";
-import { GeneralShell } from "@/components/globals/layouts/shells";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -15,9 +13,5 @@ export default async function Page() {
         redirect("/auth/signin?redirect_url=/corporate/request-quote");
     }
 
-    return (
-        <GeneralShell>
-            <CorporateRequestQuoteForm />
-        </GeneralShell>
-    );
+    redirect("/profile/corporate/request-quote");
 }
