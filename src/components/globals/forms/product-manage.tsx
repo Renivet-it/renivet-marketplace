@@ -1403,19 +1403,57 @@ export function ProductManageForm({
                             </Card>
                         </>
                     ) : (
-                        <ProductVariantManage
-                            brandId={brandId}
-                            brand={brand}
-                            product={product}
-                            media={media}
-                            form={form}
-                            appendOption={appendOption}
-                            removeOption={removeOption}
-                            replaceVariants={replaceVariants}
-                            optionFields={optionFields}
-                            variantFields={variantFields}
-                            isPending={isPending}
-                        />
+                        <>
+                            <ProductVariantManage
+                                brandId={brandId}
+                                brand={brand}
+                                product={product}
+                                media={media}
+                                form={form}
+                                appendOption={appendOption}
+                                removeOption={removeOption}
+                                replaceVariants={replaceVariants}
+                                optionFields={optionFields}
+                                variantFields={variantFields}
+                                isPending={isPending}
+                            />
+
+                            <Card>
+                                <CardHeader className="p-4 md:p-6">
+                                    <CardTitle className="text-lg font-medium">
+                                        Product HSN Code
+                                    </CardTitle>
+                                </CardHeader>
+
+                                <CardContent className="p-4 pt-0 md:p-6 md:pt-0">
+                                    <FormField
+                                        control={form.control}
+                                        name="hsCode"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Harmonized System (HSN) code
+                                                </FormLabel>
+
+                                                <FormControl>
+                                                    <Input
+                                                        {...field}
+                                                        placeholder="Add HSN code"
+                                                        className="h-9"
+                                                        value={
+                                                            field.value ?? ""
+                                                        }
+                                                        disabled={isPending}
+                                                    />
+                                                </FormControl>
+
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </CardContent>
+                            </Card>
+                        </>
                     )}
 <Card className="mx-2 md:mx-0">
                 <CardHeader className="p-4 md:p-6">
