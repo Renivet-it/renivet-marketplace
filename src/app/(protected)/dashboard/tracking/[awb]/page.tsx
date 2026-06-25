@@ -55,6 +55,52 @@ const DISPLAY_STEPS = [
         matchStatuses: ["delivered"],
     },
 ];
+const DELHIVERY_TO_INTERNAL: Record<string, string> = {
+    "Manifested": "pending",
+    "Pickup Exception": "pickup_exception",
+    "Pickup Scheduled": "pickup_scheduled",
+    "Picked Up": "pickup_completed",
+    "In Transit": "in_transit",
+    "Out For Delivery": "out_for_delivery",
+    "Delivered": "delivered",
+    "RTO Initiated": "rto_initiated",
+    "RTO Delivered": "rto_delivered",
+    "Undelivered": "failed",
+    "Cancelled": "cancelled",
+};
+
+const STATUS_ORDER = [
+    "pending",
+    "processing",
+    "pickup_scheduled",
+    "pickup_completed",
+    "in_transit",
+    "out_for_delivery",
+    "delivered",
+];
+
+function getResolvedStatus(dbStatus: string, liveScans: any[]) {
+    let resolved = dbStatus;
+
+    if (liveScans && liveScans.length > 0) {
+        const latestScan = liveScans[liveScans.length - 1];
+        if (latestScan?.status) {
+            const scanStatusLower = latestScan.status.trim().toLowerCase();
+            const matchedKey = Object.keys(DELHIVERY_TO_INTERNAL).find(
+                (k) => k.toLowerCase() === scanStatusLower
+            );
+            if (matchedKey) {
+                const liveStatus = DELHIVERY_TO_INTERNAL[matchedKey];
+                const dbIndex = STATUS_ORDER.indexOf(resolved);
+                const liveIndex = STATUS_ORDER.indexOf(liveStatus);
+                if (liveIndex > dbIndex) {
+                    resolved = liveStatus;
+                }
+            }
+        }
+    }
+    return resolved;
+}
 
 function statusLabel(value?: string | null) {
     return value
@@ -86,7 +132,7 @@ export default async function DashboardTrackingPage({
                 item.uploadWbn === decodedAwb ||
                 item.trackingNumber === decodedAwb
         ) ?? order.shipments?.[0];
-    const currentStatus = shipment?.status ?? "pending";
+    const currentStatus = getResolvedStatus(shipment?.status ?? "pending", liveScans);
     const firstItem = order.items?.[0];
     const brandName = firstItem?.product?.brand?.name ?? "Renivet Brand";
     const productTitle = firstItem?.product?.title ?? "Order Item";

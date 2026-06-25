@@ -529,7 +529,7 @@ export default async function OrderOpsPage(props: {
                 />
                 <MetricCard
                     label="Pending COD"
-                    value={`₹${Number(pendingCodAmount).toLocaleString("en-IN")}`}
+                    value={`₹${(Number(pendingCodAmount) / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
                     sublabel="Delivered COD older than 14 days"
                 />
                 <MetricCard
@@ -909,7 +909,7 @@ export default async function OrderOpsPage(props: {
                                 <p className="text-sm text-slate-500">
                                     {run.status} · {run.items.length} orders ·
                                     expected ₹
-                                    {run.expectedAmount.toLocaleString("en-IN")}
+                                    {(run.expectedAmount / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                             </div>
                         ))}

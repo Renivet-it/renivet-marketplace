@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orders, orderShipments } from "@/lib/db/schema";
 import { sendOrderShipmentStatusWhatsApp } from "@/lib/whatsapp/order-status";
-import { and, eq, ne, isNotNull } from "drizzle-orm";
+import { and, eq, ne, isNotNull, or } from "drizzle-orm";
 
 const DELHIVERY_BASE_URL = process.env.DELHIVERY_BASE_URL!;
 const DELHIVERY_TOKEN = process.env.DELHIVERY_TOKEN!;
@@ -23,9 +23,35 @@ const DELHIVERY_TO_INTERNAL: Record<string, string> = {
 };
 
 function getLatestDelhiveryScan(data: any) {
-    const scans = data?.ShipmentData?.[0]?.Shipment?.Scans;
-    if (!Array.isArray(scans) || scans.length === 0) return null;
-    return scans[scans.length - 1]?.ScanDetail?.Scan?.trim() || null;
+    const rawScans =
+        data?.ShipmentData?.[0]?.Shipment?.Scans ??
+        data?.ShipmentData?.[0]?.Shipment?.ShipmentScan ??
+        [];
+
+    if (!Array.isArray(rawScans) || rawScans.length === 0) return null;
+
+    const normalized = rawScans
+        .map((item: any) => {
+            const scanDetail = item?.ScanDetail ?? item;
+            const status =
+                scanDetail?.Scan ?? item?.Scan ?? scanDetail?.Status ?? null;
+            const time =
+                scanDetail?.ScanDateTime ??
+                scanDetail?.StatusDateTime ??
+                item?.ScanDateTime ??
+                null;
+            return { status: status?.trim(), time };
+        })
+        .filter((scan: any) => scan.status)
+        .sort((a: any, b: any) => {
+            if (!a.time && !b.time) return 0;
+            if (!a.time) return -1;
+            if (!b.time) return 1;
+            return new Date(a.time).getTime() - new Date(b.time).getTime();
+        });
+
+    if (normalized.length === 0) return null;
+    return normalized[normalized.length - 1].status;
 }
 
 export async function GET() {
@@ -38,7 +64,10 @@ export async function GET() {
             .from(orderShipments)
             .where(
                 and(
-                    isNotNull(orderShipments.uploadWbn),
+                    or(
+                        isNotNull(orderShipments.uploadWbn),
+                        isNotNull(orderShipments.awbNumber)
+                    ),
                     ne(orderShipments.status, "delivered"),
                     ne(orderShipments.status, "rto_delivered"),
                     ne(orderShipments.status, "cancelled")
@@ -80,10 +109,13 @@ export async function GET() {
                 );
             }
 
-            const scans = data?.ShipmentData?.[0]?.Shipment?.Scans;
-            console.log("📍 Scans Found:", scans?.length);
+            const rawScans =
+                data?.ShipmentData?.[0]?.Shipment?.Scans ??
+                data?.ShipmentData?.[0]?.Shipment?.ShipmentScan ??
+                [];
+            console.log("📍 Scans Found:", rawScans?.length);
 
-            if (!scans?.length) {
+            if (!rawScans?.length) {
                 console.log("⛔ No scans. Skipping.");
                 continue;
             }
@@ -98,7 +130,13 @@ export async function GET() {
                 continue;
             }
 
-            const mappedStatus = DELHIVERY_TO_INTERNAL[delhiveryStatus] ?? ship.status;
+            // Case-insensitive matching against DELHIVERY_TO_INTERNAL keys
+            const delhiveryStatusLower = delhiveryStatus.trim().toLowerCase();
+            const matchedKey = Object.keys(DELHIVERY_TO_INTERNAL).find(
+                (k) => k.toLowerCase() === delhiveryStatusLower
+            );
+            const mappedStatus = matchedKey ? DELHIVERY_TO_INTERNAL[matchedKey] : ship.status;
+
             console.log(`🔁 Mapped Status: ${mappedStatus}`);
             console.log(`🟦 Previous Status: ${ship.status}`);
 
@@ -131,11 +169,12 @@ export async function GET() {
             if (mappedStatus === "delivered") {
                 console.log("📦 Marking ORDER as delivered");
                 await db.update(orders).set({ status: "delivered" }).where(eq(orders.id, ship.orderId));
-            }
-
-            if (mappedStatus === "rto_delivered") {
+            } else if (mappedStatus === "rto_delivered") {
                 console.log("📦 Marking ORDER as cancelled (RTO Delivered)");
                 await db.update(orders).set({ status: "cancelled" }).where(eq(orders.id, ship.orderId));
+            } else if (["pickup_completed", "in_transit", "out_for_delivery"].includes(mappedStatus)) {
+                console.log("📦 Marking ORDER as shipped");
+                await db.update(orders).set({ status: "shipped" }).where(eq(orders.id, ship.orderId));
             }
 
             const shouldSendWhatsApp =
