@@ -279,44 +279,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_ORDERS,
             },
             {
-                title: "Corporate Command Center",
+                title: "Corporate Hub",
                 url: "/dashboard/general/corporate",
                 permissions:
                     BitFieldSitePermission.VIEW_ORDERS |
                     BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Requests",
-                url: "/dashboard/general/corporate/rfqs",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Finance",
-                url: "/dashboard/general/corporate/finance",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Reports",
-                url: "/dashboard/general/corporate/reports",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Executive",
-                url: "/dashboard/general/corporate/executive",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Order Settings",
-                url: "/dashboard/general/corporate-orders/settings",
-                permissions: BitFieldSitePermission.MANAGE_SETTINGS,
             },
             {
                 title: "Order Ops",
@@ -354,25 +321,11 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_USERS,
             },
             {
-                title: "Brands",
+                title: "Brands Portal",
                 url: "/dashboard/general/brands",
                 permissions:
                     BitFieldSitePermission.MANAGE_BRANDS |
                     BitFieldSitePermission.VIEW_BRANDS,
-            },
-            {
-                title: "Brand Verifications",
-                url: "/dashboard/general/brands/verifications",
-                permissions:
-                    BitFieldSitePermission.MANAGE_BRANDS |
-                    BitFieldSitePermission.VIEW_BRANDS,
-            },
-            {
-                title: "Waitlist",
-                url: "/dashboard/general/brand-waitlist",
-                permissions:
-                    BitFieldSitePermission.MANAGE_SETTINGS |
-                    BitFieldSitePermission.VIEW_SETTINGS,
             },
         ],
     },

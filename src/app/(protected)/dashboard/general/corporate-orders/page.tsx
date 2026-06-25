@@ -1,4 +1,5 @@
 import { CorporateOrdersTable } from "@/components/dashboard/general/corporate-orders/corporate-orders-table";
+import { CorporateOrderTabs } from "@/components/dashboard/general/corporate-orders/corporate-order-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
 import { corporateOrderService } from "@/lib/services/corporate-order";
 import { Metadata } from "next";
@@ -16,15 +17,18 @@ export default async function Page() {
 
     return (
         <DashShell>
-            <div className="space-y-4">
-                <div>
-                    <h1 className="text-2xl font-bold">Corporate Orders</h1>
-                    <p className="text-sm text-muted-foreground">
-                        Review bulk apparel orders, payments, files, and order
-                        progress.
-                    </p>
+            <div className="space-y-6">
+                <CorporateOrderTabs />
+                <div className="space-y-4">
+                    <div>
+                        <h1 className="text-2xl font-bold">Corporate Orders</h1>
+                        <p className="text-sm text-muted-foreground">
+                            Review bulk apparel orders, payments, files, and order
+                            progress.
+                        </p>
+                    </div>
+                    <CorporateOrdersTable initialData={initialData} />
                 </div>
-                <CorporateOrdersTable initialData={initialData} />
             </div>
         </DashShell>
     );

@@ -4,6 +4,7 @@ import {
     AdminPanel,
     StatusBadge,
 } from "@/components/corporate-platform/admin-design";
+import { CorporateTabs } from "@/components/corporate-platform/corporate-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
 import { SeedCatalogButton } from "@/components/corporate-platform/seed-catalog-button";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
@@ -31,6 +32,8 @@ export default async function Page() {
     return (
         <DashShell>
             <div className="space-y-6">
+                <CorporateTabs />
+                
                 <AdminPageIntro
                     eyebrow="Corporate Command Center"
                     title="Operations, finance, and fulfillment in one admin suite"

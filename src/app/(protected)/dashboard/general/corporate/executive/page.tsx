@@ -1,4 +1,5 @@
 import { AdminMetricGrid, AdminPageIntro, AdminPanel } from "@/components/corporate-platform/admin-design";
+import { CorporateTabs } from "@/components/corporate-platform/corporate-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
 import { formatINR } from "@/lib/utils";
@@ -17,6 +18,7 @@ export default async function Page() {
     return (
         <DashShell>
             <div className="space-y-6">
+                <CorporateTabs />
                 <AdminPageIntro
                     eyebrow="Executive View"
                     title="Leadership visibility across demand, operations, and collections"

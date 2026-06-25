@@ -33,6 +33,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                             description="Generate the current operations checkpoint across requests, orders, and pending queue actions."
                             action={
                                 <Button
+                                    className="w-full whitespace-normal h-auto py-2.5 min-h-[40px]"
                                     onClick={() =>
                                         generate.mutate({
                                             reportType: "daily_operations_summary",
@@ -49,6 +50,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                             action={
                                 <Button
                                     variant="outline"
+                                    className="w-full whitespace-normal h-auto py-2.5 min-h-[40px]"
                                     onClick={() =>
                                         generate.mutate({
                                             reportType: "weekly_sla_compliance",
@@ -65,6 +67,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                             action={
                                 <Button
                                     variant="outline"
+                                    className="w-full whitespace-normal h-auto py-2.5 min-h-[40px]"
                                     onClick={() =>
                                         generate.mutate({
                                             reportType: "monthly_corporate_review",
@@ -77,7 +80,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                         />
                     </div>
                 </AdminPanel>
-
+ 
                 <AdminPanel
                     title="Reporting Coverage"
                     description="Visible reporting lanes help the team understand what the platform is expected to surface over time."
@@ -92,7 +95,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                     </div>
                 </AdminPanel>
             </div>
-
+ 
             <AdminPanel
                 title="Report History"
                 description="Separate report generation from report history so admins can quickly tell what has already been logged."
@@ -140,7 +143,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
         </div>
     );
 }
-
+ 
 function ReportAction({
     title,
     description,
@@ -151,10 +154,10 @@ function ReportAction({
     action: React.ReactNode;
 }) {
     return (
-        <div className="rounded-[24px] border border-slate-200 bg-slate-50 p-5">
+        <div className="flex flex-col h-full rounded-[24px] border border-slate-200 bg-slate-50 p-5">
             <div className="text-lg font-semibold text-slate-900">{title}</div>
             <div className="mt-2 text-sm leading-6 text-slate-600">{description}</div>
-            <div className="mt-4">{action}</div>
+            <div className="mt-auto pt-4">{action}</div>
         </div>
     );
 }
