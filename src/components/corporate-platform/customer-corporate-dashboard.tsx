@@ -78,12 +78,12 @@ export function CustomerCorporateDashboard({
                         Corporate Dashboard
                     </p>
                     <h1 className="mt-3 font-serif text-3xl font-semibold text-slate-900 md:text-5xl">
-                        RFQs, quotes, and orders in one place
+                        Request for quotation, quotes, and orders in one place
                     </h1>
                     <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600 md:text-base">
                         {initialProfile
-                            ? `Corporate profile active for ${initialProfile.companyName}. Keep RFQs, quotes, purchase orders, and fulfillment checkpoints inside one workspace.`
-                            : "No corporate profile found yet. Submit an RFQ to create your procurement trail and unlock quote, PO, fulfillment, and finance tracking in one place."}
+                            ? `Corporate profile active for ${initialProfile.companyName}. Keep request for quotation records, quotes, purchase orders, and fulfillment checkpoints inside one workspace.`
+                            : "No corporate profile found yet. Submit a request for quotation to create your procurement trail and unlock quote, purchase order, fulfillment, and finance tracking in one place."}
                     </p>
                     <div className="mt-5 flex flex-wrap gap-3">
                         <a
@@ -96,7 +96,13 @@ export function CustomerCorporateDashboard({
                             href="/profile/corporate/request-quote"
                             className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900"
                         >
-                            New RFQ
+                            New Request for Quotation
+                        </a>
+                        <a
+                            href="/profile/corporate-orders"
+                            className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-900"
+                        >
+                            Open Legacy Corporate Ordering
                         </a>
                     </div>
                 </div>
@@ -115,15 +121,15 @@ export function CustomerCorporateDashboard({
                                 />
                             </>
                         ) : (
-                            <Empty label="Profile will be created from your first RFQ submission." />
+                            <Empty label="Profile will be created from your first request for quotation submission." />
                         )}
                     </Panel>
                     <Panel title="Workflow Coverage">
                         <div className="grid grid-cols-2 gap-3 text-sm text-slate-600">
-                            <MiniPill label="RFQ" />
+                            <MiniPill label="Request for Quotation" />
                             <MiniPill label="Quotes" />
-                            <MiniPill label="POs" />
-                            <MiniPill label="QC" />
+                            <MiniPill label="Purchase Orders" />
+                            <MiniPill label="Quality Control" />
                             <MiniPill label="Dispatch" />
                             <MiniPill label="Payments" />
                         </div>
@@ -132,7 +138,7 @@ export function CustomerCorporateDashboard({
             </section>
 
             <section className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-6 xl:grid-cols-3">
-                <Metric label="RFQs" value={String(initialRfqs.length)} />
+                <Metric label="Request for Quotations" value={String(initialRfqs.length)} />
                 <Metric label="Quotes" value={String(initialQuotes.length)} />
                 <Metric label="Orders" value={String(initialOrders.length)} />
                 <Metric
@@ -150,7 +156,7 @@ export function CustomerCorporateDashboard({
             </section>
 
             <section className="grid gap-6 2xl:grid-cols-4 xl:grid-cols-2">
-                <Panel title="Recent RFQs">
+                <Panel title="Recent Requests for Quotation">
                     {initialRfqs.length ? (
                         initialRfqs.slice(0, 5).map((rfq) => (
                             <Row
@@ -160,7 +166,7 @@ export function CustomerCorporateDashboard({
                             />
                         ))
                     ) : (
-                        <Empty label="No RFQs yet" />
+                        <Empty label="No requests for quotation yet" />
                     )}
                 </Panel>
 
@@ -249,6 +255,17 @@ export function CustomerCorporateDashboard({
                 </Panel>
 
                 <Panel title="Legacy Orders">
+                    <div className="mb-3 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+                        <div className="text-sm text-slate-600">
+                            Continue using the previous self-service corporate ordering page.
+                        </div>
+                        <a
+                            href="/profile/corporate-orders"
+                            className="shrink-0 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-900"
+                        >
+                            Open
+                        </a>
+                    </div>
                     {initialOrders.length ? (
                         initialOrders.slice(0, 5).map((order) => (
                             <Row
@@ -276,14 +293,14 @@ export function CustomerCorporateDashboard({
                             />
                         ))
                     ) : (
-                        <Empty label="PO tracking will appear after quotes are issued." />
+                        <Empty label="Purchase order tracking will appear after quotes are issued." />
                     )}
                 </Panel>
 
-                <Panel title="QC, Dispatch & Finance">
+                <Panel title="Quality Control, Dispatch & Finance">
                     <div className="space-y-3">
                         <StatusLine
-                            label="QC submissions"
+                            label="Quality control submissions"
                             value="Will appear once production starts"
                         />
                         <StatusLine

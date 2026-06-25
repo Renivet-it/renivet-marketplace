@@ -220,9 +220,9 @@ export function CorporateRequestQuoteForm() {
                                 }))
                             }
                         >
-                            <option value="rfq">RFQ managed</option>
+                            <option value="rfq">Request for quotation managed</option>
                             <option value="self_service">Self service</option>
-                            <option value="enterprise_po">Enterprise with PO</option>
+                            <option value="enterprise_po">Enterprise with purchase order</option>
                         </select>
                     </label>
                     <label className="flex items-center gap-3 rounded-2xl border px-4 py-4 text-sm text-slate-700">
@@ -295,7 +295,7 @@ export function CorporateRequestQuoteForm() {
                         onClick={submit}
                         disabled={isSubmitting}
                     >
-                        {isSubmitting ? "Submitting..." : "Submit RFQ"}
+                        {isSubmitting ? "Submitting..." : "Submit Request for Quotation"}
                     </Button>
                     <Button asChild variant="outline">
                         <a href="/profile/corporate">Back to Corporate Dashboard</a>
@@ -308,19 +308,19 @@ export function CorporateRequestQuoteForm() {
                     title="What gets created"
                     items={[
                         "Corporate profile snapshot",
-                        "RFQ record and attachments",
+                        "Request for quotation record and attachments",
                         "Quote review workflow",
-                        "PO, QC, dispatch, and finance trail",
+                        "Purchase order, quality control, dispatch, and finance trail",
                     ]}
                 />
                 <SideCard
                     title="Procurement path"
                     items={[
-                        "RFQ submitted",
+                        "Request for quotation submitted",
                         "Quote prepared and shared",
                         "Approval or revision request",
-                        "PO / payment confirmation",
-                        "Production, QC, dispatch",
+                        "Purchase order or payment confirmation",
+                        "Production, quality control, dispatch",
                     ]}
                 />
                 <SideCard
