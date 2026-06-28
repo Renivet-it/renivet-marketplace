@@ -41,6 +41,46 @@ interface PageProps {
     allMedia: BrandMediaItem[];
 }
 
+function normalizeProductVariants(product?: ProductWithBrand) {
+    if (!product?.productHasVariants) {
+        return {
+            validVariants: product?.variants ?? [],
+            orphanedVariantIds: [] as string[],
+        };
+    }
+
+    const optionValueMap = new Map(
+        (product.options ?? []).map((option) => [
+            option.id,
+            new Set(option.values.map((value) => value.id)),
+        ])
+    );
+
+    const validVariants =
+        product.variants?.filter((variant) => {
+            const variantKeys = Object.keys(variant.combinations ?? {});
+
+            if (variantKeys.length !== optionValueMap.size) return false;
+
+            return variantKeys.every((optionId) => {
+                const valueId = variant.combinations[optionId];
+                return optionValueMap.get(optionId)?.has(valueId);
+            });
+        }) ?? [];
+
+    const orphanedVariantIds =
+        product.variants
+            ?.filter(
+                (variant) =>
+                    !validVariants.some(
+                        (validVariant) => validVariant.id === variant.id
+                    )
+            )
+            .map((variant) => variant.id) ?? [];
+
+    return { validVariants, orphanedVariantIds };
+}
+
 export function ProductManageForm({
     brandId,
     brand,
@@ -101,6 +141,10 @@ export function ProductManageForm({
         (m) => m.type.includes("image") || m.type.includes("video")
     );
     const docs = mediaRaw.filter((m) => m.type.includes("pdf"));
+    const { validVariants, orphanedVariantIds } = useMemo(
+        () => normalizeProductVariants(product),
+        [product]
+    );
 
     const form = useForm<CreateProduct>({
         resolver: zodResolver(createProductSchema),
@@ -138,8 +182,7 @@ export function ProductManageForm({
 
             // VARIANTS
             options: product?.options ?? [],
-            variants:
-                product?.variants.map((variant) => ({
+            variants: validVariants.map((variant) => ({
                     ...variant,
                     price: +convertPaiseToRupees(variant.price),
                     compareAtPrice: +convertPaiseToRupees(
@@ -356,6 +399,10 @@ export function ProductManageForm({
                                   values,
                               })
                             : createProduct(values);
+                    }, () => {
+                        toast.error(
+                            "Please fix the highlighted product form errors before saving."
+                        );
                     })}
                 >
                     <Card>
@@ -1881,10 +1928,23 @@ export function ProductManageForm({
                         </CardContent>
                     </Card>
 
+                    {orphanedVariantIds.length > 0 && (
+                        <p className="text-sm text-amber-700">
+                            This product has {orphanedVariantIds.length} stale
+                            variant
+                            {orphanedVariantIds.length === 1 ? "" : "s"} from
+                            old option values. Saving will clean them up.
+                        </p>
+                    )}
+
                     <Button
                         type="submit"
                         className="w-full"
-                        disabled={isPending || !form.formState.isDirty}
+                        disabled={
+                            isPending ||
+                            (!form.formState.isDirty &&
+                                orphanedVariantIds.length === 0)
+                        }
                     >
                         Save Product
                     </Button>

@@ -54,6 +54,7 @@ import {
     menPageFeaturedProducts,
     newProductEventPage,
     orderItems,
+    ordersIntent,
     orders,
     productEvents,
     productOptions,
@@ -3587,6 +3588,37 @@ class ProductQuery {
                 deletedAt: new Date(),
                 updatedAt: new Date(),
             })
+            .where(eq(products.id, productId))
+            .returning()
+            .then((res) => res[0]);
+
+        return data;
+    }
+
+    async hardDeleteProduct(productId: string) {
+        const [existingOrderItem, existingOrderIntent] = await Promise.all([
+            db
+                .select({ id: orderItems.id })
+                .from(orderItems)
+                .where(eq(orderItems.productId, productId))
+                .limit(1)
+                .then((res) => res[0]),
+            db
+                .select({ id: ordersIntent.id })
+                .from(ordersIntent)
+                .where(eq(ordersIntent.productId, productId))
+                .limit(1)
+                .then((res) => res[0]),
+        ]);
+
+        if (existingOrderItem || existingOrderIntent) {
+            throw new Error(
+                "Cannot hard delete a product with order history. Use soft delete instead."
+            );
+        }
+
+        const data = await db
+            .delete(products)
             .where(eq(products.id, productId))
             .returning()
             .then((res) => res[0]);

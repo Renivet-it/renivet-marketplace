@@ -1671,6 +1671,81 @@ export const productsRouter = createTRPCRouter({
 
             return data;
         }),
+    hardDeleteProduct: protectedProcedure
+        .input(z.object({ productId: productSchema.shape.id }))
+        .use(
+            isTRPCAuth(BitFieldBrandPermission.MANAGE_PRODUCTS, "all", "brand")
+        )
+        .mutation(async ({ input, ctx }) => {
+            const { productId } = input;
+            const { queries, user } = ctx;
+
+            const existingProduct = await queries.products.getProduct({
+                productId,
+            });
+
+            if (!existingProduct)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Product not found",
+                });
+
+            const isAdmin = hasPermission(user.sitePermissions, [
+                BitFieldSitePermission.ADMINISTRATOR,
+            ]);
+
+            if (!isAdmin && existingProduct.brand.id !== user.brand?.id)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not a member of this brand",
+                });
+
+            let data;
+            try {
+                [data] = await Promise.all([
+                    queries.products.hardDeleteProduct(productId),
+                    userCartCache.dropAll(),
+                    userWishlistCache.dropAll(),
+                ]);
+            } catch (error) {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : "Unable to hard delete product";
+
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message,
+                });
+            }
+
+            await auditEntityChange({
+                actorId: user.id,
+                actionType: "product_hard_deleted",
+                entityType: "product",
+                entityId: productId,
+                beforeValue: {
+                    title: existingProduct.title,
+                    isDeleted: existingProduct.isDeleted,
+                },
+                afterValue: null,
+                reason: "product_hard_deleted",
+            });
+
+            posthog.capture({
+                event: POSTHOG_EVENTS.PRODUCT.DELETED,
+                distinctId: user.brand?.id ?? user.id,
+                properties: {
+                    brandName: user.brand?.name ?? "Admin",
+                    brandOwnerId: user.id,
+                    productId,
+                    productTitle: existingProduct.title,
+                    deleteMode: "hard",
+                },
+            });
+
+            return data;
+        }),
     createProductJourney: protectedProcedure
         .input(createProductJourneySchema)
         .use(
