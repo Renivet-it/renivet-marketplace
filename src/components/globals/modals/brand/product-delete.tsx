@@ -29,7 +29,7 @@ export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
         defaultValue: "",
     });
 
-    const { refetch } = trpc.brands.products.getProducts.useQuery({
+    trpc.brands.products.getProducts.useQuery({
         brandIds: [product.brandId],
         limit,
         page,
@@ -54,6 +54,25 @@ export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
                 return handleClientError(err, ctx?.toastId);
             },
         });
+    const { mutate: hardDeleteProduct, isPending: isHardDeleting } =
+        trpc.brands.products.hardDeleteProduct.useMutation({
+            onMutate: () => {
+                const toastId = toast.loading("Hard deleting product...");
+                return { toastId };
+            },
+            onSuccess: (_, __, { toastId }) => {
+                toast.success("Product permanently deleted", { id: toastId });
+                queryClient.invalidateQueries({
+                    queryKey: [["brands", "products", "getProducts"]],
+                });
+                setIsOpen(false);
+            },
+            onError: (err, _, ctx) => {
+                return handleClientError(err, ctx?.toastId);
+            },
+        });
+
+    const isPending = isDeleting || isHardDeleting;
 
     return (
         <AlertDialog open={isOpen} onOpenChange={setIsOpen}>
@@ -66,13 +85,17 @@ export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
                         People will no longer be able to view or purchase this
                         product. This action cannot be undone.
                     </AlertDialogDescription>
+                    <AlertDialogDescription>
+                        Hard delete permanently removes the product record and
+                        only works when the product has no order history.
+                    </AlertDialogDescription>
                 </AlertDialogHeader>
 
                 <AlertDialogFooter>
                     <Button
                         variant="ghost"
                         size="sm"
-                        disabled={isDeleting}
+                        disabled={isPending}
                         onClick={() => setIsOpen(false)}
                     >
                         Cancel
@@ -81,14 +104,27 @@ export function ProductDeleteModal({ product, isOpen, setIsOpen }: PageProps) {
                     <Button
                         variant="destructive"
                         size="sm"
-                        disabled={isDeleting}
+                        disabled={isPending}
                         onClick={() =>
                             deleteProduct({
                                 productId: product.id,
                             })
                         }
                     >
-                        Delete
+                        Soft Delete
+                    </Button>
+
+                    <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={isPending}
+                        onClick={() =>
+                            hardDeleteProduct({
+                                productId: product.id,
+                            })
+                        }
+                    >
+                        Hard Delete
                     </Button>
                 </AlertDialogFooter>
             </AlertDialogContent>
