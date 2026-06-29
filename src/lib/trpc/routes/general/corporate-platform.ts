@@ -67,6 +67,9 @@ export const corporatePlatformRouter = createTRPCRouter({
     listMyQuotes: protectedProcedure.query(({ ctx }) => {
         return corporatePlatformService.listMyQuotes(ctx.user.id);
     }),
+    listMyPurchaseOrders: protectedProcedure.query(({ ctx }) => {
+        return corporatePlatformService.listMyPurchaseOrders(ctx.user.id);
+    }),
     decideQuote: protectedProcedure
         .input(corporateQuoteDecisionInputSchema)
         .mutation(({ ctx, input }) => {

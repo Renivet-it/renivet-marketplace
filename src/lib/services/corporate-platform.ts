@@ -672,6 +672,19 @@ class CorporatePlatformService {
         });
     }
 
+    async listMyPurchaseOrders(userId: string) {
+        const profile = await this.getMyProfile(userId);
+        if (!profile) return [];
+
+        return db.query.corporatePurchaseOrders.findMany({
+            where: eq(corporatePurchaseOrders.corporateProfileId, profile.id),
+            with: {
+                quote: true,
+            },
+            orderBy: [desc(corporatePurchaseOrders.createdAt)],
+        });
+    }
+
     async decideQuote(userId: string, input: unknown) {
         const parsed = corporateQuoteDecisionInputSchema.parse(input);
         const quote = await db.query.corporateQuotes.findFirst({

@@ -32,7 +32,24 @@ type UploadedFile = {
     type: string;
 };
 
-export function CorporateOrderPage() {
+type CorporateOrderPagePrefill = {
+    companyName?: string;
+    contactPersonName?: string;
+    emailAddress?: string;
+    mobileNumber?: string;
+    gstNumber?: string;
+    deliveryAddress?: string;
+    numberOfEmployees?: number;
+    quantity?: number;
+    customerNotes?: string;
+    paymentPreference?: "partial_advance" | "full_upfront";
+};
+
+export function CorporateOrderPage({
+    initialPrefill,
+}: {
+    initialPrefill?: CorporateOrderPagePrefill;
+}) {
     const router = useRouter();
     const { data: user } = trpc.general.users.currentUser.useQuery();
     const { data: config, isLoading } =
@@ -58,28 +75,29 @@ export function CorporateOrderPage() {
     >([]);
     const [quote, setQuote] = useState<any>(null);
     const [form, setForm] = useState({
-        companyName: "",
-        contactPersonName: user
-            ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
-            : "",
-        emailAddress: user?.email ?? "",
-        mobileNumber: user?.phone ?? "",
-        gstNumber: "",
-        deliveryAddress: "",
-        numberOfEmployees: 0,
+        companyName: initialPrefill?.companyName ?? "",
+        contactPersonName:
+            initialPrefill?.contactPersonName ??
+            (user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() : ""),
+        emailAddress: initialPrefill?.emailAddress ?? user?.email ?? "",
+        mobileNumber: initialPrefill?.mobileNumber ?? user?.phone ?? "",
+        gstNumber: initialPrefill?.gstNumber ?? "",
+        deliveryAddress: initialPrefill?.deliveryAddress ?? "",
+        numberOfEmployees: initialPrefill?.numberOfEmployees ?? 0,
         productTypeId: "",
         gsmOptionId: "",
         fabricCompositionId: "",
         colorOptionIds: [] as string[],
         customColorRequest: "",
-        quantity: 0,
+        quantity: initialPrefill?.quantity ?? 0,
         logoLocationIds: [] as string[],
         printMethodId: "",
         extraChargeRuleIds: [] as string[],
-        paymentPreference: "partial_advance" as
+        paymentPreference: (initialPrefill?.paymentPreference ??
+            "partial_advance") as
             | "partial_advance"
             | "full_upfront",
-        customerNotes: "",
+        customerNotes: initialPrefill?.customerNotes ?? "",
     });
 
     useEffect(() => {

@@ -1027,6 +1027,24 @@ export const corporateQuoteRevisionsRelations = relations(
     })
 );
 
+export const corporatePurchaseOrdersRelations = relations(
+    corporatePurchaseOrders,
+    ({ one }) => ({
+        quote: one(corporateQuotes, {
+            fields: [corporatePurchaseOrders.quoteId],
+            references: [corporateQuotes.id],
+        }),
+        profile: one(corporateProfiles, {
+            fields: [corporatePurchaseOrders.corporateProfileId],
+            references: [corporateProfiles.id],
+        }),
+        order: one(corporateOrders, {
+            fields: [corporatePurchaseOrders.corporateOrderId],
+            references: [corporateOrders.id],
+        }),
+    })
+);
+
 export const corporateProductConfigsRelations = relations(
     corporateProductConfigs,
     ({ one }) => ({

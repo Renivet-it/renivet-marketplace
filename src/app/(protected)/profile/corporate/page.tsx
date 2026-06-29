@@ -10,10 +10,11 @@ export default async function Page() {
         redirect("/auth/signin?redirect_url=/profile/corporate");
     }
 
-    const [profile, rfqs, quotes, orders] = await Promise.all([
+    const [profile, rfqs, quotes, purchaseOrders, orders] = await Promise.all([
         corporatePlatformService.getMyProfile(userId),
         corporatePlatformService.listMyRfqs(userId),
         corporatePlatformService.listMyQuotes(userId),
+        corporatePlatformService.listMyPurchaseOrders(userId),
         corporateOrderService.listOrdersForUser(userId),
     ]);
 
@@ -22,6 +23,7 @@ export default async function Page() {
             initialProfile={profile}
             initialRfqs={rfqs}
             initialQuotes={quotes}
+            initialPurchaseOrders={purchaseOrders}
             initialOrders={orders}
         />
     );

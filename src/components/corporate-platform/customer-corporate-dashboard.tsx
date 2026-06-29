@@ -1,5 +1,6 @@
 "use client";
 
+import { CorporateOrderPage } from "@/components/corporate-orders/corporate-order-page";
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,38 +15,45 @@ export function CustomerCorporateDashboard({
     initialProfile,
     initialRfqs,
     initialQuotes,
+    initialPurchaseOrders,
     initialOrders,
 }: {
     initialProfile: any;
     initialRfqs: any[];
     initialQuotes: any[];
+    initialPurchaseOrders: any[];
     initialOrders: any[];
 }) {
     const utils = trpc.useUtils();
     const { startUpload } = useUploadThing("corporateDocumentUploader");
+    const [activeTab, setActiveTab] = useState("overview");
+    const [quotes, setQuotes] = useState(initialQuotes);
+    const [purchaseOrders, setPurchaseOrders] = useState(initialPurchaseOrders);
+    const [orderSetupQuoteId, setOrderSetupQuoteId] = useState<string | null>(
+        null
+    );
     const [poFiles, setPoFiles] = useState<Record<string, File | null>>({});
     const [poNumbers, setPoNumbers] = useState<Record<string, string>>({});
     const [poScopes, setPoScopes] = useState<Record<string, string>>({});
     const [poSignatories, setPoSignatories] = useState<Record<string, string>>({});
-    const [poSectionsOpen, setPoSectionsOpen] = useState<Record<string, boolean>>({});
-    const [revisionRequests, setRevisionRequests] = useState<
-        Record<
-            string,
-            {
-                open?: boolean;
-                price?: boolean;
-                quantity?: boolean;
-                branding?: boolean;
-                timeline?: boolean;
-                specification?: boolean;
-                notes?: string;
-            }
-        >
+    const [purchaseOrderChoice, setPurchaseOrderChoice] = useState<
+        Record<string, "direct" | "purchase_order" | undefined>
     >({});
 
     const quoteDecision = trpc.general.corporatePlatform.decideQuote.useMutation({
-        onSuccess: async () => {
-            toast.success("Quote updated");
+        onSuccess: async (updatedQuote) => {
+            toast.success("Quote approved");
+            setQuotes((current) =>
+                current.map((quote) =>
+                    quote.id === updatedQuote.id
+                        ? {
+                              ...quote,
+                              ...updatedQuote,
+                          }
+                        : quote
+                )
+            );
+            setActiveTab("quotes");
             await Promise.all([
                 utils.general.corporatePlatform.listMyQuotes.invalidate(),
                 utils.general.corporatePlatform.listMyRfqs.invalidate(),
@@ -55,8 +63,15 @@ export function CustomerCorporateDashboard({
     });
 
     const createPo = trpc.general.corporatePlatform.createPurchaseOrder.useMutation({
-        onSuccess: async () => {
+        onSuccess: async (createdPurchaseOrder) => {
             toast.success("Purchase order uploaded");
+            setPurchaseOrders((current) => [createdPurchaseOrder, ...current]);
+            setPurchaseOrderChoice((current) => ({
+                ...current,
+                [createdPurchaseOrder.quoteId]: "purchase_order",
+            }));
+            setOrderSetupQuoteId(createdPurchaseOrder.quoteId);
+            setActiveTab("order-setup");
             await Promise.all([
                 utils.general.corporatePlatform.listMyQuotes.invalidate(),
                 utils.general.corporatePlatform.listMyRfqs.invalidate(),
@@ -110,7 +125,7 @@ export function CustomerCorporateDashboard({
         }
     };
 
-    const purchaseOrdersReadyCount = initialQuotes.filter(
+    const purchaseOrdersReadyCount = quotes.filter(
         (quote) => quote.status === "approved"
     ).length;
     const paidOrdersCount = initialOrders.filter(
@@ -119,53 +134,31 @@ export function CustomerCorporateDashboard({
     const deliveredOrdersCount = initialOrders.filter(
         (order) => order.status === "delivered"
     ).length;
-    const quotesNeedingAction = initialQuotes.filter((quote) =>
+    const quotesNeedingAction = quotes.filter((quote) =>
         ["sent", "quote_sent", "customer_review", "revision_requested"].includes(
             String(quote.status)
         )
     );
+    const purchaseOrderByQuoteId = new Map(
+        purchaseOrders
+            .filter((purchaseOrder) => purchaseOrder.quoteId)
+            .map((purchaseOrder) => [purchaseOrder.quoteId, purchaseOrder])
+    );
+    const unlockedQuotes = quotes.filter((quote) => {
+        if (quote.status !== "approved") return false;
 
-    const setRevisionDraft = (
-        quoteId: string,
-        key: string,
-        value: boolean | string
-    ) => {
-        setRevisionRequests((current) => ({
-            ...current,
-            [quoteId]: {
-                ...current[quoteId],
-                [key]: value,
-            },
-        }));
-    };
-
-    const buildRevisionNotes = (quoteId: string) => {
-        const draft = revisionRequests[quoteId] ?? {};
-        const requestedChanges = [
-            draft.price ? "pricing" : null,
-            draft.quantity ? "quantity" : null,
-            draft.branding ? "branding or customization" : null,
-            draft.timeline ? "delivery timeline" : null,
-            draft.specification ? "product specification" : null,
-        ].filter(Boolean);
-
-        const parts: string[] = [];
-        if (requestedChanges.length) {
-            parts.push(`Please revise: ${requestedChanges.join(", ")}.`);
-        }
-        if (draft.notes?.trim()) {
-            parts.push(draft.notes.trim());
+        const selectedPath = purchaseOrderChoice[quote.id];
+        if (selectedPath === "direct") return true;
+        if (selectedPath === "purchase_order") {
+            return purchaseOrderByQuoteId.has(quote.id);
         }
 
-        return parts.join(" ");
-    };
-
-    const togglePoSection = (quoteId: string) => {
-        setPoSectionsOpen((current) => ({
-            ...current,
-            [quoteId]: !current[quoteId],
-        }));
-    };
+        return purchaseOrderByQuoteId.has(quote.id);
+    });
+    const selectedOrderSetupQuote =
+        quotes.find((quote) => quote.id === orderSetupQuoteId) ??
+        unlockedQuotes[0] ??
+        null;
 
     return (
         <div className="w-full space-y-8 pb-6">
@@ -233,7 +226,7 @@ export function CustomerCorporateDashboard({
 
                         <SurfacePanel
                             title="Need Help Next?"
-                            description="Enterprise purchase order upload becomes available after quote approval."
+                            description="After approval, buyers can either continue directly into order setup or upload a company purchase order first."
                             className="bg-[#23311c] text-white"
                             inverse
                         >
@@ -249,8 +242,8 @@ export function CustomerCorporateDashboard({
                                 <MiniPill
                                     label={
                                         purchaseOrdersReadyCount
-                                            ? `${purchaseOrdersReadyCount} approved quote(s) ready for purchase order upload`
-                                            : "Purchase order route activates after quote approval"
+                                            ? `${purchaseOrdersReadyCount} approved quote(s) ready for order setup`
+                                            : "Order setup unlocks after quotation approval"
                                     }
                                     dark
                                 />
@@ -268,7 +261,7 @@ export function CustomerCorporateDashboard({
                 />
                 <MetricCard
                     label="Quotes"
-                    value={String(initialQuotes.length)}
+                    value={String(quotes.length)}
                     hint="Commercial drafts received"
                 />
                 <MetricCard
@@ -277,9 +270,9 @@ export function CustomerCorporateDashboard({
                     hint="Corporate orders created"
                 />
                 <MetricCard
-                    label="Purchase Orders"
+                    label="Approved Quotations"
                     value={String(purchaseOrdersReadyCount)}
-                    hint="Approved and ready for upload"
+                    hint="Ready to continue into order setup"
                 />
                 <MetricCard
                     label="Payments"
@@ -293,9 +286,17 @@ export function CustomerCorporateDashboard({
                 />
             </section>
 
-            <Tabs defaultValue="overview" className="space-y-6">
+            <Tabs
+                value={activeTab}
+                onValueChange={setActiveTab}
+                className="space-y-6"
+            >
                 <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.24)]">
-                    <TabsList className="grid h-auto w-full grid-cols-2 gap-2 rounded-[22px] bg-slate-50 p-2 md:grid-cols-5">
+                    <TabsList
+                        className={`grid h-auto w-full grid-cols-2 gap-2 rounded-[22px] bg-slate-50 p-2 ${
+                            unlockedQuotes.length ? "md:grid-cols-6" : "md:grid-cols-5"
+                        }`}
+                    >
                         <TabsTrigger value="overview" className="rounded-[18px] py-3 text-sm font-semibold">
                             Overview
                         </TabsTrigger>
@@ -311,6 +312,14 @@ export function CustomerCorporateDashboard({
                         <TabsTrigger value="company" className="rounded-[18px] py-3 text-sm font-semibold">
                             Company
                         </TabsTrigger>
+                        {unlockedQuotes.length ? (
+                            <TabsTrigger
+                                value="order-setup"
+                                className="rounded-[18px] py-3 text-sm font-semibold"
+                            >
+                                Order Setup
+                            </TabsTrigger>
+                        ) : null}
                     </TabsList>
                 </div>
 
@@ -321,12 +330,16 @@ export function CustomerCorporateDashboard({
                             description="This is the most important area for your team after a quotation is shared."
                             className="xl:col-span-6"
                         >
-                            {initialQuotes.length ? (
+                            {quotes.length ? (
                                 <div className="space-y-3">
-                                    {initialQuotes.slice(0, 2).map((quote) => (
+                                    {quotes.slice(0, 2).map((quote) => (
                                         <CompactQuoteCard
                                             key={quote.id}
                                             quote={quote}
+                                            purchaseOrder={purchaseOrderByQuoteId.get(quote.id)}
+                                            purchaseOrderChoice={
+                                                purchaseOrderChoice[quote.id]
+                                            }
                                             poNumber={poNumbers[quote.id] ?? ""}
                                             onPoNumberChange={(value) =>
                                                 setPoNumbers((current) => ({
@@ -347,26 +360,26 @@ export function CustomerCorporateDashboard({
                                                     notes: "Approved from customer dashboard",
                                                 })
                                             }
-                                            onRevision={() =>
-                                                quoteDecision.mutate({
-                                                    quoteId: quote.id,
-                                                    decision: "revision_requested",
-                                                    notes:
-                                                        buildRevisionNotes(quote.id) ||
-                                                        "Customer requested a revision.",
-                                                })
-                                            }
-                                            onReject={() =>
-                                                quoteDecision.mutate({
-                                                    quoteId: quote.id,
-                                                    decision: "rejected",
-                                                    notes: "Rejected from customer dashboard",
-                                                })
-                                            }
                                             onUploadPo={() => submitPo(quote)}
                                             uploadPending={createPo.isPending}
-                                            poSectionOpen={!!poSectionsOpen[quote.id]}
-                                            onTogglePoSection={() => togglePoSection(quote.id)}
+                                            onChooseDirectOrder={() => {
+                                                setPurchaseOrderChoice((current) => ({
+                                                    ...current,
+                                                    [quote.id]: "direct",
+                                                }));
+                                                setOrderSetupQuoteId(quote.id);
+                                                setActiveTab("order-setup");
+                                            }}
+                                            onChoosePurchaseOrder={() =>
+                                                setPurchaseOrderChoice((current) => ({
+                                                    ...current,
+                                                    [quote.id]: "purchase_order",
+                                                }))
+                                            }
+                                            onContinueToOrderSetup={() => {
+                                                setOrderSetupQuoteId(quote.id);
+                                                setActiveTab("order-setup");
+                                            }}
                                             poScope={poScopes[quote.id] ?? ""}
                                             onPoScopeChange={(value) =>
                                                 setPoScopes((current) => ({
@@ -380,17 +393,6 @@ export function CustomerCorporateDashboard({
                                                     ...current,
                                                     [quote.id]: value,
                                                 }))
-                                            }
-                                            revisionDraft={revisionRequests[quote.id] ?? {}}
-                                            onToggleRevisionOpen={() =>
-                                                setRevisionDraft(
-                                                    quote.id,
-                                                    "open",
-                                                    !(revisionRequests[quote.id]?.open ?? false)
-                                                )
-                                            }
-                                            onRevisionFieldChange={(key, value) =>
-                                                setRevisionDraft(quote.id, key, value)
                                             }
                                         />
                                     ))}
@@ -468,247 +470,72 @@ export function CustomerCorporateDashboard({
 
                 <TabsContent value="quotes" className="mt-0">
                     <SurfacePanel
-                        title="Quotes Requiring Action"
-                        description="Approve, revise, reject, or upload a purchase order from one focused view."
+                        title="Quotation Approval And Order Unlock"
+                        description="Approve the commercial quotation, choose whether your company uses a purchase order, and then continue into the guided order setup flow."
                     >
-                        {initialQuotes.length ? (
+                        {quotes.length ? (
                             <div className="space-y-4">
-                                {initialQuotes.map((quote) => (
-                                    (() => {
-                                        const isApproved = quote.status === "approved";
-                                        const isRejected = quote.status === "rejected";
-                                        const canDecide = !isApproved && !isRejected;
-                                        return (
-                                    <div
+                                {quotes.map((quote) => (
+                                    <CompactQuoteCard
                                         key={quote.id}
-                                        className="rounded-[24px] border border-[#d8e3ef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbfe_100%)] p-5"
-                                    >
-                                        <div className="flex flex-wrap items-start justify-between gap-4">
-                                            <div>
-                                                <div className="text-xl font-semibold text-slate-900">
-                                                    {quote.quoteNumber}
-                                                </div>
-                                                <div className="mt-1 text-sm text-slate-500">
-                                                    {toLabel(quote.status)} - {formatINR(quote.totalAmountPaise)}
-                                                </div>
-                                            </div>
-                                            <StatusChip label={toLabel(quote.status)} />
-                                        </div>
-
-                                        {canDecide ? (
-                                        <div className="mt-4 flex flex-wrap gap-2">
-                                            <Button
-                                                className="bg-emerald-600 text-white hover:bg-emerald-700"
-                                                onClick={() =>
-                                                    quoteDecision.mutate({
-                                                        quoteId: quote.id,
-                                                        decision: "approved",
-                                                        notes: "Approved from customer dashboard",
-                                                    })
-                                                }
-                                            >
-                                                Approve Quote
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() =>
-                                                    setRevisionDraft(
-                                                        quote.id,
-                                                        "open",
-                                                        !(revisionRequests[quote.id]?.open ?? false)
-                                                    )
-                                                }
-                                            >
-                                                Request Revision
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() =>
-                                                    quoteDecision.mutate({
-                                                        quoteId: quote.id,
-                                                        decision: "rejected",
-                                                        notes: "Rejected from customer dashboard",
-                                                    })
-                                                }
-                                            >
-                                                Reject
-                                            </Button>
-                                        </div>
-                                        ) : (
-                                        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                            {isApproved
-                                                ? "Quote approved. If your company uses purchase orders, upload it below."
-                                                : "Quote rejected. This quote is now closed."}
-                                        </div>
-                                        )}
-
-                                        {canDecide && revisionRequests[quote.id]?.open ? (
-                                            <div className="mt-5 rounded-[22px] border border-amber-200 bg-amber-50 p-4">
-                                                <div className="text-sm font-semibold text-slate-900">
-                                                    Tell us what should be revised
-                                                </div>
-                                                <div className="mt-1 text-sm leading-6 text-slate-600">
-                                                    Select what needs to change and add a short note so the team knows exactly what to update.
-                                                </div>
-                                                <div className="mt-4 grid gap-3 md:grid-cols-2">
-                                                    <RevisionCheck
-                                                        label="Pricing"
-                                                        checked={!!revisionRequests[quote.id]?.price}
-                                                        onChange={(checked) =>
-                                                            setRevisionDraft(quote.id, "price", checked)
-                                                        }
-                                                    />
-                                                    <RevisionCheck
-                                                        label="Quantity"
-                                                        checked={!!revisionRequests[quote.id]?.quantity}
-                                                        onChange={(checked) =>
-                                                            setRevisionDraft(quote.id, "quantity", checked)
-                                                        }
-                                                    />
-                                                    <RevisionCheck
-                                                        label="Branding or customization"
-                                                        checked={!!revisionRequests[quote.id]?.branding}
-                                                        onChange={(checked) =>
-                                                            setRevisionDraft(quote.id, "branding", checked)
-                                                        }
-                                                    />
-                                                    <RevisionCheck
-                                                        label="Delivery timeline"
-                                                        checked={!!revisionRequests[quote.id]?.timeline}
-                                                        onChange={(checked) =>
-                                                            setRevisionDraft(quote.id, "timeline", checked)
-                                                        }
-                                                    />
-                                                    <RevisionCheck
-                                                        label="Product specification"
-                                                        checked={!!revisionRequests[quote.id]?.specification}
-                                                        onChange={(checked) =>
-                                                            setRevisionDraft(quote.id, "specification", checked)
-                                                        }
-                                                    />
-                                                </div>
-                                                <textarea
-                                                    className="mt-4 min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400"
-                                                    placeholder="Example: Please revise the price for 250 units and change the branding method to print instead of embroidery."
-                                                    value={revisionRequests[quote.id]?.notes ?? ""}
-                                                    onChange={(e) =>
-                                                        setRevisionDraft(quote.id, "notes", e.target.value)
-                                                    }
-                                                />
-                                                <div className="mt-4 flex flex-wrap gap-2">
-                                                    <Button
-                                                        variant="outline"
-                                                        onClick={() =>
-                                                            quoteDecision.mutate({
-                                                                quoteId: quote.id,
-                                                                decision: "revision_requested",
-                                                                notes:
-                                                                    buildRevisionNotes(quote.id) ||
-                                                                    "Customer requested a revision.",
-                                                            })
-                                                        }
-                                                    >
-                                                        Send Revision Request
-                                                    </Button>
-                                                    <Button
-                                                        variant="outline"
-                                                        onClick={() =>
-                                                            setRevisionDraft(quote.id, "open", false)
-                                                        }
-                                                    >
-                                                        Cancel
-                                                    </Button>
-                                                </div>
-                                            </div>
-                                        ) : null}
-
-                                        {isApproved ? (
-                                            <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
-                                                <div className="mb-3 text-sm font-semibold text-slate-900">
-                                                    Next step after approval
-                                                </div>
-                                                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                                    If your company does not use purchase orders, no action is needed here. Renivet will continue from the approved quote and your order will appear in the Orders tab once the team releases it.
-                                                </div>
-                                                <div className="mt-3">
-                                                    <Button
-                                                        variant="outline"
-                                                        onClick={() => togglePoSection(quote.id)}
-                                                    >
-                                                        {poSectionsOpen[quote.id]
-                                                            ? "Hide Purchase Order Form"
-                                                            : "My company uses a purchase order"}
-                                                    </Button>
-                                                </div>
-                                                {poSectionsOpen[quote.id] ? (
-                                                    <>
-                                                        <div className="mt-4 mb-3 text-sm leading-6 text-slate-500">
-                                                            Use this only if your company buys through an official purchase order after approving the quote.
-                                                        </div>
-                                                        <div className="grid gap-3 xl:grid-cols-2">
-                                                            <Input
-                                                                placeholder="Enter your company purchase order number"
-                                                                value={poNumbers[quote.id] ?? ""}
-                                                                onChange={(e) =>
-                                                                    setPoNumbers((current) => ({
-                                                                        ...current,
-                                                                        [quote.id]: e.target.value,
-                                                                    }))
-                                                                }
-                                                            />
-                                                            <Input
-                                                                placeholder="Summarize the approved product scope"
-                                                                value={
-                                                                    poScopes[quote.id] ||
-                                                                    `${quote.quantity ?? ""} unit(s) as per approved quote`
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setPoScopes((current) => ({
-                                                                        ...current,
-                                                                        [quote.id]: e.target.value,
-                                                                    }))
-                                                                }
-                                                            />
-                                                            <Input
-                                                                placeholder="Authorized signatory name"
-                                                                value={
-                                                                    poSignatories[quote.id] ||
-                                                                    initialProfile?.contactPerson ||
-                                                                    ""
-                                                                }
-                                                                onChange={(e) =>
-                                                                    setPoSignatories((current) => ({
-                                                                        ...current,
-                                                                        [quote.id]: e.target.value,
-                                                                    }))
-                                                                }
-                                                            />
-                                                            <input
-                                                                type="file"
-                                                                className="block w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm"
-                                                                onChange={(e) =>
-                                                                    setPoFiles((current) => ({
-                                                                        ...current,
-                                                                        [quote.id]: e.target.files?.[0] ?? null,
-                                                                    }))
-                                                                }
-                                                            />
-                                                        </div>
-                                                        <Button
-                                                            className="mt-3"
-                                                            variant="outline"
-                                                            onClick={() => submitPo(quote)}
-                                                            disabled={createPo.isPending}
-                                                        >
-                                                            Upload Purchase Order
-                                                        </Button>
-                                                    </>
-                                                ) : null}
-                                            </div>
-                                        ) : null}
-                                    </div>
-                                        );
-                                    })()
+                                        quote={quote}
+                                        purchaseOrder={purchaseOrderByQuoteId.get(quote.id)}
+                                        purchaseOrderChoice={purchaseOrderChoice[quote.id]}
+                                        poNumber={poNumbers[quote.id] ?? ""}
+                                        onPoNumberChange={(value) =>
+                                            setPoNumbers((current) => ({
+                                                ...current,
+                                                [quote.id]: value,
+                                            }))
+                                        }
+                                        onFileChange={(file) =>
+                                            setPoFiles((current) => ({
+                                                ...current,
+                                                [quote.id]: file,
+                                            }))
+                                        }
+                                        onApprove={() =>
+                                            quoteDecision.mutate({
+                                                quoteId: quote.id,
+                                                decision: "approved",
+                                                notes: "Approved from customer dashboard",
+                                            })
+                                        }
+                                        onUploadPo={() => submitPo(quote)}
+                                        uploadPending={createPo.isPending}
+                                        onChooseDirectOrder={() => {
+                                            setPurchaseOrderChoice((current) => ({
+                                                ...current,
+                                                [quote.id]: "direct",
+                                            }));
+                                            setOrderSetupQuoteId(quote.id);
+                                            setActiveTab("order-setup");
+                                        }}
+                                        onChoosePurchaseOrder={() =>
+                                            setPurchaseOrderChoice((current) => ({
+                                                ...current,
+                                                [quote.id]: "purchase_order",
+                                            }))
+                                        }
+                                        onContinueToOrderSetup={() => {
+                                            setOrderSetupQuoteId(quote.id);
+                                            setActiveTab("order-setup");
+                                        }}
+                                        poScope={poScopes[quote.id] ?? ""}
+                                        onPoScopeChange={(value) =>
+                                            setPoScopes((current) => ({
+                                                ...current,
+                                                [quote.id]: value,
+                                            }))
+                                        }
+                                        signatoryName={poSignatories[quote.id] ?? ""}
+                                        onSignatoryNameChange={(value) =>
+                                            setPoSignatories((current) => ({
+                                                ...current,
+                                                [quote.id]: value,
+                                            }))
+                                        }
+                                    />
                                 ))}
                             </div>
                         ) : (
@@ -738,6 +565,108 @@ export function CustomerCorporateDashboard({
                         )}
                     </SurfacePanel>
                 </TabsContent>
+
+                {unlockedQuotes.length ? (
+                    <TabsContent value="order-setup" className="mt-0">
+                        <div className="space-y-6">
+                            <SurfacePanel
+                                title="Continue With Approved Quotation"
+                                description="Use the same guided self-service order builder, now unlocked from your approved quotation."
+                            >
+                                <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+                                    <div className="rounded-[24px] border border-[#d8e3ef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbfe_100%)] p-5">
+                                        <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5B9BD5]">
+                                            Ready To Order
+                                        </div>
+                                        <div className="mt-3 text-2xl font-semibold text-slate-900">
+                                            {selectedOrderSetupQuote?.quoteNumber ??
+                                                "Approved quote"}
+                                        </div>
+                                        <div className="mt-2 text-sm leading-7 text-slate-600">
+                                            Complete the same premium order setup used in self-service buying. Your company details and approved quotation context will already be carried into the form.
+                                        </div>
+                                        <div className="mt-5 grid gap-3 md:grid-cols-3">
+                                            {unlockedQuotes.map((quote) => (
+                                                <button
+                                                    key={quote.id}
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setOrderSetupQuoteId(quote.id)
+                                                    }
+                                                    className={`rounded-[20px] border px-4 py-4 text-left transition ${
+                                                        selectedOrderSetupQuote?.id === quote.id
+                                                            ? "border-[#5B9BD5] bg-[#f2f8ff] shadow-sm"
+                                                            : "border-slate-200 bg-white hover:border-[#bfd3ea]"
+                                                    }`}
+                                                >
+                                                    <div className="font-semibold text-slate-900">
+                                                        {quote.quoteNumber}
+                                                    </div>
+                                                    <div className="mt-1 text-sm text-slate-500">
+                                                        {formatINR(quote.totalAmountPaise)}
+                                                    </div>
+                                                    <div className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-400">
+                                                        {purchaseOrderByQuoteId.has(quote.id)
+                                                            ? "Purchase order uploaded"
+                                                            : "Direct order route"}
+                                                    </div>
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <SurfacePanel
+                                        title="What Happens Here"
+                                        description="This is the same order-builder journey used for self-service corporate ordering."
+                                        className="bg-[#23311c] text-white"
+                                        inverse
+                                    >
+                                        <MiniPill
+                                            label="1. Company details are prefilled"
+                                            dark
+                                        />
+                                        <MiniPill
+                                            label="2. Configure product and branding"
+                                            dark
+                                        />
+                                        <MiniPill
+                                            label="3. Upload artwork and size sheet"
+                                            dark
+                                        />
+                                        <MiniPill
+                                            label="4. Review pricing and pay advance"
+                                            dark
+                                        />
+                                    </SurfacePanel>
+                                </div>
+                            </SurfacePanel>
+
+                            {selectedOrderSetupQuote ? (
+                                <CorporateOrderPage
+                                    key={selectedOrderSetupQuote.id}
+                                    initialPrefill={{
+                                        companyName:
+                                            initialProfile?.companyName ??
+                                            selectedOrderSetupQuote.profile?.companyName,
+                                        contactPersonName:
+                                            initialProfile?.contactPerson ?? "",
+                                        emailAddress: initialProfile?.email ?? "",
+                                        mobileNumber: initialProfile?.phone ?? "",
+                                        gstNumber: initialProfile?.gstNumber ?? "",
+                                        quantity: selectedOrderSetupQuote.quantity ?? 0,
+                                        numberOfEmployees:
+                                            selectedOrderSetupQuote.quantity ?? 0,
+                                        customerNotes: `Approved quotation ${selectedOrderSetupQuote.quoteNumber} for ${selectedOrderSetupQuote.quantity} unit(s).`,
+                                        paymentPreference:
+                                            selectedOrderSetupQuote.balanceAmountPaise === 0
+                                                ? "full_upfront"
+                                                : "partial_advance",
+                                    }}
+                                />
+                            ) : null}
+                        </div>
+                    </TabsContent>
+                ) : null}
 
                 <TabsContent value="company" className="mt-0">
                     <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
@@ -994,29 +923,10 @@ function StatusChip({ label }: { label: string }) {
     );
 }
 
-function RevisionCheck({
-    label,
-    checked,
-    onChange,
-}: {
-    label: string;
-    checked: boolean;
-    onChange: (checked: boolean) => void;
-}) {
-    return (
-        <label className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-white px-4 py-3 text-sm text-slate-700">
-            <input
-                type="checkbox"
-                checked={checked}
-                onChange={(e) => onChange(e.target.checked)}
-            />
-            <span>{label}</span>
-        </label>
-    );
-}
-
 function CompactQuoteCard({
     quote,
+    purchaseOrder,
+    purchaseOrderChoice,
     poNumber,
     onPoNumberChange,
     poScope,
@@ -1025,17 +935,15 @@ function CompactQuoteCard({
     onSignatoryNameChange,
     onFileChange,
     onApprove,
-    onRevision,
-    onReject,
     onUploadPo,
     uploadPending,
-    poSectionOpen,
-    onTogglePoSection,
-    revisionDraft,
-    onToggleRevisionOpen,
-    onRevisionFieldChange,
+    onChooseDirectOrder,
+    onChoosePurchaseOrder,
+    onContinueToOrderSetup,
 }: {
     quote: any;
+    purchaseOrder?: any;
+    purchaseOrderChoice?: "direct" | "purchase_order";
     poNumber: string;
     onPoNumberChange: (value: string) => void;
     poScope: string;
@@ -1044,27 +952,18 @@ function CompactQuoteCard({
     onSignatoryNameChange: (value: string) => void;
     onFileChange: (file: File | null) => void;
     onApprove: () => void;
-    onRevision: () => void;
-    onReject: () => void;
     onUploadPo: () => void;
     uploadPending: boolean;
-    poSectionOpen: boolean;
-    onTogglePoSection: () => void;
-    revisionDraft: {
-        open?: boolean;
-        price?: boolean;
-        quantity?: boolean;
-        branding?: boolean;
-        timeline?: boolean;
-        specification?: boolean;
-        notes?: string;
-    };
-    onToggleRevisionOpen: () => void;
-    onRevisionFieldChange: (key: string, value: boolean | string) => void;
+    onChooseDirectOrder: () => void;
+    onChoosePurchaseOrder: () => void;
+    onContinueToOrderSetup: () => void;
 }) {
     const isApproved = quote.status === "approved";
     const isRejected = quote.status === "rejected";
-    const canDecide = !isApproved && !isRejected;
+    const canApprove = !isApproved && !isRejected;
+    const purchaseOrderUploaded = !!purchaseOrder;
+    const directRouteUnlocked = isApproved && purchaseOrderChoice === "direct";
+    const purchaseOrderRouteOpen = isApproved && purchaseOrderChoice === "purchase_order";
 
     return (
         <div className="rounded-[24px] border border-[#d8e3ef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbfe_100%)] p-5">
@@ -1080,7 +979,7 @@ function CompactQuoteCard({
                 <StatusChip label={toLabel(quote.status)} />
             </div>
 
-            {canDecide ? (
+            {canApprove ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                     <Button
                         className="bg-emerald-600 text-white hover:bg-emerald-700"
@@ -1088,106 +987,74 @@ function CompactQuoteCard({
                     >
                         Approve Quote
                     </Button>
-                    <Button variant="outline" onClick={onToggleRevisionOpen}>
-                        Request Revision
-                    </Button>
-                    <Button variant="outline" onClick={onReject}>
-                        Reject
-                    </Button>
                 </div>
             ) : (
                 <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                     {isApproved
-                        ? "Quote approved. Renivet can now move this into order processing. Upload a company purchase order only if your business requires one."
+                        ? "Quote approved. Choose whether you want to continue directly into order setup or upload a company purchase order first."
                         : "Quote rejected. This quote is now closed."}
                 </div>
             )}
-
-            {canDecide && revisionDraft.open ? (
-                <div className="mt-5 rounded-[22px] border border-amber-200 bg-amber-50 p-4">
-                    <div className="text-sm font-semibold text-slate-900">
-                        Tell us what should be revised
-                    </div>
-                    <div className="mt-1 text-sm leading-6 text-slate-600">
-                        Select what needs to change and add a short note so the team can revise the quote properly.
-                    </div>
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                        <RevisionCheck
-                            label="Pricing"
-                            checked={!!revisionDraft.price}
-                            onChange={(checked) =>
-                                onRevisionFieldChange("price", checked)
-                            }
-                        />
-                        <RevisionCheck
-                            label="Quantity"
-                            checked={!!revisionDraft.quantity}
-                            onChange={(checked) =>
-                                onRevisionFieldChange("quantity", checked)
-                            }
-                        />
-                        <RevisionCheck
-                            label="Branding or customization"
-                            checked={!!revisionDraft.branding}
-                            onChange={(checked) =>
-                                onRevisionFieldChange("branding", checked)
-                            }
-                        />
-                        <RevisionCheck
-                            label="Delivery timeline"
-                            checked={!!revisionDraft.timeline}
-                            onChange={(checked) =>
-                                onRevisionFieldChange("timeline", checked)
-                            }
-                        />
-                        <RevisionCheck
-                            label="Product specification"
-                            checked={!!revisionDraft.specification}
-                            onChange={(checked) =>
-                                onRevisionFieldChange("specification", checked)
-                            }
-                        />
-                    </div>
-                    <textarea
-                        className="mt-4 min-h-28 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none placeholder:text-slate-400"
-                        placeholder="Example: Please revise the price for 250 units and change the branding method to print instead of embroidery."
-                        value={revisionDraft.notes ?? ""}
-                        onChange={(e) =>
-                            onRevisionFieldChange("notes", e.target.value)
-                        }
-                    />
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <Button variant="outline" onClick={onRevision}>
-                            Send Revision Request
-                        </Button>
-                        <Button variant="outline" onClick={onToggleRevisionOpen}>
-                            Cancel
-                        </Button>
-                    </div>
-                </div>
-            ) : null}
 
             {isApproved ? (
                 <div className="mt-5 rounded-[22px] border border-slate-200 bg-white p-4">
                     <div className="mb-3 text-sm font-semibold text-slate-900">
                         Next step after approval
                     </div>
-                    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                        If your company does not use purchase orders, no action is needed here. Renivet will continue from the approved quote and your order will appear in the Orders tab once the team releases it.
-                    </div>
-                    <div className="mt-3">
-                        <Button variant="outline" onClick={onTogglePoSection}>
-                            {poSectionOpen
-                                ? "Hide Purchase Order Form"
-                                : "My company uses a purchase order"}
-                        </Button>
-                    </div>
-                    {poSectionOpen ? (
-                        <>
-                            <div className="mt-4 mb-3 text-sm leading-6 text-slate-500">
-                                Use this only if your company buys through an official purchase order after approving the quote.
+                    {!purchaseOrderChoice && !purchaseOrderUploaded ? (
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-[20px] border border-emerald-200 bg-emerald-50 p-4">
+                                <div className="text-sm font-semibold text-slate-900">
+                                    Continue directly
+                                </div>
+                                <div className="mt-2 text-sm leading-6 text-slate-600">
+                                    If your company does not require a formal purchase order, continue straight into the guided order setup flow.
+                                </div>
+                                <Button
+                                    className="mt-4 bg-emerald-600 text-white hover:bg-emerald-700"
+                                    onClick={onChooseDirectOrder}
+                                >
+                                    Continue To Order Setup
+                                </Button>
                             </div>
-                            <div className="grid gap-3 xl:grid-cols-2">
+                            <div className="rounded-[20px] border border-[#d8e3ef] bg-[#f8fbfe] p-4">
+                                <div className="text-sm font-semibold text-slate-900">
+                                    My company uses a purchase order
+                                </div>
+                                <div className="mt-2 text-sm leading-6 text-slate-600">
+                                    Upload your official company purchase order first, then the same order setup flow will unlock for you.
+                                </div>
+                                <Button
+                                    className="mt-4"
+                                    variant="outline"
+                                    onClick={onChoosePurchaseOrder}
+                                >
+                                    Upload Purchase Order First
+                                </Button>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {directRouteUnlocked ? (
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+                            Your direct order route is ready. Continue into the same guided order setup used for self-service buying.
+                            <div className="mt-3">
+                                <Button
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                    onClick={onContinueToOrderSetup}
+                                >
+                                    Open Order Setup
+                                </Button>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {purchaseOrderRouteOpen && !purchaseOrderUploaded ? (
+                        <>
+                            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                Upload the company purchase order here. As soon as it is uploaded, the guided order setup section will unlock.
+                            </div>
+                            <div className="mt-4 grid gap-3 xl:grid-cols-2">
                                 <Input
                                     placeholder="Enter your company purchase order number"
                                     value={poNumber}
@@ -1221,6 +1088,24 @@ function CompactQuoteCard({
                                 Upload Purchase Order
                             </Button>
                         </>
+                    ) : null}
+
+                    {purchaseOrderUploaded ? (
+                        <div className="rounded-2xl border border-[#d8e3ef] bg-[#f8fbfe] px-4 py-4 text-sm text-slate-700">
+                            Purchase order uploaded:{" "}
+                            <span className="font-semibold text-slate-900">
+                                {purchaseOrder.poNumber}
+                            </span>
+                            . You can now continue into the guided order setup flow.
+                            <div className="mt-3">
+                                <Button
+                                    className="bg-[#2f3720] text-white hover:bg-[#252c18]"
+                                    onClick={onContinueToOrderSetup}
+                                >
+                                    Open Order Setup
+                                </Button>
+                            </div>
+                        </div>
                     ) : null}
                 </div>
             ) : null}
