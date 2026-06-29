@@ -10,10 +10,22 @@ import { trpc } from "@/lib/trpc/client";
 import type { CorporateOrderFormInput } from "@/lib/validations/corporate-order";
 import { cn, formatINR, handleClientError } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
+import { motion } from "motion/react";
 import * as XLSX from "xlsx";
-import { Check, ChevronLeft, ChevronRight, Upload } from "lucide-react";
+import {
+    Building2,
+    Check,
+    ChevronLeft,
+    ChevronRight,
+    FileSpreadsheet,
+    Palette,
+    Shirt,
+    Sparkles,
+    Upload,
+} from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 const STEPS = [
@@ -115,6 +127,10 @@ export function CorporateOrderPage({
     >([]);
     const [quote, setQuote] = useState<any>(null);
     const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+    const [previewSide, setPreviewSide] = useState<"front" | "back">("front");
+    const [artworkPreviewUrl, setArtworkPreviewUrl] = useState<string | null>(
+        null
+    );
     const [form, setForm] = useState({
         companyName: initialPrefill?.companyName ?? "",
         contactPersonName:
@@ -160,6 +176,25 @@ export function CorporateOrderPage({
         });
     }, []);
 
+    useEffect(() => {
+        if (!artworkLocalFile) {
+            setArtworkPreviewUrl(null);
+            return;
+        }
+
+        if (!artworkLocalFile.type.startsWith("image/")) {
+            setArtworkPreviewUrl(null);
+            return;
+        }
+
+        const objectUrl = URL.createObjectURL(artworkLocalFile);
+        setArtworkPreviewUrl(objectUrl);
+
+        return () => {
+            URL.revokeObjectURL(objectUrl);
+        };
+    }, [artworkLocalFile]);
+
     const createAdvanceMutation =
         trpc.general.corporateOrders.createAdvancePaymentOrder.useMutation({
             onError: (error) => handleClientError(error),
@@ -175,6 +210,27 @@ export function CorporateOrderPage({
     const selectedColorIds = new Set(form.colorOptionIds);
     const selectedLogoLocationIds = new Set(form.logoLocationIds);
     const selectedExtraChargeRuleIds = new Set(form.extraChargeRuleIds);
+    const selectedProductType = config?.productTypes.find(
+        (item) => item.id === form.productTypeId
+    );
+    const selectedGsm = config?.gsmOptions.find(
+        (item) => item.id === form.gsmOptionId
+    );
+    const selectedFabricComposition = config?.fabricCompositions.find(
+        (item) => item.id === form.fabricCompositionId
+    );
+    const selectedPrintMethod = config?.printMethods.find(
+        (item) => item.id === form.printMethodId
+    );
+    const selectedColors = config?.colorOptions.filter((item) =>
+        selectedColorIds.has(item.id)
+    );
+    const selectedLogoLocations = config?.logoLocations.filter((item) =>
+        selectedLogoLocationIds.has(item.id)
+    );
+    const selectedExtraCharges = config?.extraChargeRules.filter((item) =>
+        selectedExtraChargeRuleIds.has(item.id)
+    );
     const configuredAdvancePercent =
         config ? Math.round(config.settings.advancePercentBps / 100) : 30;
     const initialPaymentLabel = quote
@@ -329,25 +385,25 @@ export function CorporateOrderPage({
             if (!companyValidation.valid) {
                 setFieldErrors(companyValidation.errors);
                 setStep(0);
-                return toast.error("Please complete the company details first.");
+                return;
             }
             const productValidation = validateStepBeforeNext(1);
             if (!productValidation.valid) {
                 setFieldErrors(productValidation.errors);
                 setStep(1);
-                return toast.error("Please complete the product details first.");
+                return;
             }
             const brandingValidation = validateStepBeforeNext(2);
             if (!brandingValidation.valid) {
                 setFieldErrors(brandingValidation.errors);
                 setStep(2);
-                return toast.error("Please complete the branding details first.");
+                return;
             }
             const employeeValidation = validateStepBeforeNext(3);
             if (!employeeValidation.valid) {
                 setFieldErrors(employeeValidation.errors);
                 setStep(3);
-                return toast.error("Please complete the employee size upload first.");
+                return;
             }
 
             setIsQuoting(true);
@@ -474,25 +530,25 @@ export function CorporateOrderPage({
             if (!companyValidation.valid) {
                 setFieldErrors(companyValidation.errors);
                 setStep(0);
-                return toast.error("Please complete the company details first.");
+                return;
             }
             const productValidation = validateStepBeforeNext(1);
             if (!productValidation.valid) {
                 setFieldErrors(productValidation.errors);
                 setStep(1);
-                return toast.error("Please complete the product details first.");
+                return;
             }
             const brandingValidation = validateStepBeforeNext(2);
             if (!brandingValidation.valid) {
                 setFieldErrors(brandingValidation.errors);
                 setStep(2);
-                return toast.error("Please complete the branding details first.");
+                return;
             }
             const employeeValidation = validateStepBeforeNext(3);
             if (!employeeValidation.valid) {
                 setFieldErrors(employeeValidation.errors);
                 setStep(3);
-                return toast.error("Please complete the employee size upload first.");
+                return;
             }
             if (!canAdvance) {
                 return toast.error("Please complete all required fields first");
@@ -559,56 +615,127 @@ export function CorporateOrderPage({
 
     return (
         <div className="space-y-6">
-            <section className="rounded-[28px] border border-[#dbe5f0] bg-[linear-gradient(135deg,#ffffff_0%,#f5f9fd_55%,#edf4fb_100%)] p-5 shadow-[0_24px_70px_-48px_rgba(57,91,124,0.28)] md:p-8">
-                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#5B9BD5]">
-                        Corporate Apparel Orders
-                    </p>
-                    <h1 className="mt-3 font-serif text-3xl font-semibold text-[#1f2937] md:text-4xl">
-                        Configure, quote, and place bulk apparel orders
-                    </h1>
-                    <p className="mt-3 max-w-3xl text-sm leading-6 text-[#64748b]">
-                        Upload your branding artwork and employee size sheet,
-                        review live pricing, choose how much to collect now, and
-                        place a polished corporate order in the Renivet flow.
-                    </p>
-                    <div className="mt-4 flex flex-wrap gap-2">
-                        <Badge className="bg-blue-600 text-white hover:bg-blue-600">
-                            Professional bulk ordering
-                        </Badge>
-                        <Badge
-                            variant="outline"
-                            className="border-blue-200 bg-white text-blue-700"
-                        >
-                            {initialPaymentLabel}
-                        </Badge>
+            <section className="overflow-hidden rounded-[32px] border border-[#dbe5f0] bg-[linear-gradient(135deg,#ffffff_0%,#f5f9fd_48%,#edf5ff_100%)] shadow-[0_28px_90px_-58px_rgba(44,72,108,0.45)]">
+                <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[minmax(0,1.5fr)_380px]">
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#5B9BD5]">
+                            Corporate Order Studio
+                        </p>
+                        <h1 className="mt-3 max-w-4xl font-serif text-3xl font-semibold leading-[0.95] text-[#16213f] md:text-5xl">
+                            Build branded teamwear with live visual approval and
+                            payment-ready bulk checkout
+                        </h1>
+                        <p className="mt-4 max-w-3xl text-sm leading-7 text-[#5e728c] md:text-[15px]">
+                            Configure the garment, place your logo on the front
+                            or back, upload employee sizing, and finish the
+                            order in one guided premium workspace.
+                        </p>
+                        <div className="mt-5 flex flex-wrap gap-3">
+                            <Badge className="bg-[#1f3b17] text-white hover:bg-[#1f3b17]">
+                                Premium bulk ordering
+                            </Badge>
+                            <Badge
+                                variant="outline"
+                                className="border-[#b7d6f5] bg-white text-[#356ea5]"
+                            >
+                                {initialPaymentLabel}
+                            </Badge>
+                            <Badge
+                                variant="outline"
+                                className="border-[#d6dde6] bg-white/80 text-slate-600"
+                            >
+                                MOQ-aware pricing
+                            </Badge>
+                        </div>
                     </div>
-                    <div className="mt-6 grid gap-2 md:grid-cols-5">
+
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.45, ease: "easeOut" }}
+                        className="rounded-[28px] border border-white/70 bg-white/80 p-5 shadow-[0_24px_80px_-60px_rgba(23,42,72,0.55)] backdrop-blur"
+                    >
+                        <div className="flex items-center gap-3">
+                            <div className="flex size-11 items-center justify-center rounded-2xl bg-[#ecf5ff] text-[#5B9BD5]">
+                                <Sparkles className="size-5" />
+                            </div>
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#5B9BD5]">
+                                    Live Status
+                                </p>
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    Order readiness snapshot
+                                </h2>
+                            </div>
+                        </div>
+
+                        <div className="mt-5 space-y-3">
+                            <StudioMetric
+                                label="Selected garment"
+                                value={selectedProductType?.name ?? "Choose a product"}
+                            />
+                            <StudioMetric
+                                label="Branding placements"
+                                value={
+                                    selectedLogoLocations?.length
+                                        ? `${selectedLogoLocations.length} selected`
+                                        : "No logo placement selected"
+                                }
+                            />
+                            <StudioMetric
+                                label="Employee size rows"
+                                value={`${employeeRows.length} loaded`}
+                            />
+                            <StudioMetric
+                                label="Payment structure"
+                                value={initialPaymentLabel}
+                            />
+                        </div>
+                    </motion.div>
+                </div>
+
+                <div className="border-t border-white/70 px-5 pb-5 pt-0 md:px-8 md:pb-8">
+                    <div className="grid gap-3 md:grid-cols-5">
                         {STEPS.map((label, index) => (
-                            <div
+                            <motion.button
                                 key={label}
+                                type="button"
+                                whileHover={{ y: -1 }}
+                                whileTap={{ scale: 0.99 }}
+                                onClick={() => setStep(index)}
                                 className={cn(
-                                    "rounded-full border px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em]",
-                                    index <= step
-                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
-                                        : "border-[#d9e4ef] bg-white/80 text-[#64748b]"
+                                    "rounded-[18px] border px-4 py-3 text-left transition-all",
+                                    index === step
+                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white shadow-[0_14px_32px_-18px_rgba(91,155,213,0.75)]"
+                                        : index < step
+                                          ? "border-[#c8dff4] bg-white text-[#24496a]"
+                                          : "border-[#d9e4ef] bg-white/85 text-[#64748b]"
                                 )}
                             >
-                                {label}
-                            </div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em]">
+                                    Step {index + 1}
+                                </p>
+                                <p className="mt-1 text-sm font-semibold">{label}</p>
+                            </motion.button>
                         ))}
                     </div>
+                </div>
             </section>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_360px]">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.22fr)_430px]">
                 <div className="space-y-6">
                     {step === 0 && (
-                        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-                            <h2 className="text-xl font-semibold text-slate-900">
-                                Company Information
-                            </h2>
+                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                            <StepHeader
+                                icon={Building2}
+                                eyebrow="Step 1"
+                                title="Company and delivery details"
+                                description="Tell us where the bulk order is going and who should receive all production, pricing, and payment updates."
+                            />
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
                                 <div>
                                     <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Company Name"
                                         value={form.companyName}
                                         onChange={(e) =>
@@ -619,6 +746,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Contact Person Name"
                                         value={form.contactPersonName}
                                         onChange={(e) =>
@@ -632,6 +760,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Email Address"
                                         type="email"
                                         value={form.emailAddress}
@@ -643,6 +772,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Mobile Number"
                                         value={form.mobileNumber}
                                         onChange={(e) =>
@@ -653,6 +783,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="GST Number (Optional)"
                                         value={form.gstNumber}
                                         onChange={(e) =>
@@ -662,6 +793,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Number of Employees"
                                         type="number"
                                         value={form.numberOfEmployees || ""}
@@ -676,7 +808,7 @@ export function CorporateOrderPage({
                                 </div>
                             </div>
                             <textarea
-                                className="mt-4 min-h-32 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                                className="mt-4 min-h-32 w-full rounded-[24px] border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm outline-none transition focus:border-[#5B9BD5]"
                                 placeholder="Delivery Address"
                                 value={form.deliveryAddress}
                                 onChange={(e) =>
@@ -688,14 +820,17 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 1 && (
-                        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-                            <h2 className="text-xl font-semibold text-slate-900">
-                                Product Configuration
-                            </h2>
+                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                            <StepHeader
+                                icon={Shirt}
+                                eyebrow="Step 2"
+                                title="Choose the garment foundation"
+                                description="Select the apparel base, fabric build, and brand color palette for the live preview and pricing engine."
+                            />
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
                                 <div>
                                     <select
-                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
                                         value={form.productTypeId}
                                         onChange={(e) =>
                                             setFieldValue("productTypeId", e.target.value)
@@ -712,7 +847,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <select
-                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
                                         value={form.gsmOptionId}
                                         onChange={(e) =>
                                             setFieldValue("gsmOptionId", e.target.value)
@@ -729,7 +864,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <select
-                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
                                         value={form.fabricCompositionId}
                                         onChange={(e) =>
                                             setFieldValue(
@@ -749,6 +884,7 @@ export function CorporateOrderPage({
                                 </div>
                                 <div>
                                     <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Quantity"
                                         type="number"
                                         value={form.quantity || ""}
@@ -762,9 +898,9 @@ export function CorporateOrderPage({
 
                             <div className="mt-5">
                                 <p className="text-sm font-semibold text-slate-900">
-                                    Select Colors
+                                    Select garment colors
                                 </p>
-                                <div className="mt-3 flex flex-wrap gap-2">
+                                <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                     {config.colorOptions.map((color) => {
                                         const checked = selectedColorIds.has(color.id);
                                         return (
@@ -772,9 +908,9 @@ export function CorporateOrderPage({
                                                 type="button"
                                                 key={color.id}
                                                 className={cn(
-                                                    "rounded-full border px-3 py-2 text-sm",
+                                                    "flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm transition-all",
                                                     checked
-                                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
+                                                        ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_16px_32px_-24px_rgba(91,155,213,0.72)]"
                                                         : "border-slate-200 bg-white text-slate-700"
                                                 )}
                                                 onClick={() =>
@@ -800,14 +936,24 @@ export function CorporateOrderPage({
                                                     }
                                                 }
                                             >
-                                                {color.name}
+                                                <span
+                                                    className="size-5 rounded-full border border-black/5 shadow-inner"
+                                                    style={{
+                                                        backgroundColor:
+                                                            color.hexCode ??
+                                                            "#dbe4ee",
+                                                    }}
+                                                />
+                                                <span className="font-medium">
+                                                    {color.name}
+                                                </span>
                                             </button>
                                         );
                                     })}
                                 </div>
                                 <FieldError message={fieldErrors.colorOptionIds} />
                                 <textarea
-                                    className="mt-4 min-h-24 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
+                                    className="mt-4 min-h-24 w-full rounded-[24px] border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm outline-none transition focus:border-[#5B9BD5]"
                                     placeholder="Custom color request (optional)"
                                     value={form.customColorRequest}
                                     onChange={(e) =>
@@ -822,15 +968,18 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 2 && (
-                        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-                            <h2 className="text-xl font-semibold text-slate-900">
-                                Branding Requirements
-                            </h2>
+                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                            <StepHeader
+                                icon={Palette}
+                                eyebrow="Step 3"
+                                title="Branding, placement, and artwork"
+                                description="Select exactly where the logo should appear. The live garment preview on the right updates based on front and back placements."
+                            />
                             <div className="mt-4">
                                 <p className="text-sm font-semibold text-slate-900">
-                                    Logo Placement
+                                    Logo placement
                                 </p>
-                                <div className="mt-3 flex flex-wrap gap-2">
+                                <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                     {config.logoLocations.map((location) => {
                                         const checked = selectedLogoLocationIds.has(
                                             location.id
@@ -840,9 +989,9 @@ export function CorporateOrderPage({
                                                 type="button"
                                                 key={location.id}
                                                 className={cn(
-                                                    "rounded-full border px-3 py-2 text-sm",
+                                                    "rounded-[22px] border px-4 py-3 text-left text-sm transition-all",
                                                     checked
-                                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
+                                                        ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_16px_32px_-24px_rgba(91,155,213,0.72)]"
                                                         : "border-slate-200 bg-white text-slate-700"
                                                 )}
                                                 onClick={() =>
@@ -868,7 +1017,14 @@ export function CorporateOrderPage({
                                                     }
                                                 }
                                             >
-                                                {location.name}
+                                                <p className="font-semibold">
+                                                    {location.name}
+                                                </p>
+                                                <p className="mt-1 text-xs opacity-75">
+                                                    {isBackPlacement(location.name)
+                                                        ? "Visible on the back view"
+                                                        : "Visible on the front view"}
+                                                </p>
                                             </button>
                                         );
                                     })}
@@ -878,7 +1034,7 @@ export function CorporateOrderPage({
                             <div className="mt-5 grid gap-4 md:grid-cols-2">
                                 <div>
                                     <select
-                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
                                         value={form.printMethodId}
                                         onChange={(e) =>
                                             setFieldValue("printMethodId", e.target.value)
@@ -915,9 +1071,9 @@ export function CorporateOrderPage({
                                                     type="button"
                                                     key={item.id}
                                                     className={cn(
-                                                        "rounded-full border px-3 py-2 text-sm",
+                                                        "rounded-full border px-3 py-2 text-sm transition-all",
                                                         checked
-                                                            ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
+                                                            ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c]"
                                                             : "border-slate-200 bg-white text-slate-700"
                                                     )}
                                                     onClick={() =>
@@ -945,18 +1101,18 @@ export function CorporateOrderPage({
                                         })}
                                 </div>
                             </div>
-                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="mt-5 rounded-[26px] border border-slate-200 bg-slate-50/70 p-4">
                                 <p className="text-sm font-semibold text-slate-900">
-                                    Payment Choice
+                                    Payment choice
                                 </p>
                                 <div className="mt-3 grid gap-3 md:grid-cols-2">
                                     <button
                                         type="button"
                                         className={cn(
-                                            "rounded-2xl border px-4 py-4 text-left transition-colors",
+                                            "rounded-[22px] border p-4 text-left transition-all",
                                             form.paymentPreference ===
                                                 "partial_advance"
-                                                ? "border-[#5B9BD5] bg-blue-50"
+                                                ? "border-[#5B9BD5] bg-[#eff7ff] shadow-[0_16px_32px_-24px_rgba(91,155,213,0.72)]"
                                                 : "border-slate-200 bg-white"
                                         )}
                                         onClick={() =>
@@ -983,10 +1139,10 @@ export function CorporateOrderPage({
                                     <button
                                         type="button"
                                         className={cn(
-                                            "rounded-2xl border px-4 py-4 text-left transition-colors",
+                                            "rounded-[22px] border p-4 text-left transition-all",
                                             form.paymentPreference ===
                                                 "full_upfront"
-                                                ? "border-[#5B9BD5] bg-blue-50"
+                                                ? "border-[#5B9BD5] bg-[#eff7ff] shadow-[0_16px_32px_-24px_rgba(91,155,213,0.72)]"
                                                 : "border-slate-200 bg-white"
                                         )}
                                         onClick={() =>
@@ -1007,10 +1163,15 @@ export function CorporateOrderPage({
                                     </button>
                                 </div>
                             </div>
-                            <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                            <div className="mt-5 rounded-[26px] border border-dashed border-slate-300 bg-slate-50/70 p-5">
                                 <label className="block text-sm font-semibold text-slate-900">
-                                    Upload Company Logo / Artwork
+                                    Upload company logo or artwork
                                 </label>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    PNG and JPG files show directly on the live
+                                    garment preview. Vector or PDF files remain
+                                    attached for production.
+                                </p>
                                 <input
                                     className="mt-2 block w-full text-sm"
                                     type="file"
@@ -1038,15 +1199,18 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 3 && (
-                        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-                            <h2 className="text-xl font-semibold text-slate-900">
-                                Employee Size Upload
-                            </h2>
-                            <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4">
+                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                            <StepHeader
+                                icon={FileSpreadsheet}
+                                eyebrow="Step 4"
+                                title="Upload employee sizes"
+                                description="Use the employee sizing sheet so the quantity and garment mix match your final distribution list."
+                            />
+                            <div className="mt-4 rounded-[26px] border border-dashed border-slate-300 bg-slate-50/70 p-5">
                                 <div className="flex flex-wrap items-center justify-between gap-3">
                                     <div>
                                         <p className="text-sm font-semibold text-slate-900">
-                                            Upload Employee Details Sheet
+                                            Upload employee details sheet
                                         </p>
                                         <p className="text-xs text-slate-500">
                                             Accepted formats: XLS, XLSX, CSV
@@ -1093,7 +1257,7 @@ export function CorporateOrderPage({
                                 <FieldError message={fieldErrors.employeeSheetFile} />
                             </div>
 
-                            <div className="mt-5 rounded-2xl border border-slate-200">
+                            <div className="mt-5 overflow-hidden rounded-[26px] border border-slate-200">
                                 <div className="border-b border-slate-200 px-4 py-3">
                                     <p className="text-sm font-semibold text-slate-900">
                                         Parsed employees
@@ -1145,19 +1309,26 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 4 && (
-                        <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6">
+                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
                             <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div>
-                                    <h2 className="text-xl font-semibold text-slate-900">
-                                        Order Summary
-                                    </h2>
+                                    <StepHeader
+                                        icon={Sparkles}
+                                        eyebrow="Step 5"
+                                        title="Final quote and payment"
+                                        description={`Review the quote and complete your ${initialPaymentLabel.toLowerCase()}.`}
+                                    />
+                                </div>
+                                <div className="pt-5">
                                     <p className="text-sm text-slate-500">
-                                        Review the quote and complete your{" "}
-                                        {initialPaymentLabel.toLowerCase()}.
+                                        Pricing refresh checks every selected
+                                        option before generating the final
+                                        payment summary.
                                     </p>
                                 </div>
                                 <Button
                                     variant="outline"
+                                    className="rounded-2xl"
                                     onClick={refreshQuote}
                                     disabled={isQuoting}
                                 >
@@ -1204,14 +1375,14 @@ export function CorporateOrderPage({
                                     />
                                 </div>
                             ) : (
-                                <div className="mt-5 rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
+                                <div className="mt-5 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
                                     Refresh the quote to generate the final pricing
                                     summary.
                                 </div>
                             )}
                             <textarea
-                                className="mt-5 min-h-28 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
-                                placeholder="Customer notes (optional)"
+                                className="mt-5 min-h-28 w-full rounded-[24px] border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm outline-none transition focus:border-[#5B9BD5]"
+                                placeholder="Customer notes, dispatch instructions, or packaging details (optional)"
                                 value={form.customerNotes}
                                 onChange={(e) =>
                                     setForm((current) => ({
@@ -1226,6 +1397,7 @@ export function CorporateOrderPage({
                         <div className="flex items-center justify-between">
                             <Button
                                 variant="outline"
+                                className="rounded-2xl"
                                 onClick={() =>
                                     setStep((current) => Math.max(0, current - 1))
                                 }
@@ -1236,6 +1408,7 @@ export function CorporateOrderPage({
                             </Button>
                             {step < 4 ? (
                                 <Button
+                                    className="rounded-2xl"
                                     onClick={() => {
                                         const validation = validateStepBeforeNext(step);
                                         if (!validation.valid) {
@@ -1255,7 +1428,7 @@ export function CorporateOrderPage({
                                 </Button>
                             ) : (
                                 <Button
-                                    className="bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
+                                    className="rounded-2xl bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
                                     onClick={handleProceedToPayment}
                                     disabled={isPaying || !quote}
                                 >
@@ -1269,71 +1442,182 @@ export function CorporateOrderPage({
                         </div>
                     </div>
 
-                    <aside className="h-fit rounded-3xl border border-[#dbe5f0] bg-white p-5 shadow-sm xl:sticky xl:top-6">
-                        <div className="flex items-center gap-3">
-                            <div className="flex size-10 items-center justify-center rounded-full bg-blue-50 text-[#5B9BD5]">
-                                <Upload className="size-5" />
-                            </div>
-                            <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
-                                    Live Quote
-                                </p>
-                                <h3 className="text-lg font-semibold text-slate-900">
-                                    Corporate order summary
-                                </h3>
-                            </div>
-                        </div>
-
-                        <div className="mt-5 space-y-3 text-sm text-slate-700">
-                            <InfoRow
-                                label="Expected timeline"
-                                value={config.settings.expectedTimelineText}
-                            />
-                            <InfoRow
-                                label="GST"
-                                value={`${(config.settings.gstRateBps / 100).toFixed(2)}%`}
-                            />
-                            <InfoRow
-                                label="Payment plan"
-                                value={initialPaymentLabel}
-                            />
-                            <InfoRow
-                                label="Parsed employees"
-                                value={String(employeeRows.length)}
-                            />
-                        </div>
-
-                        {quote && (
-                            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
-                                    Payment snapshot
-                                </p>
-                                <div className="mt-3 space-y-2 text-sm text-slate-700">
-                                    <InfoRow
-                                        label="Total Order Value"
-                                        value={formatINR(quote.totalPaise)}
-                                    />
-                                    <InfoRow
-                                        label={
-                                            quote.balanceDuePaise === 0
-                                                ? "Paying now"
-                                                : "Initial payment"
-                                        }
-                                        value={formatINR(quote.advancePaidPaise)}
-                                    />
-                                    <InfoRow
-                                        label="Balance Due"
-                                        value={formatINR(quote.balanceDuePaise)}
-                                    />
+                    <aside className="space-y-5 xl:sticky xl:top-6 xl:h-fit">
+                        <motion.div
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, ease: "easeOut" }}
+                            className="overflow-hidden rounded-[30px] border border-[#dbe5f0] bg-[linear-gradient(180deg,#fdfefe_0%,#f5f9ff_100%)] p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.35)]"
+                        >
+                            <div className="flex items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                    <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-50 text-[#5B9BD5]">
+                                        <Upload className="size-5" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                            Live Preview
+                                        </p>
+                                        <h3 className="text-lg font-semibold text-slate-900">
+                                            Branded garment mockup
+                                        </h3>
+                                    </div>
+                                </div>
+                                <div className="flex rounded-full border border-slate-200 bg-white p-1">
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "rounded-full px-3 py-1 text-xs font-semibold transition",
+                                            previewSide === "front"
+                                                ? "bg-[#1f3b17] text-white"
+                                                : "text-slate-500"
+                                        )}
+                                        onClick={() => setPreviewSide("front")}
+                                    >
+                                        Front
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={cn(
+                                            "rounded-full px-3 py-1 text-xs font-semibold transition",
+                                            previewSide === "back"
+                                                ? "bg-[#1f3b17] text-white"
+                                                : "text-slate-500"
+                                        )}
+                                        onClick={() => setPreviewSide("back")}
+                                    >
+                                        Back
+                                    </button>
                                 </div>
                             </div>
-                        )}
 
-                        <div className="mt-5 space-y-2">
-                            <Checkline label="Signed-in order placement" />
-                            <Checkline label="Artwork + employee sheet upload" />
-                            <Checkline label="Live pricing with slabs and extras" />
-                            <Checkline label="Razorpay checkout support" />
+                            <CorporateGarmentPreview
+                                side={previewSide}
+                                artworkPreviewUrl={artworkPreviewUrl}
+                                artworkName={artworkLocalFile?.name}
+                                productName={selectedProductType?.name}
+                                colorHex={selectedColors?.[0]?.hexCode ?? undefined}
+                                colorName={selectedColors?.[0]?.name}
+                                logoLocations={selectedLogoLocations?.map((item) => ({
+                                    id: item.id,
+                                    name: item.name,
+                                }))}
+                            />
+
+                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                                <StudioMiniCard
+                                    label="Garment"
+                                    value={selectedProductType?.name ?? "Waiting for selection"}
+                                />
+                                <StudioMiniCard
+                                    label="Primary color"
+                                    value={selectedColors?.[0]?.name ?? "No color selected"}
+                                />
+                                <StudioMiniCard
+                                    label="Print method"
+                                    value={
+                                        selectedPrintMethod?.name ??
+                                        "Choose a printing method"
+                                    }
+                                />
+                                <StudioMiniCard
+                                    label="Branding coverage"
+                                    value={
+                                        selectedLogoLocations?.length
+                                            ? `${selectedLogoLocations.length} placement(s)`
+                                            : "No placement selected"
+                                    }
+                                />
+                            </div>
+                        </motion.div>
+
+                        <div className="rounded-[30px] border border-[#dbe5f0] bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.3)]">
+                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                Quote Snapshot
+                            </p>
+                            <h3 className="mt-1 text-lg font-semibold text-slate-900">
+                                Corporate order summary
+                            </h3>
+                            <div className="mt-5 space-y-3 text-sm text-slate-700">
+                                <InfoRow
+                                    label="Expected timeline"
+                                    value={config.settings.expectedTimelineText}
+                                />
+                                <InfoRow
+                                    label="GST"
+                                    value={`${(config.settings.gstRateBps / 100).toFixed(2)}%`}
+                                />
+                                <InfoRow
+                                    label="Payment plan"
+                                    value={initialPaymentLabel}
+                                />
+                                <InfoRow
+                                    label="Parsed employees"
+                                    value={String(employeeRows.length)}
+                                />
+                                <InfoRow
+                                    label="Selected fabric"
+                                    value={
+                                        selectedFabricComposition?.name ??
+                                        "Fabric not selected"
+                                    }
+                                />
+                                <InfoRow
+                                    label="Selected GSM"
+                                    value={selectedGsm?.label ?? "GSM not selected"}
+                                />
+                            </div>
+
+                            {quote && (
+                                <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                        Payment snapshot
+                                    </p>
+                                    <div className="mt-3 space-y-2 text-sm text-slate-700">
+                                        <InfoRow
+                                            label="Total order value"
+                                            value={formatINR(quote.totalPaise)}
+                                        />
+                                        <InfoRow
+                                            label={
+                                                quote.balanceDuePaise === 0
+                                                    ? "Paying now"
+                                                    : "Initial payment"
+                                            }
+                                            value={formatINR(quote.advancePaidPaise)}
+                                        />
+                                        <InfoRow
+                                            label="Balance due later"
+                                            value={formatINR(quote.balanceDuePaise)}
+                                        />
+                                    </div>
+                                </div>
+                            )}
+
+                            {!!selectedExtraCharges?.length && (
+                                <div className="mt-5 rounded-[24px] border border-[#dbe5f0] bg-[#f8fbff] p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                        Add-ons selected
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap gap-2">
+                                        {selectedExtraCharges.map((item) => (
+                                            <span
+                                                key={item.id}
+                                                className="rounded-full border border-[#cfe1f5] bg-white px-3 py-1 text-xs font-medium text-[#315f8a]"
+                                            >
+                                                {item.name}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="mt-5 space-y-2">
+                                <Checkline label="Signed-in corporate checkout" />
+                                <Checkline label="Visual logo placement preview" />
+                                <Checkline label="Live pricing with slabs and extras" />
+                                <Checkline label="Razorpay payment handoff" />
+                            </div>
                         </div>
                     </aside>
                 </div>
@@ -1341,9 +1625,40 @@ export function CorporateOrderPage({
     );
 }
 
+function StepHeader({
+    icon: Icon,
+    eyebrow,
+    title,
+    description,
+}: {
+    icon: typeof Building2;
+    eyebrow: string;
+    title: string;
+    description: string;
+}) {
+    return (
+        <div className="flex items-start gap-4">
+            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#eff6ff] text-[#5B9BD5]">
+                <Icon className="size-5" />
+            </div>
+            <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#5B9BD5]">
+                    {eyebrow}
+                </p>
+                <h2 className="mt-1 text-2xl font-semibold text-slate-900">
+                    {title}
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                    {description}
+                </p>
+            </div>
+        </div>
+    );
+}
+
 function SummaryStat({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+        <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {label}
             </p>
@@ -1376,4 +1691,266 @@ function Checkline({ label }: { label: string }) {
             <span>{label}</span>
         </div>
     );
+}
+
+function StudioMetric({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-center justify-between gap-4 rounded-[20px] border border-slate-200 bg-white px-4 py-3">
+            <span className="text-sm text-slate-500">{label}</span>
+            <span className="text-right text-sm font-semibold text-slate-900">
+                {value}
+            </span>
+        </div>
+    );
+}
+
+function StudioMiniCard({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-[20px] border border-slate-200 bg-white px-4 py-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {label}
+            </p>
+            <p className="mt-2 text-sm font-semibold text-slate-900">{value}</p>
+        </div>
+    );
+}
+
+function CorporateGarmentPreview({
+    side,
+    artworkPreviewUrl,
+    artworkName,
+    productName,
+    colorHex,
+    colorName,
+    logoLocations = [],
+}: {
+    side: "front" | "back";
+    artworkPreviewUrl: string | null;
+    artworkName?: string;
+    productName?: string;
+    colorHex?: string;
+    colorName?: string;
+    logoLocations?: Array<{ id: string; name: string }>;
+}) {
+    const gradientId = useId();
+    const placements = logoLocations
+        .filter((location) => isPlacementVisibleOnSide(location.name, side))
+        .map((location) => ({
+            ...location,
+            style: getPlacementStyle(location.name, side),
+        }))
+        .filter((location) => location.style);
+
+    return (
+        <div className="mt-5 rounded-[28px] border border-[#dce8f4] bg-[radial-gradient(circle_at_top,#fefefe_0%,#eef5fd_100%)] p-5">
+            <div className="flex items-center justify-between gap-3">
+                <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                        {side === "front" ? "Front mockup" : "Back mockup"}
+                    </p>
+                    <p className="mt-1 text-sm text-slate-500">
+                        {productName ?? "Corporate garment"} in{" "}
+                        {colorName ?? "selected color"}
+                    </p>
+                </div>
+                <div className="rounded-full border border-white bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
+                    {placements.length} logo zone{placements.length === 1 ? "" : "s"}
+                </div>
+            </div>
+
+            <div className="relative mt-5 flex min-h-[380px] items-center justify-center overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_top,#ffffff_0%,#edf3fa_62%,#dce6f3_100%)] px-6 py-8">
+                <div className="absolute inset-x-10 bottom-6 h-10 rounded-full bg-[#cbd9ea]/50 blur-2xl" />
+                <motion.div
+                    key={side}
+                    initial={{ opacity: 0, rotateY: side === "front" ? -12 : 12 }}
+                    animate={{ opacity: 1, rotateY: side === "front" ? -8 : 8 }}
+                    transition={{ duration: 0.45, ease: "easeOut" }}
+                    style={{ transformStyle: "preserve-3d" }}
+                    className="relative w-full max-w-[290px]"
+                >
+                    <svg
+                        viewBox="0 0 400 430"
+                        className="w-full drop-shadow-[0_30px_45px_rgba(35,49,71,0.22)]"
+                    >
+                        <defs>
+                            <linearGradient
+                                id={`garment-fill-${gradientId}`}
+                                x1="0%"
+                                y1="0%"
+                                x2="100%"
+                                y2="100%"
+                            >
+                                <stop
+                                    offset="0%"
+                                    stopColor={lighten(colorHex ?? "#5B9BD5", 28)}
+                                />
+                                <stop
+                                    offset="45%"
+                                    stopColor={colorHex ?? "#5B9BD5"}
+                                />
+                                <stop
+                                    offset="100%"
+                                    stopColor={darken(colorHex ?? "#5B9BD5", 20)}
+                                />
+                            </linearGradient>
+                        </defs>
+                        <path
+                            d="M118 52c18-12 42-20 82-20s64 8 82 20l53 42-34 54-30-18v214c0 23-19 42-42 42H129c-23 0-42-19-42-42V130l-30 18-34-54 65-42 30 35c18-15 33-23 52-30z"
+                            fill={`url(#garment-fill-${gradientId})`}
+                            stroke="rgba(32,47,68,0.15)"
+                            strokeWidth="4"
+                        />
+                        <path
+                            d="M152 60c10 16 25 24 48 24s38-8 48-24"
+                            fill="none"
+                            stroke="rgba(255,255,255,0.45)"
+                            strokeWidth="10"
+                            strokeLinecap="round"
+                        />
+                        <path
+                            d="M200 85v295"
+                            fill="none"
+                            stroke="rgba(255,255,255,0.12)"
+                            strokeWidth="2"
+                            strokeDasharray="5 8"
+                        />
+                    </svg>
+
+                    <div className="pointer-events-none absolute inset-0">
+                        {placements.map((placement) => (
+                            <div
+                                key={placement.id}
+                                className="absolute flex items-center justify-center"
+                                style={placement.style}
+                            >
+                                <div className="bg-white/12 relative flex size-full items-center justify-center rounded-[18px] border border-white/60 shadow-[0_8px_22px_rgba(15,23,42,0.16)] backdrop-blur-[2px]">
+                                    {artworkPreviewUrl ? (
+                                        <Image
+                                            src={artworkPreviewUrl}
+                                            alt="Uploaded logo preview"
+                                            fill
+                                            unoptimized
+                                            className="object-contain p-2 drop-shadow-[0_6px_10px_rgba(15,23,42,0.18)]"
+                                        />
+                                    ) : (
+                                        <div className="flex flex-col items-center justify-center text-center">
+                                            <span className="rounded-full border border-white/50 bg-white/20 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+                                                Logo
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </motion.div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+                {logoLocations.length > 0 ? (
+                    logoLocations.map((location) => (
+                        <span
+                            key={location.id}
+                            className={cn(
+                                "rounded-full border px-3 py-1 text-xs font-medium",
+                                isPlacementVisibleOnSide(location.name, side)
+                                    ? "border-[#cfe1f5] bg-white text-[#315f8a]"
+                                    : "border-slate-200 bg-slate-50 text-slate-400"
+                            )}
+                        >
+                            {location.name}
+                        </span>
+                    ))
+                ) : (
+                    <span className="text-sm text-slate-500">
+                        Choose logo placement options to activate the live mockup.
+                    </span>
+                )}
+            </div>
+
+            <p className="mt-3 text-xs text-slate-500">
+                {artworkPreviewUrl
+                    ? `Previewing uploaded artwork: ${artworkName ?? "logo file"}`
+                    : "Upload a PNG or JPG logo to see it rendered directly on the garment preview."}
+            </p>
+        </div>
+    );
+}
+
+function isBackPlacement(name: string) {
+    const normalized = name.toLowerCase();
+    return (
+        normalized.includes("back") ||
+        normalized.includes("rear") ||
+        normalized.includes("nape")
+    );
+}
+
+function isPlacementVisibleOnSide(name: string, side: "front" | "back") {
+    return side === "back" ? isBackPlacement(name) : !isBackPlacement(name);
+}
+
+function getPlacementStyle(name: string, side: "front" | "back") {
+    const normalized = name.toLowerCase();
+
+    if (normalized.includes("sleeve")) {
+        return side === "front"
+            ? { top: "42%", left: "10%", width: "18%", height: "14%" }
+            : { top: "42%", right: "10%", width: "18%", height: "14%" };
+    }
+
+    if (normalized.includes("left chest")) {
+        return { top: "28%", left: "28%", width: "18%", height: "12%" };
+    }
+
+    if (normalized.includes("right chest")) {
+        return { top: "28%", right: "28%", width: "18%", height: "12%" };
+    }
+
+    if (normalized.includes("full back")) {
+        return { top: "28%", left: "24%", width: "52%", height: "28%" };
+    }
+
+    if (normalized.includes("upper back")) {
+        return { top: "24%", left: "30%", width: "40%", height: "14%" };
+    }
+
+    if (normalized.includes("back")) {
+        return { top: "30%", left: "32%", width: "36%", height: "18%" };
+    }
+
+    if (normalized.includes("center") || normalized.includes("front")) {
+        return { top: "30%", left: "31%", width: "38%", height: "18%" };
+    }
+
+    return { top: "30%", left: "31%", width: "38%", height: "18%" };
+}
+
+function lighten(hex: string, amount: number) {
+    return shiftHex(hex, amount);
+}
+
+function darken(hex: string, amount: number) {
+    return shiftHex(hex, -amount);
+}
+
+function shiftHex(hex: string, amount: number) {
+    const safeHex = hex.startsWith("#") ? hex.slice(1) : hex;
+    const normalized = safeHex.length === 3
+        ? safeHex
+              .split("")
+              .map((char) => `${char}${char}`)
+              .join("")
+        : safeHex;
+
+    if (normalized.length !== 6) return "#5B9BD5";
+
+    const num = Number.parseInt(normalized, 16);
+    const r = Math.min(255, Math.max(0, (num >> 16) + amount));
+    const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amount));
+    const b = Math.min(255, Math.max(0, (num & 0x0000ff) + amount));
+
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b)
+        .toString(16)
+        .slice(1)}`;
 }
