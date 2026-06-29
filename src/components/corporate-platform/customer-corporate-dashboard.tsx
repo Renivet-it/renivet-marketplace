@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc/client";
 import { formatINR, handleClientError } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
+import { motion } from "motion/react";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -249,10 +250,9 @@ export function CustomerCorporateDashboard({
                         </SurfacePanel>
 
                         <SurfacePanel
-                            title="Need Help Next?"
-                            description="After approval, buyers can either continue directly into order setup or upload a company purchase order first."
-                            className="bg-[#23311c] text-white"
-                            inverse
+                            title="What happens next"
+                            description="After approval, buyers can continue directly into order setup or upload a company purchase order first."
+                            className="bg-[linear-gradient(135deg,#ffffff_0%,#f7fbff_100%)]"
                         >
                             <div className="space-y-3">
                                 <MiniPill
@@ -261,7 +261,6 @@ export function CustomerCorporateDashboard({
                                             ? `${quotesNeedingAction.length} quote(s) awaiting your decision`
                                             : "No pending quote approvals right now"
                                     }
-                                    dark
                                 />
                                 <MiniPill
                                     label={
@@ -269,7 +268,6 @@ export function CustomerCorporateDashboard({
                                             ? `${purchaseOrdersReadyCount} approved quote(s) ready for order setup`
                                             : "Order setup unlocks after quotation approval"
                                     }
-                                    dark
                                 />
                             </div>
                         </SurfacePanel>
@@ -348,7 +346,12 @@ export function CustomerCorporateDashboard({
                 </div>
 
                 <TabsContent value="overview" className="mt-0">
-                    <section className="grid gap-6 xl:grid-cols-12">
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                    >
+                        <section className="grid gap-6 xl:grid-cols-12">
                         <SurfacePanel
                             title="Quotes Requiring Action"
                             description="This is the most important area for your team after a quotation is shared."
@@ -468,10 +471,16 @@ export function CustomerCorporateDashboard({
                             )}
                         </SurfacePanel>
                     </section>
+                    </motion.div>
                 </TabsContent>
 
                 <TabsContent value="requests" className="mt-0">
-                    <SurfacePanel
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                    >
+                        <SurfacePanel
                         title="Request History"
                         description="Track every request for quotation submitted by your team."
                     >
@@ -490,10 +499,16 @@ export function CustomerCorporateDashboard({
                             <Empty label="No requests for quotation yet." />
                         )}
                     </SurfacePanel>
+                    </motion.div>
                 </TabsContent>
 
                 <TabsContent value="quotes" className="mt-0">
-                    <SurfacePanel
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                    >
+                        <SurfacePanel
                         title="Quotation Approval And Order Unlock"
                         description="Approve the commercial quotation, choose whether your company uses a purchase order, and then continue into the guided order setup flow."
                     >
@@ -566,10 +581,16 @@ export function CustomerCorporateDashboard({
                             <Empty label="No quotes need action yet." />
                         )}
                     </SurfacePanel>
+                    </motion.div>
                 </TabsContent>
 
                 <TabsContent value="orders" className="mt-0">
-                    <SurfacePanel
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                    >
+                        <SurfacePanel
                         title="Corporate Orders"
                         description="Orders, fulfillment progress, and commercial totals stay visible here."
                     >
@@ -588,18 +609,24 @@ export function CustomerCorporateDashboard({
                             <Empty label="No corporate orders yet." />
                         )}
                     </SurfacePanel>
+                    </motion.div>
                 </TabsContent>
 
                 {unlockedQuotes.length ? (
                     <TabsContent value="order-setup" className="mt-0">
-                        <div className="space-y-6">
+                        <motion.div
+                            initial={{ opacity: 0, y: 15 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.35, ease: "easeOut" }}
+                        >
+                            <div className="space-y-6">
                             <SurfacePanel
                                 title="Continue With Approved Quotation"
                                 description="Use the same guided self-service order builder, now unlocked from your approved quotation."
                             >
                                 <div className="grid gap-4 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
                                     <div className="rounded-[24px] border border-[#d8e3ef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbfe_100%)] p-5">
-                                        <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5B9BD5]">
+                                        <div className="text-11 font-semibold uppercase tracking-[0.22em] text-[#5B9BD5]">
                                             Ready To Order
                                         </div>
                                         <div className="mt-3 text-2xl font-semibold text-slate-900">
@@ -617,7 +644,7 @@ export function CustomerCorporateDashboard({
                                                     onClick={() =>
                                                         setOrderSetupQuoteId(quote.id)
                                                     }
-                                                    className={`rounded-[20px] border px-4 py-4 text-left transition ${
+                                                    className={`rounded-[20px] border p-4 text-left transition ${
                                                         selectedOrderSetupQuote?.id === quote.id
                                                             ? "border-[#5B9BD5] bg-[#f2f8ff] shadow-sm"
                                                             : "border-slate-200 bg-white hover:border-[#bfd3ea]"
@@ -692,11 +719,17 @@ export function CustomerCorporateDashboard({
                                 />
                             ) : null}
                         </div>
-                    </TabsContent>
-                ) : null}
+                    </motion.div>
+                </TabsContent>
+            ) : null}
 
                 <TabsContent value="company" className="mt-0">
-                    <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
+                    <motion.div
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.35, ease: "easeOut" }}
+                    >
+                        <section className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)]">
                     <SurfacePanel
                         title="Company Profile"
                         description="Your buyer company details used for managed procurement and enterprise approvals."
@@ -734,19 +767,19 @@ export function CustomerCorporateDashboard({
                         <SurfacePanel
                             title="Procurement Support"
                             description="How this workspace will help once orders start moving."
-                            className="bg-[#23311c] text-white"
-                            inverse
+                            className="bg-[linear-gradient(135deg,#ffffff_0%,#f8fbff_100%)]"
                         >
                             <div className="grid grid-cols-2 gap-3">
-                                <MiniPill label="Requests" dark />
-                                <MiniPill label="Quotes" dark />
-                                <MiniPill label="Purchase Orders" dark />
-                                <MiniPill label="Quality Control" dark />
-                                <MiniPill label="Dispatch" dark />
-                                <MiniPill label="Payments" dark />
+                                <MiniPill label="Requests" />
+                                <MiniPill label="Quotes" />
+                                <MiniPill label="Purchase Orders" />
+                                <MiniPill label="Quality Control" />
+                                <MiniPill label="Dispatch" />
+                                <MiniPill label="Payments" />
                             </div>
                         </SurfacePanel>
                     </section>
+                    </motion.div>
                 </TabsContent>
             </Tabs>
         </div>
@@ -801,13 +834,17 @@ function MetricCard({
     hint: string;
 }) {
     return (
-        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.25)]">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+        <motion.div
+            whileHover={{ y: -4, scale: 1.02, boxShadow: "0 22px 50px -28px rgba(15,23,42,0.18)", borderColor: "#cbd5e1" }}
+            transition={{ type: "spring", stiffness: 350, damping: 20 }}
+            className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_22px_60px_-48px_rgba(15,23,42,0.25)] transition-colors duration-200"
+        >
+            <div className="text-11 font-semibold uppercase tracking-[0.2em] text-slate-500">
                 {label}
             </div>
             <div className="mt-3 text-4xl font-semibold text-slate-900">{value}</div>
             <div className="mt-2 text-sm text-slate-500">{hint}</div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -821,7 +858,11 @@ function ListCard({
     meta: string;
 }) {
     return (
-        <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4">
+        <motion.div
+            whileHover={{ x: 4, backgroundColor: "rgb(241, 245, 249)", borderColor: "#94a3b8" }}
+            transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 transition-colors duration-150"
+        >
             <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                     <div className="font-semibold text-slate-900">{title}</div>
@@ -829,7 +870,7 @@ function ListCard({
                 </div>
                 <StatusChip label={meta} />
             </div>
-        </div>
+        </motion.div>
     );
 }
 
@@ -873,49 +914,46 @@ function ActionCard({
     const dark = tone === "dark";
 
     return (
-        <a
+        <motion.a
             href={href}
+            whileHover={{ y: -5, scale: 1.015 }}
+            whileTap={{ scale: 0.995 }}
+            transition={{ type: "spring", stiffness: 350, damping: 20 }}
             className={
                 dark
-                    ? "group rounded-[28px] border border-[#2f3720] bg-[linear-gradient(135deg,#2f3720_0%,#41512c_100%)] p-6 text-white shadow-[0_28px_70px_-42px_rgba(47,55,32,0.6)]"
-                    : "group rounded-[28px] border border-[#dbe5f0] bg-white p-6 text-slate-900 shadow-[0_24px_60px_-44px_rgba(91,155,213,0.26)]"
+                    ? "group block rounded-[28px] border border-[#d7e6d2] bg-[linear-gradient(135deg,#f7fbf4_0%,#edf6e9_100%)] p-6 text-slate-900 shadow-[0_28px_70px_-42px_rgba(47,55,32,0.18)] hover:border-[#b8d4ae] transition-colors duration-200"
+                    : "group block rounded-[28px] border border-[#dbe5f0] bg-white p-6 text-slate-900 shadow-[0_24px_60px_-44px_rgba(91,155,213,0.26)] hover:border-[#b8d3f0] transition-colors duration-200"
             }
         >
             <div
                 className={
                     dark
-                        ? "text-xs font-semibold uppercase tracking-[0.24em] text-white/70"
+                        ? "text-xs font-semibold uppercase tracking-[0.24em] text-[#4b7c37]"
                         : "text-xs font-semibold uppercase tracking-[0.24em] text-[#5B9BD5]"
                 }
             >
                 {eyebrow}
             </div>
             <div className="mt-3 text-2xl font-semibold leading-tight">{title}</div>
-            <div
-                className={
-                    dark
-                        ? "mt-3 text-sm leading-7 text-white/80"
-                        : "mt-3 text-sm leading-7 text-slate-600"
-                }
-            >
+            <div className="mt-3 text-sm leading-7 text-slate-600">
                 {description}
             </div>
             <div
                 className={
                     dark
-                        ? "mt-6 inline-flex rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#2f3720]"
-                        : "mt-6 inline-flex rounded-full border border-slate-300 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-900"
+                        ? "mt-6 inline-flex rounded-full bg-[#2f3720] px-5 py-2.5 text-sm font-semibold text-white group-hover:bg-[#1e2314] transition-colors"
+                        : "mt-6 inline-flex rounded-full border border-slate-300 bg-slate-50 px-5 py-2.5 text-sm font-semibold text-slate-900 group-hover:bg-slate-100 transition-colors"
                 }
             >
                 {cta}
             </div>
-        </a>
+        </motion.a>
     );
 }
 
 function StatusRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
+        <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
             <div className="text-sm font-semibold text-slate-900">{label}</div>
             <div className="mt-1 text-sm leading-6 text-slate-500">{value}</div>
         </div>
@@ -924,8 +962,8 @@ function StatusRow({ label, value }: { label: string; value: string }) {
 
 function HeroStat({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <div className="rounded-[20px] border border-slate-200 bg-slate-50 p-4">
+            <div className="text-11 font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {label}
             </div>
             <div className="mt-2 text-2xl font-semibold text-slate-900">{value}</div>
@@ -1063,7 +1101,7 @@ function CompactQuoteCard({
                     ) : null}
 
                     {directRouteUnlocked ? (
-                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm text-emerald-800">
+                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
                             Your direct order route is ready. Continue into the same guided order setup used for self-service buying.
                             <div className="mt-3">
                                 <Button
@@ -1118,7 +1156,7 @@ function CompactQuoteCard({
                     ) : null}
 
                     {purchaseOrderUploaded ? (
-                        <div className="rounded-2xl border border-[#d8e3ef] bg-[#f8fbfe] px-4 py-4 text-sm text-slate-700">
+                        <div className="rounded-2xl border border-[#d8e3ef] bg-[#f8fbfe] p-4 text-sm text-slate-700">
                             Purchase order uploaded:{" "}
                             <span className="font-semibold text-slate-900">
                                 {purchaseOrder.poNumber}

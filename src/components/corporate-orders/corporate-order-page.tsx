@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
 import { toast } from "sonner";
 
 const STEPS = [
@@ -621,11 +621,11 @@ export function CorporateOrderPage({
                         <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#5B9BD5]">
                             Corporate Order Studio
                         </p>
-                        <h1 className="mt-3 max-w-4xl font-serif text-3xl font-semibold leading-[0.95] text-[#16213f] md:text-5xl">
+                        <h1 className="mt-3 max-w-4xl font-serif text-3xl font-semibold leading-[1.02] text-slate-950 md:text-5xl">
                             Build branded teamwear with live visual approval and
                             payment-ready bulk checkout
                         </h1>
-                        <p className="mt-4 max-w-3xl text-sm leading-7 text-[#5e728c] md:text-[15px]">
+                        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-700 md:text-[15px]">
                             Configure the garment, place your logo on the front
                             or back, upload employee sizing, and finish the
                             order in one guided premium workspace.
@@ -694,35 +694,70 @@ export function CorporateOrderPage({
                     </motion.div>
                 </div>
 
-                <div className="border-t border-white/70 px-5 pb-5 pt-0 md:px-8 md:pb-8">
-                    <div className="grid gap-3 md:grid-cols-5">
-                        {STEPS.map((label, index) => (
-                            <motion.button
-                                key={label}
-                                type="button"
-                                whileHover={{ y: -1 }}
-                                whileTap={{ scale: 0.99 }}
-                                onClick={() => setStep(index)}
-                                className={cn(
-                                    "rounded-[18px] border px-4 py-3 text-left transition-all",
-                                    index === step
-                                        ? "border-[#5B9BD5] bg-[#5B9BD5] text-white shadow-[0_14px_32px_-18px_rgba(91,155,213,0.75)]"
-                                        : index < step
-                                          ? "border-[#c8dff4] bg-white text-[#24496a]"
-                                          : "border-[#d9e4ef] bg-white/85 text-[#64748b]"
-                                )}
-                            >
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em]">
-                                    Step {index + 1}
-                                </p>
-                                <p className="mt-1 text-sm font-semibold">{label}</p>
-                            </motion.button>
-                        ))}
+                <div className="border-t border-white/70 px-5 pb-5 pt-4 md:px-8 md:pb-8">
+                    <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto py-4">
+                        {/* Background line */}
+                        <div className="absolute top-[28px] left-[5%] w-[90%] h-0.5 bg-slate-200/70 rounded-full" />
+                        
+                        {/* Animated Active Line */}
+                        <motion.div 
+                            className="absolute top-[28px] left-[5%] h-0.5 bg-[#5B9BD5] rounded-full"
+                            initial={{ width: "0%" }}
+                            animate={{ width: `${(step / (STEPS.length - 1)) * 90}%` }}
+                            transition={{ duration: 0.4, ease: "easeInOut" }}
+                        />
+
+                        {STEPS.map((label, index) => {
+                            const isActive = index === step;
+                            const isCompleted = index < step;
+                            return (
+                                <button
+                                    key={label}
+                                    type="button"
+                                    onClick={() => setStep(index)}
+                                    className="relative z-10 flex flex-col items-center group focus:outline-none w-20"
+                                >
+                                    {/* Circle */}
+                                    <motion.div
+                                        whileHover={{ scale: 1.08 }}
+                                        whileTap={{ scale: 0.96 }}
+                                        className={cn(
+                                            "flex size-9 items-center justify-center rounded-full border-2 transition-all duration-300 font-semibold text-xs",
+                                            isActive
+                                                ? "border-[#5B9BD5] bg-white text-[#5B9BD5] shadow-[0_0_12px_rgba(91,155,213,0.35)] ring-4 ring-[#5B9BD5]/10"
+                                                : isCompleted
+                                                    ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
+                                                    : "border-slate-200 bg-white text-slate-400"
+                                        )}
+                                    >
+                                        {isCompleted ? (
+                                            <Check className="size-4 stroke-[3px]" />
+                                        ) : (
+                                            <span>{index + 1}</span>
+                                        )}
+                                    </motion.div>
+
+                                    {/* Label */}
+                                    <span
+                                        className={cn(
+                                            "mt-2 text-[10px] font-semibold uppercase tracking-wider text-center transition-colors duration-300",
+                                            isActive
+                                                ? "text-[#5B9BD5]"
+                                                : isCompleted
+                                                    ? "text-slate-700"
+                                                    : "text-slate-400 group-hover:text-slate-600"
+                                        )}
+                                    >
+                                        {label}
+                                    </span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             </section>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.22fr)_430px]">
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.22fr)_460px]">
                 <div className="space-y-6">
                     {step === 0 && (
                         <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
@@ -904,14 +939,17 @@ export function CorporateOrderPage({
                                     {config.colorOptions.map((color) => {
                                         const checked = selectedColorIds.has(color.id);
                                         return (
-                                            <button
+                                            <motion.button
                                                 type="button"
                                                 key={color.id}
+                                                whileHover={{ y: -2, scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                transition={{ type: "spring", stiffness: 450, damping: 18 }}
                                                 className={cn(
-                                                    "flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm transition-all",
+                                                    "flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm transition-all duration-200",
                                                     checked
-                                                        ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_16px_32px_-24px_rgba(91,155,213,0.72)]"
-                                                        : "border-slate-200 bg-white text-slate-700"
+                                                        ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_12px_24px_-16px_rgba(91,155,213,0.6)] ring-2 ring-[#5B9BD5]/30"
+                                                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-350"
                                                 )}
                                                 onClick={() =>
                                                     {
@@ -947,7 +985,7 @@ export function CorporateOrderPage({
                                                 <span className="font-medium">
                                                     {color.name}
                                                 </span>
-                                            </button>
+                                            </motion.button>
                                         );
                                     })}
                                 </div>
@@ -985,14 +1023,17 @@ export function CorporateOrderPage({
                                             location.id
                                         );
                                         return (
-                                            <button
+                                            <motion.button
                                                 type="button"
                                                 key={location.id}
+                                                whileHover={{ y: -2, scale: 1.01 }}
+                                                whileTap={{ scale: 0.99 }}
+                                                transition={{ type: "spring", stiffness: 450, damping: 18 }}
                                                 className={cn(
-                                                    "rounded-[22px] border px-4 py-3 text-left text-sm transition-all",
+                                                    "rounded-[22px] border px-4 py-3 text-left text-sm transition-all duration-200",
                                                     checked
-                                                        ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_16px_32px_-24px_rgba(91,155,213,0.72)]"
-                                                        : "border-slate-200 bg-white text-slate-700"
+                                                        ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_12px_24px_-16px_rgba(91,155,213,0.6)] ring-2 ring-[#5B9BD5]/30"
+                                                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-350"
                                                 )}
                                                 onClick={() =>
                                                     {
@@ -1025,7 +1066,7 @@ export function CorporateOrderPage({
                                                         ? "Visible on the back view"
                                                         : "Visible on the front view"}
                                                 </p>
-                                            </button>
+                                            </motion.button>
                                         );
                                     })}
                                 </div>
@@ -1498,6 +1539,7 @@ export function CorporateOrderPage({
                                 productName={selectedProductType?.name}
                                 colorHex={selectedColors?.[0]?.hexCode ?? undefined}
                                 colorName={selectedColors?.[0]?.name}
+                                productTone={selectedFabricComposition?.name}
                                 logoLocations={selectedLogoLocations?.map((item) => ({
                                     id: item.id,
                                     name: item.name,
@@ -1722,6 +1764,7 @@ function CorporateGarmentPreview({
     productName,
     colorHex,
     colorName,
+    productTone,
     logoLocations = [],
 }: {
     side: "front" | "back";
@@ -1730,16 +1773,25 @@ function CorporateGarmentPreview({
     productName?: string;
     colorHex?: string;
     colorName?: string;
+    productTone?: string;
     logoLocations?: Array<{ id: string; name: string }>;
 }) {
-    const gradientId = useId();
+    const figureId = useId();
     const placements = logoLocations
         .filter((location) => isPlacementVisibleOnSide(location.name, side))
         .map((location) => ({
             ...location,
             style: getPlacementStyle(location.name, side),
         }))
-        .filter((location) => location.style);
+        .filter(
+            (
+                location
+            ): location is {
+                id: string;
+                name: string;
+                style: CSSProperties;
+            } => Boolean(location.style)
+        );
 
     return (
         <div className="mt-5 rounded-[28px] border border-[#dce8f4] bg-[radial-gradient(circle_at_top,#fefefe_0%,#eef5fd_100%)] p-5">
@@ -1748,9 +1800,14 @@ function CorporateGarmentPreview({
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
                         {side === "front" ? "Front mockup" : "Back mockup"}
                     </p>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 text-sm text-slate-700">
                         {productName ?? "Corporate garment"} in{" "}
                         {colorName ?? "selected color"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                        {productTone
+                            ? `${productTone} finish with placement-aware logo zones`
+                            : "Sleeve, chest, and back placements update with your selections"}
                     </p>
                 </div>
                 <div className="rounded-full border border-white bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
@@ -1758,63 +1815,22 @@ function CorporateGarmentPreview({
                 </div>
             </div>
 
-            <div className="relative mt-5 flex min-h-[380px] items-center justify-center overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_top,#ffffff_0%,#edf3fa_62%,#dce6f3_100%)] px-6 py-8">
-                <div className="absolute inset-x-10 bottom-6 h-10 rounded-full bg-[#cbd9ea]/50 blur-2xl" />
+            <div className="relative mt-5 flex min-h-[440px] items-center justify-center overflow-hidden rounded-[28px] bg-[radial-gradient(circle_at_top,#ffffff_0%,#edf3fa_62%,#dce6f3_100%)] px-6 py-8">
+                <div className="absolute inset-x-8 bottom-8 h-12 rounded-full bg-[#b7c9de]/55 blur-2xl" />
+                <div className="absolute inset-x-10 top-8 h-24 rounded-full bg-white/70 blur-3xl" />
                 <motion.div
                     key={side}
-                    initial={{ opacity: 0, rotateY: side === "front" ? -12 : 12 }}
-                    animate={{ opacity: 1, rotateY: side === "front" ? -8 : 8 }}
-                    transition={{ duration: 0.45, ease: "easeOut" }}
-                    style={{ transformStyle: "preserve-3d" }}
-                    className="relative w-full max-w-[290px]"
+                    initial={{ opacity: 0, rotateY: side === "front" ? -90 : 90 }}
+                    animate={{ opacity: 1, rotateY: 0 }}
+                    transition={{ duration: 0.55, ease: "easeInOut" }}
+                    style={{ transformStyle: "preserve-3d", perspective: 1200 }}
+                    className="relative w-full max-w-[340px]"
                 >
-                    <svg
-                        viewBox="0 0 400 430"
-                        className="w-full drop-shadow-[0_30px_45px_rgba(35,49,71,0.22)]"
-                    >
-                        <defs>
-                            <linearGradient
-                                id={`garment-fill-${gradientId}`}
-                                x1="0%"
-                                y1="0%"
-                                x2="100%"
-                                y2="100%"
-                            >
-                                <stop
-                                    offset="0%"
-                                    stopColor={lighten(colorHex ?? "#5B9BD5", 28)}
-                                />
-                                <stop
-                                    offset="45%"
-                                    stopColor={colorHex ?? "#5B9BD5"}
-                                />
-                                <stop
-                                    offset="100%"
-                                    stopColor={darken(colorHex ?? "#5B9BD5", 20)}
-                                />
-                            </linearGradient>
-                        </defs>
-                        <path
-                            d="M118 52c18-12 42-20 82-20s64 8 82 20l53 42-34 54-30-18v214c0 23-19 42-42 42H129c-23 0-42-19-42-42V130l-30 18-34-54 65-42 30 35c18-15 33-23 52-30z"
-                            fill={`url(#garment-fill-${gradientId})`}
-                            stroke="rgba(32,47,68,0.15)"
-                            strokeWidth="4"
-                        />
-                        <path
-                            d="M152 60c10 16 25 24 48 24s38-8 48-24"
-                            fill="none"
-                            stroke="rgba(255,255,255,0.45)"
-                            strokeWidth="10"
-                            strokeLinecap="round"
-                        />
-                        <path
-                            d="M200 85v295"
-                            fill="none"
-                            stroke="rgba(255,255,255,0.12)"
-                            strokeWidth="2"
-                            strokeDasharray="5 8"
-                        />
-                    </svg>
+                    <GarmentFigure
+                        side={side}
+                        colorHex={colorHex ?? "#5B9BD5"}
+                        figureId={figureId}
+                    />
 
                     <div className="pointer-events-none absolute inset-0">
                         {placements.map((placement) => (
@@ -1862,18 +1878,268 @@ function CorporateGarmentPreview({
                         </span>
                     ))
                 ) : (
-                    <span className="text-sm text-slate-500">
+                    <span className="text-sm text-slate-600">
                         Choose logo placement options to activate the live mockup.
                     </span>
                 )}
             </div>
 
-            <p className="mt-3 text-xs text-slate-500">
+            <p className="mt-3 text-xs text-slate-600">
                 {artworkPreviewUrl
                     ? `Previewing uploaded artwork: ${artworkName ?? "logo file"}`
                     : "Upload a PNG or JPG logo to see it rendered directly on the garment preview."}
             </p>
         </div>
+    );
+}
+
+function GarmentFigure({
+    side,
+    colorHex,
+    figureId,
+}: {
+    side: "front" | "back";
+    colorHex: string;
+    figureId: string;
+}) {
+    const baseColor = colorHex ?? "#5B9BD5";
+    const darkShadow = darken(baseColor, 20);
+    const extremeDark = darken(baseColor, 35);
+    const brightHighlight = lighten(baseColor, 28);
+    const softHighlight = lighten(baseColor, 15);
+
+    return (
+        <svg
+            viewBox="0 0 420 500"
+            className="w-full drop-shadow-[0_32px_52px_rgba(35,49,71,0.24)]"
+        >
+            <defs>
+                <linearGradient
+                    id={`garment-fill-${figureId}`}
+                    x1="12%"
+                    y1="2%"
+                    x2="88%"
+                    y2="100%"
+                >
+                    <stop offset="0%" stopColor={brightHighlight} />
+                    <stop offset="28%" stopColor={softHighlight} />
+                    <stop offset="62%" stopColor={baseColor} />
+                    <stop offset="100%" stopColor={darkShadow} />
+                </linearGradient>
+                <linearGradient
+                    id={`garment-highlight-${figureId}`}
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
+                >
+                    <stop offset="0%" stopColor="rgba(255,255,255,0.7)" />
+                    <stop offset="100%" stopColor="rgba(255,255,255,0)" />
+                </linearGradient>
+                <linearGradient
+                    id={`garment-shadow-${figureId}`}
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
+                >
+                    <stop offset="0%" stopColor="rgba(25,35,55,0.02)" />
+                    <stop offset="100%" stopColor="rgba(25,35,55,0.22)" />
+                </linearGradient>
+                <filter id={`garment-soft-blur-${figureId}`}>
+                    <feGaussianBlur stdDeviation="8" />
+                </filter>
+            </defs>
+
+            {/* Inner neck (Front view only) */}
+            {side === "front" && (
+                <path
+                    d="M 152 82 Q 210 96 268 82 Q 210 120 152 82 Z"
+                    fill={extremeDark}
+                    opacity="0.85"
+                />
+            )}
+
+            {/* Main T-Shirt Body Shape */}
+            <path
+                d={
+                    side === "front"
+                        ? "M 152 82 L 92 100 C 78 112, 60 135, 42 160 L 78 185 C 90 180, 102 175, 108 172 C 118 240, 122 290, 112 440 Q 210 452, 308 440 C 298 290, 302 240, 312 172 C 318 175, 330 180, 342 185 L 378 160 C 360 135, 342 112, 328 100 L 268 82 Q 210 120, 152 82 Z"
+                        : "M 152 82 L 92 100 C 78 112, 60 135, 42 160 L 78 185 C 90 180, 102 175, 108 172 C 118 240, 122 290, 112 440 Q 210 452, 308 440 C 298 290, 302 240, 312 172 C 318 175, 330 180, 342 185 L 378 160 C 360 135, 342 112, 328 100 L 268 82 Q 210 98, 152 82 Z"
+                }
+                fill={`url(#garment-fill-${figureId})`}
+                stroke={darken(baseColor, 20)}
+                strokeWidth="2.5"
+                strokeLinejoin="round"
+            />
+
+            {/* Left and Right Shoulder Seam Stitching */}
+            <line x1="152" y1="83" x2="92" y2="101" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
+            <line x1="152" y1="84" x2="92" y2="102" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
+            <line x1="268" y1="83" x2="328" y2="101" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
+            <line x1="268" y1="84" x2="328" y2="102" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
+
+            {/* Collar Band / Ribbing */}
+            <path
+                d={
+                    side === "front"
+                        ? "M 152 82 Q 210 120 268 82 Q 268 90 268 90 Q 210 128 152 90 Z"
+                        : "M 152 82 Q 210 98 268 82 Q 268 90 268 90 Q 210 106 152 90 Z"
+                }
+                fill={baseColor}
+                stroke={darkShadow}
+                strokeWidth="1.5"
+            />
+            {/* Collar Highlight */}
+            <path
+                d={
+                    side === "front"
+                        ? "M 155 87 Q 210 122 265 87"
+                        : "M 155 87 Q 210 102 265 87"
+                }
+                fill="none"
+                stroke="rgba(255,255,255,0.35)"
+                strokeWidth="1.5"
+            />
+            {/* Collar Inner Top shadow */}
+            <path
+                d={
+                    side === "front"
+                        ? "M 152 82 Q 210 120 268 82"
+                        : "M 152 82 Q 210 98 268 82"
+                }
+                fill="none"
+                stroke={extremeDark}
+                strokeWidth="1"
+                opacity="0.5"
+            />
+
+            {/* Sleeve Cuff Stitching */}
+            {/* Left sleeve cuff stitching */}
+            <line x1="45" y1="162" x2="77" y2="184" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
+            <line x1="47" y1="164" x2="79" y2="186" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
+            {/* Right sleeve cuff stitching */}
+            <line x1="375" y1="162" x2="343" y2="184" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
+            <line x1="373" y1="164" x2="341" y2="186" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
+
+            {/* Bottom Hem Stitching */}
+            <path
+                d="M 116 432 Q 210 444 304 432"
+                fill="none"
+                stroke="rgba(0,0,0,0.12)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
+            <path
+                d="M 116 435 Q 210 447 304 435"
+                fill="none"
+                stroke="rgba(255,255,255,0.15)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
+
+            {/* 3D Soft Highlights and Shadows (Fabric Draping) */}
+            <g opacity="0.3">
+                {/* Underarm Shadow Left */}
+                <path
+                    d="M 108 172 Q 135 205 145 220"
+                    fill="none"
+                    stroke={darkShadow}
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    filter={`url(#garment-soft-blur-${figureId})`}
+                />
+                {/* Underarm Shadow Right */}
+                <path
+                    d="M 312 172 Q 285 205 275 220"
+                    fill="none"
+                    stroke={darkShadow}
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    filter={`url(#garment-soft-blur-${figureId})`}
+                />
+                {/* Side body shading left */}
+                <path
+                    d="M 112 440 C 122 350 120 230 108 172"
+                    fill="none"
+                    stroke={darkShadow}
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    filter={`url(#garment-soft-blur-${figureId})`}
+                />
+                {/* Side body shading right */}
+                <path
+                    d="M 308 440 C 298 350 300 230 312 172"
+                    fill="none"
+                    stroke={darkShadow}
+                    strokeWidth="12"
+                    strokeLinecap="round"
+                    filter={`url(#garment-soft-blur-${figureId})`}
+                />
+            </g>
+
+            {/* Chest & Body Highlight overlays */}
+            <path
+                d="M 185 130 Q 170 260 178 390"
+                fill="none"
+                stroke="rgba(255,255,255,0.18)"
+                strokeWidth="20"
+                strokeLinecap="round"
+                filter={`url(#garment-soft-blur-${figureId})`}
+            />
+            <path
+                d="M 235 140 Q 245 270 238 380"
+                fill="none"
+                stroke="rgba(0,0,0,0.06)"
+                strokeWidth="16"
+                strokeLinecap="round"
+                filter={`url(#garment-soft-blur-${figureId})`}
+            />
+
+            {/* Subtle organic wrinkles/folds near the waist */}
+            <path
+                d="M 125 310 Q 160 325 210 320"
+                fill="none"
+                stroke="rgba(0,0,0,0.06)"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                filter={`url(#garment-soft-blur-${figureId})`}
+            />
+            <path
+                d="M 128 312 Q 160 327 210 322"
+                fill="none"
+                stroke="rgba(255,255,255,0.12)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                filter={`url(#garment-soft-blur-${figureId})`}
+            />
+
+            <path
+                d="M 295 340 Q 250 355 210 350"
+                fill="none"
+                stroke="rgba(0,0,0,0.06)"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+                filter={`url(#garment-soft-blur-${figureId})`}
+            />
+            <path
+                d="M 292 342 Q 250 357 210 352"
+                fill="none"
+                stroke="rgba(255,255,255,0.12)"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                filter={`url(#garment-soft-blur-${figureId})`}
+            />
+
+            {/* Bottom Hem crease depth */}
+            <path
+                d="M 112 440 Q 210 452 308 440"
+                fill="none"
+                stroke={extremeDark}
+                strokeWidth="1.5"
+                opacity="0.35"
+            />
+        </svg>
     );
 }
 
@@ -1890,40 +2156,71 @@ function isPlacementVisibleOnSide(name: string, side: "front" | "back") {
     return side === "back" ? isBackPlacement(name) : !isBackPlacement(name);
 }
 
-function getPlacementStyle(name: string, side: "front" | "back") {
+function getPlacementStyle(
+    name: string,
+    side: "front" | "back"
+): CSSProperties | null {
     const normalized = name.toLowerCase();
+
+    if (normalized.includes("left sleeve")) {
+        return side === "front"
+            ? { top: "25%", left: "71%", width: "11.5%", height: "10.5%" }
+            : { top: "25%", left: "17.5%", width: "11.5%", height: "10.5%" };
+    }
+
+    if (normalized.includes("right sleeve")) {
+        return side === "front"
+            ? { top: "25%", left: "17.5%", width: "11.5%", height: "10.5%" }
+            : { top: "25%", left: "71%", width: "11.5%", height: "10.5%" };
+    }
 
     if (normalized.includes("sleeve")) {
         return side === "front"
-            ? { top: "42%", left: "10%", width: "18%", height: "14%" }
-            : { top: "42%", right: "10%", width: "18%", height: "14%" };
+            ? { top: "25%", left: "71%", width: "11.5%", height: "10.5%" }
+            : { top: "25%", left: "17.5%", width: "11.5%", height: "10.5%" };
     }
 
     if (normalized.includes("left chest")) {
-        return { top: "28%", left: "28%", width: "18%", height: "12%" };
+        return side === "front"
+            ? { top: "29%", left: "55%", width: "14%", height: "10.5%" }
+            : null;
     }
 
     if (normalized.includes("right chest")) {
-        return { top: "28%", right: "28%", width: "18%", height: "12%" };
+        return side === "front"
+            ? { top: "29%", left: "31%", width: "14%", height: "10.5%" }
+            : null;
     }
 
     if (normalized.includes("full back")) {
-        return { top: "28%", left: "24%", width: "52%", height: "28%" };
+        return { top: "24%", left: "26%", width: "48%", height: "25%" };
     }
 
     if (normalized.includes("upper back")) {
-        return { top: "24%", left: "30%", width: "40%", height: "14%" };
+        return { top: "21%", left: "31%", width: "38%", height: "11%" };
     }
 
     if (normalized.includes("back")) {
-        return { top: "30%", left: "32%", width: "36%", height: "18%" };
+        return { top: "26.5%", left: "33%", width: "34%", height: "15%" };
+    }
+
+    if (normalized.includes("left")) {
+        return side === "front"
+            ? { top: "31%", left: "56%", width: "15%", height: "11%" }
+            : { top: "29%", left: "56%", width: "15%", height: "11%" };
+    }
+
+    if (normalized.includes("right")) {
+        return side === "front"
+            ? { top: "31%", left: "29%", width: "15%", height: "11%" }
+            : { top: "29%", left: "29%", width: "15%", height: "11%" };
     }
 
     if (normalized.includes("center") || normalized.includes("front")) {
-        return { top: "30%", left: "31%", width: "38%", height: "18%" };
+        return { top: "28.5%", left: "39%", width: "22%", height: "13%" };
     }
 
-    return { top: "30%", left: "31%", width: "38%", height: "18%" };
+    return { top: "28.5%", left: "39%", width: "22%", height: "13%" };
 }
 
 function lighten(hex: string, amount: number) {
