@@ -45,6 +45,46 @@ type CorporateOrderPagePrefill = {
     paymentPreference?: "partial_advance" | "full_upfront";
 };
 
+type FieldErrors = Partial<Record<string, string>>;
+
+function ensureRazorpaySdk() {
+    return new Promise<void>((resolve, reject) => {
+        if (typeof window === "undefined") {
+            reject(new Error("Razorpay checkout is only available in the browser"));
+            return;
+        }
+
+        if ((window as any).Razorpay) {
+            resolve();
+            return;
+        }
+
+        const existingScript = document.querySelector<HTMLScriptElement>(
+            "script[src=\"https://checkout.razorpay.com/v1/checkout.js\"]"
+        );
+
+        if (existingScript) {
+            existingScript.addEventListener("load", () => resolve(), {
+                once: true,
+            });
+            existingScript.addEventListener(
+                "error",
+                () => reject(new Error("Failed to load Razorpay checkout")),
+                { once: true }
+            );
+            return;
+        }
+
+        const script = document.createElement("script");
+        script.src = "https://checkout.razorpay.com/v1/checkout.js";
+        script.async = true;
+        script.onload = () => resolve();
+        script.onerror = () =>
+            reject(new Error("Failed to load Razorpay checkout"));
+        document.body.appendChild(script);
+    });
+}
+
 export function CorporateOrderPage({
     initialPrefill,
 }: {
@@ -74,6 +114,7 @@ export function CorporateOrderPage({
         Array<{ employeeName: string; size: string }>
     >([]);
     const [quote, setQuote] = useState<any>(null);
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [form, setForm] = useState({
         companyName: initialPrefill?.companyName ?? "",
         contactPersonName:
@@ -112,6 +153,12 @@ export function CorporateOrderPage({
             mobileNumber: current.mobileNumber || user.phone || "",
         }));
     }, [user]);
+
+    useEffect(() => {
+        void ensureRazorpaySdk().catch((error) => {
+            console.error("Razorpay SDK preload failed", error);
+        });
+    }, []);
 
     const createAdvanceMutation =
         trpc.general.corporateOrders.createAdvancePaymentOrder.useMutation({
@@ -158,6 +205,93 @@ export function CorporateOrderPage({
         );
     }, [artworkLocalFile, employeeLocalFile, employeeRows.length, form]);
 
+    const setFieldValue = <K extends keyof typeof form>(
+        key: K,
+        value: (typeof form)[K]
+    ) => {
+        setForm((current) => ({
+            ...current,
+            [key]: value,
+        }));
+        setFieldErrors((current) => {
+            if (!current[key as string]) return current;
+            const next = { ...current };
+            delete next[key as string];
+            return next;
+        });
+    };
+
+    const validateStepBeforeNext = (currentStep: number) => {
+        const errors: FieldErrors = {};
+
+        if (currentStep === 0) {
+            if (!form.companyName || form.companyName.trim().length < 2) {
+                errors.companyName = "Enter a valid company name.";
+            }
+            if (!form.contactPersonName || form.contactPersonName.trim().length < 2) {
+                errors.contactPersonName = "Enter the contact person name.";
+            }
+            if (!form.emailAddress) {
+                errors.emailAddress = "Enter the email address.";
+            }
+            if (!form.mobileNumber) {
+                errors.mobileNumber = "Enter the mobile number.";
+            }
+            if (!form.deliveryAddress || form.deliveryAddress.trim().length < 10) {
+                errors.deliveryAddress =
+                    "Add a complete delivery address before continuing.";
+            }
+            if (form.numberOfEmployees <= 0) {
+                errors.numberOfEmployees = "Enter the number of employees.";
+            }
+        }
+
+        if (currentStep === 1) {
+            if (!form.productTypeId) {
+                errors.productTypeId = "Select the product type.";
+            }
+            if (!form.gsmOptionId) {
+                errors.gsmOptionId = "Select the GSM.";
+            }
+            if (!form.fabricCompositionId) {
+                errors.fabricCompositionId = "Select the fabric composition.";
+            }
+            if (form.colorOptionIds.length === 0) {
+                errors.colorOptionIds =
+                    "Select at least one color before continuing.";
+            }
+            if ((form.quantity || 0) <= 0) {
+                errors.quantity = "Enter the order quantity.";
+            }
+        }
+
+        if (currentStep === 2) {
+            if (form.logoLocationIds.length === 0) {
+                errors.logoLocationIds =
+                    "Select at least one logo placement option.";
+            }
+            if (!form.printMethodId) {
+                errors.printMethodId =
+                    "Select the printing method before continuing.";
+            }
+            if (!artworkLocalFile) {
+                errors.artworkFile = "Upload the company logo or artwork file.";
+            }
+        }
+
+        if (currentStep === 3) {
+            if (!employeeLocalFile || employeeRows.length === 0) {
+                errors.employeeSheetFile =
+                    "Upload a valid employee size sheet before continuing.";
+            }
+        }
+
+        return {
+            valid: Object.keys(errors).length === 0,
+            errors,
+        };
+    };
+
     const getPayload = (
         artworkFile: UploadedFile | null,
         employeeSheetFile: UploadedFile | null
@@ -191,8 +325,29 @@ export function CorporateOrderPage({
 
     const refreshQuote = async () => {
         try {
-            if (!artworkLocalFile || !employeeLocalFile) {
-                return toast.error("Please attach both artwork and employee sheet");
+            const companyValidation = validateStepBeforeNext(0);
+            if (!companyValidation.valid) {
+                setFieldErrors(companyValidation.errors);
+                setStep(0);
+                return toast.error("Please complete the company details first.");
+            }
+            const productValidation = validateStepBeforeNext(1);
+            if (!productValidation.valid) {
+                setFieldErrors(productValidation.errors);
+                setStep(1);
+                return toast.error("Please complete the product details first.");
+            }
+            const brandingValidation = validateStepBeforeNext(2);
+            if (!brandingValidation.valid) {
+                setFieldErrors(brandingValidation.errors);
+                setStep(2);
+                return toast.error("Please complete the branding details first.");
+            }
+            const employeeValidation = validateStepBeforeNext(3);
+            if (!employeeValidation.valid) {
+                setFieldErrors(employeeValidation.errors);
+                setStep(3);
+                return toast.error("Please complete the employee size upload first.");
             }
 
             setIsQuoting(true);
@@ -315,6 +470,30 @@ export function CorporateOrderPage({
 
     const handleProceedToPayment = async () => {
         try {
+            const companyValidation = validateStepBeforeNext(0);
+            if (!companyValidation.valid) {
+                setFieldErrors(companyValidation.errors);
+                setStep(0);
+                return toast.error("Please complete the company details first.");
+            }
+            const productValidation = validateStepBeforeNext(1);
+            if (!productValidation.valid) {
+                setFieldErrors(productValidation.errors);
+                setStep(1);
+                return toast.error("Please complete the product details first.");
+            }
+            const brandingValidation = validateStepBeforeNext(2);
+            if (!brandingValidation.valid) {
+                setFieldErrors(brandingValidation.errors);
+                setStep(2);
+                return toast.error("Please complete the branding details first.");
+            }
+            const employeeValidation = validateStepBeforeNext(3);
+            if (!employeeValidation.valid) {
+                setFieldErrors(employeeValidation.errors);
+                setStep(3);
+                return toast.error("Please complete the employee size upload first.");
+            }
             if (!canAdvance) {
                 return toast.error("Please complete all required fields first");
             }
@@ -362,6 +541,7 @@ export function CorporateOrderPage({
                 },
             };
 
+            await ensureRazorpaySdk();
             initializeRazorpayPayment(options as any);
         } catch (error) {
             handleClientError(error);
@@ -427,80 +607,83 @@ export function CorporateOrderPage({
                                 Company Information
                             </h2>
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                <Input
-                                    placeholder="Company Name"
-                                    value={form.companyName}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            companyName: e.target.value,
-                                        }))
-                                    }
-                                />
-                                <Input
-                                    placeholder="Contact Person Name"
-                                    value={form.contactPersonName}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            contactPersonName: e.target.value,
-                                        }))
-                                    }
-                                />
-                                <Input
-                                    placeholder="Email Address"
-                                    type="email"
-                                    value={form.emailAddress}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            emailAddress: e.target.value,
-                                        }))
-                                    }
-                                />
-                                <Input
-                                    placeholder="Mobile Number"
-                                    value={form.mobileNumber}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            mobileNumber: e.target.value,
-                                        }))
-                                    }
-                                />
-                                <Input
-                                    placeholder="GST Number (Optional)"
-                                    value={form.gstNumber}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            gstNumber: e.target.value,
-                                        }))
-                                    }
-                                />
-                                <Input
-                                    placeholder="Number of Employees"
-                                    type="number"
-                                    value={form.numberOfEmployees || ""}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            numberOfEmployees: Number(e.target.value),
-                                        }))
-                                    }
-                                />
+                                <div>
+                                    <Input
+                                        placeholder="Company Name"
+                                        value={form.companyName}
+                                        onChange={(e) =>
+                                            setFieldValue("companyName", e.target.value)
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.companyName} />
+                                </div>
+                                <div>
+                                    <Input
+                                        placeholder="Contact Person Name"
+                                        value={form.contactPersonName}
+                                        onChange={(e) =>
+                                            setFieldValue(
+                                                "contactPersonName",
+                                                e.target.value
+                                            )
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.contactPersonName} />
+                                </div>
+                                <div>
+                                    <Input
+                                        placeholder="Email Address"
+                                        type="email"
+                                        value={form.emailAddress}
+                                        onChange={(e) =>
+                                            setFieldValue("emailAddress", e.target.value)
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.emailAddress} />
+                                </div>
+                                <div>
+                                    <Input
+                                        placeholder="Mobile Number"
+                                        value={form.mobileNumber}
+                                        onChange={(e) =>
+                                            setFieldValue("mobileNumber", e.target.value)
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.mobileNumber} />
+                                </div>
+                                <div>
+                                    <Input
+                                        placeholder="GST Number (Optional)"
+                                        value={form.gstNumber}
+                                        onChange={(e) =>
+                                            setFieldValue("gstNumber", e.target.value)
+                                        }
+                                    />
+                                </div>
+                                <div>
+                                    <Input
+                                        placeholder="Number of Employees"
+                                        type="number"
+                                        value={form.numberOfEmployees || ""}
+                                        onChange={(e) =>
+                                            setFieldValue(
+                                                "numberOfEmployees",
+                                                Number(e.target.value)
+                                            )
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.numberOfEmployees} />
+                                </div>
                             </div>
                             <textarea
                                 className="mt-4 min-h-32 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                                 placeholder="Delivery Address"
                                 value={form.deliveryAddress}
                                 onChange={(e) =>
-                                    setForm((current) => ({
-                                        ...current,
-                                        deliveryAddress: e.target.value,
-                                    }))
+                                    setFieldValue("deliveryAddress", e.target.value)
                                 }
                             />
+                            <FieldError message={fieldErrors.deliveryAddress} />
                         </section>
                     )}
 
@@ -510,68 +693,71 @@ export function CorporateOrderPage({
                                 Product Configuration
                             </h2>
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
-                                <select
-                                    className="h-11 rounded-xl border border-slate-200 px-3 text-sm"
-                                    value={form.productTypeId}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            productTypeId: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Select Product Type</option>
-                                    {config.productTypes.map((item) => (
-                                        <option key={item.id} value={item.id}>
-                                            {item.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <select
-                                    className="h-11 rounded-xl border border-slate-200 px-3 text-sm"
-                                    value={form.gsmOptionId}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            gsmOptionId: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Select GSM</option>
-                                    {config.gsmOptions.map((item) => (
-                                        <option key={item.id} value={item.id}>
-                                            {item.label}
-                                        </option>
-                                    ))}
-                                </select>
-                                <select
-                                    className="h-11 rounded-xl border border-slate-200 px-3 text-sm"
-                                    value={form.fabricCompositionId}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            fabricCompositionId: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Select Fabric Composition</option>
-                                    {config.fabricCompositions.map((item) => (
-                                        <option key={item.id} value={item.id}>
-                                            {item.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <Input
-                                    placeholder="Quantity"
-                                    type="number"
-                                    value={form.quantity || ""}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            quantity: Number(e.target.value),
-                                        }))
-                                    }
-                                />
+                                <div>
+                                    <select
+                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        value={form.productTypeId}
+                                        onChange={(e) =>
+                                            setFieldValue("productTypeId", e.target.value)
+                                        }
+                                    >
+                                        <option value="">Select Product Type</option>
+                                        {config.productTypes.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <FieldError message={fieldErrors.productTypeId} />
+                                </div>
+                                <div>
+                                    <select
+                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        value={form.gsmOptionId}
+                                        onChange={(e) =>
+                                            setFieldValue("gsmOptionId", e.target.value)
+                                        }
+                                    >
+                                        <option value="">Select GSM</option>
+                                        {config.gsmOptions.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <FieldError message={fieldErrors.gsmOptionId} />
+                                </div>
+                                <div>
+                                    <select
+                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        value={form.fabricCompositionId}
+                                        onChange={(e) =>
+                                            setFieldValue(
+                                                "fabricCompositionId",
+                                                e.target.value
+                                            )
+                                        }
+                                    >
+                                        <option value="">Select Fabric Composition</option>
+                                        {config.fabricCompositions.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <FieldError message={fieldErrors.fabricCompositionId} />
+                                </div>
+                                <div>
+                                    <Input
+                                        placeholder="Quantity"
+                                        type="number"
+                                        value={form.quantity || ""}
+                                        onChange={(e) =>
+                                            setFieldValue("quantity", Number(e.target.value))
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.quantity} />
+                                </div>
                             </div>
 
                             <div className="mt-5">
@@ -592,18 +778,26 @@ export function CorporateOrderPage({
                                                         : "border-slate-200 bg-white text-slate-700"
                                                 )}
                                                 onClick={() =>
-                                                    setForm((current) => ({
-                                                        ...current,
-                                                        colorOptionIds: checked
-                                                            ? current.colorOptionIds.filter(
-                                                                  (item) =>
-                                                                      item !== color.id
-                                                              )
-                                                            : [
-                                                                  ...current.colorOptionIds,
-                                                                  color.id,
-                                                              ],
-                                                    }))
+                                                    {
+                                                        setForm((current) => ({
+                                                            ...current,
+                                                            colorOptionIds: checked
+                                                                ? current.colorOptionIds.filter(
+                                                                      (item) =>
+                                                                          item !== color.id
+                                                                  )
+                                                                : [
+                                                                      ...current.colorOptionIds,
+                                                                      color.id,
+                                                                  ],
+                                                        }));
+                                                        setFieldErrors((current) => {
+                                                            if (!current.colorOptionIds) return current;
+                                                            const next = { ...current };
+                                                            delete next.colorOptionIds;
+                                                            return next;
+                                                        });
+                                                    }
                                                 }
                                             >
                                                 {color.name}
@@ -611,6 +805,7 @@ export function CorporateOrderPage({
                                         );
                                     })}
                                 </div>
+                                <FieldError message={fieldErrors.colorOptionIds} />
                                 <textarea
                                     className="mt-4 min-h-24 w-full rounded-2xl border border-slate-200 px-3 py-2 text-sm"
                                     placeholder="Custom color request (optional)"
@@ -651,18 +846,26 @@ export function CorporateOrderPage({
                                                         : "border-slate-200 bg-white text-slate-700"
                                                 )}
                                                 onClick={() =>
-                                                    setForm((current) => ({
-                                                        ...current,
-                                                        logoLocationIds: checked
-                                                            ? current.logoLocationIds.filter(
-                                                                  (item) =>
-                                                                      item !== location.id
-                                                              )
-                                                            : [
-                                                                  ...current.logoLocationIds,
-                                                                  location.id,
-                                                              ],
-                                                    }))
+                                                    {
+                                                        setForm((current) => ({
+                                                            ...current,
+                                                            logoLocationIds: checked
+                                                                ? current.logoLocationIds.filter(
+                                                                      (item) =>
+                                                                          item !== location.id
+                                                                  )
+                                                                : [
+                                                                      ...current.logoLocationIds,
+                                                                      location.id,
+                                                                  ],
+                                                        }));
+                                                        setFieldErrors((current) => {
+                                                            if (!current.logoLocationIds) return current;
+                                                            const next = { ...current };
+                                                            delete next.logoLocationIds;
+                                                            return next;
+                                                        });
+                                                    }
                                                 }
                                             >
                                                 {location.name}
@@ -670,25 +873,26 @@ export function CorporateOrderPage({
                                         );
                                     })}
                                 </div>
+                                <FieldError message={fieldErrors.logoLocationIds} />
                             </div>
                             <div className="mt-5 grid gap-4 md:grid-cols-2">
-                                <select
-                                    className="h-11 rounded-xl border border-slate-200 px-3 text-sm"
-                                    value={form.printMethodId}
-                                    onChange={(e) =>
-                                        setForm((current) => ({
-                                            ...current,
-                                            printMethodId: e.target.value,
-                                        }))
-                                    }
-                                >
-                                    <option value="">Select Printing Method</option>
-                                    {config.printMethods.map((item) => (
-                                        <option key={item.id} value={item.id}>
-                                            {item.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                <div>
+                                    <select
+                                        className="h-11 w-full rounded-xl border border-slate-200 px-3 text-sm"
+                                        value={form.printMethodId}
+                                        onChange={(e) =>
+                                            setFieldValue("printMethodId", e.target.value)
+                                        }
+                                    >
+                                        <option value="">Select Printing Method</option>
+                                        {config.printMethods.map((item) => (
+                                            <option key={item.id} value={item.id}>
+                                                {item.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <FieldError message={fieldErrors.printMethodId} />
+                                </div>
                             </div>
                             <div className="mt-5">
                                 <p className="text-sm font-semibold text-slate-900">
@@ -815,6 +1019,12 @@ export function CorporateOrderPage({
                                         const file = e.target.files?.[0] ?? null;
                                         setArtworkLocalFile(file);
                                         setArtworkUploaded(null);
+                                        setFieldErrors((current) => {
+                                            if (!current.artworkFile) return current;
+                                            const next = { ...current };
+                                            delete next.artworkFile;
+                                            return next;
+                                        });
                                     }}
                                 />
                                 {artworkLocalFile && (
@@ -822,6 +1032,7 @@ export function CorporateOrderPage({
                                         {artworkLocalFile.name}
                                     </p>
                                 )}
+                                <FieldError message={fieldErrors.artworkFile} />
                             </div>
                         </section>
                     )}
@@ -859,6 +1070,12 @@ export function CorporateOrderPage({
                                             setEmployeeLocalFile(file);
                                             setEmployeeSheetUploaded(null);
                                             await parseEmployeeSheet(file);
+                                            setFieldErrors((current) => {
+                                                if (!current.employeeSheetFile) return current;
+                                                const next = { ...current };
+                                                delete next.employeeSheetFile;
+                                                return next;
+                                            });
                                             toast.success(
                                                 "Employee size sheet parsed successfully"
                                             );
@@ -873,6 +1090,7 @@ export function CorporateOrderPage({
                                         {employeeLocalFile.name}
                                     </p>
                                 )}
+                                <FieldError message={fieldErrors.employeeSheetFile} />
                             </div>
 
                             <div className="mt-5 rounded-2xl border border-slate-200">
@@ -1018,11 +1236,18 @@ export function CorporateOrderPage({
                             </Button>
                             {step < 4 ? (
                                 <Button
-                                    onClick={() =>
+                                    onClick={() => {
+                                        const validation = validateStepBeforeNext(step);
+                                        if (!validation.valid) {
+                                            setFieldErrors(validation.errors);
+                                            return;
+                                        }
+
+                                        setFieldErrors({});
                                         setStep((current) =>
                                             Math.min(STEPS.length - 1, current + 1)
-                                        )
-                                    }
+                                        );
+                                    }}
                                     disabled={isPaying}
                                 >
                                     Next
@@ -1125,6 +1350,12 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
             <p className="mt-2 text-lg font-semibold text-slate-900">{value}</p>
         </div>
     );
+}
+
+function FieldError({ message }: { message?: string }) {
+    if (!message) return null;
+
+    return <p className="mt-2 text-sm text-rose-600">{message}</p>;
 }
 
 function InfoRow({ label, value }: { label: string; value: string }) {

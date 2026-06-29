@@ -11,6 +11,30 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 
+function formatCorporateAddress(address: unknown) {
+    if (!address || typeof address !== "object" || Array.isArray(address)) {
+        return "";
+    }
+
+    const record = address as Record<string, unknown>;
+    const parts = [
+        record.addressLine1,
+        record.addressLine2,
+        record.street,
+        record.area,
+        record.landmark,
+        record.city,
+        record.state,
+        record.postalCode,
+        record.zip,
+        record.country,
+    ]
+        .map((value) => String(value ?? "").trim())
+        .filter(Boolean);
+
+    return parts.join(", ");
+}
+
 export function CustomerCorporateDashboard({
     initialProfile,
     initialRfqs,
@@ -653,6 +677,9 @@ export function CustomerCorporateDashboard({
                                         emailAddress: initialProfile?.email ?? "",
                                         mobileNumber: initialProfile?.phone ?? "",
                                         gstNumber: initialProfile?.gstNumber ?? "",
+                                        deliveryAddress: formatCorporateAddress(
+                                            initialProfile?.shippingAddress
+                                        ),
                                         quantity: selectedOrderSetupQuote.quantity ?? 0,
                                         numberOfEmployees:
                                             selectedOrderSetupQuote.quantity ?? 0,
