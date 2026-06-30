@@ -1397,6 +1397,17 @@ class CorporatePlatformService {
 
     async saveShipment(actorUserId: string, input: unknown) {
         const parsed = corporateShipmentInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+        });
+
+        if (!order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+
         const existing = await db.query.corporateShipments.findFirst({
             where: eq(corporateShipments.orderId, parsed.orderId),
         });
@@ -1428,6 +1439,35 @@ class CorporatePlatformService {
                   })
                   .returning()
                   .then((rows) => rows[0]);
+
+        const nextOrderStatus =
+            saved.status === "delivered"
+                ? "delivered"
+                : saved.status === "dispatched" || saved.status === "in_transit"
+                  ? "dispatched"
+                  : saved.status === "ready"
+                    ? "ready_for_dispatch"
+                    : null;
+
+        if (nextOrderStatus && order.status !== nextOrderStatus) {
+            await corporateOrderQueries.updateCorporateOrder(order.id, {
+                status: nextOrderStatus,
+            });
+
+            await corporateOrderQueries.createStatusHistory({
+                corporateOrderId: order.id,
+                fromStatus: order.status,
+                toStatus: nextOrderStatus,
+                changedByUserId: actorUserId,
+                note: `Shipment updated to ${convertValueToLabel(saved.status)}`,
+                metadata: {
+                    source: "shipment_panel",
+                    shipmentId: saved.id,
+                    provider: saved.provider,
+                    trackingNumber: saved.trackingNumber,
+                },
+            });
+        }
 
         await this.createEvent(
             "shipment",

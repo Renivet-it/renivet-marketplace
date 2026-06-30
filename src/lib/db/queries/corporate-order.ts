@@ -354,6 +354,8 @@ class CorporateOrderQueries {
         const order = await db.query.corporateOrders.findFirst({
             where: eq(corporateOrders.id, id),
             with: {
+                brand: true,
+                shipment: true,
                 statusHistory: {
                     orderBy: [desc(corporateOrderStatusHistory.createdAt)],
                 },
@@ -365,6 +367,8 @@ class CorporateOrderQueries {
 
         return {
             ...this.parseOrder(order),
+            brand: order.brand,
+            shipment: order.shipment,
             statusHistory: order.statusHistory.map((item) =>
                 corporateOrderStatusHistorySchema.parse({
                     ...item,

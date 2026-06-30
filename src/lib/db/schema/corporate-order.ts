@@ -12,7 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
-import { corporateQuotes } from "./corporate-platform";
+import { corporateQuotes, corporateShipments } from "./corporate-platform";
 import { users } from "./user";
 
 export const corporateProductTypes = pgTable(
@@ -355,6 +355,10 @@ export const corporateOrdersRelations = relations(
         brand: one(brands, {
             fields: [corporateOrders.brandId],
             references: [brands.id],
+        }),
+        shipment: one(corporateShipments, {
+            fields: [corporateOrders.id],
+            references: [corporateShipments.orderId],
         }),
         statusHistory: many(corporateOrderStatusHistory),
     })

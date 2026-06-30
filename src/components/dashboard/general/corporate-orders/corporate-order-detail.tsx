@@ -3,17 +3,62 @@
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
 import { trpc } from "@/lib/trpc/client";
-import { convertValueToLabel, formatINR, handleClientError } from "@/lib/utils";
+import {
+    convertValueToLabel,
+    formatINR,
+    generatePickupLocationCode,
+    handleClientError,
+} from "@/lib/utils";
 import type { ReactNode } from "react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 export function CorporateOrderDetail({ initialData }: { initialData: any }) {
     const [status, setStatus] = useState(initialData.status);
     const [statusNote, setStatusNote] = useState("");
+    const [shipmentProvider, setShipmentProvider] = useState(
+        initialData.shipment?.provider ?? "manual"
+    );
+    const [shipmentCourierName, setShipmentCourierName] = useState(
+        initialData.shipment?.courierName ?? ""
+    );
+    const [shipmentTrackingNumber, setShipmentTrackingNumber] = useState(
+        initialData.shipment?.trackingNumber ?? ""
+    );
+    const [shipmentAwbNumber, setShipmentAwbNumber] = useState(
+        initialData.shipment?.awbNumber ?? ""
+    );
+    const [shipmentTrackingUrl, setShipmentTrackingUrl] = useState(
+        initialData.shipment?.trackingUrl ?? ""
+    );
+    const [shipmentDispatchDate, setShipmentDispatchDate] = useState(
+        initialData.shipment?.dispatchDate ?? ""
+    );
+    const [shipmentDeliveryDate, setShipmentDeliveryDate] = useState(
+        initialData.shipment?.deliveryDate ?? ""
+    );
+    const [shipmentStatus, setShipmentStatus] = useState(
+        initialData.shipment?.status ?? "ready"
+    );
+    const [pickupDate, setPickupDate] = useState("");
+    const [pickupTime, setPickupTime] = useState("");
     const utils = trpc.useUtils();
     const customerPaymentPageHref =
         initialData.balancePaymentLink ||
         `/corporate-orders/confirmation/${initialData.id}`;
+    const canManageShipment = [
+        "ready_for_dispatch",
+        "dispatched",
+        "delivered",
+        "completed",
+    ].includes(initialData.status);
+    const delhiveryPickupLocation =
+        initialData.brand?.id && initialData.brand?.name
+            ? generatePickupLocationCode({
+                  brandId: initialData.brand.id,
+                  brandName: initialData.brand.name,
+              })
+            : "";
     const updateStatus =
         trpc.general.corporateOrders.updateStatus.useMutation({
             onSuccess: async () => {
@@ -32,6 +77,79 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
             },
             onError: (error) => handleClientError(error),
         });
+    const saveShipment = trpc.general.corporatePlatform.saveShipment.useMutation({
+        onSuccess: async () => {
+            await utils.general.corporateOrders.getOrderById.invalidate({
+                corporateOrderId: initialData.id,
+            });
+            toast.success("Shipment details saved");
+        },
+        onError: (error) => handleClientError(error),
+    });
+
+    const scheduleDelhiveryPickup = async () => {
+        if (!shipmentAwbNumber.trim()) {
+            toast.error("Add the Delhivery AWB number first");
+            return;
+        }
+
+        if (!pickupDate || !pickupTime) {
+            toast.error("Select pickup date and pickup time");
+            return;
+        }
+
+        if (!delhiveryPickupLocation) {
+            toast.error("Linked brand pickup location could not be resolved");
+            return;
+        }
+
+        try {
+            await saveShipment.mutateAsync({
+                orderId: initialData.id,
+                courierName: shipmentCourierName || "Delhivery",
+                trackingNumber: shipmentTrackingNumber || shipmentAwbNumber,
+                awbNumber: shipmentAwbNumber,
+                trackingUrl: shipmentTrackingUrl || null,
+                dispatchDate: shipmentDispatchDate || pickupDate,
+                deliveryDate: shipmentDeliveryDate || null,
+                status: "ready",
+                provider: "delhivery",
+            });
+
+            const res = await fetch("/api/delhivery/pickup", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    pickup_location: delhiveryPickupLocation,
+                    pickup_date: pickupDate,
+                    pickup_time: pickupTime,
+                    expected_package_count: 1,
+                }),
+            });
+
+            const data = await res.json();
+            if (!data.success) {
+                toast.error(data.message || "Failed to schedule Delhivery pickup");
+                return;
+            }
+
+            await saveShipment.mutateAsync({
+                orderId: initialData.id,
+                courierName: shipmentCourierName || "Delhivery",
+                trackingNumber: shipmentTrackingNumber || shipmentAwbNumber,
+                awbNumber: shipmentAwbNumber,
+                trackingUrl: shipmentTrackingUrl || null,
+                dispatchDate: shipmentDispatchDate || pickupDate,
+                deliveryDate: shipmentDeliveryDate || null,
+                status: "dispatched",
+                provider: "delhivery",
+            });
+
+            toast.success("Delhivery pickup scheduled");
+        } catch (error) {
+            handleClientError(error);
+        }
+    };
 
     return (
         <div className="space-y-6">
@@ -221,6 +339,184 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                             </Button>
                         </div>
                     </Panel>
+
+                    {canManageShipment ? (
+                        <Panel title="Shipment Workspace">
+                            <div className="space-y-3">
+                                <select
+                                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                    value={shipmentProvider}
+                                    onChange={(e) =>
+                                        setShipmentProvider(e.target.value)
+                                    }
+                                >
+                                    <option value="manual">Manual shipment</option>
+                                    <option value="delhivery">Delhivery</option>
+                                </select>
+                                <Input
+                                    placeholder="Courier name"
+                                    value={shipmentCourierName}
+                                    onChange={(e) =>
+                                        setShipmentCourierName(e.target.value)
+                                    }
+                                />
+                                <Input
+                                    placeholder="Tracking number"
+                                    value={shipmentTrackingNumber}
+                                    onChange={(e) =>
+                                        setShipmentTrackingNumber(e.target.value)
+                                    }
+                                />
+                                <Input
+                                    placeholder="AWB number"
+                                    value={shipmentAwbNumber}
+                                    onChange={(e) =>
+                                        setShipmentAwbNumber(e.target.value)
+                                    }
+                                />
+                                <Input
+                                    placeholder="Tracking URL"
+                                    value={shipmentTrackingUrl}
+                                    onChange={(e) =>
+                                        setShipmentTrackingUrl(e.target.value)
+                                    }
+                                />
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <Input
+                                        type="date"
+                                        value={shipmentDispatchDate}
+                                        onChange={(e) =>
+                                            setShipmentDispatchDate(e.target.value)
+                                        }
+                                    />
+                                    <Input
+                                        type="date"
+                                        value={shipmentDeliveryDate}
+                                        onChange={(e) =>
+                                            setShipmentDeliveryDate(e.target.value)
+                                        }
+                                    />
+                                </div>
+                                <select
+                                    className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                    value={shipmentStatus}
+                                    onChange={(e) =>
+                                        setShipmentStatus(e.target.value)
+                                    }
+                                >
+                                    <option value="ready">Ready</option>
+                                    <option value="dispatched">Dispatched</option>
+                                    <option value="in_transit">In Transit</option>
+                                    <option value="delivered">Delivered</option>
+                                    <option value="failed">Failed</option>
+                                </select>
+                                <Button
+                                    onClick={() =>
+                                        saveShipment.mutate({
+                                            orderId: initialData.id,
+                                            courierName:
+                                                shipmentCourierName || null,
+                                            trackingNumber:
+                                                shipmentTrackingNumber || null,
+                                            awbNumber: shipmentAwbNumber || null,
+                                            trackingUrl:
+                                                shipmentTrackingUrl || null,
+                                            dispatchDate:
+                                                shipmentDispatchDate || null,
+                                            deliveryDate:
+                                                shipmentDeliveryDate || null,
+                                            status: shipmentStatus as any,
+                                            provider: shipmentProvider,
+                                        })
+                                    }
+                                    disabled={saveShipment.isPending}
+                                >
+                                    {saveShipment.isPending
+                                        ? "Saving shipment..."
+                                        : "Save Shipment"}
+                                </Button>
+
+                                {shipmentProvider === "delhivery" ? (
+                                    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+                                        <p className="text-sm font-medium text-slate-900">
+                                            Delhivery pickup scheduling
+                                        </p>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Once the brand marks the order ready,
+                                            admin can schedule the Delhivery pickup
+                                            from here.
+                                        </p>
+                                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                            <Input
+                                                type="date"
+                                                value={pickupDate}
+                                                onChange={(e) =>
+                                                    setPickupDate(e.target.value)
+                                                }
+                                            />
+                                            <select
+                                                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                                value={pickupTime}
+                                                onChange={(e) =>
+                                                    setPickupTime(e.target.value)
+                                                }
+                                            >
+                                                <option value="">
+                                                    Select pickup time
+                                                </option>
+                                                <option value="09:00:00">
+                                                    9 AM - 10 AM
+                                                </option>
+                                                <option value="11:00:00">
+                                                    11 AM - 12 PM
+                                                </option>
+                                                <option value="14:00:00">
+                                                    2 PM - 3 PM
+                                                </option>
+                                                <option value="16:00:00">
+                                                    4 PM - 5 PM
+                                                </option>
+                                                <option value="18:00:00">
+                                                    6 PM - 7 PM
+                                                </option>
+                                            </select>
+                                        </div>
+                                        <Input
+                                            className="mt-3"
+                                            value={delhiveryPickupLocation}
+                                            readOnly
+                                        />
+                                        <Button
+                                            className="mt-3"
+                                            variant="outline"
+                                            onClick={scheduleDelhiveryPickup}
+                                            disabled={saveShipment.isPending}
+                                        >
+                                            Schedule Delhivery Pickup
+                                        </Button>
+                                    </div>
+                                ) : null}
+
+                                {initialData.shipment?.trackingUrl ? (
+                                    <a
+                                        href={initialData.shipment.trackingUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex font-semibold text-sky-700 underline-offset-4 hover:underline"
+                                    >
+                                        Open tracking link
+                                    </a>
+                                ) : null}
+                            </div>
+                        </Panel>
+                    ) : (
+                        <Panel title="Shipment Workspace">
+                            <p className="text-sm leading-6 text-slate-500">
+                                Shipment tools unlock after the brand moves this
+                                order to <span className="font-medium">Ready for Dispatch</span>.
+                            </p>
+                        </Panel>
+                    )}
 
                     <Panel title="Customer and Payment References">
                         <div className="space-y-2 text-sm">

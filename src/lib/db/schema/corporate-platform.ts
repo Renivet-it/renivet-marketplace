@@ -1105,5 +1105,15 @@ export const corporateQcImagesRelations = relations(
     })
 );
 
+export const corporateShipmentsRelations = relations(
+    corporateShipments,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateShipments.orderId],
+            references: [corporateOrders.id],
+        }),
+    })
+);
+
 export type CorporateWorkflowStatus = (typeof workflowStatuses)[number];
 export type CorporatePaymentLifecycleStatus = (typeof paymentStatuses)[number];
