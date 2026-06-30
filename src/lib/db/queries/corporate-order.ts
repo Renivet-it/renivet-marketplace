@@ -4,7 +4,7 @@ import {
     corporateOrderSettingsSchema,
     corporateOrderStatusHistorySchema,
 } from "@/lib/validations/corporate-order";
-import { and, asc, count, desc, eq, ilike, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNotNull, or } from "drizzle-orm";
 import { db } from "..";
 import {
     corporateColorOptions,
@@ -27,6 +27,8 @@ class CorporateOrderQueries {
     private parseOrder(value: any): CorporateOrder {
         return corporateOrderSchema.parse({
             ...value,
+            quoteId: value.quoteId ?? null,
+            brandId: value.brandId ?? null,
             gstNumber: value.gstNumber ?? null,
             artworkFile: value.artworkFile ?? null,
             employeeSheetFile: value.employeeSheetFile ?? null,
@@ -384,6 +386,14 @@ class CorporateOrderQueries {
         return order ? this.parseOrder(order) : null;
     }
 
+    async getOrderByRazorpayPaymentId(razorpayPaymentId: string) {
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.razorpayPaymentId, razorpayPaymentId),
+        });
+
+        return order ? this.parseOrder(order) : null;
+    }
+
     async listOrders(input: {
         page: number;
         limit: number;
@@ -391,6 +401,7 @@ class CorporateOrderQueries {
         status?: string;
     }) {
         const filters = [
+            isNotNull(corporateOrders.razorpayPaymentId),
             input.status ? eq(corporateOrders.status, input.status as any) : undefined,
             input.search
                 ? or(
@@ -427,7 +438,10 @@ class CorporateOrderQueries {
 
     async listOrdersByUser(userId: string) {
         const rows = await db.query.corporateOrders.findMany({
-            where: eq(corporateOrders.userId, userId),
+            where: and(
+                eq(corporateOrders.userId, userId),
+                isNotNull(corporateOrders.razorpayPaymentId)
+            ),
             orderBy: [desc(corporateOrders.createdAt)],
         });
 

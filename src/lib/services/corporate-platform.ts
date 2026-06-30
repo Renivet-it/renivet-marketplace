@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
 import {
     brands,
     brandMembers,
@@ -8,12 +9,16 @@ import {
     corporateDocuments,
     corporateEscalations,
     corporateNotifications,
+    corporateOrderStatusHistory,
     corporateOrders,
     corporatePayments,
     corporateProductConfigs,
+    corporateProductTypes,
     corporateProfiles,
     corporateProformaInvoices,
     corporatePurchaseOrders,
+    corporateFabricCompositions,
+    corporateGsmOptions,
     corporateQcImages,
     corporateQcSubmissions,
     corporateQuoteRevisions,
@@ -47,14 +52,28 @@ import {
     corporateTaskInputSchema,
     corporateTaxInvoiceInputSchema,
 } from "@/lib/validations/corporate-platform";
+import { CorporateOrderWorkflowStatus } from "@/lib/validations/corporate-order";
+import { convertValueToLabel } from "@/lib/utils";
 import { TRPCError } from "@trpc/server";
-import { and, asc, count, desc, eq, inArray, like, notInArray } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, like, notInArray } from "drizzle-orm";
+import crypto from "crypto";
 
 function makeNumber(prefix: string, sequence: number) {
     return `${prefix}-${String(sequence).padStart(5, "0")}`;
 }
 
 class CorporatePlatformService {
+    private readonly brandManagedOrderStatuses: CorporateOrderWorkflowStatus[] = [
+        "under_review",
+        "approved",
+        "in_production",
+        "quality_check",
+        "ready_for_dispatch",
+        "dispatched",
+        "delivered",
+        "completed",
+    ];
+
     private async createEvent(entityType: string, entityId: string, eventName: string, details: Record<string, unknown>, createdBy?: string) {
         await Promise.all([
             db.insert(corporateActivityTimeline).values({
@@ -148,7 +167,19 @@ class CorporatePlatformService {
         };
     }
 
-    private async findExistingOrderForQuote(quoteId: string) {
+    private async findExistingOrderForQuote(
+        quoteId: string,
+        quoteNumber?: string | null
+    ) {
+        const directOrder = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.quoteId, quoteId),
+            orderBy: [desc(corporateOrders.createdAt)],
+        });
+
+        if (directOrder) {
+            return directOrder;
+        }
+
         const purchaseOrder = await db.query.corporatePurchaseOrders.findFirst({
             where: eq(corporatePurchaseOrders.quoteId, quoteId),
             orderBy: [desc(corporatePurchaseOrders.createdAt)],
@@ -163,18 +194,104 @@ class CorporatePlatformService {
             }
         }
 
-        return db.query.corporateOrders.findFirst({
+        const matchedById = await db.query.corporateOrders.findFirst({
             where: like(corporateOrders.internalNotes, `%quote:${quoteId}%`),
             orderBy: [desc(corporateOrders.createdAt)],
         });
+
+        if (matchedById) {
+            return matchedById;
+        }
+
+        if (!quoteNumber) {
+            return null;
+        }
+
+        const matchedByQuoteNumberInNotes =
+            await db.query.corporateOrders.findFirst({
+                where: like(
+                    corporateOrders.customerNotes,
+                    `%${quoteNumber}%`
+                ),
+                orderBy: [desc(corporateOrders.createdAt)],
+            });
+
+        if (matchedByQuoteNumberInNotes) {
+            return matchedByQuoteNumberInNotes;
+        }
+
+        return db.query.corporateOrders.findFirst({
+            where: like(corporateOrders.internalNotes, `%${quoteNumber}%`),
+            orderBy: [desc(corporateOrders.createdAt)],
+        });
+    }
+
+    private maskEmployeeName(employeeName: string, index: number) {
+        const normalized = employeeName.trim().toLowerCase();
+        if (!normalized) {
+            return `EMP-${String(index + 1).padStart(3, "0")}`;
+        }
+
+        const digest = crypto
+            .createHash("sha256")
+            .update(normalized)
+            .digest("hex")
+            .slice(0, 8)
+            .toUpperCase();
+
+        return `EMP-${digest}`;
+    }
+
+    private async requireBrandMembership(userId: string, brandId: string) {
+        const membership = await db.query.brandMembers.findFirst({
+            where: and(
+                eq(brandMembers.brandId, brandId),
+                eq(brandMembers.memberId, userId)
+            ),
+        });
+
+        if (!membership) {
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "You are not a member of this brand",
+            });
+        }
+
+        return membership;
+    }
+
+    private async resolveBrandQuoteForOrder(brandId: string, orderId: string) {
+        const order = await db.query.corporateOrders.findFirst({
+            where: and(
+                eq(corporateOrders.id, orderId),
+                eq(corporateOrders.brandId, brandId),
+                isNotNull(corporateOrders.quoteId)
+            ),
+            with: {
+                quote: true,
+            },
+        });
+
+        if (!order || !order.quote) {
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "This corporate order is not assigned to the brand",
+            });
+        }
+
+        return { order, quote: order.quote };
     }
 
     private async createCorporateOrderFromQuote(
         quote: {
             id: string;
+            quoteNumber: string;
             brandId: string;
             productId: string | null;
             corporateProductConfigId: string | null;
+            productTypeId: string | null;
+            gsmOptionId: string | null;
+            fabricCompositionId: string | null;
             quantity: number;
             subtotalPaise: number;
             customizationCostPaise: number;
@@ -218,6 +335,8 @@ class CorporatePlatformService {
             .values({
                 publicOrderId: `REN-CORP-PO-${Date.now()}`,
                 userId: quote.profile.userId,
+                quoteId: quote.id,
+                brandId: quote.brandId,
                 status: "under_review",
                 paymentStatus: "pending",
                 companyName: quote.profile.companyName,
@@ -245,6 +364,10 @@ class CorporatePlatformService {
                 productConfigSnapshot: {
                     productId: quote.productId,
                     corporateProductConfigId: quote.corporateProductConfigId,
+                    productTypeId: quote.productTypeId,
+                    gsmOptionId: quote.gsmOptionId,
+                    fabricCompositionId: quote.fabricCompositionId,
+                    quoteNumber: quote.quoteNumber,
                     quantity: quote.quantity,
                     sourcedFrom: context.sourceType,
                 },
@@ -594,6 +717,9 @@ class CorporatePlatformService {
                 brandId: parsed.brandId,
                 productId: parsed.productId ?? null,
                 corporateProductConfigId: parsed.corporateProductConfigId ?? null,
+                productTypeId: parsed.productTypeId ?? null,
+                gsmOptionId: parsed.gsmOptionId ?? null,
+                fabricCompositionId: parsed.fabricCompositionId ?? null,
                 quantity: parsed.quantity,
                 subtotalPaise: parsed.subtotalPaise,
                 customizationCostPaise: parsed.customizationCostPaise,
@@ -1627,27 +1753,120 @@ class CorporatePlatformService {
     }
 
     async listBrandAssignedOrders(userId: string, brandId: string) {
-        const membership = await db.query.brandMembers.findFirst({
-            where: and(
-                eq(brandMembers.brandId, brandId),
-                eq(brandMembers.memberId, userId)
-            ),
-        });
-        if (!membership) {
-            throw new TRPCError({
-                code: "FORBIDDEN",
-                message: "You are not a member of this brand",
-            });
-        }
+        await this.requireBrandMembership(userId, brandId);
 
-        const quoteRows = await db.query.corporateQuotes.findMany({
-            where: eq(corporateQuotes.brandId, brandId),
+        const orderRows = await db.query.corporateOrders.findMany({
+            where: and(
+                eq(corporateOrders.brandId, brandId),
+                isNotNull(corporateOrders.quoteId)
+            ),
             with: {
-                profile: true,
-                revisions: true,
+                quote: true,
+                statusHistory: {
+                    orderBy: [desc(corporateOrderStatusHistory.createdAt)],
+                },
             },
-            orderBy: [desc(corporateQuotes.createdAt)],
+            orderBy: [desc(corporateOrders.createdAt)],
         });
+
+        const productTypeIds = Array.from(
+            new Set(
+                orderRows
+                    .map((order) => order.quote?.productTypeId ?? null)
+                    .filter(Boolean)
+            )
+        ) as string[];
+        const gsmOptionIds = Array.from(
+            new Set(
+                orderRows
+                    .map((order) => order.quote?.gsmOptionId ?? null)
+                    .filter(Boolean)
+            )
+        ) as string[];
+        const fabricCompositionIds = Array.from(
+            new Set(
+                orderRows
+                    .map((order) => order.quote?.fabricCompositionId ?? null)
+                    .filter(Boolean)
+            )
+        ) as string[];
+
+        const [productTypes, gsmOptions, fabricCompositions] = await Promise.all([
+            productTypeIds.length
+                ? db.query.corporateProductTypes.findMany({
+                      where: inArray(corporateProductTypes.id, productTypeIds),
+                  })
+                : Promise.resolve([]),
+            gsmOptionIds.length
+                ? db.query.corporateGsmOptions.findMany({
+                      where: inArray(corporateGsmOptions.id, gsmOptionIds),
+                  })
+                : Promise.resolve([]),
+            fabricCompositionIds.length
+                ? db.query.corporateFabricCompositions.findMany({
+                      where: inArray(
+                          corporateFabricCompositions.id,
+                          fabricCompositionIds
+                      ),
+                  })
+                : Promise.resolve([]),
+        ]);
+
+        const productTypeById = new Map(productTypes.map((item) => [item.id, item]));
+        const gsmOptionById = new Map(gsmOptions.map((item) => [item.id, item]));
+        const fabricCompositionById = new Map(
+            fabricCompositions.map((item) => [item.id, item])
+        );
+
+        const sanitizedOrders = orderRows.map((order) => ({
+            id: order.id,
+            publicOrderId: order.publicOrderId,
+            status: order.status,
+            paymentStatus: order.paymentStatus,
+            quantity: order.quantity,
+            employeeCount: order.employeeCount,
+            sizeBreakdown: order.sizeBreakdown,
+            subtotalPaise: order.subtotalPaise,
+            customizationPaise: order.customizationPaise,
+            gstPaise: order.gstPaise,
+            totalPaise: order.totalPaise,
+            advancePaidPaise: order.advancePaidPaise,
+            balanceDuePaise: order.balanceDuePaise,
+            createdAt: order.createdAt,
+            updatedAt: order.updatedAt,
+            quote: order.quote
+                ? {
+                      id: order.quote.id,
+                      quoteNumber: order.quote.quoteNumber,
+                  }
+                : null,
+            selectedGarment: {
+                productType:
+                    (order.quote?.productTypeId
+                        ? productTypeById.get(order.quote.productTypeId)?.name
+                        : null) ?? "Pending admin setup",
+                gsm:
+                    (order.quote?.gsmOptionId
+                        ? gsmOptionById.get(order.quote.gsmOptionId)?.label
+                        : null) ?? "Pending admin setup",
+                fabricComposition:
+                    (order.quote?.fabricCompositionId
+                        ? fabricCompositionById.get(
+                              order.quote.fabricCompositionId
+                          )?.name
+                        : null) ?? "Pending admin setup",
+            },
+            employeeRows: order.employeeRows.map((row, index) => ({
+                employeeCode: this.maskEmployeeName(row.employeeName ?? "", index),
+                size: row.size,
+            })),
+            statusHistory: order.statusHistory.map((item) => ({
+                id: item.id,
+                toStatus: item.toStatus,
+                note: item.note,
+                createdAt: item.createdAt,
+            })),
+        }));
 
         await db.insert(corporateBrandAuditLogs).values({
             brandId,
@@ -1656,14 +1875,92 @@ class CorporatePlatformService {
             entityType: "brand",
             entityId: brandId as any,
             metadata: {
-                quoteCount: quoteRows.length,
+                orderCount: sanitizedOrders.length,
             },
         });
 
         return {
-            quotes: quoteRows,
-            orders: [],
+            orders: sanitizedOrders,
+            allowedStatuses: this.brandManagedOrderStatuses,
         };
+    }
+
+    async updateBrandAssignedOrderStatus(
+        userId: string,
+        brandId: string,
+        input: {
+            orderId: string;
+            toStatus: CorporateOrderWorkflowStatus;
+            note?: string | null;
+        }
+    ) {
+        await this.requireBrandMembership(userId, brandId);
+
+        if (!this.brandManagedOrderStatuses.includes(input.toStatus)) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "This status cannot be updated from the brand workspace",
+            });
+        }
+
+        const { order, quote } = await this.resolveBrandQuoteForOrder(
+            brandId,
+            input.orderId
+        );
+
+        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
+            status: input.toStatus,
+        });
+
+        if (!updated) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to update corporate order status",
+            });
+        }
+
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: order.id,
+            fromStatus: order.status,
+            toStatus: input.toStatus,
+            changedByUserId: userId,
+            note:
+                input.note?.trim() ||
+                `Brand updated status to ${convertValueToLabel(input.toStatus)}`,
+            metadata: {
+                source: "brand_workspace",
+                brandId,
+                quoteId: quote.id,
+            },
+        });
+
+        await db.insert(corporateBrandAuditLogs).values({
+            brandId,
+            actorId: userId,
+            action: "UPDATE_CORPORATE_ORDER_STATUS",
+            entityType: "corporate_order",
+            entityId: order.id as any,
+            metadata: {
+                quoteId: quote.id,
+                fromStatus: order.status,
+                toStatus: input.toStatus,
+            },
+        });
+
+        await this.createEvent(
+            "corporate_order",
+            order.id,
+            "BRAND_CORPORATE_ORDER_STATUS_UPDATED",
+            {
+                brandId,
+                quoteId: quote.id,
+                fromStatus: order.status,
+                toStatus: input.toStatus,
+            },
+            userId
+        );
+
+        return updated;
     }
 
     async generateReport(actorUserId: string, input: unknown) {

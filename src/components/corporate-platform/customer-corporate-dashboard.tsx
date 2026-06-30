@@ -707,9 +707,31 @@ export function CustomerCorporateDashboard({
                                         deliveryAddress: formatCorporateAddress(
                                             initialProfile?.shippingAddress
                                         ),
+                                        productTypeId:
+                                            selectedOrderSetupQuote.productTypeId ??
+                                            undefined,
+                                        gsmOptionId:
+                                            selectedOrderSetupQuote.gsmOptionId ??
+                                            undefined,
+                                        fabricCompositionId:
+                                            selectedOrderSetupQuote.fabricCompositionId ??
+                                            undefined,
                                         quantity: selectedOrderSetupQuote.quantity ?? 0,
                                         numberOfEmployees:
                                             selectedOrderSetupQuote.quantity ?? 0,
+                                        lockApprovedQuoteSelections: true,
+                                        approvedQuoteId:
+                                            selectedOrderSetupQuote.id,
+                                        approvedQuoteNumber:
+                                            selectedOrderSetupQuote.quoteNumber,
+                                        approvedQuoteUnitPricePaise:
+                                            selectedOrderSetupQuote.quantity
+                                                ? Math.round(
+                                                      selectedOrderSetupQuote
+                                                          .totalAmountPaise /
+                                                          selectedOrderSetupQuote.quantity
+                                                  )
+                                                : 0,
                                         customerNotes: `Approved quotation ${selectedOrderSetupQuote.quoteNumber} for ${selectedOrderSetupQuote.quantity} unit(s).`,
                                         paymentPreference:
                                             selectedOrderSetupQuote.balanceAmountPaise === 0

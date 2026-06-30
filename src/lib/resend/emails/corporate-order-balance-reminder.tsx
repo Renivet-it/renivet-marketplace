@@ -1,14 +1,9 @@
 import {
-    Body,
-    Button,
-    Container,
-    Head,
-    Heading,
-    Html,
-    Preview,
-    Section,
-    Text,
-} from "@react-email/components";
+    CorporateOrderEmailShell,
+    EmailDetailCard,
+    EmailMetricGrid,
+    EmailNote,
+} from "./corporate-order-email-shell";
 import { formatINR } from "@/lib/utils";
 
 export default function CorporateOrderBalanceReminderEmail({
@@ -19,56 +14,42 @@ export default function CorporateOrderBalanceReminderEmail({
     paymentHref: string;
 }) {
     return (
-        <Html>
-            <Head />
-            <Preview>
-                Balance payment reminder for {order.publicOrderId}
-            </Preview>
-            <Body
-                style={{
-                    backgroundColor: "#f8f7f4",
-                    fontFamily: "Arial, sans-serif",
-                }}
-            >
-                <Container
-                    style={{
-                        backgroundColor: "#ffffff",
-                        padding: "24px",
-                        margin: "24px auto",
-                        maxWidth: "640px",
-                    }}
-                >
-                    <Heading>Balance Payment Reminder</Heading>
-                    <Text>
-                        Your corporate order is moving ahead and the remaining
-                        balance is now ready for payment.
-                    </Text>
-                    <Section>
-                        <Text>Order ID: {order.publicOrderId}</Text>
-                        <Text>Company: {order.companyName}</Text>
-                        <Text>Amount already paid: {formatINR(order.advancePaidPaise)}</Text>
-                        <Text>Remaining balance: {formatINR(order.balanceDuePaise)}</Text>
-                    </Section>
-                    <Section style={{ marginTop: "24px" }}>
-                        <Button
-                            href={paymentHref}
-                            style={{
-                                backgroundColor: "#5B9BD5",
-                                color: "#ffffff",
-                                padding: "12px 18px",
-                                borderRadius: "8px",
-                                textDecoration: "none",
-                            }}
-                        >
-                            Pay Remaining Balance
-                        </Button>
-                    </Section>
-                    <Text style={{ marginTop: "24px", color: "#6b7280" }}>
-                        If you have already completed this payment, you can
-                        ignore this reminder.
-                    </Text>
-                </Container>
-            </Body>
-        </Html>
+        <CorporateOrderEmailShell
+            preview={`Balance payment reminder for ${order.publicOrderId}`}
+            eyebrow="Payment Concierge"
+            title="Your Remaining Corporate Balance Is Ready"
+            intro="Your order is progressing through the managed corporate pipeline. To keep production and dispatch milestones moving smoothly, please complete the remaining balance payment from the secure payment link below."
+            primaryAction={{
+                href: paymentHref,
+                label: "Pay Remaining Balance",
+            }}
+        >
+            <EmailMetricGrid
+                items={[
+                    { label: "Order ID", value: order.publicOrderId },
+                    { label: "Company", value: order.companyName },
+                    { label: "Already Paid", value: formatINR(order.advancePaidPaise) },
+                    { label: "Balance Due", value: formatINR(order.balanceDuePaise) },
+                ]}
+            />
+
+            <EmailDetailCard
+                title="Payment Summary"
+                rows={[
+                    { label: "Total Order Value", value: formatINR(order.totalPaise) },
+                    { label: "Current Order Status", value: "Awaiting balance payment" },
+                    {
+                        label: "Payment Reference",
+                        value: order.paymentReference || "Will be updated after payment",
+                    },
+                ]}
+            />
+
+            <EmailNote>
+                If your finance team has already completed the balance payment, you may
+                ignore this reminder. Otherwise, completing payment now will help avoid
+                delays in downstream production and dispatch milestones.
+            </EmailNote>
+        </CorporateOrderEmailShell>
     );
 }

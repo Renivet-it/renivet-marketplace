@@ -25,10 +25,10 @@ export default async function Page({
             <div className="space-y-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">
-                        Brand Corporate Workspace
+                        Corporate Orders
                     </h1>
                     <p className="text-sm text-slate-500">
-                        Brand-visible quotes and corporate work items with protected buyer information.
+                        Assigned quote-backed orders for this brand, with customer details protected.
                     </p>
                 </div>
                 <BrandCorporateWorkspace brandId={bId} initialData={data} />

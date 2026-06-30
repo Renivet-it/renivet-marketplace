@@ -25,6 +25,8 @@ export function AdminRfqQueue({
         trpc.general.corporatePlatform.listAdminBrandOptions.useQuery();
     const { data: profileOptions = [] } =
         trpc.general.corporatePlatform.listAdminProfileOptions.useQuery();
+    const { data: orderConfig } =
+        trpc.general.corporateOrders.getFormConfig.useQuery();
     const [selectedRfqId, setSelectedRfqId] = useState<string | null>(
         initialRfqs[0]?.id ?? null
     );
@@ -85,8 +87,82 @@ export function AdminRfqQueue({
         awaitingReview[0] ??
         alreadyQuoted[0] ??
         null;
+    const selectedExistingQuote = selectedRfq
+        ? quoteByRfqId.get(selectedRfq.id)
+        : null;
+    const selectedDraft = useMemo(() => {
+        if (!selectedRfq) return {};
 
-    const selectedDraft = selectedRfq ? drafts[selectedRfq.id] ?? {} : {};
+        return {
+            corporateProfileId:
+                selectedExistingQuote?.corporateProfileId ??
+                selectedRfq.corporateProfileId ??
+                "",
+            brandId: selectedExistingQuote?.brandId ?? "",
+            productTypeId: selectedExistingQuote?.productTypeId ?? "",
+            gsmOptionId: selectedExistingQuote?.gsmOptionId ?? "",
+            fabricCompositionId:
+                selectedExistingQuote?.fabricCompositionId ?? "",
+            subtotal:
+                selectedExistingQuote?.subtotalPaise !== undefined
+                    ? String(selectedExistingQuote.subtotalPaise / 100)
+                    : "",
+            gst:
+                selectedExistingQuote?.gstAmountPaise !== undefined
+                    ? String(selectedExistingQuote.gstAmountPaise / 100)
+                    : "",
+            advancePercent:
+                selectedExistingQuote &&
+                selectedExistingQuote.totalAmountPaise > 0
+                    ? String(
+                          Math.round(
+                              (selectedExistingQuote.advanceAmountPaise /
+                                  selectedExistingQuote.totalAmountPaise) *
+                                  100
+                          )
+                      )
+                    : "30",
+            comments:
+                selectedExistingQuote?.revisions?.[0]?.comments ??
+                selectedExistingQuote?.customerDecisionNotes ??
+                "",
+            ...(drafts[selectedRfq.id] ?? {}),
+        };
+    }, [drafts, selectedExistingQuote, selectedRfq]);
+    const matchedPricingSlab = useMemo(() => {
+        if (
+            !selectedRfq ||
+            !orderConfig ||
+            !selectedDraft.productTypeId ||
+            !selectedDraft.gsmOptionId ||
+            !selectedDraft.fabricCompositionId
+        ) {
+            return null;
+        }
+
+        return (
+            orderConfig.pricingSlabs
+                .filter(
+                    (slab) =>
+                        slab.productTypeId === selectedDraft.productTypeId &&
+                        slab.gsmOptionId === selectedDraft.gsmOptionId &&
+                        slab.minQuantity <= selectedRfq.quantity &&
+                        (slab.maxQuantity === null ||
+                            slab.maxQuantity >= selectedRfq.quantity)
+                )
+                .sort((a, b) => b.minQuantity - a.minQuantity)[0] ?? null
+        );
+    }, [
+        orderConfig,
+        selectedDraft.fabricCompositionId,
+        selectedDraft.gsmOptionId,
+        selectedDraft.productTypeId,
+        selectedRfq,
+    ]);
+    const computedUnitPricePaise = matchedPricingSlab?.unitPricePaise ?? 0;
+    const computedSubtotalPaise = selectedRfq
+        ? computedUnitPricePaise * selectedRfq.quantity
+        : 0;
 
     const setDraft = (rfqId: string, key: string, value: string) => {
         setDrafts((current) => ({
@@ -227,15 +303,131 @@ export function AdminRfqQueue({
                                                 ))}
                                             </select>
                                         </label>
+                                        <div className="grid gap-3 md:grid-cols-3">
+                                            <label className="block space-y-2">
+                                                <span className="text-sm font-medium text-slate-700">
+                                                    Product type
+                                                </span>
+                                                <select
+                                                    className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                                    value={
+                                                        selectedDraft.productTypeId ?? ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setDraft(
+                                                            selectedRfq.id,
+                                                            "productTypeId",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                >
+                                                    <option value="">
+                                                        Select product type
+                                                    </option>
+                                                    {orderConfig?.productTypes.map((item) => (
+                                                        <option key={item.id} value={item.id}>
+                                                            {item.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="block space-y-2">
+                                                <span className="text-sm font-medium text-slate-700">
+                                                    GSM
+                                                </span>
+                                                <select
+                                                    className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                                    value={
+                                                        selectedDraft.gsmOptionId ?? ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setDraft(
+                                                            selectedRfq.id,
+                                                            "gsmOptionId",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                >
+                                                    <option value="">Select GSM</option>
+                                                    {orderConfig?.gsmOptions.map((item) => (
+                                                        <option key={item.id} value={item.id}>
+                                                            {item.label}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                            <label className="block space-y-2">
+                                                <span className="text-sm font-medium text-slate-700">
+                                                    Fabric composition
+                                                </span>
+                                                <select
+                                                    className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                                    value={
+                                                        selectedDraft.fabricCompositionId ?? ""
+                                                    }
+                                                    onChange={(e) =>
+                                                        setDraft(
+                                                            selectedRfq.id,
+                                                            "fabricCompositionId",
+                                                            e.target.value
+                                                        )
+                                                    }
+                                                >
+                                                    <option value="">
+                                                        Select fabric composition
+                                                    </option>
+                                                    {orderConfig?.fabricCompositions.map((item) => (
+                                                        <option key={item.id} value={item.id}>
+                                                            {item.name}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                            </label>
+                                        </div>
+                                        <div className="grid gap-3 md:grid-cols-3">
+                                            <MetaPill
+                                                label="Per Unit Cost"
+                                                value={
+                                                    matchedPricingSlab
+                                                        ? formatINR(
+                                                              computedUnitPricePaise
+                                                          )
+                                                        : "Select garment setup"
+                                                }
+                                            />
+                                            <MetaPill
+                                                label="RFQ Quantity"
+                                                value={
+                                                    selectedRfq
+                                                        ? String(selectedRfq.quantity)
+                                                        : "-"
+                                                }
+                                            />
+                                            <MetaPill
+                                                label="Overall Cost"
+                                                value={
+                                                    matchedPricingSlab
+                                                        ? formatINR(
+                                                              computedSubtotalPaise
+                                                          )
+                                                        : "Select garment setup"
+                                                }
+                                            />
+                                        </div>
                                         <div className="grid gap-3 md:grid-cols-2">
                                             <LabelledInput
                                                 label="Subtotal amount in INR"
                                                 placeholder="Subtotal amount in INR"
                                                 type="number"
-                                                value={selectedDraft.subtotal ?? ""}
-                                                onChange={(value) =>
-                                                    setDraft(selectedRfq.id, "subtotal", value)
+                                                value={
+                                                    matchedPricingSlab
+                                                        ? String(
+                                                              computedSubtotalPaise /
+                                                                  100
+                                                          )
+                                                        : ""
                                                 }
+                                                disabled
                                             />
                                             <LabelledInput
                                                 label="Tax amount in INR"
@@ -271,9 +463,8 @@ export function AdminRfqQueue({
                                     <Button
                                         className="w-full"
                                         onClick={() => {
-                                            const subtotalPaise = Math.round(
-                                                Number(selectedDraft.subtotal ?? 0) * 100
-                                            );
+                                            const subtotalPaise =
+                                                computedSubtotalPaise;
                                             const gstAmountPaise = Math.round(
                                                 Number(selectedDraft.gst ?? 0) * 100
                                             );
@@ -292,6 +483,13 @@ export function AdminRfqQueue({
                                                     selectedDraft.corporateProfileId ??
                                                     selectedRfq.corporateProfileId,
                                                 brandId: selectedDraft.brandId,
+                                                productTypeId:
+                                                    selectedDraft.productTypeId || null,
+                                                gsmOptionId:
+                                                    selectedDraft.gsmOptionId || null,
+                                                fabricCompositionId:
+                                                    selectedDraft.fabricCompositionId ||
+                                                    null,
                                                 quantity: selectedRfq.quantity,
                                                 subtotalPaise,
                                                 customizationCostPaise: 0,
@@ -308,7 +506,10 @@ export function AdminRfqQueue({
                                             !(
                                                 (selectedDraft.corporateProfileId ??
                                                     selectedRfq.corporateProfileId) &&
-                                                selectedDraft.brandId
+                                                selectedDraft.brandId &&
+                                                selectedDraft.productTypeId &&
+                                                selectedDraft.gsmOptionId &&
+                                                selectedDraft.fabricCompositionId
                                             )
                                         }
                                     >
@@ -483,12 +684,14 @@ function LabelledInput({
     onChange,
     placeholder,
     type,
+    disabled = false,
 }: {
     label: string;
     value: string;
     onChange: (value: string) => void;
     placeholder: string;
     type?: string;
+    disabled?: boolean;
 }) {
     return (
         <label className="block space-y-2">
@@ -497,6 +700,7 @@ function LabelledInput({
                 placeholder={placeholder}
                 type={type}
                 value={value}
+                disabled={disabled}
                 onChange={(e) => onChange(e.target.value)}
             />
         </label>

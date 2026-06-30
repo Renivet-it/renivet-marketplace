@@ -11,6 +11,8 @@ import {
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
+import { brands } from "./brand";
+import { corporateQuotes } from "./corporate-platform";
 import { users } from "./user";
 
 export const corporateProductTypes = pgTable(
@@ -194,6 +196,12 @@ export const corporateOrders = pgTable(
         userId: text("user_id")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
+        quoteId: uuid("quote_id").references(() => corporateQuotes.id, {
+            onDelete: "set null",
+        }),
+        brandId: uuid("brand_id").references(() => brands.id, {
+            onDelete: "set null",
+        }),
         status: text("status", {
             enum: [
                 "draft",
@@ -283,6 +291,8 @@ export const corporateOrders = pgTable(
             table.sequenceNo
         ),
         userIdx: index("corporate_orders_user_idx").on(table.userId),
+        quoteIdx: index("corporate_orders_quote_idx").on(table.quoteId),
+        brandIdx: index("corporate_orders_brand_idx").on(table.brandId),
         statusIdx: index("corporate_orders_status_idx").on(table.status),
         paymentStatusIdx: index("corporate_orders_payment_status_idx").on(
             table.paymentStatus
@@ -337,6 +347,14 @@ export const corporateOrdersRelations = relations(
         user: one(users, {
             fields: [corporateOrders.userId],
             references: [users.id],
+        }),
+        quote: one(corporateQuotes, {
+            fields: [corporateOrders.quoteId],
+            references: [corporateQuotes.id],
+        }),
+        brand: one(brands, {
+            fields: [corporateOrders.brandId],
+            references: [brands.id],
         }),
         statusHistory: many(corporateOrderStatusHistory),
     })

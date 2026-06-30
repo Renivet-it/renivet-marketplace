@@ -10,18 +10,20 @@ import {
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
+    corporateQuotes,
 } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { resend } from "@/lib/resend";
 import {
     CorporatePaymentPreference,
     CorporateOrderFormInput,
+    CorporateOrderQuote,
     CorporateOrderWorkflowStatus,
     corporateConfigUpsertInputSchema,
     corporateOrderFormInputSchema,
     corporateOrderListInputSchema,
-    corporateOrderUserListInputSchema,
     corporateOrderQuoteSchema,
+    corporateOrderUserListInputSchema,
     corporatePaymentConfirmationInputSchema,
 } from "@/lib/validations/corporate-order";
 import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
@@ -97,9 +99,165 @@ function getInitialPaymentLabel(
     return `${Math.round(percentBps / 100)}% advance payment`;
 }
 
+type CorporateOrderDraftTokenPayload = {
+    userId: string;
+    publicOrderId: string;
+    razorpayOrderId: string;
+    form: CorporateOrderFormInput;
+    quote: CorporateOrderQuote;
+    issuedAt: string;
+};
+
 class CorporateOrderService {
     async getFormConfig() {
         return corporateOrderQueries.getFormConfig();
+    }
+
+    private signDraftToken(payload: CorporateOrderDraftTokenPayload) {
+        const encodedPayload = Buffer.from(JSON.stringify(payload)).toString(
+            "base64url"
+        );
+        const signature = crypto
+            .createHmac("sha256", env.RAZOR_PAY_SECRET_KEY)
+            .update(encodedPayload)
+            .digest("base64url");
+
+        return `${encodedPayload}.${signature}`;
+    }
+
+    private parseDraftToken(token: string) {
+        const [encodedPayload, providedSignature] = token.split(".");
+        if (!encodedPayload || !providedSignature) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Invalid corporate payment session",
+            });
+        }
+
+        const expectedSignature = crypto
+            .createHmac("sha256", env.RAZOR_PAY_SECRET_KEY)
+            .update(encodedPayload)
+            .digest("base64url");
+
+        if (providedSignature !== expectedSignature) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Corporate payment session verification failed",
+            });
+        }
+
+        const parsed = JSON.parse(
+            Buffer.from(encodedPayload, "base64url").toString("utf8")
+        );
+
+        return {
+            ...parsed,
+            form: corporateOrderFormInputSchema.parse(parsed.form),
+            quote: corporateOrderQuoteSchema.parse(parsed.quote),
+        } as CorporateOrderDraftTokenPayload;
+    }
+
+    private async buildOrderInsertValues(
+        userId: string,
+        parsed: CorporateOrderFormInput,
+        quote: CorporateOrderQuote
+    ) {
+        const approvedQuote = parsed.approvedQuoteId
+            ? await db.query.corporateQuotes.findFirst({
+                  where: eq(corporateQuotes.id, parsed.approvedQuoteId),
+              })
+            : null;
+
+        if (parsed.approvedQuoteId && !approvedQuote) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Approved quote link could not be resolved",
+            });
+        }
+
+        const config = await corporateOrderQueries.getFormConfig();
+        const productType = config.productTypes.find(
+            (item) => item.id === parsed.productTypeId
+        );
+        const gsmOption = config.gsmOptions.find(
+            (item) => item.id === parsed.gsmOptionId
+        );
+        const fabricComposition = config.fabricCompositions.find(
+            (item) => item.id === parsed.fabricCompositionId
+        );
+        const printMethod = config.printMethods.find(
+            (item) => item.id === parsed.printMethodId
+        );
+        const colors = config.colorOptions.filter((item) =>
+            parsed.colorOptionIds.includes(item.id)
+        );
+        const logoLocations = config.logoLocations.filter((item) =>
+            parsed.logoLocationIds.includes(item.id)
+        );
+
+        return {
+            publicOrderId: `TEMP-${Date.now()}-${Math.random()
+                .toString(36)
+                .slice(2, 8)
+                .toUpperCase()}`,
+            userId,
+            quoteId: approvedQuote?.id ?? null,
+            brandId: approvedQuote?.brandId ?? null,
+            status: "inquiry_received" as const,
+            paymentStatus: "paid" as const,
+            companyName: parsed.companyName,
+            contactPersonName: parsed.contactPersonName,
+            emailAddress: parsed.emailAddress,
+            mobileNumber: parsed.mobileNumber,
+            gstNumber: parsed.gstNumber ?? null,
+            deliveryAddress: parsed.deliveryAddress,
+            numberOfEmployees: parsed.numberOfEmployees,
+            employeeCount: quote.employeeCount,
+            quantity: quote.quantity,
+            sizeBreakdown: quote.sizeBreakdown,
+            employeeRows: parsed.employeeRows,
+            companySnapshot: {
+                companyName: parsed.companyName,
+                contactPersonName: parsed.contactPersonName,
+                emailAddress: parsed.emailAddress,
+                mobileNumber: parsed.mobileNumber,
+                gstNumber: parsed.gstNumber ?? null,
+                deliveryAddress: parsed.deliveryAddress,
+                numberOfEmployees: parsed.numberOfEmployees,
+            },
+            productConfigSnapshot: {
+                productType,
+                gsmOption,
+                fabricComposition,
+                colors,
+                customColorRequest: parsed.customColorRequest ?? null,
+                quantity: quote.quantity,
+                pricingSlabId: quote.appliedPricingSlabId,
+                unitPricePaise: quote.unitPricePaise,
+            },
+            brandingConfigSnapshot: {
+                logoLocations,
+                printMethod,
+                appliedExtraCharges: quote.appliedExtraCharges,
+                paymentPreference: parsed.paymentPreference,
+            },
+            pricingSnapshot: quote,
+            artworkFile: parsed.artworkFile,
+            employeeSheetFile: parsed.employeeSheetFile,
+            subtotalPaise: quote.subtotalPaise,
+            customizationPaise: quote.customizationPaise,
+            gstRateBps: quote.gstRateBps,
+            gstPaise: quote.gstPaise,
+            totalPaise: quote.totalPaise,
+            advancePercentBps: quote.advancePercentBps,
+            advancePaidPaise: quote.advancePaidPaise,
+            balanceDuePaise: quote.balanceDuePaise,
+            customerNotes: parsed.customerNotes ?? null,
+            internalNotes: parsed.approvedQuoteId
+                ? `Created from approved quote checkout | quote:${parsed.approvedQuoteId}`
+                : null,
+            balancePaymentStatus: quote.balanceDuePaise === 0 ? "paid" : "pending",
+        };
     }
 
     private async buildQuote(input: CorporateOrderFormInput) {
@@ -287,129 +445,31 @@ class CorporateOrderService {
 
     async createAdvancePaymentOrder(userId: string, input: CorporateOrderFormInput) {
         const parsed = corporateOrderFormInputSchema.parse(input);
-        const config = await corporateOrderQueries.getFormConfig();
         const quote = await this.buildQuote(parsed);
-        const tempPublicOrderId = `TEMP-${Date.now()}-${Math.random()
+        const publicOrderId = `REN-CORP-${Date.now()}-${Math.random()
             .toString(36)
-            .slice(2, 8)
+            .slice(2, 6)
             .toUpperCase()}`;
-
-        const productType = config.productTypes.find(
-            (item) => item.id === parsed.productTypeId
-        );
-        const gsmOption = config.gsmOptions.find(
-            (item) => item.id === parsed.gsmOptionId
-        );
-        const fabricComposition = config.fabricCompositions.find(
-            (item) => item.id === parsed.fabricCompositionId
-        );
-        const printMethod = config.printMethods.find(
-            (item) => item.id === parsed.printMethodId
-        );
-        const colors = config.colorOptions.filter((item) =>
-            parsed.colorOptionIds.includes(item.id)
-        );
-        const logoLocations = config.logoLocations.filter((item) =>
-            parsed.logoLocationIds.includes(item.id)
-        );
-
-        const draftOrder = await corporateOrderQueries.createCorporateOrder({
-            publicOrderId: tempPublicOrderId,
-            userId,
-            status: "payment_pending",
-            paymentStatus: "pending",
-            companyName: parsed.companyName,
-            contactPersonName: parsed.contactPersonName,
-            emailAddress: parsed.emailAddress,
-            mobileNumber: parsed.mobileNumber,
-            gstNumber: parsed.gstNumber ?? null,
-            deliveryAddress: parsed.deliveryAddress,
-            numberOfEmployees: parsed.numberOfEmployees,
-            employeeCount: quote.employeeCount,
-            quantity: quote.quantity,
-            sizeBreakdown: quote.sizeBreakdown,
-            employeeRows: parsed.employeeRows,
-            companySnapshot: {
-                companyName: parsed.companyName,
-                contactPersonName: parsed.contactPersonName,
-                emailAddress: parsed.emailAddress,
-                mobileNumber: parsed.mobileNumber,
-                gstNumber: parsed.gstNumber ?? null,
-                deliveryAddress: parsed.deliveryAddress,
-                numberOfEmployees: parsed.numberOfEmployees,
-            },
-            productConfigSnapshot: {
-                productType,
-                gsmOption,
-                fabricComposition,
-                colors,
-                customColorRequest: parsed.customColorRequest ?? null,
-                quantity: quote.quantity,
-                pricingSlabId: quote.appliedPricingSlabId,
-                unitPricePaise: quote.unitPricePaise,
-            },
-            brandingConfigSnapshot: {
-                logoLocations,
-                printMethod,
-                appliedExtraCharges: quote.appliedExtraCharges,
-                paymentPreference: parsed.paymentPreference,
-            },
-            pricingSnapshot: quote,
-            artworkFile: parsed.artworkFile,
-            employeeSheetFile: parsed.employeeSheetFile,
-            subtotalPaise: quote.subtotalPaise,
-            customizationPaise: quote.customizationPaise,
-            gstRateBps: quote.gstRateBps,
-            gstPaise: quote.gstPaise,
-            totalPaise: quote.totalPaise,
-            advancePercentBps: quote.advancePercentBps,
-            advancePaidPaise: quote.advancePaidPaise,
-            balanceDuePaise: quote.balanceDuePaise,
-            customerNotes: parsed.customerNotes ?? null,
-            balancePaymentStatus: "pending",
-        });
-
-        const publicOrderId = `REN-CORP-${String(draftOrder.sequenceNo).padStart(4, "0")}`;
         const rzpOrder = await razorpay.orders.create({
             amount: quote.advancePaidPaise,
             currency: "INR",
             receipt: publicOrderId,
             notes: {
-                corporateOrderId: draftOrder.id,
                 publicOrderId,
-            },
-        });
-
-        const updated = await corporateOrderQueries.updateCorporateOrder(
-            draftOrder.id,
-            {
-                publicOrderId,
-                razorpayOrderId: rzpOrder.id,
-                paymentReference: rzpOrder.id,
-            }
-        );
-
-        if (!updated) {
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to initialize corporate order",
-            });
-        }
-
-        await corporateOrderQueries.createStatusHistory({
-            corporateOrderId: updated.id,
-            fromStatus: "draft",
-            toStatus: "payment_pending",
-            changedByUserId: userId,
-            note: "Advance payment initiated",
-            metadata: {
-                razorpayOrderId: rzpOrder.id,
+                userId,
             },
         });
 
         return {
-            order: updated,
             quote,
+            draftToken: this.signDraftToken({
+                userId,
+                publicOrderId,
+                razorpayOrderId: rzpOrder.id,
+                form: parsed,
+                quote,
+                issuedAt: new Date().toISOString(),
+            }),
             razorpay: {
                 orderId: rzpOrder.id,
                 amount: quote.advancePaidPaise,
@@ -429,15 +489,32 @@ class CorporateOrderService {
 
     async confirmAdvancePayment(userId: string, input: unknown) {
         const parsed = corporatePaymentConfirmationInputSchema.parse(input);
-        const order = await corporateOrderQueries.getOrderById(
-            parsed.corporateOrderId
-        );
+        const draft = this.parseDraftToken(parsed.draftToken);
 
-        if (!order || order.userId !== userId) {
+        if (draft.userId !== userId) {
             throw new TRPCError({
-                code: "NOT_FOUND",
-                message: "Corporate order not found",
+                code: "FORBIDDEN",
+                message: "Corporate payment session does not belong to you",
             });
+        }
+
+        if (draft.razorpayOrderId !== parsed.razorpayOrderId) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Corporate payment order mismatch",
+            });
+        }
+
+        const existingOrder =
+            await corporateOrderQueries.getOrderByRazorpayPaymentId(
+                parsed.razorpayPaymentId
+            );
+        if (existingOrder) {
+            return {
+                success: true,
+                order: existingOrder,
+                confirmationHref: `/corporate-orders/confirmation/${existingOrder.id}`,
+            };
         }
 
         const generatedSignature = crypto
@@ -446,36 +523,28 @@ class CorporateOrderService {
             .digest("hex");
 
         if (generatedSignature !== parsed.razorpaySignature) {
-            await corporateOrderQueries.updateCorporateOrder(order.id, {
-                paymentStatus: "failed",
-                status: "payment_failed",
-            });
-
-            await corporateOrderQueries.createStatusHistory({
-                corporateOrderId: order.id,
-                fromStatus: order.status,
-                toStatus: "payment_failed",
-                changedByUserId: userId,
-                note: "Razorpay signature verification failed",
-            });
-
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "Invalid payment signature",
             });
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            paymentStatus: "paid",
-            status: "inquiry_received",
+        const createdOrder = await corporateOrderQueries.createCorporateOrder({
+            ...(await this.buildOrderInsertValues(userId, draft.form, draft.quote)),
             razorpayOrderId: parsed.razorpayOrderId,
             razorpayPaymentId: parsed.razorpayPaymentId,
             razorpaySignature: parsed.razorpaySignature,
             paymentReference: parsed.razorpayPaymentId,
-            balancePaymentStatus:
-                order.balanceDuePaise === 0 ? "paid" : order.balancePaymentStatus,
         });
-
+        const finalPublicOrderId = `REN-CORP-${String(
+            createdOrder.sequenceNo
+        ).padStart(4, "0")}`;
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            createdOrder.id,
+            {
+                publicOrderId: finalPublicOrderId,
+            }
+        );
         if (!updated) {
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
@@ -485,7 +554,7 @@ class CorporateOrderService {
 
         await corporateOrderQueries.createStatusHistory({
             corporateOrderId: updated.id,
-            fromStatus: order.status,
+            fromStatus: null,
             toStatus: "inquiry_received",
             changedByUserId: userId,
             note: "Advance payment received",

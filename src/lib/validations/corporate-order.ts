@@ -142,6 +142,7 @@ export const corporateOrderFormInputSchema = z.object({
     paymentPreference: corporatePaymentPreferenceSchema.default(
         "partial_advance"
     ),
+    approvedQuoteId: z.string().uuid().nullable().optional(),
     artworkFile: corporateFileSchema,
     employeeSheetFile: corporateFileSchema,
     employeeRows: z.array(corporateEmployeeRowSchema).min(1),
@@ -180,6 +181,8 @@ export const corporateOrderSchema = z.object({
     sequenceNo: z.number().int().positive(),
     publicOrderId: z.string().min(1),
     userId: z.string().min(1),
+    quoteId: z.string().uuid().nullable().optional(),
+    brandId: z.string().uuid().nullable().optional(),
     status: corporateOrderStatusSchema,
     paymentStatus: corporatePaymentStatusSchema,
     companyName: z.string(),
@@ -238,7 +241,7 @@ export const corporateOrderConfirmationSchema = z.object({
 });
 
 export const corporatePaymentConfirmationInputSchema = z.object({
-    corporateOrderId: z.string().uuid(),
+    draftToken: z.string().min(1),
     razorpayOrderId: z.string().min(1),
     razorpayPaymentId: z.string().min(1),
     razorpaySignature: z.string().min(1),

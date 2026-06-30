@@ -1,5 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
+import { corporateOrderWorkflowStatusSchema } from "@/lib/validations/corporate-order";
 import {
     corporateCatalogListInputSchema,
     corporateApprovedQuoteOrderInputSchema,
@@ -178,6 +179,26 @@ export const corporatePlatformRouter = createTRPCRouter({
             return corporatePlatformService.listBrandAssignedOrders(
                 ctx.user.id,
                 input.brandId
+            );
+        }),
+    updateBrandAssignedOrderStatus: protectedProcedure
+        .input(
+            z.object({
+                brandId: z.string().uuid(),
+                orderId: z.string().uuid(),
+                toStatus: corporateOrderWorkflowStatusSchema,
+                note: z.string().trim().max(1000).nullish(),
+            })
+        )
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.updateBrandAssignedOrderStatus(
+                ctx.user.id,
+                input.brandId,
+                {
+                    orderId: input.orderId,
+                    toStatus: input.toStatus,
+                    note: input.note,
+                }
             );
         }),
     generateReport: protectedProcedure

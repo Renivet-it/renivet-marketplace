@@ -11,7 +11,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
-import { corporateOrders } from "./corporate-order";
+import {
+    corporateFabricCompositions,
+    corporateGsmOptions,
+    corporateOrders,
+    corporateProductTypes,
+} from "./corporate-order";
 import { products } from "./product";
 import { users } from "./user";
 
@@ -263,6 +268,18 @@ export const corporateQuotes = pgTable(
         }),
         corporateProductConfigId: uuid("corporate_product_config_id").references(
             () => corporateProductConfigs.id,
+            { onDelete: "set null" }
+        ),
+        productTypeId: uuid("product_type_id").references(
+            () => corporateProductTypes.id,
+            { onDelete: "set null" }
+        ),
+        gsmOptionId: uuid("gsm_option_id").references(
+            () => corporateGsmOptions.id,
+            { onDelete: "set null" }
+        ),
+        fabricCompositionId: uuid("fabric_composition_id").references(
+            () => corporateFabricCompositions.id,
             { onDelete: "set null" }
         ),
         quantity: integer("quantity").notNull(),

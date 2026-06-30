@@ -53,6 +53,13 @@ type CorporateOrderPagePrefill = {
     deliveryAddress?: string;
     numberOfEmployees?: number;
     quantity?: number;
+    productTypeId?: string;
+    gsmOptionId?: string;
+    fabricCompositionId?: string;
+    lockApprovedQuoteSelections?: boolean;
+    approvedQuoteId?: string;
+    approvedQuoteNumber?: string;
+    approvedQuoteUnitPricePaise?: number;
     customerNotes?: string;
     paymentPreference?: "partial_advance" | "full_upfront";
 };
@@ -141,9 +148,9 @@ export function CorporateOrderPage({
         gstNumber: initialPrefill?.gstNumber ?? "",
         deliveryAddress: initialPrefill?.deliveryAddress ?? "",
         numberOfEmployees: initialPrefill?.numberOfEmployees ?? 0,
-        productTypeId: "",
-        gsmOptionId: "",
-        fabricCompositionId: "",
+        productTypeId: initialPrefill?.productTypeId ?? "",
+        gsmOptionId: initialPrefill?.gsmOptionId ?? "",
+        fabricCompositionId: initialPrefill?.fabricCompositionId ?? "",
         colorOptionIds: [] as string[],
         customColorRequest: "",
         quantity: initialPrefill?.quantity ?? 0,
@@ -154,8 +161,14 @@ export function CorporateOrderPage({
             "partial_advance") as
             | "partial_advance"
             | "full_upfront",
+        approvedQuoteId: initialPrefill?.approvedQuoteId ?? null,
         customerNotes: initialPrefill?.customerNotes ?? "",
     });
+    const isApprovedQuoteFlow =
+        initialPrefill?.lockApprovedQuoteSelections === true;
+    const approvedQuoteQuantity = initialPrefill?.quantity ?? 0;
+    const approvedQuoteUnitPricePaise =
+        initialPrefill?.approvedQuoteUnitPricePaise ?? 0;
 
     useEffect(() => {
         if (!user) return;
@@ -319,6 +332,13 @@ export function CorporateOrderPage({
             if ((form.quantity || 0) <= 0) {
                 errors.quantity = "Enter the order quantity.";
             }
+            if (
+                isApprovedQuoteFlow &&
+                approvedQuoteQuantity > 0 &&
+                form.quantity !== approvedQuoteQuantity
+            ) {
+                errors.quantity = `Quantity is locked to ${approvedQuoteQuantity} from the approved quotation.`;
+            }
         }
 
         if (currentStep === 2) {
@@ -339,6 +359,14 @@ export function CorporateOrderPage({
             if (!employeeLocalFile || employeeRows.length === 0) {
                 errors.employeeSheetFile =
                     "Upload a valid employee size sheet before continuing.";
+            }
+            if (
+                isApprovedQuoteFlow &&
+                approvedQuoteQuantity > 0 &&
+                employeeRows.length > 0 &&
+                employeeRows.length !== approvedQuoteQuantity
+            ) {
+                errors.employeeSheetFile = `Employee size sheet should contain ${approvedQuoteQuantity} rows to match the approved quotation quantity.`;
             }
         }
 
@@ -478,8 +506,10 @@ export function CorporateOrderPage({
         setEmployeeRows(parsedRows);
         setForm((current) => ({
             ...current,
-            numberOfEmployees: parsedRows.length,
-            quantity: parsedRows.length,
+            numberOfEmployees: isApprovedQuoteFlow
+                ? current.numberOfEmployees
+                : parsedRows.length,
+            quantity: isApprovedQuoteFlow ? current.quantity : parsedRows.length,
         }));
     };
 
@@ -582,7 +612,7 @@ export function CorporateOrderPage({
                 }) => {
                     const confirmation =
                         await confirmPaymentMutation.mutateAsync({
-                            corporateOrderId: created.order.id,
+                            draftToken: created.draftToken,
                             razorpayOrderId: response.razorpay_order_id,
                             razorpayPaymentId: response.razorpay_payment_id,
                             razorpaySignature: response.razorpay_signature,
@@ -672,7 +702,12 @@ export function CorporateOrderPage({
                         <div className="mt-5 space-y-3">
                             <StudioMetric
                                 label="Selected garment"
-                                value={selectedProductType?.name ?? "Choose a product"}
+                                value={
+                                    selectedProductType?.name ??
+                                    (isApprovedQuoteFlow
+                                        ? "Admin-selected garment"
+                                        : "Choose a product")
+                                }
                             />
                             <StudioMetric
                                 label="Branding placements"
@@ -684,7 +719,11 @@ export function CorporateOrderPage({
                             />
                             <StudioMetric
                                 label="Employee size rows"
-                                value={`${employeeRows.length} loaded`}
+                                value={
+                                    isApprovedQuoteFlow && approvedQuoteQuantity > 0
+                                        ? `${employeeRows.length}/${approvedQuoteQuantity} loaded`
+                                        : `${employeeRows.length} loaded`
+                                }
                             />
                             <StudioMetric
                                 label="Payment structure"
@@ -698,9 +737,9 @@ export function CorporateOrderPage({
                     <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto py-4">
                         {/* Background line */}
                         <div className="absolute top-[28px] left-[5%] w-[90%] h-0.5 bg-slate-200/70 rounded-full" />
-                        
+
                         {/* Animated Active Line */}
-                        <motion.div 
+                        <motion.div
                             className="absolute top-[28px] left-[5%] h-0.5 bg-[#5B9BD5] rounded-full"
                             initial={{ width: "0%" }}
                             animate={{ width: `${(step / (STEPS.length - 1)) * 90}%` }}
@@ -832,6 +871,7 @@ export function CorporateOrderPage({
                                         placeholder="Number of Employees"
                                         type="number"
                                         value={form.numberOfEmployees || ""}
+                                        disabled={isApprovedQuoteFlow}
                                         onChange={(e) =>
                                             setFieldValue(
                                                 "numberOfEmployees",
@@ -860,69 +900,106 @@ export function CorporateOrderPage({
                                 icon={Shirt}
                                 eyebrow="Step 2"
                                 title="Choose the garment foundation"
-                                description="Select the apparel base, fabric build, and brand color palette for the live preview and pricing engine."
+                                description={
+                                    isApprovedQuoteFlow
+                                        ? "Garment base, fabric composition, GSM, and quantity are locked from the approved quote. Choose the final color palette for the live preview."
+                                        : "Select the apparel base, fabric build, and brand color palette for the live preview and pricing engine."
+                                }
                             />
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
                                 <div>
-                                    <select
-                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
-                                        value={form.productTypeId}
-                                        onChange={(e) =>
-                                            setFieldValue("productTypeId", e.target.value)
-                                        }
-                                    >
-                                        <option value="">Select Product Type</option>
-                                        {config.productTypes.map((item) => (
-                                            <option key={item.id} value={item.id}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {isApprovedQuoteFlow ? (
+                                        <Input
+                                            className="h-12 rounded-2xl border-slate-200 bg-slate-100 px-4"
+                                            value={selectedProductType?.name ?? "Admin selected"}
+                                            disabled
+                                        />
+                                    ) : (
+                                        <select
+                                            className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
+                                            value={form.productTypeId}
+                                            onChange={(e) =>
+                                                setFieldValue("productTypeId", e.target.value)
+                                            }
+                                        >
+                                            <option value="">Select Product Type</option>
+                                            {config.productTypes.map((item) => (
+                                                <option key={item.id} value={item.id}>
+                                                    {item.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
                                     <FieldError message={fieldErrors.productTypeId} />
                                 </div>
                                 <div>
-                                    <select
-                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
-                                        value={form.gsmOptionId}
-                                        onChange={(e) =>
-                                            setFieldValue("gsmOptionId", e.target.value)
-                                        }
-                                    >
-                                        <option value="">Select GSM</option>
-                                        {config.gsmOptions.map((item) => (
-                                            <option key={item.id} value={item.id}>
-                                                {item.label}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {isApprovedQuoteFlow ? (
+                                        <Input
+                                            className="h-12 rounded-2xl border-slate-200 bg-slate-100 px-4"
+                                            value={selectedGsm?.label ?? "Admin selected"}
+                                            disabled
+                                        />
+                                    ) : (
+                                        <select
+                                            className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
+                                            value={form.gsmOptionId}
+                                            onChange={(e) =>
+                                                setFieldValue("gsmOptionId", e.target.value)
+                                            }
+                                        >
+                                            <option value="">Select GSM</option>
+                                            {config.gsmOptions.map((item) => (
+                                                <option key={item.id} value={item.id}>
+                                                    {item.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
                                     <FieldError message={fieldErrors.gsmOptionId} />
                                 </div>
                                 <div>
-                                    <select
-                                        className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
-                                        value={form.fabricCompositionId}
-                                        onChange={(e) =>
-                                            setFieldValue(
-                                                "fabricCompositionId",
-                                                e.target.value
-                                            )
-                                        }
-                                    >
-                                        <option value="">Select Fabric Composition</option>
-                                        {config.fabricCompositions.map((item) => (
-                                            <option key={item.id} value={item.id}>
-                                                {item.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    {isApprovedQuoteFlow ? (
+                                        <Input
+                                            className="h-12 rounded-2xl border-slate-200 bg-slate-100 px-4"
+                                            value={
+                                                selectedFabricComposition?.name ??
+                                                "Admin selected"
+                                            }
+                                            disabled
+                                        />
+                                    ) : (
+                                        <select
+                                            className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
+                                            value={form.fabricCompositionId}
+                                            onChange={(e) =>
+                                                setFieldValue(
+                                                    "fabricCompositionId",
+                                                    e.target.value
+                                                )
+                                            }
+                                        >
+                                            <option value="">Select Fabric Composition</option>
+                                            {config.fabricCompositions.map((item) => (
+                                                <option key={item.id} value={item.id}>
+                                                    {item.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    )}
                                     <FieldError message={fieldErrors.fabricCompositionId} />
                                 </div>
                                 <div>
                                     <Input
-                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
+                                        className={cn(
+                                            "h-12 rounded-2xl border-slate-200 px-4",
+                                            isApprovedQuoteFlow
+                                                ? "bg-slate-100"
+                                                : "bg-slate-50/60"
+                                        )}
                                         placeholder="Quantity"
                                         type="number"
                                         value={form.quantity || ""}
+                                        disabled={isApprovedQuoteFlow}
                                         onChange={(e) =>
                                             setFieldValue("quantity", Number(e.target.value))
                                         }
@@ -930,6 +1007,26 @@ export function CorporateOrderPage({
                                     <FieldError message={fieldErrors.quantity} />
                                 </div>
                             </div>
+
+                            {isApprovedQuoteFlow ? (
+                                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                                    <SummaryStat
+                                        label="Approved Quote"
+                                        value={
+                                            initialPrefill?.approvedQuoteNumber ??
+                                            "Approved quote"
+                                        }
+                                    />
+                                    <SummaryStat
+                                        label="Quantity Locked"
+                                        value={String(approvedQuoteQuantity)}
+                                    />
+                                    <SummaryStat
+                                        label="Price Per Unit"
+                                        value={formatINR(approvedQuoteUnitPricePaise)}
+                                    />
+                                </div>
+                            ) : null}
 
                             <div className="mt-5">
                                 <p className="text-sm font-semibold text-slate-900">
