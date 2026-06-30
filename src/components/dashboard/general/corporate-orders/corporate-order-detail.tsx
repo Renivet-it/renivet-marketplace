@@ -10,24 +10,12 @@ import { useState } from "react";
 export function CorporateOrderDetail({ initialData }: { initialData: any }) {
     const [status, setStatus] = useState(initialData.status);
     const [statusNote, setStatusNote] = useState("");
-    const [balancePaymentLink, setBalancePaymentLink] = useState(
-        initialData.balancePaymentLink ?? ""
-    );
-    const [balancePaymentNotes, setBalancePaymentNotes] = useState(
-        initialData.balancePaymentNotes ?? ""
-    );
     const utils = trpc.useUtils();
+    const customerPaymentPageHref =
+        initialData.balancePaymentLink ||
+        `/corporate-orders/confirmation/${initialData.id}`;
     const updateStatus =
         trpc.general.corporateOrders.updateStatus.useMutation({
-            onSuccess: async () => {
-                await utils.general.corporateOrders.getOrderById.invalidate({
-                    corporateOrderId: initialData.id,
-                });
-            },
-            onError: (error) => handleClientError(error),
-        });
-    const saveBalanceLink =
-        trpc.general.corporateOrders.saveBalancePaymentLink.useMutation({
             onSuccess: async () => {
                 await utils.general.corporateOrders.getOrderById.invalidate({
                     corporateOrderId: initialData.id,
@@ -207,38 +195,14 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                         </div>
                     </Panel>
 
-                    <Panel title="Balance Payment Tracking">
+                    <Panel title="Balance Payment Actions">
                         <div className="space-y-3">
-                            <Input
-                                placeholder="https://rzp.io/..."
-                                value={balancePaymentLink}
-                                onChange={(e) =>
-                                    setBalancePaymentLink(e.target.value)
-                                }
-                            />
-                            <textarea
-                                className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
-                                placeholder="Notes for the balance payment"
-                                value={balancePaymentNotes}
-                                onChange={(e) =>
-                                    setBalancePaymentNotes(e.target.value)
-                                }
-                            />
-                            <Button
-                                onClick={() =>
-                                    saveBalanceLink.mutate({
-                                        corporateOrderId: initialData.id,
-                                        balancePaymentLink,
-                                        balancePaymentNotes:
-                                            balancePaymentNotes || undefined,
-                                    })
-                                }
-                                disabled={saveBalanceLink.isPending}
-                            >
-                                {saveBalanceLink.isPending
-                                    ? "Saving..."
-                                    : "Save Balance Link"}
-                            </Button>
+                            <Input value={customerPaymentPageHref} readOnly />
+                            <p className="text-sm leading-6 text-slate-500">
+                                Customers can pay the remaining balance directly from
+                                their corporate order page. Use the reminder button
+                                below if you want to nudge them.
+                            </p>
                             <Button
                                 variant="outline"
                                 onClick={() =>
@@ -248,8 +212,7 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                 }
                                 disabled={
                                     sendReminder.isPending ||
-                                    !initialData.balanceDuePaise ||
-                                    !balancePaymentLink
+                                    !initialData.balanceDuePaise
                                 }
                             >
                                 {sendReminder.isPending

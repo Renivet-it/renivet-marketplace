@@ -1,6 +1,8 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { corporateOrderService } from "@/lib/services/corporate-order";
 import {
+    corporateBalancePaymentConfirmationInputSchema,
+    corporateBalancePaymentOrderInputSchema,
     corporateConfigUpsertInputSchema,
     corporateOrderFormInputSchema,
     corporateOrderListInputSchema,
@@ -35,6 +37,19 @@ export const corporateOrdersRouter = createTRPCRouter({
         .input(corporatePaymentConfirmationInputSchema)
         .mutation(async ({ ctx, input }) => {
             return corporateOrderService.confirmAdvancePayment(ctx.user.id, input);
+        }),
+    createBalancePaymentOrder: protectedProcedure
+        .input(corporateBalancePaymentOrderInputSchema)
+        .mutation(async ({ ctx, input }) => {
+            return corporateOrderService.createBalancePaymentOrder(
+                ctx.user.id,
+                input
+            );
+        }),
+    confirmBalancePayment: protectedProcedure
+        .input(corporateBalancePaymentConfirmationInputSchema)
+        .mutation(async ({ ctx, input }) => {
+            return corporateOrderService.confirmBalancePayment(ctx.user.id, input);
         }),
     getOrderConfirmation: protectedProcedure
         .input(

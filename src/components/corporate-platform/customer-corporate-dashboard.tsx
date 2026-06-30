@@ -4,13 +4,45 @@ import { CorporateOrderPage } from "@/components/corporate-orders/corporate-orde
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { initializeRazorpayPayment } from "@/lib/razorpay/payment";
 import { trpc } from "@/lib/trpc/client";
 import { formatINR, handleClientError } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
 import { motion } from "motion/react";
+import Script from "next/script";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
+
+function ensureRazorpaySdk() {
+    return new Promise<void>((resolve, reject) => {
+        if (typeof window === "undefined") {
+            reject(new Error("Razorpay checkout is only available in the browser"));
+            return;
+        }
+
+        if ((window as any).Razorpay) {
+            resolve();
+            return;
+        }
+
+        const existing = document.querySelector<HTMLScriptElement>(
+            "script[src=\"https://checkout.razorpay.com/v1/checkout.js\"]"
+        );
+
+        if (existing) {
+            existing.addEventListener("load", () => resolve(), { once: true });
+            existing.addEventListener(
+                "error",
+                () => reject(new Error("Failed to load Razorpay checkout")),
+                { once: true }
+            );
+            return;
+        }
+
+        reject(new Error("Failed to load Razorpay checkout"));
+    });
+}
 
 function formatCorporateAddress(address: unknown) {
     if (!address || typeof address !== "object" || Array.isArray(address)) {
@@ -64,6 +96,9 @@ export function CustomerCorporateDashboard({
     const [purchaseOrderChoice, setPurchaseOrderChoice] = useState<
         Record<string, "direct" | "purchase_order" | undefined>
     >({});
+    const [selectedOrderId, setSelectedOrderId] = useState<string | null>(
+        initialOrders[0]?.id ?? null
+    );
 
     const quoteDecision = trpc.general.corporatePlatform.decideQuote.useMutation({
         onSuccess: async (updatedQuote) => {
@@ -104,6 +139,17 @@ export function CustomerCorporateDashboard({
         },
         onError: (error) => handleClientError(error),
     });
+    const createBalancePaymentOrder =
+        trpc.general.corporateOrders.createBalancePaymentOrder.useMutation({
+            onError: (error) => handleClientError(error),
+        });
+    const confirmBalancePayment =
+        trpc.general.corporateOrders.confirmBalancePayment.useMutation({
+            onSuccess: async () => {
+                await utils.general.corporateOrders.listMyOrders.invalidate();
+            },
+            onError: (error) => handleClientError(error),
+        });
 
     const submitPo = async (quote: any) => {
         try {
@@ -184,9 +230,62 @@ export function CustomerCorporateDashboard({
         quotes.find((quote) => quote.id === orderSetupQuoteId) ??
         unlockedQuotes[0] ??
         null;
+    const selectedOrder =
+        initialOrders.find((order) => order.id === selectedOrderId) ??
+        initialOrders[0] ??
+        null;
+
+    const payRemainingBalance = async (order: any) => {
+        try {
+            const created = await createBalancePaymentOrder.mutateAsync({
+                corporateOrderId: order.id,
+            });
+
+            await ensureRazorpaySdk();
+            initializeRazorpayPayment({
+                key: process.env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID!,
+                amount: created.razorpay.amount,
+                currency: created.razorpay.currency,
+                name: created.razorpay.name,
+                description: created.razorpay.description,
+                order_id: created.razorpay.orderId,
+                prefill: {
+                    name: order.contactPersonName,
+                    email: order.emailAddress,
+                    contact: order.mobileNumber,
+                },
+                theme: {
+                    color: "#5B9BD5",
+                },
+                handler: async (response: {
+                    razorpay_order_id: string;
+                    razorpay_payment_id: string;
+                    razorpay_signature: string;
+                }) => {
+                    await confirmBalancePayment.mutateAsync({
+                        corporateOrderId: order.id,
+                        razorpayOrderId: response.razorpay_order_id,
+                        razorpayPaymentId: response.razorpay_payment_id,
+                        razorpaySignature: response.razorpay_signature,
+                    });
+
+                    toast.success("Remaining balance paid successfully");
+                    window.location.href = `/corporate-orders/confirmation/${order.id}`;
+                },
+                modal: {
+                    ondismiss: () => {
+                        toast.message("Remaining balance payment cancelled");
+                    },
+                },
+            } as any);
+        } catch (error) {
+            handleClientError(error);
+        }
+    };
 
     return (
         <div className="w-full space-y-8 pb-6">
+            <Script src="https://checkout.razorpay.com/v1/checkout.js" />
             <section className="overflow-hidden rounded-[32px] border border-[#d7e2ef] bg-[linear-gradient(135deg,#f7fbff_0%,#f2f7fc_48%,#ffffff_100%)] shadow-[0_30px_80px_-55px_rgba(38,73,108,0.26)]">
                 <div className="grid gap-6 p-6 md:p-8 xl:grid-cols-[minmax(0,1.55fr)_320px]">
                     <div>
@@ -591,24 +690,149 @@ export function CustomerCorporateDashboard({
                         transition={{ duration: 0.35, ease: "easeOut" }}
                     >
                         <SurfacePanel
-                        title="Corporate Orders"
-                        description="Orders, fulfillment progress, and commercial totals stay visible here."
-                    >
-                        {initialOrders.length ? (
-                            <div className="grid gap-4 xl:grid-cols-2">
-                                {initialOrders.map((order) => (
-                                    <ListCard
-                                        key={order.id}
-                                        title={order.publicOrderId}
-                                        subtitle={formatINR(order.totalPaise)}
-                                        meta={toLabel(order.status)}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <Empty label="No corporate orders yet." />
-                        )}
-                    </SurfacePanel>
+                            title="Corporate Orders"
+                            description="Review final order status, payment progress, remaining balance, and full order details from one place."
+                        >
+                            {initialOrders.length ? (
+                                <div className="space-y-5">
+                                    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                                        <div className="overflow-x-auto">
+                                            <table className="min-w-full text-left">
+                                                <thead className="bg-slate-50">
+                                                    <tr className="text-xs uppercase tracking-[0.18em] text-slate-500">
+                                                        <th className="px-4 py-4 font-semibold">
+                                                            Order ID
+                                                        </th>
+                                                        <th className="px-4 py-4 font-semibold">
+                                                            Value
+                                                        </th>
+                                                        <th className="px-4 py-4 font-semibold">
+                                                            Paid
+                                                        </th>
+                                                        <th className="px-4 py-4 font-semibold">
+                                                            Balance
+                                                        </th>
+                                                        <th className="px-4 py-4 font-semibold">
+                                                            Payment
+                                                        </th>
+                                                        <th className="px-4 py-4 font-semibold">
+                                                            Fulfillment
+                                                        </th>
+                                                        <th className="px-4 py-4 font-semibold">
+                                                            Action
+                                                        </th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {initialOrders.map((order) => {
+                                                        const hasBalance =
+                                                            order.balanceDuePaise > 0;
+
+                                                        return (
+                                                            <tr
+                                                                key={order.id}
+                                                                className={`border-t border-slate-200 align-top transition-colors ${
+                                                                    selectedOrder?.id === order.id
+                                                                        ? "bg-[#f7fbff]"
+                                                                        : "bg-white"
+                                                                }`}
+                                                            >
+                                                                <td className="px-4 py-4">
+                                                                    <div className="font-semibold text-slate-900">
+                                                                        {order.publicOrderId}
+                                                                    </div>
+                                                                    <div className="mt-1 text-xs text-slate-500">
+                                                                        {new Date(
+                                                                            order.createdAt
+                                                                        ).toLocaleDateString(
+                                                                            "en-IN"
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-4 text-sm font-medium text-slate-900">
+                                                                    {formatINR(
+                                                                        order.totalPaise
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-sm text-slate-700">
+                                                                    {formatINR(
+                                                                        order.advancePaidPaise
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-4 text-sm font-medium text-slate-900">
+                                                                    {formatINR(
+                                                                        order.balanceDuePaise
+                                                                    )}
+                                                                </td>
+                                                                <td className="px-4 py-4">
+                                                                    <OrderStateChip
+                                                                        label={
+                                                                            hasBalance
+                                                                                ? "Remaining payment due"
+                                                                                : "Paid in full"
+                                                                        }
+                                                                        tone={
+                                                                            hasBalance
+                                                                                ? "amber"
+                                                                                : "emerald"
+                                                                        }
+                                                                    />
+                                                                </td>
+                                                                <td className="px-4 py-4">
+                                                                    <OrderStateChip
+                                                                        label={toLabel(
+                                                                            order.status
+                                                                        )}
+                                                                        tone="slate"
+                                                                    />
+                                                                </td>
+                                                                <td className="px-4 py-4">
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        <Button
+                                                                            type="button"
+                                                                            variant="outline"
+                                                                            onClick={() =>
+                                                                                setSelectedOrderId(
+                                                                                    order.id
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            View details
+                                                                        </Button>
+                                                                        {hasBalance ? (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() =>
+                                                                                    payRemainingBalance(
+                                                                                        order
+                                                                                    )
+                                                                                }
+                                                                                className="inline-flex h-10 items-center justify-center rounded-full bg-[#2f3720] px-4 text-sm font-semibold text-white transition-colors hover:bg-[#252c18]"
+                                                                            >
+                                                                                Pay remaining
+                                                                            </button>
+                                                                        ) : null}
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+
+                                    {selectedOrder ? (
+                                        <CustomerCorporateOrderDetailPanel
+                                            order={selectedOrder}
+                                            onPayRemaining={payRemainingBalance}
+                                        />
+                                    ) : null}
+                                </div>
+                            ) : (
+                                <Empty label="No corporate orders yet." />
+                            )}
+                        </SurfacePanel>
                     </motion.div>
                 </TabsContent>
 
@@ -881,7 +1105,11 @@ function ListCard({
 }) {
     return (
         <motion.div
-            whileHover={{ x: 4, backgroundColor: "rgb(241, 245, 249)", borderColor: "#94a3b8" }}
+            whileHover={{
+                x: 4,
+                backgroundColor: "rgb(241, 245, 249)",
+                borderColor: "#94a3b8",
+            }}
             transition={{ type: "spring", stiffness: 400, damping: 25 }}
             className="rounded-[22px] border border-slate-200 bg-slate-50 p-4 transition-colors duration-150"
         >
@@ -1006,6 +1234,108 @@ function StatusChip({ label }: { label: string }) {
     return (
         <div className="rounded-full border border-[#d8e3ef] bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
             {label}
+        </div>
+    );
+}
+
+function OrderStateChip({
+    label,
+    tone,
+}: {
+    label: string;
+    tone: "amber" | "emerald" | "slate";
+}) {
+    return (
+        <div
+            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${
+                tone === "amber"
+                    ? "border-amber-200 bg-amber-50 text-amber-700"
+                    : tone === "emerald"
+                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                      : "border-slate-200 bg-slate-50 text-slate-700"
+            }`}
+        >
+            {label}
+        </div>
+    );
+}
+
+function CustomerCorporateOrderDetailPanel({
+    order,
+    onPayRemaining,
+}: {
+    order: any;
+    onPayRemaining: (order: any) => void;
+}) {
+    const hasBalance = order.balanceDuePaise > 0;
+
+    return (
+        <div className="rounded-[26px] border border-[#d8e3ef] bg-[linear-gradient(180deg,#ffffff_0%,#f8fbfe_100%)] p-5 shadow-[0_20px_60px_-48px_rgba(15,23,42,0.28)]">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                <div>
+                    <div className="text-xs font-semibold uppercase tracking-[0.22em] text-[#5B9BD5]">
+                        Selected Order
+                    </div>
+                    <div className="mt-2 text-2xl font-semibold text-slate-900">
+                        {order.publicOrderId}
+                    </div>
+                    <div className="mt-2 text-sm text-slate-500">
+                        Created{" "}
+                        {new Date(order.createdAt).toLocaleDateString("en-IN")} for{" "}
+                        {order.companyName}
+                    </div>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                    <OrderStateChip label={toLabel(order.status)} tone="slate" />
+                    <OrderStateChip
+                        label={toLabel(order.paymentStatus)}
+                        tone={hasBalance ? "amber" : "emerald"}
+                    />
+                </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <StatusRow label="Quantity" value={String(order.quantity)} />
+                <StatusRow
+                    label="Advance Paid"
+                    value={formatINR(order.advancePaidPaise)}
+                />
+                <StatusRow
+                    label="Balance Due"
+                    value={formatINR(order.balanceDuePaise)}
+                />
+                <StatusRow
+                    label="Total Order Value"
+                    value={formatINR(order.totalPaise)}
+                />
+            </div>
+
+            <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="rounded-[22px] border border-slate-200 bg-white p-4 text-sm leading-7 text-slate-600">
+                    {hasBalance
+                        ? "This order still has a remaining balance. You can complete the payment directly from this workspace anytime."
+                        : "This order is fully paid. You can continue tracking fulfillment and download the latest summary anytime."}
+                </div>
+
+                <div className="flex flex-wrap gap-2 xl:justify-end">
+                    <a
+                        href={`/api/corporate-orders/${order.id}/summary.pdf`}
+                        className="inline-flex h-11 items-center justify-center rounded-full border border-[#d9dee5] bg-white px-5 text-sm font-semibold text-[#344054] transition-colors hover:border-[#c2cad5] hover:bg-[#f8fafc]"
+                    >
+                        Download Summary
+                    </a>
+                    {hasBalance ? (
+                        <button
+                            type="button"
+                            onClick={() => onPayRemaining(order)}
+                            className="inline-flex h-11 items-center justify-center rounded-full bg-[#2f3720] px-5 text-sm font-semibold text-white transition-colors hover:bg-[#252c18]"
+                        >
+                            Pay Remaining Balance
+                        </button>
+                    ) : null}
+                </div>
+            </div>
         </div>
     );
 }

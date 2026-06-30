@@ -15,6 +15,8 @@ import {
 import { razorpay } from "@/lib/razorpay";
 import { resend } from "@/lib/resend";
 import {
+    corporateBalancePaymentConfirmationInputSchema,
+    corporateBalancePaymentOrderInputSchema,
     CorporatePaymentPreference,
     CorporateOrderFormInput,
     CorporateOrderQuote,
@@ -204,7 +206,7 @@ class CorporateOrderService {
             quoteId: approvedQuote?.id ?? null,
             brandId: approvedQuote?.brandId ?? null,
             status: "inquiry_received" as const,
-            paymentStatus: "paid" as const,
+            paymentStatus: quote.balanceDuePaise > 0 ? ("pending" as const) : ("paid" as const),
             companyName: parsed.companyName,
             contactPersonName: parsed.contactPersonName,
             emailAddress: parsed.emailAddress,
@@ -610,6 +612,116 @@ class CorporateOrderService {
         };
     }
 
+    async createBalancePaymentOrder(userId: string, input: unknown) {
+        const parsed = corporateBalancePaymentOrderInputSchema.parse(input);
+        const order = await corporateOrderQueries.getOrderById(parsed.corporateOrderId);
+
+        if (!order || order.userId !== userId) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+
+        if (order.balanceDuePaise <= 0) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "This order has no remaining balance",
+            });
+        }
+
+        const rzpOrder = await razorpay.orders.create({
+            amount: order.balanceDuePaise,
+            currency: "INR",
+            receipt: `${order.publicOrderId}-BAL`,
+            notes: {
+                corporateOrderId: order.id,
+                publicOrderId: order.publicOrderId,
+                userId,
+                paymentKind: "balance",
+            },
+        });
+
+        return {
+            order,
+            razorpay: {
+                orderId: rzpOrder.id,
+                amount: order.balanceDuePaise,
+                currency: "INR",
+                name: "Renivet Corporate Orders",
+                description: `Remaining balance payment for ${order.publicOrderId}`,
+            },
+        };
+    }
+
+    async confirmBalancePayment(userId: string, input: unknown) {
+        const parsed = corporateBalancePaymentConfirmationInputSchema.parse(input);
+        const order = await corporateOrderQueries.getOrderById(parsed.corporateOrderId);
+
+        if (!order || order.userId !== userId) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+
+        if (order.balanceDuePaise <= 0) {
+            return {
+                success: true,
+                order,
+                confirmationHref: `/corporate-orders/confirmation/${order.id}`,
+            };
+        }
+
+        const generatedSignature = crypto
+            .createHmac("sha256", env.RAZOR_PAY_SECRET_KEY)
+            .update(`${parsed.razorpayOrderId}|${parsed.razorpayPaymentId}`)
+            .digest("hex");
+
+        if (generatedSignature !== parsed.razorpaySignature) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Invalid payment signature",
+            });
+        }
+
+        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
+            paymentStatus: "paid",
+            balanceDuePaise: 0,
+            balancePaymentStatus: "paid",
+            balancePaymentLink: getAbsoluteURL(
+                `/corporate-orders/confirmation/${order.id}`
+            ),
+            paymentReference: parsed.razorpayPaymentId,
+        });
+
+        if (!updated) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to confirm remaining balance payment",
+            });
+        }
+
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: updated.id,
+            fromStatus: updated.status,
+            toStatus: updated.status,
+            changedByUserId: userId,
+            note: "Remaining balance payment received",
+            metadata: {
+                razorpayOrderId: parsed.razorpayOrderId,
+                razorpayPaymentId: parsed.razorpayPaymentId,
+                paymentKind: "balance",
+            },
+        });
+
+        return {
+            success: true,
+            order: updated,
+            confirmationHref: `/corporate-orders/confirmation/${updated.id}`,
+        };
+    }
+
     async getOrderConfirmation(userId: string, corporateOrderId: string) {
         const [order, settings] = await Promise.all([
             corporateOrderQueries.getOrderById(corporateOrderId),
@@ -726,13 +838,6 @@ class CorporateOrderService {
             });
         }
 
-        if (!order.balancePaymentLink) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "Add a balance payment link before sending a reminder",
-            });
-        }
-
         if (order.balanceDuePaise <= 0) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
@@ -740,13 +845,17 @@ class CorporateOrderService {
             });
         }
 
+        const paymentHref =
+            order.balancePaymentLink ||
+            getAbsoluteURL(`/corporate-orders/confirmation/${order.id}`);
+
         await resend.emails.send({
             from: env.RESEND_EMAIL_FROM,
             to: order.emailAddress,
             subject: `Balance payment reminder: ${order.publicOrderId}`,
             react: CorporateOrderBalanceReminderEmail({
                 order,
-                paymentHref: order.balancePaymentLink,
+                paymentHref,
             }),
         });
 

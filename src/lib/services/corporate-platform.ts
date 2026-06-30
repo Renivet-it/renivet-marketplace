@@ -1,3 +1,4 @@
+import { env } from "@/../env";
 import { db } from "@/lib/db";
 import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
 import {
@@ -53,13 +54,29 @@ import {
     corporateTaxInvoiceInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { CorporateOrderWorkflowStatus } from "@/lib/validations/corporate-order";
-import { convertValueToLabel } from "@/lib/utils";
+import { resend } from "@/lib/resend";
+import {
+    CorporateOrderCustomerReadyForDispatchEmail,
+    CorporateOrderReadyForDispatchEmail,
+} from "@/lib/resend/emails";
+import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
 import { TRPCError } from "@trpc/server";
 import { and, asc, count, desc, eq, inArray, isNotNull, like, notInArray } from "drizzle-orm";
 import crypto from "crypto";
 
 function makeNumber(prefix: string, sequence: number) {
     return `${prefix}-${String(sequence).padStart(5, "0")}`;
+}
+
+function parseCorporateOpsEmails() {
+    const envEmails = (env.CORPORATE_OPS_EMAILS ?? "")
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean);
+
+    if (envEmails.length > 0) return envEmails;
+
+    return [env.RENIVET_EMAIL_1, env.RENIVET_EMAIL_2].filter(Boolean);
 }
 
 class CorporatePlatformService {
@@ -224,6 +241,85 @@ class CorporatePlatformService {
             where: like(corporateOrders.internalNotes, `%${quoteNumber}%`),
             orderBy: [desc(corporateOrders.createdAt)],
         });
+    }
+
+    private async notifyAdminOrderReadyForDispatch(params: {
+        order: {
+            id: string;
+            publicOrderId: string;
+            companyName: string;
+            quantity: number;
+            totalPaise: number;
+            advancePaidPaise: number;
+            balanceDuePaise: number;
+            status: string;
+        };
+        quoteNumber?: string | null;
+        brandName?: string | null;
+    }) {
+        const opsEmails = parseCorporateOpsEmails();
+        if (!opsEmails.length) return;
+
+        try {
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: opsEmails,
+                subject: `Dispatch ready: ${params.order.publicOrderId}`,
+                react: CorporateOrderReadyForDispatchEmail({
+                    order: {
+                        ...params.order,
+                        quoteNumber: params.quoteNumber ?? null,
+                        brandName: params.brandName ?? null,
+                        status: convertValueToLabel(params.order.status),
+                    },
+                    adminHref: getAbsoluteURL(
+                        `/dashboard/general/corporate-orders/${params.order.id}`
+                    ),
+                }),
+            });
+        } catch (error) {
+            console.error(
+                "Failed to send corporate ready-for-dispatch notification",
+                error
+            );
+        }
+    }
+
+    private async notifyCustomerOrderReadyForDispatch(params: {
+        order: {
+            id: string;
+            publicOrderId: string;
+            companyName: string;
+            quantity: number;
+            totalPaise: number;
+            advancePaidPaise: number;
+            balanceDuePaise: number;
+            emailAddress: string | null;
+        };
+    }) {
+        if (!params.order.emailAddress?.trim()) return;
+
+        try {
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: params.order.emailAddress.trim(),
+                subject: `Your order is ready for dispatch: ${params.order.publicOrderId}`,
+                react: CorporateOrderCustomerReadyForDispatchEmail({
+                    order: params.order,
+                    confirmationHref: getAbsoluteURL(
+                        `/corporate-orders/confirmation/${params.order.id}`
+                    ),
+                    pdfHref: getAbsoluteURL(
+                        `/api/corporate-orders/${params.order.id}/summary.pdf`
+                    ),
+                }),
+            });
+        } catch (error) {
+            console.error(
+                "Failed to send customer ready-for-dispatch notification",
+                error
+            );
+        }
     }
 
     private maskEmployeeName(employeeName: string, index: number) {
@@ -1834,12 +1930,6 @@ class CorporatePlatformService {
             balanceDuePaise: order.balanceDuePaise,
             createdAt: order.createdAt,
             updatedAt: order.updatedAt,
-            quote: order.quote
-                ? {
-                      id: order.quote.id,
-                      quoteNumber: order.quote.quoteNumber,
-                  }
-                : null,
             selectedGarment: {
                 productType:
                     (order.quote?.productTypeId
@@ -1959,6 +2049,46 @@ class CorporatePlatformService {
             },
             userId
         );
+
+        if (
+            input.toStatus === "ready_for_dispatch" &&
+            order.status !== "ready_for_dispatch"
+        ) {
+            const assignedBrand = await db.query.brands.findFirst({
+                where: eq(brands.id, brandId),
+                columns: {
+                    name: true,
+                },
+            });
+
+            await this.notifyAdminOrderReadyForDispatch({
+                order: {
+                    id: order.id,
+                    publicOrderId: order.publicOrderId,
+                    companyName: order.companyName,
+                    quantity: order.quantity,
+                    totalPaise: order.totalPaise,
+                    advancePaidPaise: order.advancePaidPaise,
+                    balanceDuePaise: order.balanceDuePaise,
+                    status: input.toStatus,
+                },
+                quoteNumber: quote.quoteNumber,
+                brandName: assignedBrand?.name ?? null,
+            });
+
+            await this.notifyCustomerOrderReadyForDispatch({
+                order: {
+                    id: order.id,
+                    publicOrderId: order.publicOrderId,
+                    companyName: order.companyName,
+                    quantity: order.quantity,
+                    totalPaise: order.totalPaise,
+                    advancePaidPaise: order.advancePaidPaise,
+                    balanceDuePaise: order.balanceDuePaise,
+                    emailAddress: order.emailAddress,
+                },
+            });
+        }
 
         return updated;
     }
