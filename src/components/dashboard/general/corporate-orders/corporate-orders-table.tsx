@@ -287,8 +287,8 @@ function CorporateShipmentInlinePanel({
                 ]);
                 toast.success(
                     result.pickupAlreadyExists
-                        ? "Pickup request already existed for this slot, so we linked to it."
-                        : "Pickup scheduled successfully"
+                        ? "Pickup request already existed for this slot, so this order was linked to it."
+                        : "Order added to pickup successfully"
                 );
                 onSaved();
             },
@@ -417,7 +417,7 @@ function CorporateShipmentInlinePanel({
                         Shipment Workspace
                     </h3>
                     <p className="mt-1 text-sm text-slate-500">
-                        Create the Delhivery forward order first, then continue to pickup scheduling.
+                        Create the Delhivery forward order first, then add this shipment to the pickup request.
                     </p>
                 </div>
                 <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
@@ -434,8 +434,8 @@ function CorporateShipmentInlinePanel({
                 />
                 <StepperCard
                     step={2}
-                    title="Schedule Pickup"
-                    description="Choose pickup date and time after the forward order is created."
+                    title="Add to Pickup"
+                    description="Choose the pickup date and slot, then add this shipment to the warehouse pickup request."
                     state={currentStep >= 2 ? "done" : currentStep === 1 ? "active" : "upcoming"}
                 />
                 <StepperCard
@@ -633,10 +633,10 @@ function CorporateShipmentInlinePanel({
                 </p>
                 <div className="mt-2">
                     <h4 className="text-base font-semibold text-slate-900">
-                        Pickup Schedule
+                        Add to Pickup
                     </h4>
                     <p className="mt-1 text-sm text-slate-500">
-                        Once the forward order is ready, choose the pickup slot for Delhivery.
+                        Once the forward order is ready, choose the Delhivery pickup date and slot for this warehouse.
                     </p>
                 </div>
                 <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,220px)_auto]">
@@ -666,10 +666,10 @@ function CorporateShipmentInlinePanel({
                         disabled={!shipmentCreated || schedulePickup.isPending}
                     >
                         {schedulePickup.isPending
-                            ? "Scheduling..."
+                            ? "Adding..."
                             : pickupScheduled || shipmentDispatched
-                              ? "Pickup Scheduled"
-                              : "Schedule Pickup"}
+                              ? "Added to Pickup"
+                              : "Add to Pickup"}
                     </Button>
                 </div>
                 {pickupScheduled ? (
@@ -681,7 +681,7 @@ function CorporateShipmentInlinePanel({
                         {pickupRequest?.pickupId
                             ? ` · Request ID ${String(pickupRequest.pickupId)}`
                             : ""}
-                        . Delhivery can still show <span className="font-medium">Ready to ship</span> until the parcel is physically scanned and picked up.
+                        . This order has been added to the Delhivery pickup flow. Delhivery can still show <span className="font-medium">Ready to ship</span> until the parcel is physically scanned and picked up.
                     </div>
                 ) : null}
             </div>

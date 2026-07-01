@@ -13,6 +13,8 @@ import {
     corporatePaymentInputSchema,
     corporateQcSubmissionInputSchema,
     corporateProformaInvoiceInputSchema,
+    corporateReplacementRequestInputSchema,
+    corporateReplacementReviewInputSchema,
     corporateQuoteDecisionInputSchema,
     corporateQuoteInputSchema,
     corporateQuoteRevisionInputSchema,
@@ -73,6 +75,28 @@ export const corporatePlatformRouter = createTRPCRouter({
     listMyPurchaseOrders: protectedProcedure.query(({ ctx }) => {
         return corporatePlatformService.listMyPurchaseOrders(ctx.user.id);
     }),
+    listMyReplacementRequests: protectedProcedure
+        .input(
+            z
+                .object({
+                    orderId: z.string().uuid().optional(),
+                })
+                .optional()
+        )
+        .query(({ ctx, input }) => {
+            return corporatePlatformService.listMyReplacementRequests(
+                ctx.user.id,
+                input?.orderId
+            );
+        }),
+    createReplacementRequest: protectedProcedure
+        .input(corporateReplacementRequestInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.createReplacementRequest(
+                ctx.user.id,
+                input
+            );
+        }),
     decideQuote: protectedProcedure
         .input(corporateQuoteDecisionInputSchema)
         .mutation(({ ctx, input }) => {
@@ -126,6 +150,32 @@ export const corporatePlatformRouter = createTRPCRouter({
         .input(corporatePickupScheduleInputSchema)
         .mutation(({ ctx, input }) => {
             return corporatePlatformService.scheduleCorporatePickup(
+                ctx.user.id,
+                input
+            );
+        }),
+    listReplacementRequestsForOrder: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
+        .input(
+            z.object({
+                orderId: z.string().uuid(),
+            })
+        )
+        .query(({ input }) => {
+            return corporatePlatformService.listReplacementRequestsForOrder(
+                input.orderId
+            );
+        }),
+    listAdminReplacementRequests: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
+        .query(() => {
+            return corporatePlatformService.listAdminReplacementRequests();
+        }),
+    reviewReplacementRequest: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateReplacementReviewInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.reviewReplacementRequest(
                 ctx.user.id,
                 input
             );

@@ -12,7 +12,12 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { brands } from "./brand";
-import { corporateQuotes, corporateShipments } from "./corporate-platform";
+import {
+    corporateQuotes,
+    corporateReplacementRequests,
+    corporateRtoShipments,
+    corporateShipments,
+} from "./corporate-platform";
 import { users } from "./user";
 
 export const corporateProductTypes = pgTable(
@@ -364,6 +369,13 @@ export const corporateOrdersRelations = relations(
             references: [corporateShipments.orderId],
         }),
         statusHistory: many(corporateOrderStatusHistory),
+        replacementRequests: many(corporateReplacementRequests, {
+            relationName: "corporate_order_replacement_requests",
+        }),
+        replacementOrderLinks: many(corporateReplacementRequests, {
+            relationName: "corporate_order_replacement_orders",
+        }),
+        rtoShipments: many(corporateRtoShipments),
     })
 );
 

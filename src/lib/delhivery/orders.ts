@@ -31,8 +31,8 @@ export interface DelhiveryShipment {
   /** ✅ REQUIRED — Order ID */
   order: string;
 
-  /** ✅ REQUIRED — Payment mode ("Prepaid" or "COD") */
-  payment_mode: "Prepaid" | "COD";
+  /** ✅ REQUIRED — Payment mode */
+  payment_mode: "Prepaid" | "COD" | "Pickup" | "REPL";
 
   /** 🟡 Optional — Address type (Home/Office) */
   address_type?: "Home" | "Office";
@@ -57,6 +57,9 @@ export interface DelhiveryShipment {
 
   /** 🟡 Optional — Return address */
   return_add?: string;
+
+  /** 🟡 Optional — Return address alias used by some Delhivery flows */
+  return_address?: string;
 
   /** 🟡 Optional — Return city */
   return_city?: string;
@@ -111,6 +114,12 @@ export interface DelhiveryShipment {
 
   /** 🟡 Optional — Quantity (recommended) */
   quantity?: string;
+
+  /** 🟡 Optional — Product detail for replacement / reverse flows */
+  product_details?: string;
+
+  /** 🟡 Optional — Returned product detail for replacement / reverse flows */
+  return_product_details?: string;
 }
 
 export interface DelhiveryPickupLocation {
@@ -195,7 +204,7 @@ export const createExchange = async (
  */
 export interface DelhiveryRateParams {
   md: "E" | "S"; // Billing mode: E for Express, S for Surface
-  cgm: number;  // Weight in grams
+  cgm: number; // Weight in grams
   o_pin: number; // Origin pincode
   d_pin: number; // Destination pincode
   ss: "Delivered" | "RTO" | "DTO"; // Status

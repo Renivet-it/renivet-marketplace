@@ -599,12 +599,12 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                 {shipmentProvider === "delhivery" ? (
                                     <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
                                         <p className="text-sm font-medium text-slate-900">
-                                            Delhivery pickup scheduling
+                                            Delhivery pickup request
                                         </p>
                                         <p className="mt-1 text-sm text-slate-500">
                                             Once the brand marks the order ready,
-                                            admin can schedule the Delhivery pickup
-                                            from here.
+                                            admin can add this shipment to the
+                                            Delhivery pickup flow from here.
                                         </p>
                                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                                             <Input
@@ -652,7 +652,7 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                             onClick={scheduleDelhiveryPickup}
                                             disabled={saveShipment.isPending}
                                         >
-                                            Schedule Delhivery Pickup
+                                            Add to Pickup
                                         </Button>
                                     </div>
                                 ) : null}
@@ -698,6 +698,7 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                             />
                         </div>
                     </Panel>
+
                 </div>
             </section>
         </div>

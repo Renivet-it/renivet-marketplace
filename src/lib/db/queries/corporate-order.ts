@@ -4,7 +4,7 @@ import {
     corporateOrderSettingsSchema,
     corporateOrderStatusHistorySchema,
 } from "@/lib/validations/corporate-order";
-import { and, asc, count, desc, eq, ilike, isNotNull, or } from "drizzle-orm";
+import { and, asc, count, desc, eq, ilike, isNotNull, notLike, or } from "drizzle-orm";
 import { db } from "..";
 import {
     corporateColorOptions,
@@ -406,6 +406,7 @@ class CorporateOrderQueries {
     }) {
         const filters = [
             isNotNull(corporateOrders.razorpayPaymentId),
+            notLike(corporateOrders.publicOrderId, "REN-CORP-RPL-%"),
             input.status ? eq(corporateOrders.status, input.status as any) : undefined,
             input.search
                 ? or(

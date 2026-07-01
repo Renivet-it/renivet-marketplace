@@ -8,6 +8,7 @@ import BrandVerificationStatusUpdate from "./brand-verification-status-update";
 import BrandVerificationtSubmitted from "./brand-verification-submitted";
 import brandOrderNotification from "./brandOrderNotification";
 import CorporateOrderInternalNotificationEmail from "./corporate-order-internal-notification";
+import CorporateReplacementRequestAdminEmail from "./corporate-replacement-request-admin";
 import CorporateOrderCustomerReadyForDispatchEmail from "./corporate-order-customer-ready-for-dispatch";
 import CorporateOrderReadyForDispatchEmail from "./corporate-order-ready-for-dispatch";
 import CorporateOrderBalanceReminderEmail from "./corporate-order-balance-reminder";
@@ -41,6 +42,7 @@ export {
     CorporateOrderBalanceReminderEmail,
     CorporateOrderCustomerReadyForDispatchEmail,
     CorporateOrderInternalNotificationEmail,
+    CorporateReplacementRequestAdminEmail,
     CorporateOrderReadyForDispatchEmail,
     CorporateOrderReceivedEmail,
     DailyOrderSummary,

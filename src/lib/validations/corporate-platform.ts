@@ -231,6 +231,36 @@ export const corporatePickupScheduleInputSchema = z.object({
     pickupTime: z.string().trim().min(1),
 });
 
+export const corporateReplacementReasonSchema = z.enum([
+    "size_issue",
+    "damaged_item",
+    "print_issue",
+    "stitching_issue",
+    "wrong_item_received",
+    "quantity_shortage",
+    "other",
+]);
+
+export const corporateReplacementRequestStatusSchema = z.enum([
+    "requested",
+    "approved",
+    "rejected",
+]);
+
+export const corporateReplacementRequestInputSchema = z.object({
+    orderId: z.string().uuid(),
+    requestedQuantity: z.number().int().positive(),
+    reasonCode: corporateReplacementReasonSchema,
+    reasonDetails: z.string().trim().max(1000).nullable().optional(),
+    photos: z.array(corporatePlatformFileSchema).min(1).max(6),
+});
+
+export const corporateReplacementReviewInputSchema = z.object({
+    requestId: z.string().uuid(),
+    decision: z.enum(["approved", "rejected"]),
+    adminNote: z.string().trim().max(1000).nullable().optional(),
+});
+
 export const corporateQcSubmissionInputSchema = z.object({
     orderId: z.string().uuid(),
     remarks: z.string().trim().max(1000).nullable().optional(),
@@ -295,4 +325,7 @@ export type CorporateRfqInput = z.infer<typeof corporateRfqInputSchema>;
 export type CorporateQuoteInput = z.infer<typeof corporateQuoteInputSchema>;
 export type CorporatePurchaseOrderInput = z.infer<
     typeof corporatePurchaseOrderInputSchema
+>;
+export type CorporateReplacementReason = z.infer<
+    typeof corporateReplacementReasonSchema
 >;

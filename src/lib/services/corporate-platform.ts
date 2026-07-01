@@ -9,6 +9,7 @@ import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
 import { createOrder } from "@/lib/delhivery/orders";
 import { schedulePickup } from "@/lib/delhivery/pickup";
 import {
+    brandConfidentials,
     brands,
     brandMembers,
     corporateActivityTimeline,
@@ -25,6 +26,8 @@ import {
     corporateProfiles,
     corporateProformaInvoices,
     corporatePurchaseOrders,
+    corporateReplacementRequests,
+    corporateRtoShipments,
     corporateFabricCompositions,
     corporateGsmOptions,
     corporateQcImages,
@@ -60,12 +63,15 @@ import {
     corporateRfqInputSchema,
     corporateShipmentInputSchema,
     corporateProformaInvoiceInputSchema,
+    corporateReplacementRequestInputSchema,
+    corporateReplacementReviewInputSchema,
     corporateTaskInputSchema,
     corporateTaxInvoiceInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { CorporateOrderWorkflowStatus } from "@/lib/validations/corporate-order";
 import { resend } from "@/lib/resend";
 import {
+    CorporateReplacementRequestAdminEmail,
     CorporateOrderCustomerReadyForDispatchEmail,
     CorporateOrderReadyForDispatchEmail,
 } from "@/lib/resend/emails";
@@ -75,8 +81,28 @@ import {
     getAbsoluteURL,
 } from "@/lib/utils";
 import { TRPCError } from "@trpc/server";
-import { and, asc, count, desc, eq, inArray, isNotNull, like, notInArray } from "drizzle-orm";
+import {
+    and,
+    asc,
+    count,
+    desc,
+    eq,
+    inArray,
+    isNotNull,
+    like,
+    notInArray,
+} from "drizzle-orm";
 import crypto from "crypto";
+
+const corporateReplacementReasonLabels = {
+    size_issue: "Size issue",
+    damaged_item: "Damaged item",
+    print_issue: "Print issue",
+    stitching_issue: "Stitching issue",
+    wrong_item_received: "Wrong item received",
+    quantity_shortage: "Quantity shortage",
+    other: "Other",
+} as const;
 
 function makeNumber(prefix: string, sequence: number) {
     return `${prefix}-${String(sequence).padStart(5, "0")}`;
@@ -336,6 +362,54 @@ class CorporatePlatformService {
         }
     }
 
+    private async notifyAdminReplacementRequestRaised(params: {
+        order: {
+            id: string;
+            publicOrderId: string;
+            companyName: string;
+            contactPersonName: string;
+            emailAddress: string;
+        };
+        request: {
+            id: string;
+            requestedQuantity: number;
+            reasonCode: keyof typeof corporateReplacementReasonLabels;
+            reasonDetails?: string | null;
+        };
+    }) {
+        const opsEmails = parseCorporateOpsEmails();
+        if (!opsEmails.length) return;
+
+        try {
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: opsEmails,
+                subject: `Replacement request raised: ${params.order.publicOrderId}`,
+                react: CorporateReplacementRequestAdminEmail({
+                    order: params.order,
+                    request: {
+                        ...params.request,
+                        reasonLabel:
+                            corporateReplacementReasonLabels[
+                                params.request.reasonCode
+                            ] ?? "Other",
+                    },
+                    queueHref: getAbsoluteURL(
+                        "/dashboard/general/corporate-orders/replacements"
+                    ),
+                    orderHref: getAbsoluteURL(
+                        `/dashboard/general/corporate-orders/${params.order.id}`
+                    ),
+                }),
+            });
+        } catch (error) {
+            console.error(
+                "Failed to send admin replacement request notification",
+                error
+            );
+        }
+    }
+
     private maskEmployeeName(employeeName: string, index: number) {
         const normalized = employeeName.trim().toLowerCase();
         if (!normalized) {
@@ -532,6 +606,423 @@ class CorporatePlatformService {
             .then((rows) => rows[0]);
 
         return createdOrder;
+    }
+
+    private async createReplacementOrderFromCorporateOrder(params: {
+        sourceOrder: typeof corporateOrders.$inferSelect;
+        requestedQuantity: number;
+        replacementRequestId: string;
+    }) {
+        const { sourceOrder, requestedQuantity, replacementRequestId } = params;
+        const totalPaise = sourceOrder.quantity
+            ? Math.round((sourceOrder.totalPaise / sourceOrder.quantity) * requestedQuantity)
+            : 0;
+        const subtotalPaise = sourceOrder.quantity
+            ? Math.round(
+                  (sourceOrder.subtotalPaise / sourceOrder.quantity) *
+                      requestedQuantity
+              )
+            : 0;
+        const customizationPaise = sourceOrder.quantity
+            ? Math.round(
+                  (sourceOrder.customizationPaise / sourceOrder.quantity) *
+                      requestedQuantity
+              )
+            : 0;
+        const gstPaise = sourceOrder.quantity
+            ? Math.round((sourceOrder.gstPaise / sourceOrder.quantity) * requestedQuantity)
+            : 0;
+        const sourceSnapshot = (sourceOrder.companySnapshot ?? {}) as Record<
+            string,
+            unknown
+        >;
+        const normalizedCompanySnapshot = {
+            ...sourceSnapshot,
+            numberOfEmployees: requestedQuantity,
+            replacementForOrderId: sourceOrder.id,
+            replacementForPublicOrderId: sourceOrder.publicOrderId,
+        };
+        const normalizedProductSnapshot = {
+            ...(sourceOrder.productConfigSnapshot ?? {}),
+            quantity: requestedQuantity,
+            replacementForOrderId: sourceOrder.id,
+            replacementForPublicOrderId: sourceOrder.publicOrderId,
+        };
+        const normalizedBrandingSnapshot = {
+            ...(sourceOrder.brandingConfigSnapshot ?? {}),
+            replacementRequestId,
+            replacementForOrderId: sourceOrder.id,
+        };
+        const normalizedPricingSnapshot = {
+            ...(sourceOrder.pricingSnapshot ?? {}),
+            subtotalPaise,
+            customizationPaise,
+            gstPaise,
+            totalPaise,
+            replacementQuantity: requestedQuantity,
+        };
+
+        const createdOrder = await db
+            .insert(corporateOrders)
+            .values({
+                publicOrderId: `REN-CORP-RPL-${Date.now()}`,
+                userId: sourceOrder.userId,
+                quoteId: sourceOrder.quoteId,
+                brandId: sourceOrder.brandId,
+                status: "approved",
+                paymentStatus: "paid",
+                companyName: sourceOrder.companyName,
+                contactPersonName: sourceOrder.contactPersonName,
+                emailAddress: sourceOrder.emailAddress,
+                mobileNumber: sourceOrder.mobileNumber,
+                gstNumber: sourceOrder.gstNumber,
+                deliveryCountry: sourceOrder.deliveryCountry,
+                deliveryCity: sourceOrder.deliveryCity,
+                deliveryPincode: sourceOrder.deliveryPincode,
+                deliveryAddress: sourceOrder.deliveryAddress,
+                numberOfEmployees: requestedQuantity,
+                employeeCount: requestedQuantity,
+                quantity: requestedQuantity,
+                sizeBreakdown: sourceOrder.sizeBreakdown,
+                employeeRows: sourceOrder.employeeRows,
+                companySnapshot: normalizedCompanySnapshot,
+                productConfigSnapshot: normalizedProductSnapshot,
+                brandingConfigSnapshot: normalizedBrandingSnapshot,
+                pricingSnapshot: normalizedPricingSnapshot,
+                artworkFile: sourceOrder.artworkFile,
+                employeeSheetFile: sourceOrder.employeeSheetFile,
+                subtotalPaise,
+                customizationPaise,
+                gstRateBps: sourceOrder.gstRateBps,
+                gstPaise,
+                totalPaise,
+                advancePercentBps: 10000,
+                advancePaidPaise: totalPaise,
+                balanceDuePaise: 0,
+                razorpayOrderId: sourceOrder.razorpayOrderId,
+                razorpayPaymentId: sourceOrder.razorpayPaymentId,
+                razorpaySignature: sourceOrder.razorpaySignature,
+                paymentReference:
+                    sourceOrder.paymentReference ?? sourceOrder.razorpayPaymentId,
+                balancePaymentStatus: "paid",
+                customerNotes:
+                    "Replacement order created after corporate replacement approval",
+                internalNotes: `Replacement for ${sourceOrder.publicOrderId} | request:${replacementRequestId}`,
+            })
+            .returning()
+            .then((rows) => rows[0]);
+
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: createdOrder.id,
+            fromStatus: null,
+            toStatus: "approved",
+            changedByUserId: sourceOrder.userId,
+            note: `Replacement order created for ${sourceOrder.publicOrderId}`,
+            metadata: {
+                sourceOrderId: sourceOrder.id,
+                sourcePublicOrderId: sourceOrder.publicOrderId,
+                replacementRequestId,
+            },
+        });
+
+        return createdOrder;
+    }
+
+    private mapCorporateReplacementRequest(request: {
+        id: string;
+        orderId: string;
+        requestedByUserId: string | null;
+        reviewedByUserId: string | null;
+        replacementOrderId: string | null;
+        requestedQuantity: number;
+        reasonCode: keyof typeof corporateReplacementReasonLabels;
+        reasonDetails: string | null;
+        photos: Array<{
+            name: string;
+            url: string;
+            type: string;
+            size: number;
+            key?: string | undefined;
+        }>;
+        status: "requested" | "approved" | "rejected";
+        adminNote: string | null;
+        reviewedAt: string | null;
+        createdAt: Date | string;
+        updatedAt: Date | string;
+        order?: typeof corporateOrders.$inferSelect | null;
+        replacementOrder?: typeof corporateOrders.$inferSelect | null;
+        rtoShipment?: typeof corporateRtoShipments.$inferSelect | null;
+        requestedBy?: { id: string; firstName: string | null; lastName: string | null; email: string | null } | null;
+        reviewedBy?: { id: string; firstName: string | null; lastName: string | null; email: string | null } | null;
+    }) {
+        return {
+            ...request,
+            reasonLabel: corporateReplacementReasonLabels[request.reasonCode] ?? "Other",
+        };
+    }
+
+    private getDelhiveryTrackingUrl(awbNumber: string | null) {
+        if (!awbNumber) return null;
+
+        return `${env.DELHIVERY_BASE_URL?.trim() || "https://track.delhivery.com"}/tracking/package/${awbNumber}`;
+    }
+
+    private extractDelhiveryWaybill(
+        rawData: Record<string, unknown> | null | undefined
+    ) {
+        if (!rawData) return null;
+
+        const packageData = Array.isArray(rawData.packages)
+            ? rawData.packages[0]
+            : Array.isArray(rawData.package)
+              ? rawData.package[0]
+              : null;
+        const packageRecord =
+            packageData &&
+            typeof packageData === "object" &&
+            !Array.isArray(packageData)
+                ? (packageData as Record<string, unknown>)
+                : null;
+
+        return typeof packageRecord?.waybill === "string"
+            ? packageRecord.waybill
+            : typeof packageRecord?.awb === "string"
+              ? packageRecord.awb
+              : typeof rawData.waybill === "string"
+                ? rawData.waybill
+                : typeof rawData.awb === "string"
+                  ? rawData.awb
+                  : null;
+    }
+
+    private readAddressField(
+        source: Record<string, unknown> | null | undefined,
+        keys: string[]
+    ) {
+        for (const key of keys) {
+            const value = source?.[key];
+            if (typeof value === "string" && value.trim()) {
+                return value.trim();
+            }
+        }
+
+        return null;
+    }
+
+    private async createCorporateRtoShipmentRecord(params: {
+        actorUserId: string;
+        order: typeof corporateOrders.$inferSelect & {
+            shipment?: typeof corporateShipments.$inferSelect | null;
+            brand?: typeof brands.$inferSelect | null;
+        };
+        request: typeof corporateReplacementRequests.$inferSelect;
+        existingRtoShipment?: typeof corporateRtoShipments.$inferSelect | null;
+    }) {
+        if (!params.order.brand?.id || !params.order.brand?.name) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Assign a brand before creating the reverse shipment",
+            });
+        }
+
+        const pickupLocationCode =
+            generatePickupLocationCode({
+                brandId: params.order.brand.id,
+                brandName: params.order.brand.name,
+            });
+
+        const brandConfidential = await db.query.brandConfidentials.findFirst({
+            where: eq(brandConfidentials.id, params.order.brand.id),
+        });
+
+        if (!brandConfidential) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "Brand pickup location details are missing for reverse shipment",
+            });
+        }
+
+        const companySnapshot =
+            params.order.companySnapshot &&
+            typeof params.order.companySnapshot === "object" &&
+            !Array.isArray(params.order.companySnapshot)
+                ? (params.order.companySnapshot as Record<string, unknown>)
+                : null;
+        const shippingAddress =
+            companySnapshot?.shippingAddress &&
+            typeof companySnapshot.shippingAddress === "object" &&
+            !Array.isArray(companySnapshot.shippingAddress)
+                ? (companySnapshot.shippingAddress as Record<string, unknown>)
+                : null;
+        const customerState =
+            this.readAddressField(shippingAddress, [
+                "state",
+                "province",
+                "region",
+            ]) ?? params.order.deliveryCity;
+        const customerCountry =
+            this.readAddressField(shippingAddress, ["country"]) ??
+            params.order.deliveryCountry ??
+            "India";
+        const reverseOrderCode = `${params.order.publicOrderId}-RTO-${params.request.id
+            .slice(0, 8)
+            .toUpperCase()}`;
+        const returnAddress = [
+            brandConfidential.warehouseAddressLine1,
+            brandConfidential.warehouseAddressLine2,
+        ]
+            .filter(Boolean)
+            .join(", ")
+            .trim() ||
+            [brandConfidential.addressLine1, brandConfidential.addressLine2]
+                .filter(Boolean)
+                .join(", ")
+                .trim();
+        const returnCity =
+            brandConfidential.warehouseCity ?? brandConfidential.city;
+        const returnState =
+            brandConfidential.warehouseState ?? brandConfidential.state;
+        const returnCountry =
+            brandConfidential.warehouseCountry ??
+            brandConfidential.country ??
+            "India";
+        const returnPin =
+            brandConfidential.warehousePostalCode ?? brandConfidential.postalCode;
+
+        const reversePayload = {
+            format: "json" as const,
+            pickup_location: {
+                name: pickupLocationCode,
+            },
+            shipments: [
+                {
+                    name: params.order.contactPersonName,
+                    add: params.order.deliveryAddress,
+                    pin: params.order.deliveryPincode,
+                    city: params.order.deliveryCity,
+                    state: customerState,
+                    country: customerCountry,
+                    phone: params.order.mobileNumber,
+                    order: reverseOrderCode,
+                    payment_mode: "Pickup" as const,
+                    shipping_mode: "Surface" as const,
+                    address_type: "Office" as const,
+                    quantity: String(params.request.requestedQuantity),
+                    products_desc: `Corporate replacement return for ${params.order.publicOrderId}`,
+                    return_name:
+                        brandConfidential.authorizedSignatoryName ||
+                        params.order.brand.name,
+                    return_add: returnAddress,
+                    return_city: returnCity,
+                    return_state: returnState,
+                    return_country: returnCountry,
+                    return_pin: returnPin,
+                    return_phone: brandConfidential.authorizedSignatoryPhone,
+                },
+            ],
+        };
+
+        const baseRawPayload = {
+            ...(params.existingRtoShipment?.rawPayload ?? {}),
+            sourceShipmentId: params.order.shipment?.id ?? null,
+            sourceAwbNumber: params.order.shipment?.awbNumber ?? null,
+            requestedQuantity: params.request.requestedQuantity,
+            reasonDetails: params.request.reasonDetails ?? null,
+            reverseOrderCode,
+            requestPayload: reversePayload,
+        };
+
+        const existingRtoShipment = params.existingRtoShipment;
+        const shipmentRecord = existingRtoShipment
+            ? await db
+                  .update(corporateRtoShipments)
+                  .set({
+                      provider: "delhivery",
+                      pickupLocationCode,
+                      originalAwbNumber:
+                          params.order.shipment?.awbNumber ??
+                          existingRtoShipment.originalAwbNumber,
+                      reasonCode: params.request.reasonCode,
+                      status: "draft",
+                      rawPayload: baseRawPayload,
+                      handledByUserId: params.actorUserId,
+                      notes: "Retrying corporate reverse shipment creation",
+                      updatedAt: new Date(),
+                  })
+                  .where(eq(corporateRtoShipments.id, existingRtoShipment.id))
+                  .returning()
+                  .then((rows) => rows[0])
+            : await db
+                  .insert(corporateRtoShipments)
+                  .values({
+                      orderId: params.order.id,
+                      replacementRequestId: params.request.id,
+                      provider: "delhivery",
+                      pickupLocationCode,
+                      originalAwbNumber: params.order.shipment?.awbNumber ?? null,
+                      reasonCode: params.request.reasonCode,
+                      status: "draft",
+                      rawPayload: baseRawPayload,
+                      createdByUserId: params.actorUserId,
+                      handledByUserId: params.actorUserId,
+                      notes: "Corporate replacement reverse shipment initialized",
+                  })
+                  .returning()
+                  .then((rows) => rows[0]);
+
+        const result = await createOrder(reversePayload);
+        const rawData =
+            result.success && result.data && typeof result.data === "object"
+                ? (result.data as Record<string, unknown>)
+                : null;
+        const reverseAwbNumber = this.extractDelhiveryWaybill(rawData);
+
+        if (!result.success || !reverseAwbNumber) {
+            const errorMessage =
+                typeof result.error === "string"
+                    ? result.error
+                    : "Delhivery reverse shipment could not be created";
+
+            await db
+                .update(corporateRtoShipments)
+                .set({
+                    status: "failed",
+                    rawPayload: {
+                        ...baseRawPayload,
+                        response: rawData,
+                        error: result.error ?? errorMessage,
+                    },
+                    notes: errorMessage,
+                    handledByUserId: params.actorUserId,
+                    updatedAt: new Date(),
+                })
+                .where(eq(corporateRtoShipments.id, shipmentRecord.id));
+
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: errorMessage,
+            });
+        }
+
+        return db
+            .update(corporateRtoShipments)
+            .set({
+                status: "requested",
+                reverseAwbNumber,
+                reverseTrackingNumber: reverseAwbNumber,
+                reverseTrackingUrl: this.getDelhiveryTrackingUrl(reverseAwbNumber),
+                rawPayload: {
+                    ...baseRawPayload,
+                    response: rawData,
+                },
+                notes: "Delhivery reverse shipment created",
+                handledByUserId: params.actorUserId,
+                updatedAt: new Date(),
+            })
+            .where(eq(corporateRtoShipments.id, shipmentRecord.id))
+            .returning()
+            .then((rows) => rows[0]);
     }
 
     async getMyProfile(userId: string) {
@@ -929,6 +1420,383 @@ class CorporatePlatformService {
             },
             orderBy: [desc(corporatePurchaseOrders.createdAt)],
         });
+    }
+
+    async listMyReplacementRequests(userId: string, orderId?: string) {
+        const requests = await db.query.corporateReplacementRequests.findMany({
+            where: orderId
+                ? eq(corporateReplacementRequests.orderId, orderId)
+                : undefined,
+            with: {
+                order: true,
+                replacementOrder: true,
+                rtoShipment: true,
+                reviewedBy: {
+                    columns: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: [desc(corporateReplacementRequests.createdAt)],
+        });
+
+        const visibleRequests = requests.filter(
+            (request) => request.order?.userId === userId
+        );
+
+        return visibleRequests.map((request) =>
+            this.mapCorporateReplacementRequest(request as any)
+        );
+    }
+
+    async listReplacementRequestsForOrder(orderId: string) {
+        const requests = await db.query.corporateReplacementRequests.findMany({
+            where: eq(corporateReplacementRequests.orderId, orderId),
+            with: {
+                order: true,
+                replacementOrder: true,
+                rtoShipment: true,
+                requestedBy: {
+                    columns: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
+                reviewedBy: {
+                    columns: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: [desc(corporateReplacementRequests.createdAt)],
+        });
+
+        return requests.map((request) =>
+            this.mapCorporateReplacementRequest(request as any)
+        );
+    }
+
+    async listAdminReplacementRequests() {
+        const requests = await db.query.corporateReplacementRequests.findMany({
+            with: {
+                order: true,
+                replacementOrder: true,
+                rtoShipment: true,
+                requestedBy: {
+                    columns: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
+                reviewedBy: {
+                    columns: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                    },
+                },
+            },
+            orderBy: [desc(corporateReplacementRequests.createdAt)],
+        });
+
+        return requests.map((request) =>
+            this.mapCorporateReplacementRequest(request as any)
+        );
+    }
+
+    async createReplacementRequest(actorUserId: string, input: unknown) {
+        const parsed = corporateReplacementRequestInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+        });
+
+        if (!order || order.userId !== actorUserId) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+
+        if (parsed.requestedQuantity > order.quantity) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Replacement quantity cannot exceed ordered quantity",
+            });
+        }
+
+        const existingOpenRequest = await db.query.corporateReplacementRequests.findFirst({
+            where: and(
+                eq(corporateReplacementRequests.orderId, order.id),
+                eq(corporateReplacementRequests.status, "requested")
+            ),
+        });
+
+        if (existingOpenRequest) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "A replacement request is already pending for this order",
+            });
+        }
+
+        const created = await db
+            .insert(corporateReplacementRequests)
+            .values({
+                orderId: order.id,
+                requestedByUserId: actorUserId,
+                requestedQuantity: parsed.requestedQuantity,
+                reasonCode: parsed.reasonCode,
+                reasonDetails: parsed.reasonDetails ?? null,
+                photos: parsed.photos,
+                status: "requested",
+            })
+            .returning()
+            .then((rows) => rows[0]);
+
+        await db.insert(corporateDocuments).values(
+            parsed.photos.map((photo, index) => ({
+                entityType: "corporate_replacement_request",
+                entityId: created.id,
+                documentType: "replacement_evidence",
+                fileName: photo.name,
+                fileUrl: photo.url,
+                mimeType: photo.type,
+                fileSizeBytes: photo.size,
+                uploadedByUserId: actorUserId,
+                version: index + 1,
+            }))
+        );
+
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: order.id,
+            fromStatus: order.status,
+            toStatus: order.status,
+            changedByUserId: actorUserId,
+            note: `Replacement request submitted for ${parsed.requestedQuantity} unit(s)`,
+            metadata: {
+                replacementRequestId: created.id,
+                reasonCode: parsed.reasonCode,
+            },
+        });
+
+        await this.createEvent(
+            "corporate_replacement_request",
+            created.id,
+            "CORPORATE_REPLACEMENT_REQUEST_CREATED",
+            {
+                orderId: order.id,
+                publicOrderId: order.publicOrderId,
+                requestedQuantity: parsed.requestedQuantity,
+                reasonCode: parsed.reasonCode,
+            },
+            actorUserId
+        );
+
+        await this.notifyAdminReplacementRequestRaised({
+            order: {
+                id: order.id,
+                publicOrderId: order.publicOrderId,
+                companyName: order.companyName,
+                contactPersonName: order.contactPersonName,
+                emailAddress: order.emailAddress,
+            },
+            request: {
+                id: created.id,
+                requestedQuantity: created.requestedQuantity,
+                reasonCode: created.reasonCode as keyof typeof corporateReplacementReasonLabels,
+                reasonDetails: created.reasonDetails,
+            },
+        });
+
+        return this.mapCorporateReplacementRequest(created as any);
+    }
+
+    async reviewReplacementRequest(actorUserId: string, input: unknown) {
+        const parsed = corporateReplacementReviewInputSchema.parse(input);
+        const request = await db.query.corporateReplacementRequests.findFirst({
+            where: eq(corporateReplacementRequests.id, parsed.requestId),
+            with: {
+                order: {
+                    with: {
+                        shipment: true,
+                        brand: true,
+                    },
+                },
+                rtoShipment: true,
+            },
+        });
+
+        if (!request || !request.order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Replacement request not found",
+            });
+        }
+
+        if (request.status !== "requested") {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "This replacement request has already been reviewed",
+            });
+        }
+
+        const reviewedAt = new Date().toISOString().slice(0, 10);
+        let replacementOrderId: string | null = null;
+        let corporateRtoShipmentId: string | null = request.rtoShipment?.id ?? null;
+        let reverseAwbNumber: string | null = request.rtoShipment?.reverseAwbNumber ?? null;
+        let latestRtoShipment = request.rtoShipment;
+        let forwardOrderResult:
+            | {
+                  awbNumber: string | null;
+              }
+            | null = null;
+
+        if (parsed.decision === "approved") {
+            const createdRtoShipment =
+                await this.createCorporateRtoShipmentRecord({
+                    actorUserId,
+                    order: request.order,
+                    request,
+                    existingRtoShipment: request.rtoShipment,
+                });
+            latestRtoShipment = createdRtoShipment;
+            corporateRtoShipmentId = createdRtoShipment.id;
+            reverseAwbNumber = createdRtoShipment.reverseAwbNumber ?? null;
+
+            const replacementOrder = await this.createReplacementOrderFromCorporateOrder({
+                sourceOrder: request.order,
+                requestedQuantity: request.requestedQuantity,
+                replacementRequestId: request.id,
+            });
+            replacementOrderId = replacementOrder.id;
+
+            const rawPayload =
+                request.order.shipment?.rawPayload &&
+                typeof request.order.shipment.rawPayload === "object" &&
+                !Array.isArray(request.order.shipment.rawPayload)
+                    ? (request.order.shipment.rawPayload as Record<string, unknown>)
+                    : null;
+            const packageSelection =
+                rawPayload?.packageSelection &&
+                typeof rawPayload.packageSelection === "object" &&
+                !Array.isArray(rawPayload.packageSelection)
+                    ? (rawPayload.packageSelection as Record<string, unknown>)
+                    : null;
+
+            const lengthCm = Number(packageSelection?.lengthCm ?? 0);
+            const widthCm = Number(packageSelection?.widthCm ?? 0);
+            const heightCm = Number(packageSelection?.heightCm ?? 0);
+            const weightGrams = Number(packageSelection?.weightGrams ?? 0);
+            const selectedPackingTypeId =
+                typeof packageSelection?.packingTypeId === "string"
+                    ? packageSelection.packingTypeId
+                    : null;
+            const packageSource =
+                packageSelection?.source === "custom" ? "custom" : "preset";
+
+            if (lengthCm > 0 && widthCm > 0 && heightCm > 0 && weightGrams > 0) {
+                try {
+                    const forwardCreated = await this.createForwardOrder(
+                        actorUserId,
+                        {
+                            orderId: replacementOrder.id,
+                            packageSource,
+                            selectedPackingTypeId,
+                            lengthCm,
+                            widthCm,
+                            heightCm,
+                            weightGrams,
+                        }
+                    );
+
+                    forwardOrderResult = {
+                        awbNumber: forwardCreated.awbNumber ?? null,
+                    };
+                } catch (error) {
+                    console.error(
+                        "Failed to auto-create Delhivery forward order for replacement",
+                        error
+                    );
+                }
+            }
+        }
+
+        const updated = await db
+            .update(corporateReplacementRequests)
+            .set({
+                status: parsed.decision,
+                adminNote:
+                    parsed.decision === "approved" &&
+                    replacementOrderId &&
+                    !forwardOrderResult
+                        ? [
+                              parsed.adminNote?.trim(),
+                              "Replacement order created. Delhivery reverse shipment was created, but the forward replacement order could not be auto-created from the source shipment package details.",
+                          ]
+                              .filter(Boolean)
+                              .join(" ")
+                        : parsed.adminNote ?? null,
+                reviewedByUserId: actorUserId,
+                reviewedAt,
+                replacementOrderId,
+                updatedAt: new Date(),
+            })
+            .where(eq(corporateReplacementRequests.id, request.id))
+            .returning()
+            .then((rows) => rows[0]);
+
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: request.order.id,
+            fromStatus: request.order.status,
+            toStatus: request.order.status,
+            changedByUserId: actorUserId,
+            note:
+                parsed.decision === "approved"
+                    ? forwardOrderResult?.awbNumber
+                        ? "Corporate replacement approved, Delhivery reverse shipment created, replacement order created, and Delhivery forward order generated"
+                        : "Corporate replacement approved, Delhivery reverse shipment created, and replacement order created"
+                    : "Corporate replacement request rejected",
+            metadata: {
+                replacementRequestId: request.id,
+                replacementOrderId,
+                corporateRtoShipmentId,
+                reverseAwbNumber,
+                replacementAwbNumber: forwardOrderResult?.awbNumber ?? null,
+            },
+        });
+
+        await this.createEvent(
+            "corporate_replacement_request",
+            request.id,
+            parsed.decision === "approved"
+                ? "CORPORATE_REPLACEMENT_REQUEST_APPROVED"
+                : "CORPORATE_REPLACEMENT_REQUEST_REJECTED",
+            {
+                orderId: request.order.id,
+                publicOrderId: request.order.publicOrderId,
+                replacementOrderId,
+                corporateRtoShipmentId,
+                reverseAwbNumber,
+                replacementAwbNumber: forwardOrderResult?.awbNumber ?? null,
+            },
+            actorUserId
+        );
+
+        return this.mapCorporateReplacementRequest({
+            ...updated,
+            order: request.order,
+            rtoShipment: latestRtoShipment,
+        } as any);
     }
 
     async decideQuote(userId: string, input: unknown) {

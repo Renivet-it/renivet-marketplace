@@ -1631,6 +1631,83 @@ function CustomerCorporateOrderDetailPanel({
     onPayRemaining: (order: any) => void;
 }) {
     const hasBalance = order.balanceDuePaise > 0;
+    const utils = trpc.useUtils();
+    const { startUpload } = useUploadThing("corporateDocumentUploader");
+    const [requestedQuantity, setRequestedQuantity] = useState("1");
+    const [reasonCode, setReasonCode] = useState("size_issue");
+    const [reasonDetails, setReasonDetails] = useState("");
+    const [replacementFiles, setReplacementFiles] = useState<File[]>([]);
+    const [uploadingReplacementFiles, setUploadingReplacementFiles] =
+        useState(false);
+    const { data: replacementRequests = [] } =
+        trpc.general.corporatePlatform.listMyReplacementRequests.useQuery({
+            orderId: order.id,
+        });
+    const createReplacementRequest =
+        trpc.general.corporatePlatform.createReplacementRequest.useMutation({
+            onSuccess: async () => {
+                toast.success("Replacement request submitted");
+                setRequestedQuantity("1");
+                setReasonCode("size_issue");
+                setReasonDetails("");
+                setReplacementFiles([]);
+                await utils.general.corporatePlatform.listMyReplacementRequests.invalidate({
+                    orderId: order.id,
+                });
+            },
+            onError: (error) => handleClientError(error),
+        });
+
+    const submitReplacementRequest = async () => {
+        const quantity = Number(requestedQuantity);
+        if (!Number.isInteger(quantity) || quantity <= 0) {
+            toast.error("Enter a valid replacement quantity");
+            return;
+        }
+
+        if (quantity > order.quantity) {
+            toast.error("Replacement quantity cannot exceed ordered quantity");
+            return;
+        }
+
+        if (!replacementFiles.length) {
+            toast.error("Upload at least one image");
+            return;
+        }
+
+        try {
+            setUploadingReplacementFiles(true);
+            const uploaded = await startUpload(replacementFiles);
+            if (!uploaded?.length) {
+                throw new Error("Upload failed");
+            }
+
+            await createReplacementRequest.mutateAsync({
+                orderId: order.id,
+                requestedQuantity: quantity,
+                reasonCode: reasonCode as
+                    | "size_issue"
+                    | "damaged_item"
+                    | "print_issue"
+                    | "stitching_issue"
+                    | "wrong_item_received"
+                    | "quantity_shortage"
+                    | "other",
+                reasonDetails: reasonDetails.trim() || null,
+                photos: uploaded.map((file) => ({
+                    name: file.name,
+                    url: file.url,
+                    type: file.type,
+                    size: file.size,
+                    key: file.key,
+                })),
+            });
+        } catch (error) {
+            handleClientError(error);
+        } finally {
+            setUploadingReplacementFiles(false);
+        }
+    };
 
     return (
         <div className="rounded-[26px] border border-[#e8e5db] bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] p-6 shadow-[0_12px_36px_rgba(49,58,31,0.06)]">
@@ -1711,6 +1788,194 @@ function CustomerCorporateOrderDetailPanel({
                             {formatCorporateDeliveryAddress(order) ||
                                 "No address specified"}
                         </span>
+                    </div>
+                </div>
+            </div>
+
+            <div className="mt-8 grid gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <div className="text-sm font-bold uppercase tracking-wider text-slate-900">
+                                Request Replacement
+                            </div>
+                            <p className="mt-1 text-sm text-slate-500">
+                                For bulk orders, raise a request with quantity, issue type, and evidence photos first. Our team will review it before creating the replacement order.
+                            </p>
+                        </div>
+                        <StatusChip
+                            label={`${replacementRequests.length} request${
+                                replacementRequests.length === 1 ? "" : "s"
+                            }`}
+                        />
+                    </div>
+
+                    <div className="mt-5 grid gap-3 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                                Replacement Quantity
+                            </label>
+                            <Input
+                                type="number"
+                                min={1}
+                                max={order.quantity}
+                                value={requestedQuantity}
+                                onChange={(e) => setRequestedQuantity(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                                Reason
+                            </label>
+                            <select
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                value={reasonCode}
+                                onChange={(e) => setReasonCode(e.target.value)}
+                            >
+                                <option value="size_issue">Size issue</option>
+                                <option value="damaged_item">Damaged item</option>
+                                <option value="print_issue">Print issue</option>
+                                <option value="stitching_issue">Stitching issue</option>
+                                <option value="wrong_item_received">
+                                    Wrong item received
+                                </option>
+                                <option value="quantity_shortage">
+                                    Quantity shortage
+                                </option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                            Replacement Notes
+                        </label>
+                        <textarea
+                            className="min-h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+                            placeholder="Tell us what went wrong and which pieces need to be replaced."
+                            value={reasonDetails}
+                            onChange={(e) => setReasonDetails(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="mt-3 space-y-2">
+                        <label className="text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                            Evidence Photos
+                        </label>
+                        <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            onChange={(e) =>
+                                setReplacementFiles(
+                                    Array.from(e.target.files ?? []).slice(0, 6)
+                                )
+                            }
+                            className="block w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600"
+                        />
+                        <p className="text-xs text-slate-500">
+                            Upload clear issue photos. Maximum 6 images.
+                        </p>
+                        {replacementFiles.length ? (
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                                {replacementFiles.map((file, index) => (
+                                    <div
+                                        key={`${file.name}-${index}`}
+                                        className="overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                                    >
+                                        <img
+                                            src={URL.createObjectURL(file)}
+                                            alt={file.name}
+                                            className="h-32 w-full object-cover"
+                                        />
+                                        <div className="p-3">
+                                            <p className="truncate text-xs font-medium text-slate-700">
+                                                {file.name}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        ) : null}
+                    </div>
+
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                        <p className="text-xs text-slate-500">
+                            You can request up to {order.quantity} units from this order.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={submitReplacementRequest}
+                            disabled={
+                                createReplacementRequest.isPending ||
+                                uploadingReplacementFiles
+                            }
+                            className="inline-flex rounded-full btn-liquid btn-liquid-primary px-6 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                        >
+                            <span>
+                                {createReplacementRequest.isPending ||
+                                uploadingReplacementFiles
+                                    ? "Submitting request..."
+                                    : "Submit Replacement Request"}
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div className="rounded-2xl border border-slate-100 bg-white p-5">
+                    <div className="text-sm font-bold uppercase tracking-wider text-slate-900">
+                        Replacement Timeline
+                    </div>
+                    <div className="mt-4 space-y-3">
+                        {replacementRequests.length ? (
+                            replacementRequests.map((request: any) => (
+                                <div
+                                    key={request.id}
+                                    className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <div className="text-sm font-semibold text-slate-900">
+                                                {request.reasonLabel}
+                                            </div>
+                                            <div className="mt-1 text-xs text-slate-500">
+                                                Requested for {request.requestedQuantity} unit(s) on{" "}
+                                                {new Date(request.createdAt).toLocaleDateString(
+                                                    "en-IN"
+                                                )}
+                                            </div>
+                                        </div>
+                                        <StatusChip label={toLabel(request.status)} />
+                                    </div>
+                                    {request.reasonDetails ? (
+                                        <p className="mt-3 text-sm leading-6 text-slate-600">
+                                            {request.reasonDetails}
+                                        </p>
+                                    ) : null}
+                                    {request.adminNote ? (
+                                        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
+                                            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                                Admin Note
+                                            </div>
+                                            <p className="mt-2 text-sm text-slate-700">
+                                                {request.adminNote}
+                                            </p>
+                                        </div>
+                                    ) : null}
+                                    {request.replacementOrder?.publicOrderId ? (
+                                        <div className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#4b7c37]">
+                                            Replacement order created:{" "}
+                                            {request.replacementOrder.publicOrderId}
+                                        </div>
+                                    ) : null}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-5 text-sm leading-6 text-slate-500">
+                                No replacement requests yet for this order.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

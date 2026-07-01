@@ -7,6 +7,7 @@ import {
     jsonb,
     pgTable,
     text,
+    uniqueIndex,
     uuid,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
@@ -1044,6 +1045,138 @@ export const corporateQuoteRevisionsRelations = relations(
     })
 );
 
+export const corporateReplacementRequests = pgTable(
+    "corporate_replacement_requests",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        requestedByUserId: text("requested_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        reviewedByUserId: text("reviewed_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        replacementOrderId: uuid("replacement_order_id").references(
+            () => corporateOrders.id,
+            { onDelete: "set null" }
+        ),
+        requestedQuantity: integer("requested_quantity").notNull().default(1),
+        reasonCode: text("reason_code", {
+            enum: [
+                "size_issue",
+                "damaged_item",
+                "print_issue",
+                "stitching_issue",
+                "wrong_item_received",
+                "quantity_shortage",
+                "other",
+            ],
+        }).notNull(),
+        reasonDetails: text("reason_details"),
+        photos: jsonb("photos")
+            .$type<
+                Array<{
+                    name: string;
+                    url: string;
+                    type: string;
+                    size: number;
+                    key?: string | undefined;
+                }>
+            >()
+            .default([])
+            .notNull(),
+        status: text("status", {
+            enum: ["requested", "approved", "rejected"],
+        })
+            .notNull()
+            .default("requested"),
+        adminNote: text("admin_note"),
+        reviewedAt: date("reviewed_at"),
+        ...timestamps,
+    },
+    (table) => ({
+        orderIdx: index("corporate_replacement_requests_order_idx").on(table.orderId),
+        statusIdx: index("corporate_replacement_requests_status_idx").on(
+            table.status
+        ),
+        replacementOrderIdx: index(
+            "corporate_replacement_requests_replacement_order_idx"
+        ).on(table.replacementOrderId),
+    })
+);
+
+export const corporateRtoShipments = pgTable(
+    "corporate_rto_shipments",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        replacementRequestId: uuid("replacement_request_id")
+            .notNull()
+            .references(() => corporateReplacementRequests.id, {
+                onDelete: "cascade",
+            }),
+        provider: text("provider").notNull().default("delhivery"),
+        pickupLocationCode: text("pickup_location_code"),
+        originalAwbNumber: text("original_awb_number"),
+        reverseAwbNumber: text("reverse_awb_number"),
+        reverseTrackingNumber: text("reverse_tracking_number"),
+        reverseTrackingUrl: text("reverse_tracking_url"),
+        reasonCode: text("reason_code", {
+            enum: [
+                "size_issue",
+                "damaged_item",
+                "print_issue",
+                "stitching_issue",
+                "wrong_item_received",
+                "quantity_shortage",
+                "other",
+            ],
+        }).notNull(),
+        status: text("status", {
+            enum: [
+                "draft",
+                "requested",
+                "pickup_scheduled",
+                "in_transit",
+                "received",
+                "completed",
+                "cancelled",
+                "failed",
+            ],
+        })
+            .notNull()
+            .default("draft"),
+        rawPayload: jsonb("raw_payload")
+            .$type<Record<string, unknown>>()
+            .default({})
+            .notNull(),
+        createdByUserId: text("created_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        handledByUserId: text("handled_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        scheduledPickupDate: date("scheduled_pickup_date"),
+        receivedAt: date("received_at"),
+        notes: text("notes"),
+        ...timestamps,
+    },
+    (table) => ({
+        orderIdx: index("corporate_rto_shipments_order_idx").on(table.orderId),
+        requestIdx: uniqueIndex("corporate_rto_shipments_request_idx").on(
+            table.replacementRequestId
+        ),
+        statusIdx: index("corporate_rto_shipments_status_idx").on(table.status),
+        reverseAwbIdx: index("corporate_rto_shipments_reverse_awb_idx").on(
+            table.reverseAwbNumber
+        ),
+    })
+);
+
 export const corporatePurchaseOrdersRelations = relations(
     corporatePurchaseOrders,
     ({ one }) => ({
@@ -1111,6 +1244,56 @@ export const corporateShipmentsRelations = relations(
         order: one(corporateOrders, {
             fields: [corporateShipments.orderId],
             references: [corporateOrders.id],
+        }),
+    })
+);
+
+export const corporateReplacementRequestsRelations = relations(
+    corporateReplacementRequests,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateReplacementRequests.orderId],
+            references: [corporateOrders.id],
+            relationName: "corporate_order_replacement_requests",
+        }),
+        replacementOrder: one(corporateOrders, {
+            fields: [corporateReplacementRequests.replacementOrderId],
+            references: [corporateOrders.id],
+            relationName: "corporate_order_replacement_orders",
+        }),
+        requestedBy: one(users, {
+            fields: [corporateReplacementRequests.requestedByUserId],
+            references: [users.id],
+        }),
+        reviewedBy: one(users, {
+            fields: [corporateReplacementRequests.reviewedByUserId],
+            references: [users.id],
+        }),
+        rtoShipment: one(corporateRtoShipments, {
+            fields: [corporateReplacementRequests.id],
+            references: [corporateRtoShipments.replacementRequestId],
+        }),
+    })
+);
+
+export const corporateRtoShipmentsRelations = relations(
+    corporateRtoShipments,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateRtoShipments.orderId],
+            references: [corporateOrders.id],
+        }),
+        replacementRequest: one(corporateReplacementRequests, {
+            fields: [corporateRtoShipments.replacementRequestId],
+            references: [corporateReplacementRequests.id],
+        }),
+        createdBy: one(users, {
+            fields: [corporateRtoShipments.createdByUserId],
+            references: [users.id],
+        }),
+        handledBy: one(users, {
+            fields: [corporateRtoShipments.handledByUserId],
+            references: [users.id],
         }),
     })
 );

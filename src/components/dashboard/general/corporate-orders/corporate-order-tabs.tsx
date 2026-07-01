@@ -25,6 +25,11 @@ export function CorporateOrderTabs() {
                 href: "/dashboard/general/corporate-orders",
                 icon: "Package" as const,
             },
+            {
+                name: "Replacement Requests",
+                href: "/dashboard/general/corporate-orders/replacements",
+                icon: "RefreshCcw" as const,
+            },
         ];
 
         if (hasSettingsPermission) {
