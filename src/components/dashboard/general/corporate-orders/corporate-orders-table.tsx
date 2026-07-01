@@ -13,6 +13,27 @@ import Link from "next/link";
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
 
+const volumetricWeightGrams = (length: number, width: number, height: number) =>
+    Math.round((length * width * height) / 5);
+
+const buildPresetDimensions = (packingType?: {
+    baseLength?: number | null;
+    baseWidth?: number | null;
+    baseHeight?: number | null;
+} | null) => ({
+    length: Number(packingType?.baseLength ?? 0),
+    width: Number(packingType?.baseWidth ?? 0),
+    height: Number(packingType?.baseHeight ?? 0),
+});
+
+const PICKUP_TIME_SLOTS = [
+    { value: "09:00:00", label: "9 AM - 10 AM", hour: 9 },
+    { value: "11:00:00", label: "11 AM - 12 PM", hour: 11 },
+    { value: "14:00:00", label: "2 PM - 3 PM", hour: 14 },
+    { value: "16:00:00", label: "4 PM - 5 PM", hour: 16 },
+    { value: "18:00:00", label: "6 PM - 7 PM", hour: 18 },
+] as const;
+
 export function CorporateOrdersTable({ initialData }: { initialData: any }) {
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("");
@@ -199,8 +220,48 @@ function CorporateShipmentInlinePanel({
             retry: 1,
         }
     );
+    const { data: packingTypesData } = trpc.general.packingTypes.getAll.useQuery({
+        page: 1,
+        limit: 100,
+    });
     const [pickupDate, setPickupDate] = useState("");
     const [pickupTime, setPickupTime] = useState("");
+    const existingPackageSelection =
+        order?.shipment?.rawPayload &&
+        typeof order.shipment.rawPayload === "object" &&
+        !Array.isArray(order.shipment.rawPayload)
+            ? (
+                  order.shipment.rawPayload as Record<string, unknown>
+              ).packageSelection as Record<string, unknown> | undefined
+            : undefined;
+    const [packageSource, setPackageSource] = useState<"preset" | "custom">(
+        existingPackageSelection?.source === "custom" ? "custom" : "preset"
+    );
+    const [selectedPackingTypeId, setSelectedPackingTypeId] = useState(
+        typeof existingPackageSelection?.packingTypeId === "string"
+            ? existingPackageSelection.packingTypeId
+            : ""
+    );
+    const [customLength, setCustomLength] = useState(
+        typeof existingPackageSelection?.lengthCm === "number"
+            ? String(existingPackageSelection.lengthCm)
+            : ""
+    );
+    const [customWidth, setCustomWidth] = useState(
+        typeof existingPackageSelection?.widthCm === "number"
+            ? String(existingPackageSelection.widthCm)
+            : ""
+    );
+    const [customHeight, setCustomHeight] = useState(
+        typeof existingPackageSelection?.heightCm === "number"
+            ? String(existingPackageSelection.heightCm)
+            : ""
+    );
+    const [weightGrams, setWeightGrams] = useState(
+        typeof existingPackageSelection?.weightGrams === "number"
+            ? String(existingPackageSelection.weightGrams)
+            : ""
+    );
     const createForwardOrder =
         trpc.general.corporatePlatform.createForwardOrder.useMutation({
             onSuccess: async () => {
@@ -217,14 +278,18 @@ function CorporateShipmentInlinePanel({
         });
     const schedulePickup =
         trpc.general.corporatePlatform.scheduleCorporatePickup.useMutation({
-            onSuccess: async () => {
+            onSuccess: async (result) => {
                 await Promise.all([
                     utils.general.corporateOrders.listOrders.invalidate(),
                     utils.general.corporateOrders.getOrderById.invalidate({
                         corporateOrderId: order.id,
                     }),
                 ]);
-                toast.success("Pickup scheduled successfully");
+                toast.success(
+                    result.pickupAlreadyExists
+                        ? "Pickup request already existed for this slot, so we linked to it."
+                        : "Pickup scheduled successfully"
+                );
                 onSaved();
             },
             onError: (error) => handleClientError(error),
@@ -233,6 +298,41 @@ function CorporateShipmentInlinePanel({
     const hydratedOrder = hydratedOrderData ?? order;
     const shipment = hydratedOrder?.shipment ?? order?.shipment;
     const brand = hydratedOrder?.brand ?? order?.brand;
+    const packingTypes = packingTypesData?.data ?? [];
+    const selectedPackingType =
+        packingTypes.find((packingType) => packingType.id === selectedPackingTypeId) ??
+        null;
+    const presetDimensions = buildPresetDimensions(selectedPackingType);
+    const customDimensions = {
+        length: Number(customLength) || 0,
+        width: Number(customWidth) || 0,
+        height: Number(customHeight) || 0,
+    };
+    const activeDimensions =
+        packageSource === "custom" ? customDimensions : presetDimensions;
+    const activeVolumetricWeight =
+        activeDimensions.length > 0 &&
+        activeDimensions.width > 0 &&
+        activeDimensions.height > 0
+            ? volumetricWeightGrams(
+                  activeDimensions.length,
+                  activeDimensions.width,
+                  activeDimensions.height
+              )
+            : 0;
+    const parsedWeightGrams = Number(weightGrams) || 0;
+    const packageSelectionReady =
+        parsedWeightGrams > 0 &&
+        activeDimensions.length > 0 &&
+        activeDimensions.width > 0 &&
+        activeDimensions.height > 0 &&
+        (packageSource === "custom" || Boolean(selectedPackingTypeId));
+    const today = new Date();
+    const todayIso = today.toISOString().slice(0, 10);
+    const isPickupToday = pickupDate === todayIso;
+    const availablePickupSlots = PICKUP_TIME_SLOTS.filter((slot) =>
+        isPickupToday ? slot.hour > today.getHours() : true
+    );
 
     const pickupLocation =
         brand?.id && brand?.name
@@ -250,10 +350,45 @@ function CorporateShipmentInlinePanel({
     const shipmentCreated = Boolean(shipment?.awbNumber);
     const shipmentDispatched =
         shipment?.status === "dispatched" || shipment?.status === "in_transit";
-    const currentStep = shipmentDispatched ? 2 : shipmentCreated ? 1 : 0;
+    const pickupRequest =
+        shipment?.rawPayload &&
+        typeof shipment.rawPayload === "object" &&
+        !Array.isArray(shipment.rawPayload)
+            ? (
+                  shipment.rawPayload as Record<string, unknown>
+              ).pickupRequest as Record<string, unknown> | undefined
+            : undefined;
+    const pickupScheduled = Boolean(
+        pickupRequest?.pickupId ||
+            pickupRequest?.scheduledAt ||
+            pickupRequest?.pickupDate
+    );
+    const currentStep = shipmentDispatched
+        ? 2
+        : pickupScheduled
+          ? 2
+          : shipmentCreated
+            ? 1
+            : 0;
     const forwardOrderAction = async () => {
+        if (!packageSelectionReady) {
+            toast.error(
+                packageSource === "preset"
+                    ? "Select a saved package option and enter shipment weight in grams"
+                    : "Enter custom L x B x H and shipment weight in grams"
+            );
+            return;
+        }
+
         await createForwardOrder.mutateAsync({
             orderId: order.id,
+            packageSource,
+            selectedPackingTypeId:
+                packageSource === "preset" ? selectedPackingTypeId : null,
+            lengthCm: activeDimensions.length,
+            widthCm: activeDimensions.width,
+            heightCm: activeDimensions.height,
+            weightGrams: parsedWeightGrams,
         });
     };
     const scheduleDelhiveryPickup = async () => {
@@ -329,6 +464,7 @@ function CorporateShipmentInlinePanel({
                         disabled={
                             createForwardOrder.isPending ||
                             shipmentCreated ||
+                            !packageSelectionReady ||
                             !canCreateForwardOrder
                         }
                     >
@@ -362,6 +498,123 @@ function CorporateShipmentInlinePanel({
                         }
                     />
                 </div>
+                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
+                    <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold text-slate-900">
+                                Package Details for Delhivery
+                            </p>
+                            <p className="mt-1 text-sm text-slate-500">
+                                Start with the saved package options you already have, or switch to a custom box size.
+                            </p>
+                        </div>
+                        <div className="text-sm font-medium text-slate-700">
+                            Volumetric estimate:{" "}
+                            <span className="text-slate-900">
+                                {activeVolumetricWeight > 0
+                                    ? `${activeVolumetricWeight} g`
+                                    : "Select a package first"}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
+                        <div className="space-y-3">
+                            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                Saved Package Options
+                            </label>
+                            <select
+                                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                                value={packageSource === "preset" ? selectedPackingTypeId : ""}
+                                onChange={(e) => {
+                                    setPackageSource("preset");
+                                    setSelectedPackingTypeId(e.target.value);
+                                }}
+                                disabled={shipmentCreated || createForwardOrder.isPending}
+                            >
+                                <option value="">Select existing package option</option>
+                                {packingTypes.map((packingType) => (
+                                    <option key={packingType.id} value={packingType.id}>
+                                        {packingType.name} ({packingType.baseLength} x{" "}
+                                        {packingType.baseWidth} x {packingType.baseHeight} cm)
+                                    </option>
+                                ))}
+                            </select>
+
+                            <button
+                                type="button"
+                                className={`w-full rounded-xl border px-4 py-3 text-left transition ${
+                                    packageSource === "custom"
+                                        ? "border-sky-200 bg-sky-50"
+                                        : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                                }`}
+                                onClick={() => setPackageSource("custom")}
+                                disabled={shipmentCreated || createForwardOrder.isPending}
+                            >
+                                <span className="block text-sm font-semibold text-slate-900">
+                                    Custom package option
+                                </span>
+                                <span className="mt-1 block text-sm text-slate-500">
+                                    Enter custom L x B x H if none of the saved presets match this shipment.
+                                </span>
+                            </button>
+
+                            {packageSource === "custom" ? (
+                                <div className="grid gap-3 md:grid-cols-3">
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Length (cm)"
+                                        value={customLength}
+                                        onChange={(e) => setCustomLength(e.target.value)}
+                                        disabled={shipmentCreated || createForwardOrder.isPending}
+                                    />
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Breadth (cm)"
+                                        value={customWidth}
+                                        onChange={(e) => setCustomWidth(e.target.value)}
+                                        disabled={shipmentCreated || createForwardOrder.isPending}
+                                    />
+                                    <Input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Height (cm)"
+                                        value={customHeight}
+                                        onChange={(e) => setCustomHeight(e.target.value)}
+                                        disabled={shipmentCreated || createForwardOrder.isPending}
+                                    />
+                                </div>
+                            ) : null}
+                        </div>
+
+                        <div className="space-y-3">
+                            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+                                Shipment Weight
+                            </label>
+                            <Input
+                                type="number"
+                                min="1"
+                                placeholder="Enter weight in grams"
+                                value={weightGrams}
+                                onChange={(e) => setWeightGrams(e.target.value)}
+                                disabled={shipmentCreated || createForwardOrder.isPending}
+                            />
+                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                                Shipping with{" "}
+                                <span className="font-medium text-slate-900">
+                                    {activeDimensions.length || 0} x {activeDimensions.width || 0} x{" "}
+                                    {activeDimensions.height || 0} cm
+                                </span>
+                                {" · "}
+                                <span className="font-medium text-slate-900">
+                                    {parsedWeightGrams || 0} g
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 {shipmentBlockedReason ? (
                     <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                         {shipmentBlockedReason}
@@ -389,6 +642,7 @@ function CorporateShipmentInlinePanel({
                 <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,220px)_auto]">
                     <Input
                         type="date"
+                        min={todayIso}
                         value={pickupDate}
                         onChange={(e) => setPickupDate(e.target.value)}
                         disabled={!shipmentCreated || schedulePickup.isPending}
@@ -400,11 +654,11 @@ function CorporateShipmentInlinePanel({
                         disabled={!shipmentCreated || schedulePickup.isPending}
                     >
                         <option value="">Select pickup time</option>
-                        <option value="09:00:00">9 AM - 10 AM</option>
-                        <option value="11:00:00">11 AM - 12 PM</option>
-                        <option value="14:00:00">2 PM - 3 PM</option>
-                        <option value="16:00:00">4 PM - 5 PM</option>
-                        <option value="18:00:00">6 PM - 7 PM</option>
+                        {availablePickupSlots.map((slot) => (
+                            <option key={slot.value} value={slot.value}>
+                                {slot.label}
+                            </option>
+                        ))}
                     </select>
                     <Button
                         variant="outline"
@@ -413,11 +667,23 @@ function CorporateShipmentInlinePanel({
                     >
                         {schedulePickup.isPending
                             ? "Scheduling..."
-                            : shipmentDispatched
+                            : pickupScheduled || shipmentDispatched
                               ? "Pickup Scheduled"
                               : "Schedule Pickup"}
                     </Button>
                 </div>
+                {pickupScheduled ? (
+                    <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
+                        Pickup request recorded for {pickupRequest?.pickupDate as string}
+                        {typeof pickupRequest?.pickupTime === "string"
+                            ? ` at ${pickupRequest.pickupTime}`
+                            : ""}
+                        {pickupRequest?.pickupId
+                            ? ` · Request ID ${String(pickupRequest.pickupId)}`
+                            : ""}
+                        . Delhivery can still show <span className="font-medium">Ready to ship</span> until the parcel is physically scanned and picked up.
+                    </div>
+                ) : null}
             </div>
 
             <div className="mt-4 flex flex-wrap gap-3">

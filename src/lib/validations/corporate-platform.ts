@@ -209,6 +209,20 @@ export const corporateShipmentInputSchema = z.object({
 
 export const corporateForwardOrderInputSchema = z.object({
     orderId: z.string().uuid(),
+    packageSource: z.enum(["preset", "custom"]),
+    selectedPackingTypeId: z.string().uuid().nullable().optional(),
+    lengthCm: z.number().int().positive(),
+    widthCm: z.number().int().positive(),
+    heightCm: z.number().int().positive(),
+    weightGrams: z.number().int().positive(),
+}).superRefine((value, ctx) => {
+    if (value.packageSource === "preset" && !value.selectedPackingTypeId) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ["selectedPackingTypeId"],
+            message: "Select a package preset",
+        });
+    }
 });
 
 export const corporatePickupScheduleInputSchema = z.object({

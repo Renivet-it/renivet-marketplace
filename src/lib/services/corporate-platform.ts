@@ -39,6 +39,7 @@ import {
     corporateTaxInvoices,
     corporateTasks,
     corporateRefunds,
+    packingTypes,
     products,
 } from "@/lib/db/schema";
 import {
@@ -1548,6 +1549,11 @@ class CorporatePlatformService {
                 ? ((productSnapshot.productType as Record<string, unknown>)
                       .name as string)
                 : "Corporate apparel";
+        const selectedPackingType = parsed.selectedPackingTypeId
+            ? await db.query.packingTypes.findFirst({
+                  where: eq(packingTypes.id, parsed.selectedPackingTypeId),
+              })
+            : null;
 
         const forwardPayload = {
             format: "json" as const,
@@ -1568,6 +1574,10 @@ class CorporatePlatformService {
                     quantity: String(order.quantity),
                     total_amount: Number((order.totalPaise / 100).toFixed(2)),
                     products_desc: productType,
+                    weight: parsed.weightGrams,
+                    shipment_length: parsed.lengthCm,
+                    shipment_width: parsed.widthCm,
+                    shipment_height: parsed.heightCm,
                 },
             ],
         };
@@ -1621,7 +1631,21 @@ class CorporatePlatformService {
             deliveryDate: null,
             status: "ready" as const,
             provider: "delhivery",
-            rawPayload: rawData,
+            rawPayload: {
+                ...rawData,
+                packageSelection: {
+                    source: parsed.packageSource,
+                    packingTypeId: parsed.selectedPackingTypeId ?? null,
+                    packingTypeName: selectedPackingType?.name ?? null,
+                    lengthCm: parsed.lengthCm,
+                    widthCm: parsed.widthCm,
+                    heightCm: parsed.heightCm,
+                    weightGrams: parsed.weightGrams,
+                    volumetricWeightGrams: Math.round(
+                        (parsed.lengthCm * parsed.widthCm * parsed.heightCm) / 5
+                    ),
+                },
+            },
             updatedAt: new Date(),
         };
 
@@ -1720,19 +1744,65 @@ class CorporatePlatformService {
             pickup_location: pickupLocation,
             pickup_date: parsed.pickupDate,
             pickup_time: parsed.pickupTime,
-            expected_package_count: order.quantity,
+            // Delhivery pickup requests are raised for the warehouse slot,
+            // and this corporate flow currently creates one manifested shipment/AWB.
+            expected_package_count: 1,
         });
+        const pickupResponseRecord =
+            pickupResponse &&
+            typeof pickupResponse === "object" &&
+            !Array.isArray(pickupResponse)
+                ? (pickupResponse as Record<string, unknown>)
+                : {};
+        const pickupId =
+            typeof pickupResponseRecord.pickup_id === "number" ||
+            typeof pickupResponseRecord.pickup_id === "string"
+                ? String(pickupResponseRecord.pickup_id)
+                : null;
+        const pickupAccepted =
+            pickupResponseRecord.status === true ||
+            pickupResponseRecord.success === true ||
+            pickupResponseRecord.pr_exist === true ||
+            pickupId !== null;
+
+        if (!pickupAccepted) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    typeof pickupResponseRecord.message === "string"
+                        ? pickupResponseRecord.message
+                        : typeof pickupResponseRecord.error === "object" &&
+                            pickupResponseRecord.error &&
+                            !Array.isArray(pickupResponseRecord.error) &&
+                            typeof (
+                                pickupResponseRecord.error as Record<string, unknown>
+                            ).message === "string"
+                          ? ((pickupResponseRecord.error as Record<string, unknown>)
+                                .message as string)
+                          : "Delhivery pickup could not be scheduled",
+            });
+        }
+        const pickupAlreadyExists = pickupResponseRecord.pr_exist === true;
 
         const rawPayload = {
             ...(order.shipment.rawPayload ?? {}),
             pickupSchedule: pickupResponse,
+            pickupRequest: {
+                corporateOrderId: order.id,
+                corporatePublicOrderId: order.publicOrderId,
+                awbNumber: order.shipment.awbNumber,
+                pickupId,
+                pickupDate: parsed.pickupDate,
+                pickupTime: parsed.pickupTime,
+                alreadyExists: pickupAlreadyExists,
+                scheduledAt: new Date().toISOString(),
+            },
         };
 
         const shipment = await db
             .update(corporateShipments)
             .set({
                 dispatchDate: parsed.pickupDate,
-                status: "dispatched",
                 rawPayload,
                 updatedAt: new Date(),
             })
@@ -1740,25 +1810,23 @@ class CorporatePlatformService {
             .returning()
             .then((rows) => rows[0]);
 
-        if (order.status !== "dispatched") {
-            await corporateOrderQueries.updateCorporateOrder(order.id, {
-                status: "dispatched",
-            });
-
-            await corporateOrderQueries.createStatusHistory({
-                corporateOrderId: order.id,
-                fromStatus: order.status,
-                toStatus: "dispatched",
-                changedByUserId: actorUserId,
-                note: "Delhivery pickup scheduled",
-                metadata: {
-                    source: "corporate_orders_table",
-                    shipmentId: shipment.id,
-                    pickupDate: parsed.pickupDate,
-                    pickupTime: parsed.pickupTime,
-                },
-            });
-        }
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: order.id,
+            fromStatus: order.status,
+            toStatus: order.status,
+            changedByUserId: actorUserId,
+            note: pickupAlreadyExists
+                ? "Delhivery pickup request already existed for this slot"
+                : "Delhivery pickup scheduled",
+            metadata: {
+                source: "corporate_orders_table",
+                shipmentId: shipment.id,
+                pickupDate: parsed.pickupDate,
+                pickupTime: parsed.pickupTime,
+                pickupId,
+                pickupAlreadyExists,
+            },
+        });
 
         await this.createEvent(
             "shipment",
@@ -1766,8 +1834,12 @@ class CorporatePlatformService {
             "PICKUP_SCHEDULED",
             {
                 orderId: order.id,
+                publicOrderId: order.publicOrderId,
+                awbNumber: order.shipment.awbNumber,
                 pickupDate: parsed.pickupDate,
                 pickupTime: parsed.pickupTime,
+                pickupId,
+                pickupAlreadyExists,
             },
             actorUserId
         );
@@ -1777,6 +1849,11 @@ class CorporatePlatformService {
             shipment,
             pickupLocation,
             pickupResponse,
+            pickupId,
+            pickupAlreadyExists,
+            orderId: order.id,
+            publicOrderId: order.publicOrderId,
+            awbNumber: order.shipment.awbNumber,
         };
     }
 
