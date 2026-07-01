@@ -68,7 +68,11 @@ import {
     CorporateOrderCustomerReadyForDispatchEmail,
     CorporateOrderReadyForDispatchEmail,
 } from "@/lib/resend/emails";
-import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
+import {
+    convertValueToLabel,
+    generatePickupLocationCode,
+    getAbsoluteURL,
+} from "@/lib/utils";
 import { TRPCError } from "@trpc/server";
 import { and, asc, count, desc, eq, inArray, isNotNull, like, notInArray } from "drizzle-orm";
 import crypto from "crypto";

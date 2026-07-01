@@ -241,6 +241,12 @@ function CorporateShipmentInlinePanel({
                   brandName: brand.name,
               })
             : "";
+    const shipmentBlockedReason = !brand
+        ? "No brand or pickup warehouse is assigned to this corporate order yet."
+        : !pickupLocation
+          ? "Assigned pickup location could not be resolved yet."
+          : null;
+    const canCreateForwardOrder = Boolean(pickupLocation);
     const shipmentCreated = Boolean(shipment?.awbNumber);
     const shipmentDispatched =
         shipment?.status === "dispatched" || shipment?.status === "in_transit";
@@ -320,7 +326,11 @@ function CorporateShipmentInlinePanel({
                     </div>
                     <Button
                         onClick={() => void forwardOrderAction()}
-                        disabled={createForwardOrder.isPending || shipmentCreated}
+                        disabled={
+                            createForwardOrder.isPending ||
+                            shipmentCreated ||
+                            !canCreateForwardOrder
+                        }
                     >
                         {createForwardOrder.isPending
                             ? "Creating..."
@@ -348,10 +358,15 @@ function CorporateShipmentInlinePanel({
                             pickupLocation ||
                             (isHydratingOrder
                                 ? "Loading assigned pickup location..."
-                                : "Assigned pickup location unavailable")
+                                : "Pickup location unavailable")
                         }
                     />
                 </div>
+                {shipmentBlockedReason ? (
+                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                        {shipmentBlockedReason}
+                    </div>
+                ) : null}
                 {hydrateOrderError ? (
                     <p className="mt-3 text-sm text-amber-700">
                         Could not load the assigned pickup location from order details yet.
@@ -428,6 +443,13 @@ function CorporateShipmentInlinePanel({
                 <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
                     Start with <span className="font-medium text-slate-900">Create Forward Order</span>.
                     After the AWB is generated, the pickup scheduling step will unlock.
+                </div>
+            ) : null}
+
+            {shipmentBlockedReason ? (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    Shipment cannot be completed from here until this order has an assigned pickup source.
+                    Open the full order view and make sure the order is assigned to the correct brand/warehouse first.
                 </div>
             ) : null}
 
