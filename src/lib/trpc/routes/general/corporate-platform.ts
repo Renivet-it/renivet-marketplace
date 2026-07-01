@@ -4,7 +4,9 @@ import { corporateOrderWorkflowStatusSchema } from "@/lib/validations/corporate-
 import {
     corporateCatalogListInputSchema,
     corporateApprovedQuoteOrderInputSchema,
+    corporateForwardOrderInputSchema,
     corporateProfileInputSchema,
+    corporatePickupScheduleInputSchema,
     corporateReportInputSchema,
     corporatePurchaseOrderInputSchema,
     corporatePurchaseOrderReviewInputSchema,
@@ -112,6 +114,21 @@ export const corporatePlatformRouter = createTRPCRouter({
         .input(corporateShipmentInputSchema)
         .mutation(({ ctx, input }) => {
             return corporatePlatformService.saveShipment(ctx.user.id, input);
+        }),
+    createForwardOrder: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateForwardOrderInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.createForwardOrder(ctx.user.id, input);
+        }),
+    scheduleCorporatePickup: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporatePickupScheduleInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.scheduleCorporatePickup(
+                ctx.user.id,
+                input
+            );
         }),
     recordPayment: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))

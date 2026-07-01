@@ -4,6 +4,10 @@ import { CorporateOrderPage } from "@/components/corporate-orders/corporate-orde
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+    extractCorporateDeliveryAddress,
+    formatCorporateDeliveryAddress,
+} from "@/lib/corporate-delivery-address";
 import { initializeRazorpayPayment } from "@/lib/razorpay/payment";
 import { trpc } from "@/lib/trpc/client";
 import { formatINR, handleClientError } from "@/lib/utils";
@@ -43,30 +47,6 @@ function ensureRazorpaySdk() {
 
         reject(new Error("Failed to load Razorpay checkout"));
     });
-}
-
-function formatCorporateAddress(address: unknown) {
-    if (!address || typeof address !== "object" || Array.isArray(address)) {
-        return "";
-    }
-
-    const record = address as Record<string, unknown>;
-    const parts = [
-        record.addressLine1,
-        record.addressLine2,
-        record.street,
-        record.area,
-        record.landmark,
-        record.city,
-        record.state,
-        record.postalCode,
-        record.zip,
-        record.country,
-    ]
-        .map((value) => String(value ?? "").trim())
-        .filter(Boolean);
-
-    return parts.join(", ");
 }
 
 export function CustomerCorporateDashboard({
@@ -968,6 +948,11 @@ export function CustomerCorporateDashboard({
                                     <CorporateOrderPage
                                         key={selectedOrderSetupQuote.id}
                                         initialPrefill={{
+                                            ...extractCorporateDeliveryAddress(
+                                                initialProfile?.shippingAddress ??
+                                                    selectedOrderSetupQuote.profile
+                                                        ?.shippingAddress
+                                            ),
                                             companyName:
                                                 initialProfile?.companyName ??
                                                 selectedOrderSetupQuote.profile?.companyName,
@@ -976,9 +961,6 @@ export function CustomerCorporateDashboard({
                                             emailAddress: initialProfile?.email ?? "",
                                             mobileNumber: initialProfile?.phone ?? "",
                                             gstNumber: initialProfile?.gstNumber ?? "",
-                                            deliveryAddress: formatCorporateAddress(
-                                                initialProfile?.shippingAddress
-                                            ),
                                             productTypeId:
                                                 selectedOrderSetupQuote.productTypeId ??
                                                 undefined,
@@ -1725,7 +1707,10 @@ function CustomerCorporateOrderDetailPanel({
                     </div>
                     <div className="flex justify-between text-sm">
                         <span className="text-slate-400">Delivery Location:</span>
-                        <span className="font-semibold text-slate-800 text-right max-w-[400px] truncate">{order.deliveryAddress ? toLabel(order.deliveryAddress) : "No address specified"}</span>
+                        <span className="font-semibold text-slate-800 text-right max-w-[400px]">
+                            {formatCorporateDeliveryAddress(order) ||
+                                "No address specified"}
+                        </span>
                     </div>
                 </div>
             </div>

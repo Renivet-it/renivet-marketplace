@@ -5,6 +5,7 @@ import {
     Text,
     View,
 } from "@react-pdf/renderer";
+import { formatCorporateDeliveryAddress } from "@/lib/corporate-delivery-address";
 
 const luxury = {
     navy: "#14213d",
@@ -201,7 +202,10 @@ export function CorporateOrderSummaryTemplate({
                         <InfoRow label="Contact Person" value={order.contactPersonName} />
                         <InfoRow label="Email" value={order.emailAddress} />
                         <InfoRow label="Phone" value={order.mobileNumber} />
-                        <InfoRow label="Delivery Address" value={order.deliveryAddress} />
+                        <InfoRow
+                            label="Delivery Address"
+                            value={formatCorporateDeliveryAddress(order)}
+                        />
                     </View>
 
                     <View style={styles.panel}>

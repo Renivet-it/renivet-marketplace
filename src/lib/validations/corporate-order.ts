@@ -128,6 +128,12 @@ export const corporateOrderFormInputSchema = z.object({
     emailAddress: z.string().email(),
     mobileNumber: z.string().min(8).max(20),
     gstNumber: z.string().trim().max(32).nullable().optional(),
+    deliveryCountry: z.string().trim().min(2),
+    deliveryCity: z.string().trim().min(2),
+    deliveryPincode: z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, "Delivery pincode must be a 6-digit code"),
     deliveryAddress: z.string().min(10),
     numberOfEmployees: z.number().int().positive(),
     productTypeId: z.string().uuid(),
@@ -190,6 +196,9 @@ export const corporateOrderSchema = z.object({
     emailAddress: z.string().email(),
     mobileNumber: z.string(),
     gstNumber: z.string().nullable().optional(),
+    deliveryCountry: z.string(),
+    deliveryCity: z.string(),
+    deliveryPincode: z.string(),
     deliveryAddress: z.string(),
     numberOfEmployees: z.number().int().positive(),
     employeeCount: z.number().int().positive(),

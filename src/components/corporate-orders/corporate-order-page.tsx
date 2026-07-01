@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Spinner } from "@/components/ui/spinner";
+import { formatCorporateDeliveryAddress } from "@/lib/corporate-delivery-address";
 import { initializeRazorpayPayment } from "@/lib/razorpay/payment";
 import { trpc } from "@/lib/trpc/client";
 import type { CorporateOrderFormInput } from "@/lib/validations/corporate-order";
@@ -50,6 +51,9 @@ type CorporateOrderPagePrefill = {
     emailAddress?: string;
     mobileNumber?: string;
     gstNumber?: string;
+    deliveryCountry?: string;
+    deliveryCity?: string;
+    deliveryPincode?: string;
     deliveryAddress?: string;
     numberOfEmployees?: number;
     quantity?: number;
@@ -146,6 +150,9 @@ export function CorporateOrderPage({
         emailAddress: initialPrefill?.emailAddress ?? user?.email ?? "",
         mobileNumber: initialPrefill?.mobileNumber ?? user?.phone ?? "",
         gstNumber: initialPrefill?.gstNumber ?? "",
+        deliveryCountry: initialPrefill?.deliveryCountry ?? "India",
+        deliveryCity: initialPrefill?.deliveryCity ?? "",
+        deliveryPincode: initialPrefill?.deliveryPincode ?? "",
         deliveryAddress: initialPrefill?.deliveryAddress ?? "",
         numberOfEmployees: initialPrefill?.numberOfEmployees ?? 0,
         productTypeId: initialPrefill?.productTypeId ?? "",
@@ -260,6 +267,9 @@ export function CorporateOrderPage({
             !!form.contactPersonName &&
             !!form.emailAddress &&
             !!form.mobileNumber &&
+            !!form.deliveryCountry &&
+            !!form.deliveryCity &&
+            !!form.deliveryPincode &&
             !!form.deliveryAddress &&
             form.numberOfEmployees > 0 &&
             !!form.productTypeId &&
@@ -305,6 +315,16 @@ export function CorporateOrderPage({
             }
             if (!form.mobileNumber) {
                 errors.mobileNumber = "Enter the mobile number.";
+            }
+            if (!form.deliveryCountry || form.deliveryCountry.trim().length < 2) {
+                errors.deliveryCountry = "Enter the delivery country.";
+            }
+            if (!form.deliveryCity || form.deliveryCity.trim().length < 2) {
+                errors.deliveryCity = "Enter the delivery city.";
+            }
+            if (!/^\d{6}$/.test(form.deliveryPincode.trim())) {
+                errors.deliveryPincode =
+                    "Enter a valid 6-digit delivery pincode.";
             }
             if (!form.deliveryAddress || form.deliveryAddress.trim().length < 10) {
                 errors.deliveryAddress =
@@ -868,6 +888,50 @@ export function CorporateOrderPage({
                                 <div>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
+                                        placeholder="Delivery Country"
+                                        value={form.deliveryCountry}
+                                        onChange={(e) =>
+                                            setFieldValue(
+                                                "deliveryCountry",
+                                                e.target.value
+                                            )
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.deliveryCountry} />
+                                </div>
+                                <div>
+                                    <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
+                                        placeholder="Delivery City"
+                                        value={form.deliveryCity}
+                                        onChange={(e) =>
+                                            setFieldValue(
+                                                "deliveryCity",
+                                                e.target.value
+                                            )
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.deliveryCity} />
+                                </div>
+                                <div>
+                                    <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
+                                        placeholder="Delivery Pincode"
+                                        inputMode="numeric"
+                                        maxLength={6}
+                                        value={form.deliveryPincode}
+                                        onChange={(e) =>
+                                            setFieldValue(
+                                                "deliveryPincode",
+                                                e.target.value.replace(/\D/g, "")
+                                            )
+                                        }
+                                    />
+                                    <FieldError message={fieldErrors.deliveryPincode} />
+                                </div>
+                                <div>
+                                    <Input
+                                        className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Number of Employees"
                                         type="number"
                                         value={form.numberOfEmployees || ""}
@@ -891,6 +955,11 @@ export function CorporateOrderPage({
                                 }
                             />
                             <FieldError message={fieldErrors.deliveryAddress} />
+                            <p className="mt-2 text-xs text-slate-500">
+                                Saved as:{" "}
+                                {formatCorporateDeliveryAddress(form) ||
+                                    "Country, city, pincode, and address will appear here"}
+                            </p>
                         </section>
                     )}
 

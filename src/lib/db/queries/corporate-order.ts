@@ -424,6 +424,10 @@ class CorporateOrderQueries {
         const [rows, [{ count: totalCount }]] = await Promise.all([
             db.query.corporateOrders.findMany({
                 where,
+                with: {
+                    brand: true,
+                    shipment: true,
+                },
                 orderBy: [desc(corporateOrders.createdAt)],
                 offset: (input.page - 1) * input.limit,
                 limit: input.limit,
@@ -435,7 +439,11 @@ class CorporateOrderQueries {
         ]);
 
         return {
-            data: rows.map((row) => this.parseOrder(row)),
+            data: rows.map((row) => ({
+                ...this.parseOrder(row),
+                brand: row.brand,
+                shipment: row.shipment,
+            })),
             count: totalCount,
         };
     }

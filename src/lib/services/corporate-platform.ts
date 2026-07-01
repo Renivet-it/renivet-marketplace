@@ -1,6 +1,13 @@
 import { env } from "@/../env";
+import {
+    extractCorporateDeliveryAddress,
+    fillCorporateDeliveryAddressDefaults,
+    formatCorporateDeliveryAddress,
+} from "@/lib/corporate-delivery-address";
 import { db } from "@/lib/db";
 import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
+import { createOrder } from "@/lib/delhivery/orders";
+import { schedulePickup } from "@/lib/delhivery/pickup";
 import {
     brands,
     brandMembers,
@@ -38,7 +45,9 @@ import {
     corporateCatalogListInputSchema,
     corporateApprovedQuoteOrderInputSchema,
     corporateDashboardSummarySchema,
+    corporateForwardOrderInputSchema,
     corporatePaymentInputSchema,
+    corporatePickupScheduleInputSchema,
     corporateProfileInputSchema,
     corporateReportInputSchema,
     corporatePurchaseOrderInputSchema,
@@ -425,6 +434,9 @@ class CorporatePlatformService {
         const gstRateBps = taxableValue
             ? Math.round((quote.gstAmountPaise / taxableValue) * 10000)
             : 0;
+        const deliveryDetails = fillCorporateDeliveryAddressDefaults(
+            extractCorporateDeliveryAddress(quote.profile.shippingAddress)
+        );
 
         const createdOrder = await db
             .insert(corporateOrders)
@@ -440,9 +452,10 @@ class CorporatePlatformService {
                 emailAddress: quote.profile.email,
                 mobileNumber: quote.profile.phone,
                 gstNumber: quote.profile.gstNumber ?? null,
-                deliveryAddress: JSON.stringify(
-                    quote.profile.shippingAddress ?? {}
-                ),
+                deliveryCountry: deliveryDetails.deliveryCountry,
+                deliveryCity: deliveryDetails.deliveryCity,
+                deliveryPincode: deliveryDetails.deliveryPincode,
+                deliveryAddress: deliveryDetails.deliveryAddress,
                 numberOfEmployees: quote.quantity,
                 employeeCount: quote.quantity,
                 quantity: quote.quantity,
@@ -454,7 +467,13 @@ class CorporatePlatformService {
                     emailAddress: quote.profile.email,
                     mobileNumber: quote.profile.phone,
                     gstNumber: quote.profile.gstNumber ?? null,
-                    deliveryAddress: quote.profile.shippingAddress ?? {},
+                    deliveryCountry: deliveryDetails.deliveryCountry,
+                    deliveryCity: deliveryDetails.deliveryCity,
+                    deliveryPincode: deliveryDetails.deliveryPincode,
+                    deliveryAddress: deliveryDetails.deliveryAddress,
+                    deliveryAddressFormatted:
+                        formatCorporateDeliveryAddress(deliveryDetails),
+                    shippingAddress: quote.profile.shippingAddress ?? {},
                     numberOfEmployees: quote.quantity,
                 },
                 productConfigSnapshot: {
@@ -1482,6 +1501,279 @@ class CorporatePlatformService {
         );
 
         return saved;
+    }
+
+    async createForwardOrder(actorUserId: string, input: unknown) {
+        const parsed = corporateForwardOrderInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+            with: {
+                brand: true,
+                shipment: true,
+            },
+        });
+
+        if (!order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+
+        if (!order.brand?.id || !order.brand?.name) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Assign a brand before creating a forward order",
+            });
+        }
+
+        const pickupLocation = generatePickupLocationCode({
+            brandId: order.brand.id,
+            brandName: order.brand.name,
+        });
+        const productSnapshot = (order.productConfigSnapshot ?? {}) as Record<
+            string,
+            unknown
+        >;
+        const productType =
+            typeof productSnapshot.productType === "object" &&
+            productSnapshot.productType &&
+            !Array.isArray(productSnapshot.productType) &&
+            typeof (productSnapshot.productType as Record<string, unknown>).name ===
+                "string"
+                ? ((productSnapshot.productType as Record<string, unknown>)
+                      .name as string)
+                : "Corporate apparel";
+
+        const forwardPayload = {
+            format: "json" as const,
+            pickup_location: {
+                name: pickupLocation,
+            },
+            shipments: [
+                {
+                    name: order.contactPersonName,
+                    add: order.deliveryAddress,
+                    pin: order.deliveryPincode,
+                    city: order.deliveryCity,
+                    country: order.deliveryCountry,
+                    phone: order.mobileNumber,
+                    order: order.publicOrderId,
+                    payment_mode: "Prepaid" as const,
+                    shipping_mode: "Surface" as const,
+                    quantity: String(order.quantity),
+                    total_amount: Number((order.totalPaise / 100).toFixed(2)),
+                    products_desc: productType,
+                },
+            ],
+        };
+
+        const result = await createOrder(forwardPayload);
+
+        if (!result.success) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    typeof result.error === "string"
+                        ? result.error
+                        : "Failed to create Delhivery forward order",
+            });
+        }
+
+        const rawData = result.data as Record<string, unknown>;
+        const packageData = Array.isArray(rawData.packages)
+            ? rawData.packages[0]
+            : Array.isArray(rawData.package)
+              ? rawData.package[0]
+              : null;
+        const packageRecord =
+            packageData &&
+            typeof packageData === "object" &&
+            !Array.isArray(packageData)
+                ? (packageData as Record<string, unknown>)
+                : {};
+        const waybill =
+            typeof packageRecord.waybill === "string"
+                ? packageRecord.waybill
+                : typeof packageRecord.awb === "string"
+                  ? packageRecord.awb
+                  : typeof rawData.waybill === "string"
+                    ? rawData.waybill
+                    : typeof rawData.awb === "string"
+                      ? rawData.awb
+                      : null;
+
+        const existingShipment = await db.query.corporateShipments.findFirst({
+            where: eq(corporateShipments.orderId, order.id),
+        });
+        const shipmentPayload = {
+            courierName: "Delhivery",
+            trackingNumber: waybill,
+            awbNumber: waybill,
+            trackingUrl: waybill
+                ? `${env.DELHIVERY_BASE_URL?.trim() || "https://track.delhivery.com"}/tracking/package/${waybill}`
+                : null,
+            dispatchDate: null,
+            deliveryDate: null,
+            status: "ready" as const,
+            provider: "delhivery",
+            rawPayload: rawData,
+            updatedAt: new Date(),
+        };
+
+        const shipment = existingShipment
+            ? await db
+                  .update(corporateShipments)
+                  .set(shipmentPayload)
+                  .where(eq(corporateShipments.id, existingShipment.id))
+                  .returning()
+                  .then((rows) => rows[0])
+            : await db
+                  .insert(corporateShipments)
+                  .values({
+                      orderId: order.id,
+                      ...shipmentPayload,
+                  })
+                  .returning()
+                  .then((rows) => rows[0]);
+
+        if (order.status !== "ready_for_dispatch") {
+            await corporateOrderQueries.updateCorporateOrder(order.id, {
+                status: "ready_for_dispatch",
+            });
+
+            await corporateOrderQueries.createStatusHistory({
+                corporateOrderId: order.id,
+                fromStatus: order.status,
+                toStatus: "ready_for_dispatch",
+                changedByUserId: actorUserId,
+                note: "Delhivery forward order created",
+                metadata: {
+                    source: "corporate_orders_table",
+                    shipmentId: shipment.id,
+                    awbNumber: waybill,
+                },
+            });
+        }
+
+        await this.createEvent(
+            "shipment",
+            shipment.id,
+            "FORWARD_ORDER_CREATED",
+            {
+                orderId: order.id,
+                awbNumber: waybill,
+                provider: "delhivery",
+            },
+            actorUserId
+        );
+
+        return {
+            success: true,
+            shipment,
+            awbNumber: waybill,
+            pickupLocation,
+            rawPayload: rawData,
+        };
+    }
+
+    async scheduleCorporatePickup(actorUserId: string, input: unknown) {
+        const parsed = corporatePickupScheduleInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+            with: {
+                brand: true,
+                shipment: true,
+            },
+        });
+
+        if (!order || !order.shipment) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Create the forward order first",
+            });
+        }
+
+        if (!order.brand?.id || !order.brand?.name) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Brand pickup location is not available",
+            });
+        }
+
+        if (!order.shipment.awbNumber) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "AWB number is missing for this shipment",
+            });
+        }
+
+        const pickupLocation = generatePickupLocationCode({
+            brandId: order.brand.id,
+            brandName: order.brand.name,
+        });
+        const pickupResponse = await schedulePickup({
+            pickup_location: pickupLocation,
+            pickup_date: parsed.pickupDate,
+            pickup_time: parsed.pickupTime,
+            expected_package_count: order.quantity,
+        });
+
+        const rawPayload = {
+            ...(order.shipment.rawPayload ?? {}),
+            pickupSchedule: pickupResponse,
+        };
+
+        const shipment = await db
+            .update(corporateShipments)
+            .set({
+                dispatchDate: parsed.pickupDate,
+                status: "dispatched",
+                rawPayload,
+                updatedAt: new Date(),
+            })
+            .where(eq(corporateShipments.id, order.shipment.id))
+            .returning()
+            .then((rows) => rows[0]);
+
+        if (order.status !== "dispatched") {
+            await corporateOrderQueries.updateCorporateOrder(order.id, {
+                status: "dispatched",
+            });
+
+            await corporateOrderQueries.createStatusHistory({
+                corporateOrderId: order.id,
+                fromStatus: order.status,
+                toStatus: "dispatched",
+                changedByUserId: actorUserId,
+                note: "Delhivery pickup scheduled",
+                metadata: {
+                    source: "corporate_orders_table",
+                    shipmentId: shipment.id,
+                    pickupDate: parsed.pickupDate,
+                    pickupTime: parsed.pickupTime,
+                },
+            });
+        }
+
+        await this.createEvent(
+            "shipment",
+            shipment.id,
+            "PICKUP_SCHEDULED",
+            {
+                orderId: order.id,
+                pickupDate: parsed.pickupDate,
+                pickupTime: parsed.pickupTime,
+            },
+            actorUserId
+        );
+
+        return {
+            success: true,
+            shipment,
+            pickupLocation,
+            pickupResponse,
+        };
     }
 
     async submitQc(actorUserId: string, input: unknown) {

@@ -10,7 +10,7 @@ import {
     handleClientError,
 } from "@/lib/utils";
 import Link from "next/link";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, useState } from "react";
 import { toast } from "sonner";
 
 export function CorporateOrdersTable({ initialData }: { initialData: any }) {
@@ -148,7 +148,7 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                                         <tr className="border-t border-slate-100 bg-slate-50/60">
                                             <td colSpan={10} className="p-4">
                                                 <CorporateShipmentInlinePanel
-                                                    corporateOrderId={order.id}
+                                                    order={order}
                                                     quantity={order.quantity}
                                                     onSaved={() => {
                                                         void refetch();
@@ -177,76 +177,62 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
 }
 
 function CorporateShipmentInlinePanel({
-    corporateOrderId,
+    order,
     quantity,
     onSaved,
 }: {
-    corporateOrderId: string;
+    order: any;
     quantity: number;
     onSaved: () => void;
 }) {
     const utils = trpc.useUtils();
-    const { data, isLoading } = trpc.general.corporateOrders.getOrderById.useQuery({
-        corporateOrderId,
-    });
-    const [provider, setProvider] = useState("manual");
-    const [courierName, setCourierName] = useState("");
-    const [trackingNumber, setTrackingNumber] = useState("");
-    const [awbNumber, setAwbNumber] = useState("");
-    const [trackingUrl, setTrackingUrl] = useState("");
-    const [dispatchDate, setDispatchDate] = useState("");
-    const [deliveryDate, setDeliveryDate] = useState("");
-    const [shipmentStatus, setShipmentStatus] = useState("ready");
+    const {
+        data: hydratedOrderData,
+        isFetching: isHydratingOrder,
+        error: hydrateOrderError,
+    } = trpc.general.corporateOrders.getOrderById.useQuery(
+        {
+            corporateOrderId: order.id,
+        },
+        {
+            enabled: !order?.brand || !order?.shipment,
+            retry: 1,
+        }
+    );
     const [pickupDate, setPickupDate] = useState("");
     const [pickupTime, setPickupTime] = useState("");
-    const [shipmentCreated, setShipmentCreated] = useState(false);
+    const createForwardOrder =
+        trpc.general.corporatePlatform.createForwardOrder.useMutation({
+            onSuccess: async () => {
+                await Promise.all([
+                    utils.general.corporateOrders.listOrders.invalidate(),
+                    utils.general.corporateOrders.getOrderById.invalidate({
+                        corporateOrderId: order.id,
+                    }),
+                ]);
+                toast.success("Forward order created successfully");
+                onSaved();
+            },
+            onError: (error) => handleClientError(error),
+        });
+    const schedulePickup =
+        trpc.general.corporatePlatform.scheduleCorporatePickup.useMutation({
+            onSuccess: async () => {
+                await Promise.all([
+                    utils.general.corporateOrders.listOrders.invalidate(),
+                    utils.general.corporateOrders.getOrderById.invalidate({
+                        corporateOrderId: order.id,
+                    }),
+                ]);
+                toast.success("Pickup scheduled successfully");
+                onSaved();
+            },
+            onError: (error) => handleClientError(error),
+        });
 
-    const saveShipment = trpc.general.corporatePlatform.saveShipment.useMutation({
-        onSuccess: async () => {
-            await Promise.all([
-                utils.general.corporateOrders.getOrderById.invalidate({
-                    corporateOrderId,
-                }),
-                utils.general.corporateOrders.listOrders.invalidate(),
-            ]);
-            toast.success("Shipment details saved");
-            onSaved();
-        },
-        onError: (error) => handleClientError(error),
-    });
-
-    const shipment = data?.shipment;
-    const brand = data?.brand;
-
-    useEffect(() => {
-        setProvider(shipment?.provider ?? "manual");
-        setCourierName(shipment?.courierName ?? "");
-        setTrackingNumber(shipment?.trackingNumber ?? "");
-        setAwbNumber(shipment?.awbNumber ?? "");
-        setTrackingUrl(shipment?.trackingUrl ?? "");
-        setDispatchDate(shipment?.dispatchDate ?? "");
-        setDeliveryDate(shipment?.deliveryDate ?? "");
-        setShipmentStatus(shipment?.status ?? "ready");
-        setShipmentCreated(Boolean(shipment));
-    }, [
-        shipment,
-        shipment?.provider,
-        shipment?.courierName,
-        shipment?.trackingNumber,
-        shipment?.awbNumber,
-        shipment?.trackingUrl,
-        shipment?.dispatchDate,
-        shipment?.deliveryDate,
-        shipment?.status,
-    ]);
-
-    if (isLoading || !data) {
-        return (
-            <div className="rounded-lg border bg-white p-4 text-sm text-slate-500">
-                Loading shipment workspace...
-            </div>
-        );
-    }
+    const hydratedOrder = hydratedOrderData ?? order;
+    const shipment = hydratedOrder?.shipment ?? order?.shipment;
+    const brand = hydratedOrder?.brand ?? order?.brand;
 
     const pickupLocation =
         brand?.id && brand?.name
@@ -255,37 +241,16 @@ function CorporateShipmentInlinePanel({
                   brandName: brand.name,
               })
             : "";
-
-    const persistShipment = async (nextStatus?: string) => {
-        await saveShipment.mutateAsync({
-            orderId: corporateOrderId,
-            courierName: courierName || null,
-            trackingNumber: trackingNumber || null,
-            awbNumber: awbNumber || null,
-            trackingUrl: trackingUrl || null,
-            dispatchDate: dispatchDate || null,
-            deliveryDate: deliveryDate || null,
-            status: (nextStatus ?? shipmentStatus) as any,
-            provider,
+    const shipmentCreated = Boolean(shipment?.awbNumber);
+    const shipmentDispatched =
+        shipment?.status === "dispatched" || shipment?.status === "in_transit";
+    const currentStep = shipmentDispatched ? 2 : shipmentCreated ? 1 : 0;
+    const forwardOrderAction = async () => {
+        await createForwardOrder.mutateAsync({
+            orderId: order.id,
         });
     };
-
-    const createShipmentFirst = async () => {
-        try {
-            await persistShipment("ready");
-            setShipmentCreated(true);
-            toast.success("Shipment created. Now choose the pickup date.");
-        } catch (error) {
-            handleClientError(error);
-        }
-    };
-
     const scheduleDelhiveryPickup = async () => {
-        if (!awbNumber.trim()) {
-            toast.error("Add the AWB number first");
-            return;
-        }
-
         if (!pickupDate || !pickupTime) {
             toast.error("Select pickup date and time");
             return;
@@ -296,31 +261,11 @@ function CorporateShipmentInlinePanel({
             return;
         }
 
-        try {
-            await persistShipment("ready");
-
-            const res = await fetch("/api/delhivery/pickup", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    pickup_location: pickupLocation,
-                    pickup_date: pickupDate,
-                    pickup_time: pickupTime,
-                    expected_package_count: quantity,
-                }),
-            });
-
-            const result = await res.json();
-            if (!result.success) {
-                toast.error(result.message || "Failed to schedule Delhivery pickup");
-                return;
-            }
-
-            await persistShipment("dispatched");
-            toast.success("Delhivery pickup scheduled");
-        } catch (error) {
-            handleClientError(error);
-        }
+        await schedulePickup.mutateAsync({
+            orderId: order.id,
+            pickupDate,
+            pickupTime,
+        });
     };
 
     return (
@@ -331,7 +276,7 @@ function CorporateShipmentInlinePanel({
                         Shipment Workspace
                     </h3>
                     <p className="mt-1 text-sm text-slate-500">
-                        Create and manage shipment directly from the corporate orders table.
+                        Create the Delhivery forward order first, then continue to pickup scheduling.
                     </p>
                 </div>
                 <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
@@ -339,117 +284,216 @@ function CorporateShipmentInlinePanel({
                 </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <select
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                    value={provider}
-                    onChange={(e) => setProvider(e.target.value)}
-                >
-                    <option value="manual">Manual shipment</option>
-                    <option value="delhivery">Delhivery</option>
-                </select>
-                <Input
-                    placeholder="Courier name"
-                    value={courierName}
-                    onChange={(e) => setCourierName(e.target.value)}
+            <div className="grid gap-3 md:grid-cols-3">
+                <StepperCard
+                    step={1}
+                    title="Create Forward Order"
+                    description="Push this corporate order to Delhivery and generate the AWB automatically."
+                    state={currentStep >= 1 ? "done" : currentStep === 0 ? "active" : "upcoming"}
                 />
-                <Input
-                    placeholder="Tracking number"
-                    value={trackingNumber}
-                    onChange={(e) => setTrackingNumber(e.target.value)}
+                <StepperCard
+                    step={2}
+                    title="Schedule Pickup"
+                    description="Choose pickup date and time after the forward order is created."
+                    state={currentStep >= 2 ? "done" : currentStep === 1 ? "active" : "upcoming"}
                 />
-                <Input
-                    placeholder="AWB number"
-                    value={awbNumber}
-                    onChange={(e) => setAwbNumber(e.target.value)}
-                />
-                <Input
-                    placeholder="Tracking URL"
-                    value={trackingUrl}
-                    onChange={(e) => setTrackingUrl(e.target.value)}
-                />
-                <select
-                    className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                    value={shipmentStatus}
-                    onChange={(e) => setShipmentStatus(e.target.value)}
-                >
-                    <option value="ready">Ready</option>
-                    <option value="dispatched">Dispatched</option>
-                    <option value="in_transit">In Transit</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="failed">Failed</option>
-                </select>
-                <Input
-                    type="date"
-                    value={dispatchDate}
-                    onChange={(e) => setDispatchDate(e.target.value)}
-                />
-                <Input
-                    type="date"
-                    value={deliveryDate}
-                    onChange={(e) => setDeliveryDate(e.target.value)}
+                <StepperCard
+                    step={3}
+                    title="Dispatch Tracking"
+                    description="Track the AWB and continue shipment follow-up from the order detail view."
+                    state={shipmentDispatched ? "active" : "upcoming"}
                 />
             </div>
 
-            <div className="mt-4 flex flex-wrap gap-3">
-                <Button
-                    onClick={() =>
-                        shipmentCreated
-                            ? void persistShipment()
-                            : void createShipmentFirst()
-                    }
-                    disabled={saveShipment.isPending}
-                >
-                    {saveShipment.isPending
-                        ? "Saving..."
-                        : shipmentCreated
-                          ? "Save Shipment"
-                          : "Ship Now"}
-                </Button>
-                {provider === "delhivery" && shipmentCreated ? (
-                    <>
-                        <Input
-                            className="max-w-[190px]"
-                            type="date"
-                            value={pickupDate}
-                            onChange={(e) => setPickupDate(e.target.value)}
-                        />
-                        <select
-                            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                            value={pickupTime}
-                            onChange={(e) => setPickupTime(e.target.value)}
-                        >
-                            <option value="">Select pickup time</option>
-                            <option value="09:00:00">9 AM - 10 AM</option>
-                            <option value="11:00:00">11 AM - 12 PM</option>
-                            <option value="14:00:00">2 PM - 3 PM</option>
-                            <option value="16:00:00">4 PM - 5 PM</option>
-                            <option value="18:00:00">6 PM - 7 PM</option>
-                        </select>
-                        <Button
-                            variant="outline"
-                            onClick={() => void scheduleDelhiveryPickup()}
-                            disabled={saveShipment.isPending}
-                        >
-                            Schedule Delhivery Pickup
-                        </Button>
-                    </>
+            <div className="mt-5 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Step 1
+                </p>
+                <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                    <div>
+                        <h4 className="text-base font-semibold text-slate-900">
+                            Create Delhivery Forward Order
+                        </h4>
+                        <p className="mt-1 text-sm text-slate-500">
+                            Delivery details will be picked from this corporate order automatically.
+                        </p>
+                    </div>
+                    <Button
+                        onClick={() => void forwardOrderAction()}
+                        disabled={createForwardOrder.isPending || shipmentCreated}
+                    >
+                        {createForwardOrder.isPending
+                            ? "Creating..."
+                            : shipmentCreated
+                              ? "Forward Order Created"
+                              : "Create Forward Order"}
+                    </Button>
+                </div>
+                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                    <InlineValue
+                        label="Provider"
+                        value={shipment?.provider || "Delhivery"}
+                    />
+                    <InlineValue
+                        label="AWB Number"
+                        value={shipment?.awbNumber || "Will be generated"}
+                    />
+                    <InlineValue
+                        label="Tracking Number"
+                        value={shipment?.trackingNumber || "Will be generated"}
+                    />
+                    <InlineValue
+                        label="Pickup Location"
+                        value={
+                            pickupLocation ||
+                            (isHydratingOrder
+                                ? "Loading assigned pickup location..."
+                                : "Assigned pickup location unavailable")
+                        }
+                    />
+                </div>
+                {hydrateOrderError ? (
+                    <p className="mt-3 text-sm text-amber-700">
+                        Could not load the assigned pickup location from order details yet.
+                    </p>
                 ) : null}
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    Step 2
+                </p>
+                <div className="mt-2">
+                    <h4 className="text-base font-semibold text-slate-900">
+                        Pickup Schedule
+                    </h4>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Once the forward order is ready, choose the pickup slot for Delhivery.
+                    </p>
+                </div>
+                <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,220px)_auto]">
+                    <Input
+                        type="date"
+                        value={pickupDate}
+                        onChange={(e) => setPickupDate(e.target.value)}
+                        disabled={!shipmentCreated || schedulePickup.isPending}
+                    />
+                    <select
+                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+                        value={pickupTime}
+                        onChange={(e) => setPickupTime(e.target.value)}
+                        disabled={!shipmentCreated || schedulePickup.isPending}
+                    >
+                        <option value="">Select pickup time</option>
+                        <option value="09:00:00">9 AM - 10 AM</option>
+                        <option value="11:00:00">11 AM - 12 PM</option>
+                        <option value="14:00:00">2 PM - 3 PM</option>
+                        <option value="16:00:00">4 PM - 5 PM</option>
+                        <option value="18:00:00">6 PM - 7 PM</option>
+                    </select>
+                    <Button
+                        variant="outline"
+                        onClick={() => void scheduleDelhiveryPickup()}
+                        disabled={!shipmentCreated || schedulePickup.isPending}
+                    >
+                        {schedulePickup.isPending
+                            ? "Scheduling..."
+                            : shipmentDispatched
+                              ? "Pickup Scheduled"
+                              : "Schedule Pickup"}
+                    </Button>
+                </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-3">
+                {shipment?.trackingUrl ? (
+                    <a
+                        href={shipment.trackingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:border-slate-300"
+                    >
+                        Open Tracking
+                    </a>
+                ) : null}
+                <Link
+                    href={`/dashboard/general/corporate-orders/${order.id}`}
+                    className="inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:border-slate-300"
+                >
+                    Open Full Shipment View
+                </Link>
             </div>
 
             {!shipmentCreated ? (
                 <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Click <span className="font-medium text-slate-900">Ship Now</span>{" "}
-                    first to create the shipment. After that, the pickup date and
-                    time options will appear here.
+                    Start with <span className="font-medium text-slate-900">Create Forward Order</span>.
+                    After the AWB is generated, the pickup scheduling step will unlock.
                 </div>
             ) : null}
 
-            {provider === "delhivery" && pickupLocation ? (
+            {shipmentCreated ? (
                 <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    Pickup location: <span className="font-medium text-slate-900">{pickupLocation}</span>
+                    Forward order created for{" "}
+                    <span className="font-medium text-slate-900">
+                        {order.publicOrderId}
+                    </span>
+                    {shipment?.awbNumber ? (
+                        <>
+                            {" "}with AWB{" "}
+                            <span className="font-medium text-slate-900">
+                                {shipment.awbNumber}
+                            </span>
+                        </>
+                    ) : null}
+                    .
                 </div>
             ) : null}
+        </div>
+    );
+}
+
+function StepperCard({
+    step,
+    title,
+    description,
+    state,
+}: {
+    step: number;
+    title: string;
+    description: string;
+    state: "done" | "active" | "upcoming";
+}) {
+    const stateClasses =
+        state === "done"
+            ? "border-emerald-200 bg-emerald-50/70"
+            : state === "active"
+              ? "border-sky-200 bg-sky-50/70"
+              : "border-slate-200 bg-white";
+
+    return (
+        <div className={`rounded-2xl border p-4 ${stateClasses}`}>
+            <div className="flex items-center gap-3">
+                <div className="flex size-9 items-center justify-center rounded-full border border-current/10 bg-white text-sm font-semibold text-slate-900">
+                    {step}
+                </div>
+                <div>
+                    <p className="text-sm font-semibold text-slate-900">{title}</p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                        {description}
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function InlineValue({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {label}
+            </p>
+            <p className="mt-2 text-sm font-medium text-slate-900">{value}</p>
         </div>
     );
 }

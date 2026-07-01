@@ -15,6 +15,10 @@ import {
 import { razorpay } from "@/lib/razorpay";
 import { resend } from "@/lib/resend";
 import {
+    fillCorporateDeliveryAddressDefaults,
+    formatCorporateDeliveryAddress,
+} from "@/lib/corporate-delivery-address";
+import {
     corporateBalancePaymentConfirmationInputSchema,
     corporateBalancePaymentOrderInputSchema,
     CorporatePaymentPreference,
@@ -164,6 +168,7 @@ class CorporateOrderService {
         parsed: CorporateOrderFormInput,
         quote: CorporateOrderQuote
     ) {
+        const deliveryDetails = fillCorporateDeliveryAddressDefaults(parsed);
         const approvedQuote = parsed.approvedQuoteId
             ? await db.query.corporateQuotes.findFirst({
                   where: eq(corporateQuotes.id, parsed.approvedQuoteId),
@@ -212,7 +217,10 @@ class CorporateOrderService {
             emailAddress: parsed.emailAddress,
             mobileNumber: parsed.mobileNumber,
             gstNumber: parsed.gstNumber ?? null,
-            deliveryAddress: parsed.deliveryAddress,
+            deliveryCountry: deliveryDetails.deliveryCountry,
+            deliveryCity: deliveryDetails.deliveryCity,
+            deliveryPincode: deliveryDetails.deliveryPincode,
+            deliveryAddress: deliveryDetails.deliveryAddress,
             numberOfEmployees: parsed.numberOfEmployees,
             employeeCount: quote.employeeCount,
             quantity: quote.quantity,
@@ -224,7 +232,12 @@ class CorporateOrderService {
                 emailAddress: parsed.emailAddress,
                 mobileNumber: parsed.mobileNumber,
                 gstNumber: parsed.gstNumber ?? null,
-                deliveryAddress: parsed.deliveryAddress,
+                deliveryCountry: deliveryDetails.deliveryCountry,
+                deliveryCity: deliveryDetails.deliveryCity,
+                deliveryPincode: deliveryDetails.deliveryPincode,
+                deliveryAddress: deliveryDetails.deliveryAddress,
+                deliveryAddressFormatted:
+                    formatCorporateDeliveryAddress(deliveryDetails),
                 numberOfEmployees: parsed.numberOfEmployees,
             },
             productConfigSnapshot: {

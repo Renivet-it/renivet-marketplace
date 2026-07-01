@@ -207,6 +207,16 @@ export const corporateShipmentInputSchema = z.object({
     provider: z.string().trim().max(80).default("manual"),
 });
 
+export const corporateForwardOrderInputSchema = z.object({
+    orderId: z.string().uuid(),
+});
+
+export const corporatePickupScheduleInputSchema = z.object({
+    orderId: z.string().uuid(),
+    pickupDate: z.string().date(),
+    pickupTime: z.string().trim().min(1),
+});
+
 export const corporateQcSubmissionInputSchema = z.object({
     orderId: z.string().uuid(),
     remarks: z.string().trim().max(1000).nullable().optional(),

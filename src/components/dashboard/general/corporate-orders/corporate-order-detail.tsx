@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
+import { formatCorporateDeliveryAddress } from "@/lib/corporate-delivery-address";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertValueToLabel,
@@ -14,6 +15,35 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 export function CorporateOrderDetail({ initialData }: { initialData: any }) {
+    const companySnapshot = (initialData.companySnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const productSnapshot = (initialData.productConfigSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const brandingSnapshot = (initialData.brandingConfigSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const pricingSnapshot = (initialData.pricingSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const selectedColors = readNamedList(productSnapshot.colors);
+    const logoLocations = readNamedList(brandingSnapshot.logoLocations);
+    const extraCharges = readChargeList(brandingSnapshot.appliedExtraCharges);
+    const printMethod = readNamedValue(brandingSnapshot.printMethod);
+    const productType = readNamedValue(productSnapshot.productType);
+    const gsmLabel = readLabelValue(productSnapshot.gsmOption);
+    const fabricComposition = readNamedValue(productSnapshot.fabricComposition);
+    const sizeBreakdown = Object.entries(
+        (initialData.sizeBreakdown ?? pricingSnapshot.sizeBreakdown ?? {}) as Record<
+            string,
+            number
+        >
+    );
     const [status, setStatus] = useState(initialData.status);
     const [statusNote, setStatusNote] = useState("");
     const [shipmentProvider, setShipmentProvider] = useState(
@@ -201,20 +231,150 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
             <section className="grid gap-6 lg:grid-cols-[minmax(0,1.4fr)_360px]">
                 <div className="space-y-6">
                     <Panel title="Order Snapshot">
-                        <pre className="overflow-auto rounded-lg bg-slate-950 p-4 text-xs text-slate-100">
-                            {JSON.stringify(
-                                {
-                                    companySnapshot: initialData.companySnapshot,
-                                    productConfigSnapshot:
-                                        initialData.productConfigSnapshot,
-                                    brandingConfigSnapshot:
-                                        initialData.brandingConfigSnapshot,
-                                    pricingSnapshot: initialData.pricingSnapshot,
-                                },
-                                null,
-                                2
-                            )}
-                        </pre>
+                        <div className="space-y-5">
+                            <SnapshotSection
+                                title="Company & Delivery"
+                                description="Core buyer information and final delivery destination."
+                            >
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <SnapshotItem
+                                        label="Company"
+                                        value={initialData.companyName}
+                                    />
+                                    <SnapshotItem
+                                        label="Contact Person"
+                                        value={initialData.contactPersonName}
+                                    />
+                                    <SnapshotItem
+                                        label="Email"
+                                        value={initialData.emailAddress}
+                                    />
+                                    <SnapshotItem
+                                        label="Phone"
+                                        value={initialData.mobileNumber}
+                                    />
+                                    <SnapshotItem
+                                        label="GST Number"
+                                        value={
+                                            initialData.gstNumber || "Not provided"
+                                        }
+                                    />
+                                    <SnapshotItem
+                                        label="Employees"
+                                        value={String(
+                                            initialData.numberOfEmployees ??
+                                                companySnapshot.numberOfEmployees ??
+                                                "-"
+                                        )}
+                                    />
+                                </div>
+                                <SnapshotBlock
+                                    label="Delivery Address"
+                                    value={
+                                        formatCorporateDeliveryAddress(initialData) ||
+                                        "No delivery address captured"
+                                    }
+                                />
+                            </SnapshotSection>
+
+                            <SnapshotSection
+                                title="Product Configuration"
+                                description="Base garment, fabric decisions, quantity, and selected colors."
+                            >
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <SnapshotItem
+                                        label="Product Type"
+                                        value={productType || "Not selected"}
+                                    />
+                                    <SnapshotItem
+                                        label="GSM"
+                                        value={gsmLabel || "Not selected"}
+                                    />
+                                    <SnapshotItem
+                                        label="Fabric Composition"
+                                        value={
+                                            fabricComposition || "Not selected"
+                                        }
+                                    />
+                                    <SnapshotItem
+                                        label="Quantity"
+                                        value={String(initialData.quantity ?? "-")}
+                                    />
+                                </div>
+                                {selectedColors.length ? (
+                                    <ChipGroup
+                                        label="Selected Colors"
+                                        values={selectedColors}
+                                    />
+                                ) : null}
+                                {sizeBreakdown.length ? (
+                                    <MetricStrip
+                                        label="Size Breakdown"
+                                        items={sizeBreakdown.map(([size, count]) => ({
+                                            label: size,
+                                            value: String(count),
+                                        }))}
+                                    />
+                                ) : null}
+                            </SnapshotSection>
+
+                            <SnapshotSection
+                                title="Branding & Customization"
+                                description="Printing selections, logo placement, and extra customization charges."
+                            >
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <SnapshotItem
+                                        label="Print Method"
+                                        value={printMethod || "Not selected"}
+                                    />
+                                    <SnapshotItem
+                                        label="Payment Preference"
+                                        value={convertValueToLabel(
+                                            String(
+                                                brandingSnapshot.paymentPreference ??
+                                                    "partial_advance"
+                                            )
+                                        )}
+                                    />
+                                </div>
+                                {logoLocations.length ? (
+                                    <ChipGroup
+                                        label="Logo Placements"
+                                        values={logoLocations}
+                                    />
+                                ) : null}
+                                {extraCharges.length ? (
+                                    <MetricStrip
+                                        label="Applied Extra Charges"
+                                        items={extraCharges}
+                                    />
+                                ) : null}
+                            </SnapshotSection>
+
+                            <SnapshotSection
+                                title="Commercial Summary"
+                                description="Pricing generated for this order at the time of checkout."
+                            >
+                                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                                    <SnapshotMoneyCard
+                                        label="Subtotal"
+                                        value={initialData.subtotalPaise}
+                                    />
+                                    <SnapshotMoneyCard
+                                        label="Customization"
+                                        value={initialData.customizationPaise}
+                                    />
+                                    <SnapshotMoneyCard
+                                        label="GST"
+                                        value={initialData.gstPaise}
+                                    />
+                                    <SnapshotMoneyCard
+                                        label="Total"
+                                        value={initialData.totalPaise}
+                                    />
+                                </div>
+                            </SnapshotSection>
+                        </div>
                     </Panel>
 
                     <Panel title="Files">
@@ -523,6 +683,10 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                             <SimpleRow label="Email" value={initialData.emailAddress} />
                             <SimpleRow label="Phone" value={initialData.mobileNumber} />
                             <SimpleRow
+                                label="Delivery Address"
+                                value={formatCorporateDeliveryAddress(initialData)}
+                            />
+                            <SimpleRow
                                 label="Razorpay Order"
                                 value={initialData.razorpayOrderId || "Not available"}
                             />
@@ -557,7 +721,7 @@ function Panel({
 
 function DetailCard({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-4">
+        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                 {label}
             </p>
@@ -598,4 +762,167 @@ function SimpleRow({ label, value }: { label: string; value: string }) {
             </span>
         </div>
     );
+}
+
+function SnapshotSection({
+    title,
+    description,
+    children,
+}: {
+    title: string;
+    description: string;
+    children: ReactNode;
+}) {
+    return (
+        <div className="rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4">
+            <div className="border-b border-slate-100 pb-3">
+                <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-800">
+                    {title}
+                </h3>
+                <p className="mt-1 text-sm leading-6 text-slate-500">
+                    {description}
+                </p>
+            </div>
+            <div className="mt-4">{children}</div>
+        </div>
+    );
+}
+
+function SnapshotItem({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="rounded-xl border border-slate-200 bg-white p-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {label}
+            </p>
+            <p className="mt-2 text-sm font-medium text-slate-900">{value}</p>
+        </div>
+    );
+}
+
+function SnapshotBlock({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {label}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-800">{value}</p>
+        </div>
+    );
+}
+
+function ChipGroup({ label, values }: { label: string; values: string[] }) {
+    return (
+        <div className="mt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {label}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+                {values.map((value) => (
+                    <span
+                        key={value}
+                        className="rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-700"
+                    >
+                        {value}
+                    </span>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function MetricStrip({
+    label,
+    items,
+}: {
+    label: string;
+    items: Array<{ label: string; value: string }>;
+}) {
+    return (
+        <div className="mt-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {label}
+            </p>
+            <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                {items.map((item) => (
+                    <div
+                        key={`${item.label}-${item.value}`}
+                        className="rounded-xl border border-slate-200 bg-white p-3"
+                    >
+                        <p className="text-xs text-slate-500">{item.label}</p>
+                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                            {item.value}
+                        </p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function SnapshotMoneyCard({
+    label,
+    value,
+}: {
+    label: string;
+    value: number;
+}) {
+    return (
+        <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                {label}
+            </p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">
+                {formatINR(value)}
+            </p>
+        </div>
+    );
+}
+
+function readNamedList(value: unknown) {
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .map((item) => readNamedValue(item))
+        .filter((item): item is string => Boolean(item));
+}
+
+function readChargeList(value: unknown) {
+    if (!Array.isArray(value)) return [];
+
+    return value
+        .map((item) => {
+            if (!item || typeof item !== "object" || Array.isArray(item)) {
+                return null;
+            }
+
+            const record = item as Record<string, unknown>;
+            const name = typeof record.name === "string" ? record.name : "";
+            const amount =
+                typeof record.amountPaise === "number"
+                    ? formatINR(record.amountPaise)
+                    : "";
+
+            return name && amount ? { label: name, value: amount } : null;
+        })
+        .filter(
+            (item): item is { label: string; value: string } => Boolean(item)
+        );
+}
+
+function readNamedValue(value: unknown) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return "";
+    }
+
+    const record = value as Record<string, unknown>;
+    return typeof record.name === "string" ? record.name : "";
+}
+
+function readLabelValue(value: unknown) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) {
+        return "";
+    }
+
+    const record = value as Record<string, unknown>;
+    return typeof record.label === "string" ? record.label : "";
 }
