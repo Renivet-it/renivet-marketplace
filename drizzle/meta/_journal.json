@@ -1674,6 +1674,13 @@
       "when": 1782333496585,
       "tag": "0238_fixed_strong_guy",
       "breakpoints": true
+    },
+    {
+      "idx": 239,
+      "version": "7",
+      "when": 1783107000000,
+      "tag": "0247_corporate_quote_option_columns",
+      "breakpoints": true
     }
   ]
 }
