@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input-dash";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel, handleClientError } from "@/lib/utils";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -21,7 +22,8 @@ export function CorporateReplacementRequestsPage({
     initialRequests: any[];
 }) {
     const utils = trpc.useUtils();
-    const [search, setSearch] = useState("");
+    const searchParams = useSearchParams();
+    const [search, setSearch] = useState(searchParams.get("search") || "");
     const [selectedRequestId, setSelectedRequestId] = useState<string | null>(
         initialRequests[0]?.id ?? null
     );
@@ -225,6 +227,45 @@ export function CorporateReplacementRequestsPage({
                                                     .originalAwbNumber || "Not linked"
                                             }
                                         />
+                                        {selectedRequest.rtoShipment.reverseAwbNumber && (
+                                            <InfoTile
+                                                label="Reverse AWB"
+                                                value={selectedRequest.rtoShipment.reverseAwbNumber}
+                                            />
+                                        )}
+                                        {selectedRequest.rtoShipment.provider && (
+                                            <InfoTile
+                                                label="Provider"
+                                                value={convertValueToLabel(
+                                                    selectedRequest.rtoShipment.provider
+                                                )}
+                                            />
+                                        )}
+                                    </div>
+                                ) : null}
+                                {selectedRequest.replacementOrder?.shipment ? (
+                                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                                        <InfoTile
+                                            label="Replacement Delivery Status"
+                                            value={convertValueToLabel(
+                                                selectedRequest.replacementOrder.shipment.status
+                                            )}
+                                        />
+                                        <InfoTile
+                                            label="Replacement AWB"
+                                            value={
+                                                selectedRequest.replacementOrder.shipment
+                                                    .awbNumber || "Pending generation"
+                                            }
+                                        />
+                                        {selectedRequest.replacementOrder.shipment.provider && (
+                                            <InfoTile
+                                                label="Replacement Provider"
+                                                value={convertValueToLabel(
+                                                    selectedRequest.replacementOrder.shipment.provider
+                                                )}
+                                            />
+                                        )}
                                     </div>
                                 ) : null}
                                 {selectedRequest.reasonDetails ? (
@@ -246,6 +287,26 @@ export function CorporateReplacementRequestsPage({
                                         >
                                             Open replacement order
                                         </Link>
+                                    ) : null}
+                                    {selectedRequest.rtoShipment?.reverseTrackingUrl ? (
+                                        <a
+                                            href={selectedRequest.rtoShipment.reverseTrackingUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-sm font-semibold text-rose-700 underline-offset-4 hover:underline"
+                                        >
+                                            Track reverse pickup
+                                        </a>
+                                    ) : null}
+                                    {selectedRequest.replacementOrder?.shipment?.trackingUrl ? (
+                                        <a
+                                            href={selectedRequest.replacementOrder.shipment.trackingUrl}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-sm font-semibold text-emerald-700 underline-offset-4 hover:underline"
+                                        >
+                                            Track replacement delivery
+                                        </a>
                                     ) : null}
                                 </div>
                             </div>

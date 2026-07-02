@@ -272,6 +272,7 @@ export const corporateOrderListInputSchema = z.object({
     limit: z.number().int().positive().max(100).default(10),
     search: z.string().trim().optional(),
     status: corporateOrderStatusSchema.optional(),
+    showReplacements: z.enum(["all", "only", "exclude"]).default("exclude"),
 });
 
 export const corporateOrderUserListInputSchema = z.object({

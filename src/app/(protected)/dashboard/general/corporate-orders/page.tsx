@@ -13,6 +13,7 @@ export default async function Page() {
     const initialData = await corporateOrderService.listOrders({
         page: 1,
         limit: 50,
+        showReplacements: "all",
     });
 
     return (

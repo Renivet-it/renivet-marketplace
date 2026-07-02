@@ -398,15 +398,23 @@ class CorporateOrderQueries {
         return order ? this.parseOrder(order) : null;
     }
 
+
     async listOrders(input: {
         page: number;
         limit: number;
         search?: string;
         status?: string;
+        showReplacements?: "all" | "only" | "exclude";
     }) {
+        const showReplacements = input.showReplacements ?? "exclude";
+
         const filters = [
             isNotNull(corporateOrders.razorpayPaymentId),
-            notLike(corporateOrders.publicOrderId, "REN-CORP-RPL-%"),
+            showReplacements === "exclude"
+                ? notLike(corporateOrders.publicOrderId, "REN-CORP-RPL-%")
+                : showReplacements === "only"
+                  ? ilike(corporateOrders.publicOrderId, "REN-CORP-RPL-%")
+                  : undefined,
             input.status ? eq(corporateOrders.status, input.status as any) : undefined,
             input.search
                 ? or(
@@ -428,6 +436,7 @@ class CorporateOrderQueries {
                 with: {
                     brand: true,
                     shipment: true,
+                    replacementRequests: true,
                 },
                 orderBy: [desc(corporateOrders.createdAt)],
                 offset: (input.page - 1) * input.limit,
@@ -444,6 +453,7 @@ class CorporateOrderQueries {
                 ...this.parseOrder(row),
                 brand: row.brand,
                 shipment: row.shipment,
+                replacementRequests: row.replacementRequests,
             })),
             count: totalCount,
         };

@@ -1429,7 +1429,11 @@ class CorporatePlatformService {
                 : undefined,
             with: {
                 order: true,
-                replacementOrder: true,
+                replacementOrder: {
+                    with: {
+                        shipment: true,
+                    },
+                },
                 rtoShipment: true,
                 reviewedBy: {
                     columns: {
@@ -1457,7 +1461,11 @@ class CorporatePlatformService {
             where: eq(corporateReplacementRequests.orderId, orderId),
             with: {
                 order: true,
-                replacementOrder: true,
+                replacementOrder: {
+                    with: {
+                        shipment: true,
+                    },
+                },
                 rtoShipment: true,
                 requestedBy: {
                     columns: {
@@ -1488,7 +1496,11 @@ class CorporatePlatformService {
         const requests = await db.query.corporateReplacementRequests.findMany({
             with: {
                 order: true,
-                replacementOrder: true,
+                replacementOrder: {
+                    with: {
+                        shipment: true,
+                    },
+                },
                 rtoShipment: true,
                 requestedBy: {
                     columns: {

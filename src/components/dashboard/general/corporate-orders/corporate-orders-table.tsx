@@ -37,6 +37,7 @@ const PICKUP_TIME_SLOTS = [
 export function CorporateOrdersTable({ initialData }: { initialData: any }) {
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("");
+    const [showReplacements, setShowReplacements] = useState<"exclude" | "only" | "all">("all");
     const [shipmentOrderId, setShipmentOrderId] = useState<string | null>(null);
     const { data, isFetching, refetch } =
         trpc.general.corporateOrders.listOrders.useQuery(
@@ -45,6 +46,7 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                 limit: 50,
                 search: search || undefined,
                 status: (status || undefined) as any,
+                showReplacements,
             },
             {
                 initialData,
@@ -76,6 +78,15 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                     <option value="delivered">Delivered</option>
                     <option value="completed">Completed</option>
                 </select>
+                <select
+                    className="h-10 rounded-md border border-input bg-background px-3 text-sm font-medium text-slate-700"
+                    value={showReplacements}
+                    onChange={(e) => setShowReplacements(e.target.value as any)}
+                >
+                    <option value="exclude">Standard Orders</option>
+                    <option value="only">Replacement Orders</option>
+                    <option value="all">All Orders</option>
+                </select>
                 <Button onClick={() => refetch()} disabled={isFetching}>
                     {isFetching ? "Refreshing..." : "Refresh"}
                 </Button>
@@ -104,8 +115,38 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                                     <tr
                                         className="border-t border-slate-100"
                                     >
-                                        <td className="px-4 py-3 font-semibold text-slate-900">
-                                            {order.publicOrderId}
+                                        <td className="px-4 py-3 text-slate-900">
+                                            <div className="flex flex-col gap-1">
+                                                <div className="flex flex-wrap items-center gap-1.5">
+                                                    <span className="font-semibold text-slate-900">
+                                                        {order.publicOrderId}
+                                                    </span>
+                                                    {order.publicOrderId.startsWith("REN-CORP-RPL-") ? (
+                                                        <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                                                            Replacement
+                                                        </span>
+                                                    ) : order.replacementRequests && order.replacementRequests.length > 0 ? (
+                                                        <Link
+                                                            href={`/dashboard/general/corporate-orders/replacements?search=${order.publicOrderId}`}
+                                                            className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 hover:bg-amber-100/80 transition-colors"
+                                                        >
+                                                            Has Replacement ({order.replacementRequests.length})
+                                                        </Link>
+                                                    ) : null}
+                                                </div>
+                                                {order.publicOrderId.startsWith("REN-CORP-RPL-") &&
+                                                    order.companySnapshot?.replacementForPublicOrderId && (
+                                                        <div className="text-xs text-slate-500">
+                                                            Replacement for{" "}
+                                                            <Link
+                                                                href={`/dashboard/general/corporate-orders/${order.companySnapshot.replacementForOrderId}`}
+                                                                className="font-semibold text-sky-700 hover:underline"
+                                                            >
+                                                                {order.companySnapshot.replacementForPublicOrderId}
+                                                            </Link>
+                                                        </div>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3">{order.companyName}</td>
                                         <td className="px-4 py-3">
@@ -147,7 +188,7 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                                                     "dispatched",
                                                     "delivered",
                                                     "completed",
-                                                ].includes(order.status) ? (
+                                                ].includes(order.status) || (order.status === "approved" && order.publicOrderId.startsWith("REN-CORP-RPL-")) ? (
                                                     <button
                                                         type="button"
                                                         onClick={() =>
