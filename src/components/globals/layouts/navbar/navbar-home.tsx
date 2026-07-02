@@ -21,6 +21,7 @@ import {
     NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { ProductSearch } from "@/components/ui/product-search";
+import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -187,12 +188,15 @@ export function NavbarHome({
         setTimeout(() => setIsCartBumping(false), 300);
     };
 
-    const { isSignedIn } = useAuth();
+    const { isSignedIn, isLoaded } = useAuth();
 
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery(undefined, {
             enabled: !!isSignedIn,
         });
+
+    const showUserActions = isLoaded && !!isSignedIn && !!user;
+    const showGuestActions = isLoaded && !isSignedIn;
 
     const [
         { data: categories, isPending: isCategoriesFetching },
@@ -827,7 +831,7 @@ export function NavbarHome({
                             </>
                         )}
 
-                        {user ? (
+                        {showUserActions ? (
                             <div className="flex items-center">
                                 <Link
                                     aria-label="Mobile Cart Button"
@@ -998,6 +1002,8 @@ export function NavbarHome({
                                         </DropdownMenuContent>
                                     </DropdownMenu>
 
+                                    <UserNotificationMenu />
+
                                     <NavbarActionButton
                                         href="/profile/wishlist"
                                         badge={userWishlist?.length ?? 0}
@@ -1030,7 +1036,7 @@ export function NavbarHome({
                                     </NavbarActionButton>
                                 </div>
                             </div>
-                        ) : (
+                        ) : showGuestActions ? (
                             <>
                                 <Button
                                     className="hidden h-10 rounded-full border-2 border-[#d4af37] bg-transparent px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] md:inline-flex"
@@ -1040,16 +1046,38 @@ export function NavbarHome({
                                     <Link href="/auth/signin">Login</Link>
                                 </Button>
 
+                                <Button
+                                    className="hidden h-10 rounded-full bg-[#2f3720] px-6 text-[12px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] md:inline-flex"
+                                    size="sm"
+                                    asChild
+                                >
+                                    <Link href="/auth/signup">Sign Up</Link>
+                                </Button>
+
                                 <div className="flex items-center md:hidden">
-                                    <Button
-                                        className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] sm:px-5"
-                                        size="sm"
-                                        asChild
-                                    >
-                                        <Link href="/auth/signin">Login</Link>
-                                    </Button>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            className="h-8 rounded-full border-2 border-[#d4af37] bg-transparent px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-[#a68a4a] transition-all duration-300 hover:border-[#bfa15f] hover:bg-[#d4af37]/5 hover:text-[#d4af37] sm:px-5"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <Link href="/auth/signin">Login</Link>
+                                        </Button>
+                                        <Button
+                                            className="h-8 rounded-full bg-[#2f3720] px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] sm:px-5"
+                                            size="sm"
+                                            asChild
+                                        >
+                                            <Link href="/auth/signup">Sign Up</Link>
+                                        </Button>
+                                    </div>
                                 </div>
                             </>
+                        ) : (
+                            <div
+                                className="hidden h-10 w-[114px] md:block"
+                                aria-hidden="true"
+                            />
                         )}
                     </div>
                 </nav>

@@ -100,7 +100,8 @@ function NavGroup({
 
 export function ProfileNav({ className, ...props }: GenericProps) {
     const pathname = usePathname();
-    const { data: user } = trpc.general.users.currentUser.useQuery();
+    const { data: user, isPending: isUserLoading } =
+        trpc.general.users.currentUser.useQuery();
     const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery(
         { userId: user?.id ?? "" },
         { enabled: !!user?.id }
@@ -148,6 +149,12 @@ export function ProfileNav({ className, ...props }: GenericProps) {
             href: "/orders",
             label: "Orders",
             count: orders?.length,
+        },
+        {
+            icon: "Briefcase",
+            name: "corporate",
+            href: "/corporate",
+            label: "Corporate Procurement",
         },
         {
             icon: "Heart",
@@ -239,7 +246,7 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                     style={{ minHeight: 966 }}
                 >
                     {/* User Profile Section */}
-                    {user && (
+                    {user ? (
                         <div className="mb-8 flex flex-col items-center">
                             <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-gray-100 p-1">
                                 <Avatar className="size-full">
@@ -268,6 +275,16 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                             >
                                 Edit Profile
                             </Link>
+                        </div>
+                    ) : (
+                        <div
+                            className="mb-8 flex flex-col items-center opacity-0"
+                            aria-hidden="true"
+                        >
+                            <div className="mb-4 size-20 rounded-full" />
+                            <div className="h-5 w-32 rounded-full" />
+                            <div className="mt-2 h-4 w-40 rounded-full" />
+                            <div className="mt-3 h-3 w-20 rounded-full" />
                         </div>
                     )}
 

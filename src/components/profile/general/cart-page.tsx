@@ -55,6 +55,18 @@ export function CartPage({
             { initialData }
         );
 
+    const { data: activeRewardCartItem, refetch: refetchRewardCartItem } =
+        trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
+
+    const { mutate: removeRewardCartItem, isPending: isRemovingRewardCartItem } =
+        trpc.general.swapRewards.removeRewardCartItem.useMutation({
+            onSuccess: () => {
+                toast.success("Reward removed from cart");
+                refetchRewardCartItem();
+            },
+            onError: (err) => handleClientError(err),
+        });
+
     const availableCart = userCart?.filter(
         (c) =>
             c.product.isPublished &&
@@ -71,7 +83,7 @@ export function CartPage({
         (item) => !availableCart.map((i) => i.id).includes(item.id)
     );
 
-    const totalPrice = availableCart
+    const totalPrice = (availableCart
     ?.filter((item) => item.status)
         .reduce((acc, item) => {
             const itemPrice = item.variantId
@@ -81,11 +93,14 @@ export function CartPage({
                   0)
                 : (item.product.price ?? 0);
             return acc + itemPrice * item.quantity;
-        }, 0);
+        }, 0)) ?? 0;
 
-    const itemCount = availableCart
+    const paidItemCount = (availableCart
     ?.filter((item) => item.status)
-        .reduce((acc, item) => acc + item.quantity, 0);
+        .reduce((acc, item) => acc + item.quantity, 0)) ?? 0;
+    const hasRewardCartItem = !!activeRewardCartItem?.selection;
+    const itemCount = paidItemCount + (hasRewardCartItem ? 1 : 0);
+    const hasCheckoutItems = paidItemCount > 0 || hasRewardCartItem;
 
     const getProgress = () => {
         const progress = (totalPrice / FREE_DELIVERY_THRESHOLD) * 100;
@@ -118,7 +133,7 @@ export function CartPage({
             },
         });
 
-    if (userCart?.length === 0) return <NoCartCard />;
+    if (userCart?.length === 0 && !hasRewardCartItem) return <NoCartCard />;
 
     return (
         <>
@@ -200,6 +215,55 @@ export function CartPage({
                 </div>
 
                 <div className="space-y-2">
+                    {activeRewardCartItem?.selection ? (
+                        <div className="rounded-2xl border border-[#e0d2b9] bg-[linear-gradient(135deg,#fffaf2_0%,#f7eddc_100%)] p-4 shadow-sm">
+                            <div className="flex items-start justify-between gap-4">
+                                <div>
+                                    <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#9b7a46]">
+                                        Reward item
+                                    </p>
+                                    <h3 className="mt-1 text-base font-semibold text-[#3f2c17]">
+                                        {activeRewardCartItem.selection.product.title}
+                                    </h3>
+                                    <p className="mt-1 text-sm text-[#735d38]">
+                                        Added as your Swap & Reward redemption.
+                                        It will stay at {formatPriceTag(0)} in checkout.
+                                    </p>
+                                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                                        <span className="rounded-full border border-[#d8c7ab] bg-white/75 px-3 py-1 text-xs font-medium text-[#7c5831]">
+                                            Final payable {formatPriceTag(0)}
+                                        </span>
+                                        <span className="rounded-full border border-[#e8dac0] bg-[#fffaf1] px-3 py-1 text-xs font-medium text-[#8f6a3e]">
+                                            Value{" "}
+                                            {formatPriceTag(
+                                                parseFloat(
+                                                    convertPaiseToRupees(
+                                                        activeRewardCartItem.selection.rewardValue
+                                                    )
+                                                ),
+                                                true
+                                            )}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        removeRewardCartItem({
+                                            redemptionId:
+                                                activeRewardCartItem.redemption.id,
+                                        })
+                                    }
+                                    disabled={isRemovingRewardCartItem}
+                                    className="text-xs font-semibold text-red-600 hover:underline disabled:opacity-50"
+                                >
+                                    Remove
+                                </button>
+                            </div>
+                        </div>
+                    ) : null}
+
                     {availableCart?.map((item) => (
                         <ProductCartCard
                             item={item}
@@ -218,7 +282,7 @@ export function CartPage({
                 <Button
                     className="w-full"
                     disabled={
-                        totalPrice === 0 ||
+                        !hasCheckoutItems ||
                         process.env.NEXT_PUBLIC_IS_CHECKOUT_DISABLED === "true"
                     }
                     onClick={() => {
@@ -230,10 +294,17 @@ export function CartPage({
                                 "Checkouts are currently disabled due to testing"
                             );
 
+                        if (hasRewardCartItem) {
+                            window.location.href = "/checkout";
+                            return;
+                        }
+
                         setIsCheckoutModalOpen(true);
                     }}
                 >
-                    Proceed to Checkout
+                    {hasRewardCartItem
+                        ? "Proceed to Reward Checkout"
+                        : "Proceed to Checkout"}
                     <Icons.ArrowRight />
                 </Button>
             </div>

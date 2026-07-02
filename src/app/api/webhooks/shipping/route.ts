@@ -6,6 +6,7 @@ import { orderShipments, returnShipments } from "@/lib/db/schema";
 import { analytics, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { OrderDelivered } from "@/lib/resend/emails";
+import { swapRewardService } from "@/lib/services/swap-reward";
 import { AppError, CResponse, handleError } from "@/lib/utils";
 import { sendOrderShipmentStatusWhatsApp } from "@/lib/whatsapp/order-status";
 import { and, eq } from "drizzle-orm";
@@ -238,6 +239,11 @@ async function handleDefaultShipmentFlow(
             shipmentStatus: "delivered",
             awbNumber: shipment.awbNumber,
         });
+        try {
+            await swapRewardService.earnStampForOrder(shipment.order.id);
+        } catch (error) {
+            console.error("swap reward earn failed", error);
+        }
     } else if (newStatus === "in_transit" || newStatus === "out_for_delivery") {
         await orderQueries.updateOrderStatus(shipment.order.id, {
             status: "shipped",

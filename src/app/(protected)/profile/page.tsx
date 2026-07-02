@@ -4,6 +4,7 @@ import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
     ArrowRight,
+    Briefcase,
     ChevronRight,
     FileText,
     Headphones,
@@ -23,6 +24,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import React from "react";
+import { SwapRewardCard } from "@/components/profile/swap-reward-card";
 
 function SummaryCard({
     icon: Icon,
@@ -210,6 +212,8 @@ export default function OverviewPage() {
                 <p className="text-gray-500">Welcome back, {user?.firstName}</p>
             </div>
 
+            <SwapRewardCard />
+
             {/* Summary Cards Grid */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
                 <SummaryCard
@@ -235,6 +239,14 @@ export default function OverviewPage() {
                     {/* Example of adding badge like in design if needed, checking logic first */}
                     {/* {ordersCount > 0 && <span className="mt-2 inline-block rounded-full bg-[#C89F93] px-2 py-0.5 text-[10px] font-bold text-white">1 in transit</span>} */}
                 </SummaryCard>
+                <SummaryCard
+                    icon={Briefcase}
+                    title="Corporate Orders"
+                    count="bulk apparel"
+                    subtitle="Manage company orders"
+                    href="/profile/corporate-orders"
+                    customCount={true}
+                />
                 <SummaryCard
                     icon={ShoppingBag}
                     title="Shopping Bag"

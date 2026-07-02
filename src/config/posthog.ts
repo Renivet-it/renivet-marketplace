@@ -85,4 +85,11 @@ export const POSTHOG_EVENTS = {
         CHECKOUT_STARTED: "checkout_started",
         PURCHASE_COMPLETED: "purchase_completed",
     },
+    SWAP_REWARD: {
+        STAMP_EARNED: "swap_stamp_earned",
+        STAMP_REVOKED: "swap_stamp_revoked",
+        REWARD_UNLOCKED: "swap_reward_unlocked",
+        REWARD_REDEEMED: "swap_reward_redeemed",
+        CHECKOUT_STARTED: "swap_reward_checkout_started",
+    },
 } as const;

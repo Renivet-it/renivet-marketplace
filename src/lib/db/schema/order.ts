@@ -64,6 +64,11 @@ export const orders = pgTable(
         deliveryAmount: integer("delivery_amount").notNull(),
         discountAmount: integer("discount_amount").notNull().default(0),
         totalAmount: integer("total_amount").notNull(),
+        isSwapRewardOrder: boolean("is_swap_reward_order")
+            .notNull()
+            .default(false),
+        swapRewardCycle: integer("swap_reward_cycle"),
+        rewardRedemptionId: uuid("reward_redemption_id"),
         ...timestamps,
     },
     (table) => ({

@@ -1,6 +1,8 @@
 "use client";
 
 import { Icons } from "@/components/icons";
+import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
+import { Button } from "@/components/ui/button-general";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { useNavbarStore } from "@/lib/store";
 import { trpc } from "@/lib/trpc/client";
@@ -23,6 +25,7 @@ import {
     HelpCircle,
     LayoutDashboard,
     LineChart,
+    Bell,
     Lock,
     LogOut,
     MapPin,
@@ -290,6 +293,10 @@ export function NavbarMob({ className, ...props }: GenericProps) {
         { userId: user?.id ?? "" },
         { enabled: !!user?.id }
     );
+    const { data: unreadNotifications } =
+        trpc.general.notifications.unreadCount.useQuery(undefined, {
+            enabled: !!user?.id,
+        });
 
     const cartCount =
         userCart?.filter(
@@ -375,13 +382,19 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                                     </div>
                                 </div>
                                 <div className="flex flex-col items-end gap-2">
-                                    <button
-                                        className="text-gray-400 hover:text-gray-900"
-                                        disabled={isLoggingOut}
-                                        onClick={() => handleLogout()}
-                                    >
-                                        <LogOut className="size-5" />
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                        <UserNotificationMenu
+                                            className="border border-gray-200 bg-white text-gray-700 hover:border-[#d7e6f5] hover:bg-[#f7fbff]"
+                                            align="end"
+                                        />
+                                        <button
+                                            className="text-gray-400 hover:text-gray-900"
+                                            disabled={isLoggingOut}
+                                            onClick={() => handleLogout()}
+                                        >
+                                            <LogOut className="size-5" />
+                                        </button>
+                                    </div>
                                     <Link
                                         href="/personal-details"
                                         onClick={() => setIsMenuOpen(false)}
@@ -397,6 +410,17 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                         <div className="grid grid-cols-2 gap-4">
                             {!isAuthorized ? (
                                 <>
+                                    <SummaryCard
+                                        icon={Bell}
+                                        title="Notifications"
+                                        count={String(unreadNotifications ?? 0)}
+                                        subtitle={
+                                            (unreadNotifications ?? 0) > 0
+                                                ? "Unread updates"
+                                                : "You're all caught up"
+                                        }
+                                        href="/profile/notifications"
+                                    />
                                     <SummaryCard
                                         icon={Heart}
                                         title="Wishlist"
@@ -561,12 +585,37 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                             </button>
                         </div>
                     </div>
-                ) : (
-                    // NOT LOGGED IN VIEW (Keep existing Grid/List for guests)
-                    <div className={cn("space-y-6", "mt-5")}>
-                        <ul
-                            className={cn(
-                                "grid grid-cols-2 items-center gap-4"
+	                ) : (
+	                    // NOT LOGGED IN VIEW (Keep existing Grid/List for guests)
+	                    <div className={cn("space-y-6", "mt-5")}>
+	                        <div className="grid grid-cols-2 gap-3">
+	                            <Button
+	                                className="h-11 rounded-full border border-[#d4af37] bg-transparent text-xs font-bold uppercase tracking-[0.08em] text-[#a68a4a] hover:bg-[#d4af37]/5"
+	                                asChild
+	                            >
+	                                <Link
+	                                    href="/auth/signin"
+	                                    onClick={() => setIsMenuOpen(false)}
+	                                >
+	                                    Login
+	                                </Link>
+	                            </Button>
+	                            <Button
+	                                className="h-11 rounded-full bg-[#2f3720] text-xs font-bold uppercase tracking-[0.08em] text-white hover:bg-[#252c18]"
+	                                asChild
+	                            >
+	                                <Link
+	                                    href="/auth/signup"
+	                                    onClick={() => setIsMenuOpen(false)}
+	                                >
+	                                    Sign Up
+	                                </Link>
+	                            </Button>
+	                        </div>
+
+	                        <ul
+	                            className={cn(
+	                                "grid grid-cols-2 items-center gap-4"
                             )}
                             ref={navListRef}
                         >

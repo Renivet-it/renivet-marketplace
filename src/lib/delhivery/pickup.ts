@@ -3,7 +3,7 @@ import { delhiveryClient } from "./client";
 export interface PickupRequest {
   pickup_location: string;
   pickup_date: string; // YYYY-MM-DD
-  pickup_time?: string; // Optional time slot
+  pickup_time: string; // Required time slot, hh:mm:ss
   expected_package_count: number;
 }
 
@@ -15,8 +15,8 @@ export const schedulePickup = async (payload: PickupRequest) => {
     console.log("📨 Sending Delhivery Pickup Payload:", payload);
 
     const res = await delhiveryClient.post("/fm/request/new/", {
-      pickup_date: payload.pickup_date,
       pickup_time: payload.pickup_time,
+      pickup_date: payload.pickup_date,
       pickup_location: payload.pickup_location,
       expected_package_count: payload.expected_package_count,
     });
@@ -143,7 +143,7 @@ export const downloadDelhiveryLabel = async (wbn: string) => {
     console.log("🔄 First 100 chars of Base64:", base64PDF.substring(0, 100));
 
     // Verify PDF header
-    const pdfHeader = Buffer.from(pdfBuffer).toString('utf8', 0, 4);
+    const pdfHeader = Buffer.from(pdfBuffer).toString("utf8", 0, 4);
     console.log("✅ PDF Header Check:", pdfHeader);
 
     if (pdfHeader !== "%PDF") {

@@ -14,6 +14,7 @@ import {
     cn,
     convertPaiseToRupees,
     convertValueToLabel,
+    formatINR,
     formatPriceTag,
     handleClientError,
 } from "@/lib/utils";
@@ -52,6 +53,11 @@ export default function CheckoutSection({ userId }: PageProps) {
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
 
+    const { data: activeRewardCartItem } =
+        trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
+
+    const hasRewardCartItem = !!activeRewardCartItem?.selection;
+
     const { data: activeCoupons, isLoading: isCouponsLoading } =
         trpc.general.coupons.getActiveCoupons.useQuery(undefined, {
             enabled: isCouponExpanded,
@@ -81,8 +87,8 @@ export default function CheckoutSection({ userId }: PageProps) {
     );
 
     const selectedItemsCount = useMemo(
-        () => selectedItems.reduce((acc, item) => acc + item.quantity, 0),
-        [selectedItems]
+        () => selectedItems.reduce((acc, item) => acc + item.quantity, 0) + (hasRewardCartItem ? 1 : 0),
+        [selectedItems, hasRewardCartItem]
     );
 
     const filteredCoupons = useMemo(() => {
@@ -274,6 +280,29 @@ export default function CheckoutSection({ userId }: PageProps) {
 
             {/* Mobile: Product thumbnails before summary */}
             <div className="space-y-3 lg:hidden">
+                {hasRewardCartItem && activeRewardCartItem?.selection && (
+                    <div className="flex items-center gap-3 rounded-lg border border-[#e0d2b9] bg-[#fffaf2] p-3">
+                        <div className="relative size-16 shrink-0 overflow-hidden rounded-lg">
+                            <Image
+                                src={activeRewardCartItem.selection.product.media?.[0]?.mediaItem?.url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
+                                alt={activeRewardCartItem.selection.product.title}
+                                width={100}
+                                height={100}
+                                className="size-full object-cover"
+                            />
+                        </div>
+                        <div className="flex-1">
+                            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#9b7a46]">Reward Item</span>
+                            <h4 className="line-clamp-2 text-xs font-semibold text-gray-900">
+                                {activeRewardCartItem.selection.product.title}
+                            </h4>
+                            <p className="mt-0.5 text-xs font-bold text-[#7c5831]">
+                                {formatINR(0)}
+                            </p>
+                        </div>
+                        <span className="text-xs text-gray-500 font-medium px-2">Qty: 1</span>
+                    </div>
+                )}
                 {selectedItems.map((item) => {
                     const itemMedia =
                         item.product.media?.[0]?.mediaItem ?? null;
@@ -686,7 +715,7 @@ export default function CheckoutSection({ userId }: PageProps) {
                         disabled={
                             isUserFetching ||
                             isValidating ||
-                            !userCart?.some((item) => item.status)
+                            (!userCart?.some((item) => item.status) && !hasRewardCartItem)
                         }
                         onClick={() => {
                             if (!user)

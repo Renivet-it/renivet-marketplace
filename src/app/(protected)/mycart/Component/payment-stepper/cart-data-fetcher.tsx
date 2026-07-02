@@ -16,8 +16,13 @@ interface CartDataFetcherProps {
 export default function CartDataFetcher({ userId, user }: CartDataFetcherProps) {
     const { appliedCoupon } = useCartStore();
 
-    const { data: userCart, isLoading, error } = trpc.general.users.cart.getCartForUser.useQuery(
+    const { data: userCart, isLoading: isCartLoading, error } = trpc.general.users.cart.getCartForUser.useQuery(
         { userId },
+        { enabled: !!userId }
+    );
+
+    const { data: activeRewardCartItem, isLoading: isRewardLoading } = trpc.general.swapRewards.getActiveRewardCartItem.useQuery(
+        undefined,
         { enabled: !!userId }
     );
 
@@ -43,18 +48,27 @@ export default function CartDataFetcher({ userId, user }: CartDataFetcherProps) 
 
     // Format cart data to mimic OrderWithItemAndBrand
     const cartSummary = useMemo(() => {
-        const items = cartItems.map((item) => {
-            const itemPrice = item.variantId
-                ? (item.product.variants.find((v) => v.id === item.variantId)?.price ?? item.product.price ?? 0)
-                : (item.product.price ?? 0);
-            return {
-                price: itemPrice,
-                quantity: item.quantity,
-                categoryId: item.product.categoryId,
-                subCategoryId: item.product.subcategoryId,
-                productTypeId: item.product.productTypeId,
-            };
-        });
+        const items = [
+            ...cartItems.map((item) => {
+                const itemPrice = item.variantId
+                    ? (item.product.variants.find((v) => v.id === item.variantId)?.price ?? item.product.price ?? 0)
+                    : (item.product.price ?? 0);
+                return {
+                    price: itemPrice,
+                    quantity: item.quantity,
+                    categoryId: item.product.categoryId,
+                    subCategoryId: item.product.subcategoryId,
+                    productTypeId: item.product.productTypeId,
+                };
+            }),
+            ...(activeRewardCartItem?.selection ? [{
+                price: 0,
+                quantity: 1,
+                categoryId: activeRewardCartItem.selection.product.categoryId,
+                subCategoryId: activeRewardCartItem.selection.product.subcategoryId,
+                productTypeId: activeRewardCartItem.selection.product.productTypeId,
+            }] : [])
+        ];
 
         const priceList = calculateTotalPriceWithCoupon(
             items.map((item) => item.price * item.quantity),
@@ -76,27 +90,50 @@ export default function CartDataFetcher({ userId, user }: CartDataFetcherProps) 
             id: `cart-${userId}`,
             status: "pending",
             paymentStatus: "pending",
-            items: cartItems.map((item) => ({
-                id: item.id,
-                product: {
-                    ...item.product,
-                    verificationStatus: item.product.verificationStatus || "approved",
-                    isDeleted: item.product.isDeleted || false,
-                    isAvailable: item.product.isAvailable || true,
-                    quantity: item.product.quantity || null,
-                    price: item.product.price || 0,
-                    variants: item.product.variants || [],
-                },
-                variant: item.variant || null,
-                variantId: item.variantId || null,
-                quantity: item.quantity,
-            })),
+            items: [
+                ...cartItems.map((item) => ({
+                    id: item.id,
+                    product: {
+                        ...item.product,
+                        verificationStatus: item.product.verificationStatus || "approved",
+                        isDeleted: item.product.isDeleted || false,
+                        isAvailable: item.product.isAvailable || true,
+                        quantity: item.product.quantity || null,
+                        price: item.product.price || 0,
+                        variants: item.product.variants || [],
+                    },
+                    variant: item.variant || null,
+                    variantId: item.variantId || null,
+                    quantity: item.quantity,
+                })),
+                ...(activeRewardCartItem?.selection ? [{
+                    id: activeRewardCartItem.redemption.id,
+                    product: {
+                        ...activeRewardCartItem.selection.product,
+                        verificationStatus: "approved",
+                        isDeleted: false,
+                        isAvailable: true,
+                        quantity: 1,
+                        price: 0,
+                        variants: activeRewardCartItem.selection.product.variants || [],
+                        options: activeRewardCartItem.selection.product.options || [],
+                    },
+                    variant: null,
+                    variantId: null,
+                    quantity: 1,
+                    isSwapRewardItem: true,
+                    rewardValue: activeRewardCartItem.selection.rewardValue,
+                    swapRewardRedemptionId: activeRewardCartItem.redemption.id,
+                }] : [])
+            ],
             deliveryAmount: priceList.delivery,
             discountAmount: priceList.discount,
             totalAmount: priceList.total,
             address: null, // Use selectedShippingAddress in OrderPage
         };
-    }, [cartItems, userId, appliedCoupon]);
+    }, [cartItems, activeRewardCartItem, userId, appliedCoupon]);
+
+    const isLoading = isCartLoading || isRewardLoading;
 
     if (isLoading) {
         return <div>Loading cart data...</div>;

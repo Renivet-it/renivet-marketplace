@@ -1,4 +1,5 @@
 import { BrandVerificationsTable } from "@/components/dashboard/general/brand-verifications";
+import { BrandTabs } from "@/components/dashboard/general/brands/brand-tabs";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { brandConfidentialQueries } from "@/lib/db/queries";
@@ -23,7 +24,7 @@ interface PageProps {
 export default function Page({ searchParams }: PageProps) {
     return (
         <DashShell className="max-w-none">
-            <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
+            <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2 mb-6">
                 <div className="space-y-1 text-center md:text-start">
                     <h1 className="text-2xl font-bold">
                         Brand Verification Requests
@@ -33,6 +34,8 @@ export default function Page({ searchParams }: PageProps) {
                     </p>
                 </div>
             </div>
+
+            <BrandTabs />
 
             <Suspense fallback={<TableSkeleton />}>
                 <BrandVerificationsFetch searchParams={searchParams} />

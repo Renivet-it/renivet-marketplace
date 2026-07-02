@@ -8,28 +8,33 @@ export async function POST(req: Request) {
 
     const result = await schedulePickup(body);
     console.log("✅ Delhivery schedulePickup result:", result);
+    const normalizedSuccess =
+      result?.status === true ||
+      result?.success === true ||
+      result?.pr_exist === true;
 
     return NextResponse.json({
-      success: true,
+      success: normalizedSuccess,
       data: result,
+      pickupAlreadyExists: result?.pr_exist === true,
     });
   } catch (err: any) {
-  console.error("❌ Delhivery pickup API error:", err);
+    console.error("❌ Delhivery pickup API error:", err);
 
-  const delhiveryError =
-    err?.response?.data ||
-    { message: err?.message || "Delhivery pickup failed" };
+    const delhiveryError =
+      err?.response?.data ||
+      { message: err?.message || "Delhivery pickup failed" };
 
-  return NextResponse.json(
-    {
-      success: false,
-      message:
-        delhiveryError?.message ||
-        delhiveryError?.error ||
-        JSON.stringify(delhiveryError),
-      fullError: delhiveryError, // send COMPLETE ERROR OBJECT
-    },
-    { status: 400 }
-  );
-}
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          delhiveryError?.message ||
+          delhiveryError?.error ||
+          JSON.stringify(delhiveryError),
+        fullError: delhiveryError,
+      },
+      { status: 400 }
+    );
+  }
 }
