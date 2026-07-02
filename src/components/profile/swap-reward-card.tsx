@@ -87,7 +87,7 @@ export function SwapRewardCard() {
                                         className={cn(
                                             "relative flex size-[54px] items-center justify-center rounded-full border sm:size-[58px] lg:size-[68px]",
                                             filled
-                                                ? "-rotate-6 border-[#8d623e] bg-[radial-gradient(circle_at_30%_30%,#b98559,#99683f_60%,#784d2c_100%)] text-[#fff8ed] shadow-[inset_0_0_0_2px_rgba(255,246,228,0.16),0_18px_24px_-20px_rgba(69,44,24,0.9)]"
+                                                ? "-rotate-6 border-[#8b311f] bg-[radial-gradient(circle_at_30%_30%,#bf5a43,#9F3A26_60%,#712417_100%)] text-[#fff8ed] shadow-[inset_0_0_0_2px_rgba(255,246,228,0.16),0_18px_24px_-20px_rgba(91,32,21,0.9)]"
                                                 : "border-dashed border-[#ddc79e] bg-[#fffaf2] text-[#ad9060]"
                                         )}
                                     >
