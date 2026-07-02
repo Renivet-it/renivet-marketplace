@@ -10,9 +10,14 @@ interface CartFetcherProps {
 }
 
 export default function CartFetcher({ userId }: CartFetcherProps) {
-    const { data: userCart, isLoading, error } = trpc.general.users.cart.getCartForUser.useQuery(
+    const { data: userCart, isLoading: isCartLoading, error } = trpc.general.users.cart.getCartForUser.useQuery(
         { userId },
         { enabled: !!userId } // Only fetch if userId is present
+    );
+
+    const { data: activeRewardCartItem, isLoading: isRewardLoading } = trpc.general.swapRewards.getActiveRewardCartItem.useQuery(
+        undefined,
+        { enabled: !!userId }
     );
 
     const cartItems = useMemo(() => {
@@ -35,6 +40,33 @@ export default function CartFetcher({ userId }: CartFetcherProps) {
             .filter((item) => item.status) || [];
     }, [userCart]);
 
+    const allItems = useMemo(() => {
+        const items = [...cartItems];
+        if (activeRewardCartItem?.selection) {
+            items.push({
+                id: activeRewardCartItem.redemption.id,
+                product: {
+                    id: activeRewardCartItem.selection.product.id,
+                    slug: activeRewardCartItem.selection.product.slug,
+                    title: activeRewardCartItem.selection.product.title,
+                    price: activeRewardCartItem.selection.product.price,
+                    brand: activeRewardCartItem.selection.product.brand,
+                    media: activeRewardCartItem.selection.product.media,
+                    variants: activeRewardCartItem.selection.product.variants || [],
+                    options: activeRewardCartItem.selection.product.options || [],
+                },
+                variantId: undefined,
+                quantity: 1,
+                isSwapRewardItem: true,
+                rewardValue: activeRewardCartItem.selection.rewardValue,
+                createdAt: activeRewardCartItem.redemption.createdAt,
+            } as any);
+        }
+        return items;
+    }, [cartItems, activeRewardCartItem]);
+
+    const isLoading = isCartLoading || isRewardLoading;
+
     if (isLoading) {
         return <div>Loading cart...</div>;
     }
@@ -43,5 +75,5 @@ export default function CartFetcher({ userId }: CartFetcherProps) {
         return <div>Error loading cart: {error.message}</div>;
     }
 
-    return <OrderProductCard orderItems={cartItems as any} />;
+    return <OrderProductCard orderItems={allItems as any} />;
 }

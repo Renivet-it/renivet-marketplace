@@ -1,4 +1,5 @@
 import { BrandRequestsTable } from "@/components/dashboard/general/brand-requests";
+import { BrandTabs } from "@/components/dashboard/general/brands/brand-tabs";
 import { DashShell } from "@/components/globals/layouts";
 import { TableSkeleton } from "@/components/globals/skeletons";
 import { brandRequestQueries } from "@/lib/db/queries";
@@ -22,8 +23,8 @@ interface PageProps {
 
 export default function Page({ searchParams }: PageProps) {
     return (
-        <DashShell>
-            <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2">
+        <DashShell className="max-w-none">
+            <div className="flex flex-col items-center justify-between gap-4 md:flex-row md:gap-2 mb-6">
                 <div className="space-y-1 text-center md:text-start">
                     <h1 className="text-2xl font-bold">Brand Requests</h1>
                     <p className="text-balance text-sm text-muted-foreground">
@@ -31,6 +32,8 @@ export default function Page({ searchParams }: PageProps) {
                     </p>
                 </div>
             </div>
+
+            <BrandTabs />
 
             <Suspense fallback={<TableSkeleton />}>
                 <BrandRequestsFetch searchParams={searchParams} />

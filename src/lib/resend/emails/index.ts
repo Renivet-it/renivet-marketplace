@@ -7,6 +7,12 @@ import BrandUnsubscribed from "./brand-unsubscribed";
 import BrandVerificationStatusUpdate from "./brand-verification-status-update";
 import BrandVerificationtSubmitted from "./brand-verification-submitted";
 import brandOrderNotification from "./brandOrderNotification";
+import CorporateOrderInternalNotificationEmail from "./corporate-order-internal-notification";
+import CorporateReplacementRequestAdminEmail from "./corporate-replacement-request-admin";
+import CorporateOrderCustomerReadyForDispatchEmail from "./corporate-order-customer-ready-for-dispatch";
+import CorporateOrderReadyForDispatchEmail from "./corporate-order-ready-for-dispatch";
+import CorporateOrderBalanceReminderEmail from "./corporate-order-balance-reminder";
+import CorporateOrderReceivedEmail from "./corporate-order-received";
 import CategoryRequestStatusUpdate from "./category-request-status-update";
 import DailyOrderSummary from "./daily-order-summary";
 import MonitoringAlertEmail from "./monitoring-alert";
@@ -19,6 +25,9 @@ import OrderRefundProcessed from "./order-refund-processed";
 import ProductReviewStatusUpdate from "./product-review-status-update";
 import ProductReviewSubmitted from "./product-review-submitted";
 import SupportNotificationEmail from "./support-notification";
+import SwapRewardRedeemedEmail from "./swap-reward-redeemed";
+import SwapRewardStampEarnedEmail from "./swap-reward-stamp-earned";
+import SwapRewardUnlockedEmail from "./swap-reward-unlocked";
 
 export {
     AccountCreated,
@@ -30,6 +39,12 @@ export {
     BrandVerificationStatusUpdate,
     BrandVerificationtSubmitted,
     CategoryRequestStatusUpdate,
+    CorporateOrderBalanceReminderEmail,
+    CorporateOrderCustomerReadyForDispatchEmail,
+    CorporateOrderInternalNotificationEmail,
+    CorporateReplacementRequestAdminEmail,
+    CorporateOrderReadyForDispatchEmail,
+    CorporateOrderReceivedEmail,
     DailyOrderSummary,
     MonitoringAlertEmail,
     OrderDelivered,
@@ -42,4 +57,7 @@ export {
     OrderRefundFailed,
     brandOrderNotification,
     SupportNotificationEmail,
+    SwapRewardRedeemedEmail,
+    SwapRewardStampEarnedEmail,
+    SwapRewardUnlockedEmail,
 };

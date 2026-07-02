@@ -466,6 +466,90 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
+    corporateArtworkUploader: f({
+        blob: { maxFileSize: "25MB", maxFileCount: 1 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => ({
+            uploaderId: metadata.userId,
+            name: file.name,
+            size: file.size,
+            key: file.key,
+            url: file.url,
+            type: file.type,
+        })),
+    corporateEmployeeSheetUploader: f({
+        blob: { maxFileSize: "10MB", maxFileCount: 1 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => ({
+            uploaderId: metadata.userId,
+            name: file.name,
+            size: file.size,
+            key: file.key,
+            url: file.url,
+            type: file.type,
+        })),
+    corporateRfqAttachmentUploader: f({
+        blob: { maxFileSize: "50MB", maxFileCount: 6 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => ({
+            uploaderId: metadata.userId,
+            name: file.name,
+            size: file.size,
+            key: file.key,
+            url: file.url,
+            type: file.type,
+        })),
+    corporateDocumentUploader: f({
+        blob: { maxFileSize: "50MB", maxFileCount: 6 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => ({
+            uploaderId: metadata.userId,
+            name: file.name,
+            size: file.size,
+            key: file.key,
+            url: file.url,
+            type: file.type,
+        })),
 } satisfies FileRouter;
 
 export type UploadRouter = typeof uploadRouter;

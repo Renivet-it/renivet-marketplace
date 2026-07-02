@@ -6,6 +6,7 @@ import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { OrderRefundFailed, OrderRefundProcessed } from "@/lib/resend/emails";
+import { swapRewardService } from "@/lib/services/swap-reward";
 import {
     AppError,
     convertPaiseToRupees,
@@ -157,6 +158,15 @@ export async function POST(req: NextRequest) {
                                 },
                             }),
                         });
+                    }
+
+                    try {
+                        await swapRewardService.revokeStampForOrder(
+                            existingOrder.id,
+                            "refund_processed"
+                        );
+                    } catch (error) {
+                        console.error("swap reward revoke failed", error);
                     }
                 }
                 break;
@@ -328,6 +338,15 @@ export async function POST(req: NextRequest) {
                                 }),
                             },
                         ]);
+                    }
+
+                    try {
+                        await swapRewardService.revokeStampForOrder(
+                            existingOrder.id,
+                            "refund_failed_order_cancelled"
+                        );
+                    } catch (error) {
+                        console.error("swap reward revoke failed", error);
                     }
                 }
                 break;

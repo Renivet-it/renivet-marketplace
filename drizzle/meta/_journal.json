@@ -1667,6 +1667,13 @@
       "when": 1781555058700,
       "tag": "0237_loud_black_bolt",
       "breakpoints": true
+    },
+    {
+      "idx": 238,
+      "version": "7",
+      "when": 1782333496585,
+      "tag": "0238_fixed_strong_guy",
+      "breakpoints": true
     }
   ]
 }

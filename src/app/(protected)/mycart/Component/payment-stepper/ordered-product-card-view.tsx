@@ -33,7 +33,10 @@ interface CartItem {
     };
     variantId?: string;
     quantity: number;
-    createdAt: string | Date;
+    createdAt?: string | Date | null;
+    isSwapRewardItem?: boolean;
+    rewardValue?: number;
+    swapRewardRedemptionId?: string;
 }
 
 interface OrderProductCardProps extends GenericProps {
@@ -50,6 +53,15 @@ export function OrderProductCard({
     ...props
 }: OrderProductCardProps) {
     const totalItems = orderItems.reduce((acc, item) => acc + item.quantity, 0);
+
+    const formatAddedDate = (value?: string | Date | null) => {
+        if (!value) return null;
+
+        const parsedDate = value instanceof Date ? value : new Date(value);
+        if (Number.isNaN(parsedDate.getTime())) return null;
+
+        return format(parsedDate, "MMM dd, yyyy");
+    };
 
     return (
         <div className="space-y-5">
@@ -82,7 +94,9 @@ export function OrderProductCard({
                         const imageAlt = itemMedia?.alt ?? item.product.title;
 
                         const itemPrice =
-                            item.variantId && item.product.variants?.length > 0
+                            item.isSwapRewardItem
+                                ? 0
+                                : item.variantId && item.product.variants?.length > 0
                                 ? (item.product.variants.find(
                                       (variant) => variant.id === item.variantId
                                   )?.price ??
@@ -91,13 +105,15 @@ export function OrderProductCard({
                                 : (item.product.price ?? 0);
 
                         const itemCompareAtPrice =
-                            item.variantId && item.product.variants?.length > 0
+                            item.rewardValue ??
+                            (item.variantId && item.product.variants?.length > 0
                                 ? (item.product.variants.find(
                                       (variant) => variant.id === item.variantId
                                   )?.compareAtPrice ??
                                   item.product.compareAtPrice ??
                                   itemPrice)
-                                : (item.product.compareAtPrice ?? itemPrice);
+                                : (item.product.compareAtPrice ?? itemPrice));
+                        const addedDate = formatAddedDate(item.createdAt);
 
                         return (
                             <div
@@ -186,6 +202,11 @@ export function OrderProductCard({
                                                     </>
                                                 )}
                                             </div>
+                                            {item.isSwapRewardItem ? (
+                                                <span className="inline-flex items-center rounded-full border border-[#e3d1b4] bg-[#fbf4e8] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a592d]">
+                                                    Swap reward
+                                                </span>
+                                            ) : null}
                                             {onRemove && (
                                                 <button
                                                     onClick={() =>
@@ -242,14 +263,12 @@ export function OrderProductCard({
 
                                 {/* Bottom info bar */}
                                 <div className="mt-3 flex items-center gap-4 border-t border-dashed border-gray-100 pt-3">
-                                    <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
-                                        <Calendar className="size-3" />
-                                        Added{" "}
-                                        {format(
-                                            new Date(item.createdAt),
-                                            "MMM dd, yyyy"
-                                        )}
-                                    </div>
+                                    {addedDate ? (
+                                        <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                                            <Calendar className="size-3" />
+                                            Added {addedDate}
+                                        </div>
+                                    ) : null}
                                     <div className="flex items-center gap-1 rounded-full border border-[#d4deca] bg-[#f5f8f0] px-2 py-0.5 text-[11px] font-medium text-[#6B7A5E]">
                                         <RotateCcw className="size-2.5" />
                                         10-day returns
