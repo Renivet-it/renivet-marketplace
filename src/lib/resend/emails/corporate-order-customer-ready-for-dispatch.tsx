@@ -25,17 +25,17 @@ export default function CorporateOrderCustomerReadyForDispatchEmail({
 }) {
     return (
         <CorporateOrderEmailShell
-            preview={`Dispatch update: ${order.publicOrderId}`}
-            eyebrow="Renivet Corporate Atelier"
-            title="Your Corporate Order Is Ready For Dispatch"
-            intro="Production is complete and your assigned fulfillment brand has marked the order ready for dispatch. You can review the latest order status and commercial summary from your corporate workspace."
+            preview={`Corporate Order Ready for Dispatch: ${order.publicOrderId}`}
+            eyebrow="Corporate Dispatch Update"
+            title="Your Order is Ready for Dispatch"
+            intro="We are pleased to inform you that production for your corporate order is now complete and has been marked as ready for dispatch. Below is the final status and billing summary of your order. Once all dispatch logistics are processed, we will coordinate delivery and send you tracking information."
             primaryAction={{
                 href: confirmationHref,
-                label: "View Corporate Order",
+                label: "View Order Details",
             }}
             secondaryAction={{
                 href: pdfHref,
-                label: "Download Luxury Summary",
+                label: "Download Order Summary",
             }}
             footer={
                 <Text
@@ -43,42 +43,46 @@ export default function CorporateOrderCustomerReadyForDispatchEmail({
                         margin: 0,
                         fontSize: "12px",
                         lineHeight: "20px",
-                        color: "#6b7280",
+                        color: "#475569",
+                        textAlign: "center" as const,
                     }}
                 >
-                    Track your managed corporate order anytime at{" "}
-                    {getAbsoluteURL("/corporate-orders")}.
+                    Track your corporate order anytime at{" "}
+                    <a
+                        href={getAbsoluteURL("/corporate-orders")}
+                        style={{ color: "#2d3121", textDecoration: "underline" }}
+                    >
+                        {getAbsoluteURL("/corporate-orders")}
+                    </a>
                 </Text>
             }
         >
             <EmailMetricGrid
                 items={[
                     { label: "Order ID", value: order.publicOrderId },
-                    { label: "Company", value: order.companyName },
-                    { label: "Quantity", value: String(order.quantity) },
+                    { label: "Company Name", value: order.companyName },
+                    { label: "Total Quantity", value: `${order.quantity} units` },
                     { label: "Order Value", value: formatINR(order.totalPaise) },
                 ]}
             />
 
             <EmailDetailCard
-                title="Latest Order Status"
+                title="Order Status & Billing Summary"
                 rows={[
-                    { label: "Current Stage", value: "Ready for dispatch" },
+                    { label: "Fulfillment Stage", value: "Ready for Dispatch" },
                     {
-                        label: "Advance Paid",
+                        label: "Amount Paid (Advance)",
                         value: formatINR(order.advancePaidPaise),
                     },
                     {
-                        label: "Balance Due",
+                        label: "Outstanding Balance",
                         value: formatINR(order.balanceDuePaise),
                     },
                 ]}
             />
 
             <EmailNote>
-                Your order has moved through production successfully. The admin team
-                will now continue with final dispatch coordination and shipment
-                updates.
+                Note: If there is an outstanding balance due on this order, please complete the payment to prevent shipping delays. Our operations team will provide full consignment details and tracking links as soon as the shipment is dispatched.
             </EmailNote>
         </CorporateOrderEmailShell>
     );

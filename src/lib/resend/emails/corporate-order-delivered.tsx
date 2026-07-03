@@ -7,25 +7,30 @@ import {
     EmailNote,
 } from "./corporate-order-email-shell";
 
-export default function CorporateOrderReceivedEmail({
+export default function CorporateOrderDeliveredEmail({
     order,
     confirmationHref,
     pdfHref,
-    expectedTimelineText,
 }: {
-    order: any;
+    order: {
+        publicOrderId: string;
+        companyName: string;
+        totalPaise: number;
+        advancePaidPaise: number;
+        balanceDuePaise: number;
+        quantity: number;
+    };
     confirmationHref: string;
     pdfHref: string;
-    expectedTimelineText: string;
 }) {
     const paidInFull = order.balanceDuePaise === 0;
 
     return (
         <CorporateOrderEmailShell
-            preview={`Corporate Order Confirmed: ${order.publicOrderId}`}
-            eyebrow="Corporate Order Confirmation"
-            title="Your Order is Confirmed"
-            intro="Thank you for choosing Renivet. Your corporate order has been successfully received. Below is a summary of your order and billing structure. You can track production status or download the complete order summary at any time."
+            preview={`Corporate Order Delivered: ${order.publicOrderId}`}
+            eyebrow="Corporate Order Delivery"
+            title="Your Order Has Been Delivered"
+            intro="We are pleased to inform you that your corporate order has been successfully delivered. Below is a summary of the fulfilled order. We hope our craftsmanship and service exceeded your expectations."
             primaryAction={{
                 href: confirmationHref,
                 label: "View Order Details",
@@ -44,7 +49,7 @@ export default function CorporateOrderReceivedEmail({
                         textAlign: "center" as const,
                     }}
                 >
-                    Access your live corporate workspace anytime at{" "}
+                    Access your corporate orders history anytime at{" "}
                     <a
                         href={getAbsoluteURL("/corporate-orders")}
                         style={{ color: "#2d3121", textDecoration: "underline" }}
@@ -57,32 +62,29 @@ export default function CorporateOrderReceivedEmail({
             <EmailMetricGrid
                 items={[
                     { label: "Order ID", value: order.publicOrderId },
-                    {
-                        label: paidInFull ? "Amount Paid" : "Advance Paid",
-                        value: formatINR(order.advancePaidPaise),
-                    },
-                    { label: "Balance Due", value: formatINR(order.balanceDuePaise) },
-                    { label: "Order Value", value: formatINR(order.totalPaise) },
+                    { label: "Company Name", value: order.companyName },
+                    { label: "Total Quantity", value: `${order.quantity} units` },
+                    { label: "Final Value", value: formatINR(order.totalPaise) },
                 ]}
             />
 
             <EmailDetailCard
-                title="Order & Fulfillment Details"
+                title="Delivery & Fulfillment Status"
                 rows={[
-                    { label: "Company Name", value: order.companyName },
-                    { label: "Status", value: "Confirmed & Under Review" },
-                    { label: "Estimated Timeline", value: expectedTimelineText },
+                    { label: "Fulfillment Stage", value: "Delivered & Completed" },
                     {
                         label: "Payment Status",
-                        value: paidInFull
-                            ? "Paid in Full"
-                            : "Deposit Paid (Balance Pending)",
+                        value: paidInFull ? "Paid in Full" : "Outstanding Balance Pending",
+                    },
+                    {
+                        label: "Total Amount Settled",
+                        value: formatINR(order.advancePaidPaise + (paidInFull ? order.balanceDuePaise : 0)),
                     },
                 ]}
             />
 
             <EmailNote>
-                All specifications, size lists, and artwork files provided during checkout are linked to this order. Our team will review these details and reach out if any clarifications are needed.
+                If you have any feedback regarding the size fitting, print quality, or overall service, please let us know. We look forward to partnering with you on your future corporate merchandise needs.
             </EmailNote>
         </CorporateOrderEmailShell>
     );

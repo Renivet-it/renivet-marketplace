@@ -5,6 +5,7 @@ import {
     Head,
     Hr,
     Html,
+    Img,
     Preview,
     Section,
     Text,
@@ -12,14 +13,14 @@ import {
 import type { ReactNode } from "react";
 
 const palette = {
-    bg: "#f4efe7",
-    panel: "#fffdf9",
-    ink: "#14213d",
-    muted: "#6b7280",
-    gold: "#9a6b2f",
-    goldSoft: "#efe1cf",
-    line: "#e7d9c8",
-    dark: "#1f2937",
+    bg: "#f8fafc",          // Slate-50: Clean and modern background
+    panel: "#ffffff",       // Pure white for the card
+    ink: "#0f172a",         // Slate-900: High-readability text
+    muted: "#475569",       // Slate-600: Secondary text
+    brand: "#2d3121",       // Renivet Brand Green
+    brandLight: "#f4f6f0",  // Soft sage green highlight
+    line: "#e2e8f0",        // Slate-200: Subtle divider lines
+    dark: "#0f172a",        // Slate-900: Secondary dark action background
 };
 
 export function CorporateOrderEmailShell({
@@ -49,47 +50,58 @@ export function CorporateOrderEmailShell({
                 style={{
                     backgroundColor: palette.bg,
                     fontFamily:
-                        "'Georgia', 'Times New Roman', serif",
+                        "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
                     margin: 0,
-                    padding: "24px 0",
+                    padding: "40px 0",
                     color: palette.ink,
                 }}
             >
                 <Container
                     style={{
-                        maxWidth: "680px",
+                        maxWidth: "600px", // 600px is the gold standard for HTML emails
                         margin: "0 auto",
                         backgroundColor: palette.panel,
                         border: `1px solid ${palette.line}`,
-                        borderRadius: "24px",
+                        borderRadius: "12px",
                         overflow: "hidden",
-                        boxShadow: "0 24px 80px rgba(20, 33, 61, 0.08)",
+                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)",
                     }}
                 >
                     <Section
                         style={{
-                            background:
-                                "linear-gradient(135deg, #14213d 0%, #1f325e 55%, #9a6b2f 100%)",
-                            padding: "32px 36px 28px",
+                            backgroundColor: palette.brand,
+                            padding: "40px 40px 36px",
                             color: "#ffffff",
+                            textAlign: "center" as const,
                         }}
                     >
+                        <Img
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqU6nAZGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw"
+                            alt="Renivet"
+                            width={64}
+                            height={64}
+                            style={{
+                                margin: "0 auto 20px",
+                                display: "block",
+                            }}
+                        />
                         <Text
                             style={{
                                 margin: 0,
                                 fontSize: "11px",
-                                letterSpacing: "0.32em",
+                                letterSpacing: "0.25em",
                                 textTransform: "uppercase",
-                                color: "#d8c4a8",
+                                color: "#c0c4b9",
+                                fontWeight: 600,
                             }}
                         >
                             {eyebrow}
                         </Text>
                         <Text
                             style={{
-                                margin: "14px 0 0",
-                                fontSize: "34px",
-                                lineHeight: "40px",
+                                margin: "12px 0 0",
+                                fontSize: "26px",
+                                lineHeight: "34px",
                                 fontWeight: 700,
                                 color: "#ffffff",
                             }}
@@ -98,34 +110,35 @@ export function CorporateOrderEmailShell({
                         </Text>
                         <Text
                             style={{
-                                margin: "14px 0 0",
-                                fontSize: "15px",
-                                lineHeight: "26px",
-                                color: "#eef2ff",
+                                margin: "12px 0 0",
+                                fontSize: "14px",
+                                lineHeight: "22px",
+                                color: "#f4f6f0",
                             }}
                         >
                             {intro}
                         </Text>
                     </Section>
 
-                    <Section style={{ padding: "30px 36px 12px" }}>
+                    <Section style={{ padding: "32px 40px 16px" }}>
                         {children}
                     </Section>
 
                     {primaryAction || secondaryAction ? (
-                        <Section style={{ padding: "8px 36px 0" }}>
+                        <Section style={{ padding: "8px 40px 16px", textAlign: "center" as const }}>
                             {primaryAction ? (
                                 <Button
                                     href={primaryAction.href}
                                     style={{
-                                        backgroundColor: palette.gold,
+                                        backgroundColor: palette.brand,
                                         color: "#ffffff",
-                                        padding: "14px 24px",
-                                        borderRadius: "999px",
+                                        padding: "12px 24px",
+                                        borderRadius: "6px",
                                         textDecoration: "none",
                                         fontSize: "14px",
-                                        fontWeight: 700,
+                                        fontWeight: 600,
                                         marginRight: secondaryAction ? "12px" : "0",
+                                        display: "inline-block",
                                     }}
                                 >
                                     {primaryAction.label}
@@ -135,13 +148,15 @@ export function CorporateOrderEmailShell({
                                 <Button
                                     href={secondaryAction.href}
                                     style={{
-                                        backgroundColor: palette.dark,
-                                        color: "#ffffff",
-                                        padding: "14px 24px",
-                                        borderRadius: "999px",
+                                        backgroundColor: "#ffffff",
+                                        color: palette.ink,
+                                        border: `1px solid ${palette.line}`,
+                                        padding: "12px 24px",
+                                        borderRadius: "6px",
                                         textDecoration: "none",
                                         fontSize: "14px",
-                                        fontWeight: 700,
+                                        fontWeight: 600,
+                                        display: "inline-block",
                                     }}
                                 >
                                     {secondaryAction.label}
@@ -150,7 +165,7 @@ export function CorporateOrderEmailShell({
                         </Section>
                     ) : null}
 
-                    <Section style={{ padding: "24px 36px 34px" }}>
+                    <Section style={{ padding: "16px 40px 40px" }}>
                         <Hr
                             style={{
                                 borderColor: palette.line,
@@ -164,6 +179,7 @@ export function CorporateOrderEmailShell({
                                     fontSize: "12px",
                                     lineHeight: "20px",
                                     color: palette.muted,
+                                    textAlign: "center" as const,
                                 }}
                             >
                                 Renivet Corporate Desk
@@ -182,19 +198,19 @@ export function EmailMetricGrid({
     items: Array<{ label: string; value: string }>;
 }) {
     return (
-        <Section style={{ marginBottom: "16px" }}>
+        <Section style={{ marginBottom: "20px" }}>
             {items.map((item) => (
                 <Section
                     key={item.label}
                     style={{
                         display: "inline-block",
-                        width: "46%",
+                        width: "47%",
                         minWidth: "220px",
                         verticalAlign: "top",
-                        margin: "0 12px 12px 0",
-                        padding: "16px 18px",
-                        borderRadius: "18px",
-                        backgroundColor: "#fbf8f2",
+                        margin: "0 10px 12px 0",
+                        padding: "16px 20px",
+                        borderRadius: "8px",
+                        backgroundColor: "#fafafa",
                         border: `1px solid ${palette.line}`,
                     }}
                 >
@@ -202,18 +218,19 @@ export function EmailMetricGrid({
                         style={{
                             margin: 0,
                             fontSize: "11px",
-                            letterSpacing: "0.2em",
+                            letterSpacing: "0.15em",
                             textTransform: "uppercase",
                             color: palette.muted,
+                            fontWeight: 600,
                         }}
                     >
                         {item.label}
                     </Text>
                     <Text
                         style={{
-                            margin: "10px 0 0",
-                            fontSize: "20px",
-                            lineHeight: "26px",
+                            margin: "8px 0 0",
+                            fontSize: "18px",
+                            lineHeight: "24px",
                             fontWeight: 700,
                             color: palette.ink,
                         }}
@@ -236,37 +253,42 @@ export function EmailDetailCard({
     return (
         <Section
             style={{
-                marginBottom: "16px",
-                padding: "18px 20px",
-                borderRadius: "20px",
+                marginBottom: "20px",
+                padding: "20px 24px",
+                borderRadius: "12px",
                 backgroundColor: "#ffffff",
                 border: `1px solid ${palette.line}`,
             }}
         >
             <Text
                 style={{
-                    margin: 0,
+                    margin: "0 0 12px 0",
                     fontSize: "12px",
-                    letterSpacing: "0.22em",
+                    letterSpacing: "0.15em",
                     textTransform: "uppercase",
-                    color: palette.gold,
+                    color: palette.brand,
                     fontWeight: 700,
                 }}
             >
                 {title}
             </Text>
-            {rows.map((row) => (
+            {rows.map((row, idx) => (
                 <Section
                     key={`${title}-${row.label}`}
                     style={{
-                        paddingTop: "12px",
+                        paddingTop: idx === 0 ? "0px" : "12px",
+                        borderTop: idx === 0 ? "none" : `1px solid ${palette.line}`,
+                        paddingBottom: "12px",
                     }}
                 >
                     <Text
                         style={{
                             margin: 0,
-                            fontSize: "12px",
+                            fontSize: "11px",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.05em",
                             color: palette.muted,
+                            fontWeight: 600,
                         }}
                     >
                         {row.label}
@@ -274,10 +296,10 @@ export function EmailDetailCard({
                     <Text
                         style={{
                             margin: "4px 0 0",
-                            fontSize: "15px",
-                            lineHeight: "24px",
+                            fontSize: "14px",
+                            lineHeight: "20px",
                             color: palette.ink,
-                            fontWeight: 600,
+                            fontWeight: 500,
                         }}
                     >
                         {row.value}
@@ -296,18 +318,18 @@ export function EmailNote({
     return (
         <Section
             style={{
-                marginTop: "10px",
-                padding: "16px 18px",
-                borderRadius: "18px",
-                backgroundColor: palette.goldSoft,
-                border: `1px solid ${palette.line}`,
+                marginTop: "16px",
+                padding: "16px 20px",
+                borderRadius: "8px",
+                backgroundColor: palette.brandLight,
+                borderLeft: `4px solid ${palette.brand}`,
             }}
         >
             <Text
                 style={{
                     margin: 0,
-                    fontSize: "14px",
-                    lineHeight: "24px",
+                    fontSize: "13px",
+                    lineHeight: "22px",
                     color: palette.ink,
                 }}
             >

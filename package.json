@@ -11,6 +11,7 @@
     "db:gen": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:mig": "drizzle-kit generate && drizzle-kit migrate",
+    "corporate-emails:test": "bun run src/scripts/send-corporate-email-tests.ts",
     "embeddings:brands": "bun run generateBrandEmbeddings.ts",
     "swap-rewards:backfill": "bun run src/scripts/backfill-swap-rewards.ts"
   },

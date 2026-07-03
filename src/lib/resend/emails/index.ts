@@ -13,6 +13,7 @@ import CorporateOrderCustomerReadyForDispatchEmail from "./corporate-order-custo
 import CorporateOrderReadyForDispatchEmail from "./corporate-order-ready-for-dispatch";
 import CorporateOrderBalanceReminderEmail from "./corporate-order-balance-reminder";
 import CorporateOrderReceivedEmail from "./corporate-order-received";
+import CorporateOrderDeliveredEmail from "./corporate-order-delivered";
 import CategoryRequestStatusUpdate from "./category-request-status-update";
 import DailyOrderSummary from "./daily-order-summary";
 import MonitoringAlertEmail from "./monitoring-alert";
@@ -41,6 +42,7 @@ export {
     CategoryRequestStatusUpdate,
     CorporateOrderBalanceReminderEmail,
     CorporateOrderCustomerReadyForDispatchEmail,
+    CorporateOrderDeliveredEmail,
     CorporateOrderInternalNotificationEmail,
     CorporateReplacementRequestAdminEmail,
     CorporateOrderReadyForDispatchEmail,
