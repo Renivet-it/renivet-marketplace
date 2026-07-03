@@ -3100,12 +3100,17 @@ class CorporatePlatformService {
     async getAdminDashboardSummary() {
         const [rfqs, quotes, orders, tasks, escalations, refunds] =
             await Promise.all([
-                db.query.corporateRfqs.findMany(),
-                db.query.corporateQuotes.findMany(),
-                db.query.corporateOrders.findMany(),
-                db.query.corporateTasks.findMany(),
-                db.query.corporateEscalations.findMany(),
-                db.query.corporateRefunds.findMany(),
+                db.select({ status: corporateRfqs.status }).from(corporateRfqs),
+                db.select({ status: corporateQuotes.status }).from(corporateQuotes),
+                db.select({
+                    status: corporateOrders.status,
+                    balanceDuePaise: corporateOrders.balanceDuePaise,
+                }).from(corporateOrders),
+                db.select({ status: corporateTasks.status }).from(corporateTasks),
+                db.select({ status: corporateEscalations.status }).from(
+                    corporateEscalations
+                ),
+                db.select({ id: corporateRefunds.id }).from(corporateRefunds),
             ]);
 
         const summary = {
