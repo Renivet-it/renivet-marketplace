@@ -459,6 +459,14 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 url: "/dashboard/general/monthly-compliance",
                 permissions: BitFieldSitePermission.MANAGE_CATEGORIES,
             },
+            {
+                title: "Finance Control Center",
+                url: "/dashboard/general/finance",
+                permissions:
+                    BitFieldSitePermission.VIEW_MONITORING |
+                    BitFieldSitePermission.MANAGE_MONITORING |
+                    BitFieldSitePermission.MANAGE_SETTINGS,
+            },
         ],
     },
     {
@@ -502,6 +510,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                 permissions:
                     BitFieldSitePermission.MANAGE_FEEDBACK |
                     BitFieldSitePermission.VIEW_FEEDBACK,
+            },
+            {
+                title: "Finance Module Access",
+                url: "/dashboard/general/settings/module-access",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.ADMINISTRATOR,
             },
         ],
     },

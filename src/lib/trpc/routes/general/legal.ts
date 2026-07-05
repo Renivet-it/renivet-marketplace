@@ -23,6 +23,14 @@ export const legalRouter = createTRPCRouter({
                 privacyPolicy,
                 refundPolicy,
                 shippingPolicy,
+                grievanceOfficerName,
+                grievanceOfficerEmail,
+                grievanceOfficerPhone,
+                grievanceOfficerAddress,
+                supportEmail,
+                supportPhone,
+                dpdpConsentVersion,
+                isConsumerProtectionPublished,
             } = input;
 
             const existingLegal = await queries.legal.getLegal();
@@ -46,6 +54,14 @@ export const legalRouter = createTRPCRouter({
                     privacyPolicy,
                     refundPolicy,
                     shippingPolicy,
+                    grievanceOfficerName,
+                    grievanceOfficerEmail,
+                    grievanceOfficerPhone,
+                    grievanceOfficerAddress,
+                    supportEmail,
+                    supportPhone,
+                    dpdpConsentVersion,
+                    isConsumerProtectionPublished,
                     updated,
                 });
             } else
@@ -54,6 +70,14 @@ export const legalRouter = createTRPCRouter({
                     privacyPolicy,
                     refundPolicy,
                     shippingPolicy,
+                    grievanceOfficerName,
+                    grievanceOfficerEmail,
+                    grievanceOfficerPhone,
+                    grievanceOfficerAddress,
+                    supportEmail,
+                    supportPhone,
+                    dpdpConsentVersion,
+                    isConsumerProtectionPublished,
                 });
 
             await legalCache.remove();

@@ -101,6 +101,50 @@ export const uploadRouter = {
                 url: file.url,
             };
         }),
+    financeProofUploader: f({
+        "image/png": { maxFileSize: "4MB", maxFileCount: 1 },
+        "image/jpeg": { maxFileSize: "4MB", maxFileCount: 1 },
+        "application/pdf": { maxFileSize: "4MB", maxFileCount: 1 },
+    })
+        .middleware(async () => {
+            const auth = await clerkAuth();
+            if (!auth.userId)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const existingUser = await userCache.get(auth.userId);
+            if (!existingUser)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            const { sitePermissions } = getUserPermissions(existingUser.roles);
+            const isAuthorized = hasPermission(sitePermissions, [
+                BitFieldSitePermission.ADMINISTRATOR,
+                BitFieldSitePermission.MANAGE_MONITORING,
+                BitFieldSitePermission.MANAGE_SETTINGS,
+            ], "any");
+
+            if (!isAuthorized)
+                throw new UploadThingError({
+                    code: "FORBIDDEN",
+                    message: "You're not authorized",
+                });
+
+            return { userId: auth.userId };
+        })
+        .onUploadComplete(async ({ metadata, file }) => {
+            return {
+                uploaderId: metadata.userId,
+                name: file.name,
+                size: file.size,
+                key: file.key,
+                url: file.url,
+            };
+        }),
     brandRequestDemoUploader: f({
         "video/mp4": { maxFileSize: "32MB", maxFileCount: 1 },
     })

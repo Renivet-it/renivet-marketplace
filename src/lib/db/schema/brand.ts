@@ -115,6 +115,9 @@ export const brandConfidentials = pgTable(
         bankAccountHolderName: text("bank_account_holder_name").notNull(),
         bankAccountNumber: text("bank_account_number").notNull(),
         bankIfscCode: text("bank_ifsc_code").notNull(),
+        bankAccountType: text("bank_account_type"),
+        beneficiaryCode: text("beneficiary_code"),
+        payoutReference: text("payout_reference"),
         bankAccountVerificationDocument: text(
             "bank_account_verification_document"
         ),

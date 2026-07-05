@@ -36,3 +36,4 @@ export * from "./address";
 export * from "./audit-log";
 export * from "./recommendation";
 export * from "./monitoring-sla";
+export * from "./finance-compliance";

@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const legals = pgTable("legals", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
@@ -6,6 +6,16 @@ export const legals = pgTable("legals", {
     termsOfService: text("terms_of_service"),
     shippingPolicy: text("shipping_policy"),
     refundPolicy: text("refund_policy"),
+    grievanceOfficerName: text("grievance_officer_name"),
+    grievanceOfficerEmail: text("grievance_officer_email"),
+    grievanceOfficerPhone: text("grievance_officer_phone"),
+    grievanceOfficerAddress: text("grievance_officer_address"),
+    supportEmail: text("support_email"),
+    supportPhone: text("support_phone"),
+    dpdpConsentVersion: text("dpdp_consent_version"),
+    isConsumerProtectionPublished: boolean("is_consumer_protection_published")
+        .notNull()
+        .default(false),
     ppCreatedAt: timestamp("pp_created_at").notNull().defaultNow(),
     tosCreatedAt: timestamp("tos_created_at").notNull().defaultNow(),
     spCreatedAt: timestamp("sp_created_at").notNull().defaultNow(),

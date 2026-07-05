@@ -35,3 +35,4 @@ export * from "./analytics";
 export * from "./whatsapp-notifications";
 export * from "./corporate-orders";
 export * from "./corporate-platform";
+export * from "./finance";

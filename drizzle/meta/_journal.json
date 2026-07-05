@@ -1681,6 +1681,13 @@
       "when": 1783107000000,
       "tag": "0247_corporate_quote_option_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 240,
+      "version": "7",
+      "when": 1783308600000,
+      "tag": "0248_finance_compliance_runtime",
+      "breakpoints": true
     }
   ]
 }
