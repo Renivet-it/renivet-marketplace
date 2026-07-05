@@ -351,29 +351,6 @@ class CorporatePlatformService {
                         `/corporate-orders/confirmation/${params.order.id}`
                     ),
                     pdfHref: getAbsoluteURL(
-            id: string;
-            publicOrderId: string;
-            companyName: string;
-            quantity: number;
-            totalPaise: number;
-            advancePaidPaise: number;
-            balanceDuePaise: number;
-            emailAddress: string | null;
-        };
-    }) {
-        if (!params.order.emailAddress?.trim()) return;
-
-        try {
-            await resend.emails.send({
-                from: env.RESEND_EMAIL_FROM,
-                to: params.order.emailAddress.trim(),
-                subject: `Your order is ready for dispatch: ${params.order.publicOrderId}`,
-                react: CorporateOrderCustomerReadyForDispatchEmail({
-                    order: params.order,
-                    confirmationHref: getAbsoluteURL(
-                        `/corporate-orders/confirmation/${params.order.id}`
-                    ),
-                    pdfHref: getAbsoluteURL(
                         `/api/corporate-orders/${params.order.id}/summary.pdf`
                     ),
                 }),
