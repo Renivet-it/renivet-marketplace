@@ -73,6 +73,7 @@ import { resend } from "@/lib/resend";
 import {
     CorporateReplacementRequestAdminEmail,
     CorporateOrderCustomerReadyForDispatchEmail,
+    CorporateOrderDeliveredEmail,
     CorporateOrderReadyForDispatchEmail,
 } from "@/lib/resend/emails";
 import {
@@ -357,6 +358,43 @@ class CorporatePlatformService {
         } catch (error) {
             console.error(
                 "Failed to send customer ready-for-dispatch notification",
+                error
+            );
+        }
+    }
+
+    private async notifyCustomerOrderDelivered(params: {
+        order: {
+            id: string;
+            publicOrderId: string;
+            companyName: string;
+            quantity: number;
+            totalPaise: number;
+            advancePaidPaise: number;
+            balanceDuePaise: number;
+            emailAddress: string | null;
+        };
+    }) {
+        if (!params.order.emailAddress?.trim()) return;
+
+        try {
+            await resend.emails.send({
+                from: env.RESEND_EMAIL_FROM,
+                to: params.order.emailAddress.trim(),
+                subject: `Your order has been delivered: ${params.order.publicOrderId}`,
+                react: CorporateOrderDeliveredEmail({
+                    order: params.order,
+                    confirmationHref: getAbsoluteURL(
+                        `/corporate-orders/confirmation/${params.order.id}`
+                    ),
+                    pdfHref: getAbsoluteURL(
+                        `/api/corporate-orders/${params.order.id}/summary.pdf`
+                    ),
+                }),
+            });
+        } catch (error) {
+            console.error(
+                "Failed to send customer delivered notification",
                 error
             );
         }
@@ -2371,6 +2409,21 @@ class CorporatePlatformService {
                     trackingNumber: saved.trackingNumber,
                 },
             });
+
+            if (nextOrderStatus === "delivered") {
+                await this.notifyCustomerOrderDelivered({
+                    order: {
+                        id: order.id,
+                        publicOrderId: order.publicOrderId,
+                        companyName: order.companyName,
+                        quantity: order.quantity,
+                        totalPaise: order.totalPaise,
+                        advancePaidPaise: order.advancePaidPaise,
+                        balanceDuePaise: order.balanceDuePaise,
+                        emailAddress: order.emailAddress,
+                    },
+                });
+            }
         }
 
         await this.createEvent(
@@ -3375,6 +3428,24 @@ class CorporatePlatformService {
             });
 
             await this.notifyCustomerOrderReadyForDispatch({
+                order: {
+                    id: order.id,
+                    publicOrderId: order.publicOrderId,
+                    companyName: order.companyName,
+                    quantity: order.quantity,
+                    totalPaise: order.totalPaise,
+                    advancePaidPaise: order.advancePaidPaise,
+                    balanceDuePaise: order.balanceDuePaise,
+                    emailAddress: order.emailAddress,
+                },
+            });
+        }
+
+        if (
+            input.toStatus === "delivered" &&
+            order.status !== "delivered"
+        ) {
+            await this.notifyCustomerOrderDelivered({
                 order: {
                     id: order.id,
                     publicOrderId: order.publicOrderId,

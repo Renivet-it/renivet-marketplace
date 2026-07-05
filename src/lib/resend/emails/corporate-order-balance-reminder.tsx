@@ -15,40 +15,38 @@ export default function CorporateOrderBalanceReminderEmail({
 }) {
     return (
         <CorporateOrderEmailShell
-            preview={`Balance payment reminder for ${order.publicOrderId}`}
-            eyebrow="Payment Concierge"
-            title="Your Remaining Corporate Balance Is Ready"
-            intro="Your order is progressing through the managed corporate pipeline. To keep production and dispatch milestones moving smoothly, please complete the remaining balance payment from the secure payment link below."
+            preview={`Balance Payment Reminder: ${order.publicOrderId}`}
+            eyebrow="Payment Reminder"
+            title="Outstanding Balance Payment Due"
+            intro="Your corporate order is currently progressing through our production pipeline. To prevent any delays with fulfillment and subsequent dispatch milestones, please review the outstanding balance details below and complete the payment using our secure link."
             primaryAction={{
                 href: paymentHref,
-                label: "Pay Remaining Balance",
+                label: "Pay Outstanding Balance",
             }}
         >
             <EmailMetricGrid
                 items={[
                     { label: "Order ID", value: order.publicOrderId },
-                    { label: "Company", value: order.companyName },
-                    { label: "Already Paid", value: formatINR(order.advancePaidPaise) },
-                    { label: "Balance Due", value: formatINR(order.balanceDuePaise) },
+                    { label: "Company Name", value: order.companyName },
+                    { label: "Amount Paid (Advance)", value: formatINR(order.advancePaidPaise) },
+                    { label: "Balance Due (Outstanding)", value: formatINR(order.balanceDuePaise) },
                 ]}
             />
 
             <EmailDetailCard
-                title="Payment Summary"
+                title="Billing Summary"
                 rows={[
                     { label: "Total Order Value", value: formatINR(order.totalPaise) },
-                    { label: "Current Order Status", value: "Awaiting balance payment" },
+                    { label: "Payment Status", value: "Awaiting Balance Payment" },
                     {
-                        label: "Payment Reference",
-                        value: order.paymentReference || "Will be updated after payment",
+                        label: "Advance Payment Reference",
+                        value: order.paymentReference || "N/A",
                     },
                 ]}
             />
 
             <EmailNote>
-                If your finance team has already completed the balance payment, you may
-                ignore this reminder. Otherwise, completing payment now will help avoid
-                delays in downstream production and dispatch milestones.
+                Note: If your finance department has already initiated the payment transfer, please ignore this message. Once the transaction is cleared, your order status will automatically update and we will begin processing dispatch preparation.
             </EmailNote>
         </CorporateOrderEmailShell>
     );

@@ -15,54 +15,50 @@ export default function CorporateOrderInternalNotificationEmail({
 }) {
     return (
         <CorporateOrderEmailShell
-            preview={`New corporate order: ${order.publicOrderId}`}
+            preview={`[Internal Alert] New Corporate Order: ${order.publicOrderId}`}
             eyebrow="Operations Notification"
-            title="New Corporate Order Routed To Operations"
-            intro="A fresh corporate order has been finalized and is now ready for commercial review, fulfillment planning, and workflow ownership inside the admin console."
+            title="New Corporate Order Finalized"
+            intro="A new corporate order has been finalized by the customer. It is now queued for commercial review, production assignment, and fulfillment tracking within the admin dashboard."
             primaryAction={{
                 href: adminHref,
-                label: "Open In Admin Workspace",
+                label: "Open Admin Workspace",
             }}
         >
             <EmailMetricGrid
                 items={[
                     { label: "Order ID", value: order.publicOrderId },
                     { label: "Company", value: order.companyName },
-                    { label: "Quantity", value: String(order.quantity) },
+                    { label: "Quantity", value: `${order.quantity} units` },
                     { label: "Total Value", value: formatINR(order.totalPaise) },
                 ]}
             />
 
             <EmailDetailCard
-                title="Commercial Details"
+                title="Client & Billing Details"
                 rows={[
-                    { label: "Contact Person", value: order.contactPersonName },
-                    { label: "Email", value: order.emailAddress },
-                    { label: "Advance Paid", value: formatINR(order.advancePaidPaise) },
-                    { label: "Balance Due", value: formatINR(order.balanceDuePaise) },
+                    { label: "Contact Name", value: order.contactPersonName },
+                    { label: "Email Address", value: order.emailAddress },
+                    { label: "Advance Payment", value: formatINR(order.advancePaidPaise) },
+                    { label: "Remaining Balance", value: formatINR(order.balanceDuePaise) },
                 ]}
             />
 
             <EmailDetailCard
-                title="Files Received"
+                title="Uploaded Documents"
                 rows={[
                     {
-                        label: "Artwork File",
-                        value: String((order.artworkFile as any)?.url ?? "Not available"),
+                        label: "Artwork File (URL)",
+                        value: String((order.artworkFile as any)?.url ?? "No document uploaded"),
                     },
                     {
-                        label: "Employee Size Sheet",
-                        value: String(
-                            (order.employeeSheetFile as any)?.url ?? "Not available"
-                        ),
+                        label: "Employee Size Sheet (URL)",
+                        value: String((order.employeeSheetFile as any)?.url ?? "No document uploaded"),
                     },
                 ]}
             />
 
             <EmailNote>
-                This order should now be visible in the corporate operations queue,
-                payment tracking, and the assigned brand workspace if the quote linkage
-                is present.
+                Action Required: Please review the customer's design assets, size sheet, and verify payment receipt. Once validated, assign the production workload to the appropriate brand partner.
             </EmailNote>
         </CorporateOrderEmailShell>
     );

@@ -35,6 +35,7 @@ import {
 import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
 import {
     CorporateOrderBalanceReminderEmail,
+    CorporateOrderDeliveredEmail,
     CorporateOrderInternalNotificationEmail,
     CorporateOrderReceivedEmail,
 } from "@/lib/resend/emails";
@@ -812,6 +813,34 @@ class CorporateOrderService {
             changedByUserId: input.changedByUserId,
             note: input.note ?? `Status changed to ${convertValueToLabel(input.toStatus)}`,
         });
+
+        if (input.toStatus === "delivered" && order.status !== "delivered" && order.emailAddress?.trim()) {
+            try {
+                await resend.emails.send({
+                    from: env.RESEND_EMAIL_FROM,
+                    to: order.emailAddress.trim(),
+                    subject: `Your order has been delivered: ${order.publicOrderId}`,
+                    react: CorporateOrderDeliveredEmail({
+                        order: {
+                            publicOrderId: order.publicOrderId,
+                            companyName: order.companyName,
+                            totalPaise: order.totalPaise,
+                            advancePaidPaise: order.advancePaidPaise,
+                            balanceDuePaise: order.balanceDuePaise,
+                            quantity: order.quantity,
+                        },
+                        confirmationHref: getAbsoluteURL(
+                            `/corporate-orders/confirmation/${order.id}`
+                        ),
+                        pdfHref: getAbsoluteURL(
+                            `/api/corporate-orders/${order.id}/summary.pdf`
+                        ),
+                    }),
+                });
+            } catch (error) {
+                console.error("Failed to send customer delivered notification from admin updateStatus", error);
+            }
+        }
 
         return updated;
     }

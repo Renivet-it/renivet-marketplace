@@ -25,48 +25,44 @@ export default function CorporateOrderReadyForDispatchEmail({
 }) {
     return (
         <CorporateOrderEmailShell
-            preview={`Ready for dispatch: ${order.publicOrderId}`}
+            preview={`[Internal Alert] Corporate Order Ready for Dispatch: ${order.publicOrderId}`}
             eyebrow="Brand Fulfillment Update"
-            title="Corporate Order Ready For Dispatch"
-            intro="The assigned brand has completed production and marked this corporate order as ready for dispatch. Please review the final order and continue with shipment handling from the admin workspace."
+            title="Corporate Order Ready for Dispatch"
+            intro="The assigned brand has completed production and marked this corporate order as ready for dispatch. Please review the final details, confirm balance payment receipt, and coordinate shipment handling from the admin workspace."
             primaryAction={{
                 href: adminHref,
-                label: "Review Final Order",
+                label: "Review & Process Order",
             }}
         >
             <EmailMetricGrid
                 items={[
                     { label: "Order ID", value: order.publicOrderId },
-                    { label: "Company", value: order.companyName },
-                    { label: "Quantity", value: String(order.quantity) },
+                    { label: "Company Name", value: order.companyName },
+                    { label: "Quantity", value: `${order.quantity} units` },
                     { label: "Total Value", value: formatINR(order.totalPaise) },
                 ]}
             />
 
             <EmailDetailCard
-                title="Dispatch Readiness"
+                title="Fulfillment & Brand Assignment"
                 rows={[
-                    { label: "Workflow Status", value: order.status },
+                    { label: "Fulfillment Status", value: order.status },
                     {
                         label: "Assigned Brand",
                         value: order.brandName?.trim() || "Assigned brand",
                     },
                     {
-                        label: "Linked Quote",
-                        value: order.quoteNumber?.trim() || "Linked to approved quote",
-                    },
-                    {
-                        label: "Balance Due",
-                        value: formatINR(order.balanceDuePaise),
+                        label: "Linked Quote ID",
+                        value: order.quoteNumber?.trim() || "N/A",
                     },
                 ]}
             />
 
             <EmailDetailCard
-                title="Payment Snapshot"
+                title="Billing Summary"
                 rows={[
                     {
-                        label: "Advance Paid",
+                        label: "Advance Payment Received",
                         value: formatINR(order.advancePaidPaise),
                     },
                     {
@@ -77,9 +73,7 @@ export default function CorporateOrderReadyForDispatchEmail({
             />
 
             <EmailNote>
-                This alert was triggered directly from the brand admin corporate
-                orders table when the production team marked the final order as ready
-                for dispatch.
+                Note: This internal notification was generated automatically when the brand production team marked the order status as ready for dispatch in their dashboard.
             </EmailNote>
         </CorporateOrderEmailShell>
     );

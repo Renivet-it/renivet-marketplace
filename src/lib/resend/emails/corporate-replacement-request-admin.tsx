@@ -27,44 +27,44 @@ export default function CorporateReplacementRequestAdminEmail({
 }) {
     return (
         <CorporateOrderEmailShell
-            preview={`Replacement request raised for ${order.publicOrderId}`}
+            preview={`[Internal Alert] Replacement Request: ${order.publicOrderId}`}
             eyebrow="Corporate Replacement Desk"
-            title="A New Replacement Request Needs Review"
-            intro="A corporate customer has raised a replacement request. Please review the issue details, inspect the uploaded evidence, and decide whether the replacement order should move into fulfillment."
+            title="Replacement Request Submitted"
+            intro="A corporate customer has submitted a request for replacement items. Please inspect the details, verify the uploaded evidence and photos, and process the request in the admin replacement queue."
             primaryAction={{
                 href: queueHref,
                 label: "Open Replacement Queue",
             }}
             secondaryAction={{
                 href: orderHref,
-                label: "Open Source Order",
+                label: "View Source Order",
             }}
         >
             <EmailMetricGrid
                 items={[
                     { label: "Order ID", value: order.publicOrderId },
-                    { label: "Company", value: order.companyName },
+                    { label: "Company Name", value: order.companyName },
                     {
                         label: "Requested Quantity",
-                        value: `${request.requestedQuantity} unit(s)`,
+                        value: `${request.requestedQuantity} units`,
                     },
-                    { label: "Issue Type", value: request.reasonLabel },
+                    { label: "Reason Code", value: request.reasonLabel },
                 ]}
             />
 
             <EmailDetailCard
-                title="Customer Contact"
+                title="Client Contact Information"
                 rows={[
-                    { label: "Contact Person", value: order.contactPersonName },
-                    { label: "Email", value: order.emailAddress },
+                    { label: "Contact Name", value: order.contactPersonName },
+                    { label: "Email Address", value: order.emailAddress },
                 ]}
             />
 
             <EmailDetailCard
-                title="Replacement Notes"
+                title="Customer Comments"
                 rows={[
                     {
-                        label: "Customer Message",
+                        label: "Comments / Message",
                         value:
                             request.reasonDetails?.trim() ||
                             "No additional notes were provided by the customer.",
@@ -73,9 +73,7 @@ export default function CorporateReplacementRequestAdminEmail({
             />
 
             <EmailNote>
-                Review this request quickly so the team can either approve the
-                replacement and generate the new fulfillment order, or respond
-                back with the correct next step.
+                Action Required: Please review the submission in the admin dashboard promptly. Approved replacement requests will trigger a new zero-value fulfillment order for the brand partner.
             </EmailNote>
         </CorporateOrderEmailShell>
     );

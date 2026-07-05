@@ -4,139 +4,154 @@ import {
     StyleSheet,
     Text,
     View,
+    Image,
 } from "@react-pdf/renderer";
 import { formatCorporateDeliveryAddress } from "@/lib/corporate-delivery-address";
 
-const luxury = {
-    navy: "#14213d",
-    gold: "#9a6b2f",
-    goldSoft: "#e8d8c0",
-    sand: "#f6f0e7",
-    panel: "#fffdf9",
-    ink: "#1f2937",
-    muted: "#667085",
-    line: "#decdb8",
+const brandColors = {
+    bg: "#f8fafc",          // Slate-50 background
+    panel: "#ffffff",       // Pure white panels
+    ink: "#0f172a",         // Slate-900: Primary dark text
+    muted: "#475569",       // Slate-600: Muted secondary text
+    brand: "#2d3121",       // Renivet Brand Green
+    brandLight: "#f4f6f0",  // Soft sage green highlight
+    line: "#e2e8f0",        // Slate-200: Divider lines
 };
 
 const styles = StyleSheet.create({
     page: {
         paddingTop: 0,
-        paddingBottom: 34,
+        paddingBottom: 40,
         paddingHorizontal: 0,
-        fontSize: 11,
-        backgroundColor: luxury.sand,
-        color: luxury.ink,
+        fontSize: 10,
+        backgroundColor: "#ffffff", // Crisp white is the professional standard for printable documents
+        color: brandColors.ink,
     },
     hero: {
-        backgroundColor: luxury.navy,
-        paddingTop: 30,
-        paddingBottom: 28,
-        paddingHorizontal: 34,
+        backgroundColor: brandColors.brand,
+        paddingTop: 32,
+        paddingBottom: 30,
+        paddingHorizontal: 36,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    heroLeft: {
+        flexDirection: "column",
+        width: "75%",
+    },
+    logo: {
+        width: 50,
+        height: 50,
     },
     eyebrow: {
-        fontSize: 10,
-        color: luxury.goldSoft,
-        letterSpacing: 3,
+        fontSize: 9,
+        color: "#c0c4b9", // soft brand-tinted white
+        letterSpacing: 2,
         textTransform: "uppercase",
+        fontWeight: 700,
     },
     title: {
-        marginTop: 12,
-        fontSize: 28,
+        marginTop: 8,
+        fontSize: 24,
         color: "#ffffff",
         fontWeight: 700,
     },
     subtitle: {
-        marginTop: 10,
-        fontSize: 12,
-        color: "#dbe4f0",
-        lineHeight: 1.6,
+        marginTop: 8,
+        fontSize: 11,
+        color: "#f4f6f0",
+        lineHeight: 1.5,
     },
     sectionWrap: {
-        paddingHorizontal: 28,
-        paddingTop: 18,
+        paddingHorizontal: 36,
+        paddingTop: 24,
     },
     metricGrid: {
         flexDirection: "row",
-        flexWrap: "wrap",
-        gap: 12,
+        justifyContent: "space-between",
+        marginBottom: 8,
     },
     metricCard: {
-        width: "47%",
-        padding: 16,
-        backgroundColor: luxury.panel,
-        borderRadius: 16,
-        border: `1 solid ${luxury.line}`,
+        padding: 12,
+        backgroundColor: "#fafafa",
+        borderRadius: 6,
+        border: `1 solid ${brandColors.line}`,
     },
     metricLabel: {
-        fontSize: 10,
+        fontSize: 8,
         textTransform: "uppercase",
-        letterSpacing: 2,
-        color: luxury.muted,
+        letterSpacing: 1,
+        color: brandColors.muted,
+        fontWeight: 600,
     },
     metricValue: {
-        marginTop: 10,
-        fontSize: 18,
+        marginTop: 6,
+        fontSize: 10, // 10pt is the sweet spot for perfect, non-overlapping values
         fontWeight: 700,
-        color: luxury.navy,
+        color: brandColors.ink,
     },
     panel: {
-        marginTop: 14,
-        padding: 18,
-        backgroundColor: luxury.panel,
-        borderRadius: 18,
-        border: `1 solid ${luxury.line}`,
+        marginTop: 16,
+        padding: 16,
+        backgroundColor: "#ffffff",
+        borderRadius: 8,
+        border: `1 solid ${brandColors.line}`,
     },
     panelTitle: {
-        fontSize: 11,
+        fontSize: 10,
         textTransform: "uppercase",
-        letterSpacing: 2.2,
-        color: luxury.gold,
+        letterSpacing: 1.5,
+        color: brandColors.brand,
         fontWeight: 700,
-        marginBottom: 12,
+        marginBottom: 10,
+        borderBottom: `1 solid ${brandColors.line}`,
+        paddingBottom: 4,
     },
     row: {
         flexDirection: "row",
         justifyContent: "space-between",
-        gap: 12,
-        paddingTop: 8,
+        paddingVertical: 6,
+        borderBottom: `0.5 solid #f1f5f9`, // add a very subtle row separator line for ease of reading
     },
     label: {
         width: "40%",
-        fontSize: 11,
-        color: luxury.muted,
+        fontSize: 9,
+        color: brandColors.muted,
     },
     value: {
         width: "58%",
-        fontSize: 11,
-        color: luxury.ink,
+        fontSize: 9,
+        color: brandColors.ink,
+        fontWeight: 500,
         textAlign: "right",
     },
     note: {
-        marginTop: 14,
-        padding: 16,
-        backgroundColor: luxury.goldSoft,
-        borderRadius: 16,
-        border: `1 solid ${luxury.line}`,
+        marginTop: 20,
+        padding: 14,
+        backgroundColor: brandColors.brandLight,
+        borderRadius: 6,
+        borderLeft: `3 solid ${brandColors.brand}`,
     },
     noteText: {
-        fontSize: 11,
-        lineHeight: 1.6,
-        color: luxury.navy,
+        fontSize: 9,
+        lineHeight: 1.5,
+        color: brandColors.ink,
     },
     chipRow: {
         flexDirection: "row",
         flexWrap: "wrap",
-        gap: 8,
-        marginTop: 4,
+        gap: 6,
+        marginTop: 6,
     },
     chip: {
-        paddingVertical: 6,
-        paddingHorizontal: 10,
-        borderRadius: 999,
-        backgroundColor: "#fbf7f1",
-        border: `1 solid ${luxury.line}`,
-        fontSize: 10,
-        color: luxury.ink,
+        paddingVertical: 4,
+        paddingHorizontal: 8,
+        borderRadius: 4,
+        backgroundColor: "#f1f5f9",
+        border: `1 solid ${brandColors.line}`,
+        fontSize: 8,
+        color: brandColors.ink,
     },
 });
 
@@ -164,31 +179,36 @@ export function CorporateOrderSummaryTemplate({
         <Document>
             <Page size="A4" style={styles.page}>
                 <View style={styles.hero}>
-                    <Text style={styles.eyebrow}>Renivet Corporate Atelier</Text>
-                    <Text style={styles.title}>Corporate Order Dossier</Text>
-                    <Text style={styles.subtitle}>
-                        Premium commercial summary for managed procurement,
-                        production handoff, and payment tracking.
-                    </Text>
+                    <View style={styles.heroLeft}>
+                        <Text style={styles.eyebrow}>Renivet Corporate Orders</Text>
+                        <Text style={styles.title}>Corporate Order Summary</Text>
+                        <Text style={styles.subtitle}>
+                            Official order confirmation, commercial billing breakdown, and production specifications.
+                        </Text>
+                    </View>
+                    <Image
+                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqU6nAZGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw"
+                        style={styles.logo}
+                    />
                 </View>
 
                 <View style={styles.sectionWrap}>
                     <View style={styles.metricGrid}>
-                        <View style={styles.metricCard}>
+                        <View style={[styles.metricCard, { width: "31%" }]}>
                             <Text style={styles.metricLabel}>Order ID</Text>
                             <Text style={styles.metricValue}>{order.publicOrderId}</Text>
                         </View>
-                        <View style={styles.metricCard}>
+                        <View style={[styles.metricCard, { width: "21%" }]}>
                             <Text style={styles.metricLabel}>Order Value</Text>
                             <Text style={styles.metricValue}>{toMoney(order.totalPaise)}</Text>
                         </View>
-                        <View style={styles.metricCard}>
+                        <View style={[styles.metricCard, { width: "21%" }]}>
                             <Text style={styles.metricLabel}>Advance Paid</Text>
                             <Text style={styles.metricValue}>
                                 {toMoney(order.advancePaidPaise)}
                             </Text>
                         </View>
-                        <View style={styles.metricCard}>
+                        <View style={[styles.metricCard, { width: "21%" }]}>
                             <Text style={styles.metricLabel}>Balance Due</Text>
                             <Text style={styles.metricValue}>
                                 {toMoney(order.balanceDuePaise)}
@@ -198,10 +218,10 @@ export function CorporateOrderSummaryTemplate({
 
                     <View style={styles.panel}>
                         <Text style={styles.panelTitle}>Company Information</Text>
-                        <InfoRow label="Company" value={order.companyName} />
+                        <InfoRow label="Company Name" value={order.companyName} />
                         <InfoRow label="Contact Person" value={order.contactPersonName} />
-                        <InfoRow label="Email" value={order.emailAddress} />
-                        <InfoRow label="Phone" value={order.mobileNumber} />
+                        <InfoRow label="Email Address" value={order.emailAddress} />
+                        <InfoRow label="Phone Number" value={order.mobileNumber} />
                         <InfoRow
                             label="Delivery Address"
                             value={formatCorporateDeliveryAddress(order)}
@@ -226,7 +246,7 @@ export function CorporateOrderSummaryTemplate({
                                 "-"
                             }
                         />
-                        <InfoRow label="Quantity" value={String(order.quantity)} />
+                        <InfoRow label="Total Quantity" value={String(order.quantity)} />
                         {colors.length ? (
                             <View style={{ paddingTop: 8 }}>
                                 <Text style={styles.label}>Selected Colors</Text>
@@ -280,20 +300,17 @@ export function CorporateOrderSummaryTemplate({
                             label="Customization"
                             value={toMoney(order.customizationPaise)}
                         />
-                        <InfoRow label="GST" value={toMoney(order.gstPaise)} />
-                        <InfoRow label="Total" value={toMoney(order.totalPaise)} />
+                        <InfoRow label="GST Amount" value={toMoney(order.gstPaise)} />
+                        <InfoRow label="Grand Total" value={toMoney(order.totalPaise)} />
                         <InfoRow
-                            label="Expected Timeline"
+                            label="Estimated Timeline"
                             value={settings.expectedTimelineText}
                         />
                     </View>
 
                     <View style={styles.note}>
                         <Text style={styles.noteText}>
-                            This corporate order dossier is generated for premium
-                            procurement coordination across finance, production, and
-                            brand operations. All commercial amounts and configuration
-                            snapshots reflect the current recorded order state.
+                            This corporate order summary is generated to facilitate procurement coordination across finance, production, and brand operations. All values and configurations reflect the current recorded order specifications.
                         </Text>
                     </View>
                 </View>
