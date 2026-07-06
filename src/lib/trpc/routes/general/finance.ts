@@ -1,6 +1,5 @@
-import { BitFieldSitePermission } from "@/config/permissions";
 import { financeModules } from "@/lib/db/schema";
-import { getFinanceModuleAccess } from "@/lib/finance/access";
+import { getFinanceModuleAccess, hasFinanceAdminAccess } from "@/lib/finance/access";
 import {
     categorizeCodDiscrepancy,
     computeTdsDeduction,
@@ -42,6 +41,7 @@ async function assertFinanceAccess(ctx: any, moduleKey: (typeof financeModules)[
     const access = await getFinanceModuleAccess({
         userId: ctx.user.id,
         sitePermissions: ctx.user.sitePermissions ?? 0,
+        roles: ctx.user.roles ?? [],
         moduleKey,
     });
 
@@ -668,10 +668,13 @@ export const financeComplianceRouter = createTRPCRouter({
         if (!ctx.user?.sitePermissions) {
             throw new TRPCError({ code: "UNAUTHORIZED", message: "You're not authorized" });
         }
+        const canManageMonitoring = hasFinanceAdminAccess({
+            sitePermissions: ctx.user.sitePermissions,
+            roles: ctx.user.roles ?? [],
+        });
         return {
             modules: financeModules,
-            canManageMonitoring:
-                (ctx.user.sitePermissions & BitFieldSitePermission.MANAGE_MONITORING) > 0,
+            canManageMonitoring,
             currentFinancialYear: getFinancialYearForDate(new Date()),
         };
     }),

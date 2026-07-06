@@ -9,7 +9,7 @@ export function toCsv(rows: Array<Record<string, unknown>>) {
 
     const escapeValue = (value: unknown) => {
         if (value === null || value === undefined) return "";
-        const stringValue = String(value).replaceAll('"', '""');
+        const stringValue = String(value).replaceAll("\"", "\"\"");
         return /[",\n]/.test(stringValue) ? `"${stringValue}"` : stringValue;
     };
 

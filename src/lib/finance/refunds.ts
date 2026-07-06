@@ -290,7 +290,11 @@ export async function executeApprovedRefund(refundId: string, actorId: string) {
     }
 
     const order = await orderQueries.getOrderById(refund.orderId);
-    if (!order?.paymentId && !refund.paymentId) {
+    if (!order) {
+        throw new Error("Order not found for refund execution.");
+    }
+
+    if (!order.paymentId && !refund.paymentId) {
         throw new Error("Unable to execute refund without a payment id.");
     }
     const paymentId = refund.paymentId ?? order.paymentId;

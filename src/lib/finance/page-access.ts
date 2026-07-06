@@ -4,7 +4,7 @@ import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { notFound } from "next/navigation";
-import { getFinanceModuleAccess } from "./access";
+import { getFinanceModuleAccess, hasFinanceAdminAccess } from "./access";
 
 export async function assertFinanceDashboardAccess() {
     const { userId } = await auth();
@@ -14,6 +14,10 @@ export async function assertFinanceDashboardAccess() {
     const permissions = user
         ? getUserPermissions(user.roles).sitePermissions
         : 0;
+    const isFinanceAdmin = hasFinanceAdminAccess({
+        sitePermissions: permissions,
+        roles: user?.roles,
+    });
     const allowed = hasPermission(
         permissions,
         [
@@ -26,11 +30,13 @@ export async function assertFinanceDashboardAccess() {
         "any"
     );
 
-    if (!allowed) notFound();
+    if (!allowed && !isFinanceAdmin) notFound();
 
     return {
         userId,
         permissions,
+        user,
+        isFinanceAdmin,
     };
 }
 
@@ -42,6 +48,7 @@ export async function assertFinanceModulePageAccess(
     const moduleAccess = await getFinanceModuleAccess({
         userId: access.userId,
         sitePermissions: access.permissions,
+        roles: access.user?.roles,
         moduleKey,
     });
 
