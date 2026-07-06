@@ -10,6 +10,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
+import { DiscountBadge } from "@/components/ui/discount-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -374,9 +375,11 @@ export function ProductCard({
                         sizes="(max-width: 640px) 33vw, 14vw"
                     />
                     {discount && discount > 0 && (
-                        <span className="absolute left-0 top-2 rounded-r-sm bg-[#E95123] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white">
-                            -{discount}%
-                        </span>
+                        <DiscountBadge
+                            discount={discount}
+                            compact
+                            className="absolute left-0 top-3 z-20"
+                        />
                     )}
 
                     {/* Wishlist — top right */}
