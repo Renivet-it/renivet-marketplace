@@ -1,16 +1,25 @@
-"use client";
-
 import { Icons } from "@/components/icons";
 import { ConsumerProtectionNotice } from "@/components/legal/consumer-protection-notice";
 import { Renivet } from "@/components/svgs";
 import { Button } from "@/components/ui/button-general";
 import { siteConfig } from "@/config/site";
-import { legalCache } from "@/lib/redis/methods";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-export async function Footer({ className, ...props }: GenericProps) {
-    const legal = await legalCache.get();
+type FooterLegalProps = {
+    supportEmail?: string | null;
+    supportPhone?: string | null;
+    grievanceOfficerName?: string | null;
+    grievanceOfficerEmail?: string | null;
+    grievanceOfficerPhone?: string | null;
+    grievanceOfficerAddress?: string | null;
+};
+
+interface FooterProps extends GenericProps {
+    legal?: FooterLegalProps | null;
+}
+
+export function Footer({ className, legal, ...props }: FooterProps) {
 
     return (
         <footer

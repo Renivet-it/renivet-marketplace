@@ -46,31 +46,31 @@ export const legalSchema = z.object({
     ),
     grievanceOfficerName: z.preprocess(
         convertEmptyStringToNull,
-        z.string().min(1).nullable()
+        z.string().min(1).nullable().optional()
     ),
     grievanceOfficerEmail: z.preprocess(
         convertEmptyStringToNull,
-        z.string().email().nullable()
+        z.string().email().nullable().optional()
     ),
     grievanceOfficerPhone: z.preprocess(
         convertEmptyStringToNull,
-        z.string().min(6).nullable()
+        z.string().min(6).nullable().optional()
     ),
     grievanceOfficerAddress: z.preprocess(
         convertEmptyStringToNull,
-        z.string().min(1).nullable()
+        z.string().min(1).nullable().optional()
     ),
     supportEmail: z.preprocess(
         convertEmptyStringToNull,
-        z.string().email().nullable()
+        z.string().email().nullable().optional()
     ),
     supportPhone: z.preprocess(
         convertEmptyStringToNull,
-        z.string().min(6).nullable()
+        z.string().min(6).nullable().optional()
     ),
     dpdpConsentVersion: z.preprocess(
         convertEmptyStringToNull,
-        z.string().min(1).nullable()
+        z.string().min(1).nullable().optional()
     ),
     isConsumerProtectionPublished: z.boolean().default(false),
     ppCreatedAt: z

@@ -1,9 +1,9 @@
 import {
-    Footer,
     GeneralShell,
     NavbarHome,
     NavbarMob,
 } from "@/components/globals/layouts";
+import { FooterWithLegal } from "@/components/globals/layouts/footer/footer-with-legal";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -35,7 +35,7 @@ export default async function CheckoutPage() {
                     </div>
                 </GeneralShell>
             </main>
-            <Footer />
+            <FooterWithLegal />
             <NavbarMob />
         </div>
     );
