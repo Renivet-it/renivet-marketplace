@@ -40,6 +40,17 @@ export async function getFinanceModuleAccess(params: {
     roles?: FinanceAccessRole[];
     moduleKey: (typeof financeModules)[number];
 }) {
+    const entries = await financeComplianceQueries.getModuleAccessForUser(params.userId);
+    const entry = entries.find((item) => item.moduleKey === params.moduleKey);
+
+    if (params.moduleKey === "monthly_pl") {
+        return {
+            canView: entry?.canView ?? false,
+            canManage: entry?.canManage ?? false,
+            isInherited: false,
+        };
+    }
+
     const isAdmin = hasFinanceAdminAccess({
         sitePermissions: params.sitePermissions,
         roles: params.roles,
@@ -48,12 +59,13 @@ export async function getFinanceModuleAccess(params: {
     if (isAdmin) {
         return { canView: true, canManage: true, isInherited: true };
     }
-
-    const entries = await financeComplianceQueries.getModuleAccessForUser(params.userId);
-    const entry = entries.find((item) => item.moduleKey === params.moduleKey);
     return {
         canView: entry?.canView ?? false,
         canManage: entry?.canManage ?? false,
         isInherited: false,
     };
+}
+
+export function isAjSuperAdmin(userId?: string | null) {
+    return Boolean(userId) && userId === process.env.AJ_USER_ID;
 }

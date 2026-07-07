@@ -1,11 +1,17 @@
-export function toCsv(rows: Array<Record<string, unknown>>) {
+export function toCsv(
+    rows: Array<Record<string, unknown>>,
+    explicitHeaders?: string[]
+) {
     if (!rows.length) return "";
-    const headers = Array.from(
-        rows.reduce((set, row) => {
-            Object.keys(row).forEach((key) => set.add(key));
-            return set;
-        }, new Set<string>())
-    );
+    const headers =
+        explicitHeaders && explicitHeaders.length
+            ? explicitHeaders
+            : Array.from(
+                  rows.reduce((set, row) => {
+                      Object.keys(row).forEach((key) => set.add(key));
+                      return set;
+                  }, new Set<string>())
+              );
 
     const escapeValue = (value: unknown) => {
         if (value === null || value === undefined) return "";

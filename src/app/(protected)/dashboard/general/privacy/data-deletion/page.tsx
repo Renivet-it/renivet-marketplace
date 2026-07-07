@@ -1,3 +1,4 @@
+import { DataDeletionWorkspace } from "@/components/dashboard/general/privacy/data-deletion-workspace";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { assertFinanceModulePageAccess } from "@/lib/finance/page-access";
 
@@ -16,31 +17,13 @@ export default async function DataDeletionPage() {
                     </p>
                 </header>
 
-                <section className="overflow-hidden rounded-md border bg-white shadow-sm">
-                    <div className="grid grid-cols-[1fr_0.8fr_0.8fr_1.2fr] gap-3 border-b bg-slate-100 px-4 py-3 text-xs font-semibold uppercase text-slate-600">
-                        <span>Request</span>
-                        <span>Status</span>
-                        <span>Requested by</span>
-                        <span>Reason</span>
-                    </div>
-                    <div className="divide-y">
-                        {rows.length === 0 ? (
-                            <p className="p-6 text-sm text-slate-500">No deletion requests logged yet.</p>
-                        ) : (
-                            rows.map((row) => (
-                                <div
-                                    key={row.id}
-                                    className="grid grid-cols-[1fr_0.8fr_0.8fr_1.2fr] gap-3 px-4 py-3 text-sm"
-                                >
-                                    <span className="font-medium text-slate-900">{row.id}</span>
-                                    <span>{row.status}</span>
-                                    <span>{row.requestedByEmail ?? row.userId}</span>
-                                    <span>{row.reason ?? "-"}</span>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                </section>
+                {rows.length === 0 ? (
+                    <section className="rounded-md border bg-white p-6 text-sm text-slate-500 shadow-sm">
+                        No deletion requests logged yet.
+                    </section>
+                ) : null}
+
+                <DataDeletionWorkspace />
             </div>
         </main>
     );

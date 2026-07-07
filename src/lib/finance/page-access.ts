@@ -1,9 +1,10 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { financeModules } from "@/lib/db/schema";
+import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { notFound } from "next/navigation";
+import { forbidden, notFound } from "next/navigation";
 import { getFinanceModuleAccess, hasFinanceAdminAccess } from "./access";
 
 export async function assertFinanceDashboardAccess() {
@@ -18,6 +19,12 @@ export async function assertFinanceDashboardAccess() {
         sitePermissions: permissions,
         roles: user?.roles,
     });
+    const moduleAccessRows = await financeComplianceQueries.getModuleAccessForUser(
+        userId
+    );
+    const hasModuleAccess = moduleAccessRows.some(
+        (item) => item.canView || item.canManage
+    );
     const allowed = hasPermission(
         permissions,
         [
@@ -30,13 +37,14 @@ export async function assertFinanceDashboardAccess() {
         "any"
     );
 
-    if (!allowed && !isFinanceAdmin) notFound();
+    if (!allowed && !isFinanceAdmin && !hasModuleAccess) notFound();
 
     return {
         userId,
         permissions,
         user,
         isFinanceAdmin,
+        hasModuleAccess,
     };
 }
 
@@ -56,6 +64,9 @@ export async function assertFinanceModulePageAccess(
         (mode === "manage" && !moduleAccess.canManage) ||
         (mode === "view" && !moduleAccess.canView && !moduleAccess.canManage)
     ) {
+        if (moduleKey === "monthly_pl") {
+            forbidden();
+        }
         notFound();
     }
 

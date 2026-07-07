@@ -1,12 +1,14 @@
 export type TdsComputation = {
     deductiblePaise: number;
     postCycleCumulativePaise: number;
+    thresholdCrossed: boolean;
     note: string;
 };
 
 export function getFinancialYearForDate(value: Date) {
-    const year = value.getUTCMonth() >= 3 ? value.getUTCFullYear() : value.getUTCFullYear() - 1;
-    return `${year}-${year + 1}`;
+    const year = value.getMonth() >= 3 ? value.getFullYear() : value.getFullYear() - 1;
+    const shortNextYear = String((year + 1) % 100).padStart(2, "0");
+    return `FY${year}-${shortNextYear}`;
 }
 
 export function computeTdsDeduction(params: {
@@ -26,15 +28,17 @@ export function computeTdsDeduction(params: {
         return {
             deductiblePaise: Math.round(cycle * rate),
             postCycleCumulativePaise: post,
-            note: "Already above threshold; TDS applied on full cycle commission.",
+            thresholdCrossed: false,
+            note: "TDS (1% u/s 194-O) applied on full cycle commission because the annual threshold is already crossed.",
         };
     }
 
-    if (post <= thresholdPaise) {
+    if (post < thresholdPaise) {
         return {
             deductiblePaise: 0,
             postCycleCumulativePaise: post,
-            note: "Below threshold; no TDS deduction applied.",
+            thresholdCrossed: false,
+            note: `TDS: Nil (cumulative Rs. ${(post / 100).toFixed(2)} below Rs. 30000 threshold).`,
         };
     }
 
@@ -42,7 +46,8 @@ export function computeTdsDeduction(params: {
     return {
         deductiblePaise: Math.round(eligiblePaise * rate),
         postCycleCumulativePaise: post,
-        note: "Threshold crossed in this cycle; TDS applied only on eligible portion.",
+        thresholdCrossed: current < thresholdPaise,
+        note: "Threshold crossed in this cycle; TDS applied only on the commission above Rs. 30000.",
     };
 }
 

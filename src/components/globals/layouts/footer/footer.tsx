@@ -115,6 +115,16 @@ export function Footer({ className, legal, ...props }: FooterProps) {
                                             </li>
                                         );
                                     })}
+                                    {category.name.toLowerCase() === "legal" ? (
+                                        <li>
+                                            <Link
+                                                href="/contact#grievance-redressal"
+                                                className="flex w-full items-center gap-2 text-sm text-primary-foreground/80 transition-all ease-in-out hover:text-primary-foreground md:text-base"
+                                            >
+                                                Grievance Redressal
+                                            </Link>
+                                        </li>
+                                    ) : null}
                                 </ul>
                             </div>
                         ))}

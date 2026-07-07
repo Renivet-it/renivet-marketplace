@@ -1,393 +1,306 @@
 "use client";
 
+import { Button } from "@/components/ui/button-dash";
+import { Input } from "@/components/ui/input-dash";
+import { Textarea } from "@/components/ui/textarea-dash";
 import { siteConfig } from "@/config/site";
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
-import Image from "next/image";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-interface ContactFormData {
+type ContactFormData = {
     fullName: string;
     email: string;
     message: string;
-}
+};
+
+type GrievanceFormData = {
+    name: string;
+    email: string;
+    orderId: string;
+    category:
+        | "order_issue"
+        | "refund_dispute"
+        | "delivery_issue"
+        | "product_quality"
+        | "other";
+    description: string;
+};
+
+const grievanceCategoryLabels: Record<GrievanceFormData["category"], string> = {
+    order_issue: "Order issue",
+    refund_dispute: "Refund dispute",
+    delivery_issue: "Delivery issue",
+    product_quality: "Product quality",
+    other: "Other",
+};
 
 export default function ContactPage() {
-    const [formData, setFormData] = useState<ContactFormData>({
+    const [contactForm, setContactForm] = useState<ContactFormData>({
         fullName: "",
         email: "",
         message: "",
     });
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [grievanceForm, setGrievanceForm] = useState<GrievanceFormData>({
+        name: "",
+        email: "",
+        orderId: "",
+        category: "order_issue",
+        description: "",
+    });
 
-    const handleSubmit = async (e?: React.FormEvent) => {
-        e?.preventDefault();
-        setIsSubmitting(true);
-        await new Promise((r) => setTimeout(r, 1000));
-        toast.success("Message sent successfully!");
-        setFormData({ fullName: "", email: "", message: "" });
-        setIsSubmitting(false);
-    };
+    const legalContactsQuery = trpc.general.legal.getActiveLegalContacts.useQuery();
+    const submitGrievance = trpc.general.legal.submitGrievance.useMutation({
+        onSuccess: (result) => {
+            toast.success(`Grievance submitted. Ticket ID: ${result.ticketId}`);
+            setGrievanceForm({
+                name: "",
+                email: "",
+                orderId: "",
+                category: "order_issue",
+                description: "",
+            });
+        },
+        onError: (error) => {
+            toast.error(error.message);
+        },
+    });
 
-    const handleChange = (
-        e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-    ) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+    const gro = useMemo(
+        () => legalContactsQuery.data?.find((item) => item.role === "gro") ?? null,
+        [legalContactsQuery.data]
+    );
+
+    const handleContactSubmit = async (event?: React.FormEvent) => {
+        event?.preventDefault();
+        await new Promise((resolve) => setTimeout(resolve, 500));
+        toast.success("Message recorded. Our team will get back to you.");
+        setContactForm({
+            fullName: "",
+            email: "",
+            message: "",
+        });
     };
 
     return (
-        <div className="bg-[#fcfbf4] px-4 py-10 md:min-h-screen">
-            <style jsx>{`
-                @media (min-width: 1532px) and (max-width: 1600px) {
-                    .contact-bottom-image {
-                        left: -350px !important;
-                    }
-                }
-                @media (min-width: 1282px) and (max-width: 1393px) {
-                    .contact-bottom-image {
-                        left: -200px !important;
-                    }
-                }
-            `}</style>
-            {/* Header */}
-            <div className="mb-6 text-center md:mb-10">
-                <h1
-                    className="mb-2 text-2xl font-medium tracking-wide md:mb-3 md:text-4xl"
-                    style={{
-                        fontFamily: "josephine sans",
-                        fontSize: "clamp(24px, 5vw, 40px)",
-                    }}
-                >
-                    Contact Us
-                </h1>
-                <p
-                    className="text-base text-gray-600 md:text-lg"
-                    style={{
-                        fontFamily: "josephine sans",
-                        fontSize: "clamp(16px, 4vw, 32px)",
-                    }}
-                >
-                    We&apos;d Love To Hear From You.
-                </p>
-            </div>
+        <main className="min-h-screen bg-[linear-gradient(180deg,#fcfbf4_0%,#f3f7ee_100%)] px-4 py-10 sm:px-6">
+            <div className="mx-auto max-w-6xl space-y-8">
+                <header className="rounded-[28px] border border-[#d8dec8] bg-white/80 px-6 py-8 shadow-sm backdrop-blur sm:px-8">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
+                        Renivet Contact
+                    </p>
+                    <h1 className="mt-3 text-3xl font-semibold text-slate-950 sm:text-5xl">
+                        Contact Us
+                    </h1>
+                    <p className="mt-3 max-w-3xl text-sm text-slate-600 sm:text-base">
+                        For general help, reach our support team. For complaints under the
+                        Consumer Protection (E-Commerce) Rules, use the grievance section below so
+                        we can acknowledge within 48 hours.
+                    </p>
+                </header>
 
-            {/* ================= MOBILE LAYOUT (up to lg/1024px) ================= */}
-            <div className="block lg:hidden">
-                {/* Mobile Form Box - Left on phones, centered on iPad */}
-                <div
-                    className="flex border border-gray-400 md:mx-auto"
-                    style={{
-                        width: "280px",
-                        minHeight: "169px",
-                        marginLeft: "75px",
-                    }}
-                >
-                    {/* Left Form - Mobile */}
-                    <div className="flex-1 px-3 py-3">
-                        <form
-                            onSubmit={handleSubmit}
-                            className="flex h-full flex-col justify-between"
-                        >
-                            <div className="space-y-3">
-                                <div>
-                                    <label
-                                        className="mb-1 block text-[10px]"
-                                        style={{ fontFamily: "serif" }}
-                                    >
-                                        Full Name
-                                    </label>
-                                    <input
-                                        name="fullName"
-                                        value={formData.fullName}
-                                        onChange={handleChange}
-                                        className="w-full border-0 border-b border-gray-500 bg-transparent py-0.5 text-[10px] focus:outline-none"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label
-                                        className="mb-1 block text-[10px]"
-                                        style={{ fontFamily: "serif" }}
-                                    >
-                                        Email
-                                    </label>
-                                    <input
-                                        name="email"
-                                        value={formData.email}
-                                        onChange={handleChange}
-                                        className="w-full border-0 border-b border-gray-500 bg-transparent py-0.5 text-[10px] focus:outline-none"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label
-                                        className="mb-1 block text-[10px]"
-                                        style={{ fontFamily: "serif" }}
-                                    >
-                                        Message
-                                    </label>
-                                    <textarea
-                                        name="message"
-                                        rows={1}
-                                        value={formData.message}
-                                        onChange={handleChange}
-                                        className="w-full resize-none border-0 border-b border-gray-500 bg-transparent py-0.5 text-[10px] focus:outline-none"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Small Submit Button - Mobile */}
-                            <button
-                                type="submit"
-                                disabled={isSubmitting}
-                                className={cn(
-                                    "mt-3 w-full bg-[#1a1a2e] py-1.5 text-[8px] font-medium uppercase tracking-widest text-white transition-colors hover:bg-[#0f0f1a]",
-                                    isSubmitting &&
-                                        "cursor-not-allowed opacity-70"
-                                )}
-                            >
-                                {isSubmitting ? "Sending..." : "Submit"}
-                            </button>
+                <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+                    <div className="rounded-[28px] border border-[#d8dec8] bg-white p-6 shadow-sm sm:p-8">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                            General Contact
+                        </p>
+                        <h2 className="mt-2 text-2xl font-semibold text-slate-950">
+                            Support and business queries
+                        </h2>
+                        <form onSubmit={handleContactSubmit} className="mt-6 space-y-4">
+                            <Input
+                                placeholder="Full name"
+                                value={contactForm.fullName}
+                                onChange={(event) =>
+                                    setContactForm((current) => ({
+                                        ...current,
+                                        fullName: event.target.value,
+                                    }))
+                                }
+                            />
+                            <Input
+                                type="email"
+                                placeholder="Email"
+                                value={contactForm.email}
+                                onChange={(event) =>
+                                    setContactForm((current) => ({
+                                        ...current,
+                                        email: event.target.value,
+                                    }))
+                                }
+                            />
+                            <Textarea
+                                minRows={5}
+                                placeholder="How can we help?"
+                                value={contactForm.message}
+                                onChange={(event) =>
+                                    setContactForm((current) => ({
+                                        ...current,
+                                        message: event.target.value,
+                                    }))
+                                }
+                            />
+                            <Button type="submit">Send message</Button>
                         </form>
                     </div>
 
-                    {/* Vertical Divider - Mobile */}
-                    {/* <div className="w-px bg-gray-400" /> */}
-
-                    {/* Right Info - Mobile */}
-                    <div className="w-[100px] space-y-3 px-2 py-3">
-                        <div>
-                            <h3
-                                className="text-[9px] font-semibold"
-                                style={{ fontFamily: "serif" }}
-                            >
-                                Contact
-                            </h3>
-                            <a
-                                href={`mailto:${siteConfig.contact?.email}`}
-                                className="text-[8px] underline"
-                            >
-                                Support@Renivet.Com
-                            </a>
-                        </div>
-
-                        <div>
-                            <h3
-                                className="text-[9px] font-semibold"
-                                style={{ fontFamily: "serif" }}
-                            >
-                                Based In
-                            </h3>
-                            <p className="text-[8px]">Bangalore Xyz</p>
-                        </div>
-
-                        <div>
-                            <h3
-                                className="text-[9px] font-semibold"
-                                style={{ fontFamily: "serif" }}
-                            >
-                                Office Hours:
-                            </h3>
-                            <p className="text-[8px] leading-tight">
-                                Monday - Friday,
-                                <br />
-                                9:00 AM - 5:00 PM
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Mobile Image - Left on phones, centered on iPad */}
-                <div className="ml-4 mt-[-0.5] md:mx-auto md:w-fit">
-                    <Image
-                        src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
-                        alt="Leaf person"
-                        width={214}
-                        height={167}
-                        className="h-[167px] w-[214px] object-cover object-top"
-                        priority
-                    />
-                </div>
-
-                {/* Mobile Footer */}
-                <div className="mt-6 text-center">
-                    <p
-                        className="text-sm leading-relaxed text-gray-600"
-                        style={{
-                            fontFamily: "josephine sans",
-                            letterSpacing: "0.02em",
-                            fontSize: "16px",
-                        }}
-                    >
-                        Every Conversation Begins With A Pause.
-                        <br />
-                        Thanks For Starting One.
-                    </p>
-                </div>
-            </div>
-
-            {/* ================= DESKTOP LAYOUT (lg/1024px and above) ================= */}
-            <div className="hidden lg:block">
-                {/* Main Container */}
-                <div
-                    className="relative mx-auto lg:ml-auto lg:mr-[120px]"
-                    style={{ maxWidth: "947px" }}
-                >
-                    {/* Form Box */}
-                    <div
-                        className="flex flex-row border border-gray-400"
-                        style={{
-                            maxWidth: "100%",
-                            minHeight: "auto",
-                        }}
-                    >
-                        {/* Left Form */}
-                        <div className="flex-1 px-14 py-14">
-                            <form
-                                onSubmit={handleSubmit}
-                                className="flex h-full flex-col justify-between"
-                            >
-                                <div className="space-y-14">
-                                    <div>
-                                        <label
-                                            className="mb-3 block text-base"
-                                            style={{ fontFamily: "serif" }}
-                                        >
-                                            Full Name
-                                        </label>
-                                        <input
-                                            name="fullName"
-                                            value={formData.fullName}
-                                            onChange={handleChange}
-                                            className="w-full border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            className="mb-3 block text-base"
-                                            style={{ fontFamily: "serif" }}
-                                        >
-                                            Email
-                                        </label>
-                                        <input
-                                            name="email"
-                                            value={formData.email}
-                                            onChange={handleChange}
-                                            className="w-full border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <label
-                                            className="mb-3 block text-base"
-                                            style={{ fontFamily: "serif" }}
-                                        >
-                                            Message
-                                        </label>
-                                        <textarea
-                                            name="message"
-                                            rows={1}
-                                            value={formData.message}
-                                            onChange={handleChange}
-                                            className="w-full resize-none border-0 border-b border-gray-500 bg-transparent py-2 focus:outline-none"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Submit Button */}
-                                <button
-                                    type="submit"
-                                    disabled={isSubmitting}
-                                    className={cn(
-                                        "mt-8 w-full bg-[#1a1a2e] py-4 text-sm font-medium uppercase tracking-widest text-white transition-colors hover:bg-[#0f0f1a]",
-                                        isSubmitting &&
-                                            "cursor-not-allowed opacity-70"
-                                    )}
-                                >
-                                    {isSubmitting ? "Sending..." : "Submit"}
-                                </button>
-                            </form>
-                        </div>
-
-                        {/* Vertical Divider */}
-                        <div className="w-px bg-gray-400" />
-
-                        {/* Right Info */}
-                        <div className="w-[280px] space-y-14 px-12 py-14">
+                    <aside className="rounded-[28px] border border-[#d8dec8] bg-[#eff7ec] p-6 shadow-sm sm:p-8">
+                        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">
+                            Contact Details
+                        </p>
+                        <div className="mt-5 space-y-5 text-sm text-slate-700">
                             <div>
-                                <h3
-                                    className="mb-2 text-base font-semibold"
-                                    style={{ fontFamily: "serif" }}
-                                >
-                                    Contact
-                                </h3>
+                                <p className="font-medium text-slate-900">Support email</p>
                                 <a
-                                    href={`mailto:${siteConfig.contact?.email}`}
-                                    className="text-base underline"
+                                    href={`mailto:${siteConfig.contact.email}`}
+                                    className="text-emerald-800 underline underline-offset-2"
                                 >
-                                    Support@Renivet.Com
+                                    {siteConfig.contact.email}
                                 </a>
                             </div>
-
                             <div>
-                                <h3
-                                    className="mb-2 text-base font-semibold"
-                                    style={{ fontFamily: "serif" }}
-                                >
-                                    Based In
-                                </h3>
-                                <p className="text-base">Bangalore</p>
+                                <p className="font-medium text-slate-900">Office hours</p>
+                                <p>{siteConfig.contact.officeHours}</p>
                             </div>
-
                             <div>
-                                <h3
-                                    className="mb-2 text-base font-semibold"
-                                    style={{ fontFamily: "serif" }}
-                                >
-                                    Office Hours:
-                                </h3>
-                                <p className="text-base">
-                                    Monday - Friday,
-                                    <br />
-                                    9:00 AM - 5:00 PM
-                                </p>
+                                <p className="font-medium text-slate-900">Based in</p>
+                                <p>Bangalore, Karnataka</p>
                             </div>
                         </div>
+                    </aside>
+                </section>
+
+                <section
+                    id="grievance-redressal"
+                    className="rounded-[28px] border border-emerald-200 bg-white p-6 shadow-sm sm:p-8"
+                >
+                    <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
+                        <div className="space-y-4 rounded-[24px] bg-[linear-gradient(180deg,#ebf8ee_0%,#f7fcf8_100%)] p-6">
+                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-emerald-700">
+                                Grievance Redressal
+                            </p>
+                            <h2 className="text-2xl font-semibold text-slate-950">
+                                Grievance Redressal Officer
+                            </h2>
+                            <p className="text-sm text-slate-600">
+                                Complaints are acknowledged within 48 hours and we aim to resolve
+                                them within 30 days.
+                            </p>
+
+                            {gro ? (
+                                <div className="space-y-2 rounded-2xl border border-emerald-200 bg-white p-5 text-sm text-slate-700">
+                                    <p className="text-lg font-semibold text-slate-950">{gro.name}</p>
+                                    {gro.designation ? <p>{gro.designation}</p> : null}
+                                    <a
+                                        href={`mailto:${gro.email}`}
+                                        className="block text-emerald-800 underline underline-offset-2"
+                                    >
+                                        {gro.email}
+                                    </a>
+                                    {gro.phone ? <p>{gro.phone}</p> : null}
+                                    {gro.address ? <p>{gro.address}</p> : null}
+                                    <p className="text-xs text-slate-500">
+                                        Effective from {new Date(gro.effectiveFrom).toLocaleDateString()}
+                                    </p>
+                                </div>
+                            ) : (
+                                <div className="rounded-2xl border border-dashed border-emerald-200 bg-white p-5 text-sm text-slate-500">
+                                    GRO details will appear here as soon as compliance records are published.
+                                </div>
+                            )}
+                        </div>
+
+                        <div>
+                            <p className="text-sm font-medium text-slate-900">Submit a complaint</p>
+                            <p className="mt-1 text-sm text-slate-600">
+                                This creates a high-priority grievance support ticket with a 48-hour acknowledgment SLA.
+                            </p>
+                            <form
+                                className="mt-5 grid gap-4"
+                                onSubmit={(event) => {
+                                    event.preventDefault();
+                                    submitGrievance.mutate({
+                                        name: grievanceForm.name,
+                                        email: grievanceForm.email,
+                                        orderId: grievanceForm.orderId || undefined,
+                                        category: grievanceForm.category,
+                                        description: grievanceForm.description,
+                                    });
+                                }}
+                            >
+                                <div className="grid gap-4 sm:grid-cols-2">
+                                    <Input
+                                        placeholder="Name"
+                                        value={grievanceForm.name}
+                                        onChange={(event) =>
+                                            setGrievanceForm((current) => ({
+                                                ...current,
+                                                name: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                    <Input
+                                        type="email"
+                                        placeholder="Email"
+                                        value={grievanceForm.email}
+                                        onChange={(event) =>
+                                            setGrievanceForm((current) => ({
+                                                ...current,
+                                                email: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                </div>
+                                <div className="grid gap-4 sm:grid-cols-[0.9fr_1.1fr]">
+                                    <Input
+                                        placeholder="Order ID (optional)"
+                                        value={grievanceForm.orderId}
+                                        onChange={(event) =>
+                                            setGrievanceForm((current) => ({
+                                                ...current,
+                                                orderId: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                    <select
+                                        value={grievanceForm.category}
+                                        onChange={(event) =>
+                                            setGrievanceForm((current) => ({
+                                                ...current,
+                                                category: event.target.value as GrievanceFormData["category"],
+                                            }))
+                                        }
+                                        className={cn(
+                                            "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-slate-900 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                                        )}
+                                    >
+                                        {Object.entries(grievanceCategoryLabels).map(([value, label]) => (
+                                            <option key={value} value={value}>
+                                                {label}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <Textarea
+                                    minRows={6}
+                                    placeholder="Describe the complaint"
+                                    value={grievanceForm.description}
+                                    onChange={(event) =>
+                                        setGrievanceForm((current) => ({
+                                            ...current,
+                                            description: event.target.value,
+                                        }))
+                                    }
+                                />
+                                <Button type="submit" disabled={submitGrievance.isPending}>
+                                    {submitGrievance.isPending ? "Submitting..." : "Submit grievance"}
+                                </Button>
+                            </form>
+                        </div>
                     </div>
-
-                    {/* Desktop Image - Absolute positioned, responsive for screen sizes */}
-                    <div className="contact-bottom-image absolute bottom-[-350px] left-[-200px] h-[400px] w-[500px] lg:bottom-[-450px] lg:left-[-120px] lg:h-[500px] lg:w-[620px] xl:bottom-[-567px] xl:left-[-310px] xl:h-[613px] xl:w-[760px] 2xl:left-[-494px]">
-                        <Image
-                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNg5o5iI2ENPRLZdGUpA0elOxytCDfJibYIko7"
-                            alt="Leaf person"
-                            width={784}
-                            height={613}
-                            className="h-auto w-full object-cover"
-                            priority
-                        />
-                    </div>
-                </div>
-
-                {/* Desktop Spacer */}
-                <div className="h-[500px]" />
-
-                {/* Desktop Footer */}
-                <div className="mb-16 mt-16 text-center">
-                    <p
-                        className="text-base leading-relaxed text-gray-600"
-                        style={{
-                            fontFamily: "josephine sans",
-                            letterSpacing: "0.02em",
-                            fontSize: "32px",
-                        }}
-                    >
-                        Every Conversation Begins With A Pause.
-                        <br />
-                        Thanks For Starting One.
-                    </p>
-                </div>
+                </section>
             </div>
-        </div>
+        </main>
     );
 }

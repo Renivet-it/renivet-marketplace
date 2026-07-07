@@ -518,6 +518,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_SETTINGS |
                     BitFieldSitePermission.ADMINISTRATOR,
             },
+            {
+                title: "Legal & Compliance",
+                url: "/dashboard/general/finance/legal-compliance",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.ADMINISTRATOR,
+            },
         ],
     },
     {

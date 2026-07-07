@@ -33,9 +33,19 @@ const sections = [
         description: "DPDP request lifecycle, execution evidence, and failure monitoring.",
     },
     {
+        title: "Legal & Compliance",
+        href: "/dashboard/general/finance/legal-compliance",
+        description: "GRO contact history, consumer-protection publishing, and public legal surfaces.",
+    },
+    {
         title: "Module Access",
         href: "/dashboard/general/settings/module-access",
         description: "Finance-specific access grants layered on top of existing role permissions.",
+    },
+    {
+        title: "Audit Log",
+        href: "/dashboard/general/finance/audit-log",
+        description: "Structured finance audit evidence with typed actors, JSON diffs, proof links, and CSV export.",
     },
 ];
 

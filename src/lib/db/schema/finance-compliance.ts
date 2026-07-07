@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
     boolean,
     date,
@@ -25,7 +25,23 @@ export const financeModules = [
     "tds_reports",
     "monthly_pl",
     "data_deletion",
+    "compliance_admin",
     "audit_log_finance",
+] as const;
+
+export const dpdpConsentTypes = [
+    "data_processing",
+    "marketing_emails",
+    "whatsapp_notifications",
+    "analytics_tracking",
+] as const;
+
+export const dpdpDeletionStatuses = [
+    "pending",
+    "identity_check",
+    "in_progress",
+    "completed",
+    "rejected",
 ] as const;
 
 export const platformSettings = pgTable(
@@ -86,23 +102,33 @@ export const financeCodReconciliationRuns = pgTable(
     "finance_cod_reconciliation_runs",
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
+        carrier: text("carrier"),
         runType: text("run_type", {
             enum: ["fee_sync", "remittance_sync", "manual_refresh"],
         })
             .notNull()
             .default("remittance_sync"),
         status: text("status", {
-            enum: ["running", "completed", "failed"],
+            enum: ["running", "success", "partial", "failed"],
         })
             .notNull()
             .default("running"),
         requestedBy: text("requested_by").references(() => users.id, {
             onDelete: "set null",
         }),
+        runAt: timestamp("run_at").notNull().defaultNow(),
         startedAt: timestamp("started_at").notNull().defaultNow(),
         finishedAt: timestamp("finished_at"),
         rowsProcessed: integer("rows_processed").notNull().default(0),
+        recordsSynced: integer("records_synced").notNull().default(0),
+        matchedCount: integer("matched_count").notNull().default(0),
+        pendingCount: integer("pending_count").notNull().default(0),
+        discrepancyCount: integer("discrepancy_count").notNull().default(0),
         metadata: jsonb("metadata")
+            .$type<Record<string, unknown>>()
+            .notNull()
+            .default({}),
+        errors: jsonb("errors")
             .$type<Record<string, unknown>>()
             .notNull()
             .default({}),
@@ -120,33 +146,45 @@ export const financeCodReconciliation = pgTable(
     "finance_cod_reconciliation",
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
-        orderId: text("order_id")
-            .notNull()
-            .references(() => orders.id, {
-                onDelete: "cascade",
-            }),
+        orderId: text("order_id").references(() => orders.id, {
+            onDelete: "cascade",
+        }),
         runId: uuid("run_id").references(() => financeCodReconciliationRuns.id, {
             onDelete: "set null",
         }),
+        awbNumber: text("awb_number"),
         carrier: text("carrier").notNull().default("delhivery"),
+        codAmountPaise: integer("cod_amount_paise").notNull().default(0),
+        codFeeRateBps: integer("cod_fee_rate_bps"),
+        codFeeFlatPaise: integer("cod_fee_flat_paise"),
         expectedAmountPaise: integer("expected_amount_paise").notNull().default(0),
-        remittedAmountPaise: integer("remitted_amount_paise")
+        expectedRemittancePaise: integer("expected_remittance_paise")
             .notNull()
             .default(0),
+        remittedAmountPaise: integer("remitted_amount_paise"),
         expectedFeePaise: integer("expected_fee_paise").notNull().default(0),
-        actualFeePaise: integer("actual_fee_paise").notNull().default(0),
-        discrepancyAmountPaise: integer("discrepancy_amount_paise")
-            .notNull()
-            .default(0),
+        actualFeePaise: integer("actual_fee_paise"),
+        discrepancyAmountPaise: integer("discrepancy_amount_paise"),
         ageingDays: integer("ageing_days").notNull().default(0),
         remittanceReference: text("remittance_reference"),
+        deliveryDate: timestamp("delivery_date"),
+        remittedAt: timestamp("remitted_at"),
         remittanceDate: date("remittance_date"),
         status: text("status", {
-            enum: ["matched", "short", "missing", "delayed", "excess", "review"],
+            enum: [
+                "pending",
+                "matched",
+                "discrepancy",
+                "overdue",
+                "critical",
+                "ghost",
+                "written_off",
+            ],
         })
             .notNull()
-            .default("review"),
+            .default("pending"),
         notes: text("notes"),
+        proofFileUrl: text("proof_file_url"),
         metadata: jsonb("metadata")
             .$type<Record<string, unknown>>()
             .notNull()
@@ -160,6 +198,9 @@ export const financeCodReconciliation = pgTable(
     (table) => ({
         financeCodReconciliationOrderIdx: uniqueIndex("finance_cod_reconciliation_order_idx").on(
             table.orderId
+        ),
+        financeCodReconciliationAwbIdx: uniqueIndex("finance_cod_reconciliation_awb_idx").on(
+            table.awbNumber
         ),
         financeCodReconciliationStatusIdx: index("finance_cod_reconciliation_status_idx").on(
             table.status
@@ -355,6 +396,13 @@ export const brandTdsTracking = pgTable(
                 onDelete: "cascade",
             }),
         financialYear: text("financial_year").notNull(),
+        annualCommissionYtdPaise: integer("annual_commission_ytd_paise")
+            .notNull()
+            .default(0),
+        tdsDeductedYtdPaise: integer("tds_deducted_ytd_paise")
+            .notNull()
+            .default(0),
+        thresholdCrossedAt: timestamp("threshold_crossed_at"),
         cumulativeCommissionPaise: integer("cumulative_commission_paise")
             .notNull()
             .default(0),
@@ -441,6 +489,8 @@ export const moduleAccess = pgTable(
         grantedBy: text("granted_by").references(() => users.id, {
             onDelete: "set null",
         }),
+        grantedAt: timestamp("granted_at").notNull().defaultNow(),
+        revokedAt: timestamp("revoked_at"),
         canView: boolean("can_view").notNull().default(true),
         canManage: boolean("can_manage").notNull().default(false),
         notes: text("notes"),
@@ -459,16 +509,24 @@ export const plManualEntries = pgTable(
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
         monthKey: text("month_key").notNull(),
+        month: text("month"),
         category: text("category").notNull(),
+        lineItem: text("line_item"),
+        subLabel: text("sub_label"),
         description: text("description").notNull(),
         amountPaise: integer("amount_paise").notNull(),
         notes: text("notes"),
         createdBy: text("created_by").references(() => users.id, {
             onDelete: "set null",
         }),
+        enteredBy: text("entered_by").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        enteredAt: timestamp("entered_at"),
         updatedBy: text("updated_by").references(() => users.id, {
             onDelete: "set null",
         }),
+        isLocked: boolean("is_locked").notNull().default(false),
         lockedAt: timestamp("locked_at"),
         ...timestamps,
     },
@@ -484,6 +542,7 @@ export const plSnapshots = pgTable(
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
         monthKey: text("month_key").notNull().unique(),
+        month: text("month"),
         snapshotType: text("snapshot_type", {
             enum: ["draft", "locked"],
         })
@@ -519,11 +578,15 @@ export const userConsents = pgTable(
             .references(() => users.id, {
                 onDelete: "cascade",
             }),
-        consentType: text("consent_type").notNull(),
-        version: text("version").notNull(),
+        consentType: text("consent_type", {
+            enum: dpdpConsentTypes,
+        }).notNull(),
+        consentGiven: boolean("consent_given").notNull().default(true),
+        consentGivenAt: timestamp("consent_given_at").notNull().defaultNow(),
+        consentVersion: text("consent_version").notNull(),
+        ipAddress: text("ip_address"),
+        userAgent: text("user_agent"),
         source: text("source").notNull().default("web"),
-        isGranted: boolean("is_granted").notNull().default(true),
-        grantedAt: timestamp("granted_at").notNull().defaultNow(),
         revokedAt: timestamp("revoked_at"),
         metadata: jsonb("metadata")
             .$type<Record<string, unknown>>()
@@ -533,6 +596,10 @@ export const userConsents = pgTable(
     },
     (table) => ({
         userConsentsUserIdx: index("user_consents_user_idx").on(table.userId),
+        userConsentsTypeIdx: index("user_consents_type_idx").on(
+            table.userId,
+            table.consentType
+        ),
     })
 );
 
@@ -545,18 +612,30 @@ export const dataDeletionRequests = pgTable(
             .references(() => users.id, {
                 onDelete: "cascade",
             }),
+        userEmail: text("user_email").notNull(),
+        requestedAt: timestamp("requested_at").notNull().defaultNow(),
+        identityVerifiedAt: timestamp("identity_verified_at"),
         status: text("status", {
-            enum: ["requested", "approved", "rejected", "processing", "completed", "failed"],
+            enum: dpdpDeletionStatuses,
         })
             .notNull()
-            .default("requested"),
-        reason: text("reason"),
-        requestedByEmail: text("requested_by_email"),
-        reviewedBy: text("reviewed_by").references(() => users.id, {
+            .default("identity_check"),
+        completedAt: timestamp("completed_at"),
+        deletionScope: jsonb("deletion_scope")
+            .$type<Record<string, unknown>>()
+            .notNull()
+            .default({}),
+        retentionScope: jsonb("retention_scope")
+            .$type<Record<string, unknown>>()
+            .notNull()
+            .default({}),
+        executedBy: text("executed_by").references(() => users.id, {
             onDelete: "set null",
         }),
-        reviewedAt: timestamp("reviewed_at"),
-        executedAt: timestamp("executed_at"),
+        rejectionReason: text("rejection_reason"),
+        notes: text("notes"),
+        verificationToken: text("verification_token"),
+        verificationExpiresAt: timestamp("verification_expires_at"),
         completionEvidence: jsonb("completion_evidence")
             .$type<Record<string, unknown>>()
             .notNull()
@@ -571,23 +650,62 @@ export const dataDeletionRequests = pgTable(
         dataDeletionRequestsStatusIdx: index("data_deletion_requests_status_idx").on(
             table.status
         ),
+        dataDeletionRequestsVerificationIdx: index(
+            "data_deletion_requests_verification_idx"
+        ).on(table.verificationToken),
     })
+);
+
+export const breachIncidents = pgTable(
+    "breach_incidents",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        detectedAt: timestamp("detected_at").notNull().defaultNow(),
+        scope: text("scope"),
+        usersAffected: integer("users_affected"),
+        rootCause: text("root_cause"),
+        notifiedAt: timestamp("notified_at"),
+        remediationSteps: jsonb("remediation_steps")
+            .$type<string[]>()
+            .notNull()
+            .default([]),
+        notes: text("notes"),
+        ...timestamps,
+    }
 );
 
 export const legalContacts = pgTable(
     "legal_contacts",
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
-        contactType: text("contact_type").notNull(),
+        role: text("role", {
+            enum: ["gro", "dpo", "nodal_officer", "compliance_officer"],
+        }).notNull(),
         name: text("name").notNull(),
-        email: text("email"),
+        email: text("email").notNull(),
         phone: text("phone"),
         address: text("address"),
         designation: text("designation"),
         notes: text("notes"),
+        effectiveFrom: date("effective_from").notNull().default(sql`CURRENT_DATE`),
         isActive: boolean("is_active").notNull().default(true),
+        updatedBy: text("updated_by").references(() => users.id, {
+            onDelete: "set null",
+        }),
         ...timestamps,
-    }
+    },
+    (table) => ({
+        legalContactsRoleIdx: index("legal_contacts_role_idx").on(
+            table.role,
+            table.isActive
+        ),
+        legalContactsEffectiveFromIdx: index("legal_contacts_effective_from_idx").on(
+            table.effectiveFrom
+        ),
+        legalContactsUpdatedByIdx: index("legal_contacts_updated_by_idx").on(
+            table.updatedBy
+        ),
+    })
 );
 
 export const sustainabilityCertificates = pgTable(
@@ -617,6 +735,70 @@ export const sustainabilityCertificates = pgTable(
             .default({}),
         ...timestamps,
     }
+);
+
+// Canonical future-facing sustainability model for M8 and beyond.
+// Existing JSON snapshots on brand_confidentials and the older
+// sustainability_certificates table remain for compatibility until the
+// dedicated sprint migrates reads and writes onto this table.
+export const brandSustainabilityCerts = pgTable(
+    "brand_sustainability_certs",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, {
+                onDelete: "cascade",
+            }),
+        certType: text("cert_type", {
+            enum: [
+                "GOTS",
+                "OEKO_TEX",
+                "FSC",
+                "FAIR_TRADE",
+                "BCI",
+                "BLUESIGN",
+                "RECYCLED_CONTENT",
+                "OTHER",
+            ],
+        }).notNull(),
+        certNumber: text("cert_number"),
+        certNameOther: text("cert_name_other"),
+        fileUrl: text("file_url").notNull(),
+        issuedAt: date("issued_at").notNull(),
+        expiresAt: date("expires_at").notNull(),
+        verificationStatus: text("verification_status", {
+            enum: ["pending", "verified", "expired", "rejected"],
+        })
+            .notNull()
+            .default("pending"),
+        verifiedBy: text("verified_by").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        verifiedAt: timestamp("verified_at"),
+        appliesTo: text("applies_to", {
+            enum: ["all_products", "specific_category", "specific_products"],
+        })
+            .notNull()
+            .default("all_products"),
+        applicableIds: jsonb("applicable_ids")
+            .$type<string[]>()
+            .notNull()
+            .default([]),
+        notes: text("notes"),
+        ...timestamps,
+    },
+    (table) => ({
+        brandSustainabilityCertsBrandIdx: index("brand_sustainability_certs_brand_idx").on(
+            table.brandId
+        ),
+        brandSustainabilityCertsStatusIdx: index("brand_sustainability_certs_status_idx").on(
+            table.verificationStatus
+        ),
+        brandSustainabilityCertsExpiryIdx: index("brand_sustainability_certs_expiry_idx").on(
+            table.expiresAt
+        ),
+    })
 );
 
 export const financeRelations = relations(brandPayoutConfig, ({ one }) => ({

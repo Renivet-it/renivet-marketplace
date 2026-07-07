@@ -24,7 +24,7 @@ export function ConsumerProtectionNotice(props: LegalNoticeProps) {
                 Consumer Protection
             </p>
             <h2 className="mt-2 text-lg font-semibold text-slate-900">
-                Support And Grievance Contacts
+                Support And Grievance Redressal
             </h2>
             {props.supportEmail || props.supportPhone ? (
                 <p className="mt-3">
@@ -34,7 +34,7 @@ export function ConsumerProtectionNotice(props: LegalNoticeProps) {
             ) : null}
             {props.grievanceOfficerName || props.grievanceOfficerEmail ? (
                 <p className="mt-2">
-                    Grievance Officer: {props.grievanceOfficerName ?? "-"}
+                    Grievance Redressal Officer: {props.grievanceOfficerName ?? "-"}
                     {props.grievanceOfficerEmail
                         ? ` | ${props.grievanceOfficerEmail}`
                         : ""}

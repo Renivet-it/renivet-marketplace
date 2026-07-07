@@ -1,7 +1,9 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lte, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
 import { db } from "..";
 import {
+    analyticsDailyCommerce,
     auditLogs,
+    carrierClaims,
     brandConfidentials,
     brandPayoutCycles,
     brandPayoutLineItems,
@@ -9,8 +11,10 @@ import {
     brandPayoutOverrides,
     brandTdsTracking,
     brands,
+    carrierFeeSchedule,
     categories,
     commissionRules,
+    corporatePayments,
     dataDeletionRequests,
     financeCodReconciliation,
     financeCodReconciliationRuns,
@@ -29,13 +33,21 @@ import {
     products,
     refunds,
     platformSettings,
+    reasonMasters,
     userConsents,
+    users,
 } from "../schema";
 
 type RefundFilters = {
     status?: string;
     approvalStatus?: string;
     q?: string;
+};
+
+type CodFilters = {
+    status?: string;
+    q?: string;
+    attentionOnly?: boolean;
 };
 
 class FinanceComplianceQuery {
@@ -53,6 +65,7 @@ class FinanceComplianceQuery {
             with: {
                 order: true,
                 user: true,
+                reasonMaster: true,
             },
             orderBy: [desc(refunds.createdAt)],
             limit: 100,
@@ -65,6 +78,7 @@ class FinanceComplianceQuery {
             with: {
                 order: true,
                 user: true,
+                reasonMaster: true,
             },
         });
     }
@@ -101,6 +115,28 @@ class FinanceComplianceQuery {
         return this.createRefund(values);
     }
 
+    async listRefundReasons() {
+        return db.query.reasonMasters.findMany({
+            where: and(
+                eq(reasonMasters.isActive, true),
+                eq(reasonMasters.reasonType, "return_reason")
+            ),
+            with: {
+                parent: true,
+            },
+            orderBy: [asc(reasonMasters.level), asc(reasonMasters.shortOrder), asc(reasonMasters.name)],
+        });
+    }
+
+    async getRefundReasonById(id: string) {
+        return db.query.reasonMasters.findFirst({
+            where: eq(reasonMasters.id, id),
+            with: {
+                parent: true,
+            },
+        });
+    }
+
     async createCodRun(values: typeof financeCodReconciliationRuns.$inferInsert) {
         return db
             .insert(financeCodReconciliationRuns)
@@ -126,17 +162,25 @@ class FinanceComplianceQuery {
                 target: financeCodReconciliation.orderId,
                 set: {
                     runId: values.runId,
+                    awbNumber: values.awbNumber,
                     carrier: values.carrier,
+                    codAmountPaise: values.codAmountPaise,
+                    codFeeRateBps: values.codFeeRateBps,
+                    codFeeFlatPaise: values.codFeeFlatPaise,
                     expectedAmountPaise: values.expectedAmountPaise,
+                    expectedRemittancePaise: values.expectedRemittancePaise,
                     remittedAmountPaise: values.remittedAmountPaise,
                     expectedFeePaise: values.expectedFeePaise,
                     actualFeePaise: values.actualFeePaise,
                     discrepancyAmountPaise: values.discrepancyAmountPaise,
                     ageingDays: values.ageingDays,
                     remittanceReference: values.remittanceReference,
+                    deliveryDate: values.deliveryDate,
+                    remittedAt: values.remittedAt,
                     remittanceDate: values.remittanceDate,
                     status: values.status,
                     notes: values.notes,
+                    proofFileUrl: values.proofFileUrl,
                     metadata: values.metadata,
                     resolvedBy: values.resolvedBy,
                     resolvedAt: values.resolvedAt,
@@ -147,15 +191,56 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
-    async listCodReconciliation(status?: string) {
+    async createCodReconciliation(values: typeof financeCodReconciliation.$inferInsert) {
+        return db
+            .insert(financeCodReconciliation)
+            .values(values)
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
+    async updateCodReconciliation(
+        id: string,
+        values: Partial<typeof financeCodReconciliation.$inferInsert>
+    ) {
+        return db
+            .update(financeCodReconciliation)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(financeCodReconciliation.id, id))
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
+    async listCodReconciliation(filters: CodFilters = {}) {
         return db.query.financeCodReconciliation.findMany({
-            where: status ? eq(financeCodReconciliation.status, status as any) : undefined,
+            where: and(
+                filters.status ? eq(financeCodReconciliation.status, filters.status as any) : undefined,
+                filters.q
+                    ? sql`(
+                        COALESCE(${financeCodReconciliation.orderId}, '') ILIKE ${`%${filters.q}%`}
+                        OR COALESCE(${financeCodReconciliation.awbNumber}, '') ILIKE ${`%${filters.q}%`}
+                        OR COALESCE(${financeCodReconciliation.carrier}, '') ILIKE ${`%${filters.q}%`}
+                    )`
+                    : undefined,
+                filters.attentionOnly
+                    ? inArray(financeCodReconciliation.status, [
+                          "discrepancy",
+                          "overdue",
+                          "critical",
+                          "ghost",
+                          "written_off",
+                      ])
+                    : undefined
+            ),
             with: {
                 order: true,
                 run: true,
             },
             orderBy: [desc(financeCodReconciliation.updatedAt)],
-            limit: 200,
+            limit: 400,
         });
     }
 
@@ -165,10 +250,34 @@ class FinanceComplianceQuery {
         });
     }
 
+    async getCodReconciliationByAwb(awbNumber: string) {
+        return db.query.financeCodReconciliation.findFirst({
+            where: eq(financeCodReconciliation.awbNumber, awbNumber),
+        });
+    }
+
+    async getCodReconciliationById(id: string) {
+        return db.query.financeCodReconciliation.findFirst({
+            where: eq(financeCodReconciliation.id, id),
+            with: {
+                order: true,
+                run: true,
+            },
+        });
+    }
+
     async markCodReconciliationResolution(input: {
         id: string;
-        status: "matched" | "short" | "missing" | "delayed" | "excess" | "review";
+        status:
+            | "pending"
+            | "matched"
+            | "discrepancy"
+            | "overdue"
+            | "critical"
+            | "ghost"
+            | "written_off";
         notes?: string | null;
+        proofFileUrl?: string | null;
         metadata?: Record<string, unknown>;
         resolvedBy?: string | null;
         resolvedAt?: Date | null;
@@ -178,6 +287,7 @@ class FinanceComplianceQuery {
             .set({
                 status: input.status,
                 notes: input.notes ?? null,
+                proofFileUrl: input.proofFileUrl ?? null,
                 metadata: input.metadata ?? {},
                 resolvedBy: input.resolvedBy ?? null,
                 resolvedAt: input.resolvedAt ?? null,
@@ -192,6 +302,45 @@ class FinanceComplianceQuery {
         return db.query.financeCodReconciliationRuns.findMany({
             orderBy: [desc(financeCodReconciliationRuns.startedAt)],
             limit: 50,
+        });
+    }
+
+    async listCarrierFeeSchedules(carrier?: string) {
+        return db.query.carrierFeeSchedule.findMany({
+            where: carrier ? eq(carrierFeeSchedule.carrier, carrier) : undefined,
+            orderBy: [desc(carrierFeeSchedule.effectiveFrom), desc(carrierFeeSchedule.createdAt)],
+            limit: 100,
+        });
+    }
+
+    async upsertCarrierFeeSchedule(values: typeof carrierFeeSchedule.$inferInsert) {
+        return db
+            .insert(carrierFeeSchedule)
+            .values(values)
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
+    async getLatestCarrierFeeSchedule(carrier: string) {
+        return db.query.carrierFeeSchedule.findFirst({
+            where: and(eq(carrierFeeSchedule.carrier, carrier), eq(carrierFeeSchedule.isActive, true)),
+            orderBy: [desc(carrierFeeSchedule.effectiveFrom), desc(carrierFeeSchedule.createdAt)],
+        });
+    }
+
+    async listDeliveredCodOrders(input: { start: Date; end: Date }) {
+        return db.query.orders.findMany({
+            where: and(
+                gte(orders.createdAt, input.start),
+                lte(orders.createdAt, input.end),
+                eq(orders.status, "delivered"),
+                sql`LOWER(COALESCE(${orders.paymentMethod}, '')) = 'cod'`
+            ),
+            with: {
+                shipments: true,
+                address: true,
+            },
+            orderBy: [desc(orders.updatedAt)],
         });
     }
 
@@ -267,6 +416,27 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
+    async getPayoutOverride(id: string) {
+        return db.query.brandPayoutOverrides.findFirst({
+            where: eq(brandPayoutOverrides.id, id),
+        });
+    }
+
+    async updatePayoutOverride(
+        id: string,
+        values: Partial<typeof brandPayoutOverrides.$inferInsert>
+    ) {
+        return db
+            .update(brandPayoutOverrides)
+            .set({
+                ...values,
+                updatedAt: new Date(),
+            })
+            .where(eq(brandPayoutOverrides.id, id))
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
     async listPayoutLineItems(cycleId: string) {
         return db.query.brandPayoutLineItems.findMany({
             where: eq(brandPayoutLineItems.cycleId, cycleId),
@@ -288,6 +458,15 @@ class FinanceComplianceQuery {
         });
     }
 
+    async getBrandTdsTracking(brandId: string, financialYear: string) {
+        return db.query.brandTdsTracking.findFirst({
+            where: and(
+                eq(brandTdsTracking.brandId, brandId),
+                eq(brandTdsTracking.financialYear, financialYear)
+            ),
+        });
+    }
+
     async listBrandsForPayout() {
         return db
             .select({
@@ -305,6 +484,7 @@ class FinanceComplianceQuery {
                 beneficiaryCode: brandConfidentials.beneficiaryCode,
                 payoutReference: brandConfidentials.payoutReference,
                 gstin: brandConfidentials.gstin,
+                pan: brandConfidentials.pan,
                 rzpAccountId: brands.rzpAccountId,
             })
             .from(brands)
@@ -355,6 +535,9 @@ class FinanceComplianceQuery {
             .onConflictDoUpdate({
                 target: [brandTdsTracking.brandId, brandTdsTracking.financialYear],
                 set: {
+                    annualCommissionYtdPaise: values.annualCommissionYtdPaise,
+                    tdsDeductedYtdPaise: values.tdsDeductedYtdPaise,
+                    thresholdCrossedAt: values.thresholdCrossedAt,
                     cumulativeCommissionPaise: values.cumulativeCommissionPaise,
                     cumulativeTdsPaise: values.cumulativeTdsPaise,
                     thresholdPaise: values.thresholdPaise,
@@ -365,6 +548,23 @@ class FinanceComplianceQuery {
             })
             .returning()
             .then((rows) => rows[0]);
+    }
+
+    async listBrandTdsTracking(financialYear?: string) {
+        return db.query.brandTdsTracking.findMany({
+            where: financialYear ? eq(brandTdsTracking.financialYear, financialYear) : undefined,
+            orderBy: [desc(brandTdsTracking.financialYear), asc(brandTdsTracking.brandId)],
+        });
+    }
+
+    async listCarrierClaimsForFinanceWindow(input: {
+        start: Date;
+        end: Date;
+    }) {
+        return db.query.carrierClaims.findMany({
+            where: and(gte(carrierClaims.updatedAt, input.start), lte(carrierClaims.updatedAt, input.end)),
+            orderBy: [desc(carrierClaims.updatedAt)],
+        });
     }
 
     async listHsnMaster() {
@@ -415,6 +615,8 @@ class FinanceComplianceQuery {
                 target: [moduleAccess.moduleKey, moduleAccess.userId],
                 set: {
                     grantedBy: values.grantedBy,
+                    grantedAt: values.grantedAt ?? new Date(),
+                    revokedAt: values.revokedAt ?? null,
                     canView: values.canView,
                     canManage: values.canManage,
                     notes: values.notes,
@@ -432,17 +634,65 @@ class FinanceComplianceQuery {
         });
     }
 
+    async searchFinanceUsers(search?: string) {
+        const term = search?.trim();
+        return db
+            .select({
+                id: users.id,
+                firstName: users.firstName,
+                lastName: users.lastName,
+                email: users.email,
+            })
+            .from(users)
+            .where(
+                term
+                    ? or(
+                          ilike(users.firstName, `%${term}%`),
+                          ilike(users.lastName, `%${term}%`),
+                          ilike(users.email, `%${term}%`),
+                          ilike(users.id, `%${term}%`)
+                      )
+                    : undefined
+            )
+            .orderBy(asc(users.firstName), asc(users.lastName))
+            .limit(20);
+    }
+
     async getModuleAccessForUser(userId: string) {
         return db.query.moduleAccess.findMany({
-            where: eq(moduleAccess.userId, userId),
+            where: and(eq(moduleAccess.userId, userId), sql`${moduleAccess.revokedAt} IS NULL`),
         });
     }
 
     async listPlEntries(monthKey?: string) {
         return db.query.plManualEntries.findMany({
-            where: monthKey ? eq(plManualEntries.monthKey, monthKey) : undefined,
-            orderBy: [desc(plManualEntries.monthKey), asc(plManualEntries.category)],
+            where: monthKey
+                ? or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey))
+                : undefined,
+            orderBy: [
+                desc(plManualEntries.monthKey),
+                asc(plManualEntries.category),
+                asc(plManualEntries.subLabel),
+            ],
         });
+    }
+
+    async getPlEntryById(id: string) {
+        return db.query.plManualEntries.findFirst({
+            where: eq(plManualEntries.id, id),
+        });
+    }
+
+    async getLatestPreviousPlEntries(monthKey: string) {
+        const previousMonth = await db.query.plManualEntries.findFirst({
+            where: sql`COALESCE(${plManualEntries.month}, ${plManualEntries.monthKey}) < ${monthKey}`,
+            orderBy: [desc(sql`COALESCE(${plManualEntries.month}, ${plManualEntries.monthKey})`)],
+        });
+
+        if (!previousMonth) return [];
+
+        const previousKey = previousMonth.month ?? previousMonth.monthKey;
+        return this.listPlEntries(previousKey);
     }
 
     async upsertPlEntry(values: typeof plManualEntries.$inferInsert) {
@@ -451,11 +701,17 @@ class FinanceComplianceQuery {
                 .update(plManualEntries)
                 .set({
                     monthKey: values.monthKey,
+                    month: values.month ?? values.monthKey,
                     category: values.category,
+                    lineItem: values.lineItem,
+                    subLabel: values.subLabel,
                     description: values.description,
                     amountPaise: values.amountPaise,
                     notes: values.notes,
+                    enteredBy: values.enteredBy,
+                    enteredAt: values.enteredAt,
                     updatedBy: values.updatedBy,
+                    isLocked: values.isLocked,
                     lockedAt: values.lockedAt,
                     updatedAt: new Date(),
                 })
@@ -466,9 +722,39 @@ class FinanceComplianceQuery {
 
         return db
             .insert(plManualEntries)
-            .values(values)
+            .values({
+                ...values,
+                month: values.month ?? values.monthKey,
+                lineItem: values.lineItem ?? values.category,
+                enteredAt: values.enteredAt ?? new Date(),
+                enteredBy: values.enteredBy ?? values.createdBy,
+            })
             .returning()
             .then((rows) => rows[0]);
+    }
+
+    async lockPlEntries(monthKey: string) {
+        return db
+            .update(plManualEntries)
+            .set({
+                isLocked: true,
+                lockedAt: new Date(),
+                updatedAt: new Date(),
+            })
+            .where(or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey)))
+            .returning();
+    }
+
+    async unlockPlEntries(monthKey: string) {
+        return db
+            .update(plManualEntries)
+            .set({
+                isLocked: false,
+                lockedAt: null,
+                updatedAt: new Date(),
+            })
+            .where(or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey)))
+            .returning();
     }
 
     async getPlSummary(monthKey: string) {
@@ -477,7 +763,7 @@ class FinanceComplianceQuery {
                 totalPaise: sql<number>`COALESCE(SUM(${plManualEntries.amountPaise}), 0)`,
             })
             .from(plManualEntries)
-            .where(eq(plManualEntries.monthKey, monthKey));
+            .where(or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey)));
 
         return {
             monthKey,
@@ -498,6 +784,7 @@ class FinanceComplianceQuery {
             .onConflictDoUpdate({
                 target: plSnapshots.monthKey,
                 set: {
+                    month: values.month ?? values.monthKey,
                     snapshotType: values.snapshotType,
                     summary: values.summary,
                     lockedBy: values.lockedBy,
@@ -524,8 +811,15 @@ class FinanceComplianceQuery {
     async listConsents(userIds?: string[]) {
         return db.query.userConsents.findMany({
             where: userIds?.length ? inArray(userConsents.userId, userIds) : undefined,
-            orderBy: [desc(userConsents.grantedAt)],
+            orderBy: [desc(userConsents.consentGivenAt)],
             limit: 200,
+        });
+    }
+
+    async getLatestConsent(userId: string, consentType: typeof userConsents.$inferSelect.consentType) {
+        return db.query.userConsents.findFirst({
+            where: and(eq(userConsents.userId, userId), eq(userConsents.consentType, consentType)),
+            orderBy: [desc(userConsents.consentGivenAt), desc(userConsents.createdAt)],
         });
     }
 
@@ -554,7 +848,7 @@ class FinanceComplianceQuery {
             where: status
                 ? eq(dataDeletionRequests.status, status as any)
                 : undefined,
-            orderBy: [desc(dataDeletionRequests.createdAt)],
+            orderBy: [desc(dataDeletionRequests.requestedAt), desc(dataDeletionRequests.createdAt)],
             limit: 100,
         });
     }
@@ -565,24 +859,26 @@ class FinanceComplianceQuery {
         });
     }
 
+    async getDeletionRequestByVerificationToken(token: string) {
+        return db.query.dataDeletionRequests.findFirst({
+            where: eq(dataDeletionRequests.verificationToken, token),
+        });
+    }
+
     async upsertLegalContact(values: typeof legalContacts.$inferInsert) {
-        if (values.id) {
-            return db
+        if (values.isActive) {
+            await db
                 .update(legalContacts)
                 .set({
-                    contactType: values.contactType,
-                    name: values.name,
-                    email: values.email,
-                    phone: values.phone,
-                    address: values.address,
-                    designation: values.designation,
-                    notes: values.notes,
-                    isActive: values.isActive,
+                    isActive: false,
                     updatedAt: new Date(),
                 })
-                .where(eq(legalContacts.id, values.id))
-                .returning()
-                .then((rows) => rows[0]);
+                .where(
+                    and(
+                        eq(legalContacts.role, values.role),
+                        eq(legalContacts.isActive, true)
+                    )
+                );
         }
 
         return db
@@ -594,14 +890,21 @@ class FinanceComplianceQuery {
 
     async listLegalContacts() {
         return db.query.legalContacts.findMany({
-            orderBy: [asc(legalContacts.contactType), asc(legalContacts.name)],
+            orderBy: [asc(legalContacts.role), desc(legalContacts.effectiveFrom), desc(legalContacts.createdAt)],
         });
     }
 
     async getActiveLegalContacts() {
         return db.query.legalContacts.findMany({
             where: eq(legalContacts.isActive, true),
-            orderBy: [asc(legalContacts.contactType), asc(legalContacts.name)],
+            orderBy: [asc(legalContacts.role), desc(legalContacts.effectiveFrom), desc(legalContacts.createdAt)],
+        });
+    }
+
+    async getActiveLegalContactByRole(role: "gro" | "dpo" | "nodal_officer" | "compliance_officer") {
+        return db.query.legalContacts.findFirst({
+            where: and(eq(legalContacts.role, role), eq(legalContacts.isActive, true)),
+            orderBy: [desc(legalContacts.effectiveFrom), desc(legalContacts.createdAt)],
         });
     }
 
@@ -685,6 +988,58 @@ class FinanceComplianceQuery {
         });
     }
 
+    async listAnalyticsCommerceForMonth(input: { monthKey: string }) {
+        return db.query.analyticsDailyCommerce.findMany({
+            where: sql`${analyticsDailyCommerce.dateKey} LIKE ${`${input.monthKey}%`}`,
+            orderBy: [asc(analyticsDailyCommerce.dateKey)],
+        });
+    }
+
+    async listCorporatePaymentsForMonth(input: { start: Date; end: Date }) {
+        return db.query.corporatePayments.findMany({
+            where: and(
+                gte(corporatePayments.createdAt, input.start),
+                lte(corporatePayments.createdAt, input.end)
+            ),
+            orderBy: [desc(corporatePayments.createdAt)],
+        });
+    }
+
+    async listRefundsForPayoutWindow(input: {
+        start: Date;
+        end: Date;
+    }) {
+        return db.query.refunds.findMany({
+            where: or(
+                and(gte(refunds.createdAt, input.start), lte(refunds.createdAt, input.end)),
+                and(
+                    gte(refunds.returnReceivedAt, input.start),
+                    lte(refunds.returnReceivedAt, input.end)
+                )
+            ),
+            with: {
+                order: {
+                    with: {
+                        items: {
+                            with: {
+                                product: {
+                                    with: {
+                                        brand: {
+                                            with: {
+                                                confidential: true,
+                                            },
+                                        },
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+            orderBy: [desc(refunds.createdAt)],
+        });
+    }
+
     async listShipmentsForOrderIds(orderIds: string[]) {
         if (!orderIds.length) return [];
         return db.query.orderShipments.findMany({
@@ -722,20 +1077,37 @@ class FinanceComplianceQuery {
 
     async listFinanceAuditLogs(filters: {
         entityType?: string;
+        entityId?: string;
+        actionType?: string;
         actorId?: string;
+        actorType?: string;
         from?: Date;
         to?: Date;
+        q?: string;
         module?: string;
+        attachmentOnly?: boolean;
     } = {}) {
         return db.query.auditLogs.findMany({
             where: and(
                 filters.entityType ? eq(auditLogs.entityType, filters.entityType) : undefined,
+                filters.entityId ? eq(auditLogs.entityId, filters.entityId) : undefined,
+                filters.actionType ? eq(auditLogs.actionType, filters.actionType) : undefined,
                 filters.actorId ? eq(auditLogs.userId, filters.actorId) : undefined,
+                filters.actorType ? eq(auditLogs.actorType, filters.actorType) : undefined,
                 filters.from ? gte(auditLogs.timestampUtc, filters.from) : undefined,
                 filters.to ? lte(auditLogs.timestampUtc, filters.to) : undefined,
+                filters.q
+                    ? sql`(
+                        ${auditLogs.reason} ILIKE ${`%${filters.q}%`}
+                        OR ${auditLogs.entityId} ILIKE ${`%${filters.q}%`}
+                        OR ${auditLogs.actionType} ILIKE ${`%${filters.q}%`}
+                        OR COALESCE(${auditLogs.metadata} ->> 'financeEventCode', '') ILIKE ${`%${filters.q}%`}
+                    )`
+                    : undefined,
                 filters.module
                     ? sql`${auditLogs.metadata} ->> 'module' = ${filters.module}`
-                    : sql`${auditLogs.metadata} ->> 'module' = 'finance_compliance'`
+                    : sql`${auditLogs.metadata} ->> 'module' = 'finance_compliance'`,
+                filters.attachmentOnly ? sql`${auditLogs.attachmentUrl} IS NOT NULL` : undefined
             ),
             orderBy: [desc(auditLogs.timestampUtc)],
             limit: 250,
