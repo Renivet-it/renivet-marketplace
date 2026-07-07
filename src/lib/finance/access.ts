@@ -42,19 +42,30 @@ export async function getFinanceModuleAccess(params: {
 }) {
     const entries = await financeComplianceQueries.getModuleAccessForUser(params.userId);
     const entry = entries.find((item) => item.moduleKey === params.moduleKey);
-
-    if (params.moduleKey === "monthly_pl") {
-        return {
-            canView: entry?.canView ?? false,
-            canManage: entry?.canManage ?? false,
-            isInherited: false,
-        };
-    }
-
     const isAdmin = hasFinanceAdminAccess({
         sitePermissions: params.sitePermissions,
         roles: params.roles,
     });
+
+    if (params.moduleKey === "monthly_pl") {
+        if (entry) {
+            return {
+                canView: entry.canView,
+                canManage: entry.canManage,
+                isInherited: false,
+            };
+        }
+
+        if (isAdmin) {
+            return { canView: true, canManage: true, isInherited: true };
+        }
+
+        return {
+            canView: false,
+            canManage: false,
+            isInherited: false,
+        };
+    }
 
     if (isAdmin) {
         return { canView: true, canManage: true, isInherited: true };

@@ -77,8 +77,8 @@ export function ModuleAccessWorkspace({
                 </p>
                 <h1 className="mt-2 text-2xl font-semibold text-slate-950">Finance Module Access</h1>
                 <p className="mt-2 text-sm text-slate-600">
-                    Module access is additive. `monthly_pl` is explicit allowlist access only and does not inherit from
-                    admin role.
+                    Module access is additive. Admin users inherit finance access by default, and this panel can grant
+                    module visibility to additional named users when needed.
                 </p>
                 {!isAj ? (
                     <p className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">

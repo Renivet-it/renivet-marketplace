@@ -1688,6 +1688,62 @@
       "when": 1783308600000,
       "tag": "0248_finance_compliance_runtime",
       "breakpoints": true
+    },
+    {
+      "idx": 241,
+      "version": "7",
+      "when": 1783395000000,
+      "tag": "0249_refund_workflow_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 242,
+      "version": "7",
+      "when": 1783481400000,
+      "tag": "0250_cod_finance_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 243,
+      "version": "7",
+      "when": 1783567800000,
+      "tag": "0251_tds_tracking_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 244,
+      "version": "7",
+      "when": 1783654200000,
+      "tag": "0252_dpdp_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 245,
+      "version": "7",
+      "when": 1783740600000,
+      "tag": "0253_consumer_protection_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 246,
+      "version": "7",
+      "when": 1783827000000,
+      "tag": "0254_sustainability_cert_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 247,
+      "version": "7",
+      "when": 1783913400000,
+      "tag": "0255_finance_audit_log_alignment",
+      "breakpoints": true
+    },
+    {
+      "idx": 248,
+      "version": "7",
+      "when": 1783999800000,
+      "tag": "0256_monthly_pl_access_alignment",
+      "breakpoints": true
     }
   ]
 }

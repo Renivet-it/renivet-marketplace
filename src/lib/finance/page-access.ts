@@ -4,7 +4,7 @@ import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { forbidden, notFound } from "next/navigation";
+import { notFound } from "next/navigation";
 import { getFinanceModuleAccess, hasFinanceAdminAccess } from "./access";
 
 export async function assertFinanceDashboardAccess() {
@@ -64,9 +64,6 @@ export async function assertFinanceModulePageAccess(
         (mode === "manage" && !moduleAccess.canManage) ||
         (mode === "view" && !moduleAccess.canView && !moduleAccess.canManage)
     ) {
-        if (moduleKey === "monthly_pl") {
-            forbidden();
-        }
         notFound();
     }
 
