@@ -838,11 +838,72 @@ class FinanceComplianceQuery {
     }
 
     async upsertConsent(values: typeof userConsents.$inferInsert) {
-        return db
-            .insert(userConsents)
-            .values(values)
-            .returning()
-            .then((rows) => rows[0]);
+        const consentGivenAt =
+            values.consentGivenAt instanceof Date
+                ? values.consentGivenAt.toISOString()
+                : values.consentGivenAt ?? new Date().toISOString();
+        const revokedAt =
+            values.revokedAt instanceof Date
+                ? values.revokedAt.toISOString()
+                : values.revokedAt ?? null;
+        const metadataJson = JSON.stringify(values.metadata ?? {});
+
+        const result = await db.execute(sql`
+            insert into user_consents (
+                user_id,
+                consent_type,
+                consent_given,
+                consent_given_at,
+                consent_version,
+                version,
+                ip_address,
+                user_agent,
+                source,
+                is_granted,
+                granted_at,
+                revoked_at,
+                metadata,
+                created_at,
+                updated_at
+            ) values (
+                ${values.userId},
+                ${values.consentType},
+                ${values.consentGiven ?? true},
+                ${consentGivenAt},
+                ${values.consentVersion},
+                ${values.consentVersion},
+                ${values.ipAddress ?? null},
+                ${values.userAgent ?? null},
+                ${values.source ?? "web"},
+                ${values.consentGiven ?? true},
+                ${consentGivenAt},
+                ${revokedAt},
+                ${metadataJson}::jsonb,
+                now(),
+                now()
+            )
+            returning id
+        `);
+
+        const insertedRows = Array.isArray((result as { rows?: unknown }).rows)
+            ? ((result as { rows: Array<{ id?: string }> }).rows ?? [])
+            : Array.isArray(result)
+              ? (result as Array<{ id?: string }>)
+              : [];
+        const insertedId = insertedRows[0]?.id;
+        if (!insertedId) {
+            throw new Error("Failed to create consent record");
+        }
+
+        const row = await db.query.userConsents.findFirst({
+            where: eq(userConsents.id, insertedId),
+        });
+
+        if (!row) {
+            throw new Error("Created consent record could not be reloaded");
+        }
+
+        return row;
     }
 
     async listConsents(userIds?: string[]) {

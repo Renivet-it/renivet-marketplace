@@ -212,7 +212,9 @@ export async function listUserConsentState(userId: string) {
         version,
         consents: CONSENT_TYPES.map((type) => {
             const row = latestByType.get(type);
-            const granted = row ? row.consentGiven && !row.revokedAt : type === "data_processing" ? false : false;
+            const granted = row
+                ? row.consentGiven && !row.revokedAt
+                : type === "data_processing";
 
             return {
                 consentType: type,
@@ -221,7 +223,8 @@ export async function listUserConsentState(userId: string) {
                 consentVersion: row?.consentVersion ?? null,
                 needsReconsent:
                     type === "data_processing" &&
-                    (!row || row.consentVersion !== version || !granted),
+                    Boolean(row) &&
+                    (row.consentVersion !== version || !granted),
                 latestEvent: row ?? null,
             };
         }),
