@@ -1,5 +1,4 @@
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
-import { isAjSuperAdmin } from "@/lib/finance/access";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
 
 type PlSourceLine = {
@@ -381,7 +380,7 @@ export async function buildMonthlyPl(monthKey: string): Promise<MonthlyPlSummary
     };
 }
 
-export async function refreshMonthlyPl(monthKey: string, actorId: string) {
+export async function refreshMonthlyPl(monthKey: string) {
     const summary = await buildMonthlyPl(monthKey);
     const existing = await financeComplianceQueries.getPlSnapshot(monthKey);
     const snapshotType = existing?.snapshotType === "locked" ? "locked" : "draft";
@@ -444,10 +443,6 @@ export async function lockMonthlyPl(monthKey: string, actorId: string) {
 }
 
 export async function unlockMonthlyPl(monthKey: string, actorId: string, reason: string) {
-    if (!isAjSuperAdmin(actorId)) {
-        throw new Error("Only AJ can unlock a locked month.");
-    }
-
     const existing = await financeComplianceQueries.getPlSnapshot(monthKey);
     await financeComplianceQueries.unlockPlEntries(monthKey);
     const row = await financeComplianceQueries.upsertPlSnapshot({

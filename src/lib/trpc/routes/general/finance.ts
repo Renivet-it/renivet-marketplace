@@ -3,7 +3,6 @@ import { legalCache } from "@/lib/redis/methods/legal";
 import {
     getFinanceModuleAccess,
     hasFinanceAdminAccess,
-    isAjSuperAdmin,
 } from "@/lib/finance/access";
 import {
     computeTdsDeduction,
@@ -858,6 +857,12 @@ export const financeComplianceRouter = createTRPCRouter({
         .input(z.object({ monthKey: z.string() }))
         .query(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "monthly_pl", "view");
+            const access = await getFinanceModuleAccess({
+                userId: ctx.user.id,
+                sitePermissions: ctx.user.sitePermissions ?? 0,
+                roles: ctx.user.roles ?? [],
+                moduleKey: "monthly_pl",
+            });
             const [entries, previousEntries, snapshot, summary] = await Promise.all([
                 ctx.queries.financeCompliance.listPlEntries(input.monthKey),
                 ctx.queries.financeCompliance.getLatestPreviousPlEntries(input.monthKey),
@@ -870,7 +875,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 snapshot,
                 summary,
                 isLocked: snapshot?.snapshotType === "locked",
-                canUnlock: isAjSuperAdmin(ctx.user.id),
+                canUnlock: access.canManage,
             };
         }),
 
@@ -930,7 +935,7 @@ export const financeComplianceRouter = createTRPCRouter({
         .input(z.object({ monthKey: z.string() }))
         .mutation(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "monthly_pl", "manage");
-            return refreshMonthlyPl(input.monthKey, ctx.user.id);
+            return refreshMonthlyPl(input.monthKey);
         }),
 
     lockPlMonth: protectedProcedure

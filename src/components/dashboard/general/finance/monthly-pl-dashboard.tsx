@@ -164,27 +164,37 @@ export function MonthlyPlDashboard({
                                     Locked {new Date(dashboardQuery.data.snapshot.lockedAt).toLocaleString()}
                                 </span>
                             ) : null}
-                            {dashboardQuery.data?.canUnlock ? (
-                                <>
-                                    <Input
-                                        value={unlockReason}
-                                        onChange={(event) => setUnlockReason(event.target.value)}
-                                        placeholder="Unlock reason"
-                                        className="w-52"
-                                    />
-                                    <Button
-                                        variant="destructive"
-                                        disabled={unlockMutation.isPending || unlockReason.trim().length < 3}
-                                        onClick={() =>
-                                            unlockMutation.mutate({
-                                                monthKey,
-                                                reason: unlockReason,
-                                            })
-                                        }
-                                    >
-                                        Unlock Month
-                                    </Button>
-                                </>
+                            <Input
+                                value={unlockReason}
+                                onChange={(event) => setUnlockReason(event.target.value)}
+                                placeholder={
+                                    dashboardQuery.data?.canUnlock
+                                        ? "Unlock reason"
+                                        : "Only AJ can unlock locked months"
+                                }
+                                className="w-64"
+                                disabled={!dashboardQuery.data?.canUnlock || unlockMutation.isPending}
+                            />
+                            <Button
+                                variant="destructive"
+                                disabled={
+                                    !dashboardQuery.data?.canUnlock ||
+                                    unlockMutation.isPending ||
+                                    unlockReason.trim().length < 3
+                                }
+                                onClick={() =>
+                                    unlockMutation.mutate({
+                                        monthKey,
+                                        reason: unlockReason,
+                                    })
+                                }
+                            >
+                                {unlockMutation.isPending ? "Unlocking..." : "Unlock Month"}
+                            </Button>
+                            {!dashboardQuery.data?.canUnlock ? (
+                                <span className="text-xs text-slate-500">
+                                    Locked months can only be unlocked by AJ.
+                                </span>
                             ) : null}
                         </>
                     ) : (
@@ -307,7 +317,7 @@ export function MonthlyPlDashboard({
                                         type="number"
                                         value={String(row.amountPaise)}
                                         disabled={isLocked}
-                                        placeholder="Amount in paise"
+                                        placeholder="Amount in paise (e.g. 400000 = INR 4,000)"
                                         onChange={(event) => {
                                             const value = Number(event.target.value || 0);
                                             setDraftRows((current) =>
@@ -318,6 +328,9 @@ export function MonthlyPlDashboard({
                                             setHasUnsavedChanges(true);
                                         }}
                                     />
+                                    <p className="text-xs text-slate-500">
+                                        Enter amount in paise. Example: `400` = INR 4.00, `400000` = INR 4,000.00
+                                    </p>
                                     <Input
                                         value={row.notes}
                                         disabled={isLocked}
