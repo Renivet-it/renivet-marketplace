@@ -5,6 +5,13 @@ import { Input } from "@/components/ui/input-dash";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select-general";
 import { Textarea } from "@/components/ui/textarea-dash";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-dash";
+import {
     getReturnShippingPaidBy,
     inferRefundCostAllocationFromReason,
     requiresNotesForCostAllocation,
@@ -13,8 +20,7 @@ import {
 import { trpc } from "@/lib/trpc/client";
 import { formatINR, handleClientError } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
-import type React from "react";
-import { startTransition, useState } from "react";
+import React, { startTransition, useState } from "react";
 import { toast } from "sonner";
 
 type RefundReason = {
@@ -50,6 +56,11 @@ type RefundRow = {
         name: string | null;
     } | null;
     metadata?: Record<string, unknown> | null;
+    user?: {
+        firstName: string;
+        lastName: string;
+        email: string;
+    } | null;
 };
 
 const allocationOptions: Array<{
@@ -164,6 +175,35 @@ export function FinanceRefundsWorkspace({
     const [actionNotes, setActionNotes] = useState<Record<string, string>>({});
     const { startUpload } = useUploadThing("financeProofUploader");
 
+    const [isFetchingOrder, setIsFetchingOrder] = useState(false);
+    const [isFormOpen, setIsFormOpen] = useState(false);
+    const [statusFilter, setStatusFilter] = useState("all");
+    const [approvalStatusFilter, setApprovalStatusFilter] = useState("all");
+    const [costAllocationFilter, setCostAllocationFilter] = useState("all");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage, setItemsPerPage] = useState(5);
+
+    const handleFetchOrder = async () => {
+        if (!orderId.trim()) {
+            toast.error("Please enter an Order ID first");
+            return;
+        }
+        setIsFetchingOrder(true);
+        try {
+            const data = await utils.general.financeCompliance.getOrderDetailsForRefund.fetch({
+                orderId: orderId.trim(),
+            });
+            setUserId(data.userId);
+            setPaymentId(data.paymentId);
+            setAmount(String(data.amount));
+            toast.success(`Loaded order details for ${data.userName}`);
+        } catch (err) {
+            toast.error("Could not find order. Please fill details manually.");
+        } finally {
+            setIsFetchingOrder(false);
+        }
+    };
+
     const refreshRefunds = async () => {
         await utils.general.financeCompliance.listRefundCases.invalidate();
     };
@@ -181,6 +221,7 @@ export function FinanceRefundsWorkspace({
             setRefundType("full");
             setCostAllocation("brand_fault");
             setReturnShippingPaidBy("renivet");
+            setIsFormOpen(false);
             await refreshRefunds();
         },
         onError: handleClientError,
@@ -242,11 +283,20 @@ export function FinanceRefundsWorkspace({
         onError: handleClientError,
     });
 
-    const filteredRows = (refundsQuery.data ?? []).filter((row) =>
-        `${row.orderId} ${row.id} ${row.reasonMaster?.name ?? ""} ${row.costAllocation ?? ""}`
-            .toLowerCase()
-            .includes(search.trim().toLowerCase())
-    );
+    const filteredRows = (refundsQuery.data ?? []).filter((row) => {
+        const searchStr = `${row.orderId} ${row.id} ${row.reasonMaster?.name ?? ""} ${row.costAllocation ?? ""} ${row.user?.firstName ?? ""} ${row.user?.lastName ?? ""} ${row.user?.email ?? ""}`.toLowerCase();
+        const matchesSearch = searchStr.includes(search.trim().toLowerCase());
+
+        const matchesStatus = statusFilter === "all" || row.status === statusFilter;
+        const matchesApproval = approvalStatusFilter === "all" || row.approvalStatus === approvalStatusFilter;
+        const matchesAllocation = costAllocationFilter === "all" || row.costAllocation === costAllocationFilter;
+
+        return matchesSearch && matchesStatus && matchesApproval && matchesAllocation;
+    });
+
+    const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedRows = filteredRows.slice(startIndex, startIndex + itemsPerPage);
     const reasonGroups = buildReasonGroups(reasonsQuery.data ?? [], reasonSearch);
     const selectedReason =
         (reasonsQuery.data ?? []).find((reason) => reason.id === selectedReasonId) ?? null;
@@ -300,194 +350,318 @@ export function FinanceRefundsWorkspace({
     };
 
     return (
-        <div className="grid gap-4 xl:grid-cols-[minmax(360px,0.9fr)_minmax(0,1.6fr)]">
-            <section className="space-y-4 rounded-md border bg-white p-5 shadow-sm">
-                <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">
-                        Initiate Refund
-                    </p>
-                    <h2 className="mt-2 text-xl font-semibold text-slate-950">Refund initiation form</h2>
-                    <p className="mt-2 text-sm text-slate-600">
-                        Use reason master mapping, upload proof when needed, and keep payout impact aligned to policy.
-                    </p>
-                </div>
+        <div className="space-y-4">
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Initiate Refund Case</DialogTitle>
+                        <DialogDescription>
+                            Use reason master mapping, upload proof when needed, and keep payout impact aligned to policy.
+                        </DialogDescription>
+                    </DialogHeader>
 
-                <div className="grid gap-3 md:grid-cols-2">
-                    <Input placeholder="Order ID" value={orderId} onChange={(event) => setOrderId(event.target.value)} />
-                    <Input placeholder="User ID" value={userId} onChange={(event) => setUserId(event.target.value)} />
-                    <Input placeholder="Razorpay Payment ID" value={paymentId} onChange={(event) => setPaymentId(event.target.value)} />
-                    <Input
-                        placeholder="Amount in paise"
-                        inputMode="numeric"
-                        value={amount}
-                        onChange={(event) => setAmount(event.target.value.replace(/[^\d]/g, ""))}
-                    />
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                    <Select
-                        value={refundType}
-                        onValueChange={(value) =>
-                            setRefundType(value as "full" | "partial" | "exchange" | "credit_note")
-                        }
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Refund type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="full">Full</SelectItem>
-                            <SelectItem value="partial">Partial</SelectItem>
-                            <SelectItem value="exchange">Exchange</SelectItem>
-                            <SelectItem value="credit_note">Credit note</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <Select
-                        value={costAllocation}
-                        onValueChange={(value) => {
-                            const next = value as RefundCostAllocation;
-                            setCostAllocation(next);
-                            startTransition(() => {
-                                setReturnShippingPaidBy(getReturnShippingPaidBy(next));
-                            });
-                        }}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Cost allocation" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {allocationOptions.map((option) => (
-                                <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
-                </div>
-
-                <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                        <div>
-                            <p className="text-sm font-medium text-slate-900">Refund reason</p>
-                            <p className="text-xs text-slate-500">
-                                Search and pick from grouped `reason_master` entries.
-                            </p>
+                    <div className="space-y-4 py-2">
+                        <div className="space-y-3">
+                            <div className="flex gap-2">
+                                <Input
+                                    placeholder="Order ID"
+                                    value={orderId}
+                                    onChange={(event) => setOrderId(event.target.value)}
+                                    className="flex-1"
+                                />
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={handleFetchOrder}
+                                    disabled={isFetchingOrder}
+                                    className="shrink-0"
+                                >
+                                    {isFetchingOrder ? "Fetching..." : "Fetch Info"}
+                                </Button>
+                            </div>
+                            <div className="grid gap-3 md:grid-cols-2">
+                                <Input placeholder="User ID" value={userId} onChange={(event) => setUserId(event.target.value)} />
+                                <Input placeholder="Razorpay Payment ID" value={paymentId} onChange={(event) => setPaymentId(event.target.value)} />
+                                <Input
+                                    placeholder="Amount in paise"
+                                    inputMode="numeric"
+                                    value={amount}
+                                    onChange={(event) => setAmount(event.target.value.replace(/[^\d]/g, ""))}
+                                    className="md:col-span-2"
+                                />
+                            </div>
                         </div>
-                        <Input
-                            className="max-w-52"
-                            placeholder="Search reason"
-                            value={reasonSearch}
-                            onChange={(event) => setReasonSearch(event.target.value)}
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <Select
+                                value={refundType}
+                                onValueChange={(value) =>
+                                    setRefundType(value as "full" | "partial" | "exchange" | "credit_note")
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Refund type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="full">Full</SelectItem>
+                                    <SelectItem value="partial">Partial</SelectItem>
+                                    <SelectItem value="exchange">Exchange</SelectItem>
+                                    <SelectItem value="credit_note">Credit note</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            <Select
+                                value={costAllocation}
+                                onValueChange={(value) => {
+                                    const next = value as RefundCostAllocation;
+                                    setCostAllocation(next);
+                                    startTransition(() => {
+                                        setReturnShippingPaidBy(getReturnShippingPaidBy(next));
+                                    });
+                                }}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Cost allocation" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {allocationOptions.map((option) => (
+                                        <SelectItem key={option.value} value={option.value}>
+                                            {option.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-sm font-medium text-slate-900">Refund reason</p>
+                                    <p className="text-xs text-slate-500">
+                                        Search and pick from grouped `reason_master` entries.
+                                    </p>
+                                </div>
+                                <Input
+                                    className="max-w-52 bg-white"
+                                    placeholder="Search reason"
+                                    value={reasonSearch}
+                                    onChange={(event) => setReasonSearch(event.target.value)}
+                                />
+                            </div>
+                            <div className="max-h-60 space-y-3 overflow-y-auto">
+                                {reasonGroups.map((group) => (
+                                    <div key={group.parent.id} className="rounded-md border bg-white p-3">
+                                        <p className="text-sm font-semibold text-slate-900">{group.parent.name}</p>
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {(group.children.length ? group.children : [group.parent]).map((reason) => (
+                                                <button
+                                                    key={reason.id}
+                                                    type="button"
+                                                    onClick={() => handleReasonSelection(reason)}
+                                                    className={`rounded-full border px-3 py-1.5 text-xs transition ${
+                                                        selectedReasonId === reason.id
+                                                            ? "border-emerald-600 bg-emerald-50 text-emerald-700"
+                                                            : "border-slate-200 text-slate-600 hover:border-slate-300"
+                                                    }`}
+                                                >
+                                                    {reason.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                    Suggested policy
+                                </p>
+                                <p className="mt-2 text-sm font-medium text-slate-900">
+                                    {selectedReason ? allocationOptions.find((item) => item.value === getSuggestedAllocation(selectedReason))?.label : "Select a reason"}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    Override is allowed when finance needs to classify a case differently.
+                                </p>
+                            </div>
+                            <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                    Return shipping
+                                </p>
+                                <p className="mt-2 text-sm font-medium text-slate-900">
+                                    {returnShippingPaidBy === "na"
+                                        ? "No return required"
+                                        : returnShippingPaidBy === "renivet"
+                                          ? "Renivet pays"
+                                          : "Customer pays"}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    This auto-follows the selected cost allocation.
+                                </p>
+                            </div>
+                        </div>
+
+                        <Textarea
+                            minRows={3}
+                            placeholder="Notes are mandatory for renivet_fault and carrier_fault"
+                            value={notes}
+                            onChange={(event) => setNotes(event.target.value)}
                         />
-                    </div>
-                    <div className="max-h-80 space-y-3 overflow-y-auto">
-                        {reasonGroups.map((group) => (
-                            <div key={group.parent.id} className="rounded-md border bg-white p-3">
-                                <p className="text-sm font-semibold text-slate-900">{group.parent.name}</p>
-                                <div className="mt-3 flex flex-wrap gap-2">
-                                    {(group.children.length ? group.children : [group.parent]).map((reason) => (
-                                        <button
-                                            key={reason.id}
-                                            type="button"
-                                            onClick={() => handleReasonSelection(reason)}
-                                            className={`rounded-full border px-3 py-1.5 text-xs transition ${
-                                                selectedReasonId === reason.id
-                                                    ? "border-emerald-600 bg-emerald-50 text-emerald-700"
-                                                    : "border-slate-200 text-slate-600 hover:border-slate-300"
-                                            }`}
-                                        >
-                                            {reason.name}
-                                        </button>
+
+                        <div className="rounded-md border border-dashed border-slate-300 p-4">
+                            <p className="text-sm font-medium text-slate-900">Proof attachments</p>
+                            <p className="mt-1 text-xs text-slate-500">
+                                Upload photos or PDFs for late exceptions, transit damage, and manual review context.
+                            </p>
+                            <Input className="mt-3" type="file" accept="image/png,image/jpeg,application/pdf" multiple onChange={handleFileChange} />
+                            {files.length ? (
+                                <div className="mt-3 space-y-1 text-xs text-slate-600">
+                                    {files.map((file) => (
+                                        <p key={file.name}>{file.name}</p>
                                     ))}
                                 </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                            Suggested policy
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-slate-900">
-                            {selectedReason ? allocationOptions.find((item) => item.value === getSuggestedAllocation(selectedReason))?.label : "Select a reason"}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                            Override is allowed when finance needs to classify a case differently.
-                        </p>
-                    </div>
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
-                        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                            Return shipping
-                        </p>
-                        <p className="mt-2 text-sm font-medium text-slate-900">
-                            {returnShippingPaidBy === "na"
-                                ? "No return required"
-                                : returnShippingPaidBy === "renivet"
-                                  ? "Renivet pays"
-                                  : "Customer pays"}
-                        </p>
-                        <p className="mt-1 text-xs text-slate-500">
-                            This auto-follows the selected cost allocation.
-                        </p>
-                    </div>
-                </div>
-
-                <Textarea
-                    minRows={4}
-                    placeholder="Notes are mandatory for renivet_fault and carrier_fault"
-                    value={notes}
-                    onChange={(event) => setNotes(event.target.value)}
-                />
-
-                <div className="rounded-md border border-dashed border-slate-300 p-4">
-                    <p className="text-sm font-medium text-slate-900">Proof attachments</p>
-                    <p className="mt-1 text-xs text-slate-500">
-                        Upload photos or PDFs for late exceptions, transit damage, and manual review context.
-                    </p>
-                    <Input className="mt-3" type="file" accept="image/png,image/jpeg,application/pdf" multiple onChange={handleFileChange} />
-                    {files.length ? (
-                        <div className="mt-3 space-y-1 text-xs text-slate-600">
-                            {files.map((file) => (
-                                <p key={file.name}>{file.name}</p>
-                            ))}
+                            ) : null}
                         </div>
-                    ) : null}
-                </div>
 
-                <Button
-                    onClick={submitRefund}
-                    disabled={createRefundMutation.isPending}
-                    className="w-full"
-                >
-                    {createRefundMutation.isPending ? "Creating refund case..." : "Create Refund Case"}
-                </Button>
-            </section>
+                        <Button
+                            onClick={submitRefund}
+                            disabled={createRefundMutation.isPending}
+                            className="w-full mt-2"
+                        >
+                            {createRefundMutation.isPending ? "Creating refund case..." : "Create Refund Case"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             <section className="space-y-4">
                 <div className="rounded-md border bg-white p-5 shadow-sm">
-                    <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                        <div>
-                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                                Refund queue
-                            </p>
-                            <h2 className="mt-2 text-xl font-semibold text-slate-950">Approval, logistics, and execution</h2>
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                    Refund queue
+                                </p>
+                                <h2 className="mt-2 text-xl font-semibold text-slate-950">Approval, logistics, and execution</h2>
+                            </div>
+                            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center">
+                                <Input
+                                    className="w-full sm:max-w-sm"
+                                    placeholder="Search by order, refund id, user name/email, reason, or allocation"
+                                    value={search}
+                                    onChange={(event) => {
+                                        setSearch(event.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                />
+                                <Button onClick={() => setIsFormOpen(true)} className="shrink-0">
+                                    Create Refund Case
+                                </Button>
+                            </div>
                         </div>
-                        <Input
-                            className="max-w-sm"
-                            placeholder="Search by order, refund id, reason, or allocation"
-                            value={search}
-                            onChange={(event) => setSearch(event.target.value)}
-                        />
+
+                        <div className="flex flex-wrap gap-4 border-t border-slate-100 pt-4">
+                            <div className="w-full sm:w-48">
+                                <label className="text-xs font-semibold text-slate-600 block mb-1">Status</label>
+                                <Select
+                                    value={statusFilter}
+                                    onValueChange={(value) => {
+                                        setStatusFilter(value);
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Statuses" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Statuses</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="awaiting_approval">Awaiting Approval</SelectItem>
+                                        <SelectItem value="awaiting_return">Awaiting Return</SelectItem>
+                                        <SelectItem value="awaiting_qc">Awaiting QC</SelectItem>
+                                        <SelectItem value="qc_failed">QC Failed</SelectItem>
+                                        <SelectItem value="processed">Processed</SelectItem>
+                                        <SelectItem value="failed">Failed</SelectItem>
+                                        <SelectItem value="rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="w-full sm:w-48">
+                                <label className="text-xs font-semibold text-slate-600 block mb-1">Approval Status</label>
+                                <Select
+                                    value={approvalStatusFilter}
+                                    onValueChange={(value) => {
+                                        setApprovalStatusFilter(value);
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Approvals" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Approvals</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="approved">Approved</SelectItem>
+                                        <SelectItem value="rejected">Rejected</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="w-full sm:w-48">
+                                <label className="text-xs font-semibold text-slate-600 block mb-1">Cost Allocation</label>
+                                <Select
+                                    value={costAllocationFilter}
+                                    onValueChange={(value) => {
+                                        setCostAllocationFilter(value);
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Allocations" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Allocations</SelectItem>
+                                        {allocationOptions.map((opt) => (
+                                            <SelectItem key={opt.value} value={opt.value}>
+                                                {opt.label}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            
+                            <div className="w-full sm:w-36 ml-auto flex flex-col justify-end">
+                                <label className="text-xs font-semibold text-slate-600 block mb-1">Per Page</label>
+                                <Select
+                                    value={String(itemsPerPage)}
+                                    onValueChange={(value) => {
+                                        setItemsPerPage(Number(value));
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="5 per page" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="2">2 cases</SelectItem>
+                                        <SelectItem value="5">5 cases</SelectItem>
+                                        <SelectItem value="10">10 cases</SelectItem>
+                                        <SelectItem value="25">25 cases</SelectItem>
+                                        <SelectItem value="50">50 cases</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {filteredRows.length === 0 ? (
-                    <div className="rounded-md border bg-white p-8 text-sm text-slate-500 shadow-sm">
-                        No refund cases recorded yet.
+                {paginatedRows.length === 0 ? (
+                    <div className="rounded-md border bg-white p-8 text-sm text-slate-500 shadow-sm text-center">
+                        No matching refund cases recorded.
                     </div>
                 ) : (
-                    filteredRows.map((row) => {
+                    paginatedRows.map((row) => {
                         const evidenceUrls = getEvidenceUrls(row);
                         const actionNote = actionNotes[row.id] ?? "";
                         return (
@@ -517,12 +691,36 @@ export function FinanceRefundsWorkspace({
                                             </p>
                                         </div>
                                         <div className="grid gap-2 text-sm text-slate-600 md:grid-cols-2">
-                                            <p>User: {row.userId}</p>
-                                            <p>Payment: {row.paymentId}</p>
-                                            <p>Return shipping: {row.returnShippingPaidBy ?? "-"}</p>
-                                            <p>QC: {row.returnQcStatus ?? "-"}</p>
-                                            <p>Reverse pickup: {row.reversePickupShipmentId ? "Created" : row.reversePickupRequired ? "Required" : "No"}</p>
-                                            <p>Payout impact: {row.costAllocation === "brand_fault" ? "Deduct next payout" : "Brand still gets paid"}</p>
+                                            <p className="flex gap-1.5 items-center">
+                                                <span className="text-slate-400 font-medium">User:</span>
+                                                <span className="text-slate-900 font-semibold">
+                                                    {row.user ? `${row.user.firstName} ${row.user.lastName} (${row.user.email})` : row.userId}
+                                                </span>
+                                            </p>
+                                            <p className="flex gap-1.5 items-center">
+                                                <span className="text-slate-400 font-medium">Payment:</span>
+                                                <span className="text-slate-900 font-mono text-xs">{row.paymentId}</span>
+                                            </p>
+                                            <p className="flex gap-1.5 items-center">
+                                                <span className="text-slate-400 font-medium">Return shipping:</span>
+                                                <span className="text-slate-900 font-medium">{row.returnShippingPaidBy ?? "-"}</span>
+                                            </p>
+                                            <p className="flex gap-1.5 items-center">
+                                                <span className="text-slate-400 font-medium">QC:</span>
+                                                <span className="text-slate-900 font-medium">{row.returnQcStatus ?? "-"}</span>
+                                            </p>
+                                            <p className="flex gap-1.5 items-center">
+                                                <span className="text-slate-400 font-medium">Reverse pickup:</span>
+                                                <span className="text-slate-900 font-medium">
+                                                    {row.reversePickupShipmentId ? "Created" : row.reversePickupRequired ? "Required" : "No"}
+                                                </span>
+                                            </p>
+                                            <p className="flex gap-1.5 items-center">
+                                                <span className="text-slate-400 font-medium">Payout impact:</span>
+                                                <span className="text-slate-900 font-medium">
+                                                    {row.costAllocation === "brand_fault" ? "Deduct next payout" : "Brand still gets paid"}
+                                                </span>
+                                            </p>
                                         </div>
                                     </div>
                                     <div className="min-w-64 rounded-md border border-slate-200 bg-slate-50 p-4">
@@ -683,6 +881,42 @@ export function FinanceRefundsWorkspace({
                             </article>
                         );
                     })
+                )}
+
+                {filteredRows.length > 0 && (
+                    <div className="flex flex-col items-center justify-between gap-4 rounded-md border bg-white p-4 shadow-sm sm:flex-row">
+                        <p className="text-sm text-slate-600">
+                            Showing <span className="font-semibold text-slate-900">{startIndex + 1}</span> to{" "}
+                            <span className="font-semibold text-slate-900">
+                                {Math.min(startIndex + itemsPerPage, filteredRows.length)}
+                            </span>{" "}
+                            of <span className="font-semibold text-slate-900">{filteredRows.length}</span> cases
+                        </p>
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+                                disabled={currentPage === 1}
+                            >
+                                Previous
+                            </Button>
+                            
+                            <span className="text-sm font-medium text-slate-600">
+                                Page <span className="font-semibold text-slate-900">{currentPage}</span> of{" "}
+                                <span className="font-semibold text-slate-900">{totalPages}</span>
+                            </span>
+
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+                                disabled={currentPage === totalPages}
+                            >
+                                Next
+                            </Button>
+                        </div>
+                    </div>
                 )}
             </section>
         </div>

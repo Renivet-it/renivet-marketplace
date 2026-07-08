@@ -105,6 +105,31 @@ export const financeComplianceRouter = createTRPCRouter({
         return ctx.queries.financeCompliance.listRefundReasons();
     }),
 
+    getOrderDetailsForRefund: protectedProcedure
+        .input(
+            z.object({
+                orderId: z.string(),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "refunds", "view");
+            const order = await ctx.queries.orders.getOrderById(input.orderId);
+            if (!order) {
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Order not found",
+                });
+            }
+            const user = await ctx.queries.users.getUser(order.userId);
+            return {
+                orderId: order.id,
+                userId: order.userId,
+                userName: user ? `${user.firstName} ${user.lastName}` : "Unknown User",
+                paymentId: order.paymentId ?? "",
+                amount: order.totalAmount, // in paise
+            };
+        }),
+
     createRefundCase: protectedProcedure
         .input(
             z.object({
