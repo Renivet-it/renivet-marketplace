@@ -1,3 +1,4 @@
+import { ConsumerProtectionNotice } from "@/components/legal/consumer-protection-notice";
 import { GeneralShell } from "@/components/globals/layouts";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { legalCache } from "@/lib/redis/methods";
@@ -25,8 +26,18 @@ async function ShippingPolicyFetch() {
     const data = await legalCache.get();
 
     return (
-        <RichTextViewer
-            content={data?.shippingPolicy || "<p>No content yet</p>"}
-        />
+        <>
+            <RichTextViewer
+                content={data?.shippingPolicy || "<p>No content yet</p>"}
+            />
+            <ConsumerProtectionNotice
+                supportEmail={data?.supportEmail}
+                supportPhone={data?.supportPhone}
+                grievanceOfficerName={data?.grievanceOfficerName}
+                grievanceOfficerEmail={data?.grievanceOfficerEmail}
+                grievanceOfficerPhone={data?.grievanceOfficerPhone}
+                grievanceOfficerAddress={data?.grievanceOfficerAddress}
+            />
+        </>
     );
 }

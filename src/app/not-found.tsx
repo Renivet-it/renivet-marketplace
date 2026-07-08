@@ -1,9 +1,9 @@
 import {
-    Footer,
     GeneralShell,
     NavbarHome,
     NavbarMob,
 } from "@/components/globals/layouts";
+import { FooterWithLegal } from "@/components/globals/layouts/footer/footer-with-legal";
 import { Icons } from "@/components/icons";
 import { SoonButtons } from "@/components/soon";
 import { Button } from "@/components/ui/button-general";
@@ -81,7 +81,7 @@ export default function NotFound() {
                     </div>
                 </GeneralShell>
             </main>
-            <Footer />
+            <FooterWithLegal />
             <NavbarMob />
         </div>
     );

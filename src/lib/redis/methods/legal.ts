@@ -12,9 +12,16 @@ class LegalCache {
 
     async get() {
         const cachedLegalRaw = await redis.get(this.genKey());
-        let cachedLegal = cachedLegalSchema
+        const cachedLegalResult = cachedLegalSchema
             .nullable()
-            .parse(parseToJSON<CachedLegal>(cachedLegalRaw));
+            .safeParse(parseToJSON<CachedLegal>(cachedLegalRaw));
+        let cachedLegal = cachedLegalResult.success
+            ? cachedLegalResult.data
+            : null;
+
+        if (!cachedLegalResult.success && cachedLegalRaw) {
+            await this.remove();
+        }
 
         if (!cachedLegal) {
             const dbLegal = await legalQueries.getLegal();

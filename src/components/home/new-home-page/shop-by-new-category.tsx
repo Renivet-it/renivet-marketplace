@@ -194,8 +194,13 @@ export function ShopByNewCategories({
                         <Link
                             key={i}
                             href={getCategoryHref(cat)}
-                            className="group/card ease-[cubic-bezier(0.25,1,0.5,1)] relative block shrink-0 overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 hover:z-20 hover:-translate-y-3 hover:scale-[1.03] hover:!opacity-100 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] hover:!blur-none group-hover/container:opacity-40 group-hover/container:blur-[2px]"
-                            style={{ width: "280px", height: "440px" }}
+                            className="group/card relative block shrink-0 overflow-hidden rounded-xl bg-gray-100 transition-all duration-500 hover:z-20 hover:-translate-y-3 hover:scale-[1.03] hover:!opacity-100 hover:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.3)] hover:!blur-none group-hover/container:opacity-40 group-hover/container:blur-[2px]"
+                            style={{
+                                width: "280px",
+                                height: "440px",
+                                transitionTimingFunction:
+                                    "cubic-bezier(0.25, 1, 0.5, 1)",
+                            }}
                         >
                             {/* Image */}
                             <Image

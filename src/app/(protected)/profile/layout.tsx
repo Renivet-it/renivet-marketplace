@@ -1,9 +1,9 @@
 import {
-    Footer,
     GeneralShell,
     NavbarHome,
     NavbarMob,
 } from "@/components/globals/layouts";
+import { FooterWithLegal } from "@/components/globals/layouts/footer/footer-with-legal";
 import { ProfileNav } from "@/components/profile";
 import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
@@ -27,7 +27,7 @@ export default function Layout({ children }: LayoutProps) {
                     </div>
                 </GeneralShell>
             </main>
-            <Footer />
+            <FooterWithLegal />
             <NavbarMob />
         </div>
     );

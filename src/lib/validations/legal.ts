@@ -44,6 +44,35 @@ export const legalSchema = z.object({
             .min(1, "Refund Policy must be at least 1 characters long")
             .nullable()
     ),
+    grievanceOfficerName: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().min(1).nullable().optional()
+    ),
+    grievanceOfficerEmail: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().email().nullable().optional()
+    ),
+    grievanceOfficerPhone: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().min(6).nullable().optional()
+    ),
+    grievanceOfficerAddress: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().min(1).nullable().optional()
+    ),
+    supportEmail: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().email().nullable().optional()
+    ),
+    supportPhone: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().min(6).nullable().optional()
+    ),
+    dpdpConsentVersion: z.preprocess(
+        convertEmptyStringToNull,
+        z.string().min(1).nullable().optional()
+    ),
+    isConsumerProtectionPublished: z.boolean().default(false),
     ppCreatedAt: z
         .union([z.string(), z.date()], {
             required_error: "Privacy Policy created at is required",

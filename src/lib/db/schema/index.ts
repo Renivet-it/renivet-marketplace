@@ -43,3 +43,4 @@ export * from "./corporate-platform";
 export * from "./analytics";
 export * from "./unicommerce";
 export * from "./review";
+export * from "./finance-compliance";

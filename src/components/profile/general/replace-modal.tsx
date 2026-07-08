@@ -40,7 +40,7 @@ export function ReplaceModal({
   const [files, setFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
 
-  const { startUpload } = useUploadThing("brandMediaUploader");
+  const { startUpload } = useUploadThing("supportAttachmentUploader");
 const utils = trpc.useUtils();
 
   // Fetch product + variants

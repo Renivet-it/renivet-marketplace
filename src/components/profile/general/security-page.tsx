@@ -1,6 +1,7 @@
 "use client";
 
 import { UserPasswordUpdateForm } from "@/components/globals/forms";
+import { PrivacyCenter } from "@/components/profile/general/privacy-center";
 import {
     Card,
     CardDescription,
@@ -26,6 +27,8 @@ export function SecurityPage({ className, ...props }: GenericProps) {
 
                 <UserPasswordUpdateForm />
             </Card>
+
+            <PrivacyCenter />
         </div>
     );
 }

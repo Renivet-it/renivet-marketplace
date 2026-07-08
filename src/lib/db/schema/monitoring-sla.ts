@@ -7,6 +7,7 @@ export const auditLogs = pgTable(
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         timestampUtc: timestamp("timestamp_utc").notNull().defaultNow(),
         userId: text("user_id"),
+        actorType: text("actor_type"),
         userRoleSnapshot: text("user_role_snapshot"),
         actionType: text("action_type").notNull(),
         entityType: text("entity_type").notNull(),
@@ -14,6 +15,7 @@ export const auditLogs = pgTable(
         beforeValue: jsonb("before_value").$type<Record<string, unknown> | null>(),
         afterValue: jsonb("after_value").$type<Record<string, unknown> | null>(),
         reason: text("reason"),
+        attachmentUrl: text("attachment_url"),
         ipAddress: text("ip_address"),
         sessionId: text("session_id"),
         metadata: jsonb("metadata").$type<Record<string, unknown>>().default({}),
@@ -26,6 +28,7 @@ export const auditLogs = pgTable(
         auditEntityIdx: index("audit_log_entity_idx").on(table.entityType, table.entityId),
         auditActionIdx: index("audit_log_action_idx").on(table.actionType),
         auditUserIdx: index("audit_log_user_idx").on(table.userId),
+        auditActorTypeIdx: index("audit_log_actor_type_idx").on(table.actorType),
         auditTimestampIdx: index("audit_log_timestamp_idx").on(table.timestampUtc),
     })
 );

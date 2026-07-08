@@ -1,13 +1,26 @@
-"use client";
-
 import { Icons } from "@/components/icons";
+import { ConsumerProtectionNotice } from "@/components/legal/consumer-protection-notice";
 import { Renivet } from "@/components/svgs";
 import { Button } from "@/components/ui/button-general";
 import { siteConfig } from "@/config/site";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 
-export function Footer({ className, ...props }: GenericProps) {
+type FooterLegalProps = {
+    supportEmail?: string | null;
+    supportPhone?: string | null;
+    grievanceOfficerName?: string | null;
+    grievanceOfficerEmail?: string | null;
+    grievanceOfficerPhone?: string | null;
+    grievanceOfficerAddress?: string | null;
+};
+
+interface FooterProps extends GenericProps {
+    legal?: FooterLegalProps | null;
+}
+
+export function Footer({ className, legal, ...props }: FooterProps) {
+
     return (
         <footer
             className={cn(
@@ -102,6 +115,16 @@ export function Footer({ className, ...props }: GenericProps) {
                                             </li>
                                         );
                                     })}
+                                    {category.name.toLowerCase() === "legal" ? (
+                                        <li>
+                                            <Link
+                                                href="/contact#grievance-redressal"
+                                                className="flex w-full items-center gap-2 text-sm text-primary-foreground/80 transition-all ease-in-out hover:text-primary-foreground md:text-base"
+                                            >
+                                                Grievance Redressal
+                                            </Link>
+                                        </li>
+                                    ) : null}
                                 </ul>
                             </div>
                         ))}
@@ -110,6 +133,17 @@ export function Footer({ className, ...props }: GenericProps) {
 
                 <div className="self-stretch px-5 md:mx-0">
                     <div className="h-px w-full self-stretch bg-background" />
+                </div>
+
+                <div className="w-full px-5 pb-2 md:px-10 lg:px-20">
+                    <ConsumerProtectionNotice
+                        supportEmail={legal?.supportEmail}
+                        supportPhone={legal?.supportPhone}
+                        grievanceOfficerName={legal?.grievanceOfficerName}
+                        grievanceOfficerEmail={legal?.grievanceOfficerEmail}
+                        grievanceOfficerPhone={legal?.grievanceOfficerPhone}
+                        grievanceOfficerAddress={legal?.grievanceOfficerAddress}
+                    />
                 </div>
 
                 <div className="flex w-full flex-col items-center justify-center gap-1 p-5 text-sm text-primary-foreground/80 md:flex-row">

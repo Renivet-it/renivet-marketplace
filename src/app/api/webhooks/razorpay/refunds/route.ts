@@ -2,7 +2,8 @@ import crypto from "crypto";
 import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
 import { orderQueries, refundQueries } from "@/lib/db/queries";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
+import { writeFinanceAuditEvent } from "@/lib/finance/audit";
+import { createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { OrderRefundFailed, OrderRefundProcessed } from "@/lib/resend/emails";
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
                             payload.payload.refund.entity.status
                         ),
                     ]);
-                    await auditEntityChange({
+                    await writeFinanceAuditEvent({
                         actorId: "razorpay-webhook",
                         actionType: "refund_processed",
                         entityType: "refund",
@@ -65,6 +66,7 @@ export async function POST(req: NextRequest) {
                             paymentStatus: "refunded",
                             refundStatus: payload.payload.refund.entity.status,
                             amount: payload.payload.refund.entity.amount,
+                            gatewayTransactionId: payload.payload.refund.entity.id,
                         },
                         reason: "razorpay_refund_processed",
                     });
@@ -188,7 +190,7 @@ export async function POST(req: NextRequest) {
                             payload.payload.refund.entity.status
                         ),
                     ]);
-                    await auditEntityChange({
+                    await writeFinanceAuditEvent({
                         actorId: "razorpay-webhook",
                         actionType: "refund_failed",
                         entityType: "refund",
@@ -201,6 +203,7 @@ export async function POST(req: NextRequest) {
                             paymentStatus: "refund_failed",
                             refundStatus: payload.payload.refund.entity.status,
                             amount: payload.payload.refund.entity.amount,
+                            errorCode: payload.payload.refund.entity.status,
                         },
                         reason: "razorpay_refund_failed",
                     });

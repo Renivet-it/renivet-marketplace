@@ -1,9 +1,9 @@
 import {
-    Footer,
     GeneralShell,
     NavbarHome,
     NavbarMob,
 } from "@/components/globals/layouts";
+import { FooterWithLegal } from "@/components/globals/layouts/footer/footer-with-legal";
 import { ProfileNav } from "@/components/profile";
 import { siteConfig } from "@/config/site";
 import { auth } from "@clerk/nextjs/server";
@@ -133,7 +133,7 @@ export default async function CartPage({
                     </div>
                 </GeneralShell>
             </main>
-            <Footer />
+            <FooterWithLegal />
             <NavbarMob />
         </div>
     );

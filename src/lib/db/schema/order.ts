@@ -60,6 +60,7 @@ export const orders = pgTable(
             .notNull()
             .references(() => addresses.id),
         totalItems: integer("total_items").notNull(),
+        customerGstin: text("customer_gstin"),
         taxAmount: integer("tax_amount").notNull(),
         deliveryAmount: integer("delivery_amount").notNull(),
         discountAmount: integer("discount_amount").notNull().default(0),
