@@ -44,6 +44,8 @@ type RefundCreateInput = {
     returnShippingPaidBy?: "renivet" | "customer" | "na";
     evidenceUrls?: string[];
     actorId: string;
+    source?: "finance_refund_workflow" | "customer_return_request" | "customer_return_approved";
+    sourceContext?: Record<string, unknown>;
 };
 
 function differenceInDays(from: Date, to: Date) {
@@ -267,13 +269,14 @@ export async function createFinanceRefundCase(input: RefundCreateInput) {
         returnShippingPaidBy,
         returnQcStatus: qcStatus,
         metadata: {
-            source: "finance_refund_workflow",
+            source: input.source ?? "finance_refund_workflow",
             thresholdPaise,
             evidenceUrls: input.evidenceUrls ?? [],
             deductibleFromBrand: input.costAllocation === "brand_fault",
             suggestedCostAllocation,
             reasonName: reason.name,
             parentReasonName: reason.parent?.name ?? null,
+            ...(input.sourceContext ?? {}),
         },
     });
 

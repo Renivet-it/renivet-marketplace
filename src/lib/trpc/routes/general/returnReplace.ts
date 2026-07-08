@@ -1,7 +1,14 @@
 import { z } from "zod";
 import { eq, and, like, sql } from "drizzle-orm";
+import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
 import { swapRewardService } from "@/lib/services/swap-reward";
+import { createFinanceRefundCase } from "@/lib/finance/refunds";
+import {
+  getReturnShippingPaidBy,
+  inferRefundCostAllocationFromReason,
+  type RefundCostAllocation,
+} from "@/lib/finance/refund-policy";
 
 import { createTRPCRouter, protectedProcedure } from "@/lib/trpc/trpc";
 import { orderReturnRequests, orders, orderItems, users, orderShipments, brandConfidentials } from "@/lib/db/schema";
@@ -21,6 +28,49 @@ function formatIndianWhatsAppNumber(phone: string) {
   }
 
   throw new Error(`Invalid phone number: ${phone}`);
+}
+
+function normalizeReasonKey(value?: string | null) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+async function resolveFinanceRefundReason(requestReason?: string | null) {
+  const reasons = await financeComplianceQueries.listRefundReasons();
+  const leafReasons = reasons.filter((reason) => reason.parentId);
+  const key = normalizeReasonKey(requestReason);
+
+  const candidates: Record<string, string[]> = {
+    wrong_item: ["different product", "wrong item", "wrong size", "wrong color"],
+    damaged: ["damaged product", "broken during transit", "packaging was damaged", "physical damage"],
+    quality_issue: ["quality not as expected", "performance functionality issue", "stitching or finish is poor"],
+    other: ["other"],
+  };
+
+  const matches = candidates[key] ?? [];
+  const matchedLeaf =
+    leafReasons.find((reason) =>
+      matches.some((needle) => (reason.name ?? "").toLowerCase().includes(needle))
+    ) ??
+    reasons.find((reason) =>
+      matches.some((needle) => (reason.name ?? "").toLowerCase().includes(needle))
+    ) ??
+    leafReasons[0] ??
+    reasons[0];
+
+  if (!matchedLeaf?.id) {
+    throw new Error("No finance refund reasons are configured in reason_master.");
+  }
+
+  const inferredCostAllocation =
+    inferRefundCostAllocationFromReason({
+      reasonName: matchedLeaf.name,
+      parentReasonName: matchedLeaf.parent?.name ?? null,
+    }) ?? "brand_fault";
+
+  return {
+    reason: matchedLeaf,
+    costAllocation: inferredCostAllocation,
+  };
 }
 
 
@@ -64,11 +114,46 @@ export const returnReplaceRouter = createTRPCRouter({
 
         // 3️⃣ Fetch order + user
         const [order] = await ctx.db
-            .select({ id: orders.id, userId: orders.userId })
+            .select({
+              id: orders.id,
+              userId: orders.userId,
+              paymentId: orders.paymentId,
+              totalAmount: orders.totalAmount,
+            })
             .from(orders)
             .where(eq(orders.id, input.orderId));
 
         if (!order) throw new Error("Order not found");
+
+        if (input.requestType === "return") {
+            const existingFinanceRefund = await financeComplianceQueries.getRefundByOrderId(
+              input.orderId
+            );
+
+            if (!existingFinanceRefund) {
+              const { reason, costAllocation } = await resolveFinanceRefundReason(input.reason);
+
+              await createFinanceRefundCase({
+                orderId: order.id,
+                userId: order.userId,
+                paymentId: order.paymentId ?? "",
+                amountPaise: order.totalAmount,
+                reasonCode: reason.id,
+                notes: input.comment ?? input.reason ?? undefined,
+                refundType: "full",
+                costAllocation: costAllocation as RefundCostAllocation,
+                returnShippingPaidBy: getReturnShippingPaidBy(costAllocation as RefundCostAllocation),
+                evidenceUrls: Array.isArray(input.images)
+                  ? input.images.filter((value): value is string => typeof value === "string")
+                  : [],
+                actorId: ctx.user.id,
+                source: "customer_return_request",
+                sourceContext: {
+                  customerReturnRequestReason: input.reason ?? null,
+                },
+              });
+            }
+        }
 
         const [user] = await ctx.db
             .select({ name: users.firstName, phone: users.phone })
@@ -224,13 +309,53 @@ export const returnReplaceRouter = createTRPCRouter({
       .where(eq(orderReturnRequests.id, input.id))
       .returning();
 
+    if (!request) {
+      throw new Error("Return / replacement request not found");
+    }
+
     // 2️⃣ Fetch order + user
     const [order] = await ctx.db
-      .select({ id: orders.id, userId: orders.userId })
+      .select({
+        id: orders.id,
+        userId: orders.userId,
+        paymentId: orders.paymentId,
+        totalAmount: orders.totalAmount,
+      })
       .from(orders)
       .where(eq(orders.id, request.orderId));
 
     if (!order) throw new Error("Order not found");
+
+    if (request.requestType === "return") {
+      const existingFinanceRefund = await financeComplianceQueries.getRefundByOrderId(
+        request.orderId
+      );
+
+      if (!existingFinanceRefund) {
+        const { reason, costAllocation } = await resolveFinanceRefundReason(request.reason);
+
+        await createFinanceRefundCase({
+          orderId: order.id,
+          userId: order.userId,
+          paymentId: order.paymentId ?? "",
+          amountPaise: order.totalAmount,
+          reasonCode: reason.id,
+          notes: request.comment ?? request.reason ?? undefined,
+          refundType: "full",
+          costAllocation: costAllocation as RefundCostAllocation,
+          returnShippingPaidBy: getReturnShippingPaidBy(costAllocation as RefundCostAllocation),
+          evidenceUrls: Array.isArray(request.images)
+            ? request.images.filter((value): value is string => typeof value === "string")
+            : [],
+          actorId: ctx.user.id,
+          source: "customer_return_approved",
+          sourceContext: {
+            customerReturnRequestId: request.id,
+            customerReturnReasonKey: request.reason ?? null,
+          },
+        });
+      }
+    }
 
     const [user] = await ctx.db
       .select({ name: users.firstName, phone: users.phone })

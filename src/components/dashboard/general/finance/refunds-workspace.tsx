@@ -63,6 +63,15 @@ type RefundRow = {
     } | null;
 };
 
+type RefundEligibleOrder = {
+    orderId: string;
+    userId: string;
+    paymentId: string | null;
+    amount: number;
+    status: string;
+    paymentStatus: string;
+};
+
 const allocationOptions: Array<{
     value: RefundCostAllocation;
     label: string;
@@ -116,6 +125,11 @@ function getSuggestedAllocation(reason: RefundReason | null | undefined): Refund
 function getEvidenceUrls(row: RefundRow) {
     const evidence = row.metadata?.evidenceUrls;
     return Array.isArray(evidence) ? evidence : [];
+}
+
+function getRefundSource(row: RefundRow) {
+    const source = row.metadata?.source;
+    return source === "finance_refund_workflow" ? "manual" : "automatic";
 }
 
 function RefundTimeline({ row }: { row: RefundRow }) {
@@ -180,8 +194,16 @@ export function FinanceRefundsWorkspace({
     const [statusFilter, setStatusFilter] = useState("all");
     const [approvalStatusFilter, setApprovalStatusFilter] = useState("all");
     const [costAllocationFilter, setCostAllocationFilter] = useState("all");
+    const [sourceFilter, setSourceFilter] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(5);
+    const eligibleOrdersQuery = trpc.general.financeCompliance.listRefundEligibleOrders.useQuery(
+        { q: orderId || undefined },
+        {
+            enabled: isFormOpen,
+            refetchOnWindowFocus: false,
+        }
+    );
 
     const handleFetchOrder = async () => {
         if (!orderId.trim()) {
@@ -291,8 +313,9 @@ export function FinanceRefundsWorkspace({
             const matchesStatus = statusFilter === "all" || row.status === statusFilter;
             const matchesApproval = approvalStatusFilter === "all" || row.approvalStatus === approvalStatusFilter;
             const matchesAllocation = costAllocationFilter === "all" || row.costAllocation === costAllocationFilter;
+            const matchesSource = sourceFilter === "all" || getRefundSource(row) === sourceFilter;
 
-            return matchesSearch && matchesStatus && matchesApproval && matchesAllocation;
+            return matchesSearch && matchesStatus && matchesApproval && matchesAllocation && matchesSource;
         })
         .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
@@ -302,6 +325,7 @@ export function FinanceRefundsWorkspace({
     const reasonGroups = buildReasonGroups(reasonsQuery.data ?? [], reasonSearch);
     const selectedReason =
         (reasonsQuery.data ?? []).find((reason) => reason.id === selectedReasonId) ?? null;
+    const eligibleOrders = eligibleOrdersQuery.data ?? [];
 
     const handleReasonSelection = (reason: RefundReason) => {
         setSelectedReasonId(reason.id);
@@ -370,7 +394,15 @@ export function FinanceRefundsWorkspace({
                                     value={orderId}
                                     onChange={(event) => setOrderId(event.target.value)}
                                     className="flex-1"
+                                    list="refund-eligible-orders"
                                 />
+                                <datalist id="refund-eligible-orders">
+                                    {eligibleOrders.map((order: RefundEligibleOrder) => (
+                                        <option key={order.orderId} value={order.orderId}>
+                                            {order.orderId}
+                                        </option>
+                                    ))}
+                                </datalist>
                                 <Button
                                     type="button"
                                     variant="outline"
@@ -381,6 +413,30 @@ export function FinanceRefundsWorkspace({
                                     {isFetchingOrder ? "Fetching..." : "Fetch Info"}
                                 </Button>
                             </div>
+                            {eligibleOrders.length ? (
+                                <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                        Eligible delivered orders
+                                    </p>
+                                    <div className="mt-2 flex flex-wrap gap-2">
+                                        {eligibleOrders.map((order: RefundEligibleOrder) => (
+                                            <button
+                                                key={order.orderId}
+                                                type="button"
+                                                onClick={() => {
+                                                    setOrderId(order.orderId);
+                                                    setUserId(order.userId);
+                                                    setPaymentId(order.paymentId ?? "");
+                                                    setAmount(String(order.amount));
+                                                }}
+                                                className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 hover:border-slate-300"
+                                            >
+                                                {order.orderId}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            ) : null}
                             <div className="grid gap-3 md:grid-cols-2">
                                 <Input placeholder="User ID" value={userId} onChange={(event) => setUserId(event.target.value)} />
                                 <Input placeholder="Razorpay Payment ID" value={paymentId} onChange={(event) => setPaymentId(event.target.value)} />
@@ -632,6 +688,26 @@ export function FinanceRefundsWorkspace({
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            <div className="w-full sm:w-48">
+                                <label className="text-xs font-semibold text-slate-600 block mb-1">Entry Source</label>
+                                <Select
+                                    value={sourceFilter}
+                                    onValueChange={(value) => {
+                                        setSourceFilter(value);
+                                        setCurrentPage(1);
+                                    }}
+                                >
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="All Sources" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Sources</SelectItem>
+                                        <SelectItem value="automatic">Automatic</SelectItem>
+                                        <SelectItem value="manual">Manual</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                             
                             <div className="w-full sm:w-36 ml-auto flex flex-col justify-end">
                                 <label className="text-xs font-semibold text-slate-600 block mb-1">Per Page</label>
@@ -682,6 +758,15 @@ export function FinanceRefundsWorkspace({
                                             </span>
                                             <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
                                                 {row.costAllocation ?? row.policyBucket ?? "-"}
+                                            </span>
+                                            <span
+                                                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                                                    getRefundSource(row) === "automatic"
+                                                        ? "bg-violet-50 text-violet-700"
+                                                        : "bg-cyan-50 text-cyan-700"
+                                                }`}
+                                            >
+                                                {getRefundSource(row) === "automatic" ? "Automatic return" : "Manual finance"}
                                             </span>
                                         </div>
                                         <div>

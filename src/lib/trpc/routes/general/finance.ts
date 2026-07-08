@@ -93,6 +93,7 @@ export const financeComplianceRouter = createTRPCRouter({
                 status: z.string().optional(),
                 approvalStatus: z.string().optional(),
                 q: z.string().optional(),
+                source: z.enum(["manual", "automatic"]).optional(),
             }).optional()
         )
         .query(async ({ ctx, input }) => {
@@ -104,6 +105,17 @@ export const financeComplianceRouter = createTRPCRouter({
         await assertFinanceAccess(ctx, "refunds", "view");
         return ctx.queries.financeCompliance.listRefundReasons();
     }),
+
+    listRefundEligibleOrders: protectedProcedure
+        .input(
+            z.object({
+                q: z.string().optional(),
+            }).optional()
+        )
+        .query(async ({ ctx, input }) => {
+            await assertFinanceAccess(ctx, "refunds", "view");
+            return ctx.queries.financeCompliance.listRefundEligibleOrders(input?.q);
+        }),
 
     getOrderDetailsForRefund: protectedProcedure
         .input(

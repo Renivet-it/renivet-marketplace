@@ -42,6 +42,7 @@ type RefundFilters = {
     status?: string;
     approvalStatus?: string;
     q?: string;
+    source?: string;
 };
 
 type CodFilters = {
@@ -57,7 +58,13 @@ class FinanceComplianceQuery {
             filters.approvalStatus
                 ? eq(refunds.approvalStatus, filters.approvalStatus as any)
                 : undefined,
-            filters.q ? ilike(refunds.orderId, `%${filters.q}%`) : undefined
+            filters.q ? ilike(refunds.orderId, `%${filters.q}%`) : undefined,
+            filters.source === "manual"
+                ? sql`${refunds.metadata} ->> 'source' = 'finance_refund_workflow'`
+                : undefined,
+            filters.source === "automatic"
+                ? sql`${refunds.metadata} ->> 'source' <> 'finance_refund_workflow'`
+                : undefined
         );
 
         return db.query.refunds.findMany({
@@ -135,6 +142,36 @@ class FinanceComplianceQuery {
                 parent: true,
             },
         });
+    }
+
+    async listRefundEligibleOrders(search?: string) {
+        const term = search?.trim();
+
+        return db
+            .select({
+                orderId: orders.id,
+                userId: orders.userId,
+                paymentId: orders.paymentId,
+                amount: orders.totalAmount,
+                status: orders.status,
+                paymentStatus: orders.paymentStatus,
+            })
+            .from(orders)
+            .where(
+                and(
+                    eq(orders.status, "delivered"),
+                    eq(orders.paymentStatus, "paid"),
+                    sql`${orders.paymentId} IS NOT NULL`,
+                    sql`NOT EXISTS (
+                        SELECT 1
+                        FROM ${refunds}
+                        WHERE ${refunds.orderId} = ${orders.id}
+                    )`,
+                    term ? ilike(orders.id, `%${term}%`) : undefined
+                )
+            )
+            .orderBy(desc(orders.createdAt))
+            .limit(20);
     }
 
     async createCodRun(values: typeof financeCodReconciliationRuns.$inferInsert) {
