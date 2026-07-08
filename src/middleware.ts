@@ -126,7 +126,8 @@ export default clerkMiddleware(async (auth, req) => {
                         url.pathname === "/dashboard/general/terms" ||
                         url.pathname === "/dashboard/general/privacy" ||
                         url.pathname === "/dashboard/general/shipping-policy" ||
-                        url.pathname === "/dashboard/general/refund-policy"
+                        url.pathname === "/dashboard/general/refund-policy" ||
+                        url.pathname.startsWith("/dashboard/general/privacy/data-deletion")
                     )
                         return NextResponse.next();
 

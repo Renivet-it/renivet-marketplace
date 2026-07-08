@@ -29,7 +29,7 @@ const sections = [
     },
     {
         title: "Data Deletion",
-        href: "/dashboard/general/privacy/data-deletion",
+        href: "/dashboard/general/finance/data-deletion",
         description: "DPDP request lifecycle, execution evidence, and failure monitoring.",
     },
     {
