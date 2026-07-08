@@ -301,53 +301,86 @@ export function PayoutsWorkspace({
                 <StatCard label="Failed" value={String(summary.failed)} />
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)]">
+            <section className="grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)] 2xl:grid-cols-[360px_minmax(0,1fr)]">
                 <div className="space-y-4">
                     <section className="rounded-md border bg-white p-5 shadow-sm">
                         <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                             Create Cycle
                         </p>
+                        <h2 className="mt-2 text-xl font-semibold text-slate-950">Start a payout run</h2>
+                        <p className="mt-1 text-sm text-slate-600">
+                            Create one settlement window, then calculate payouts, review TDS, and execute
+                            brand payments from the control desk.
+                        </p>
                         <div className="mt-4 space-y-3">
-                            <Input
-                                placeholder="Cycle key"
-                                value={createForm.cycleKey}
-                                onChange={(event) =>
-                                    setCreateForm((current) => ({
-                                        ...current,
-                                        cycleKey: event.target.value,
-                                    }))
-                                }
-                            />
-                            <Input
-                                type="date"
-                                value={createForm.cycleStart}
-                                onChange={(event) =>
-                                    setCreateForm((current) => ({
-                                        ...current,
-                                        cycleStart: event.target.value,
-                                    }))
-                                }
-                            />
-                            <Input
-                                type="date"
-                                value={createForm.cycleEnd}
-                                onChange={(event) =>
-                                    setCreateForm((current) => ({
-                                        ...current,
-                                        cycleEnd: event.target.value,
-                                    }))
-                                }
-                            />
-                            <Input
-                                type="date"
-                                value={createForm.payoutDate}
-                                onChange={(event) =>
-                                    setCreateForm((current) => ({
-                                        ...current,
-                                        payoutDate: event.target.value,
-                                    }))
-                                }
-                            />
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                    Cycle Key
+                                </label>
+                                <Input
+                                    placeholder="Example: 2026-07-H1"
+                                    value={createForm.cycleKey}
+                                    onChange={(event) =>
+                                        setCreateForm((current) => ({
+                                            ...current,
+                                            cycleKey: event.target.value,
+                                        }))
+                                    }
+                                />
+                                <p className="text-xs text-slate-500">
+                                    Use a readable batch name for finance, for example month plus half.
+                                </p>
+                            </div>
+                            <div className="space-y-3">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                        Start Date
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={createForm.cycleStart}
+                                        onChange={(event) =>
+                                            setCreateForm((current) => ({
+                                                ...current,
+                                                cycleStart: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                    <p className="text-xs text-slate-500">First order date in this payout window.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                        End Date
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={createForm.cycleEnd}
+                                        onChange={(event) =>
+                                            setCreateForm((current) => ({
+                                                ...current,
+                                                cycleEnd: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                    <p className="text-xs text-slate-500">Last order date included in this cycle.</p>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                        Payout Date
+                                    </label>
+                                    <Input
+                                        type="date"
+                                        value={createForm.payoutDate}
+                                        onChange={(event) =>
+                                            setCreateForm((current) => ({
+                                                ...current,
+                                                payoutDate: event.target.value,
+                                            }))
+                                        }
+                                    />
+                                    <p className="text-xs text-slate-500">Date on which this batch will be paid.</p>
+                                </div>
+                            </div>
                             <Button onClick={submitCreateCycle} disabled={createCycle.isPending}>
                                 {createCycle.isPending ? "Creating..." : "Create Cycle"}
                             </Button>
@@ -396,8 +429,8 @@ export function PayoutsWorkspace({
 
                 <div className="space-y-4">
                     <section className="rounded-md border bg-white p-5 shadow-sm">
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                            <div>
+                        <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+                            <div className="min-w-0">
                                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                                     Control Desk
                                 </p>
@@ -409,9 +442,13 @@ export function PayoutsWorkspace({
                                         Window {cycle.cycleStart} to {cycle.cycleEnd} • payout date{" "}
                                         {cycle.payoutDate}
                                     </p>
-                                ) : null}
+                                ) : (
+                                    <p className="mt-1 text-sm text-slate-600">
+                                        Create a cycle on the left, then select it here to calculate brand payouts.
+                                    </p>
+                                )}
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 xl:max-w-[420px] xl:justify-end">
                                 <Button
                                     variant="outline"
                                     disabled={!cycle || calculateCycle.isPending}
@@ -444,8 +481,37 @@ export function PayoutsWorkspace({
 
                     <section className="grid gap-4">
                         {brands.length === 0 ? (
-                            <section className="rounded-md border bg-white p-5 text-sm text-slate-500 shadow-sm">
-                                Run a calculation to generate brand payout cards.
+                            <section className="rounded-md border bg-white p-5 shadow-sm">
+                                <h3 className="text-base font-semibold text-slate-900">How to use this page</h3>
+                                <div className="mt-3 grid gap-3 md:grid-cols-3">
+                                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                            Step 1
+                                        </p>
+                                        <p className="mt-2 text-sm font-medium text-slate-900">Create a cycle</p>
+                                        <p className="mt-1 text-sm text-slate-600">
+                                            Enter cycle key, start date, end date, and payout date.
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                            Step 2
+                                        </p>
+                                        <p className="mt-2 text-sm font-medium text-slate-900">Run calculation</p>
+                                        <p className="mt-1 text-sm text-slate-600">
+                                            The system computes commission, returns, holdback, and TDS for each brand.
+                                        </p>
+                                    </div>
+                                    <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                                        <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                                            Step 3
+                                        </p>
+                                        <p className="mt-2 text-sm font-medium text-slate-900">Approve and pay</p>
+                                        <p className="mt-1 text-sm text-slate-600">
+                                            Review payout cards, apply overrides if needed, then approve and execute.
+                                        </p>
+                                    </div>
+                                </div>
                             </section>
                         ) : (
                             brands.map((brand) => (
@@ -457,25 +523,25 @@ export function PayoutsWorkspace({
                                             : ""
                                     }`}
                                 >
-                                    <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                                        <div>
+                                    <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] xl:items-start">
+                                        <div className="min-w-0">
                                             <button
                                                 type="button"
                                                 className="text-left"
                                                 onClick={() => setActiveBrandId(brand.brandId)}
                                             >
-                                                <h3 className="text-lg font-semibold text-slate-950">
+                                                <h3 className="truncate text-lg font-semibold text-slate-950">
                                                     {brand.brandName}
                                                 </h3>
                                             </button>
-                                            <p className="mt-1 text-sm text-slate-500">
+                                            <p className="mt-1 break-words text-sm text-slate-500">
                                                 {brand.payoutMethod === "razorpay_route"
                                                     ? "Razorpay Route"
                                                     : "Manual NEFT"}{" "}
                                                 • {brand.reviewStatus} • {brand.executionStatus}
                                             </p>
                                         </div>
-                                        <div className="flex flex-wrap gap-2">
+                                        <div className="flex flex-wrap gap-2 xl:justify-end">
                                             <Button
                                                 variant="outline"
                                                 disabled={approveCycle.isPending}
@@ -509,7 +575,7 @@ export function PayoutsWorkspace({
                                         </div>
                                     </div>
 
-                                    <div className="mt-4 grid gap-3 md:grid-cols-4 xl:grid-cols-8">
+                                    <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-8">
                                         <MiniStat label="Gross" value={formatINR(brand.grossSalesPaise)} />
                                         <MiniStat label="Commission" value={formatINR(brand.commissionPaise)} />
                                         <MiniStat label="Returns" value={formatINR(brand.returnsPaise)} />
@@ -725,11 +791,11 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 function MiniStat({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-md border bg-slate-50 px-3 py-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
+        <div className="min-w-0 rounded-md border bg-slate-50 px-3 py-2">
+            <p className="break-words text-xs font-semibold uppercase leading-tight tracking-[0.08em] text-slate-500">
                 {label}
             </p>
-            <p className="mt-1 text-sm font-semibold text-slate-950">{value}</p>
+            <p className="mt-1 text-sm font-semibold leading-tight text-slate-950">{value}</p>
         </div>
     );
 }

@@ -610,16 +610,18 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
 
 export async function generateGstExport(monthKey: string, actorId: string) {
     const preview = await previewGstExport(monthKey);
-    const csv = preview.isReady ? toCsv(preview.rows, CSV_HEADERS as string[]) : "";
+    const csv = toCsv(preview.rows, CSV_HEADERS as string[]);
+    const hasErrors = preview.validationIssues.some((issue) => issue.severity === "error");
     const run = await financeComplianceQueries.createGstReportRun({
         monthKey,
-        status: preview.isReady ? "generated" : "failed",
+        status: "generated",
         generatedBy: actorId,
         recordCount: preview.rows.length,
         totals: preview.totals,
         validationSummary: {
             issues: preview.validationIssues,
             isReady: preview.isReady,
+            hasErrors,
         },
     });
 
@@ -629,12 +631,12 @@ export async function generateGstExport(monthKey: string, actorId: string) {
         entityType: "gst_report_run",
         entityId: run.id,
         afterValue: run as Record<string, unknown>,
-        reason: preview.isReady ? "export_generated" : "validation_failed",
-        title: preview.isReady ? "GST export generated" : "GST export blocked",
-        message: preview.isReady
-            ? `GST/TCS export generated for ${monthKey}.`
-            : `GST/TCS export blocked for ${monthKey} due to validation errors.`,
-        severity: preview.isReady ? "info" : "warning",
+        reason: hasErrors ? "export_generated_with_issues" : "export_generated",
+        title: hasErrors ? "GST export generated with issues" : "GST export generated",
+        message: hasErrors
+            ? `GST/TCS export generated for ${monthKey} with validation issues.`
+            : `GST/TCS export generated for ${monthKey}.`,
+        severity: hasErrors ? "warning" : "info",
         ownerRole: "finance_admin",
         type: "gst_export_generated",
         dedupeKey: `gst:export:${monthKey}`,
@@ -642,6 +644,7 @@ export async function generateGstExport(monthKey: string, actorId: string) {
         metadata: {
             module: "finance_compliance",
             validationIssueCount: preview.validationIssues.length,
+            hasErrors,
         },
     });
 

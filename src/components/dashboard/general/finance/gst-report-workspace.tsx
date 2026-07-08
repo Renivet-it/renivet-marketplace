@@ -143,6 +143,7 @@ export function GstReportWorkspace({
     );
 
     const exportUrl = `/api/finance/gst-report/export?month=${monthKey}`;
+    const issueSummaryUrl = `/api/finance/gst-report/issues?month=${monthKey}`;
 
     const submitManualRow = () => {
         if (!manualRow.hsnCode || !manualRow.description || !manualRow.gstRatePercent) {
@@ -200,6 +201,7 @@ export function GstReportWorkspace({
                         </h2>
                         <p className="mt-1 text-sm text-slate-600">
                             Preview validation first, then download the RegisterKaro-ready combined CSV.
+                            Validation issues no longer block export, but they should be reviewed before filing.
                         </p>
                     </div>
                     <div className="flex flex-wrap items-end gap-3">
@@ -220,19 +222,24 @@ export function GstReportWorkspace({
                         >
                             {previewQuery.isFetching ? "Refreshing..." : "Run Pre-flight"}
                         </Button>
-                        <a
-                            href={preview.isReady ? exportUrl : undefined}
-                            onClick={(event) => {
-                                if (!preview.isReady) {
-                                    event.preventDefault();
-                                    toast.error("Fix validation errors before generating the CSV");
-                                }
-                            }}
-                        >
-                            <Button disabled={!preview.isReady}>Generate GST Report</Button>
+                        <a href={exportUrl}>
+                            <Button>Generate GST Report</Button>
                         </a>
+                        {preview.validationIssues.length > 0 ? (
+                            <a href={issueSummaryUrl}>
+                                <Button variant="outline">Download Issue Summary</Button>
+                            </a>
+                        ) : null}
                     </div>
                 </div>
+
+                {preview.validationIssues.length > 0 ? (
+                    <div className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                        {summary.errors > 0
+                            ? `${summary.errors} error(s) and ${summary.warnings} warning(s) found. Export is allowed, but please review the issue summary before sharing the file with RegisterKaro.`
+                            : `${summary.warnings} warning(s) found. Export is allowed, but please review them before sharing the file with RegisterKaro.`}
+                    </div>
+                ) : null}
 
                 <div className="mt-5 grid gap-3 md:grid-cols-3 xl:grid-cols-6">
                     <MiniStat label="Invoices" value={String(preview.totals.totalInvoices)} />

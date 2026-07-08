@@ -1,9 +1,19 @@
-import { userCache } from "@/lib/redis/methods";
-import { generateGstExport } from "@/lib/finance/gst";
 import { getFinanceModuleAccess } from "@/lib/finance/access";
+import { previewGstExport } from "@/lib/finance/gst";
+import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+
+function toCsv(rows: Array<Record<string, unknown>>) {
+    if (!rows.length) {
+        return "severity,code,entity_type,entity_id,message\n";
+    }
+
+    const headers = Object.keys(rows[0]);
+    const escape = (value: unknown) => `"${String(value ?? "").replaceAll("\"", "\"\"")}"`;
+    return [headers.join(","), ...rows.map((row) => headers.map((header) => escape(row[header])).join(","))].join("\n");
+}
 
 export async function GET(req: NextRequest) {
     const { userId } = await auth();
@@ -25,20 +35,22 @@ export async function GET(req: NextRequest) {
     }
 
     const monthKey = req.nextUrl.searchParams.get("month") ?? new Date().toISOString().slice(0, 7);
-    const { csv, preview } = await generateGstExport(monthKey, userId);
+    const preview = await previewGstExport(monthKey);
     const fileMonth = monthKey.split("-")[1] + monthKey.split("-")[0];
-    const validationErrorCount = preview.validationIssues.filter((issue) => issue.severity === "error").length;
-    const validationWarningCount = preview.validationIssues.filter(
-        (issue) => issue.severity === "warning"
-    ).length;
+    const csv = toCsv(
+        preview.validationIssues.map((issue) => ({
+            severity: issue.severity,
+            code: issue.code,
+            entity_type: issue.entityType,
+            entity_id: issue.entityId,
+            message: issue.message,
+        }))
+    );
 
     return new NextResponse(csv, {
         headers: {
             "Content-Type": "text/csv; charset=utf-8",
-            "X-Renivet-GST-Validation-Errors": String(preview.validationIssues.length),
-            "X-Renivet-GST-Validation-Error-Count": String(validationErrorCount),
-            "X-Renivet-GST-Validation-Warning-Count": String(validationWarningCount),
-            "Content-Disposition": `attachment; filename="RENIVET_GST_TCS_${fileMonth}.csv"`,
+            "Content-Disposition": `attachment; filename="RENIVET_GST_ISSUES_${fileMonth}.csv"`,
         },
     });
 }
