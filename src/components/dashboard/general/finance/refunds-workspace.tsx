@@ -283,16 +283,18 @@ export function FinanceRefundsWorkspace({
         onError: handleClientError,
     });
 
-    const filteredRows = (refundsQuery.data ?? []).filter((row) => {
-        const searchStr = `${row.orderId} ${row.id} ${row.reasonMaster?.name ?? ""} ${row.costAllocation ?? ""} ${row.user?.firstName ?? ""} ${row.user?.lastName ?? ""} ${row.user?.email ?? ""}`.toLowerCase();
-        const matchesSearch = searchStr.includes(search.trim().toLowerCase());
+    const filteredRows = (refundsQuery.data ?? [])
+        .filter((row) => {
+            const searchStr = `${row.orderId} ${row.id} ${row.reasonMaster?.name ?? ""} ${row.costAllocation ?? ""} ${row.user?.firstName ?? ""} ${row.user?.lastName ?? ""} ${row.user?.email ?? ""}`.toLowerCase();
+            const matchesSearch = searchStr.includes(search.trim().toLowerCase());
 
-        const matchesStatus = statusFilter === "all" || row.status === statusFilter;
-        const matchesApproval = approvalStatusFilter === "all" || row.approvalStatus === approvalStatusFilter;
-        const matchesAllocation = costAllocationFilter === "all" || row.costAllocation === costAllocationFilter;
+            const matchesStatus = statusFilter === "all" || row.status === statusFilter;
+            const matchesApproval = approvalStatusFilter === "all" || row.approvalStatus === approvalStatusFilter;
+            const matchesAllocation = costAllocationFilter === "all" || row.costAllocation === costAllocationFilter;
 
-        return matchesSearch && matchesStatus && matchesApproval && matchesAllocation;
-    });
+            return matchesSearch && matchesStatus && matchesApproval && matchesAllocation;
+        })
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const totalPages = Math.ceil(filteredRows.length / itemsPerPage);
     const startIndex = (currentPage - 1) * itemsPerPage;

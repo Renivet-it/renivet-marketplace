@@ -36,7 +36,7 @@ export function ReturnModal({ orderItem, isOpen, onClose }: ReturnModalProps) {
   const [uploading, setUploading] = useState(false);
 const utils = trpc.useUtils();
 
-  const { startUpload } = useUploadThing("brandMediaUploader");
+  const { startUpload } = useUploadThing("supportAttachmentUploader");
 
 const { mutate, isPending } =
   trpc.general.returnReplace.create.useMutation({
