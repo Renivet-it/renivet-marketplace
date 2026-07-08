@@ -1,19 +1,35 @@
 import { syncCodReconciliationRun } from "@/lib/finance/cod";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-function isAuthorized(req: NextRequest) {
-    const secret = process.env.CRON_SECRET;
-    if (!secret) return process.env.NODE_ENV !== "production";
+/**
+ * COD Remittance Sync Cron Job
+ * Trigger this via your scheduler without a secret, same pattern as daily order summary.
+ *
+ * Suggested schedule: every day at 8:00 AM IST
+ */
+export async function GET() {
+    try {
+        console.log("COD Remittance Sync Cron Job Started");
+        console.log(
+            "Triggered at:",
+            new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+        );
 
-    const authHeader = req.headers.get("authorization");
-    const querySecret = req.nextUrl.searchParams.get("secret");
-    return authHeader === `Bearer ${secret}` || querySecret === secret;
-}
+        const result = await syncCodReconciliationRun("cron");
 
-export async function GET(req: NextRequest) {
-    if (!isAuthorized(req)) {
-        return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 });
+        console.log("COD Remittance Sync Cron Job Completed Successfully");
+        return NextResponse.json({
+            ok: true,
+            ...result,
+        });
+    } catch (error) {
+        console.error("COD Remittance Sync Cron Job Error:", error);
+        return NextResponse.json(
+            {
+                ok: false,
+                error: error instanceof Error ? error.message : "Unknown error",
+            },
+            { status: 500 }
+        );
     }
-    const result = await syncCodReconciliationRun("cron");
-    return NextResponse.json({ ok: true, ...result });
 }
