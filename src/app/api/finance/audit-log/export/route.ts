@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
         to: parseDate(search.get("to")),
         q: search.get("q") || undefined,
         attachmentOnly: search.get("attachmentOnly") === "true",
+        limit: 5000,
     });
 
     const csv = toCsv(

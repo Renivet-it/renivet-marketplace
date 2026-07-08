@@ -51,6 +51,46 @@ type CodFilters = {
     attentionOnly?: boolean;
 };
 
+type AuditLogFilters = {
+    entityType?: string;
+    entityId?: string;
+    actionType?: string;
+    actorId?: string;
+    actorType?: string;
+    from?: Date;
+    to?: Date;
+    q?: string;
+    module?: string;
+    attachmentOnly?: boolean;
+    limit?: number;
+    offset?: number;
+};
+
+function buildFinanceAuditLogWhere(filters: AuditLogFilters = {}) {
+    return and(
+        filters.entityType ? eq(auditLogs.entityType, filters.entityType) : undefined,
+        filters.entityId ? eq(auditLogs.entityId, filters.entityId) : undefined,
+        filters.actionType ? eq(auditLogs.actionType, filters.actionType) : undefined,
+        filters.actorId ? eq(auditLogs.userId, filters.actorId) : undefined,
+        filters.actorType ? eq(auditLogs.actorType, filters.actorType) : undefined,
+        filters.from ? gte(auditLogs.timestampUtc, filters.from) : undefined,
+        filters.to ? lte(auditLogs.timestampUtc, filters.to) : undefined,
+        filters.q
+            ? sql`(
+                ${auditLogs.reason} ILIKE ${`%${filters.q}%`}
+                OR ${auditLogs.entityId} ILIKE ${`%${filters.q}%`}
+                OR ${auditLogs.actionType} ILIKE ${`%${filters.q}%`}
+                OR ${auditLogs.entityType} ILIKE ${`%${filters.q}%`}
+                OR COALESCE(${auditLogs.metadata} ->> 'financeEventCode', '') ILIKE ${`%${filters.q}%`}
+            )`
+            : undefined,
+        filters.module
+            ? sql`${auditLogs.metadata} ->> 'module' = ${filters.module}`
+            : sql`${auditLogs.metadata} ->> 'module' = 'finance_compliance'`,
+        filters.attachmentOnly ? sql`${auditLogs.attachmentUrl} IS NOT NULL` : undefined
+    );
+}
+
 class FinanceComplianceQuery {
     async listRefunds(filters: RefundFilters = {}) {
         const where = and(
@@ -1173,43 +1213,51 @@ class FinanceComplianceQuery {
         return db.update(legals).set(values).returning().then((rows) => rows[0]);
     }
 
-    async listFinanceAuditLogs(filters: {
-        entityType?: string;
-        entityId?: string;
-        actionType?: string;
-        actorId?: string;
-        actorType?: string;
-        from?: Date;
-        to?: Date;
-        q?: string;
-        module?: string;
-        attachmentOnly?: boolean;
-    } = {}) {
+    async listFinanceAuditLogs(filters: AuditLogFilters = {}) {
+        const where = buildFinanceAuditLogWhere(filters);
         return db.query.auditLogs.findMany({
-            where: and(
-                filters.entityType ? eq(auditLogs.entityType, filters.entityType) : undefined,
-                filters.entityId ? eq(auditLogs.entityId, filters.entityId) : undefined,
-                filters.actionType ? eq(auditLogs.actionType, filters.actionType) : undefined,
-                filters.actorId ? eq(auditLogs.userId, filters.actorId) : undefined,
-                filters.actorType ? eq(auditLogs.actorType, filters.actorType) : undefined,
-                filters.from ? gte(auditLogs.timestampUtc, filters.from) : undefined,
-                filters.to ? lte(auditLogs.timestampUtc, filters.to) : undefined,
-                filters.q
-                    ? sql`(
-                        ${auditLogs.reason} ILIKE ${`%${filters.q}%`}
-                        OR ${auditLogs.entityId} ILIKE ${`%${filters.q}%`}
-                        OR ${auditLogs.actionType} ILIKE ${`%${filters.q}%`}
-                        OR COALESCE(${auditLogs.metadata} ->> 'financeEventCode', '') ILIKE ${`%${filters.q}%`}
-                    )`
-                    : undefined,
-                filters.module
-                    ? sql`${auditLogs.metadata} ->> 'module' = ${filters.module}`
-                    : sql`${auditLogs.metadata} ->> 'module' = 'finance_compliance'`,
-                filters.attachmentOnly ? sql`${auditLogs.attachmentUrl} IS NOT NULL` : undefined
-            ),
+            where,
             orderBy: [desc(auditLogs.timestampUtc)],
-            limit: 250,
+            limit: filters.limit ?? 250,
+            offset: filters.offset ?? 0,
         });
+    }
+
+    async getFinanceAuditLogsPage(
+        filters: AuditLogFilters & {
+            page?: number;
+            pageSize?: number;
+        } = {}
+    ) {
+        const pageSize = Math.min(Math.max(filters.pageSize ?? 20, 1), 100);
+        const page = Math.max(filters.page ?? 1, 1);
+        const where = buildFinanceAuditLogWhere(filters);
+
+        const totalRow = await db
+            .select({
+                count: sql<number>`count(*)`,
+            })
+            .from(auditLogs)
+            .where(where)
+            .then((rows) => rows[0]);
+
+        const total = Number(totalRow?.count ?? 0);
+        const totalPages = Math.max(1, Math.ceil(total / pageSize));
+        const safePage = Math.min(page, totalPages);
+        const offset = (safePage - 1) * pageSize;
+        const rows = await this.listFinanceAuditLogs({
+            ...filters,
+            limit: pageSize,
+            offset,
+        });
+
+        return {
+            rows,
+            total,
+            page: safePage,
+            pageSize,
+            totalPages,
+        };
     }
 }
 
