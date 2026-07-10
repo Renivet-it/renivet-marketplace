@@ -1771,6 +1771,18 @@ const sortByWithOrderTypes = [
 ];
 
 export function ShopSortBy({ className }: { className?: string } = {}) {
+    return <ShopSortByWithDefault className={className} />;
+}
+
+export function ShopSortByWithDefault({
+    className,
+    defaultSortBy = "recommended",
+    defaultSortOrder = "desc",
+}: {
+    className?: string;
+    defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
+    defaultSortOrder?: "asc" | "desc";
+} = {}) {
     const isMobile = useMediaQuery("(max-width: 768px)");
     const [sortBy, setSortBy] = useQueryState(
         "sortBy",
@@ -1779,11 +1791,13 @@ export function ShopSortBy({ className }: { className?: string } = {}) {
             "createdAt",
             "recommended",
             "best-sellers",
-        ] as const).withDefault("recommended")
+        ] as const).withDefault(defaultSortBy)
     );
     const [sortOrder, setSortOrder] = useQueryState(
         "sortOrder",
-        parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
+        parseAsStringLiteral(["asc", "desc"] as const).withDefault(
+            defaultSortOrder
+        )
     );
     const [, setPage] = useQueryState(
         "shopPage",
@@ -1802,6 +1816,9 @@ export function ShopSortBy({ className }: { className?: string } = {}) {
     const currentValue = `${sortBy}:${sortOrder}`;
     const currentLabel =
         sortByWithOrderTypes.find((o) => o.value === currentValue)?.label ??
+        sortByWithOrderTypes.find(
+            (o) => o.value === `${defaultSortBy}:${defaultSortOrder}`
+        )?.label ??
         "Recommended";
 
     // --- Desktop View (Dropdown) ---

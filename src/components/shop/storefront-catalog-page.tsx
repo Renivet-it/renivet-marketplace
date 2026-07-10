@@ -20,7 +20,7 @@ import { Suspense, type ReactNode } from "react";
 import { unstable_cache } from "next/cache";
 import { SearchableProductTypes } from "@/app/(marketing)/shop/search-component";
 import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
-import { ShopFilters, ShopSortBy } from "./shop-filters";
+import { ShopFilters, ShopSortByWithDefault } from "./shop-filters";
 import { ShopProducts } from "./shop-products";
 import { ShopMobileActions } from "./shop-mobile-actions";
 
@@ -50,7 +50,11 @@ interface StorefrontCatalogPageProps {
     hero?: ReactNode;
     lockedBrandId?: string;
     hideBrandFilter?: boolean;
+    defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
+    defaultSortOrder?: "asc" | "desc";
 }
+
+const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-[5.55rem] lg:top-[5.75rem]";
 
 export async function StorefrontCatalogPage({
     searchParams,
@@ -59,6 +63,8 @@ export async function StorefrontCatalogPage({
     hero,
     lockedBrandId,
     hideBrandFilter = false,
+    defaultSortBy = "recommended",
+    defaultSortOrder = "desc",
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
@@ -179,19 +185,25 @@ export async function StorefrontCatalogPage({
                         }
                     />
 
-                    <div className="hidden items-center justify-between rounded-2xl border border-[#dce5ee] bg-[#f9fbfd] px-5 py-3.5 md:flex">
-                        <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
-                            Refine By Category, Color, Size And Fit
-                        </p>
-                        <ShopSortBy />
-                    </div>
-
                     <Suspense fallback={<ShopProductsSkeleton />}>
                         <StorefrontProductsFetch
                             searchParams={searchParams}
                             productTypes={productTypes}
                             basePath={basePath}
                             lockedBrandId={lockedBrandId}
+                            defaultSortBy={defaultSortBy}
+                            defaultSortOrder={defaultSortOrder}
+                            desktopCatalogHeader={
+                                <div className="hidden items-center justify-between rounded-2xl border border-[#dce5ee] bg-[#f9fbfd] px-5 py-3.5 md:flex">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
+                                        Refine By Category, Color, Size And Fit
+                                    </p>
+                                    <ShopSortByWithDefault
+                                        defaultSortBy={defaultSortBy}
+                                        defaultSortOrder={defaultSortOrder}
+                                    />
+                                </div>
+                            }
                         />
                     </Suspense>
                 </main>
@@ -395,11 +407,17 @@ async function StorefrontProductsFetch({
     productTypes,
     basePath,
     lockedBrandId,
+    defaultSortBy = "recommended",
+    defaultSortOrder = "desc",
+    desktopCatalogHeader,
 }: {
     searchParams: Promise<StorefrontSearchParams>;
     productTypes: any[];
     basePath: string;
     lockedBrandId?: string;
+    defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
+    defaultSortOrder?: "asc" | "desc";
+    desktopCatalogHeader?: ReactNode;
 }) {
     const { userId } = await auth();
 
@@ -460,11 +478,15 @@ async function StorefrontProductsFetch({
     const sortBy =
         !!sortByRaw?.length && sortByRaw !== "recommended"
             ? sortByRaw
-            : undefined;
+            : defaultSortBy === "recommended"
+              ? undefined
+              : defaultSortBy;
     const sortOrder =
         !!sortOrderRaw?.length && sortByRaw !== "recommended"
             ? sortOrderRaw
-            : undefined;
+            : defaultSortBy === "recommended"
+              ? undefined
+              : defaultSortOrder;
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
     const minDiscount =
@@ -482,6 +504,7 @@ async function StorefrontProductsFetch({
         minPrice === 0 &&
         maxPrice >= SHOP_PRICE_FILTER_MAX &&
         !minDiscount &&
+        defaultSortBy === "recommended" &&
         (!sortByRaw || sortByRaw === "recommended") &&
         !!userId;
 
@@ -526,6 +549,7 @@ async function StorefrontProductsFetch({
             !categoryId &&
             !subCategoryId &&
             !productTypeId &&
+            defaultSortBy === "recommended" &&
             (!sortByRaw || sortByRaw === "recommended") &&
             !sortOrder &&
             !colors &&
@@ -560,7 +584,9 @@ async function StorefrontProductsFetch({
                 sizes,
                 minDiscount,
                 prioritizeBestSellers:
-                    !search && (!sortByRaw || sortByRaw === "recommended"),
+                    !search &&
+                    defaultSortBy === "recommended" &&
+                    (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
         }
@@ -619,7 +645,7 @@ async function StorefrontProductsFetch({
     );
 
     return (
-        <div className="space-y-5">
+        <div className="space-y-4 md:space-y-3">
             <div className="block md:hidden">
                 <SearchableProductTypes
                     productTypes={productTypesForPills}
@@ -629,7 +655,11 @@ async function StorefrontProductsFetch({
                 />
             </div>
 
-            <div className="hidden md:block">
+            <div
+                className={`hidden md:sticky ${DESKTOP_CATALOG_STICKY_TOP_CLASS} md:z-20 md:block md:space-y-3 md:bg-white/95 md:pb-2 md:backdrop-blur-sm`}
+            >
+                {desktopCatalogHeader}
+
                 <SearchableProductTypes
                     productTypes={productTypesForPills}
                     productTypeId={productTypeIdRaw ?? ""}
@@ -637,9 +667,9 @@ async function StorefrontProductsFetch({
                     isDesktop
                     basePath={basePath}
                 />
-            </div>
 
-            <Separator />
+                <div className="border-b border-[#e4e9ef]" />
+            </div>
 
             <ShopProducts
                 initialData={{
@@ -651,6 +681,8 @@ async function StorefrontProductsFetch({
                 userId={userId ?? undefined}
                 initialPage={page}
                 lockedBrandId={lockedBrandId}
+                defaultSortBy={defaultSortBy}
+                defaultSortOrder={defaultSortOrder}
             />
         </div>
     );

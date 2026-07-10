@@ -111,6 +111,8 @@ export default async function Page({ params, searchParams }: PageProps) {
             hero={<BrandShopHero brand={brand} />}
             lockedBrandId={brand.id}
             hideBrandFilter
+            defaultSortBy="createdAt"
+            defaultSortOrder="desc"
         />
     );
 }
