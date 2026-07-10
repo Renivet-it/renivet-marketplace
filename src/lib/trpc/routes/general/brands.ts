@@ -35,6 +35,7 @@ import {
     brandConfidentialSchema,
     brandRequestSchema,
     createBrandRequestSchema,
+    updateBrandSchema,
     updateBrandConfidentialByAdminSchema,
     updateBrandRequestStatusSchema,
 } from "@/lib/validations";
@@ -786,6 +787,47 @@ export const brandsRouter = createTRPCRouter({
                     code: "NOT_FOUND",
                     message: "Brand not found",
                 });
+
+            return data;
+        }),
+    updateBrand: protectedProcedure
+        .input(
+            z.object({
+                id: z.string(),
+                values: updateBrandSchema,
+            })
+        )
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .mutation(async ({ input, ctx }) => {
+            const { id, values } = input;
+            const { queries } = ctx;
+
+            const existingBrand = await brandCache.get(id);
+            if (!existingBrand)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "Brand not found",
+                });
+
+            const keysToBeDeleted: string[] = [];
+
+            const existingLogoUrl = existingBrand.logoUrl;
+            const existingCoverUrl = existingBrand.coverUrl;
+
+            const inputLogoUrl = values.logoUrl;
+            const inputCoverUrl = values.coverUrl;
+
+            if (existingLogoUrl && existingLogoUrl !== inputLogoUrl)
+                keysToBeDeleted.push(getUploadThingFileKey(existingLogoUrl));
+            if (existingCoverUrl && existingCoverUrl !== inputCoverUrl)
+                keysToBeDeleted.push(getUploadThingFileKey(existingCoverUrl));
+
+            const data = await Promise.all([
+                queries.brands.updateBrand(id, values),
+                brandCache.remove(id),
+                keysToBeDeleted.length > 0 &&
+                    utApi.deleteFiles(keysToBeDeleted),
+            ]);
 
             return data;
         }),

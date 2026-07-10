@@ -299,11 +299,17 @@ export const uploadRouter = {
                     message: "You're not authorized",
                 });
 
-            const { brandPermissions } = getUserPermissions(existingUser.roles);
-            const isAuthorized = hasPermission(brandPermissions, [
+            const { brandPermissions, sitePermissions } = getUserPermissions(
+                existingUser.roles
+            );
+            const isAuthorized =
+                hasPermission(brandPermissions, [
                 BitFieldBrandPermission.MANAGE_PRODUCTS |
                     BitFieldBrandPermission.MANAGE_BRANDING,
-            ]);
+                ]) ||
+                hasPermission(sitePermissions, [
+                    BitFieldSitePermission.MANAGE_BRANDS,
+                ]);
             if (!isAuthorized)
                 throw new UploadThingError({
                     code: "FORBIDDEN",
@@ -341,11 +347,17 @@ export const uploadRouter = {
                     message: "You're not authorized",
                 });
 
-            const { brandPermissions } = getUserPermissions(existingUser.roles);
-            const isAuthorized = hasPermission(brandPermissions, [
+            const { brandPermissions, sitePermissions } = getUserPermissions(
+                existingUser.roles
+            );
+            const isAuthorized =
+                hasPermission(brandPermissions, [
                 BitFieldBrandPermission.MANAGE_PRODUCTS |
                     BitFieldBrandPermission.MANAGE_BRANDING,
-            ]);
+                ]) ||
+                hasPermission(sitePermissions, [
+                    BitFieldSitePermission.MANAGE_BRANDS,
+                ]);
             if (!isAuthorized)
                 throw new UploadThingError({
                     code: "FORBIDDEN",

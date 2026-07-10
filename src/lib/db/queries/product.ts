@@ -5539,6 +5539,7 @@ class ProductQuery {
         categoryId?: string;
         subcategoryId?: string;
         productTypeId?: string;
+        brandIds?: string[];
     }): Promise<{ name: string; count: number }[]> {
         try {
             const whereConditions = [
@@ -5568,6 +5569,9 @@ class ProductQuery {
                 whereConditions.push(
                     eq(products.productTypeId, filters.productTypeId)
                 );
+            }
+            if (filters?.brandIds?.length) {
+                whereConditions.push(inArray(products.brandId, filters.brandIds));
             }
 
             const colorOptions = await db
@@ -6009,6 +6013,7 @@ class ProductQuery {
         categoryId?: string;
         subcategoryId?: string;
         productTypeId?: string;
+        brandIds?: string[];
     }) {
         try {
             const whereConditions = [
@@ -6037,6 +6042,9 @@ class ProductQuery {
                 whereConditions.push(
                     eq(products.productTypeId, filters.productTypeId)
                 );
+            }
+            if (filters?.brandIds?.length) {
+                whereConditions.push(inArray(products.brandId, filters.brandIds));
             }
 
             const sizeOptions = await db
@@ -6080,6 +6088,7 @@ class ProductQuery {
         categoryId?: string;
         subcategoryId?: string;
         productTypeId?: string;
+        brandIds?: string[];
     }) {
         try {
             const whereConditions = [
@@ -6108,6 +6117,9 @@ class ProductQuery {
                 whereConditions.push(
                     eq(products.productTypeId, filters.productTypeId)
                 );
+            }
+            if (filters?.brandIds?.length) {
+                whereConditions.push(inArray(products.brandId, filters.brandIds));
             }
 
             const sizeOptions = await db

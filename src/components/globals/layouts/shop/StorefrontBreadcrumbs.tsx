@@ -10,7 +10,7 @@ import { cn, getAbsoluteURL } from "@/lib/utils";
 import Link from "next/link";
 import { Fragment } from "react";
 
-type BreadcrumbSegment = {
+export type BreadcrumbSegment = {
     label: string;
     href?: string;
 };

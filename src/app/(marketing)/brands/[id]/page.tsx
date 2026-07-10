@@ -4,8 +4,11 @@ import { siteConfig } from "@/config/site";
 import { brandCache } from "@/lib/redis/methods";
 import { getAbsoluteURL } from "@/lib/utils";
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
+
+const UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface PageProps {
     params: Promise<{
@@ -18,12 +21,18 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
     const { id } = await params;
 
-    const existingBrand = await brandCache.get(id);
+    const existingBrand = UUID_PATTERN.test(id)
+        ? await brandCache.get(id)
+        : await brandCache.getBySlug(id);
     if (!existingBrand)
         return {
             title: "Brand not found",
             description: "The requested brand was not found.",
         };
+
+    const canonicalPath = UUID_PATTERN.test(id)
+        ? `/brands/${existingBrand.id}`
+        : `/brands/${existingBrand.slug}/shop`;
 
     return {
         title: existingBrand.name,
@@ -31,13 +40,13 @@ export async function generateMetadata({
         authors: [
             {
                 name: `${existingBrand.owner.firstName} ${existingBrand.owner.lastName}`,
-                url: getAbsoluteURL(`/brands/${id}`),
+                url: getAbsoluteURL(canonicalPath),
             },
         ],
         openGraph: {
             type: "website",
             locale: "en_US",
-            url: getAbsoluteURL(`/brands/${id}`),
+            url: getAbsoluteURL(canonicalPath),
             title: existingBrand.name,
             description: existingBrand.bio ?? "",
             siteName: siteConfig.name,
@@ -78,6 +87,13 @@ export default function Page({ params }: PageProps) {
 
 async function BrandFetch({ params }: PageProps) {
     const { id } = await params;
+
+    if (!UUID_PATTERN.test(id)) {
+        const brandBySlug = await brandCache.getBySlug(id);
+        if (!brandBySlug) notFound();
+
+        redirect(`/brands/${brandBySlug.slug}/shop`);
+    }
 
     const existingBrand = await brandCache.get(id);
     if (!existingBrand) notFound();

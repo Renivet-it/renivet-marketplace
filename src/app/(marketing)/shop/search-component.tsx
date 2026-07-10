@@ -22,6 +22,7 @@ export function SearchableProductTypes({
     products: productsProp,
     productTypeId,
     isDesktop = false,
+    basePath = "/shop",
 }: {
     productTypes: {
         id: string;
@@ -32,6 +33,7 @@ export function SearchableProductTypes({
     products?: Product[]; // alternate prop name (optional)
     productTypeId?: string;
     isDesktop?: boolean;
+    basePath?: string;
 }) {
     const searchParams = useSearchParams();
     const searchTerm = searchParams.get("search") ?? "";
@@ -43,8 +45,8 @@ export function SearchableProductTypes({
             )
         );
         const query = params.toString();
-        return query ? `?${query}` : "/shop";
-    }, [searchParams]);
+        return query ? `?${query}` : basePath;
+    }, [basePath, searchParams]);
 
     const getTypeHref = (typeId: string) => {
         const params = new URLSearchParams(

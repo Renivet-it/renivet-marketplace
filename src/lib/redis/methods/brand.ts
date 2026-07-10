@@ -3,6 +3,9 @@ import { generateCacheKey, parseToJSON } from "@/lib/utils";
 import { CachedBrand, cachedBrandSchema } from "@/lib/validations";
 import { redis } from "..";
 
+const UUID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
 class BrandCache {
     private genKey: (...args: string[]) => string;
 
@@ -63,6 +66,8 @@ class BrandCache {
         }
 
         if (!cachedBrand) {
+            if (!UUID_PATTERN.test(id)) return null;
+
             const dbBrand = await brandQueries.getBrand(id);
             if (!dbBrand) return null;
 
@@ -78,6 +83,15 @@ class BrandCache {
         }
 
         return cachedBrand;
+    }
+
+    async getBySlug(slug: string) {
+        const brands = await this.getAll();
+        const matchingBrand = brands.find((brand) => brand.slug === slug) ?? null;
+
+        if (!matchingBrand) return null;
+
+        return await this.get(matchingBrand.id);
     }
 
     async add(brand: CachedBrand) {
