@@ -961,11 +961,11 @@ export function BrandAction({ brand }: PageProps) {
                                     className="w-full"
                                 >
                                     <Link
-                                        href={`/brands/${brand.slug}`}
+                                        href={`/brands/${brand.slug}/shop`}
                                         target="_blank"
                                     >
                                         <Icons.ExternalLink className="size-4" />
-                                        View Public Page
+                                        View Public Shop
                                     </Link>
                                 </Button>
                             </div>

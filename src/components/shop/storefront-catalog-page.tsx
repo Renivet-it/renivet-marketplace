@@ -650,6 +650,7 @@ async function StorefrontProductsFetch({
                 initialWishlist={userWishlist}
                 userId={userId ?? undefined}
                 initialPage={page}
+                lockedBrandId={lockedBrandId}
             />
         </div>
     );

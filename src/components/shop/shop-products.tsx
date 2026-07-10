@@ -39,6 +39,7 @@ interface PageProps extends GenericProps {
     initialWishlist?: CachedWishlist[];
     userId?: string;
     initialPage?: number;
+    lockedBrandId?: string;
 }
 
 export function ShopProducts({
@@ -47,6 +48,7 @@ export function ShopProducts({
     initialWishlist,
     userId,
     initialPage = 1,
+    lockedBrandId,
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
@@ -122,13 +124,17 @@ export function ShopProducts({
         parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
     );
     const [minDiscount] = useQueryState("minDiscount", parseAsInteger);
+    const effectiveBrandIds = useMemo(
+        () => (lockedBrandId ? [lockedBrandId] : brandIds),
+        [brandIds, lockedBrandId]
+    );
 
     const [initialParams] = useState(() =>
         JSON.stringify({
             page,
             limit,
             search,
-            brandIds,
+            brandIds: effectiveBrandIds,
             minPrice,
             maxPrice,
             categoryId,
@@ -146,7 +152,7 @@ export function ShopProducts({
         page,
         limit,
         search,
-        brandIds,
+        brandIds: effectiveBrandIds,
         minPrice,
         maxPrice,
         categoryId,
@@ -170,7 +176,7 @@ export function ShopProducts({
             isActive: true,
             isDeleted: false,
             verificationStatus: "approved" as const,
-            brandIds,
+            brandIds: effectiveBrandIds,
             minPrice: minPrice < 0 ? 0 : minPrice,
             maxPrice: maxPrice >= SHOP_PRICE_FILTER_MAX ? undefined : maxPrice,
             categoryId: !!categoryId.length ? categoryId : undefined,
@@ -194,6 +200,7 @@ export function ShopProducts({
             useRecommendations:
                 !search &&
                 (!sortBy || sortBy === "recommended") &&
+                !effectiveBrandIds.length &&
                 minPrice === 0 &&
                 maxPrice >= SHOP_PRICE_FILTER_MAX &&
                 !minDiscount,
@@ -202,7 +209,7 @@ export function ShopProducts({
             page,
             limit,
             search,
-            brandIds,
+            effectiveBrandIds,
             minPrice,
             maxPrice,
             categoryId,
@@ -237,7 +244,7 @@ export function ShopProducts({
             !categoryId.length &&
             !effectiveSubCategoryId.length &&
             !productTypeId.length &&
-            !brandIds?.length &&
+            !effectiveBrandIds.length &&
             minPrice === 0 &&
             maxPrice >= SHOP_PRICE_FILTER_MAX &&
             !colors.length &&
@@ -350,6 +357,7 @@ export function ShopProducts({
                 !search &&
                 nextPage === 1 &&
                 (!sortBy || sortBy === "recommended") &&
+                !effectiveBrandIds.length &&
                 !minDiscount,
         });
     }, [
@@ -363,6 +371,7 @@ export function ShopProducts({
         search,
         sortBy,
         minDiscount,
+        effectiveBrandIds,
     ]);
 
     // The "Show more" button IS the sentinel — when it scrolls into view it
