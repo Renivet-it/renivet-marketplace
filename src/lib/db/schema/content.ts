@@ -6,6 +6,7 @@ export const banners = pgTable("home_banners", {
     title: text("title").notNull(),
     description: text("description").notNull(),
     imageUrl: text("image_url").notNull(),
+    url: text("url"),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps,
 });
