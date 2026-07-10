@@ -54,6 +54,7 @@ export function BannerManageForm({ banner }: PageProps) {
             title: banner?.title ?? "",
             description: banner?.description ?? "",
             imageUrl: banner?.imageUrl ?? null,
+            url: banner?.url ?? "",
             isActive: banner?.isActive ?? false,
         },
     });
@@ -187,6 +188,29 @@ export function BannerManageForm({ banner }: PageProps) {
                                         isBannerCreating || isBannerUpdating
                                     }
                                     {...field}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="url"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Redirect URL</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    placeholder="Enter the banner redirect URL"
+                                    disabled={
+                                        isBannerCreating || isBannerUpdating
+                                    }
+                                    {...field}
+                                    value={field.value ?? ""}
                                 />
                             </FormControl>
 
