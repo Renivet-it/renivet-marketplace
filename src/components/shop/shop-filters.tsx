@@ -389,6 +389,7 @@ interface PageProps extends GenericProps {
     alphaSize?: string[];
     numSize?: string[];
     sizes?: string[];
+    hideBrandFilter?: boolean;
 }
 
 const getBrandProductCount = (brand: any): number | null => {
@@ -420,6 +421,7 @@ export function ShopFilters({
     alphaSize,
     numSize,
     sizes,
+    hideBrandFilter = false,
     ...props
 }: PageProps) {
     const isMobile = useMediaQuery("(max-width: 768px)");
@@ -459,7 +461,7 @@ export function ShopFilters({
             }),
         [brandsMeta]
     );
-    const hasBrands = availableBrands.length > 0;
+    const hasBrands = !hideBrandFilter && availableBrands.length > 0;
     const hasCategoryTree =
         categories.length > 0 || availableSubCategories.length > 0;
     const hasPrice = true;

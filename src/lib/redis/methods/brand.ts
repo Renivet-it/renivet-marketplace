@@ -80,6 +80,15 @@ class BrandCache {
         return cachedBrand;
     }
 
+    async getBySlug(slug: string) {
+        const brands = await this.getAll();
+        const matchingBrand = brands.find((brand) => brand.slug === slug) ?? null;
+
+        if (!matchingBrand) return null;
+
+        return await this.get(matchingBrand.id);
+    }
+
     async add(brand: CachedBrand) {
         return await redis.set(
             this.genKey(brand.id),
