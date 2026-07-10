@@ -44,10 +44,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { brandStatusReasonCodes } from "@/lib/monitoring-sla/reason-codes";
 import { trpc } from "@/lib/trpc/client";
+import { useUploadThing } from "@/lib/uploadthing";
 import { cn, handleClientError } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
 import { State } from "country-state-city";
 import { format } from "date-fns";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -55,9 +58,10 @@ import {
     parseAsStringLiteral,
     useQueryState,
 } from "nuqs";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
+import { generatePermittedFileTypes } from "uploadthing/client";
 import { z } from "zod";
 import { TableBrand } from "./brands-table";
 
@@ -126,9 +130,15 @@ type EditConfidentialData = z.infer<typeof editConfidentialSchema>;
 
 export function BrandAction({ brand }: PageProps) {
     const router = useRouter();
+    const coverInputRef = useRef<HTMLInputElement>(null);
+    const logoInputRef = useRef<HTMLInputElement>(null);
     const [isOpen, setIsOpen] = useState(false);
     const [isDelistOpen, setIsDelistOpen] = useState(false);
     const [isRelistOpen, setIsRelistOpen] = useState(false);
+    const [logoPreview, setLogoPreview] = useState<string>(brand.logoUrl);
+    const [coverPreview, setCoverPreview] = useState<string | null>(
+        brand.coverUrl
+    );
     const [brandStatusReasonCode, setBrandStatusReasonCode] = useState(
         brand.isActive ? "BRD_PAUSED_REQUEST" : "BRD_ACTIVATED"
     );
@@ -142,6 +152,23 @@ export function BrandAction({ brand }: PageProps) {
     );
 
     const states = useMemo(() => State.getStatesOfCountry("IN"), []);
+
+    const { startUpload: startCoverUpload, routeConfig } = useUploadThing(
+        "brandCoverUploader",
+        {
+            onUploadError(e) {
+                toast.error(e.message);
+            },
+        }
+    );
+    const { startUpload: startLogoUpload } = useUploadThing(
+        "brandLogoUploader",
+        {
+            onUploadError(e) {
+                toast.error(e.message);
+            },
+        }
+    );
 
     const { refetch } = trpc.general.brands.getBrands.useQuery({
         page,
@@ -244,7 +271,7 @@ export function BrandAction({ brand }: PageProps) {
     });
 
     const { mutate: updateBrand, isPending: isUpdatingBrand } =
-        trpc.brands.brands.updateBrand.useMutation({
+        trpc.general.brands.updateBrand.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Updating brand...");
                 return { toastId };
@@ -258,6 +285,78 @@ export function BrandAction({ brand }: PageProps) {
                 return handleClientError(err, ctx?.toastId);
             },
         });
+
+    const { mutate: updateCover, isPending: isCoverUpdating } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Uploading brand cover...");
+            return { toastId };
+        },
+        mutationFn: async (file: File) => {
+            const res = await startCoverUpload([file]);
+            if (!res?.length) throw new Error("Failed to upload cover");
+
+            const [{ appUrl }] = res;
+            await new Promise<void>((resolve, reject) => {
+                updateBrand(
+                    {
+                        id: brand.id,
+                        values: {
+                            bio: brandForm.getValues("bio") ?? null,
+                            website: brandForm.getValues("website") || null,
+                            logoUrl: logoPreview,
+                            coverUrl: appUrl,
+                        },
+                    },
+                    {
+                        onSuccess: () => resolve(),
+                        onError: (error) => reject(error),
+                    }
+                );
+            });
+            return appUrl;
+        },
+        onSuccess: (appUrl, __, ctx) => {
+            setCoverPreview(appUrl);
+            toast.success("Brand cover updated", { id: ctx?.toastId });
+        },
+        onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
+    });
+
+    const { mutate: updateLogo, isPending: isLogoUpdating } = useMutation({
+        onMutate: () => {
+            const toastId = toast.loading("Uploading brand logo...");
+            return { toastId };
+        },
+        mutationFn: async (file: File) => {
+            const res = await startLogoUpload([file]);
+            if (!res?.length) throw new Error("Failed to upload logo");
+
+            const [{ appUrl }] = res;
+            await new Promise<void>((resolve, reject) => {
+                updateBrand(
+                    {
+                        id: brand.id,
+                        values: {
+                            bio: brandForm.getValues("bio") ?? null,
+                            website: brandForm.getValues("website") || null,
+                            logoUrl: appUrl,
+                            coverUrl: coverPreview,
+                        },
+                    },
+                    {
+                        onSuccess: () => resolve(),
+                        onError: (error) => reject(error),
+                    }
+                );
+            });
+            return appUrl;
+        },
+        onSuccess: (appUrl, __, ctx) => {
+            setLogoPreview(appUrl);
+            toast.success("Brand logo updated", { id: ctx?.toastId });
+        },
+        onError: (err, _, ctx) => handleClientError(err, ctx?.toastId),
+    });
 
     const { mutate: updateConfidential, isPending: isUpdatingConfidential } =
         trpc.general.brands.verifications.editDetails.useMutation({
@@ -343,8 +442,8 @@ export function BrandAction({ brand }: PageProps) {
             values: {
                 bio: values.bio ?? null,
                 website: values.website || null,
-                logoUrl: brand.logoUrl,
-                coverUrl: brand.coverUrl,
+                logoUrl: logoPreview,
+                coverUrl: coverPreview,
             },
         });
     };
@@ -645,6 +744,136 @@ export function BrandAction({ brand }: PageProps) {
                                     )}
                                     className="space-y-4"
                                 >
+                                    <div className="space-y-3">
+                                        <p className="text-sm font-medium">
+                                            Brand Appearance
+                                        </p>
+
+                                        <div className="space-y-2">
+                                            <FormLabel>Cover Image</FormLabel>
+                                            <div
+                                                className={cn(
+                                                    "relative flex aspect-[4/1] items-center justify-center overflow-hidden rounded-md border border-dashed",
+                                                    !coverPreview && "bg-muted",
+                                                    coverPreview && "group"
+                                                )}
+                                            >
+                                                {coverPreview ? (
+                                                    <>
+                                                        <div className="absolute inset-0 bg-black opacity-0 transition-all group-hover:opacity-45" />
+                                                        <Image
+                                                            src={coverPreview}
+                                                            alt="Brand cover"
+                                                            height={1200}
+                                                            width={4800}
+                                                            className="size-full object-cover"
+                                                        />
+                                                        <Button
+                                                            size="sm"
+                                                            type="button"
+                                                            className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100"
+                                                            onClick={() =>
+                                                                coverInputRef.current?.click()
+                                                            }
+                                                            disabled={
+                                                                isCoverUpdating
+                                                            }
+                                                        >
+                                                            <Icons.Upload className="size-4" />
+                                                            Change Cover
+                                                        </Button>
+                                                    </>
+                                                ) : (
+                                                    <Button
+                                                        size="sm"
+                                                        type="button"
+                                                        onClick={() =>
+                                                            coverInputRef.current?.click()
+                                                        }
+                                                        disabled={
+                                                            isCoverUpdating
+                                                        }
+                                                    >
+                                                        <Icons.Upload className="size-4" />
+                                                        Upload Cover
+                                                    </Button>
+                                                )}
+
+                                                <input
+                                                    ref={coverInputRef}
+                                                    type="file"
+                                                    className="hidden"
+                                                    accept={generatePermittedFileTypes(
+                                                        routeConfig
+                                                    ).fileTypes.join()}
+                                                    onChange={(e) => {
+                                                        if (!e.target.files?.[0])
+                                                            return;
+                                                        updateCover(
+                                                            e.target.files[0]
+                                                        );
+                                                    }}
+                                                />
+                                            </div>
+                                            <p className="text-xs text-muted-foreground">
+                                                This cover is used on the public
+                                                brand page and the new brand
+                                                shop banner.
+                                            </p>
+                                        </div>
+
+                                        <div className="space-y-2">
+                                            <FormLabel>Brand Logo</FormLabel>
+                                            <div className="flex items-center gap-4 rounded-md border p-3">
+                                                <Avatar className="group relative size-20 border">
+                                                    <Button
+                                                        size="icon"
+                                                        type="button"
+                                                        className="absolute left-1/2 top-1/2 z-10 size-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/60 opacity-0 hover:bg-black/70 group-hover:opacity-100"
+                                                        onClick={() =>
+                                                            logoInputRef.current?.click()
+                                                        }
+                                                        disabled={
+                                                            isLogoUpdating
+                                                        }
+                                                    >
+                                                        <Icons.Upload className="size-4 text-white" />
+                                                    </Button>
+                                                    <input
+                                                        ref={logoInputRef}
+                                                        type="file"
+                                                        className="hidden"
+                                                        accept={generatePermittedFileTypes(
+                                                            routeConfig
+                                                        ).fileTypes.join()}
+                                                        onChange={(e) => {
+                                                            if (
+                                                                !e.target.files?.[0]
+                                                            )
+                                                                return;
+                                                            updateLogo(
+                                                                e.target.files[0]
+                                                            );
+                                                        }}
+                                                    />
+                                                    <AvatarImage
+                                                        src={logoPreview}
+                                                        alt={brand.name}
+                                                        className="size-full object-cover"
+                                                    />
+                                                    <AvatarFallback>
+                                                        {brand.name[0]}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <div className="text-sm text-muted-foreground">
+                                                    Update the brand logo shown
+                                                    across admin and public
+                                                    pages.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     <FormField
                                         control={brandForm.control}
                                         name="bio"
@@ -698,6 +927,8 @@ export function BrandAction({ brand }: PageProps) {
                                         className="w-full"
                                         disabled={
                                             isUpdatingBrand ||
+                                            isCoverUpdating ||
+                                            isLogoUpdating ||
                                             !brandForm.formState.isDirty
                                         }
                                     >
