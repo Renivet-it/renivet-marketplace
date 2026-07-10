@@ -40,6 +40,8 @@ interface PageProps extends GenericProps {
     userId?: string;
     initialPage?: number;
     lockedBrandId?: string;
+    defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
+    defaultSortOrder?: "asc" | "desc";
 }
 
 export function ShopProducts({
@@ -49,6 +51,8 @@ export function ShopProducts({
     userId,
     initialPage = 1,
     lockedBrandId,
+    defaultSortBy = "recommended",
+    defaultSortOrder = "desc",
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
@@ -117,11 +121,13 @@ export function ShopProducts({
             "createdAt",
             "recommended",
             "best-sellers",
-        ] as const).withDefault("recommended")
+        ] as const).withDefault(defaultSortBy)
     );
     const [sortOrder] = useQueryState(
         "sortOrder",
-        parseAsStringLiteral(["asc", "desc"] as const).withDefault("desc")
+        parseAsStringLiteral(["asc", "desc"] as const).withDefault(
+            defaultSortOrder
+        )
     );
     const [minDiscount] = useQueryState("minDiscount", parseAsInteger);
     const effectiveBrandIds = useMemo(
@@ -192,6 +198,7 @@ export function ShopProducts({
             prioritizeBestSellers:
                 !search &&
                 page === 1 &&
+                defaultSortBy === "recommended" &&
                 (!sortBy || sortBy === "recommended") &&
                 minPrice === 0 &&
                 maxPrice >= SHOP_PRICE_FILTER_MAX &&
@@ -210,6 +217,7 @@ export function ShopProducts({
             limit,
             search,
             effectiveBrandIds,
+            defaultSortBy,
             minPrice,
             maxPrice,
             categoryId,
@@ -249,6 +257,7 @@ export function ShopProducts({
             maxPrice >= SHOP_PRICE_FILTER_MAX &&
             !colors.length &&
             !sizes.length &&
+            defaultSortBy === "recommended" &&
             !minDiscount
                 ? 60 * 1000
                 : 0,
@@ -356,6 +365,7 @@ export function ShopProducts({
             prioritizeBestSellers:
                 !search &&
                 nextPage === 1 &&
+                defaultSortBy === "recommended" &&
                 (!sortBy || sortBy === "recommended") &&
                 !effectiveBrandIds.length &&
                 !minDiscount,
@@ -372,6 +382,7 @@ export function ShopProducts({
         sortBy,
         minDiscount,
         effectiveBrandIds,
+        defaultSortBy,
     ]);
 
     // The "Show more" button IS the sentinel — when it scrolls into view it

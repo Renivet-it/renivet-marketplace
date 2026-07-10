@@ -20,7 +20,7 @@ import { Suspense, type ReactNode } from "react";
 import { unstable_cache } from "next/cache";
 import { SearchableProductTypes } from "@/app/(marketing)/shop/search-component";
 import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
-import { ShopFilters, ShopSortBy } from "./shop-filters";
+import { ShopFilters, ShopSortByWithDefault } from "./shop-filters";
 import { ShopProducts } from "./shop-products";
 import { ShopMobileActions } from "./shop-mobile-actions";
 
@@ -50,6 +50,8 @@ interface StorefrontCatalogPageProps {
     hero?: ReactNode;
     lockedBrandId?: string;
     hideBrandFilter?: boolean;
+    defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
+    defaultSortOrder?: "asc" | "desc";
 }
 
 export async function StorefrontCatalogPage({
@@ -59,6 +61,8 @@ export async function StorefrontCatalogPage({
     hero,
     lockedBrandId,
     hideBrandFilter = false,
+    defaultSortBy = "recommended",
+    defaultSortOrder = "desc",
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
@@ -183,7 +187,10 @@ export async function StorefrontCatalogPage({
                         <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
                             Refine By Category, Color, Size And Fit
                         </p>
-                        <ShopSortBy />
+                        <ShopSortByWithDefault
+                            defaultSortBy={defaultSortBy}
+                            defaultSortOrder={defaultSortOrder}
+                        />
                     </div>
 
                     <Suspense fallback={<ShopProductsSkeleton />}>
@@ -192,6 +199,8 @@ export async function StorefrontCatalogPage({
                             productTypes={productTypes}
                             basePath={basePath}
                             lockedBrandId={lockedBrandId}
+                            defaultSortBy={defaultSortBy}
+                            defaultSortOrder={defaultSortOrder}
                         />
                     </Suspense>
                 </main>
@@ -395,11 +404,15 @@ async function StorefrontProductsFetch({
     productTypes,
     basePath,
     lockedBrandId,
+    defaultSortBy = "recommended",
+    defaultSortOrder = "desc",
 }: {
     searchParams: Promise<StorefrontSearchParams>;
     productTypes: any[];
     basePath: string;
     lockedBrandId?: string;
+    defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
+    defaultSortOrder?: "asc" | "desc";
 }) {
     const { userId } = await auth();
 
@@ -460,11 +473,15 @@ async function StorefrontProductsFetch({
     const sortBy =
         !!sortByRaw?.length && sortByRaw !== "recommended"
             ? sortByRaw
-            : undefined;
+            : defaultSortBy === "recommended"
+              ? undefined
+              : defaultSortBy;
     const sortOrder =
         !!sortOrderRaw?.length && sortByRaw !== "recommended"
             ? sortOrderRaw
-            : undefined;
+            : defaultSortBy === "recommended"
+              ? undefined
+              : defaultSortOrder;
     const colors = !!colorsRaw?.length ? colorsRaw.split(",") : undefined;
     const sizes = !!sizesRaw?.length ? sizesRaw.split(",") : undefined;
     const minDiscount =
@@ -482,6 +499,7 @@ async function StorefrontProductsFetch({
         minPrice === 0 &&
         maxPrice >= SHOP_PRICE_FILTER_MAX &&
         !minDiscount &&
+        defaultSortBy === "recommended" &&
         (!sortByRaw || sortByRaw === "recommended") &&
         !!userId;
 
@@ -526,6 +544,7 @@ async function StorefrontProductsFetch({
             !categoryId &&
             !subCategoryId &&
             !productTypeId &&
+            defaultSortBy === "recommended" &&
             (!sortByRaw || sortByRaw === "recommended") &&
             !sortOrder &&
             !colors &&
@@ -560,7 +579,9 @@ async function StorefrontProductsFetch({
                 sizes,
                 minDiscount,
                 prioritizeBestSellers:
-                    !search && (!sortByRaw || sortByRaw === "recommended"),
+                    !search &&
+                    defaultSortBy === "recommended" &&
+                    (!sortByRaw || sortByRaw === "recommended"),
                 requireMedia: true,
             });
         }
@@ -651,6 +672,8 @@ async function StorefrontProductsFetch({
                 userId={userId ?? undefined}
                 initialPage={page}
                 lockedBrandId={lockedBrandId}
+                defaultSortBy={defaultSortBy}
+                defaultSortOrder={defaultSortOrder}
             />
         </div>
     );
