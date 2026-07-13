@@ -1,18 +1,15 @@
 import { DashShell } from "@/components/globals/layouts";
+import { DigestCampaignManager } from "@/components/dashboard/general/marketing";
 import { Metadata } from "next";
 import { Suspense } from "react";
 import { MarketingEmailForm } from "@/components/globals/email-template/bulk-email-send";
-
-interface PageProps {
-  searchParams: Promise<object>;
-}
 
 export const metadata: Metadata = {
   title: "Bulk Email Campaigns",
   description: "Upload an Excel or CSV file to send personalized bulk emails",
 };
 
-export default function BulkEmailPage({ searchParams }: PageProps) {
+export default function BulkEmailPage() {
   return (
     <DashShell className="max-w-[100rem]">
       <div className="mx-auto w-full max-w-none space-y-6 px-4">
@@ -27,6 +24,7 @@ export default function BulkEmailPage({ searchParams }: PageProps) {
         <Suspense fallback={<div className="text-center text-gray-500">Loading...</div>}>
           <MarketingEmailForm />
         </Suspense>
+        <DigestCampaignManager />
       </div>
     </DashShell>
   );

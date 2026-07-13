@@ -17,6 +17,7 @@ export * from "./category-request";
 export * from "./coupon";
 export * from "./legal";
 export * from "./marketing-strip";
+export * from "./marketing";
 export * from "./order";
 export * from "./plan";
 export * from "./product";

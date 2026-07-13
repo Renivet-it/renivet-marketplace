@@ -68,8 +68,12 @@ export function BlogManageForm({ tags, blog }: PageProps) {
         defaultValues: {
             title: blog?.title ?? "",
             description: blog?.description ?? "",
+            metaTitle: blog?.metaTitle ?? "",
+            metaDescription: blog?.metaDescription ?? "",
+            targetKeyword: blog?.targetKeyword ?? "",
             content: blog?.content ?? "",
             thumbnailUrl: blog?.thumbnailUrl ?? null,
+            thumbnailAltText: blog?.thumbnailAltText ?? "",
             tagIds: blog?.tags.map((tag) => tag.id) ?? [],
             isPublished: blog?.isPublished ?? false,
         },
@@ -245,6 +249,84 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                     )}
                 />
 
+                <div className="grid gap-6 md:grid-cols-2">
+                    <FormField
+                        control={form.control}
+                        name="metaTitle"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Meta Title</FormLabel>
+
+                                <FormControl>
+                                    <Input
+                                        placeholder="SEO title for search results"
+                                        disabled={
+                                            isBlogCreating ||
+                                            isBlogUpdating ||
+                                            !tags.length
+                                        }
+                                        {...field}
+                                        value={field.value ?? ""}
+                                    />
+                                </FormControl>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+
+                    <FormField
+                        control={form.control}
+                        name="targetKeyword"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Target Keyword</FormLabel>
+
+                                <FormControl>
+                                    <Input
+                                        placeholder="Primary keyword for this article"
+                                        disabled={
+                                            isBlogCreating ||
+                                            isBlogUpdating ||
+                                            !tags.length
+                                        }
+                                        {...field}
+                                        value={field.value ?? ""}
+                                    />
+                                </FormControl>
+
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                <FormField
+                    control={form.control}
+                    name="metaDescription"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Meta Description</FormLabel>
+
+                            <FormControl>
+                                <Textarea
+                                    placeholder="Short SEO description for search results"
+                                    minRows={3}
+                                    disabled={
+                                        isBlogCreating ||
+                                        isBlogUpdating ||
+                                        !tags.length
+                                    }
+                                    {...field}
+                                    value={field.value ?? ""}
+                                />
+                            </FormControl>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
                 <FormField
                     control={form.control}
                     name="content"
@@ -345,6 +427,31 @@ export function BlogManageForm({ tags, blog }: PageProps) {
                                     </div>
                                 )}
                             </div>
+
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+
+                <FormField
+                    control={form.control}
+                    name="thumbnailAltText"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Thumbnail Alt Text</FormLabel>
+
+                            <FormControl>
+                                <Input
+                                    placeholder="Describe the blog thumbnail image"
+                                    disabled={
+                                        isBlogCreating ||
+                                        isBlogUpdating ||
+                                        !tags.length
+                                    }
+                                    {...field}
+                                    value={field.value ?? ""}
+                                />
+                            </FormControl>
 
                             <FormMessage />
                         </FormItem>

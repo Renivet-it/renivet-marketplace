@@ -33,6 +33,15 @@ export interface PostHogLocationRow {
     visitors: number;
 }
 
+export interface PostHogAttributionRow {
+    source: string;
+    medium: string;
+    campaign: string;
+    landingPath: string;
+    sessions: number;
+    visitors: number;
+}
+
 function toNumber(value: unknown) {
     const numeric = Number(value ?? 0);
     return Number.isFinite(numeric) ? numeric : 0;
@@ -446,6 +455,97 @@ export async function getPostHogSessionsByLocation(
 
     return rows.map((row) => ({
         location: String(row.location ?? "Unknown"),
+        sessions: toNumber(row.sessions),
+        visitors: toNumber(row.visitors),
+    }));
+}
+
+export async function getPostHogAttributionBreakdown(
+    start: Date,
+    end: Date,
+    limit = 100
+): Promise<PostHogAttributionRow[]> {
+    const startSql = formatDateTime(start);
+    const endSql = formatDateTime(end);
+    const safeLimit = Math.max(limit, 1);
+
+    const rows = await runHogQL<{
+        source: string;
+        medium: string;
+        campaign: string;
+        landing_path: string;
+        sessions: number;
+        visitors: number;
+    }>(`
+        WITH session_first_touch AS (
+            SELECT
+                coalesce(
+                    nullIf(toString(properties.$session_id), ''),
+                    concat('anon:', toString(distinct_id), ':', substring(toString(timestamp), 1, 10))
+                ) AS session_key,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.utm_source), ''),
+                        nullIf(toString(properties.$utm_source), ''),
+                        'direct'
+                    ),
+                    timestamp
+                ) AS source,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.utm_medium), ''),
+                        nullIf(toString(properties.$utm_medium), ''),
+                        'none'
+                    ),
+                    timestamp
+                ) AS medium,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.utm_campaign), ''),
+                        nullIf(toString(properties.$utm_campaign), ''),
+                        'unassigned'
+                    ),
+                    timestamp
+                ) AS campaign,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.$pathname), ''),
+                        nullIf(
+                            extract(
+                                toString(properties.$current_url),
+                                'https?://[^/]+([^?#]*)'
+                            ),
+                            ''
+                        ),
+                        'unknown'
+                    ),
+                    timestamp
+                ) AS landing_path,
+                argMin(distinct_id, timestamp) AS visitor_id
+            FROM events
+            WHERE event = '$pageview'
+              AND timestamp >= toDateTime('${startSql}')
+              AND timestamp <= toDateTime('${endSql}')
+            GROUP BY session_key
+        )
+        SELECT
+            source,
+            medium,
+            campaign,
+            landing_path,
+            count() AS sessions,
+            uniq(visitor_id) AS visitors
+        FROM session_first_touch
+        GROUP BY source, medium, campaign, landing_path
+        ORDER BY sessions DESC
+        LIMIT ${safeLimit}
+    `);
+
+    return rows.map((row) => ({
+        source: String(row.source ?? "direct"),
+        medium: String(row.medium ?? "none"),
+        campaign: String(row.campaign ?? "unassigned"),
+        landingPath: String(row.landing_path ?? "unknown"),
         sessions: toNumber(row.sessions),
         visitors: toNumber(row.visitors),
     }));

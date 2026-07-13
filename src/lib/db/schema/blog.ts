@@ -17,8 +17,12 @@ export const blogs = pgTable("blogs", {
     title: text("title").notNull(),
     slug: text("slug").notNull().unique(),
     description: text("description").notNull(),
+    metaTitle: text("meta_title"),
+    metaDescription: text("meta_description"),
+    targetKeyword: text("target_keyword"),
     content: text("content").notNull(),
     thumbnailUrl: text("thumbnail_url"),
+    thumbnailAltText: text("thumbnail_alt_text"),
     authorId: text("author_id")
         .notNull()
         .references(() => users.id, {

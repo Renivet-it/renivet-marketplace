@@ -396,6 +396,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.VIEW_SETTINGS,
             },
             {
+                title: "Partnerships",
+                url: "/dashboard/general/marketing-partnerships",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.VIEW_SETTINGS,
+            },
+            {
                 title: "Coupons",
                 url: "/dashboard/general/coupons",
                 permissions: BitFieldSitePermission.MANAGE_SETTINGS,

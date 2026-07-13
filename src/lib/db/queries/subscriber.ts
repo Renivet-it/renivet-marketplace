@@ -1,5 +1,6 @@
 import {
     CreateNewsletterSubscriber,
+    NewsletterSubscriber,
     newsletterSubscriberSchema,
 } from "@/lib/validations";
 import { and, desc, eq, ilike } from "drizzle-orm";
@@ -62,18 +63,27 @@ class SubscriberQuery {
     async createSubscriber(values: CreateNewsletterSubscriber) {
         const data = await db
             .insert(newsletterSubscribers)
-            .values(values)
+            .values({
+                ...values,
+                source: values.source ?? "website",
+                segments: values.segments ?? [],
+            })
             .returning()
             .then((res) => res[0]);
 
         return data;
     }
 
-    async updateSubscriber(email: string, isActive: boolean) {
+    async updateSubscriber(
+        email: string,
+        values: Partial<Pick<NewsletterSubscriber, "isActive" | "source" | "segments">> & {
+            unsubscribedAt?: Date | null;
+        }
+    ) {
         const data = await db
             .update(newsletterSubscribers)
             .set({
-                isActive,
+                ...values,
                 updatedAt: new Date(),
             })
             .where(eq(newsletterSubscribers.email, email))
@@ -81,6 +91,23 @@ class SubscriberQuery {
             .then((res) => res[0]);
 
         return data;
+    }
+
+    async upsertSubscriber(values: {
+        email: string;
+        name?: string | null;
+        source?: string;
+        segments?: string[];
+    }) {
+        const existing = await this.getSubscriberByEmail(values.email);
+        if (existing) return existing;
+
+        return this.createSubscriber({
+            email: values.email,
+            name: values.name?.trim()?.length ? values.name : "Subscriber",
+            source: values.source ?? "marketing",
+            segments: values.segments ?? [],
+        });
     }
 
     async deleteSubscriber(id: string) {

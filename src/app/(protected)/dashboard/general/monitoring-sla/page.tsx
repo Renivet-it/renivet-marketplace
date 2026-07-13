@@ -643,6 +643,18 @@ export default async function MonitoringSlaPage({
             format: "csv",
         }
     ).toString()}`;
+    const marketingReportXlsxHref = `/api/admin/monitoring-sla/marketing-report?${new URLSearchParams(
+        {
+            month: currentMonth,
+            format: "xlsx",
+        }
+    ).toString()}`;
+    const marketingReportCsvHref = `/api/admin/monitoring-sla/marketing-report?${new URLSearchParams(
+        {
+            month: currentMonth,
+            format: "csv",
+        }
+    ).toString()}`;
     const dailyLastRefresh = new Intl.DateTimeFormat("en-IN", {
         dateStyle: "medium",
         timeStyle: "short",
@@ -1706,6 +1718,20 @@ export default async function MonitoringSlaPage({
                                         ))}
                                     </div>
                                 </div>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <a
+                                        href={marketingReportXlsxHref}
+                                        className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                                    >
+                                        Export Marketing XLSX
+                                    </a>
+                                    <a
+                                        href={marketingReportCsvHref}
+                                        className="inline-flex items-center rounded-md border border-white/30 px-3 py-2 text-sm font-semibold text-white"
+                                    >
+                                        Export Marketing CSV
+                                    </a>
+                                </div>
                             </div>
 
                             <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
@@ -1746,6 +1772,28 @@ export default async function MonitoringSlaPage({
                                     detail={`CAC goal ${rupeeLabelFromPaise(
                                         marketingPerformance.goals.cac
                                     )}`}
+                                />
+                            </div>
+                            <div className="grid gap-3 border-t border-slate-100 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                                <MetricTile
+                                    label="Sessions"
+                                    value={metricLabel(marketingPerformance.kpis.sessions)}
+                                    detail={`Visitors ${metricLabel(marketingPerformance.kpis.visitors)}`}
+                                />
+                                <MetricTile
+                                    label="Browse rate"
+                                    value={percentFromRatio(marketingPerformance.kpis.browseRate)}
+                                    detail={`Cart rate ${percentFromRatio(marketingPerformance.kpis.cartRate)}`}
+                                />
+                                <MetricTile
+                                    label="Checkout rate"
+                                    value={percentFromRatio(marketingPerformance.kpis.checkoutRate)}
+                                    detail={`Purchase rate ${percentFromRatio(marketingPerformance.kpis.purchaseRate)}`}
+                                />
+                                <MetricTile
+                                    label="Returning customer rate"
+                                    value={percentFromRatio(marketingPerformance.kpis.returningCustomerRate)}
+                                    detail={`${marketingPerformance.kpis.emailSends} email sends this week`}
                                 />
                             </div>
                         </div>
@@ -1867,6 +1915,36 @@ export default async function MonitoringSlaPage({
 
                                     <div className="rounded-xl border bg-white p-5 shadow-sm">
                                         <h3 className="text-base font-semibold text-slate-950">
+                                            Sessions by source / medium
+                                        </h3>
+                                        <div className="mt-4 space-y-2">
+                                            {marketingPerformance.sourceMediumPerformance
+                                                .length === 0 ? (
+                                                <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                    No attribution data yet.
+                                                </p>
+                                            ) : (
+                                                marketingPerformance.sourceMediumPerformance.map(
+                                                    (row) => (
+                                                        <div
+                                                            key={`${row.source}-${row.medium}`}
+                                                            className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                        >
+                                                            <span className="text-slate-700">
+                                                                {row.source} / {row.medium}
+                                                            </span>
+                                                            <span className="font-semibold text-slate-950">
+                                                                {row.sessions} sessions
+                                                            </span>
+                                                        </div>
+                                                    )
+                                                )
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                        <h3 className="text-base font-semibold text-slate-950">
                                             Conversion rate by source
                                         </h3>
                                         <div className="mt-4 space-y-2">
@@ -1899,6 +1977,39 @@ export default async function MonitoringSlaPage({
                                                 )
                                             )}
                                         </div>
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Landing performance by campaign
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance.landingPerformanceByCampaign
+                                            .length === 0 ? (
+                                            <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                No campaign landing data yet.
+                                            </p>
+                                        ) : (
+                                            marketingPerformance.landingPerformanceByCampaign.map(
+                                                (row) => (
+                                                    <div
+                                                        key={`${row.campaign}-${row.landingPath}`}
+                                                        className="rounded-lg border bg-slate-50 p-4"
+                                                    >
+                                                        <p className="font-semibold text-slate-950">
+                                                            {row.campaign}
+                                                        </p>
+                                                        <p className="mt-1 text-sm text-muted-foreground">
+                                                            {row.landingPath}
+                                                        </p>
+                                                        <p className="mt-2 text-sm text-slate-700">
+                                                            {row.sessions} sessions • {row.visitors} visitors
+                                                        </p>
+                                                    </div>
+                                                )
+                                            )
+                                        )}
                                     </div>
                                 </div>
 
@@ -2071,6 +2182,57 @@ export default async function MonitoringSlaPage({
                                                 </div>
                                             )
                                         )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Email send volume
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance.emailSends.byCampaignType.map(
+                                            (row) => (
+                                                <div
+                                                    key={row.campaignType}
+                                                    className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                >
+                                                    <span className="text-slate-700">
+                                                        {row.campaignType}
+                                                    </span>
+                                                    <span className="font-semibold text-slate-950">
+                                                        {row.sends}
+                                                    </span>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Partnership tracking
+                                    </h3>
+                                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                                        {[
+                                            ["Total", marketingPerformance.partnerships.total],
+                                            ["Live", marketingPerformance.partnerships.live],
+                                            ["Completed", marketingPerformance.partnerships.completed],
+                                            ["With coupon", marketingPerformance.partnerships.withCouponCode],
+                                            ["With tracking URL", marketingPerformance.partnerships.withTrackingUrl],
+                                            ["Planned", marketingPerformance.partnerships.planned],
+                                        ].map(([label, value]) => (
+                                            <div
+                                                key={String(label)}
+                                                className="rounded-md bg-slate-50 px-3 py-2"
+                                            >
+                                                <p className="text-xs text-muted-foreground">
+                                                    {label}
+                                                </p>
+                                                <p className="mt-1 font-semibold text-slate-950">
+                                                    {metricLabel(value)}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 

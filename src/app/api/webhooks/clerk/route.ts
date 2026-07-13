@@ -2,9 +2,9 @@ import { env } from "@/../env";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { db } from "@/lib/db";
 import { users } from "@/lib/db/schema";
+import { sendMarketingEmail } from "@/lib/marketing/email";
 import { posthog } from "@/lib/posthog/client";
 import { first100Cache, userCache } from "@/lib/redis/methods";
-import { resend } from "@/lib/resend";
 import { AccountCreated } from "@/lib/resend/emails";
 import { CResponse, handleError } from "@/lib/utils";
 import {
@@ -33,34 +33,102 @@ export async function POST(req: NextRequest) {
         );
 
         switch (type) {
-            case "user.created":
-                {
-                    const webhookUser = userWebhookSchema.parse(data);
+            case "user.created": {
+                const webhookUser = userWebhookSchema.parse(data);
 
-                    const email = webhookUser.email_addresses.find(
-                        (e) => e.id === webhookUser.primary_email_address_id
-                    )!;
-                    const phone = webhookUser.phone_numbers.find(
-                        (p) => p?.id === webhookUser.primary_phone_number_id
-                    );
+                const email = webhookUser.email_addresses.find(
+                    (e) => e.id === webhookUser.primary_email_address_id
+                )!;
+                const phone = webhookUser.phone_numbers.find(
+                    (p) => p?.id === webhookUser.primary_phone_number_id
+                );
 
-                    posthog.capture({
-                        distinctId: webhookUser.id,
-                        event: POSTHOG_EVENTS.USER.ACCOUNT.CREATED,
-                        properties: {
-                            email: email.email_address,
-                            isEmailVerified:
-                                email.verification?.status === "verified",
-                            firstName: webhookUser.first_name,
-                            lastName: webhookUser.last_name,
-                            phone: phone?.phone_number ?? null,
-                        },
-                    });
+                posthog.capture({
+                    distinctId: webhookUser.id,
+                    event: POSTHOG_EVENTS.USER.ACCOUNT.CREATED,
+                    properties: {
+                        email: email.email_address,
+                        isEmailVerified:
+                            email.verification?.status === "verified",
+                        firstName: webhookUser.first_name,
+                        lastName: webhookUser.last_name,
+                        phone: phone?.phone_number ?? null,
+                    },
+                });
 
-                    const newUser = await db
-                        .insert(users)
-                        .values({
-                            id: webhookUser.id,
+                const newUser = await db
+                    .insert(users)
+                    .values({
+                        id: webhookUser.id,
+                        firstName: webhookUser.first_name,
+                        lastName: webhookUser.last_name,
+                        email: email.email_address,
+                        phone: phone?.phone_number ?? null,
+                        avatarUrl: webhookUser.image_url,
+                        isEmailVerified:
+                            email.verification?.status === "verified",
+                        isPhoneVerified:
+                            phone?.verification?.status === "verified",
+                        createdAt: webhookUser.created_at,
+                        updatedAt: webhookUser.updated_at,
+                    })
+                    .returning()
+                    .then((res) => res[0]);
+
+                let addCode = false;
+
+                const currentFirst100Cache = await first100Cache.get();
+                if (currentFirst100Cache < 100) {
+                    await first100Cache.set();
+                    addCode = true;
+                }
+
+                await sendMarketingEmail({
+                    email: newUser.email,
+                    firstName: newUser.firstName,
+                    name: `${newUser.firstName} ${newUser.lastName}`.trim(),
+                    subject: "Welcome Aboard the Renivet Express!",
+                    emailContent:
+                        "Welcome to Renivet. Start exploring conscious brands and thoughtful products.",
+                    campaignType: "welcome",
+                    source: "clerk_signup",
+                    respectFrequencyCap: false,
+                    react: AccountCreated({ user: newUser, addCode }),
+                    metadata: {
+                        addCode,
+                        source: "clerk_webhook",
+                    },
+                });
+                break;
+            }
+
+            case "user.updated": {
+                const webhookUser = userWebhookSchema.parse(data);
+
+                const email = webhookUser.email_addresses.find(
+                    (e) => e.id === webhookUser.primary_email_address_id
+                )!;
+                const phone = webhookUser.phone_numbers.find(
+                    (p) => p?.id === webhookUser.primary_phone_number_id
+                );
+
+                posthog.capture({
+                    distinctId: webhookUser.id,
+                    event: POSTHOG_EVENTS.USER.ACCOUNT.UPDATED,
+                    properties: {
+                        email: email.email_address,
+                        isEmailVerified:
+                            email.verification?.status === "verified",
+                        firstName: webhookUser.first_name,
+                        lastName: webhookUser.last_name,
+                        phone: phone?.phone_number ?? null,
+                    },
+                });
+
+                await Promise.all([
+                    db
+                        .update(users)
+                        .set({
                             firstName: webhookUser.first_name,
                             lastName: webhookUser.last_name,
                             email: email.email_address,
@@ -70,89 +138,28 @@ export async function POST(req: NextRequest) {
                                 email.verification?.status === "verified",
                             isPhoneVerified:
                                 phone?.verification?.status === "verified",
-                            createdAt: webhookUser.created_at,
                             updatedAt: webhookUser.updated_at,
                         })
-                        .returning()
-                        .then((res) => res[0]);
-
-                    let addCode = false;
-
-                    const currentFirst100Cache = await first100Cache.get();
-                    if (currentFirst100Cache < 100) {
-                        await first100Cache.set();
-                        addCode = true;
-                    }
-
-                    await resend.emails.send({
-                        from: env.RESEND_EMAIL_FROM,
-                        to: newUser.email,
-                        subject: "🎉 Welcome Aboard the Renivet Express! 🎉",
-                        react: AccountCreated({ user: newUser, addCode }),
-                    });
-                }
+                        .where(eq(users.id, webhookUser.id)),
+                    userCache.remove(webhookUser.id),
+                ]);
                 break;
+            }
 
-            case "user.updated":
-                {
-                    const webhookUser = userWebhookSchema.parse(data);
+            case "user.deleted": {
+                const { id } = userDeleteWebhookSchema.parse(data);
 
-                    const email = webhookUser.email_addresses.find(
-                        (e) => e.id === webhookUser.primary_email_address_id
-                    )!;
-                    const phone = webhookUser.phone_numbers.find(
-                        (p) => p?.id === webhookUser.primary_phone_number_id
-                    );
+                posthog.capture({
+                    distinctId: id,
+                    event: POSTHOG_EVENTS.USER.ACCOUNT.DELETED,
+                });
 
-                    posthog.capture({
-                        distinctId: webhookUser.id,
-                        event: POSTHOG_EVENTS.USER.ACCOUNT.UPDATED,
-                        properties: {
-                            email: email.email_address,
-                            isEmailVerified:
-                                email.verification?.status === "verified",
-                            firstName: webhookUser.first_name,
-                            lastName: webhookUser.last_name,
-                            phone: phone?.phone_number ?? null,
-                        },
-                    });
-
-                    await Promise.all([
-                        db
-                            .update(users)
-                            .set({
-                                firstName: webhookUser.first_name,
-                                lastName: webhookUser.last_name,
-                                email: email.email_address,
-                                phone: phone?.phone_number ?? null,
-                                avatarUrl: webhookUser.image_url,
-                                isEmailVerified:
-                                    email.verification?.status === "verified",
-                                isPhoneVerified:
-                                    phone?.verification?.status === "verified",
-                                updatedAt: webhookUser.updated_at,
-                            })
-                            .where(eq(users.id, webhookUser.id)),
-                        userCache.remove(webhookUser.id),
-                    ]);
-                }
+                await Promise.all([
+                    db.delete(users).where(eq(users.id, id)),
+                    userCache.remove(id),
+                ]);
                 break;
-
-            case "user.deleted":
-                {
-                    const { id } = userDeleteWebhookSchema.parse(data);
-
-                    posthog.capture({
-                        distinctId: id,
-                        event: POSTHOG_EVENTS.USER.ACCOUNT.DELETED,
-                    });
-
-                    await Promise.all([
-                        db.delete(users).where(eq(users.id, id)),
-                        userCache.remove(id),
-                    ]);
-                }
-                break;
+            }
         }
 
         return CResponse({

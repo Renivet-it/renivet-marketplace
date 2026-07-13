@@ -7,6 +7,7 @@ interface EmailTemplateProps {
   expiryDate: string;
   brandName: string;
   emailContent: string;
+  unsubscribeUrl: string;
   additionalMessage?: string;
   ctaText?: string;
 }
@@ -19,6 +20,7 @@ export const DynamicMarketingEmailTemplate: React.FC<
   expiryDate,
   brandName,
   emailContent,
+  unsubscribeUrl,
   additionalMessage,
   ctaText = "Explore Renivet",
 }) => (
@@ -103,6 +105,11 @@ export const DynamicMarketingEmailTemplate: React.FC<
       <br />
       Only on Renivet.
     </p>
+    <p style={unsubscribeStyle}>
+      <a href={unsubscribeUrl} style={unsubscribeLinkStyle}>
+        Unsubscribe from marketing emails
+      </a>
+    </p>
   </Layout>
 );
 
@@ -183,4 +190,16 @@ const footerLineStyle: React.CSSProperties = {
   textAlign: "center" as const,
   marginTop: "36px",
   lineHeight: 1.8,
+};
+
+const unsubscribeStyle: React.CSSProperties = {
+  fontSize: "12px",
+  color: "#999999",
+  textAlign: "center" as const,
+  marginTop: "14px",
+};
+
+const unsubscribeLinkStyle: React.CSSProperties = {
+  color: "#666666",
+  textDecoration: "underline",
 };

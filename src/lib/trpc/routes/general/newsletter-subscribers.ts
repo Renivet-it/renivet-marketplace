@@ -127,7 +127,10 @@ export const newsletterSubscriberRouter = createTRPCRouter({
             const newsletterSubscriber =
                 await queries.newsletterSubscribers.updateSubscriber(
                     email,
-                    isActive
+                    {
+                        isActive,
+                        unsubscribedAt: isActive ? null : new Date(),
+                    }
                 );
 
             posthog.capture({

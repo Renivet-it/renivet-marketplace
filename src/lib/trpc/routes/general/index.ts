@@ -6,6 +6,7 @@ export * from "./categories";
 export * from "./content";
 export * from "./coupons";
 export * from "./legal";
+export * from "./marketing";
 export * from "./newsletter-subscribers";
 export * from "./notifications";
 export * from "./orders";

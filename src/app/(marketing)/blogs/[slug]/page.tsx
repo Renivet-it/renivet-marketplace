@@ -33,8 +33,14 @@ export async function generateMetadata({
         };
 
     return {
-        title: `"${existingBlog.title}" by ${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
-        description: existingBlog.description,
+        title:
+            existingBlog.metaTitle?.trim() ||
+            `"${existingBlog.title}" by ${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
+        description:
+            existingBlog.metaDescription?.trim() || existingBlog.description,
+        keywords: existingBlog.targetKeyword
+            ? [existingBlog.targetKeyword]
+            : undefined,
         authors: [
             {
                 name: `${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
@@ -45,14 +51,20 @@ export async function generateMetadata({
             type: "article",
             locale: "en_US",
             url: getAbsoluteURL(`/blogs/${slug}`),
-            title: `"${existingBlog.title}" by ${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
-            description: existingBlog.description,
+            title:
+                existingBlog.metaTitle?.trim() ||
+                `"${existingBlog.title}" by ${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
+            description:
+                existingBlog.metaDescription?.trim() ||
+                existingBlog.description,
             siteName: siteConfig.name,
             images: [
                 {
                     url:
                         existingBlog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL,
-                    alt: existingBlog.title,
+                    alt:
+                        existingBlog.thumbnailAltText?.trim() ||
+                        existingBlog.title,
                     height: 1920,
                     width: 1080,
                 },
@@ -60,13 +72,19 @@ export async function generateMetadata({
         },
         twitter: {
             card: "summary_large_image",
-            title: `"${existingBlog.title}" by ${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
-            description: existingBlog.description,
+            title:
+                existingBlog.metaTitle?.trim() ||
+                `"${existingBlog.title}" by ${existingBlog.author.firstName} ${existingBlog.author.lastName}`,
+            description:
+                existingBlog.metaDescription?.trim() ||
+                existingBlog.description,
             images: [
                 {
                     url:
                         existingBlog.thumbnailUrl ?? DEFAULT_BLOG_THUMBNAIL_URL,
-                    alt: existingBlog.title,
+                    alt:
+                        existingBlog.thumbnailAltText?.trim() ||
+                        existingBlog.title,
                     height: 1920,
                     width: 1080,
                 },
