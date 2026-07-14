@@ -197,6 +197,46 @@ export function OrderPage({
         return priceDetails;
     }, [allAvailableItems, appliedCoupon]);
 
+    const checkoutTaxLines = useMemo(
+        () =>
+            allAvailableItems.map((item) => {
+                const checkoutItem = item as any;
+                return {
+                lineId: String(checkoutItem.id),
+                hsnCode: checkoutItem.product.hsCode ?? "",
+                unitPricePaise: checkoutItem.isSwapRewardItem
+                    ? 0
+                    : checkoutItem.variantId
+                    ? (checkoutItem.product.variants?.find((v: any) => v.id === checkoutItem.variantId)?.price ??
+                      checkoutItem.product.price ??
+                      0)
+                    : (checkoutItem.product.price ?? 0),
+                quantity: checkoutItem.quantity,
+            };
+            }),
+        [allAvailableItems]
+    );
+
+    const checkoutTaxQuery = trpc.general.orders.previewCheckoutTax.useQuery(
+        {
+            lines: checkoutTaxLines,
+            discountAmountPaise: priceList.discount,
+        },
+        {
+            enabled: checkoutTaxLines.length > 0,
+        }
+    );
+
+    const taxLinesById = useMemo(
+        () =>
+            new Map(
+                (checkoutTaxQuery.data?.lines ?? []).map((line) => [line.lineId, line])
+            ),
+        [checkoutTaxQuery.data]
+    );
+    const gstAmountPaise = checkoutTaxQuery.data?.totalTaxPaise ?? 0;
+    const payableTotalPaise = priceList.total + gstAmountPaise;
+
     const totalQuantity = allAvailableItems.reduce(
         (acc, item) => acc + item.quantity,
         0
@@ -336,19 +376,29 @@ export function OrderPage({
                     : (item.product.price ?? 0);
                 return acc + price * item.quantity;
             }, 0);
+            const brandDiscount = Number(
+                (
+                    priceList.discount *
+                    (brandTotal / Math.max(priceList.items, 1))
+                ).toFixed(2)
+            );
+            const brandTaxAmount = brandItems.reduce(
+                (sum, item) =>
+                    sum + (taxLinesById.get(String(item.id))?.taxPaise ?? 0),
+                0
+            );
 
             return {
                 userId: user.id,
                 coupon: appliedCoupon?.code,
                 addressId: selectedShippingAddress.id,
                 deliveryAmount: priceList.delivery,
-                taxAmount: 0,
-                totalAmount: Number(brandTotal.toFixed(2)),
-                discountAmount: Number(
-                    (
-                        priceList.discount * (brandTotal / priceList.items)
-                    ).toFixed(2)
+                taxAmount: brandTaxAmount,
+                totalAmount: Math.max(
+                    0,
+                    Number((brandTotal - brandDiscount + brandTaxAmount).toFixed(2))
                 ),
+                discountAmount: brandDiscount,
                 paymentMethod,
                 totalItems: brandItems.reduce(
                     (acc, item) => acc + item.quantity,
@@ -414,7 +464,7 @@ export function OrderPage({
 
                 console.log(
                     "Initiating payment with total amount (in paise):",
-                    priceList.total
+                    payableTotalPaise
                 );
 
                 // Prepare product details for order intent
@@ -442,7 +492,7 @@ export function OrderPage({
                     userId: user.id,
                     //@ts-ignore
                     products: productsForIntent,
-                    totalAmount: priceList.total,
+                    totalAmount: payableTotalPaise,
                 });
                 const intentId = orderIntent?.id;
 
@@ -450,7 +500,7 @@ export function OrderPage({
 
                 // Create a single Razorpay order for the total amount
                 const razorpayOrderId = await getShiprocketBalance(
-                    priceList.total
+                    payableTotalPaise
                 );
                 if (!razorpayOrderId)
                     throw new Error("Failed to create Razorpay order");
@@ -472,7 +522,10 @@ export function OrderPage({
                 const options = createRazorpayPaymentOptions({
                     orderId: razorpayOrderId,
                     deliveryAddress: selectedShippingAddress,
-                    prices: priceList,
+                    prices: {
+                        ...priceList,
+                        total: payableTotalPaise,
+                    },
                     user,
                     setIsProcessing,
                     setIsProcessingModalOpen,
@@ -609,7 +662,7 @@ export function OrderPage({
         posthog?.capture(POSTHOG_EVENTS.COMMERCE.CHECKOUT_STARTED, {
             product_ids: allAvailableItems.map((item) => item.product.id),
             brand_ids: allAvailableItems.map((item) => item.product.brandId),
-            total_amount: Number(convertPaiseToRupees(priceList.total)),
+            total_amount: Number(convertPaiseToRupees(payableTotalPaise)),
             currency: "INR",
             total_items: totalQuantity,
             payment_method: selectedPaymentMethod,
@@ -620,7 +673,7 @@ export function OrderPage({
             "InitiateCheckout",
             {
                 content_ids: allAvailableItems.map((item) => item.product.id),
-                value: convertPaiseToRupees(priceList.total), // Convert paise to rupees
+                value: convertPaiseToRupees(payableTotalPaise),
                 currency: "INR",
                 contents: allAvailableItems.map((item) => ({
                     id: item.product.id,
@@ -664,7 +717,7 @@ export function OrderPage({
             {
                 content_ids: allAvailableItems.map((item) => item.product.id),
                 content_type: "product",
-                value: parseFloat(convertPaiseToRupees(priceList.total)),
+                value: parseFloat(convertPaiseToRupees(payableTotalPaise)),
                 currency: "INR",
                 num_items: totalQuantity,
             },
@@ -737,6 +790,16 @@ export function OrderPage({
                                     FREE
                                 </span>
                             </li>
+                            {gstAmountPaise > 0 ? (
+                                <li className="flex justify-between text-sm">
+                                    <span className="text-gray-600">GST</span>
+                                    <span className="font-medium text-gray-900">
+                                        {formatPriceTag(
+                                            +convertPaiseToRupees(gstAmountPaise)
+                                        )}
+                                    </span>
+                                </li>
+                            ) : null}
                         </ul>
                         <Separator className="my-2" />
                         <div className="flex items-center justify-between pt-1">
@@ -745,7 +808,7 @@ export function OrderPage({
                             </span>
                             <span className="text-lg font-bold text-gray-900">
                                 {formatPriceTag(
-                                    +convertPaiseToRupees(priceList.total)
+                                    +convertPaiseToRupees(payableTotalPaise)
                                 )}
                             </span>
                         </div>

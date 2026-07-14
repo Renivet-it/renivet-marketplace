@@ -37,6 +37,7 @@ import {
     generateReceiptId,
     getRawNumberFromPhone,
 } from "@/lib/utils";
+import { computeCheckoutTaxLines } from "@/lib/finance/calculations";
 import {
     categorySchema,
     createOrderItemSchema,
@@ -210,6 +211,38 @@ export const ordersRouter = createTRPCRouter({
                 });
 
             return data;
+        }),
+    previewCheckoutTax: protectedProcedure
+        .input(
+            z.object({
+                lines: z.array(
+                    z.object({
+                        lineId: z.string(),
+                        hsnCode: z.string().optional().nullable(),
+                        unitPricePaise: z.number().int().nonnegative(),
+                        quantity: z.number().int().positive(),
+                    })
+                ),
+                discountAmountPaise: z.number().int().nonnegative().default(0),
+            })
+        )
+        .query(async ({ ctx, input }) => {
+            const hsnRows = await ctx.queries.financeCompliance.listHsnMaster();
+            const hsnRateByCode = new Map(
+                hsnRows.map((row) => [row.hsnCode.trim(), row.gstRateBps])
+            );
+            const lines = computeCheckoutTaxLines(input.lines, {
+                totalDiscountPaise: input.discountAmountPaise,
+                hsnRateByCode,
+            });
+
+            return {
+                totalTaxPaise: lines.reduce(
+                    (sum: number, line: (typeof lines)[number]) => sum + line.taxPaise,
+                    0
+                ),
+                lines,
+            };
         }),
     createOrder: protectedProcedure
         .input(
@@ -439,11 +472,50 @@ export const ordersRouter = createTRPCRouter({
                     { itemsCount: input.items.length }
                 );
 
+                const hsnRows = await ctx.queries.financeCompliance.listHsnMaster();
+                const hsnRateByCode = new Map(
+                    hsnRows.map((row) => [row.hsnCode.trim(), row.gstRateBps])
+                );
+                const productDetailsByIndex = await Promise.all(
+                    input.items.map(async (item) => {
+                        const product = await queries.products.getProduct({
+                            productId: item.productId,
+                            isActive: true,
+                            isDeleted: false,
+                            isAvailable: true,
+                            isPublished: true,
+                            verificationStatus: "approved",
+                        });
+
+                        const variant =
+                            item.variantId && product
+                                ? product.variants.find((v) => v.id === item.variantId)
+                                : null;
+
+                        return { product, variant };
+                    })
+                );
+                const taxLines = computeCheckoutTaxLines(
+                    input.items.map((item, index) => ({
+                        lineId: String(index),
+                        hsnCode: productDetailsByIndex[index]?.product?.hsCode ?? "",
+                        unitPricePaise: Number(item.price ?? 0),
+                        quantity: item.quantity,
+                    })),
+                    {
+                        totalDiscountPaise: input.discountAmount,
+                        hsnRateByCode,
+                    }
+                );
+                const taxLinesById = new Map<string, (typeof taxLines)[number]>(
+                    taxLines.map((line: (typeof taxLines)[number]) => [line.lineId, line])
+                );
+
                 // NEW: Array to store all created orders
                 const createdOrders = [];
 
                 // NEW: Process each item individually to create a separate order
-                for (const item of input.items) {
+                for (const [index, item] of input.items.entries()) {
                     console.log(
                         "------------------------------------------------"
                     );
@@ -480,6 +552,21 @@ export const ordersRouter = createTRPCRouter({
                     const rewardCheckout = itemRewardRedemptionId
                         ? rewardCheckoutMap.get(itemRewardRedemptionId)
                         : null;
+                    const taxLine = taxLinesById.get(String(index));
+                    const lineDiscountAmount = isRewardOrder
+                        ? orderLineTotal
+                        : taxLine?.discountPaise ?? 0;
+                    const lineTaxAmount = isRewardOrder ? 0 : taxLine?.taxPaise ?? 0;
+                    const lineTotalAmount = isRewardOrder
+                        ? 0
+                        : Math.max(
+                              0,
+                              (taxLine?.taxableValuePaise ?? orderLineTotal) + lineTaxAmount
+                          );
+                    const { product, variant } = productDetailsByIndex[index] ?? {
+                        product: null,
+                        variant: null,
+                    };
 
                     // NEW: Create order for this single item
                     const newOrder = await queries.orders.createOrder({
@@ -487,8 +574,9 @@ export const ordersRouter = createTRPCRouter({
                         id: orderId,
                         receiptId,
                         userId: user.id,
-                        totalAmount: isRewardOrder ? 0 : orderLineTotal,
-                        discountAmount: isRewardOrder ? orderLineTotal : input.discountAmount,
+                        taxAmount: lineTaxAmount,
+                        totalAmount: lineTotalAmount,
+                        discountAmount: lineDiscountAmount,
                         isSwapRewardOrder: isRewardOrder,
                         swapRewardCycle: isRewardOrder
                             ? rewardCheckout?.state.activeRewardCycle
@@ -560,22 +648,6 @@ export const ordersRouter = createTRPCRouter({
                     //   console.log(
                     //       `Processing Shiprocket order for brand: ${brand.name} (ID: ${item.brandId})`
                     //   );
-                    const product = await queries.products.getProduct({
-                        productId: item.productId,
-                        isActive: true,
-                        isDeleted: false,
-                        isAvailable: true,
-                        isPublished: true,
-                        verificationStatus: "approved",
-                    });
-
-                    const variant =
-                        item.variantId && product
-                            ? product.variants.find(
-                                  (v) => v.id === item.variantId
-                              )
-                            : null;
-
                     const productDetails = { product, variant, item };
                     console.log(
                         `Product details for brand ${brand.name}:`,

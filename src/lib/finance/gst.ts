@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { corporateOrders } from "@/lib/db/schema";
-import { splitGstByState } from "@/lib/finance/calculations";
+import { deriveGstRateBps, splitGstByState } from "@/lib/finance/calculations";
 import { toCsv } from "@/lib/finance/reporting";
 import { auditAndAlert } from "@/lib/monitoring-sla/audit";
 import { and, desc, eq, gte, lte } from "drizzle-orm";
@@ -148,17 +148,6 @@ function formatMoney(paise: number) {
 
 function formatRate(bps: number) {
     return (bps / 100).toFixed(2);
-}
-
-function deriveGstRateBps(input: {
-    hsnCode: string;
-    fallbackRateBps: number;
-    unitPricePaise: number;
-}) {
-    if (/^(61|62)/.test(input.hsnCode)) {
-        return input.unitPricePaise <= 100_000 ? 500 : 1200;
-    }
-    return input.fallbackRateBps;
 }
 
 function readCorporateState(snapshot: Record<string, unknown> | null, fallbackCity?: string | null) {

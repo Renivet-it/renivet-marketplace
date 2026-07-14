@@ -21,6 +21,7 @@ export const financeModules = [
     "refunds",
     "cod_reconciliation",
     "payouts",
+    "hsn_master",
     "gst_reports",
     "tds_reports",
     "monthly_pl",
