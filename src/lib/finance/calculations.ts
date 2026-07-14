@@ -5,6 +5,24 @@ export type TdsComputation = {
     note: string;
 };
 
+export type CheckoutTaxLineInput = {
+    lineId: string;
+    hsnCode?: string | null;
+    unitPricePaise: number;
+    quantity: number;
+    fallbackRateBps?: number;
+};
+
+export type CheckoutTaxLineResult = {
+    lineId: string;
+    hsnCode: string;
+    subtotalPaise: number;
+    discountPaise: number;
+    taxableValuePaise: number;
+    gstRateBps: number;
+    taxPaise: number;
+};
+
 export function getFinancialYearForDate(value: Date) {
     const year = value.getMonth() >= 3 ? value.getFullYear() : value.getFullYear() - 1;
     const shortNextYear = String((year + 1) % 100).padStart(2, "0");
@@ -82,6 +100,71 @@ export function splitGstByState(params: {
         igstPaise: totalTaxPaise,
         totalTaxPaise,
     };
+}
+
+export function deriveGstRateBps(params: {
+    hsnCode?: string | null;
+    fallbackRateBps?: number;
+    unitPricePaise: number;
+}) {
+    const normalizedHsn = params.hsnCode?.trim() ?? "";
+    if (/^(61|62)/.test(normalizedHsn)) {
+        return params.unitPricePaise <= 100_000 ? 500 : 1200;
+    }
+
+    return params.fallbackRateBps ?? 0;
+}
+
+export function computeCheckoutTaxLines(
+    lines: CheckoutTaxLineInput[],
+    opts: {
+        totalDiscountPaise?: number;
+        hsnRateByCode?: Map<string, number>;
+    } = {}
+): CheckoutTaxLineResult[] {
+    const totalDiscountPaise = Math.max(0, opts.totalDiscountPaise ?? 0);
+    const subtotals = lines.map((line) =>
+        Math.max(0, Math.round(line.unitPricePaise * line.quantity))
+    );
+    const subtotalSum = subtotals.reduce((sum, value) => sum + value, 0);
+
+    let assignedDiscountPaise = 0;
+
+    return lines.map((line, index) => {
+        const subtotalPaise = subtotals[index] ?? 0;
+        const normalizedHsn = line.hsnCode?.trim() ?? "";
+        const discountPaise =
+            subtotalSum > 0
+                ? index === lines.length - 1
+                    ? Math.max(0, totalDiscountPaise - assignedDiscountPaise)
+                    : Math.max(
+                          0,
+                          Math.round((totalDiscountPaise * subtotalPaise) / subtotalSum)
+                      )
+                : 0;
+
+        assignedDiscountPaise += discountPaise;
+
+        const taxableValuePaise = Math.max(0, subtotalPaise - discountPaise);
+        const gstRateBps = deriveGstRateBps({
+            hsnCode: normalizedHsn,
+            fallbackRateBps: normalizedHsn
+                ? opts.hsnRateByCode?.get(normalizedHsn) ?? line.fallbackRateBps ?? 0
+                : line.fallbackRateBps ?? 0,
+            unitPricePaise: line.unitPricePaise,
+        });
+        const taxPaise = Math.round(taxableValuePaise * (gstRateBps / 10_000));
+
+        return {
+            lineId: line.lineId,
+            hsnCode: normalizedHsn,
+            subtotalPaise,
+            discountPaise,
+            taxableValuePaise,
+            gstRateBps,
+            taxPaise,
+        };
+    });
 }
 
 export function categorizeCodDiscrepancy(params: {

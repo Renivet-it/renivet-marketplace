@@ -291,29 +291,30 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         }
 
         const items = availableItems.map((item) => {
-            const itemPrice = item.isSwapRewardItem
+            const checkoutItem = item as any;
+            const itemPrice = checkoutItem.isSwapRewardItem
                 ? 0
-                : item.variantId
-                ? (item.product.variants?.find((v) => v.id === item.variantId)
+                : checkoutItem.variantId
+                ? (checkoutItem.product.variants?.find((v: any) => v.id === checkoutItem.variantId)
                       ?.price ??
-                  item.product.price ??
+                  checkoutItem.product.price ??
                   0)
-                : (item.product.price ?? 0);
+                : (checkoutItem.product.price ?? 0);
 
-            const compareAtPrice = item.variantId
-                ? (item.product.variants?.find((v) => v.id === item.variantId)
+            const compareAtPrice = checkoutItem.variantId
+                ? (checkoutItem.product.variants?.find((v: any) => v.id === checkoutItem.variantId)
                       ?.compareAtPrice ??
-                  item.product.compareAtPrice ??
+                  checkoutItem.product.compareAtPrice ??
                   itemPrice)
-                : (item.product.compareAtPrice ?? itemPrice);
+                : (checkoutItem.product.compareAtPrice ?? itemPrice);
 
             return {
                 price: itemPrice,
                 compareAtPrice: compareAtPrice,
-                quantity: item.quantity,
-                categoryId: item.product.categoryId,
-                subCategoryId: item.product.subcategoryId,
-                productTypeId: item.product.productTypeId,
+                quantity: checkoutItem.quantity,
+                categoryId: checkoutItem.product.categoryId,
+                subCategoryId: checkoutItem.product.subcategoryId,
+                productTypeId: checkoutItem.product.productTypeId,
             };
         });
 
@@ -333,22 +334,63 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         );
     }, [availableItems, appliedCoupon, isSwapReward, rewardCheckoutQuery.data]);
 
+    const checkoutTaxLines = useMemo(
+        () =>
+            availableItems.map((item) => {
+                const checkoutItem = item as any;
+                return {
+                lineId: String(checkoutItem.id),
+                hsnCode: checkoutItem.product.hsCode ?? "",
+                unitPricePaise: checkoutItem.isSwapRewardItem
+                    ? 0
+                    : checkoutItem.variantId
+                    ? (checkoutItem.product.variants?.find((v: any) => v.id === checkoutItem.variantId)?.price ??
+                      checkoutItem.product.price ??
+                      0)
+                    : (checkoutItem.product.price ?? 0),
+                quantity: checkoutItem.quantity,
+            };
+            }),
+        [availableItems]
+    );
+
+    const checkoutTaxQuery = trpc.general.orders.previewCheckoutTax.useQuery(
+        {
+            lines: checkoutTaxLines,
+            discountAmountPaise: priceList.discount,
+        },
+        {
+            enabled: !isSwapReward && checkoutTaxLines.length > 0,
+        }
+    );
+
+    const taxLinesById = useMemo(
+        () =>
+            new Map(
+                (checkoutTaxQuery.data?.lines ?? []).map((line) => [line.lineId, line])
+            ),
+        [checkoutTaxQuery.data]
+    );
+    const gstAmountPaise = isSwapReward ? 0 : checkoutTaxQuery.data?.totalTaxPaise ?? 0;
+    const payableTotalPaise = isSwapReward ? priceList.total : priceList.total + gstAmountPaise;
+
     const cartValue = useMemo(
         () =>
             isSwapReward
                 ? rewardCheckoutQuery.data?.selection.rewardValue ?? 0
                 :
             availableItems.reduce((acc, item) => {
-                const itemPrice = item.isSwapRewardItem
+                const checkoutItem = item as any;
+                const itemPrice = checkoutItem.isSwapRewardItem
                     ? 0
-                    : item.variantId
-                    ? (item.product.variants?.find(
-                          (v) => v.id === item.variantId
+                    : checkoutItem.variantId
+                    ? (checkoutItem.product.variants?.find(
+                          (v: any) => v.id === checkoutItem.variantId
                       )?.price ??
-                      item.product.price ??
+                      checkoutItem.product.price ??
                       0)
-                    : (item.product.price ?? 0);
-                return acc + itemPrice * item.quantity;
+                    : (checkoutItem.product.price ?? 0);
+                return acc + itemPrice * checkoutItem.quantity;
             }, 0),
         [availableItems, isSwapReward, rewardCheckoutQuery.data]
     );
@@ -479,6 +521,22 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     },
                     0
                 );
+                const brandDiscount = Number(
+                    paymentMethod === "reward"
+                        ? brandTotal
+                        : (
+                              priceList.discount *
+                              (brandTotal / Math.max(priceList.items, 1))
+                          ).toFixed(2)
+                );
+                const brandTaxAmount =
+                    paymentMethod === "reward"
+                        ? 0
+                        : brandItems.reduce(
+                              (sum: number, item: any) =>
+                                  sum + (taxLinesById.get(String(item.id))?.taxPaise ?? 0),
+                              0
+                          );
 
                 return {
                     userId: user.id,
@@ -488,19 +546,15 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                             : appliedCoupon?.code,
                     addressId: selectedShippingAddress.id,
                     deliveryAmount: priceList.delivery,
-                    taxAmount: 0,
+                    taxAmount: brandTaxAmount,
                     totalAmount:
                         paymentMethod === "reward"
                             ? 0
-                            : Number(brandTotal.toFixed(2)),
-                    discountAmount: Number(
-                        paymentMethod === "reward"
-                            ? brandTotal
-                            : (
-                                  priceList.discount *
-                                  (brandTotal / priceList.items)
-                              ).toFixed(2)
-                    ),
+                            : Math.max(
+                                  0,
+                                  Number((brandTotal - brandDiscount + brandTaxAmount).toFixed(2))
+                              ),
+                    discountAmount: brandDiscount,
                     paymentMethod,
                     totalItems: brandItems.reduce(
                         (acc: number, item: any) => acc + item.quantity,
@@ -648,12 +702,12 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     userId: user.id,
                     // @ts-ignore
                     products: productsForIntent,
-                    totalAmount: priceList.total,
+                    totalAmount: payableTotalPaise,
                 });
                 const intentId = orderIntent?.id;
 
                 const razorpayOrderId = await getShiprocketBalance(
-                    priceList.total
+                    payableTotalPaise
                 );
                 if (!razorpayOrderId)
                     throw new Error("Failed to create Razorpay order");
@@ -668,7 +722,10 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 const options = createRazorpayPaymentOptions({
                     orderId: razorpayOrderId,
                     deliveryAddress: selectedShippingAddress,
-                    prices: priceList,
+                    prices: {
+                        ...priceList,
+                        total: payableTotalPaise,
+                    },
                     user,
                     setIsProcessing,
                     setIsProcessingModalOpen,
@@ -849,7 +906,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         posthog?.capture(POSTHOG_EVENTS.COMMERCE.CHECKOUT_STARTED, {
             product_ids: availableItems.map((item) => item.product.id),
             brand_ids: availableItems.map((item) => item.product.brandId),
-            total_amount: Number(convertPaiseToRupees(priceList.total)),
+            total_amount: Number(convertPaiseToRupees(payableTotalPaise)),
             currency: "INR",
             total_items: itemsCount,
             payment_method: selectedPaymentMethod,
@@ -870,7 +927,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             "InitiateCheckout",
             {
                 content_ids: availableItems.map((item) => item.product.id),
-                value: convertPaiseToRupees(priceList.total),
+                value: convertPaiseToRupees(payableTotalPaise),
                 currency: "INR",
                 contents: availableItems.map((item) => ({
                     id: item.product.id,
@@ -906,7 +963,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             {
                 content_ids: availableItems.map((item) => item.product.id),
                 content_type: "product",
-                value: parseFloat(convertPaiseToRupees(priceList.total)),
+                value: parseFloat(convertPaiseToRupees(payableTotalPaise)),
                 currency: "INR",
                 num_items: itemsCount,
             },
@@ -1318,6 +1375,12 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         <span>Platform Fee</span>
                         <span>{formatPriceTag(0)}</span>
                     </div>
+                    {!isSwapReward && gstAmountPaise > 0 ? (
+                        <div className="flex justify-between text-sm font-medium text-gray-600">
+                            <span>GST</span>
+                            <span>{formatPriceTag(+convertPaiseToRupees(gstAmountPaise))}</span>
+                        </div>
+                    ) : null}
 
                     <Separator className="my-3" />
 
@@ -1325,7 +1388,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         <span>Total Amount</span>
                         <span>
                             {formatPriceTag(
-                                +convertPaiseToRupees(priceList.total)
+                                +convertPaiseToRupees(payableTotalPaise)
                             )}
                         </span>
                     </div>
@@ -1400,8 +1463,8 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                             : isRewardOnlyCheckout
                               ? "Redeem Reward for Free"
                             : selectedPaymentMethod === "cod"
-                              ? `Place COD Order ${formatPriceTag(+convertPaiseToRupees(priceList.total))}`
-                              : `Confirm & Pay ${formatPriceTag(+convertPaiseToRupees(priceList.total))}`}
+                              ? `Place COD Order ${formatPriceTag(+convertPaiseToRupees(payableTotalPaise))}`
+                              : `Confirm & Pay ${formatPriceTag(+convertPaiseToRupees(payableTotalPaise))}`}
                     </Button>
                 </div>
             </div>

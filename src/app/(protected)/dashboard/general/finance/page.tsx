@@ -18,6 +18,11 @@ const sections = [
         description: "Cycle calculation, brand review cards, overrides, and execution tracking.",
     },
     {
+        title: "HSN Master",
+        href: "/dashboard/general/finance/hsn-master",
+        description: "Dedicated HSN master maintenance for GST rates, coverage checks, and bulk imports.",
+    },
+    {
         title: "GST Report",
         href: "/dashboard/general/finance/gst-report",
         description: "HSN master, GST/TCS preview, run history, and export readiness.",

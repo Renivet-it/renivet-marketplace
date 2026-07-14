@@ -12,6 +12,7 @@ const moduleLabels: Record<ModuleKey, string> = {
     refunds: "Refunds",
     cod_reconciliation: "COD Reconciliation",
     payouts: "Payouts",
+    hsn_master: "HSN Master",
     gst_reports: "GST Reports",
     tds_reports: "TDS Reports",
     monthly_pl: "Monthly P&L",

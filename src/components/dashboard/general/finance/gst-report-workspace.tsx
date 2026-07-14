@@ -1,22 +1,12 @@
 "use client";
 
+import { HsnMasterWorkspace, type HsnMasterRow } from "@/components/dashboard/general/finance/hsn-master-workspace";
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
-import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
-import { formatINR, handleClientError } from "@/lib/utils";
-import type React from "react";
+import { formatINR } from "@/lib/utils";
+import Link from "next/link";
 import { useDeferredValue, useMemo, useState } from "react";
-import { toast } from "sonner";
-
-type HsnRow = {
-    id: string;
-    hsnCode: string;
-    description: string;
-    gstRateBps: number;
-    categoryLabel?: string | null;
-    isActive: boolean;
-};
 
 type ReportRun = {
     id: string;
@@ -51,23 +41,46 @@ type GstPreview = {
     isReady: boolean;
 };
 
-function parseHsnCsv(text: string) {
-    const [headerLine, ...body] = text.trim().split(/\r?\n/);
-    const headers = headerLine.split(",").map((value) => value.trim().toLowerCase());
-    return body
-        .map((line) => line.split(",").map((value) => value.trim()))
-        .filter((cells) => cells.some(Boolean))
-        .map((cells) => {
-            const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]));
-            const ratePercent = Number(row.gst_rate ?? row.gst_rate_percent ?? row.gst_percent ?? "0");
+function extractHsnCode(message: string) {
+    const match = message.match(/HSN\s+([A-Za-z0-9]+)/i);
+    return match?.[1] ?? "";
+}
+
+function resolveIssueAction(issue: ValidationIssue) {
+    if (issue.entityType === "product") {
+        if (issue.code === "missing_hsn") {
             return {
-                hsnCode: row.hsn_code ?? row.hsn ?? "",
-                description: row.description ?? "",
-                gstRateBps: Math.round(ratePercent * 100),
-                categoryLabel: row.category_hint ?? row.category_label ?? "",
-                isActive: (row.is_active ?? "true").toLowerCase() !== "false",
+                href: `/dashboard/general/products/preview-form/${issue.entityId}?tab=edit&focus=hsCode`,
+                label: "Edit product",
+                helper: "Open the editable product screen and fill the HSN code.",
             };
-        });
+        }
+
+        if (issue.code === "missing_hsn_master") {
+            const hsnCode = extractHsnCode(issue.message);
+
+            return {
+                href: `/dashboard/general/finance/hsn-master${hsnCode ? `?hsn=${encodeURIComponent(hsnCode)}` : ""}`,
+                label: "Open HSN Master",
+                helper: hsnCode
+                    ? `Create or update HSN ${hsnCode} in HSN Master.`
+                    : "Open HSN Master and add the missing HSN row.",
+            };
+        }
+    }
+
+    if (issue.entityType === "corporate_order") {
+        return {
+            href: `/dashboard/general/corporate-orders/${issue.entityId}`,
+            label: "Open corporate order",
+            helper:
+                issue.code === "missing_customer_gstin"
+                    ? "Open the corporate order and add the customer GSTIN."
+                    : "Open the corporate order and complete the HSN mapping.",
+        };
+    }
+
+    return null;
 }
 
 export function GstReportWorkspace({
@@ -77,115 +90,42 @@ export function GstReportWorkspace({
     initialPreview,
 }: {
     initialMonthKey: string;
-    initialHsnRows: HsnRow[];
+    initialHsnRows: HsnMasterRow[];
     initialReportRuns: ReportRun[];
     initialPreview: GstPreview;
 }) {
     const utils = trpc.useUtils();
     const [monthKey, setMonthKey] = useState(initialMonthKey);
-    const [importText, setImportText] = useState("");
-    const [manualRow, setManualRow] = useState({
-        hsnCode: "",
-        description: "",
-        gstRatePercent: "",
-        categoryLabel: "",
-    });
     const deferredMonthKey = useDeferredValue(monthKey);
 
-    const hsnQuery = trpc.general.financeCompliance.listHsnMaster.useQuery(undefined, {
-        initialData: initialHsnRows,
-    });
-    const runsQuery = trpc.general.financeCompliance.listGstReportRuns.useQuery(undefined, {
-        initialData: initialReportRuns,
-    });
+    const runsQuery = trpc.general.financeCompliance.listGstReportRuns.useQuery();
     const previewQuery = trpc.general.financeCompliance.previewGstExport.useQuery(
         { monthKey: deferredMonthKey },
-        {
-            initialData: initialPreview,
-        }
+        undefined
     );
 
     const refresh = async () => {
-        await utils.general.financeCompliance.listHsnMaster.invalidate();
         await utils.general.financeCompliance.listGstReportRuns.invalidate();
-        await utils.general.financeCompliance.previewGstExport.invalidate({
-            monthKey,
-        });
+        await utils.general.financeCompliance.previewGstExport.invalidate();
     };
 
-    const upsertHsn = trpc.general.financeCompliance.upsertHsnMaster.useMutation({
-        onSuccess: async () => {
-            toast.success("HSN row saved");
-            setManualRow({
-                hsnCode: "",
-                description: "",
-                gstRatePercent: "",
-                categoryLabel: "",
-            });
-            await refresh();
-        },
-        onError: (error) => {
-            handleClientError(error);
-        },
-    });
-
     const preview = previewQuery.data ?? initialPreview;
-    const hsnRows = hsnQuery.data ?? initialHsnRows;
     const reportRuns = runsQuery.data ?? initialReportRuns;
 
     const summary = useMemo(
         () => ({
-            activeHsn: hsnRows.filter((row) => row.isActive).length,
             errors: preview.validationIssues.filter((issue) => issue.severity === "error").length,
             warnings: preview.validationIssues.filter((issue) => issue.severity === "warning").length,
         }),
-        [hsnRows, preview.validationIssues]
+        [preview.validationIssues]
     );
 
     const exportUrl = `/api/finance/gst-report/export?month=${monthKey}`;
     const issueSummaryUrl = `/api/finance/gst-report/issues?month=${monthKey}`;
 
-    const submitManualRow = () => {
-        if (!manualRow.hsnCode || !manualRow.description || !manualRow.gstRatePercent) {
-            toast.error("HSN code, description, and GST rate are required");
-            return;
-        }
-
-        upsertHsn.mutate({
-            hsnCode: manualRow.hsnCode,
-            description: manualRow.description,
-            gstRateBps: Math.round(Number(manualRow.gstRatePercent) * 100),
-            categoryLabel: manualRow.categoryLabel || undefined,
-            isActive: true,
-        });
-    };
-
-    const importRows = async () => {
-        const rows = parseHsnCsv(importText);
-        if (!rows.length) {
-            toast.error("Paste a valid CSV first");
-            return;
-        }
-
-        for (const row of rows) {
-            if (!row.hsnCode || !row.description) continue;
-            await upsertHsn.mutateAsync({
-                hsnCode: row.hsnCode,
-                description: row.description,
-                gstRateBps: row.gstRateBps,
-                categoryLabel: row.categoryLabel || undefined,
-                isActive: row.isActive,
-            });
-        }
-
-        toast.success("HSN import completed");
-        setImportText("");
-    };
-
     return (
         <div className="space-y-4">
-            <section className="grid gap-4 md:grid-cols-3">
-                <StatCard label="Active HSN Rows" value={String(summary.activeHsn)} />
+            <section className="grid gap-4 md:grid-cols-2">
                 <StatCard label="Pre-flight Errors" value={String(summary.errors)} />
                 <StatCard label="Pre-flight Warnings" value={String(summary.warnings)} />
             </section>
@@ -258,22 +198,34 @@ export function GstReportWorkspace({
                         {preview.validationIssues.length === 0 ? (
                             <p className="text-sm text-emerald-700">No validation issues. Export is ready.</p>
                         ) : (
-                            preview.validationIssues.map((issue, index) => (
-                                <div
-                                    key={`${issue.entityType}-${issue.entityId}-${index}`}
-                                    className={`rounded-md border p-3 text-sm ${
-                                        issue.severity === "error"
-                                            ? "border-rose-200 bg-rose-50"
-                                            : "border-amber-200 bg-amber-50"
-                                    }`}
-                                >
-                                    <p className="font-medium text-slate-900">{issue.code}</p>
-                                    <p className="mt-1 text-slate-700">{issue.message}</p>
-                                    <p className="mt-1 text-xs uppercase text-slate-500">
-                                        {issue.entityType} • {issue.entityId}
-                                    </p>
-                                </div>
-                            ))
+                            preview.validationIssues.map((issue, index) => {
+                                const action = resolveIssueAction(issue);
+
+                                return (
+                                    <div
+                                        key={`${issue.entityType}-${issue.entityId}-${index}`}
+                                        className={`rounded-md border p-3 text-sm ${
+                                            issue.severity === "error"
+                                                ? "border-rose-200 bg-rose-50"
+                                                : "border-amber-200 bg-amber-50"
+                                        }`}
+                                    >
+                                        <p className="font-medium text-slate-900">{issue.code}</p>
+                                        <p className="mt-1 text-slate-700">{issue.message}</p>
+                                        <p className="mt-1 text-xs uppercase text-slate-500">
+                                            {issue.entityType} • {issue.entityId}
+                                        </p>
+                                        {action ? (
+                                            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                                <p className="text-xs text-slate-600">{action.helper}</p>
+                                                <Button asChild size="sm" variant="outline">
+                                                    <Link href={action.href}>{action.label}</Link>
+                                                </Button>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                );
+                            })
                         )}
                     </div>
                 </section>
@@ -298,98 +250,7 @@ export function GstReportWorkspace({
                 </section>
             </section>
 
-            <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-                <section className="rounded-md border bg-white p-5 shadow-sm">
-                    <h3 className="text-lg font-semibold text-slate-900">HSN editor</h3>
-                    <div className="mt-4 space-y-3">
-                        <Input
-                            placeholder="HSN code"
-                            value={manualRow.hsnCode}
-                            onChange={(event) =>
-                                setManualRow((current) => ({
-                                    ...current,
-                                    hsnCode: event.target.value,
-                                }))
-                            }
-                        />
-                        <Input
-                            placeholder="Description"
-                            value={manualRow.description}
-                            onChange={(event) =>
-                                setManualRow((current) => ({
-                                    ...current,
-                                    description: event.target.value,
-                                }))
-                            }
-                        />
-                        <Input
-                            placeholder="GST rate percent, eg 5 or 18"
-                            value={manualRow.gstRatePercent}
-                            onChange={(event) =>
-                                setManualRow((current) => ({
-                                    ...current,
-                                    gstRatePercent: event.target.value,
-                                }))
-                            }
-                        />
-                        <Input
-                            placeholder="Category hint"
-                            value={manualRow.categoryLabel}
-                            onChange={(event) =>
-                                setManualRow((current) => ({
-                                    ...current,
-                                    categoryLabel: event.target.value,
-                                }))
-                            }
-                        />
-                        <Button onClick={submitManualRow} disabled={upsertHsn.isPending}>
-                            {upsertHsn.isPending ? "Saving..." : "Save HSN Row"}
-                        </Button>
-                    </div>
-
-                    <div className="mt-6">
-                        <p className="text-sm font-semibold text-slate-900">One-time CSV import</p>
-                        <p className="mt-1 text-sm text-slate-600">
-                            Paste CSV with `hsn_code,description,gst_rate,category_hint,is_active`.
-                        </p>
-                        <Textarea
-                            className="mt-3 min-h-40"
-                            placeholder="hsn_code,description,gst_rate,category_hint,is_active"
-                            value={importText}
-                            onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) =>
-                                setImportText(event.target.value)
-                            }
-                        />
-                        <div className="mt-3 flex gap-2">
-                            <Button variant="outline" onClick={() => void importRows()}>
-                                Import CSV Rows
-                            </Button>
-                        </div>
-                    </div>
-                </section>
-
-                <section className="rounded-md border bg-white p-5 shadow-sm">
-                    <h3 className="text-lg font-semibold text-slate-900">HSN coverage</h3>
-                    <div className="mt-4 divide-y">
-                        {hsnRows.slice(0, 25).map((row) => (
-                            <div key={row.id} className="flex items-start justify-between gap-4 py-3 text-sm">
-                                <div>
-                                    <p className="font-medium text-slate-900">{row.hsnCode}</p>
-                                    <p className="text-slate-600">{row.description}</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="font-medium text-slate-900">
-                                        {(row.gstRateBps / 100).toFixed(2)}%
-                                    </p>
-                                    <p className="text-slate-500">
-                                        {row.categoryLabel ?? (row.isActive ? "Active" : "Inactive")}
-                                    </p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-            </section>
+            <HsnMasterWorkspace initialHsnRows={initialHsnRows} />
         </div>
     );
 }
