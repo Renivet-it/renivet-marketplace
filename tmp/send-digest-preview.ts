@@ -19,6 +19,7 @@ async function main() {
 
     const result = await sendDigestCampaign(campaign.id);
     console.log(JSON.stringify(result, null, 2));
+    process.exit(0);
 }
 
 main().catch((error) => {
