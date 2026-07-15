@@ -1,8 +1,7 @@
 import { DashShell } from "@/components/globals/layouts";
-import { DigestCampaignManager } from "@/components/dashboard/general/marketing";
+import { EmailCampaignWorkspace } from "@/components/dashboard/general/marketing";
 import { Metadata } from "next";
 import { Suspense } from "react";
-import { MarketingEmailForm } from "@/components/globals/email-template/bulk-email-send";
 
 export const metadata: Metadata = {
   title: "Bulk Email Campaigns",
@@ -22,9 +21,8 @@ export default function BulkEmailPage() {
           </p>
         </div>
         <Suspense fallback={<div className="text-center text-gray-500">Loading...</div>}>
-          <MarketingEmailForm />
+          <EmailCampaignWorkspace />
         </Suspense>
-        <DigestCampaignManager />
       </div>
     </DashShell>
   );

@@ -8,6 +8,7 @@ import {
     newsletterSubscribers,
 } from "@/lib/db/schema";
 import { posthog } from "@/lib/posthog/client";
+import { mediaCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import { BlogDigestEmail, NewArrivalsDigestEmail } from "@/lib/resend/emails";
 import { getAbsoluteURL } from "@/lib/utils";
@@ -206,6 +207,7 @@ export async function sendMarketingEmail(input: {
     source?: string;
     segments?: string[];
     respectFrequencyCap?: boolean;
+    bypassSubscriberGuards?: boolean;
     react?: React.ReactElement;
 }) {
     const subscriber = await ensureSubscriber({
@@ -217,7 +219,7 @@ export async function sendMarketingEmail(input: {
 
     const guarded = GUARDED_MARKETING_TYPES.includes(input.campaignType);
     if (guarded) {
-        if (!subscriber.isActive) {
+        if (!input.bypassSubscriberGuards && !subscriber.isActive) {
             const log = await logEmailSend({
                 email: input.email,
                 firstName: input.firstName,
@@ -238,7 +240,10 @@ export async function sendMarketingEmail(input: {
             return { ok: false as const, reason: "inactive", log };
         }
 
-        if (input.respectFrequencyCap !== false) {
+        if (
+            !input.bypassSubscriberGuards &&
+            input.respectFrequencyCap !== false
+        ) {
             const recentCount = await getRecentMarketingSendCount(input.email);
             if (recentCount >= 2) {
                 const log = await logEmailSend({
@@ -411,6 +416,48 @@ function priceLabelFromPaise(value?: number | null) {
     return `INR ${(value / 100).toFixed(0)}`;
 }
 
+function stripHtml(value?: string | null) {
+    if (!value) return null;
+
+    return value
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/&quot;/gi, "\"")
+        .replace(/&#39;/gi, "'")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function limitWords(value?: string | null, maxWords = 30) {
+    if (!value) return null;
+
+    const words = value.trim().split(/\s+/);
+    if (words.length <= maxWords) return value.trim();
+
+    return `${words.slice(0, maxWords).join(" ")}...`;
+}
+
+function parseManualRecipients(value: unknown) {
+    if (!Array.isArray(value)) return [];
+
+    const seen = new Set<string>();
+
+    return value
+        .map((entry) => String(entry ?? "").trim().toLowerCase())
+        .filter((email) => {
+            if (!email) return false;
+            const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+            if (!valid || seen.has(email)) return false;
+            seen.add(email);
+            return true;
+        })
+        .map((email) => ({
+            email,
+            name: email.split("@")[0]?.replace(/[._-]+/g, " ") || "Subscriber",
+        }));
+}
+
 async function getCampaignDigestContent(campaignId: string) {
     const campaign = await db.query.marketingCampaigns.findFirst({
         where: eq(marketingCampaigns.id, campaignId),
@@ -444,6 +491,7 @@ async function getCampaignDigestContent(campaignId: string) {
                       ),
                   with: {
                       brand: true,
+                      variants: true,
                   },
                   orderBy: (product, { desc }) => [desc(product.publishedAt)],
               })
@@ -455,19 +503,45 @@ async function getCampaignDigestContent(campaignId: string) {
                       ),
                   with: {
                       brand: true,
+                      variants: true,
                   },
                   orderBy: (product, { desc }) => [desc(product.publishedAt)],
                   limit: defaultLimit,
               });
 
+        const mediaIds = new Set<string>();
+        for (const row of rows) {
+            for (const media of row.media ?? []) {
+                if (media?.id) mediaIds.add(media.id);
+            }
+            for (const variant of row.variants ?? []) {
+                if (variant.image) mediaIds.add(variant.image);
+            }
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(mediaItems.data.map((item) => [item.id, item]));
+
         return {
             campaign,
             items: rows.map((row) => ({
                 title: row.title,
-                description: row.description,
+                description: limitWords(stripHtml(row.description), 30),
                 url: getAbsoluteURL(`/products/${row.slug}`),
                 brandName: row.brand?.name ?? null,
                 priceLabel: priceLabelFromPaise(row.price),
+                imageUrl:
+                    row.media?.[0]?.id
+                        ? (mediaMap.get(row.media[0].id)?.url ?? null)
+                        : row.variants?.find((variant) => variant.image)?.image
+                          ? (mediaMap.get(
+                                row.variants.find((variant) => variant.image)?.image ?? ""
+                            )?.url ?? null)
+                          : null,
+                imageAlt:
+                    row.media?.[0]?.id
+                        ? (mediaMap.get(row.media[0].id)?.alt ?? row.title)
+                        : row.title,
             })),
         };
     }
@@ -491,16 +565,30 @@ async function getCampaignDigestContent(campaignId: string) {
             description: row.metaDescription ?? row.description,
             url: getAbsoluteURL(`/blogs/${row.slug}`),
             targetKeyword: row.targetKeyword,
+            imageUrl: row.thumbnailUrl,
+            imageAlt: row.thumbnailAltText ?? row.title,
         })),
     };
 }
 
 export async function sendDigestCampaign(campaignId: string) {
     const { campaign, items } = await getCampaignDigestContent(campaignId);
-    const subscribers = await db.query.newsletterSubscribers.findMany({
-        where: eq(newsletterSubscribers.isActive, true),
-        orderBy: [desc(newsletterSubscribers.createdAt)],
-    });
+    const audienceType =
+        campaign.metadata?.audienceType === "manual" ? "manual" : "subscribers";
+    const manualRecipients = parseManualRecipients(
+        campaign.metadata?.manualRecipients
+    );
+    const subscribers =
+        audienceType === "manual"
+            ? manualRecipients.map((recipient) => ({
+                  email: recipient.email,
+                  name: recipient.name,
+                  segments: [] as string[],
+              }))
+            : await db.query.newsletterSubscribers.findMany({
+                  where: eq(newsletterSubscribers.isActive, true),
+                  orderBy: [desc(newsletterSubscribers.createdAt)],
+              });
 
     if (items.length === 0) {
         await updateMarketingCampaignStatus(campaignId, "failed");
@@ -511,6 +599,21 @@ export async function sendDigestCampaign(campaignId: string) {
             skipped: 0,
             failed: 0,
             message: "No digest content available for this campaign",
+        };
+    }
+
+    if (subscribers.length === 0) {
+        await updateMarketingCampaignStatus(campaignId, "failed");
+        return {
+            campaignId,
+            type: campaign.type,
+            sent: 0,
+            skipped: 0,
+            failed: 0,
+            message:
+                audienceType === "manual"
+                    ? "No valid manual recipient emails were provided"
+                    : "No active subscribers available for this campaign",
         };
     }
 
@@ -536,9 +639,12 @@ export async function sendDigestCampaign(campaignId: string) {
             campaignId: campaign.id,
             source: "scheduled_campaign",
             segments: subscriber.segments ?? [],
+            respectFrequencyCap: audienceType !== "manual",
+            bypassSubscriberGuards: audienceType === "manual",
             metadata: {
                 ...campaign.metadata,
                 digestItemCount: items.length,
+                audienceType,
             },
             react:
                 campaign.type === "new_arrivals"

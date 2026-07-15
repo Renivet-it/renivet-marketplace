@@ -84,7 +84,7 @@ export const marketingPartnershipSchema = z.object({
     updatedAt: dateValue,
 });
 
-export const createMarketingPartnershipSchema = marketingPartnershipSchema
+const createMarketingPartnershipSchemaBase = marketingPartnershipSchema
     .omit({
         id: true,
         createdAt: true,
@@ -103,16 +103,22 @@ export const createMarketingPartnershipSchema = marketingPartnershipSchema
         notes: z.string().nullable().optional(),
         couponCode: z.string().nullable().optional(),
         metadata: z.record(z.string(), z.unknown()).optional().default({}),
-    })
-    .transform((value) => ({
+    });
+
+export const createMarketingPartnershipSchema =
+    createMarketingPartnershipSchemaBase.transform((value) => ({
         ...value,
         trackingUrl: value.trackingUrl || null,
     }));
 
 export const updateMarketingPartnershipSchema =
-    createMarketingPartnershipSchema.partial().extend({
+    createMarketingPartnershipSchemaBase.partial().extend({
         id: z.string().uuid(),
-    });
+    }).transform((value) => ({
+        ...value,
+        trackingUrl:
+            value.trackingUrl === undefined ? undefined : value.trackingUrl || null,
+    }));
 
 export type MarketingCampaign = z.infer<typeof marketingCampaignSchema>;
 export type CreateMarketingCampaign = z.infer<
