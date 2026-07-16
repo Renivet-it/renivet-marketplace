@@ -36,7 +36,6 @@ import {
     accessReviewItems,
     accessReviewRuns,
     analyticsDailyBehavior,
-    analyticsLandingPageDaily,
     auditLogs,
     brandConfidentials,
     brandRequests,
@@ -298,6 +297,7 @@ const ALERT_WHATSAPP_RECIPIENTS = (process.env.RENIVET_ALERT_WHATSAPP ?? "")
     .filter(Boolean);
 const MONITORING_DASHBOARD_PATH = "/dashboard/general/monitoring-sla";
 const MARKETING_TARGETS_SETTING_KEY = "marketing_performance_targets";
+const MARKETING_SPEND_OVERRIDE_SETTING_KEY = "marketing_performance_spend_override";
 const WHATSAPP_NOTIFICATION_SETTINGS_KEY = "whatsapp_notification_modules";
 
 type MarketingPerformanceTargets = {
@@ -306,6 +306,13 @@ type MarketingPerformanceTargets = {
     reelsTarget: number;
     postsTarget: number;
     blogsTarget: number;
+};
+
+type MarketingSpendOverride = {
+    metaSpendPaise: number;
+    googleSpendPaise: number;
+    partnershipSpendPaise: number;
+    notes: string;
 };
 
 function numberSetting(
@@ -3496,6 +3503,82 @@ class MonitoringSlaQuery {
         return safeTargets;
     }
 
+    async getMarketingSpendOverride(): Promise<MarketingSpendOverride> {
+        const saved = await db.query.monitoringSettings.findFirst({
+            where: eq(
+                monitoringSettings.key,
+                MARKETING_SPEND_OVERRIDE_SETTING_KEY
+            ),
+        });
+        const value = saved?.value ?? {};
+
+        return {
+            metaSpendPaise: Math.round(
+                numberSetting(value.metaSpendPaise, 0, 0)
+            ),
+            googleSpendPaise: Math.round(
+                numberSetting(value.googleSpendPaise, 0, 0)
+            ),
+            partnershipSpendPaise: Math.round(
+                numberSetting(value.partnershipSpendPaise, 0, 0)
+            ),
+            notes:
+                typeof value.notes === "string"
+                    ? value.notes.trim().slice(0, 500)
+                    : "",
+        };
+    }
+
+    async updateMarketingSpendOverride({
+        override,
+        actorId,
+    }: {
+        override: MarketingSpendOverride;
+        actorId: string;
+    }) {
+        const safeOverride: MarketingSpendOverride = {
+            metaSpendPaise: Math.round(
+                numberSetting(override.metaSpendPaise, 0, 0)
+            ),
+            googleSpendPaise: Math.round(
+                numberSetting(override.googleSpendPaise, 0, 0)
+            ),
+            partnershipSpendPaise: Math.round(
+                numberSetting(override.partnershipSpendPaise, 0, 0)
+            ),
+            notes: String(override.notes ?? "")
+                .trim()
+                .slice(0, 500),
+        };
+
+        await db
+            .insert(monitoringSettings)
+            .values({
+                key: MARKETING_SPEND_OVERRIDE_SETTING_KEY,
+                value: safeOverride,
+                updatedBy: actorId,
+            })
+            .onConflictDoUpdate({
+                target: monitoringSettings.key,
+                set: {
+                    value: safeOverride,
+                    updatedBy: actorId,
+                    updatedAt: new Date(),
+                },
+            });
+
+        await auditLogQueries.write({
+            userId: actorId,
+            actionType: "marketing_spend_override_updated",
+            entityType: "monitoring_settings",
+            entityId: MARKETING_SPEND_OVERRIDE_SETTING_KEY,
+            afterValue: safeOverride,
+            reason: "Admin updated manual marketing spend fallback",
+        });
+
+        return safeOverride;
+    }
+
     async getMarketingPerformance() {
         const today = startOfDay();
         const weekStart = new Date(today.getTime() - 6 * DAY);
@@ -3508,6 +3591,7 @@ class MonitoringSlaQuery {
             process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
         const graphVersion = process.env.META_GRAPH_API_VERSION || "v20.0";
         const targets = await this.getMarketingPerformanceTargets();
+        const spendOverride = await this.getMarketingSpendOverride();
         const roasGoal = targets.roasGoal;
         const cacGoalPaise = targets.cacGoalPaise;
         const contentTargets = {
@@ -3608,9 +3692,7 @@ class MonitoringSlaQuery {
         const [
             week,
             month,
-            behavior,
             behaviorOverview,
-            trafficRows,
             attributionRows,
             metaChannelRows,
             metaCreativeRows,
@@ -3640,44 +3722,7 @@ class MonitoringSlaQuery {
                 .from(orders)
                 .where(gte(orders.createdAt, monthStart))
                 .then((res) => res[0]),
-            db
-                .select({
-                    sessions: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessions}), 0)`,
-                    visitors: sql<number>`coalesce(sum(${analyticsDailyBehavior.visitors}), 0)`,
-                    carts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsWithCart}), 0)`,
-                    checkouts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsReachedCheckout}), 0)`,
-                })
-                .from(analyticsDailyBehavior)
-                .where(
-                    and(
-                        gte(analyticsDailyBehavior.dateKey, weekStartKey),
-                        lte(analyticsDailyBehavior.dateKey, weekEndKey)
-                    )
-                )
-                .then((res) => res[0]),
             getPostHogBehaviorOverview(weekStart, today),
-            db
-                .select({
-                    source: analyticsLandingPageDaily.landingType,
-                    sessions: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`,
-                    visitors: sql<number>`coalesce(sum(${analyticsLandingPageDaily.visitors}), 0)`,
-                    carts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsWithCart}), 0)`,
-                    checkouts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsReachedCheckout}), 0)`,
-                })
-                .from(analyticsLandingPageDaily)
-                .where(
-                    and(
-                        gte(analyticsLandingPageDaily.dateKey, weekStartKey),
-                        lte(analyticsLandingPageDaily.dateKey, weekEndKey)
-                    )
-                )
-                .groupBy(analyticsLandingPageDaily.landingType)
-                .orderBy(
-                    desc(
-                        sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`
-                    )
-                )
-                .limit(8),
             getPostHogAttributionBreakdown(weekStart, today, 250),
             fetchMetaInsights({
                 level: "account",
@@ -3780,13 +3825,17 @@ class MonitoringSlaQuery {
             : [];
         const repeatCustomerCount = repeatCustomerRows.length;
         const metaAccount = metaChannelRows[0] ?? {};
-        const metaSpendPaise = Math.round(Number(metaAccount.spend ?? 0) * 100);
+        const metaAdsConnected = Boolean(metaToken && metaAdAccountId);
+        const googleAdsConnected =
+            String(googleSummary.status ?? "").toLowerCase() === "connected";
+        const metaSpendPaise = metaAdsConnected
+            ? Math.round(Number(metaAccount.spend ?? 0) * 100)
+            : spendOverride.metaSpendPaise;
         const metaPurchases = readActionCount(metaAccount, purchaseActionTypes);
         const metaRevenuePaise = readActionValue(
             metaAccount,
             purchaseActionTypes
         );
-        const organicTrafficSessions = Number(behavior.sessions ?? 0);
         const paidMetaClicks = Number(metaAccount.clicks ?? 0);
         const bounceRate =
             behaviorOverview.sessions === 0
@@ -3794,17 +3843,20 @@ class MonitoringSlaQuery {
                 : behaviorOverview.bounceSessions / behaviorOverview.sessions;
         const browseRate = 1 - bounceRate;
         const cartRate =
-            Number(behavior.sessions ?? 0) === 0
+            Number(behaviorOverview.sessions ?? 0) === 0
                 ? 0
-                : Number(behavior.carts ?? 0) / Number(behavior.sessions ?? 0);
+                : Number(behaviorOverview.sessionsWithCart ?? 0) /
+                  Number(behaviorOverview.sessions ?? 0);
         const checkoutRate =
-            Number(behavior.sessions ?? 0) === 0
+            Number(behaviorOverview.sessions ?? 0) === 0
                 ? 0
-                : Number(behavior.checkouts ?? 0) / Number(behavior.sessions ?? 0);
+                : Number(behaviorOverview.sessionsReachedCheckout ?? 0) /
+                  Number(behaviorOverview.sessions ?? 0);
         const purchaseRate =
-            Number(behavior.sessions ?? 0) === 0
+            Number(behaviorOverview.sessions ?? 0) === 0
                 ? 0
-                : Number(week.orders ?? 0) / Number(behavior.sessions ?? 0);
+                : Number(week.orders ?? 0) /
+                  Number(behaviorOverview.sessions ?? 0);
         const returningCustomerRate =
             weekCustomers === 0 ? 0 : repeatCustomerCount / weekCustomers;
         const contentCounts = {
@@ -3824,33 +3876,37 @@ class MonitoringSlaQuery {
                 revenue: metaRevenuePaise,
                 conversions: metaPurchases,
                 traffic: paidMetaClicks,
-                source: metaToken && metaAdAccountId ? "Meta Ads API" : "Needs META_ACCESS_TOKEN + META_AD_ACCOUNT_ID",
+                source: metaAdsConnected
+                    ? "Meta Ads API"
+                    : metaSpendPaise > 0
+                      ? "Manual spend fallback (Meta disconnected)"
+                      : "Needs META_ACCESS_TOKEN + META_AD_ACCOUNT_ID",
             },
             {
                 channel: "Google",
-                spend: googleSummary.spend,
+                spend: googleAdsConnected
+                    ? googleSummary.spend
+                    : spendOverride.googleSpendPaise,
                 revenue: googleSummary.revenue,
                 conversions: googleSummary.conversions,
                 traffic: googleSummary.traffic,
-                source: googleSummary.source,
-            },
-            {
-                channel: "Organic",
-                spend: 0,
-                revenue: weekGmv,
-                conversions: Number(week.orders ?? 0),
-                traffic: organicTrafficSessions,
-                source: "Admin analytics + orders",
+                source:
+                    googleAdsConnected || spendOverride.googleSpendPaise === 0
+                        ? googleSummary.source
+                        : "Manual spend fallback (Google disconnected)",
             },
             {
                 channel: "Partnerships",
-                spend: 0,
+                spend: spendOverride.partnershipSpendPaise,
                 revenue: 0,
                 conversions: partnershipRows.filter(
                     (row) => row.status === "completed"
                 ).length,
                 traffic: partnershipRows.filter((row) => row.trackingUrl).length,
-                source: "Tracked URLs + coupon-based partnership records",
+                source:
+                    spendOverride.partnershipSpendPaise > 0
+                        ? "Manual weekly spend + tracked URLs + coupon-based partnership records"
+                        : "Tracked URLs + coupon-based partnership records",
             },
         ].map((row) => ({
             ...row,
@@ -3940,6 +3996,39 @@ class MonitoringSlaQuery {
             .sort((a, b) => b.sessions - a.sessions)
             .slice(0, 10);
 
+        const trafficBySourceRows = Array.from(
+            attributionRows.reduce<
+                Map<
+                    string,
+                    {
+                        source: string;
+                        sessions: number;
+                        visitors: number;
+                        carts: number;
+                        checkouts: number;
+                    }
+                >
+            >((map, row) => {
+                const key = row.source;
+                const existing = map.get(key) ?? {
+                    source: row.source,
+                    sessions: 0,
+                    visitors: 0,
+                    carts: 0,
+                    checkouts: 0,
+                };
+                existing.sessions += row.sessions;
+                existing.visitors += row.visitors;
+                existing.carts += row.sessionsWithCart;
+                existing.checkouts += row.sessionsReachedCheckout;
+                map.set(key, existing);
+                return map;
+            }, new Map())
+        )
+            .map(([, value]) => value)
+            .sort((a, b) => b.sessions - a.sessions)
+            .slice(0, 10);
+
         const landingPerformanceByCampaign = Array.from(
             attributionRows.reduce<
                 Map<
@@ -4019,8 +4108,8 @@ class MonitoringSlaQuery {
             ordersMtd: Number(month.orders ?? 0),
             customersMtd: Number(month.customers ?? 0),
             kpis: {
-                sessions: Number(behavior.sessions ?? 0),
-                visitors: Number(behavior.visitors ?? 0),
+                sessions: Number(behaviorOverview.sessions ?? 0),
+                visitors: Number(behaviorOverview.visitors ?? 0),
                 browseRate,
                 cartRate,
                 checkoutRate,
@@ -4040,9 +4129,7 @@ class MonitoringSlaQuery {
                     ? null
                     : weekGmv /
                       channelRows.reduce((total, row) => total + row.spend, 0),
-            trafficBySource: Array.from(
-                trafficRows as Iterable<Record<string, unknown>>
-            ).map((row) => {
+            trafficBySource: trafficBySourceRows.map((row) => {
                 const sessions = Number(row.sessions ?? 0);
                 const checkouts = Number(row.checkouts ?? 0);
                 return {
@@ -4054,20 +4141,18 @@ class MonitoringSlaQuery {
                     conversionRate:
                         sessions === 0
                             ? 0
-                            : Number(week.orders ?? 0) / sessions,
+                            : checkouts / sessions,
                     checkoutRate: sessions === 0 ? 0 : checkouts / sessions,
                 };
             }),
-            conversionBySource: Array.from(
-                trafficRows as Iterable<Record<string, unknown>>
-            ).map((row) => {
+            conversionBySource: trafficBySourceRows.map((row) => {
                 const sessions = Number(row.sessions ?? 0);
                 return {
                     source: String(row.source ?? "unknown"),
                     conversionRate:
                         sessions === 0
                             ? 0
-                            : Number(week.orders ?? 0) / sessions,
+                            : Number(row.checkouts ?? 0) / sessions,
                 };
             }),
             sourceMediumPerformance: sourceMediumRows,
@@ -4123,7 +4208,7 @@ class MonitoringSlaQuery {
             },
             integrations: {
                 metaAds:
-                    metaToken && metaAdAccountId
+                    metaAdsConnected
                         ? "connected"
                         : "missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID",
                 instagram:
@@ -4131,6 +4216,15 @@ class MonitoringSlaQuery {
                         ? "connected"
                         : "missing META_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID",
                 googleAds: googleSummary.status,
+                metaAdsConnected,
+                googleAdsConnected,
+                manualSpendFallback: {
+                    metaSpendPaise: spendOverride.metaSpendPaise,
+                    googleSpendPaise: spendOverride.googleSpendPaise,
+                    partnershipSpendPaise:
+                        spendOverride.partnershipSpendPaise,
+                    notes: spendOverride.notes,
+                },
             },
         };
     }

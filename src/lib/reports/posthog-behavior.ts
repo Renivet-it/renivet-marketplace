@@ -40,6 +40,8 @@ export interface PostHogAttributionRow {
     landingPath: string;
     sessions: number;
     visitors: number;
+    sessionsWithCart: number;
+    sessionsReachedCheckout: number;
 }
 
 function toNumber(value: unknown) {
@@ -476,6 +478,8 @@ export async function getPostHogAttributionBreakdown(
         landing_path: string;
         sessions: number;
         visitors: number;
+        sessions_with_cart: number;
+        sessions_reached_checkout: number;
     }>(`
         WITH session_first_touch AS (
             SELECT
@@ -521,10 +525,17 @@ export async function getPostHogAttributionBreakdown(
                     ),
                     timestamp
                 ) AS landing_path,
-                argMin(distinct_id, timestamp) AS visitor_id
+                argMin(distinct_id, timestamp) AS visitor_id,
+                countDistinctIf(
+                    toString(properties.$session_id),
+                    event = 'add_to_cart' AND toString(properties.$session_id) != ''
+                ) AS sessions_with_cart,
+                countDistinctIf(
+                    toString(properties.$session_id),
+                    event = 'checkout_started' AND toString(properties.$session_id) != ''
+                ) AS sessions_reached_checkout
             FROM events
-            WHERE event = '$pageview'
-              AND timestamp >= toDateTime('${startSql}')
+            WHERE timestamp >= toDateTime('${startSql}')
               AND timestamp <= toDateTime('${endSql}')
             GROUP BY session_key
         )
@@ -534,7 +545,9 @@ export async function getPostHogAttributionBreakdown(
             campaign,
             landing_path,
             count() AS sessions,
-            uniq(visitor_id) AS visitors
+            uniq(visitor_id) AS visitors,
+            sum(sessions_with_cart) AS sessions_with_cart,
+            sum(sessions_reached_checkout) AS sessions_reached_checkout
         FROM session_first_touch
         GROUP BY source, medium, campaign, landing_path
         ORDER BY sessions DESC
@@ -548,6 +561,8 @@ export async function getPostHogAttributionBreakdown(
         landingPath: String(row.landing_path ?? "unknown"),
         sessions: toNumber(row.sessions),
         visitors: toNumber(row.visitors),
+        sessionsWithCart: toNumber(row.sessions_with_cart),
+        sessionsReachedCheckout: toNumber(row.sessions_reached_checkout),
     }));
 }
 
