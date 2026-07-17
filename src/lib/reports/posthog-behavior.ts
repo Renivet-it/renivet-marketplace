@@ -507,7 +507,7 @@ export async function getPostHogAttributionBreakdown(
                     coalesce(
                         nullIf(toString(properties.utm_campaign), ''),
                         nullIf(toString(properties.$utm_campaign), ''),
-                        'unassigned'
+                        'Untagged visit'
                     ),
                     timestamp
                 ) AS campaign,
@@ -557,7 +557,7 @@ export async function getPostHogAttributionBreakdown(
     return rows.map((row) => ({
         source: String(row.source ?? "direct"),
         medium: String(row.medium ?? "none"),
-        campaign: String(row.campaign ?? "unassigned"),
+        campaign: String(row.campaign ?? "Untagged visit"),
         landingPath: String(row.landing_path ?? "unknown"),
         sessions: toNumber(row.sessions),
         visitors: toNumber(row.visitors),

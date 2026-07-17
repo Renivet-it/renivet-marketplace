@@ -297,6 +297,8 @@ const ALERT_WHATSAPP_RECIPIENTS = (process.env.RENIVET_ALERT_WHATSAPP ?? "")
     .filter(Boolean);
 const MONITORING_DASHBOARD_PATH = "/dashboard/general/monitoring-sla";
 const MARKETING_TARGETS_SETTING_KEY = "marketing_performance_targets";
+const MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY =
+    "marketing_performance_content_output_override";
 const MARKETING_SPEND_OVERRIDE_SETTING_KEY = "marketing_performance_spend_override";
 const WHATSAPP_NOTIFICATION_SETTINGS_KEY = "whatsapp_notification_modules";
 
@@ -313,6 +315,13 @@ type MarketingSpendOverride = {
     googleSpendPaise: number;
     partnershipSpendPaise: number;
     notes: string;
+};
+
+type MarketingContentOutputOverride = {
+    isActive: boolean;
+    reels: number;
+    posts: number;
+    blogs: number;
 };
 
 function numberSetting(
@@ -3503,6 +3512,65 @@ class MonitoringSlaQuery {
         return safeTargets;
     }
 
+    async getMarketingContentOutputOverride(): Promise<MarketingContentOutputOverride> {
+        const saved = await db.query.monitoringSettings.findFirst({
+            where: eq(
+                monitoringSettings.key,
+                MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY
+            ),
+        });
+        const value = saved?.value ?? {};
+
+        return {
+            isActive: value.isActive === true,
+            reels: Math.round(numberSetting(value.reels, 0, 0)),
+            posts: Math.round(numberSetting(value.posts, 0, 0)),
+            blogs: Math.round(numberSetting(value.blogs, 0, 0)),
+        };
+    }
+
+    async updateMarketingContentOutputOverride({
+        override,
+        actorId,
+    }: {
+        override: MarketingContentOutputOverride;
+        actorId: string;
+    }) {
+        const safeOverride: MarketingContentOutputOverride = {
+            isActive: override.isActive === true,
+            reels: Math.round(numberSetting(override.reels, 0, 0)),
+            posts: Math.round(numberSetting(override.posts, 0, 0)),
+            blogs: Math.round(numberSetting(override.blogs, 0, 0)),
+        };
+
+        await db
+            .insert(monitoringSettings)
+            .values({
+                key: MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY,
+                value: safeOverride,
+                updatedBy: actorId,
+            })
+            .onConflictDoUpdate({
+                target: monitoringSettings.key,
+                set: {
+                    value: safeOverride,
+                    updatedBy: actorId,
+                    updatedAt: new Date(),
+                },
+            });
+
+        await auditLogQueries.write({
+            userId: actorId,
+            actionType: "marketing_content_output_override_updated",
+            entityType: "monitoring_settings",
+            entityId: MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY,
+            afterValue: safeOverride,
+            reason: "Admin updated Marketing Performance content output override",
+        });
+
+        return safeOverride;
+    }
+
     async getMarketingSpendOverride(): Promise<MarketingSpendOverride> {
         const saved = await db.query.monitoringSettings.findFirst({
             where: eq(
@@ -3591,6 +3659,8 @@ class MonitoringSlaQuery {
             process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
         const graphVersion = process.env.META_GRAPH_API_VERSION || "v20.0";
         const targets = await this.getMarketingPerformanceTargets();
+        const contentOutputOverride =
+            await this.getMarketingContentOutputOverride();
         const spendOverride = await this.getMarketingSpendOverride();
         const roasGoal = targets.roasGoal;
         const cacGoalPaise = targets.cacGoalPaise;
@@ -3868,6 +3938,13 @@ class MonitoringSlaQuery {
             ).length,
             blogs: Number(blogsPublishedThisWeek),
         };
+        const displayedContentCounts = contentOutputOverride.isActive
+            ? {
+                  reels: contentOutputOverride.reels,
+                  posts: contentOutputOverride.posts,
+                  blogs: contentOutputOverride.blogs,
+              }
+            : contentCounts;
 
         const channelRows = [
             {
@@ -4110,27 +4187,33 @@ class MonitoringSlaQuery {
             contentOutput: [
                 {
                     type: "Reels",
-                    count: contentCounts.reels,
+                    count: displayedContentCounts.reels,
                     target: contentTargets.reels,
                     source:
-                        metaToken && instagramBusinessAccountId
+                        contentOutputOverride.isActive
+                            ? "Manual weekly entry"
+                            : metaToken && instagramBusinessAccountId
                             ? "Instagram Graph API"
                             : "Needs META_ACCESS_TOKEN + INSTAGRAM_BUSINESS_ACCOUNT_ID",
                 },
                 {
                     type: "Posts",
-                    count: contentCounts.posts,
+                    count: displayedContentCounts.posts,
                     target: contentTargets.posts,
                     source:
-                        metaToken && instagramBusinessAccountId
+                        contentOutputOverride.isActive
+                            ? "Manual weekly entry"
+                            : metaToken && instagramBusinessAccountId
                             ? "Instagram Graph API"
                             : "Needs META_ACCESS_TOKEN + INSTAGRAM_BUSINESS_ACCOUNT_ID",
                 },
                 {
                     type: "Blogs",
-                    count: contentCounts.blogs,
+                    count: displayedContentCounts.blogs,
                     target: contentTargets.blogs,
-                    source: "blogs table",
+                    source: contentOutputOverride.isActive
+                        ? "Manual weekly entry"
+                        : "blogs table",
                 },
             ],
             campaignPerformance: campaignRows,
@@ -4149,6 +4232,7 @@ class MonitoringSlaQuery {
                 postsTarget: targets.postsTarget,
                 blogsTarget: targets.blogsTarget,
             },
+            contentOutputOverride,
             integrations: {
                 metaAds:
                     metaAdsConnected

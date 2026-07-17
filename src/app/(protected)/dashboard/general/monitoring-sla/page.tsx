@@ -207,6 +207,60 @@ async function saveMarketingSpendFallback(formData: FormData) {
     finishAction("marketing-spend-saved", { dashboard: "marketing" });
 }
 
+async function saveMarketingContentOutputAndTargets(formData: FormData) {
+    "use server";
+
+    const reelsOutput = Number(formData.get("reelsOutput") ?? 0);
+    const postsOutput = Number(formData.get("postsOutput") ?? 0);
+    const blogsOutput = Number(formData.get("blogsOutput") ?? 0);
+    const reelsTarget = Number(formData.get("reelsTarget") ?? 0);
+    const postsTarget = Number(formData.get("postsTarget") ?? 0);
+    const blogsTarget = Number(formData.get("blogsTarget") ?? 0);
+    const roasGoal = Number(formData.get("roasGoal") ?? 2);
+    const cacGoalPaise = Number(formData.get("cacGoalPaise") ?? 150000);
+
+    await monitoringSlaQueries.updateMarketingPerformanceTargets({
+        actorId: await getActor(),
+        targets: {
+            roasGoal: Math.max(0, roasGoal),
+            cacGoalPaise: Math.max(0, Math.round(cacGoalPaise)),
+            reelsTarget: Math.max(0, Math.round(reelsTarget)),
+            postsTarget: Math.max(0, Math.round(postsTarget)),
+            blogsTarget: Math.max(0, Math.round(blogsTarget)),
+        },
+    });
+
+    await monitoringSlaQueries.updateMarketingContentOutputOverride({
+        actorId: await getActor(),
+        override: {
+            isActive: true,
+            reels: Math.max(0, Math.round(reelsOutput)),
+            posts: Math.max(0, Math.round(postsOutput)),
+            blogs: Math.max(0, Math.round(blogsOutput)),
+        },
+    });
+
+    finishAction("marketing-content-output-targets-saved", {
+        dashboard: "marketing",
+    });
+}
+
+async function useLiveMarketingContentOutput() {
+    "use server";
+
+    await monitoringSlaQueries.updateMarketingContentOutputOverride({
+        actorId: await getActor(),
+        override: {
+            isActive: false,
+            reels: 0,
+            posts: 0,
+            blogs: 0,
+        },
+    });
+
+    finishAction("marketing-content-output-live", { dashboard: "marketing" });
+}
+
 function metricLabel(value: number | string) {
     return typeof value === "number" ? value.toLocaleString("en-IN") : value;
 }
@@ -217,6 +271,21 @@ function rupeeLabelFromPaise(value: number | string) {
     return `Rs ${(amount / 100).toLocaleString("en-IN", {
         maximumFractionDigits: 2,
     })}`;
+}
+
+function marketingCampaignLabel(value: string) {
+    const campaign = value.trim();
+    if (
+        !campaign ||
+        campaign.toLowerCase() === "unassigned" ||
+        campaign.toLowerCase() === "no campaign tracking"
+    ) {
+        return "Untagged visit";
+    }
+    if (/^\d+$/.test(campaign)) {
+        return `Campaign ID: ${campaign}`;
+    }
+    return campaign;
 }
 
 type MetricCardConfig = {
@@ -2222,7 +2291,9 @@ export default async function MonitoringSlaPage({
                                                         className="rounded-lg border bg-slate-50 p-4"
                                                     >
                                                         <p className="font-semibold text-slate-950">
-                                                            {row.campaign}
+                                                            {marketingCampaignLabel(
+                                                                row.campaign
+                                                            )}
                                                         </p>
                                                         <p className="mt-1 text-sm text-muted-foreground">
                                                             {row.landingPath}
@@ -2381,9 +2452,115 @@ export default async function MonitoringSlaPage({
                                 </div>
 
                                 <div className="rounded-xl border bg-white p-5 shadow-sm">
-                                    <h3 className="text-base font-semibold text-slate-950">
-                                        Content output vs target
-                                    </h3>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            Content output vs target
+                                        </h3>
+                                        <details className="group relative">
+                                            <summary className="cursor-pointer list-none rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                                                Edit targets
+                                            </summary>
+                                            <form
+                                                action={saveMarketingContentOutputAndTargets}
+                                                className="absolute right-0 top-9 z-20 w-72 rounded-lg border bg-white p-4 shadow-lg"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="dashboard"
+                                                    value="marketing"
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="roasGoal"
+                                                    value={marketingPerformance.goals.roas}
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="cacGoalPaise"
+                                                    value={marketingPerformance.goals.cac}
+                                                />
+                                                <p className="text-sm font-semibold text-slate-950">
+                                                    Weekly output and targets
+                                                </p>
+                                                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                                                    Enter actual output and the weekly target. Saving uses the manual output values on this dashboard.
+                                                </p>
+                                                <div className="mt-3 grid grid-cols-[1fr_76px_76px] gap-2 text-xs">
+                                                    <span className="font-medium text-slate-500">Type</span>
+                                                    <span className="font-medium text-slate-500">Output</span>
+                                                    <span className="font-medium text-slate-500">Target</span>
+                                                    {[
+                                                        {
+                                                            label: "Reels",
+                                                            outputName: "reelsOutput",
+                                                            targetName: "reelsTarget",
+                                                            outputValue: marketingPerformance.contentOutputOverride.isActive
+                                                                ? marketingPerformance.contentOutputOverride.reels
+                                                                : marketingPerformance.contentOutput[0]?.count ?? 0,
+                                                            targetValue: marketingPerformance.goals.reelsTarget,
+                                                        },
+                                                        {
+                                                            label: "Posts",
+                                                            outputName: "postsOutput",
+                                                            targetName: "postsTarget",
+                                                            outputValue: marketingPerformance.contentOutputOverride.isActive
+                                                                ? marketingPerformance.contentOutputOverride.posts
+                                                                : marketingPerformance.contentOutput[1]?.count ?? 0,
+                                                            targetValue: marketingPerformance.goals.postsTarget,
+                                                        },
+                                                        {
+                                                            label: "Blogs",
+                                                            outputName: "blogsOutput",
+                                                            targetName: "blogsTarget",
+                                                            outputValue: marketingPerformance.contentOutputOverride.isActive
+                                                                ? marketingPerformance.contentOutputOverride.blogs
+                                                                : marketingPerformance.contentOutput[2]?.count ?? 0,
+                                                            targetValue: marketingPerformance.goals.blogsTarget,
+                                                        },
+                                                    ].map((row) => (
+                                                        <div key={row.label} className="contents">
+                                                            <span className="self-center font-medium text-slate-700">
+                                                                {row.label}
+                                                            </span>
+                                                            <input
+                                                                type="number"
+                                                                name={row.outputName}
+                                                                min="0"
+                                                                step="1"
+                                                                defaultValue={row.outputValue}
+                                                                aria-label={`${row.label} output`}
+                                                                className="w-full rounded-md border border-slate-200 px-2 py-2 text-sm text-slate-950"
+                                                            />
+                                                            <input
+                                                                type="number"
+                                                                name={row.targetName}
+                                                                min="0"
+                                                                step="1"
+                                                                defaultValue={row.targetValue}
+                                                                aria-label={`${row.label} target`}
+                                                                className="w-full rounded-md border border-slate-200 px-2 py-2 text-sm text-slate-950"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    type="submit"
+                                                    className="mt-4 w-full rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white"
+                                                >
+                                                    Save output and targets
+                                                </button>
+                                                {marketingPerformance.contentOutputOverride.isActive && (
+                                                    <button
+                                                        formAction={useLiveMarketingContentOutput}
+                                                        type="submit"
+                                                        className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
+                                                    >
+                                                        Use live data
+                                                    </button>
+                                                )}
+                                            </form>
+                                        </details>
+                                    </div>
                                     <div className="mt-4 space-y-2">
                                         {marketingPerformance.contentOutput.map(
                                             (row) => (
