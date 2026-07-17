@@ -1,7 +1,8 @@
-import { BitFieldSitePermission } from "@/config/permissions";
+﻿import { BitFieldSitePermission } from "@/config/permissions";
 import { monitoringSlaQueries } from "@/lib/db/queries";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { auth } from "@clerk/nextjs/server";
 import {
     Activity,
@@ -14,6 +15,7 @@ import {
     FileText,
     Gauge,
     History,
+    Info,
     ShieldCheck,
     TimerReset,
     UsersRound,
@@ -180,16 +182,110 @@ async function generateComplianceExport(formData: FormData) {
     finishAction("compliance-export", { exportMonth, exportType });
 }
 
+async function saveMarketingSpendFallback(formData: FormData) {
+    "use server";
+    const metaSpendRupees = Number(formData.get("metaSpendRupees") ?? 0);
+    const googleSpendRupees = Number(formData.get("googleSpendRupees") ?? 0);
+    const partnershipSpendRupees = Number(
+        formData.get("partnershipSpendRupees") ?? 0
+    );
+    const notes = String(formData.get("notes") ?? "");
+
+    await monitoringSlaQueries.updateMarketingSpendOverride({
+        actorId: await getActor(),
+        override: {
+            metaSpendPaise: Math.max(0, Math.round(metaSpendRupees * 100)),
+            googleSpendPaise: Math.max(0, Math.round(googleSpendRupees * 100)),
+            partnershipSpendPaise: Math.max(
+                0,
+                Math.round(partnershipSpendRupees * 100)
+            ),
+            notes,
+        },
+    });
+
+    finishAction("marketing-spend-saved", { dashboard: "marketing" });
+}
+
+async function saveMarketingContentOutputAndTargets(formData: FormData) {
+    "use server";
+
+    const reelsOutput = Number(formData.get("reelsOutput") ?? 0);
+    const postsOutput = Number(formData.get("postsOutput") ?? 0);
+    const blogsOutput = Number(formData.get("blogsOutput") ?? 0);
+    const reelsTarget = Number(formData.get("reelsTarget") ?? 0);
+    const postsTarget = Number(formData.get("postsTarget") ?? 0);
+    const blogsTarget = Number(formData.get("blogsTarget") ?? 0);
+    const roasGoal = Number(formData.get("roasGoal") ?? 2);
+    const cacGoalPaise = Number(formData.get("cacGoalPaise") ?? 150000);
+
+    await monitoringSlaQueries.updateMarketingPerformanceTargets({
+        actorId: await getActor(),
+        targets: {
+            roasGoal: Math.max(0, roasGoal),
+            cacGoalPaise: Math.max(0, Math.round(cacGoalPaise)),
+            reelsTarget: Math.max(0, Math.round(reelsTarget)),
+            postsTarget: Math.max(0, Math.round(postsTarget)),
+            blogsTarget: Math.max(0, Math.round(blogsTarget)),
+        },
+    });
+
+    await monitoringSlaQueries.updateMarketingContentOutputOverride({
+        actorId: await getActor(),
+        override: {
+            isActive: true,
+            reels: Math.max(0, Math.round(reelsOutput)),
+            posts: Math.max(0, Math.round(postsOutput)),
+            blogs: Math.max(0, Math.round(blogsOutput)),
+        },
+    });
+
+    finishAction("marketing-content-output-targets-saved", {
+        dashboard: "marketing",
+    });
+}
+
+async function useLiveMarketingContentOutput() {
+    "use server";
+
+    await monitoringSlaQueries.updateMarketingContentOutputOverride({
+        actorId: await getActor(),
+        override: {
+            isActive: false,
+            reels: 0,
+            posts: 0,
+            blogs: 0,
+        },
+    });
+
+    finishAction("marketing-content-output-live", { dashboard: "marketing" });
+}
+
 function metricLabel(value: number | string) {
     return typeof value === "number" ? value.toLocaleString("en-IN") : value;
 }
 
 function rupeeLabelFromPaise(value: number | string) {
     const amount = typeof value === "number" ? value : Number(value);
-    if (!Number.isFinite(amount)) return "₹0";
-    return `₹${(amount / 100).toLocaleString("en-IN", {
+    if (!Number.isFinite(amount)) return "Rs 0";
+    return `Rs ${(amount / 100).toLocaleString("en-IN", {
         maximumFractionDigits: 2,
     })}`;
+}
+
+function marketingCampaignLabel(value: string) {
+    const campaign = value.trim();
+    if (
+        !campaign ||
+        campaign.toLowerCase() === "unassigned" ||
+        campaign.toLowerCase() === "no campaign tracking"
+    ) {
+        return "Untagged visit";
+    }
+    if (/^\d+$/.test(campaign)) {
+        return `Campaign ID: ${campaign}`;
+    }
+    return campaign;
 }
 
 type MetricCardConfig = {
@@ -418,6 +514,8 @@ function getNoticeConfig(notice?: string) {
             return "Alert acknowledged and audit evidence recorded.";
         case "alert-resolved":
             return "Alert resolved and audit evidence recorded.";
+        case "marketing-spend-saved":
+            return "Manual marketing spend fallback saved. Disconnected channels will now use these values on the dashboard.";
         default:
             return null;
     }
@@ -490,6 +588,120 @@ function MetricTile({
                 </p>
             ) : null}
         </div>
+    );
+}
+
+function MarketingMetricGuide() {
+    const items = [
+        {
+            label: "Spend This Week",
+            shortForm: "Paid spend",
+            formula: "Meta spend + Google spend for the current week",
+            source: "Live ad integrations or manual fallback spend",
+        },
+        {
+            label: "Blended CAC",
+            shortForm: "Customer Acquisition Cost",
+            formula: "Total spend this week / customers this week",
+            source: "Spend card + distinct ordering customers in this week window",
+        },
+        {
+            label: "Blended ROAS",
+            shortForm: "Return On Ad Spend",
+            formula: "Weekly GMV / total ad spend",
+            source: "Orders GMV for the week + paid spend",
+        },
+        {
+            label: "GMV",
+            shortForm: "Gross Merchandise Value",
+            formula: "Sum of order value in the current week",
+            source: "Orders table",
+        },
+        {
+            label: "Sessions / Visitors",
+            shortForm: "Traffic metrics",
+            formula: "Weekly summed traffic records",
+            source: "Analytics daily behavior snapshots",
+        },
+        {
+            label: "Browse Rate",
+            shortForm: "Non-bounce rate",
+            formula: "1 - bounce rate",
+            source: "PostHog behavior overview",
+        },
+        {
+            label: "Cart Rate",
+            shortForm: "Add-to-cart rate",
+            formula: "Sessions with cart / sessions",
+            source: "Analytics daily behavior snapshots",
+        },
+        {
+            label: "Checkout Rate",
+            shortForm: "Checkout reach rate",
+            formula: "Sessions reaching checkout / sessions",
+            source: "Analytics daily behavior snapshots",
+        },
+        {
+            label: "Purchase Rate",
+            shortForm: "Order conversion rate",
+            formula: "Orders / sessions",
+            source: "Orders + analytics sessions",
+        },
+        {
+            label: "Returning Customer Rate",
+            shortForm: "Repeat customer share",
+            formula: "Repeat customers / customers this week",
+            source: "Orders grouped by customer in the weekly window",
+        },
+    ];
+
+    return (
+        <Popover>
+            <PopoverTrigger asChild>
+                <button
+                    type="button"
+                    className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
+                >
+                    <Info className="size-4" />
+                    Metric guide
+                </button>
+            </PopoverTrigger>
+            <PopoverContent
+                align="end"
+                className="w-[min(92vw,34rem)] space-y-3 rounded-xl border border-slate-200 bg-white p-4"
+            >
+                <div>
+                    <p className="text-sm font-semibold text-slate-950">
+                        Marketing KPI guide
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                        Full forms, quick formulas, and where each value comes
+                        from on this dashboard.
+                    </p>
+                </div>
+                <div className="max-h-[28rem] space-y-3 overflow-y-auto pr-1">
+                    {items.map((item) => (
+                        <div
+                            key={item.label}
+                            className="rounded-lg border border-slate-200 bg-slate-50 p-3"
+                        >
+                            <p className="text-sm font-semibold text-slate-950">
+                                {item.label}
+                            </p>
+                            <p className="mt-1 text-sm text-slate-700">
+                                {item.shortForm}
+                            </p>
+                            <p className="mt-2 text-xs leading-5 text-slate-600">
+                                Formula: {item.formula}
+                            </p>
+                            <p className="mt-1 text-xs leading-5 text-slate-500">
+                                Source: {item.source}
+                            </p>
+                        </div>
+                    ))}
+                </div>
+            </PopoverContent>
+        </Popover>
     );
 }
 
@@ -638,6 +850,18 @@ export default async function MonitoringSlaPage({
         }
     ).toString()}`;
     const founderReportCsvHref = `/api/admin/monitoring-sla/founder-report?${new URLSearchParams(
+        {
+            month: currentMonth,
+            format: "csv",
+        }
+    ).toString()}`;
+    const marketingReportXlsxHref = `/api/admin/monitoring-sla/marketing-report?${new URLSearchParams(
+        {
+            month: currentMonth,
+            format: "xlsx",
+        }
+    ).toString()}`;
+    const marketingReportCsvHref = `/api/admin/monitoring-sla/marketing-report?${new URLSearchParams(
         {
             month: currentMonth,
             format: "csv",
@@ -1147,7 +1371,7 @@ export default async function MonitoringSlaPage({
                                     )}
                                     detail={`${signedPercent(
                                         weeklyBusiness.gmvWoW
-                                    )} vs last week · ${signedPercent(
+                                    )} vs last week Â· ${signedPercent(
                                         weeklyBusiness.gmvVsPriorFourWeekAvg
                                     )} vs prior 4-week avg`}
                                     tone={
@@ -1161,7 +1385,7 @@ export default async function MonitoringSlaPage({
                                     value={weeklyBusiness.orderCount}
                                     detail={`${signedPercent(
                                         weeklyBusiness.orderVolumeWoW
-                                    )} vs last week · ${
+                                    )} vs last week Â· ${
                                         weeklyBusiness.customerCount -
                                         weeklyBusiness.repeatCustomers
                                     } new / ${
@@ -1180,7 +1404,7 @@ export default async function MonitoringSlaPage({
                                     )}
                                     detail={`${signedPercent(
                                         weeklyBusiness.aovWoW
-                                    )} vs last week · prior ${rupeeLabelFromPaise(
+                                    )} vs last week Â· prior ${rupeeLabelFromPaise(
                                         weeklyBusiness.previousAov
                                     )}`}
                                     tone={
@@ -1192,7 +1416,7 @@ export default async function MonitoringSlaPage({
                                 <MetricTile
                                     label="Active brands"
                                     value={weeklyBusiness.activeBrands}
-                                    detail={`${weeklyBusiness.sellingBrandsThisWeek} selling this week · ${weeklyBusiness.sellingBrandsPreviousWeek} selling last week`}
+                                    detail={`${weeklyBusiness.sellingBrandsThisWeek} selling this week Â· ${weeklyBusiness.sellingBrandsPreviousWeek} selling last week`}
                                 />
                             </div>
                         </div>
@@ -1350,7 +1574,7 @@ export default async function MonitoringSlaPage({
                                                 value={percentFromRatio(
                                                     weeklyBusiness.refundRate
                                                 )}
-                                                detail={`${weeklyBusiness.refundCount} refunds · ${rupeeLabelFromPaise(
+                                                detail={`${weeklyBusiness.refundCount} refunds Â· ${rupeeLabelFromPaise(
                                                     weeklyBusiness.refundAmount
                                                 )}`}
                                                 tone={
@@ -1364,7 +1588,7 @@ export default async function MonitoringSlaPage({
                                                 value={percentFromRatio(
                                                     weeklyBusiness.rtoRate
                                                 )}
-                                                detail={`${weeklyBusiness.rtoShipments} RTO · ${weeklyBusiness.deliveredShipments} delivered`}
+                                                detail={`${weeklyBusiness.rtoShipments} RTO Â· ${weeklyBusiness.deliveredShipments} delivered`}
                                                 tone={
                                                     weeklyBusiness.rtoRate > 0.1
                                                         ? "watch"
@@ -1400,7 +1624,7 @@ export default async function MonitoringSlaPage({
                                                                     {
                                                                         reason.count
                                                                     }{" "}
-                                                                    ·{" "}
+                                                                    Â·{" "}
                                                                     {rupeeLabelFromPaise(
                                                                         reason.amount
                                                                     )}
@@ -1706,21 +1930,183 @@ export default async function MonitoringSlaPage({
                                         ))}
                                     </div>
                                 </div>
+                                <div className="mt-4 flex flex-wrap gap-2">
+                                    <a
+                                        href={marketingReportXlsxHref}
+                                        className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-900"
+                                    >
+                                        Export Marketing XLSX
+                                    </a>
+                                    <a
+                                        href={marketingReportCsvHref}
+                                        className="inline-flex items-center rounded-md border border-white/30 px-3 py-2 text-sm font-semibold text-white"
+                                    >
+                                        Export Marketing CSV
+                                    </a>
+                                </div>
+                                <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
+                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                        <div className="rounded-xl border border-white/15 bg-white/10 p-4">
+                                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-100">
+                                                Meta Ads
+                                            </p>
+                                            <p className="mt-2 text-lg font-semibold text-white">
+                                                {marketingPerformance.integrations.metaAdsConnected
+                                                    ? "Connected"
+                                                    : "Not connected"}
+                                            </p>
+                                            <p className="mt-1 text-sm text-rose-100">
+                                                {marketingPerformance.integrations.metaAdsConnected
+                                                    ? "Spend pulls from the Meta Ads API for the current week."
+                                                    : "If Meta is not configured, the dashboard can use your manual fallback value."}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-xl border border-white/15 bg-white/10 p-4">
+                                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-100">
+                                                Google Ads
+                                            </p>
+                                            <p className="mt-2 text-lg font-semibold text-white">
+                                                {marketingPerformance.integrations.googleAdsConnected
+                                                    ? "Connected"
+                                                    : "Not connected"}
+                                            </p>
+                                            <p className="mt-1 text-sm text-rose-100">
+                                                {marketingPerformance.integrations.googleAdsConnected
+                                                    ? "Spend pulls from the Google Ads source for the current week."
+                                                    : "If Google is not configured, the dashboard can use your manual fallback value."}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-xl border border-white/15 bg-white/10 p-4 sm:col-span-2 xl:col-span-1">
+                                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-rose-100">
+                                                Partnerships
+                                            </p>
+                                            <p className="mt-2 text-lg font-semibold text-white">
+                                                Manual
+                                            </p>
+                                            <p className="mt-1 text-sm text-rose-100">
+                                                Weekly partnership spend can be entered manually and is used for the channel card below.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <form
+                                        action={saveMarketingSpendFallback}
+                                        className="rounded-xl border border-white/15 bg-white/10 p-4 backdrop-blur"
+                                    >
+                                        <input
+                                            type="hidden"
+                                            name="dashboard"
+                                            value="marketing"
+                                        />
+                                        <p className="text-sm font-semibold text-white">
+                                            Manual weekly spend fallback
+                                        </p>
+                                        <p className="mt-1 text-xs leading-5 text-rose-100">
+                                            Use this for disconnected ad channels
+                                            and for weekly partnership spend.
+                                            Connected ad channels still use live
+                                            API data.
+                                        </p>
+                                        <div className="mt-4 grid gap-3">
+                                            <div className="grid gap-3 sm:grid-cols-2">
+                                                <label className="space-y-1 text-sm text-white">
+                                                    <span>Meta spend (INR)</span>
+                                                    <input
+                                                        type="number"
+                                                        name="metaSpendRupees"
+                                                        min="0"
+                                                        step="0.01"
+                                                        defaultValue={(
+                                                            marketingPerformance.integrations.manualSpendFallback.metaSpendPaise /
+                                                            100
+                                                        ).toFixed(2)}
+                                                        className="w-full rounded-md border border-white/20 bg-white/95 px-3 py-2 text-slate-950 outline-none ring-0"
+                                                    />
+                                                </label>
+                                                <label className="space-y-1 text-sm text-white">
+                                                    <span>Google spend (INR)</span>
+                                                    <input
+                                                        type="number"
+                                                        name="googleSpendRupees"
+                                                        min="0"
+                                                        step="0.01"
+                                                        defaultValue={(
+                                                            marketingPerformance.integrations.manualSpendFallback.googleSpendPaise /
+                                                            100
+                                                        ).toFixed(2)}
+                                                        className="w-full rounded-md border border-white/20 bg-white/95 px-3 py-2 text-slate-950 outline-none ring-0"
+                                                    />
+                                                </label>
+                                            </div>
+                                            <label className="space-y-1 text-sm text-white">
+                                                <span>Partnerships spend (INR)</span>
+                                                <input
+                                                    type="number"
+                                                    name="partnershipSpendRupees"
+                                                    min="0"
+                                                    step="0.01"
+                                                    defaultValue={(
+                                                        marketingPerformance.integrations.manualSpendFallback.partnershipSpendPaise /
+                                                        100
+                                                    ).toFixed(2)}
+                                                    className="w-full rounded-md border border-white/20 bg-white/95 px-3 py-2 text-slate-950 outline-none ring-0"
+                                                />
+                                            </label>
+                                        </div>
+                                        <label className="mt-3 block space-y-1 text-sm text-white">
+                                            <span>Notes</span>
+                                            <textarea
+                                                name="notes"
+                                                rows={3}
+                                                defaultValue={
+                                                    marketingPerformance.integrations.manualSpendFallback.notes
+                                                }
+                                                placeholder="Example: Added Meta spend manually because API is not configured yet."
+                                                className="w-full rounded-md border border-white/20 bg-white/95 px-3 py-2 text-slate-950 outline-none ring-0"
+                                            />
+                                        </label>
+                                        <button
+                                            type="submit"
+                                            className="mt-3 inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-slate-950"
+                                        >
+                                            Save fallback spend
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
 
-                            <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-5 pt-5">
+                                <div>
+                                    <p className="text-sm font-semibold text-slate-950">
+                                        Core marketing KPIs
+                                    </p>
+                                    <p className="text-xs text-slate-500">
+                                        Click the guide for short forms,
+                                        formulas, and data sources.
+                                    </p>
+                                </div>
+                                <MarketingMetricGuide />
+                            </div>
+                            <div className="grid gap-3 px-5 pb-5 pt-3 sm:grid-cols-2 xl:grid-cols-4">
                                 <MetricTile
                                     label="Spend this week"
                                     value={rupeeLabelFromPaise(
                                         marketingPerformance.totalSpend
                                     )}
-                                    detail={marketingPerformance.integrations.metaAds}
+                                    detail={`Meta: ${marketingPerformance.integrations.metaAds} Â· Google: ${marketingPerformance.integrations.googleAds}`}
                                 />
                                 <MetricTile
                                     label="Blended CAC"
                                     value={
                                         marketingPerformance.blendedCac === null
-                                            ? "Needs spend + customers"
+                                            ? marketingPerformance.totalSpend ===
+                                                  0 &&
+                                              marketingPerformance.customersWtd ===
+                                                  0
+                                                ? "Needs spend + customers"
+                                                : marketingPerformance.totalSpend ===
+                                                    0
+                                                  ? "Needs spend"
+                                                  : "Needs customers"
                                             : rupeeLabelFromPaise(
                                                   marketingPerformance.blendedCac
                                               )
@@ -1748,6 +2134,28 @@ export default async function MonitoringSlaPage({
                                     )}`}
                                 />
                             </div>
+                            <div className="grid gap-3 border-t border-slate-100 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                                <MetricTile
+                                    label="Sessions"
+                                    value={metricLabel(marketingPerformance.kpis.sessions)}
+                                    detail={`Visitors ${metricLabel(marketingPerformance.kpis.visitors)}`}
+                                />
+                                <MetricTile
+                                    label="Browse rate"
+                                    value={percentFromRatio(marketingPerformance.kpis.browseRate)}
+                                    detail={`Cart rate ${percentFromRatio(marketingPerformance.kpis.cartRate)}`}
+                                />
+                                <MetricTile
+                                    label="Checkout rate"
+                                    value={percentFromRatio(marketingPerformance.kpis.checkoutRate)}
+                                    detail={`Purchase rate ${percentFromRatio(marketingPerformance.kpis.purchaseRate)}`}
+                                />
+                                <MetricTile
+                                    label="Returning customer rate"
+                                    value={percentFromRatio(marketingPerformance.kpis.returningCustomerRate)}
+                                    detail={`${marketingPerformance.kpis.emailSends} email sends this week`}
+                                />
+                            </div>
                         </div>
 
                         <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(380px,0.85fr)]">
@@ -1759,16 +2167,19 @@ export default async function MonitoringSlaPage({
                                                 Spend, CAC, and ROAS by channel
                                             </h3>
                                             <p className="text-sm text-muted-foreground">
-                                                Meta, Google, organic, and
-                                                partnerships in the required
-                                                order.
+                                                Meta, Google, and partnerships
+                                                with weekly spend and conversion
+                                                context.
                                             </p>
                                         </div>
                                         <Gauge className="size-5 text-slate-500" />
                                     </div>
                                     <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                                        {marketingPerformance.channelPerformance.map(
-                                            (row) => (
+                                        {marketingPerformance.channelPerformance
+                                            .filter(
+                                                (row) => row.channel !== "Organic"
+                                            )
+                                            .map((row) => (
                                                 <div
                                                     key={row.channel}
                                                     className="rounded-lg border bg-slate-50 p-4"
@@ -1825,38 +2236,33 @@ export default async function MonitoringSlaPage({
                                                         </div>
                                                     </div>
                                                 </div>
-                                            )
-                                        )}
+                                            ))}
                                     </div>
                                 </div>
 
-                                <div className="grid gap-4 lg:grid-cols-2">
+                                <div className="grid gap-4">
                                     <div className="rounded-xl border bg-white p-5 shadow-sm">
                                         <h3 className="text-base font-semibold text-slate-950">
-                                            Traffic by source
+                                            Sessions by source / medium
                                         </h3>
                                         <div className="mt-4 space-y-2">
-                                            {marketingPerformance.trafficBySource
+                                            {marketingPerformance.sourceMediumPerformance
                                                 .length === 0 ? (
                                                 <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
-                                                    No source traffic data yet.
+                                                    No attribution data yet.
                                                 </p>
                                             ) : (
-                                                marketingPerformance.trafficBySource.map(
+                                                marketingPerformance.sourceMediumPerformance.map(
                                                     (row) => (
                                                         <div
-                                                            key={row.source}
+                                                            key={`${row.source}-${row.medium}`}
                                                             className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
                                                         >
-                                                            <span className="capitalize text-slate-700">
-                                                                {row.source.replaceAll(
-                                                                    "_",
-                                                                    " "
-                                                                )}
+                                                            <span className="text-slate-700">
+                                                                {row.source} / {row.medium}
                                                             </span>
                                                             <span className="font-semibold text-slate-950">
-                                                                {row.sessions}{" "}
-                                                                sessions
+                                                                {row.sessions} sessions
                                                             </span>
                                                         </div>
                                                     )
@@ -1865,40 +2271,40 @@ export default async function MonitoringSlaPage({
                                         </div>
                                     </div>
 
-                                    <div className="rounded-xl border bg-white p-5 shadow-sm">
-                                        <h3 className="text-base font-semibold text-slate-950">
-                                            Conversion rate by source
-                                        </h3>
-                                        <div className="mt-4 space-y-2">
-                                            {marketingPerformance.conversionBySource
-                                                .length === 0 ? (
-                                                <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
-                                                    No source conversion data
-                                                    yet.
-                                                </p>
-                                            ) : (
-                                                marketingPerformance.conversionBySource.map(
-                                                    (row) => (
-                                                        <div
-                                                            key={row.source}
-                                                            className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
-                                                        >
-                                                            <span className="capitalize text-slate-700">
-                                                                {row.source.replaceAll(
-                                                                    "_",
-                                                                    " "
-                                                                )}
-                                                            </span>
-                                                            <span className="font-semibold text-slate-950">
-                                                                {percentFromRatio(
-                                                                    row.conversionRate
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                    )
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Landing performance by campaign
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance.landingPerformanceByCampaign
+                                            .length === 0 ? (
+                                            <p className="rounded-md bg-slate-50 px-3 py-8 text-center text-sm text-muted-foreground">
+                                                No campaign landing data yet.
+                                            </p>
+                                        ) : (
+                                            marketingPerformance.landingPerformanceByCampaign.map(
+                                                (row) => (
+                                                    <div
+                                                        key={`${row.campaign}-${row.landingPath}`}
+                                                        className="rounded-lg border bg-slate-50 p-4"
+                                                    >
+                                                        <p className="font-semibold text-slate-950">
+                                                            {marketingCampaignLabel(
+                                                                row.campaign
+                                                            )}
+                                                        </p>
+                                                        <p className="mt-1 text-sm text-muted-foreground">
+                                                            {row.landingPath}
+                                                        </p>
+                                                        <p className="mt-2 text-sm text-slate-700">
+                                                            {row.sessions} sessions | {row.visitors} visitors
+                                                        </p>
+                                                    </div>
                                                 )
-                                            )}
-                                        </div>
+                                            )
+                                        )}
                                     </div>
                                 </div>
 
@@ -2046,9 +2452,115 @@ export default async function MonitoringSlaPage({
                                 </div>
 
                                 <div className="rounded-xl border bg-white p-5 shadow-sm">
-                                    <h3 className="text-base font-semibold text-slate-950">
-                                        Content output vs target
-                                    </h3>
+                                    <div className="flex items-center justify-between gap-3">
+                                        <h3 className="text-base font-semibold text-slate-950">
+                                            Content output vs target
+                                        </h3>
+                                        <details className="group relative">
+                                            <summary className="cursor-pointer list-none rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50 [&::-webkit-details-marker]:hidden">
+                                                Edit targets
+                                            </summary>
+                                            <form
+                                                action={saveMarketingContentOutputAndTargets}
+                                                className="absolute right-0 top-9 z-20 w-72 rounded-lg border bg-white p-4 shadow-lg"
+                                            >
+                                                <input
+                                                    type="hidden"
+                                                    name="dashboard"
+                                                    value="marketing"
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="roasGoal"
+                                                    value={marketingPerformance.goals.roas}
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="cacGoalPaise"
+                                                    value={marketingPerformance.goals.cac}
+                                                />
+                                                <p className="text-sm font-semibold text-slate-950">
+                                                    Weekly output and targets
+                                                </p>
+                                                <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                                                    Enter actual output and the weekly target. Saving uses the manual output values on this dashboard.
+                                                </p>
+                                                <div className="mt-3 grid grid-cols-[1fr_76px_76px] gap-2 text-xs">
+                                                    <span className="font-medium text-slate-500">Type</span>
+                                                    <span className="font-medium text-slate-500">Output</span>
+                                                    <span className="font-medium text-slate-500">Target</span>
+                                                    {[
+                                                        {
+                                                            label: "Reels",
+                                                            outputName: "reelsOutput",
+                                                            targetName: "reelsTarget",
+                                                            outputValue: marketingPerformance.contentOutputOverride.isActive
+                                                                ? marketingPerformance.contentOutputOverride.reels
+                                                                : marketingPerformance.contentOutput[0]?.count ?? 0,
+                                                            targetValue: marketingPerformance.goals.reelsTarget,
+                                                        },
+                                                        {
+                                                            label: "Posts",
+                                                            outputName: "postsOutput",
+                                                            targetName: "postsTarget",
+                                                            outputValue: marketingPerformance.contentOutputOverride.isActive
+                                                                ? marketingPerformance.contentOutputOverride.posts
+                                                                : marketingPerformance.contentOutput[1]?.count ?? 0,
+                                                            targetValue: marketingPerformance.goals.postsTarget,
+                                                        },
+                                                        {
+                                                            label: "Blogs",
+                                                            outputName: "blogsOutput",
+                                                            targetName: "blogsTarget",
+                                                            outputValue: marketingPerformance.contentOutputOverride.isActive
+                                                                ? marketingPerformance.contentOutputOverride.blogs
+                                                                : marketingPerformance.contentOutput[2]?.count ?? 0,
+                                                            targetValue: marketingPerformance.goals.blogsTarget,
+                                                        },
+                                                    ].map((row) => (
+                                                        <div key={row.label} className="contents">
+                                                            <span className="self-center font-medium text-slate-700">
+                                                                {row.label}
+                                                            </span>
+                                                            <input
+                                                                type="number"
+                                                                name={row.outputName}
+                                                                min="0"
+                                                                step="1"
+                                                                defaultValue={row.outputValue}
+                                                                aria-label={`${row.label} output`}
+                                                                className="w-full rounded-md border border-slate-200 px-2 py-2 text-sm text-slate-950"
+                                                            />
+                                                            <input
+                                                                type="number"
+                                                                name={row.targetName}
+                                                                min="0"
+                                                                step="1"
+                                                                defaultValue={row.targetValue}
+                                                                aria-label={`${row.label} target`}
+                                                                className="w-full rounded-md border border-slate-200 px-2 py-2 text-sm text-slate-950"
+                                                            />
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                <button
+                                                    type="submit"
+                                                    className="mt-4 w-full rounded-md bg-slate-950 px-3 py-2 text-sm font-semibold text-white"
+                                                >
+                                                    Save output and targets
+                                                </button>
+                                                {marketingPerformance.contentOutputOverride.isActive && (
+                                                    <button
+                                                        formAction={useLiveMarketingContentOutput}
+                                                        type="submit"
+                                                        className="mt-2 w-full rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700"
+                                                    >
+                                                        Use live data
+                                                    </button>
+                                                )}
+                                            </form>
+                                        </details>
+                                    </div>
                                     <div className="mt-4 space-y-2">
                                         {marketingPerformance.contentOutput.map(
                                             (row) => (
@@ -2071,6 +2583,57 @@ export default async function MonitoringSlaPage({
                                                 </div>
                                             )
                                         )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Email send volume
+                                    </h3>
+                                    <div className="mt-4 space-y-2">
+                                        {marketingPerformance.emailSends.byCampaignType.map(
+                                            (row) => (
+                                                <div
+                                                    key={row.campaignType}
+                                                    className="flex items-center justify-between gap-3 rounded-md bg-slate-50 px-3 py-2 text-sm"
+                                                >
+                                                    <span className="text-slate-700">
+                                                        {row.campaignType}
+                                                    </span>
+                                                    <span className="font-semibold text-slate-950">
+                                                        {row.sends}
+                                                    </span>
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                </div>
+
+                                <div className="rounded-xl border bg-white p-5 shadow-sm">
+                                    <h3 className="text-base font-semibold text-slate-950">
+                                        Partnership tracking
+                                    </h3>
+                                    <div className="mt-4 grid grid-cols-2 gap-2 text-sm">
+                                        {[
+                                            ["Total", marketingPerformance.partnerships.total],
+                                            ["Live", marketingPerformance.partnerships.live],
+                                            ["Completed", marketingPerformance.partnerships.completed],
+                                            ["With coupon", marketingPerformance.partnerships.withCouponCode],
+                                            ["With tracking URL", marketingPerformance.partnerships.withTrackingUrl],
+                                            ["Planned", marketingPerformance.partnerships.planned],
+                                        ].map(([label, value]) => (
+                                            <div
+                                                key={String(label)}
+                                                className="rounded-md bg-slate-50 px-3 py-2"
+                                            >
+                                                <p className="text-xs text-muted-foreground">
+                                                    {label}
+                                                </p>
+                                                <p className="mt-1 font-semibold text-slate-950">
+                                                    {metricLabel(value)}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -2667,7 +3230,7 @@ export default async function MonitoringSlaPage({
                                             {alertsPage.total === 1
                                                 ? ""
                                                 : "s"}{" "}
-                                            · page {currentAlertPage} of{" "}
+                                            Â· page {currentAlertPage} of{" "}
                                             {pageCount}
                                         </p>
                                     </div>
@@ -3013,3 +3576,4 @@ export default async function MonitoringSlaPage({
         </main>
     );
 }
+

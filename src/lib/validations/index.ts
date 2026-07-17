@@ -21,6 +21,7 @@ export * from "./corporate-order";
 export * from "./corporate-platform";
 export * from "./legal";
 export * from "./marketing-strip";
+export * from "./marketing";
 export * from "./newsletter-subscriber";
 export * from "./monitoring-sla";
 export * from "./order";

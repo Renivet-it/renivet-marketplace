@@ -92,6 +92,12 @@ export const env = createEnv({
 
         POSTHOG_PROJECT_ID: z.string().optional(),
         POSTHOG_PERSONAL_API_KEY: z.string().optional(),
+        GOOGLE_ADS_DEVELOPER_TOKEN: z.string().optional(),
+        GOOGLE_ADS_CUSTOMER_ID: z.string().optional(),
+        GOOGLE_ADS_REFRESH_TOKEN: z.string().optional(),
+        GOOGLE_ADS_CLIENT_ID: z.string().optional(),
+        GOOGLE_ADS_CLIENT_SECRET: z.string().optional(),
+        GOOGLE_ADS_LOGIN_CUSTOMER_ID: z.string().optional(),
         ANALYTICS_CRON_SECRET: z.string().optional(),
 
         NODE_ENV: z
@@ -155,6 +161,12 @@ export const env = createEnv({
         UNICOMMERCE_CRON_SECRET: process.env.UNICOMMERCE_CRON_SECRET,
         POSTHOG_PROJECT_ID: process.env.POSTHOG_PROJECT_ID,
         POSTHOG_PERSONAL_API_KEY: process.env.POSTHOG_PERSONAL_API_KEY,
+        GOOGLE_ADS_DEVELOPER_TOKEN: process.env.GOOGLE_ADS_DEVELOPER_TOKEN,
+        GOOGLE_ADS_CUSTOMER_ID: process.env.GOOGLE_ADS_CUSTOMER_ID,
+        GOOGLE_ADS_REFRESH_TOKEN: process.env.GOOGLE_ADS_REFRESH_TOKEN,
+        GOOGLE_ADS_CLIENT_ID: process.env.GOOGLE_ADS_CLIENT_ID,
+        GOOGLE_ADS_CLIENT_SECRET: process.env.GOOGLE_ADS_CLIENT_SECRET,
+        GOOGLE_ADS_LOGIN_CUSTOMER_ID: process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID,
         ANALYTICS_CRON_SECRET: process.env.ANALYTICS_CRON_SECRET,
         NODE_ENV: process.env.NODE_ENV,
 

@@ -28,6 +28,27 @@ export const blogSchema = z.object({
         })
         .min(3, "Description must be at least 3 characters long")
         .max(255, "Description must be at most 255 characters long"),
+    metaTitle: z
+        .string({
+            invalid_type_error: "Meta title must be a string",
+        })
+        .max(60, "Meta title must be at most 60 characters long")
+        .nullable()
+        .optional(),
+    metaDescription: z
+        .string({
+            invalid_type_error: "Meta description must be a string",
+        })
+        .max(160, "Meta description must be at most 160 characters long")
+        .nullable()
+        .optional(),
+    targetKeyword: z
+        .string({
+            invalid_type_error: "Target keyword must be a string",
+        })
+        .max(120, "Target keyword must be at most 120 characters long")
+        .nullable()
+        .optional(),
     content: z
         .string({
             required_error: "Content is required",
@@ -41,6 +62,13 @@ export const blogSchema = z.object({
         })
         .url("Thumbnail URL is invalid")
         .nullable(),
+    thumbnailAltText: z
+        .string({
+            invalid_type_error: "Thumbnail alt text must be a string",
+        })
+        .max(160, "Thumbnail alt text must be at most 160 characters long")
+        .nullable()
+        .optional(),
     authorId: z
         .string({
             required_error: "Author ID is required",
@@ -103,7 +131,30 @@ export const createBlogSchema = blogSchema
             message: "Content must be at least 10 characters long",
             path: ["content"],
         }
-    );
+    )
+    .superRefine((data, ctx) => {
+        if (data.isPublished && !data.targetKeyword?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Target keyword is required for published blogs",
+                path: ["targetKeyword"],
+            });
+        }
+        if (data.isPublished && !data.metaTitle?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Meta title is required for published blogs",
+                path: ["metaTitle"],
+            });
+        }
+        if (data.isPublished && !data.metaDescription?.trim()) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                message: "Meta description is required for published blogs",
+                path: ["metaDescription"],
+            });
+        }
+    });
 
 export const updateBlogSchema = blogSchema
     .omit({

@@ -11,6 +11,10 @@ import {
 } from "@/lib/validations";
 import { resend } from "@/lib/resend";
 import { MonitoringAlertEmail } from "@/lib/resend/emails";
+import {
+    getPostHogAttributionBreakdown,
+    getPostHogBehaviorOverview,
+} from "@/lib/reports/posthog-behavior";
 import { getAbsoluteURL } from "@/lib/utils";
 import { sendPlainWhatsAppMessage, sendWhatsAppMessage } from "@/lib/whatsapp";
 import {
@@ -32,7 +36,6 @@ import {
     accessReviewItems,
     accessReviewRuns,
     analyticsDailyBehavior,
-    analyticsLandingPageDaily,
     auditLogs,
     brandConfidentials,
     brandRequests,
@@ -45,11 +48,13 @@ import {
     complianceExportFiles,
     complianceExportRuns,
     dailyHealthSnapshots,
+    emailMessageLogs,
     fraudReviews,
     monitoringAlertDeliveries,
     monitoringAlertEvents,
     monitoringAlerts,
     monitoringSettings,
+    marketingPartnerships,
     orderItems,
     orderReturnRequests,
     orders,
@@ -78,6 +83,176 @@ export type ComplianceExportFile = {
     rowCount: number;
     headers: string[];
 };
+
+type GoogleAdsSummary = {
+    configured: boolean;
+    status: string;
+    spend: number;
+    revenue: number;
+    conversions: number;
+    traffic: number;
+    source: string;
+};
+
+async function getGoogleAdsSummary(
+    weekStartKey: string,
+    weekEndKey: string
+): Promise<GoogleAdsSummary> {
+    const developerToken = process.env.GOOGLE_ADS_DEVELOPER_TOKEN;
+    const customerId = process.env.GOOGLE_ADS_CUSTOMER_ID;
+    const refreshToken = process.env.GOOGLE_ADS_REFRESH_TOKEN;
+    const clientId = process.env.GOOGLE_ADS_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_ADS_CLIENT_SECRET;
+    const loginCustomerId = process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID;
+
+    if (
+        !developerToken ||
+        !customerId ||
+        !refreshToken ||
+        !clientId ||
+        !clientSecret
+    ) {
+        return {
+            configured: false,
+            status: "not configured",
+            spend: 0,
+            revenue: 0,
+            conversions: 0,
+            traffic: 0,
+            source: "Needs Google Ads integration keys",
+        };
+    }
+
+    try {
+        const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+                client_id: clientId,
+                client_secret: clientSecret,
+                refresh_token: refreshToken,
+                grant_type: "refresh_token",
+            }),
+            next: { revalidate: 900 },
+        });
+
+        if (!tokenResponse.ok) {
+            return {
+                configured: true,
+                status: "token refresh failed",
+                spend: 0,
+                revenue: 0,
+                conversions: 0,
+                traffic: 0,
+                source: "Google OAuth token refresh failed",
+            };
+        }
+
+        const tokenPayload = (await tokenResponse.json()) as {
+            access_token?: string;
+        };
+        const accessToken = tokenPayload.access_token;
+
+        if (!accessToken) {
+            return {
+                configured: true,
+                status: "access token missing",
+                spend: 0,
+                revenue: 0,
+                conversions: 0,
+                traffic: 0,
+                source: "Google OAuth token missing",
+            };
+        }
+
+        const query = `
+            SELECT
+              metrics.cost_micros,
+              metrics.clicks,
+              metrics.conversions,
+              metrics.conversions_value,
+              metrics.impressions
+            FROM customer
+            WHERE segments.date BETWEEN '${weekStartKey}' AND '${weekEndKey}'
+        `;
+
+        const response = await fetch(
+            `https://googleads.googleapis.com/v17/customers/${customerId}/googleAds:searchStream`,
+            {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${accessToken}`,
+                    "developer-token": developerToken,
+                    ...(loginCustomerId
+                        ? { "login-customer-id": loginCustomerId }
+                        : {}),
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ query }),
+                next: { revalidate: 900 },
+            }
+        );
+
+        if (!response.ok) {
+            const details = await response.text().catch(() => "");
+            return {
+                configured: true,
+                status: "query failed",
+                spend: 0,
+                revenue: 0,
+                conversions: 0,
+                traffic: 0,
+                source: `Google Ads API query failed${details ? `: ${details.slice(0, 80)}` : ""}`,
+            };
+        }
+
+        const payload = (await response.json()) as Array<{
+            results?: Array<{
+                metrics?: {
+                    costMicros?: string;
+                    clicks?: string;
+                    conversions?: string;
+                    conversionsValue?: string;
+                    impressions?: string;
+                };
+            }>;
+        }>;
+
+        const rows = payload.flatMap((chunk) => chunk.results ?? []);
+        const totals = rows.reduce(
+            (acc, row) => {
+                acc.spend += Number(row.metrics?.costMicros ?? 0);
+                acc.clicks += Number(row.metrics?.clicks ?? 0);
+                acc.conversions += Number(row.metrics?.conversions ?? 0);
+                acc.revenue += Number(row.metrics?.conversionsValue ?? 0);
+                return acc;
+            },
+            { spend: 0, clicks: 0, conversions: 0, revenue: 0 }
+        );
+
+        return {
+            configured: true,
+            status: "connected",
+            spend: Math.round(totals.spend / 10000),
+            revenue: Math.round(totals.revenue * 100),
+            conversions: totals.conversions,
+            traffic: totals.clicks,
+            source: "Google Ads API",
+        };
+    } catch (error) {
+        return {
+            configured: true,
+            status: error instanceof Error ? error.message : "request failed",
+            spend: 0,
+            revenue: 0,
+            conversions: 0,
+            traffic: 0,
+            source: "Google Ads API request failed",
+        };
+    }
+}
 export type ComplianceExportBuild = {
     rows: ComplianceExportRow[];
     csv: string;
@@ -122,6 +297,9 @@ const ALERT_WHATSAPP_RECIPIENTS = (process.env.RENIVET_ALERT_WHATSAPP ?? "")
     .filter(Boolean);
 const MONITORING_DASHBOARD_PATH = "/dashboard/general/monitoring-sla";
 const MARKETING_TARGETS_SETTING_KEY = "marketing_performance_targets";
+const MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY =
+    "marketing_performance_content_output_override";
+const MARKETING_SPEND_OVERRIDE_SETTING_KEY = "marketing_performance_spend_override";
 const WHATSAPP_NOTIFICATION_SETTINGS_KEY = "whatsapp_notification_modules";
 
 type MarketingPerformanceTargets = {
@@ -130,6 +308,20 @@ type MarketingPerformanceTargets = {
     reelsTarget: number;
     postsTarget: number;
     blogsTarget: number;
+};
+
+type MarketingSpendOverride = {
+    metaSpendPaise: number;
+    googleSpendPaise: number;
+    partnershipSpendPaise: number;
+    notes: string;
+};
+
+type MarketingContentOutputOverride = {
+    isActive: boolean;
+    reels: number;
+    posts: number;
+    blogs: number;
 };
 
 function numberSetting(
@@ -3320,6 +3512,141 @@ class MonitoringSlaQuery {
         return safeTargets;
     }
 
+    async getMarketingContentOutputOverride(): Promise<MarketingContentOutputOverride> {
+        const saved = await db.query.monitoringSettings.findFirst({
+            where: eq(
+                monitoringSettings.key,
+                MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY
+            ),
+        });
+        const value = saved?.value ?? {};
+
+        return {
+            isActive: value.isActive === true,
+            reels: Math.round(numberSetting(value.reels, 0, 0)),
+            posts: Math.round(numberSetting(value.posts, 0, 0)),
+            blogs: Math.round(numberSetting(value.blogs, 0, 0)),
+        };
+    }
+
+    async updateMarketingContentOutputOverride({
+        override,
+        actorId,
+    }: {
+        override: MarketingContentOutputOverride;
+        actorId: string;
+    }) {
+        const safeOverride: MarketingContentOutputOverride = {
+            isActive: override.isActive === true,
+            reels: Math.round(numberSetting(override.reels, 0, 0)),
+            posts: Math.round(numberSetting(override.posts, 0, 0)),
+            blogs: Math.round(numberSetting(override.blogs, 0, 0)),
+        };
+
+        await db
+            .insert(monitoringSettings)
+            .values({
+                key: MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY,
+                value: safeOverride,
+                updatedBy: actorId,
+            })
+            .onConflictDoUpdate({
+                target: monitoringSettings.key,
+                set: {
+                    value: safeOverride,
+                    updatedBy: actorId,
+                    updatedAt: new Date(),
+                },
+            });
+
+        await auditLogQueries.write({
+            userId: actorId,
+            actionType: "marketing_content_output_override_updated",
+            entityType: "monitoring_settings",
+            entityId: MARKETING_CONTENT_OUTPUT_OVERRIDE_SETTING_KEY,
+            afterValue: safeOverride,
+            reason: "Admin updated Marketing Performance content output override",
+        });
+
+        return safeOverride;
+    }
+
+    async getMarketingSpendOverride(): Promise<MarketingSpendOverride> {
+        const saved = await db.query.monitoringSettings.findFirst({
+            where: eq(
+                monitoringSettings.key,
+                MARKETING_SPEND_OVERRIDE_SETTING_KEY
+            ),
+        });
+        const value = saved?.value ?? {};
+
+        return {
+            metaSpendPaise: Math.round(
+                numberSetting(value.metaSpendPaise, 0, 0)
+            ),
+            googleSpendPaise: Math.round(
+                numberSetting(value.googleSpendPaise, 0, 0)
+            ),
+            partnershipSpendPaise: Math.round(
+                numberSetting(value.partnershipSpendPaise, 0, 0)
+            ),
+            notes:
+                typeof value.notes === "string"
+                    ? value.notes.trim().slice(0, 500)
+                    : "",
+        };
+    }
+
+    async updateMarketingSpendOverride({
+        override,
+        actorId,
+    }: {
+        override: MarketingSpendOverride;
+        actorId: string;
+    }) {
+        const safeOverride: MarketingSpendOverride = {
+            metaSpendPaise: Math.round(
+                numberSetting(override.metaSpendPaise, 0, 0)
+            ),
+            googleSpendPaise: Math.round(
+                numberSetting(override.googleSpendPaise, 0, 0)
+            ),
+            partnershipSpendPaise: Math.round(
+                numberSetting(override.partnershipSpendPaise, 0, 0)
+            ),
+            notes: String(override.notes ?? "")
+                .trim()
+                .slice(0, 500),
+        };
+
+        await db
+            .insert(monitoringSettings)
+            .values({
+                key: MARKETING_SPEND_OVERRIDE_SETTING_KEY,
+                value: safeOverride,
+                updatedBy: actorId,
+            })
+            .onConflictDoUpdate({
+                target: monitoringSettings.key,
+                set: {
+                    value: safeOverride,
+                    updatedBy: actorId,
+                    updatedAt: new Date(),
+                },
+            });
+
+        await auditLogQueries.write({
+            userId: actorId,
+            actionType: "marketing_spend_override_updated",
+            entityType: "monitoring_settings",
+            entityId: MARKETING_SPEND_OVERRIDE_SETTING_KEY,
+            afterValue: safeOverride,
+            reason: "Admin updated manual marketing spend fallback",
+        });
+
+        return safeOverride;
+    }
+
     async getMarketingPerformance() {
         const today = startOfDay();
         const weekStart = new Date(today.getTime() - 6 * DAY);
@@ -3332,6 +3659,9 @@ class MonitoringSlaQuery {
             process.env.INSTAGRAM_BUSINESS_ACCOUNT_ID;
         const graphVersion = process.env.META_GRAPH_API_VERSION || "v20.0";
         const targets = await this.getMarketingPerformanceTargets();
+        const contentOutputOverride =
+            await this.getMarketingContentOutputOverride();
+        const spendOverride = await this.getMarketingSpendOverride();
         const roasGoal = targets.roasGoal;
         const cacGoalPaise = targets.cacGoalPaise;
         const contentTargets = {
@@ -3432,13 +3762,17 @@ class MonitoringSlaQuery {
         const [
             week,
             month,
-            behavior,
-            trafficRows,
+            behaviorOverview,
+            attributionRows,
             metaChannelRows,
             metaCreativeRows,
             metaCampaignRows,
+            googleSummary,
             blogsPublishedThisWeek,
             instagramMedia,
+            emailSends,
+            partnershipRows,
+            weeklyCustomers,
         ] = await Promise.all([
             db
                 .select({
@@ -3458,43 +3792,8 @@ class MonitoringSlaQuery {
                 .from(orders)
                 .where(gte(orders.createdAt, monthStart))
                 .then((res) => res[0]),
-            db
-                .select({
-                    sessions: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessions}), 0)`,
-                    visitors: sql<number>`coalesce(sum(${analyticsDailyBehavior.visitors}), 0)`,
-                    carts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsWithCart}), 0)`,
-                    checkouts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsReachedCheckout}), 0)`,
-                })
-                .from(analyticsDailyBehavior)
-                .where(
-                    and(
-                        gte(analyticsDailyBehavior.dateKey, weekStartKey),
-                        lte(analyticsDailyBehavior.dateKey, weekEndKey)
-                    )
-                )
-                .then((res) => res[0]),
-            db
-                .select({
-                    source: analyticsLandingPageDaily.landingType,
-                    sessions: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`,
-                    visitors: sql<number>`coalesce(sum(${analyticsLandingPageDaily.visitors}), 0)`,
-                    carts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsWithCart}), 0)`,
-                    checkouts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsReachedCheckout}), 0)`,
-                })
-                .from(analyticsLandingPageDaily)
-                .where(
-                    and(
-                        gte(analyticsLandingPageDaily.dateKey, weekStartKey),
-                        lte(analyticsLandingPageDaily.dateKey, weekEndKey)
-                    )
-                )
-                .groupBy(analyticsLandingPageDaily.landingType)
-                .orderBy(
-                    desc(
-                        sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`
-                    )
-                )
-                .limit(8),
+            getPostHogBehaviorOverview(weekStart, today),
+            getPostHogAttributionBreakdown(weekStart, today, 250),
             fetchMetaInsights({
                 level: "account",
                 fields: "spend,impressions,clicks,actions,action_values,purchase_roas",
@@ -3509,6 +3808,7 @@ class MonitoringSlaQuery {
                 fields: "campaign_id,campaign_name,spend,impressions,clicks,actions,action_values,purchase_roas",
                 limit: "20",
             }),
+            getGoogleAdsSummary(weekStartKey, weekEndKey),
             db.$count(
                 blogs,
                 and(
@@ -3543,6 +3843,30 @@ class MonitoringSlaQuery {
                     return [];
                 }
             })(),
+            db
+                .select({
+                    campaignType: emailMessageLogs.campaignType,
+                    sends: sql<number>`count(${emailMessageLogs.id})`,
+                })
+                .from(emailMessageLogs)
+                .where(
+                    and(
+                        eq(emailMessageLogs.success, true),
+                        gte(emailMessageLogs.sentAt, weekStart)
+                    )
+                )
+                .groupBy(emailMessageLogs.campaignType),
+            db.query.marketingPartnerships.findMany({
+                orderBy: [desc(marketingPartnerships.createdAt)],
+                limit: 50,
+            }),
+            db
+                .select({
+                    userId: orders.userId,
+                })
+                .from(orders)
+                .where(gte(orders.createdAt, weekStart))
+                .groupBy(orders.userId),
         ]);
 
         const purchaseActionTypes = [
@@ -3552,15 +3876,59 @@ class MonitoringSlaQuery {
         ];
         const weekGmv = Number(week.gmv ?? 0);
         const weekCustomers = Number(week.customers ?? 0);
+        const repeatCustomerRows = weeklyCustomers.length
+            ? await db
+                  .select({
+                      userId: orders.userId,
+                  })
+                  .from(orders)
+                  .where(
+                      and(
+                          inArray(
+                              orders.userId,
+                              weeklyCustomers.map((row) => row.userId)
+                          ),
+                          lt(orders.createdAt, weekStart)
+                      )
+                  )
+                  .groupBy(orders.userId)
+            : [];
+        const repeatCustomerCount = repeatCustomerRows.length;
         const metaAccount = metaChannelRows[0] ?? {};
-        const metaSpendPaise = Math.round(Number(metaAccount.spend ?? 0) * 100);
+        const metaAdsConnected = Boolean(metaToken && metaAdAccountId);
+        const googleAdsConnected =
+            String(googleSummary.status ?? "").toLowerCase() === "connected";
+        const metaSpendPaise = metaAdsConnected
+            ? Math.round(Number(metaAccount.spend ?? 0) * 100)
+            : spendOverride.metaSpendPaise;
         const metaPurchases = readActionCount(metaAccount, purchaseActionTypes);
         const metaRevenuePaise = readActionValue(
             metaAccount,
             purchaseActionTypes
         );
-        const organicTrafficSessions = Number(behavior.sessions ?? 0);
         const paidMetaClicks = Number(metaAccount.clicks ?? 0);
+        const bounceRate =
+            behaviorOverview.sessions === 0
+                ? 0
+                : behaviorOverview.bounceSessions / behaviorOverview.sessions;
+        const browseRate = 1 - bounceRate;
+        const cartRate =
+            Number(behaviorOverview.sessions ?? 0) === 0
+                ? 0
+                : Number(behaviorOverview.sessionsWithCart ?? 0) /
+                  Number(behaviorOverview.sessions ?? 0);
+        const checkoutRate =
+            Number(behaviorOverview.sessions ?? 0) === 0
+                ? 0
+                : Number(behaviorOverview.sessionsReachedCheckout ?? 0) /
+                  Number(behaviorOverview.sessions ?? 0);
+        const purchaseRate =
+            Number(behaviorOverview.sessions ?? 0) === 0
+                ? 0
+                : Number(week.orders ?? 0) /
+                  Number(behaviorOverview.sessions ?? 0);
+        const returningCustomerRate =
+            weekCustomers === 0 ? 0 : repeatCustomerCount / weekCustomers;
         const contentCounts = {
             reels: instagramMedia.filter(
                 (item) => item.media_type === "REELS"
@@ -3570,6 +3938,13 @@ class MonitoringSlaQuery {
             ).length,
             blogs: Number(blogsPublishedThisWeek),
         };
+        const displayedContentCounts = contentOutputOverride.isActive
+            ? {
+                  reels: contentOutputOverride.reels,
+                  posts: contentOutputOverride.posts,
+                  blogs: contentOutputOverride.blogs,
+              }
+            : contentCounts;
 
         const channelRows = [
             {
@@ -3578,31 +3953,37 @@ class MonitoringSlaQuery {
                 revenue: metaRevenuePaise,
                 conversions: metaPurchases,
                 traffic: paidMetaClicks,
-                source: metaToken && metaAdAccountId ? "Meta Ads API" : "Needs META_ACCESS_TOKEN + META_AD_ACCOUNT_ID",
+                source: metaAdsConnected
+                    ? "Meta Ads API"
+                    : metaSpendPaise > 0
+                      ? "Manual spend fallback (Meta disconnected)"
+                      : "Needs META_ACCESS_TOKEN + META_AD_ACCOUNT_ID",
             },
             {
                 channel: "Google",
-                spend: 0,
-                revenue: 0,
-                conversions: 0,
-                traffic: 0,
-                source: "Needs Google Ads integration keys",
-            },
-            {
-                channel: "Organic",
-                spend: 0,
-                revenue: weekGmv,
-                conversions: Number(week.orders ?? 0),
-                traffic: organicTrafficSessions,
-                source: "Admin analytics + orders",
+                spend: googleAdsConnected
+                    ? googleSummary.spend
+                    : spendOverride.googleSpendPaise,
+                revenue: googleSummary.revenue,
+                conversions: googleSummary.conversions,
+                traffic: googleSummary.traffic,
+                source:
+                    googleAdsConnected || spendOverride.googleSpendPaise === 0
+                        ? googleSummary.source
+                        : "Manual spend fallback (Google disconnected)",
             },
             {
                 channel: "Partnerships",
-                spend: 0,
+                spend: spendOverride.partnershipSpendPaise,
                 revenue: 0,
-                conversions: 0,
-                traffic: 0,
-                source: "Needs partnership spend/import tagging",
+                conversions: partnershipRows.filter(
+                    (row) => row.status === "completed"
+                ).length,
+                traffic: partnershipRows.filter((row) => row.trackingUrl).length,
+                source:
+                    spendOverride.partnershipSpendPaise > 0
+                        ? "Manual weekly spend + tracked URLs + coupon-based partnership records"
+                        : "Tracked URLs + coupon-based partnership records",
             },
         ].map((row) => ({
             ...row,
@@ -3663,6 +4044,101 @@ class MonitoringSlaQuery {
             })
             .sort((a, b) => b.spend - a.spend);
 
+        const sourceMediumRows = Array.from(
+            attributionRows.reduce<
+                Map<
+                    string,
+                    {
+                        source: string;
+                        medium: string;
+                        sessions: number;
+                        visitors: number;
+                    }
+                >
+            >((map, row) => {
+                const key = `${row.source}::${row.medium}`;
+                const existing = map.get(key) ?? {
+                    source: row.source,
+                    medium: row.medium,
+                    sessions: 0,
+                    visitors: 0,
+                };
+                existing.sessions += row.sessions;
+                existing.visitors += row.visitors;
+                map.set(key, existing);
+                return map;
+            }, new Map())
+        )
+            .map(([, value]) => value)
+            .sort((a, b) => b.sessions - a.sessions)
+            .slice(0, 10);
+
+        const landingPerformanceByCampaign = Array.from(
+            attributionRows.reduce<
+                Map<
+                    string,
+                    {
+                        campaign: string;
+                        landingPath: string;
+                        sessions: number;
+                        visitors: number;
+                    }
+                >
+            >((map, row) => {
+                const key = `${row.campaign}::${row.landingPath}`;
+                const existing = map.get(key) ?? {
+                    campaign: row.campaign,
+                    landingPath: row.landingPath,
+                    sessions: 0,
+                    visitors: 0,
+                };
+                existing.sessions += row.sessions;
+                existing.visitors += row.visitors;
+                map.set(key, existing);
+                return map;
+            }, new Map())
+        )
+            .map(([, value]) => value)
+            .sort((a, b) => b.sessions - a.sessions)
+            .slice(0, 10);
+
+        const topTrafficContributors = Array.from(
+            attributionRows.reduce<
+                Map<string, { campaign: string; sessions: number; visitors: number }>
+            >((map, row) => {
+                const key = row.campaign;
+                const existing = map.get(key) ?? {
+                    campaign: row.campaign,
+                    sessions: 0,
+                    visitors: 0,
+                };
+                existing.sessions += row.sessions;
+                existing.visitors += row.visitors;
+                map.set(key, existing);
+                return map;
+            }, new Map())
+        )
+            .map(([, value]) => value)
+            .sort((a, b) => b.sessions - a.sessions)
+            .slice(0, 10);
+
+        const partnershipPerformance = {
+            total: partnershipRows.length,
+            planned: partnershipRows.filter((row) => row.status === "planned")
+                .length,
+            live: partnershipRows.filter((row) => row.status === "live").length,
+            completed: partnershipRows.filter((row) => row.status === "completed")
+                .length,
+            withCouponCode: partnershipRows.filter((row) => row.couponCode).length,
+            withTrackingUrl: partnershipRows.filter((row) => row.trackingUrl)
+                .length,
+        };
+
+        const totalEmailSends = emailSends.reduce(
+            (sum, row) => sum + Number(row.sends ?? 0),
+            0
+        );
+
         return {
             owner: "PS reviews weekly with Performance Marketing freelancer",
             source: "Admin panel + ad platform data",
@@ -3675,6 +4151,16 @@ class MonitoringSlaQuery {
             gmvMtd: Number(month.gmv ?? 0),
             ordersMtd: Number(month.orders ?? 0),
             customersMtd: Number(month.customers ?? 0),
+            kpis: {
+                sessions: Number(behaviorOverview.sessions ?? 0),
+                visitors: Number(behaviorOverview.visitors ?? 0),
+                browseRate,
+                cartRate,
+                checkoutRate,
+                purchaseRate,
+                returningCustomerRate,
+                emailSends: totalEmailSends,
+            },
             totalSpend: channelRows.reduce((total, row) => total + row.spend, 0),
             blendedCac:
                 channelRows.reduce((total, row) => total + row.spend, 0) === 0 ||
@@ -3687,36 +4173,11 @@ class MonitoringSlaQuery {
                     ? null
                     : weekGmv /
                       channelRows.reduce((total, row) => total + row.spend, 0),
-            trafficBySource: Array.from(
-                trafficRows as Iterable<Record<string, unknown>>
-            ).map((row) => {
-                const sessions = Number(row.sessions ?? 0);
-                const checkouts = Number(row.checkouts ?? 0);
-                return {
-                    source: String(row.source ?? "unknown"),
-                    sessions,
-                    visitors: Number(row.visitors ?? 0),
-                    carts: Number(row.carts ?? 0),
-                    checkouts,
-                    conversionRate:
-                        sessions === 0
-                            ? 0
-                            : Number(week.orders ?? 0) / sessions,
-                    checkoutRate: sessions === 0 ? 0 : checkouts / sessions,
-                };
-            }),
-            conversionBySource: Array.from(
-                trafficRows as Iterable<Record<string, unknown>>
-            ).map((row) => {
-                const sessions = Number(row.sessions ?? 0);
-                return {
-                    source: String(row.source ?? "unknown"),
-                    conversionRate:
-                        sessions === 0
-                            ? 0
-                            : Number(week.orders ?? 0) / sessions,
-                };
-            }),
+            trafficBySource: [],
+            conversionBySource: [],
+            sourceMediumPerformance: sourceMediumRows,
+            landingPerformanceByCampaign,
+            topTrafficContributors,
             channelPerformance: channelRows,
             topCreatives: creativeRows.slice(0, 5),
             underperformingCreatives: creativeRows
@@ -3726,30 +4187,44 @@ class MonitoringSlaQuery {
             contentOutput: [
                 {
                     type: "Reels",
-                    count: contentCounts.reels,
+                    count: displayedContentCounts.reels,
                     target: contentTargets.reels,
                     source:
-                        metaToken && instagramBusinessAccountId
+                        contentOutputOverride.isActive
+                            ? "Manual weekly entry"
+                            : metaToken && instagramBusinessAccountId
                             ? "Instagram Graph API"
                             : "Needs META_ACCESS_TOKEN + INSTAGRAM_BUSINESS_ACCOUNT_ID",
                 },
                 {
                     type: "Posts",
-                    count: contentCounts.posts,
+                    count: displayedContentCounts.posts,
                     target: contentTargets.posts,
                     source:
-                        metaToken && instagramBusinessAccountId
+                        contentOutputOverride.isActive
+                            ? "Manual weekly entry"
+                            : metaToken && instagramBusinessAccountId
                             ? "Instagram Graph API"
                             : "Needs META_ACCESS_TOKEN + INSTAGRAM_BUSINESS_ACCOUNT_ID",
                 },
                 {
                     type: "Blogs",
-                    count: contentCounts.blogs,
+                    count: displayedContentCounts.blogs,
                     target: contentTargets.blogs,
-                    source: "blogs table",
+                    source: contentOutputOverride.isActive
+                        ? "Manual weekly entry"
+                        : "blogs table",
                 },
             ],
             campaignPerformance: campaignRows,
+            emailSends: {
+                total: totalEmailSends,
+                byCampaignType: emailSends.map((row) => ({
+                    campaignType: String(row.campaignType ?? "unknown"),
+                    sends: Number(row.sends ?? 0),
+                })),
+            },
+            partnerships: partnershipPerformance,
             goals: {
                 roas: roasGoal,
                 cac: cacGoalPaise,
@@ -3757,16 +4232,26 @@ class MonitoringSlaQuery {
                 postsTarget: targets.postsTarget,
                 blogsTarget: targets.blogsTarget,
             },
+            contentOutputOverride,
             integrations: {
                 metaAds:
-                    metaToken && metaAdAccountId
+                    metaAdsConnected
                         ? "connected"
                         : "missing META_ACCESS_TOKEN or META_AD_ACCOUNT_ID",
                 instagram:
                     metaToken && instagramBusinessAccountId
                         ? "connected"
                         : "missing META_ACCESS_TOKEN or INSTAGRAM_BUSINESS_ACCOUNT_ID",
-                googleAds: "not configured",
+                googleAds: googleSummary.status,
+                metaAdsConnected,
+                googleAdsConnected,
+                manualSpendFallback: {
+                    metaSpendPaise: spendOverride.metaSpendPaise,
+                    googleSpendPaise: spendOverride.googleSpendPaise,
+                    partnershipSpendPaise:
+                        spendOverride.partnershipSpendPaise,
+                    notes: spendOverride.notes,
+                },
             },
         };
     }

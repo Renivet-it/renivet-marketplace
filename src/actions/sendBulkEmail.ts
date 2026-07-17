@@ -1,11 +1,14 @@
 "use server";
 
 import React from "react";
-import { Resend } from "resend";
 import { emailMessageLogQueries } from "@/lib/db/queries/email";
 import { DynamicMarketingEmailTemplate } from "@/lib/resend/emails/bulk-email-marketing-template";
-
-const resend = new Resend(process.env.RESEND_API_KEY);
+import {
+  buildUnsubscribeUrl,
+  createMarketingCampaign,
+  sendMarketingEmail,
+  updateMarketingCampaignStatus,
+} from "@/lib/marketing/email";
 
 type Recipient = {
   email: string;
@@ -60,11 +63,13 @@ async function sendSingleMarketingEmail({
   recipient,
   subject,
   emailContent,
+  campaignId,
   attempts = 1,
 }: {
   recipient: Recipient;
   subject: string;
   emailContent: string;
+  campaignId?: string | null;
   attempts?: number;
 }) {
   const {
@@ -78,10 +83,17 @@ async function sendSingleMarketingEmail({
   } = recipient;
 
   try {
-    const { data, error } = await resend.emails.send({
-      from: "Renivet <no-reply@notifications.renivet.com>",
-      to: email,
+    const unsubscribeUrl = await buildUnsubscribeUrl(email);
+    const result = await sendMarketingEmail({
+      email,
+      firstName,
+      name: firstName,
       subject: subject || `${discount}% OFF - Limited Time Offer!`,
+      emailContent,
+      campaignType: "promotional",
+      campaignId,
+      attempts,
+      source: "manual_campaign",
       react: React.createElement(DynamicMarketingEmailTemplate, {
         firstName,
         discount,
@@ -90,28 +102,27 @@ async function sendSingleMarketingEmail({
         additionalMessage,
         ctaText: ctaText || "Check out our Website",
         emailContent,
+        unsubscribeUrl,
       }),
-    });
-
-    const success = !error;
-    const log = await emailMessageLogQueries.createLog({
-      email,
-      firstName,
-      subject,
-      emailContent,
-      status: success ? "sent" : "failed",
-      success,
-      messageId: data?.id ?? null,
-      error: error?.message ?? null,
-      attempts,
-      sentAt: new Date(),
+      metadata: {
+        discount,
+        expiryDate,
+        brandName,
+      },
     });
 
     return {
       email,
-      success,
-      message: error ? error.message : "Email sent successfully",
-      log: serializeEmailLog(log),
+      success: result.ok,
+      message:
+        result.ok
+          ? "Email sent successfully"
+          : result.reason === "inactive"
+            ? "Subscriber is unsubscribed"
+            : result.reason === "frequency_cap"
+              ? "Subscriber hit marketing send cap"
+              : result.log.error ?? "Email failed",
+      log: serializeEmailLog(result.log),
     };
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Send failed";
@@ -157,13 +168,33 @@ export async function sendBulkEmail(formData: FormData) {
       };
     }
 
+    const campaign = await createMarketingCampaign({
+      name: subject || `Promotional campaign ${new Date().toISOString()}`,
+      type: "promotional",
+      subject: subject || "Renivet promotion",
+      contentHtml: emailContent,
+      status: "sending",
+      metadata: {
+        recipientCount: recipients.length,
+      },
+    });
+
     const results = await Promise.all(
       recipients.map((recipient) =>
-        sendSingleMarketingEmail({ recipient, subject, emailContent })
+        sendSingleMarketingEmail({
+          recipient,
+          subject,
+          emailContent,
+          campaignId: campaign.id,
+        })
       )
     );
 
     const failed = results.filter((r) => !r.success);
+    await updateMarketingCampaignStatus(
+      campaign.id,
+      failed.length > 0 ? "failed" : "completed"
+    );
     if (failed.length > 0) {
       return {
         success: false,

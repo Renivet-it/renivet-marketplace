@@ -33,6 +33,17 @@ export interface PostHogLocationRow {
     visitors: number;
 }
 
+export interface PostHogAttributionRow {
+    source: string;
+    medium: string;
+    campaign: string;
+    landingPath: string;
+    sessions: number;
+    visitors: number;
+    sessionsWithCart: number;
+    sessionsReachedCheckout: number;
+}
+
 function toNumber(value: unknown) {
     const numeric = Number(value ?? 0);
     return Number.isFinite(numeric) ? numeric : 0;
@@ -448,6 +459,110 @@ export async function getPostHogSessionsByLocation(
         location: String(row.location ?? "Unknown"),
         sessions: toNumber(row.sessions),
         visitors: toNumber(row.visitors),
+    }));
+}
+
+export async function getPostHogAttributionBreakdown(
+    start: Date,
+    end: Date,
+    limit = 100
+): Promise<PostHogAttributionRow[]> {
+    const startSql = formatDateTime(start);
+    const endSql = formatDateTime(end);
+    const safeLimit = Math.max(limit, 1);
+
+    const rows = await runHogQL<{
+        source: string;
+        medium: string;
+        campaign: string;
+        landing_path: string;
+        sessions: number;
+        visitors: number;
+        sessions_with_cart: number;
+        sessions_reached_checkout: number;
+    }>(`
+        WITH session_first_touch AS (
+            SELECT
+                coalesce(
+                    nullIf(toString(properties.$session_id), ''),
+                    concat('anon:', toString(distinct_id), ':', substring(toString(timestamp), 1, 10))
+                ) AS session_key,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.utm_source), ''),
+                        nullIf(toString(properties.$utm_source), ''),
+                        'direct'
+                    ),
+                    timestamp
+                ) AS source,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.utm_medium), ''),
+                        nullIf(toString(properties.$utm_medium), ''),
+                        'none'
+                    ),
+                    timestamp
+                ) AS medium,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.utm_campaign), ''),
+                        nullIf(toString(properties.$utm_campaign), ''),
+                        'Untagged visit'
+                    ),
+                    timestamp
+                ) AS campaign,
+                argMin(
+                    coalesce(
+                        nullIf(toString(properties.$pathname), ''),
+                        nullIf(
+                            extract(
+                                toString(properties.$current_url),
+                                'https?://[^/]+([^?#]*)'
+                            ),
+                            ''
+                        ),
+                        'unknown'
+                    ),
+                    timestamp
+                ) AS landing_path,
+                argMin(distinct_id, timestamp) AS visitor_id,
+                countDistinctIf(
+                    toString(properties.$session_id),
+                    event = 'add_to_cart' AND toString(properties.$session_id) != ''
+                ) AS sessions_with_cart,
+                countDistinctIf(
+                    toString(properties.$session_id),
+                    event = 'checkout_started' AND toString(properties.$session_id) != ''
+                ) AS sessions_reached_checkout
+            FROM events
+            WHERE timestamp >= toDateTime('${startSql}')
+              AND timestamp <= toDateTime('${endSql}')
+            GROUP BY session_key
+        )
+        SELECT
+            source,
+            medium,
+            campaign,
+            landing_path,
+            count() AS sessions,
+            uniq(visitor_id) AS visitors,
+            sum(sessions_with_cart) AS sessions_with_cart,
+            sum(sessions_reached_checkout) AS sessions_reached_checkout
+        FROM session_first_touch
+        GROUP BY source, medium, campaign, landing_path
+        ORDER BY sessions DESC
+        LIMIT ${safeLimit}
+    `);
+
+    return rows.map((row) => ({
+        source: String(row.source ?? "direct"),
+        medium: String(row.medium ?? "none"),
+        campaign: String(row.campaign ?? "Untagged visit"),
+        landingPath: String(row.landing_path ?? "unknown"),
+        sessions: toNumber(row.sessions),
+        visitors: toNumber(row.visitors),
+        sessionsWithCart: toNumber(row.sessions_with_cart),
+        sessionsReachedCheckout: toNumber(row.sessions_reached_checkout),
     }));
 }
 

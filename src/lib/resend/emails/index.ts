@@ -29,6 +29,10 @@ import SupportNotificationEmail from "./support-notification";
 import SwapRewardRedeemedEmail from "./swap-reward-redeemed";
 import SwapRewardStampEarnedEmail from "./swap-reward-stamp-earned";
 import SwapRewardUnlockedEmail from "./swap-reward-unlocked";
+import PostPurchaseReviewEmail from "./post-purchase-review";
+import WinBackEmail from "./win-back";
+import NewArrivalsDigestEmail from "./new-arrivals-digest";
+import BlogDigestEmail from "./blog-digest";
 
 export {
     AccountCreated,
@@ -54,6 +58,9 @@ export {
     OrderPlaceFailed,
     ProductReviewStatusUpdate,
     ProductReviewSubmitted,
+    BlogDigestEmail,
+    NewArrivalsDigestEmail,
+    PostPurchaseReviewEmail,
     OrderRefundInitiated,
     OrderRefundProcessed,
     OrderRefundFailed,
@@ -62,4 +69,5 @@ export {
     SwapRewardRedeemedEmail,
     SwapRewardStampEarnedEmail,
     SwapRewardUnlockedEmail,
+    WinBackEmail,
 };

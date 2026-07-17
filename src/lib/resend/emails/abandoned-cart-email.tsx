@@ -17,11 +17,19 @@ import * as React from "react";
 interface AbandonedCartEmailProps {
     customerName: string;
     checkoutUrl: string;
+    unsubscribeUrl: string;
+    headline?: string;
+    body?: string;
+    couponCode?: string | null;
 }
 
 export const AbandonedCartEmail = ({
     customerName,
     checkoutUrl,
+    unsubscribeUrl,
+    headline,
+    body,
+    couponCode,
 }: AbandonedCartEmailProps) => {
     return (
         <Html>
@@ -35,17 +43,22 @@ export const AbandonedCartEmail = ({
 
                     <Section style={content}>
                         <Heading style={title}>
-                            Did you forget something, {customerName}?
+                            {headline ?? `Did you forget something, ${customerName}?`}
                         </Heading>
                         <Text style={paragraph}>
-                            We noticed you left some great items in your cart.
-                            They're still waiting for you, but they might sell
-                            out soon!
+                            {body ??
+                                "We noticed you left some great items in your cart. They're still waiting for you, but they might sell out soon."}
                         </Text>
                         <Text style={paragraph}>
                             Don't miss out on these amazing finds. Complete your
                             purchase now before they're gone.
                         </Text>
+
+                        {couponCode ? (
+                            <Text style={couponStyle}>
+                                Use coupon <strong>{couponCode}</strong> before it expires.
+                            </Text>
+                        ) : null}
 
                         <Section style={btnContainer}>
                             <Button style={button} href={checkoutUrl}>
@@ -80,6 +93,11 @@ export const AbandonedCartEmail = ({
                                 style={link}
                             >
                                 Terms of Service
+                            </Link>
+                        </Text>
+                        <Text style={footerLinks}>
+                            <Link href={unsubscribeUrl} style={link}>
+                                Unsubscribe from marketing emails
                             </Link>
                         </Text>
                     </Section>
@@ -140,6 +158,16 @@ const paragraph = {
     fontSize: "16px",
     lineHeight: "26px",
     margin: "0 0 20px",
+};
+
+const couponStyle = {
+    backgroundColor: "#eff6ff",
+    borderRadius: "8px",
+    color: "#1d4ed8",
+    fontSize: "15px",
+    lineHeight: "24px",
+    margin: "0 0 20px",
+    padding: "14px 16px",
 };
 
 const btnContainer = {

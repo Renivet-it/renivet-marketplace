@@ -1751,6 +1751,13 @@
       "when": 1784086200000,
       "tag": "0257_home_banner_redirect_url",
       "breakpoints": true
+    },
+    {
+      "idx": 250,
+      "version": "7",
+      "when": 1784172600000,
+      "tag": "0258_marketing_playbook_foundation",
+      "breakpoints": true
     }
   ]
 }

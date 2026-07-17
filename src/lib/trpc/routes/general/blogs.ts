@@ -300,6 +300,27 @@ export const blogsRouter = createTRPCRouter({
                     message: "Blog not found",
                 });
 
+            if (isPublished) {
+                if (!existingBlog.targetKeyword?.trim()) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Target keyword is required before publishing a blog",
+                    });
+                }
+                if (!existingBlog.metaTitle?.trim()) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Meta title is required before publishing a blog",
+                    });
+                }
+                if (!existingBlog.metaDescription?.trim()) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: "Meta description is required before publishing a blog",
+                    });
+                }
+            }
+
             const existingPrimaryBlog = await blogCache.get();
 
             if (isPublished && !existingPrimaryBlog)
