@@ -11,10 +11,6 @@ import {
 } from "@/lib/validations";
 import { resend } from "@/lib/resend";
 import { MonitoringAlertEmail } from "@/lib/resend/emails";
-import {
-    getPostHogAttributionBreakdown,
-    getPostHogBehaviorOverview,
-} from "@/lib/reports/posthog-behavior";
 import { getAbsoluteURL } from "@/lib/utils";
 import { sendPlainWhatsAppMessage, sendWhatsAppMessage } from "@/lib/whatsapp";
 import {
@@ -36,6 +32,7 @@ import {
     accessReviewItems,
     accessReviewRuns,
     analyticsDailyBehavior,
+    analyticsLandingPageDaily,
     auditLogs,
     brandConfidentials,
     brandRequests,
@@ -3692,8 +3689,8 @@ class MonitoringSlaQuery {
         const [
             week,
             month,
-            behaviorOverview,
-            attributionRows,
+            behavior,
+            trafficRows,
             metaChannelRows,
             metaCreativeRows,
             metaCampaignRows,
@@ -3722,8 +3719,43 @@ class MonitoringSlaQuery {
                 .from(orders)
                 .where(gte(orders.createdAt, monthStart))
                 .then((res) => res[0]),
-            getPostHogBehaviorOverview(weekStart, today),
-            getPostHogAttributionBreakdown(weekStart, today, 250),
+            db
+                .select({
+                    sessions: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessions}), 0)`,
+                    visitors: sql<number>`coalesce(sum(${analyticsDailyBehavior.visitors}), 0)`,
+                    carts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsWithCart}), 0)`,
+                    checkouts: sql<number>`coalesce(sum(${analyticsDailyBehavior.sessionsReachedCheckout}), 0)`,
+                })
+                .from(analyticsDailyBehavior)
+                .where(
+                    and(
+                        gte(analyticsDailyBehavior.dateKey, weekStartKey),
+                        lte(analyticsDailyBehavior.dateKey, weekEndKey)
+                    )
+                )
+                .then((res) => res[0]),
+            db
+                .select({
+                    source: analyticsLandingPageDaily.landingType,
+                    sessions: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`,
+                    visitors: sql<number>`coalesce(sum(${analyticsLandingPageDaily.visitors}), 0)`,
+                    carts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsWithCart}), 0)`,
+                    checkouts: sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessionsReachedCheckout}), 0)`,
+                })
+                .from(analyticsLandingPageDaily)
+                .where(
+                    and(
+                        gte(analyticsLandingPageDaily.dateKey, weekStartKey),
+                        lte(analyticsLandingPageDaily.dateKey, weekEndKey)
+                    )
+                )
+                .groupBy(analyticsLandingPageDaily.landingType)
+                .orderBy(
+                    desc(
+                        sql<number>`coalesce(sum(${analyticsLandingPageDaily.sessions}), 0)`
+                    )
+                )
+                .limit(10),
             fetchMetaInsights({
                 level: "account",
                 fields: "spend,impressions,clicks,actions,action_values,purchase_roas",
@@ -3838,25 +3870,24 @@ class MonitoringSlaQuery {
         );
         const paidMetaClicks = Number(metaAccount.clicks ?? 0);
         const bounceRate =
-            behaviorOverview.sessions === 0
+            Number(behavior.sessions ?? 0) === 0
                 ? 0
-                : behaviorOverview.bounceSessions / behaviorOverview.sessions;
+                : Number(behavior.bounceSessions ?? 0) /
+                  Number(behavior.sessions ?? 0);
         const browseRate = 1 - bounceRate;
         const cartRate =
-            Number(behaviorOverview.sessions ?? 0) === 0
+            Number(behavior.sessions ?? 0) === 0
                 ? 0
-                : Number(behaviorOverview.sessionsWithCart ?? 0) /
-                  Number(behaviorOverview.sessions ?? 0);
+                : Number(behavior.carts ?? 0) / Number(behavior.sessions ?? 0);
         const checkoutRate =
-            Number(behaviorOverview.sessions ?? 0) === 0
+            Number(behavior.sessions ?? 0) === 0
                 ? 0
-                : Number(behaviorOverview.sessionsReachedCheckout ?? 0) /
-                  Number(behaviorOverview.sessions ?? 0);
+                : Number(behavior.checkouts ?? 0) /
+                  Number(behavior.sessions ?? 0);
         const purchaseRate =
-            Number(behaviorOverview.sessions ?? 0) === 0
+            Number(behavior.sessions ?? 0) === 0
                 ? 0
-                : Number(week.orders ?? 0) /
-                  Number(behaviorOverview.sessions ?? 0);
+                : Number(week.orders ?? 0) / Number(behavior.sessions ?? 0);
         const returningCustomerRate =
             weekCustomers === 0 ? 0 : repeatCustomerCount / weekCustomers;
         const contentCounts = {
@@ -3967,116 +3998,23 @@ class MonitoringSlaQuery {
             })
             .sort((a, b) => b.spend - a.spend);
 
-        const sourceMediumRows = Array.from(
-            attributionRows.reduce<
-                Map<
-                    string,
-                    {
-                        source: string;
-                        medium: string;
-                        sessions: number;
-                        visitors: number;
-                    }
-                >
-            >((map, row) => {
-                const key = `${row.source}::${row.medium}`;
-                const existing = map.get(key) ?? {
-                    source: row.source,
-                    medium: row.medium,
-                    sessions: 0,
-                    visitors: 0,
-                };
-                existing.sessions += row.sessions;
-                existing.visitors += row.visitors;
-                map.set(key, existing);
-                return map;
-            }, new Map())
-        )
-            .map(([, value]) => value)
-            .sort((a, b) => b.sessions - a.sessions)
-            .slice(0, 10);
-
-        const trafficBySourceRows = Array.from(
-            attributionRows.reduce<
-                Map<
-                    string,
-                    {
-                        source: string;
-                        sessions: number;
-                        visitors: number;
-                        carts: number;
-                        checkouts: number;
-                    }
-                >
-            >((map, row) => {
-                const key = row.source;
-                const existing = map.get(key) ?? {
-                    source: row.source,
-                    sessions: 0,
-                    visitors: 0,
-                    carts: 0,
-                    checkouts: 0,
-                };
-                existing.sessions += row.sessions;
-                existing.visitors += row.visitors;
-                existing.carts += row.sessionsWithCart;
-                existing.checkouts += row.sessionsReachedCheckout;
-                map.set(key, existing);
-                return map;
-            }, new Map())
-        )
-            .map(([, value]) => value)
-            .sort((a, b) => b.sessions - a.sessions)
-            .slice(0, 10);
-
-        const landingPerformanceByCampaign = Array.from(
-            attributionRows.reduce<
-                Map<
-                    string,
-                    {
-                        campaign: string;
-                        landingPath: string;
-                        sessions: number;
-                        visitors: number;
-                    }
-                >
-            >((map, row) => {
-                const key = `${row.campaign}::${row.landingPath}`;
-                const existing = map.get(key) ?? {
-                    campaign: row.campaign,
-                    landingPath: row.landingPath,
-                    sessions: 0,
-                    visitors: 0,
-                };
-                existing.sessions += row.sessions;
-                existing.visitors += row.visitors;
-                map.set(key, existing);
-                return map;
-            }, new Map())
-        )
-            .map(([, value]) => value)
-            .sort((a, b) => b.sessions - a.sessions)
-            .slice(0, 10);
-
-        const topTrafficContributors = Array.from(
-            attributionRows.reduce<
-                Map<string, { campaign: string; sessions: number; visitors: number }>
-            >((map, row) => {
-                const key = row.campaign;
-                const existing = map.get(key) ?? {
-                    campaign: row.campaign,
-                    sessions: 0,
-                    visitors: 0,
-                };
-                existing.sessions += row.sessions;
-                existing.visitors += row.visitors;
-                map.set(key, existing);
-                return map;
-            }, new Map())
-        )
-            .map(([, value]) => value)
-            .sort((a, b) => b.sessions - a.sessions)
-            .slice(0, 10);
+        const sourceMediumRows: Array<{
+            source: string;
+            medium: string;
+            sessions: number;
+            visitors: number;
+        }> = [];
+        const landingPerformanceByCampaign: Array<{
+            campaign: string;
+            landingPath: string;
+            sessions: number;
+            visitors: number;
+        }> = [];
+        const topTrafficContributors: Array<{
+            campaign: string;
+            sessions: number;
+            visitors: number;
+        }> = [];
 
         const partnershipPerformance = {
             total: partnershipRows.length,
@@ -4108,8 +4046,8 @@ class MonitoringSlaQuery {
             ordersMtd: Number(month.orders ?? 0),
             customersMtd: Number(month.customers ?? 0),
             kpis: {
-                sessions: Number(behaviorOverview.sessions ?? 0),
-                visitors: Number(behaviorOverview.visitors ?? 0),
+                sessions: Number(behavior.sessions ?? 0),
+                visitors: Number(behavior.visitors ?? 0),
                 browseRate,
                 cartRate,
                 checkoutRate,
@@ -4129,7 +4067,9 @@ class MonitoringSlaQuery {
                     ? null
                     : weekGmv /
                       channelRows.reduce((total, row) => total + row.spend, 0),
-            trafficBySource: trafficBySourceRows.map((row) => {
+            trafficBySource: Array.from(
+                trafficRows as Iterable<Record<string, unknown>>
+            ).map((row) => {
                 const sessions = Number(row.sessions ?? 0);
                 const checkouts = Number(row.checkouts ?? 0);
                 return {
@@ -4141,18 +4081,20 @@ class MonitoringSlaQuery {
                     conversionRate:
                         sessions === 0
                             ? 0
-                            : checkouts / sessions,
+                            : Number(week.orders ?? 0) / sessions,
                     checkoutRate: sessions === 0 ? 0 : checkouts / sessions,
                 };
             }),
-            conversionBySource: trafficBySourceRows.map((row) => {
+            conversionBySource: Array.from(
+                trafficRows as Iterable<Record<string, unknown>>
+            ).map((row) => {
                 const sessions = Number(row.sessions ?? 0);
                 return {
                     source: String(row.source ?? "unknown"),
                     conversionRate:
                         sessions === 0
                             ? 0
-                            : Number(row.checkouts ?? 0) / sessions,
+                            : Number(week.orders ?? 0) / sessions,
                 };
             }),
             sourceMediumPerformance: sourceMediumRows,
