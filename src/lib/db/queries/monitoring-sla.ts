@@ -3996,39 +3996,6 @@ class MonitoringSlaQuery {
             .sort((a, b) => b.sessions - a.sessions)
             .slice(0, 10);
 
-        const trafficBySourceRows = Array.from(
-            attributionRows.reduce<
-                Map<
-                    string,
-                    {
-                        source: string;
-                        sessions: number;
-                        visitors: number;
-                        carts: number;
-                        checkouts: number;
-                    }
-                >
-            >((map, row) => {
-                const key = row.source;
-                const existing = map.get(key) ?? {
-                    source: row.source,
-                    sessions: 0,
-                    visitors: 0,
-                    carts: 0,
-                    checkouts: 0,
-                };
-                existing.sessions += row.sessions;
-                existing.visitors += row.visitors;
-                existing.carts += row.sessionsWithCart;
-                existing.checkouts += row.sessionsReachedCheckout;
-                map.set(key, existing);
-                return map;
-            }, new Map())
-        )
-            .map(([, value]) => value)
-            .sort((a, b) => b.sessions - a.sessions)
-            .slice(0, 10);
-
         const landingPerformanceByCampaign = Array.from(
             attributionRows.reduce<
                 Map<
@@ -4129,32 +4096,8 @@ class MonitoringSlaQuery {
                     ? null
                     : weekGmv /
                       channelRows.reduce((total, row) => total + row.spend, 0),
-            trafficBySource: trafficBySourceRows.map((row) => {
-                const sessions = Number(row.sessions ?? 0);
-                const checkouts = Number(row.checkouts ?? 0);
-                return {
-                    source: String(row.source ?? "unknown"),
-                    sessions,
-                    visitors: Number(row.visitors ?? 0),
-                    carts: Number(row.carts ?? 0),
-                    checkouts,
-                    conversionRate:
-                        sessions === 0
-                            ? 0
-                            : checkouts / sessions,
-                    checkoutRate: sessions === 0 ? 0 : checkouts / sessions,
-                };
-            }),
-            conversionBySource: trafficBySourceRows.map((row) => {
-                const sessions = Number(row.sessions ?? 0);
-                return {
-                    source: String(row.source ?? "unknown"),
-                    conversionRate:
-                        sessions === 0
-                            ? 0
-                            : Number(row.checkouts ?? 0) / sessions,
-                };
-            }),
+            trafficBySource: [],
+            conversionBySource: [],
             sourceMediumPerformance: sourceMediumRows,
             landingPerformanceByCampaign,
             topTrafficContributors,
