@@ -1,5 +1,6 @@
 "use client";
 
+import { DiscountBadge } from "@/components/ui/discount-badge";
 import { convertPaiseToRupees } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import Image from "next/image";
@@ -56,11 +57,13 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
                 />
 
                 {/* ⭐ DISCOUNT BADGE */}
-                {discount && (
-                    <span className="absolute left-2 top-2 rounded-md bg-black/70 px-2 py-[2px] text-[11px] font-medium text-white">
-                        {discount}% OFF
-                    </span>
-                )}
+                {discount ? (
+                    <DiscountBadge
+                        discount={discount}
+                        compact
+                        className="absolute left-0 top-3 z-10"
+                    />
+                ) : null}
             </div>
 
             {/* TEXT */}

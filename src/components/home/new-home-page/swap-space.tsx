@@ -11,6 +11,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
+import { DiscountBadge } from "@/components/ui/discount-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -421,9 +422,11 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
 
                     {/* 🏷️ Discount badge */}
                     {discount && discount > 0 && (
-                        <span className="absolute left-3 top-3 z-10 rounded-sm bg-[#E95123] px-2 py-0.5 text-[10px] font-bold tracking-wide text-white shadow-sm md:text-xs">
-                            Sale -{discount}%
-                        </span>
+                        <DiscountBadge
+                            discount={discount}
+                            compact
+                            className="absolute left-0 top-3 z-10"
+                        />
                     )}
 
                     {/* Floating Wishlist Button */}

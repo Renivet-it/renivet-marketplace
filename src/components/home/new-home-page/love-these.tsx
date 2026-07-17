@@ -4,6 +4,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
+import { DiscountBadge } from "@/components/ui/discount-badge";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -216,9 +217,11 @@ export const ProductCard = ({
                     />
 
                     {discountPct && discountPct > 0 && (
-                        <span className="absolute left-0 top-2.5 z-10 whitespace-nowrap rounded-r-full bg-gradient-to-r from-rose-600 to-orange-500 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-md md:px-2.5 md:py-1 md:text-xs">
-                            {discountPct}% OFF
-                        </span>
+                        <DiscountBadge
+                            discount={discountPct}
+                            compact
+                            className="absolute left-0 top-3 z-10"
+                        />
                     )}
                 </div>
 
