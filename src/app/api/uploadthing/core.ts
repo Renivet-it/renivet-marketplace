@@ -446,17 +446,17 @@ export const uploadRouter = {
                     message: "You're not authorized",
                 });
 
-            const { brandPermissions } = getUserPermissions(existingUser.roles);
-            const isAuthorized = hasPermission(brandPermissions, [
+            const { brandPermissions, sitePermissions } = getUserPermissions(
+                existingUser.roles
+            );
+            const canManageBrandProducts = hasPermission(brandPermissions, [
                 BitFieldBrandPermission.MANAGE_PRODUCTS,
             ]);
-            const { sitePermissions } = getUserPermissions(existingUser.roles);
-
-            const isAdmin = hasPermission(sitePermissions, [
-                BitFieldSitePermission.ADMINISTRATOR,
+            const canManagePlatformProducts = hasPermission(sitePermissions, [
+                BitFieldSitePermission.MANAGE_PRODUCTS,
             ]);
 
-            if (!isAuthorized && !isAdmin)
+            if (!canManageBrandProducts && !canManagePlatformProducts)
                 throw new UploadThingError({
                     code: "FORBIDDEN",
                     message: "You're not authorized",
