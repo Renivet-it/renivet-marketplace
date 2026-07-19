@@ -448,8 +448,7 @@ export const uploadRouter = {
 
             const { brandPermissions } = getUserPermissions(existingUser.roles);
             const isAuthorized = hasPermission(brandPermissions, [
-                BitFieldBrandPermission.MANAGE_PRODUCTS |
-                    BitFieldBrandPermission.MANAGE_BRANDING,
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
             ]);
             const { sitePermissions } = getUserPermissions(existingUser.roles);
 

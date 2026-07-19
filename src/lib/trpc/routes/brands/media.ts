@@ -63,8 +63,7 @@ export const mediaRouter = createTRPCRouter({
         )
         .use(
             isTRPCAuth(
-                BitFieldBrandPermission.MANAGE_BRANDING |
-                    BitFieldBrandPermission.MANAGE_PRODUCTS,
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
                 "all",
                 "brand",
                 BitFieldSitePermission.MANAGE_PRODUCTS
@@ -115,8 +114,7 @@ export const mediaRouter = createTRPCRouter({
         )
         .use(
             isTRPCAuth(
-                BitFieldBrandPermission.MANAGE_BRANDING |
-                    BitFieldBrandPermission.MANAGE_PRODUCTS,
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
                 "all",
                 "brand",
                 BitFieldSitePermission.MANAGE_PRODUCTS
@@ -181,8 +179,7 @@ export const mediaRouter = createTRPCRouter({
         )
         .use(
             isTRPCAuth(
-                BitFieldBrandPermission.MANAGE_BRANDING |
-                    BitFieldBrandPermission.MANAGE_PRODUCTS,
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
                 "all",
                 "brand",
                 BitFieldSitePermission.MANAGE_PRODUCTS
