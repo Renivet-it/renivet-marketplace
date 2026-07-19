@@ -244,7 +244,7 @@ export default function OverviewPage() {
                     title="Corporate Orders"
                     count="bulk apparel"
                     subtitle="Manage company orders"
-                    href="/profile/corporate-orders"
+                    href="/profile/corporate"
                     customCount={true}
                 />
                 <SummaryCard
