@@ -67,7 +67,7 @@ export const siteConfig: SiteConfig = {
         {
             name: "Corporate Orders",
             description: "Corporate procurement, RFQs, quotes, and bulk orders",
-            href: "/corporate",
+            href: "/profile/corporate",
             icon: "Briefcase",
         },
         {
@@ -108,7 +108,7 @@ export const siteConfig: SiteConfig = {
                     },
                     {
                         name: "Corporate Orders",
-                        href: "/corporate",
+                        href: "/profile/corporate",
                     },
                 ],
             },
