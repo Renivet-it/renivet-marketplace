@@ -1,5 +1,6 @@
 import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { BitFieldSitePermission } from "./config/permissions";
 import { generalSidebarConfig, generateBrandSideNav } from "./config/site";
 import { cFetch, getUserPermissions, hasPermission } from "./lib/utils";
 import { CachedUser, ResponseData } from "./lib/validations";
@@ -127,7 +128,9 @@ export default clerkMiddleware(async (auth, req) => {
                         url.pathname === "/dashboard/general/privacy" ||
                         url.pathname === "/dashboard/general/shipping-policy" ||
                         url.pathname === "/dashboard/general/refund-policy" ||
-                        url.pathname.startsWith("/dashboard/general/privacy/data-deletion")
+                        url.pathname.startsWith(
+                            "/dashboard/general/privacy/data-deletion"
+                        )
                     )
                         return NextResponse.next();
 
@@ -174,26 +177,35 @@ export default clerkMiddleware(async (auth, req) => {
             }
 
             if (url.pathname.startsWith("/dashboard/brands")) {
+                // Product handlers have a site-level permission that permits
+                // product management for every brand. Keep this in sync with
+                // the tRPC product routes, including bulk imports.
+                const isBrandProductsRoute =
+                    /^\/dashboard\/brands\/[^/]+\/products(?:\/|$)/.test(
+                        url.pathname
+                    );
+                const canManageProductsAcrossBrands = hasPermission(
+                    sitePermissions,
+                    [BitFieldSitePermission.MANAGE_PRODUCTS]
+                );
+
+                if (isBrandProductsRoute && canManageProductsAcrossBrands)
+                    return NextResponse.next();
+
                 if (!existingUser.brand)
                     return NextResponse.redirect(new URL("/dashboard", url));
                 const userBrand = existingUser.brand;
 
                 if (url.pathname === "/dashboard/brands")
                     return NextResponse.redirect(
-                        new URL(
-                            `/dashboard/brands/${userBrand.id}`,
-                            url
-                        )
+                        new URL(`/dashboard/brands/${userBrand.id}`, url)
                     );
 
                 const routes = generateBrandSideNav(userBrand.id)
                     .map((item) => item.items.map((subItem) => subItem))
                     .flat();
 
-                if (
-                    url.pathname !==
-                    `/dashboard/brands/${userBrand.id}`
-                ) {
+                if (url.pathname !== `/dashboard/brands/${userBrand.id}`) {
                     const accessedRoute = routes.find((route) => {
                         if (
                             url.pathname ===
@@ -219,10 +231,7 @@ export default clerkMiddleware(async (auth, req) => {
                     });
                     if (!accessedRoute)
                         return NextResponse.redirect(
-                            new URL(
-                                `/dashboard/brands/${userBrand.id}`,
-                                url
-                            )
+                            new URL(`/dashboard/brands/${userBrand.id}`, url)
                         );
 
                     const isAuthorized = hasPermission(
@@ -232,10 +241,7 @@ export default clerkMiddleware(async (auth, req) => {
                     );
                     if (!isAuthorized)
                         return NextResponse.redirect(
-                            new URL(
-                                `/dashboard/brands/${userBrand.id}`,
-                                url
-                            )
+                            new URL(`/dashboard/brands/${userBrand.id}`, url)
                         );
                 }
             }

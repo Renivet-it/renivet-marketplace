@@ -32,9 +32,9 @@ export const productReviewsRouter = createTRPCRouter({
                 products: z.array(createProductSchema),
             })
         )
-        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_BRANDS))
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_PRODUCTS))
         .mutation(async ({ input, ctx }) => {
-            const { queries } = ctx;
+            const { queries, user } = ctx;
             const { products: inputProducts, brandId } = input;
 
             const existingBrand = await brandCache.get(brandId);
