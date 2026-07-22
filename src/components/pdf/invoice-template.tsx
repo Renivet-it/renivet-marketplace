@@ -193,7 +193,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
             tax: gross - taxable,
             rate,
             title: item.product?.title ?? "Product",
-            hsn: item.variant?.hsCode ?? item.product?.hsCode ?? "-",
+            hsn: item.product?.hsCode ?? item.variant?.hsCode ?? "-",
         };
     });
     const taxable = lines.reduce((s, l) => s + l.taxable, 0);
