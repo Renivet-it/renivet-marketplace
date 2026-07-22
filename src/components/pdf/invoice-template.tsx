@@ -7,415 +7,380 @@ import {
     View,
 } from "@react-pdf/renderer";
 
-// Register fonts - Helvetica is standard
-const colors = {
-    primary: "#111827", // Dark gray/black
-    secondary: "#6B7280", // Light gray
-    accent: "#F3F4F6", // Very light gray background
-    border: "#E5E7EB", // Border gray
-    text: "#374151",
-};
+const ink = "#18212f";
+const border = "#cbd5e1";
+const money = (paise: number) => `Rs. ${(Math.max(0, paise) / 100).toFixed(2)}`;
 
 const styles = StyleSheet.create({
-    page: {
-        padding: 40,
-        fontFamily: "Helvetica",
-        fontSize: 10,
-        color: colors.text,
-        lineHeight: 1.5,
+    page: { padding: 28, fontFamily: "Helvetica", fontSize: 8, color: ink },
+    heading: {
+        fontSize: 14,
+        fontFamily: "Helvetica-Bold",
+        textAlign: "center",
+        marginBottom: 3,
     },
-    // Centered Header
-    header: {
-        alignItems: "center",
-        marginBottom: 20,
+    original: {
+        fontSize: 7,
+        textAlign: "center",
+        color: "#475569",
+        marginBottom: 16,
     },
     logo: {
-        width: 180,
-        height: 50,
+        width: 145,
+        height: 40,
         objectFit: "contain",
-        marginBottom: 10,
+        marginLeft: -28,
+        marginBottom: 8,
     },
-    title: {
-        fontSize: 20,
-        fontFamily: "Helvetica-Bold",
-        textTransform: "uppercase",
-        letterSpacing: 1,
-        color: colors.primary,
+    header: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        borderBottomWidth: 1,
+        borderBottomColor: ink,
+        paddingBottom: 10,
+        marginBottom: 12,
     },
-
-    // Main Container
-    mainContainer: {
+    sellerName: { fontFamily: "Helvetica-Bold", fontSize: 10, marginBottom: 3 },
+    small: { fontSize: 8, lineHeight: 1.45, color: "#334155" },
+    grid: {
+        flexDirection: "row",
         borderWidth: 1,
-        borderColor: colors.border,
-        borderRadius: 4,
-        padding: 0, // Inner padding handles spacing
+        borderColor: border,
+        marginBottom: 12,
     },
-
-    // Address Grid (Seller / Buyer)
-    addressGrid: {
+    cell: { width: "50%", padding: 9 },
+    cellRight: { borderLeftWidth: 1, borderLeftColor: border },
+    label: { fontFamily: "Helvetica-Bold", fontSize: 8, marginBottom: 4 },
+    meta: {
+        flexDirection: "row",
+        borderWidth: 1,
+        borderColor: border,
+        marginBottom: 12,
+    },
+    metaCell: {
+        width: "33.33%",
+        padding: 7,
+        borderRightWidth: 1,
+        borderRightColor: border,
+    },
+    metaLast: { borderRightWidth: 0 },
+    metaLabel: { color: "#64748b", fontSize: 7, marginBottom: 2 },
+    metaValue: { fontSize: 7, lineHeight: 1.2 },
+    table: { borderWidth: 1, borderColor: border },
+    row: {
         flexDirection: "row",
         borderBottomWidth: 1,
-        borderBottomColor: colors.border,
+        borderBottomColor: border,
     },
-    addressBox: {
-        flex: 1,
-        padding: 16,
-        paddingTop: 24, // Increased top padding to prevent clipping
+    head: { backgroundColor: "#eef2f7" },
+    th: {
+        padding: 6,
+        fontFamily: "Helvetica-Bold",
+        borderRightWidth: 1,
+        borderRightColor: border,
     },
-    addressBoxRight: {
+    td: { padding: 6, borderRightWidth: 1, borderRightColor: border },
+    last: { borderRightWidth: 0 },
+    no: { width: "5%" },
+    product: { width: "37%" },
+    hsn: { width: "12%" },
+    qty: { width: "7%" },
+    taxable: { width: "13%" },
+    rate: { width: "8%" },
+    tax: { width: "9%" },
+    total: { width: "9%" },
+    totals: {
+        marginTop: 12,
+        marginLeft: "55%",
+        width: "45%",
+        borderWidth: 1,
+        borderColor: border,
+    },
+    totalRow: {
+        flexDirection: "row",
+        borderBottomWidth: 1,
+        borderBottomColor: border,
+    },
+    totalLabel: { width: "62%", padding: 6 },
+    totalValue: {
+        width: "38%",
+        padding: 6,
+        textAlign: "right",
         borderLeftWidth: 1,
-        borderLeftColor: colors.border,
+        borderLeftColor: border,
     },
-    sectionTitle: {
-        fontSize: 10,
-        fontFamily: "Helvetica-Bold",
-        color: colors.primary,
-        marginBottom: 4,
-    },
-    text: {
-        fontSize: 9,
-        marginBottom: 2,
-    },
-
-    // Order Details
-    orderDetailsSection: {
-        padding: 16,
-        paddingBottom: 8,
-    },
-    detailsHeader: {
-        fontSize: 12,
-        fontFamily: "Helvetica-Bold",
-        color: colors.primary,
-        marginBottom: 4,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.primary,
-        paddingBottom: 4,
-    },
-    detailRow: {
-        flexDirection: "row",
-        marginTop: 4,
-        gap: 4,
-    },
-    detailLabel: {
-        fontFamily: "Helvetica-Bold",
-        fontSize: 9,
-    },
-    detailValue: {
-        fontSize: 9,
-    },
-
-    // Items Section
-    itemsSection: {
-        padding: 16,
+    final: { fontFamily: "Helvetica-Bold", backgroundColor: "#eef2f7" },
+    notes: {
+        marginTop: 14,
+        borderTopWidth: 1,
+        borderTopColor: border,
         paddingTop: 8,
     },
-
-    // Table
-    table: {
-        width: "100%",
-        borderWidth: 1,
-        borderColor: colors.border,
-        marginTop: 8,
-    },
-    tableHeader: {
-        flexDirection: "row",
-        backgroundColor: "#F3F4F6", // Light gray
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    tableHeaderCell: {
-        padding: 8,
-        fontSize: 9,
-        fontFamily: "Helvetica-Bold",
-        color: colors.primary,
-        borderRightWidth: 1,
-        borderRightColor: colors.border,
-    },
-    tableRow: {
-        flexDirection: "row",
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    tableCell: {
-        padding: 8,
-        fontSize: 9,
-        borderRightWidth: 1,
-        borderRightColor: colors.border,
-    },
-    // Remove right border for last cell
-    lastCell: {
-        borderRightWidth: 0,
-    },
-
-    // Columns widths
-    colIdx: { width: "8%" },
-    colProduct: { width: "52%" },
-    colQty: { width: "10%" },
-    colPrice: { width: "15%" },
-    colTotal: { width: "15%" },
-
-    // Summary (Bottom Right)
-    summaryContainer: {
-        flexDirection: "row",
-        justifyContent: "flex-end",
-        marginTop: 0,
-    },
-    summaryTable: {
-        width: 200,
-        borderLeftWidth: 1,
-        borderLeftColor: colors.border,
-        borderRightWidth: 1,
-        borderRightColor: colors.border,
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    summaryRow: {
-        flexDirection: "row",
-        borderBottomWidth: 1,
-        borderBottomColor: colors.border,
-    },
-    summaryRowLast: {
-        borderBottomWidth: 0,
-    },
-    summaryLabelCell: {
-        flex: 1,
-        padding: 8,
-        fontSize: 9,
-        borderRightWidth: 1,
-        borderRightColor: colors.border,
-    },
-    summaryValueCell: {
-        flex: 1,
-        padding: 8,
-        fontSize: 9,
-        fontFamily: "Helvetica",
-    },
-    bold: {
-        fontFamily: "Helvetica-Bold",
-    },
-
-    // Footer
     footer: {
-        marginTop: 40,
+        position: "absolute",
+        left: 28,
+        right: 28,
+        bottom: 25,
         textAlign: "center",
-        fontSize: 8,
-        color: "#9CA3AF",
+        color: "#64748b",
+        fontSize: 7,
     },
 });
 
-function convertPaiseToRupees(value?: number) {
-    if (!value) return "0.00";
-    return (value / 100).toFixed(2);
-}
-
-interface InvoiceOrder {
+type InvoiceItem = {
+    quantity?: number;
+    product?: { title?: string; price?: number; hsCode?: string | null };
+    variant?: { hsCode?: string | null };
+    gstRateBps?: number;
+};
+type InvoiceOrder = {
     id: string;
+    receiptId?: string;
+    paymentMethod?: string | null;
+    paymentId?: string | null;
+    paymentStatus?: string | null;
     date: string | Date;
     customerName: string;
     address: string;
-    phone: string;
+    state?: string;
     amount: number;
-    items:
-        | {
-              title: string;
-          }
-        | any;
+    items: InvoiceItem[];
     brand: {
         name: string;
         confidential?: {
             addressLine1?: string;
+            city?: string;
+            state?: string;
+            postalCode?: string;
             gstin?: string;
         };
     };
-}
+};
 
-interface InvoiceTemplateProps {
-    order: InvoiceOrder;
-}
-
-export const InvoiceTemplate = ({ order }: InvoiceTemplateProps) => (
-    <Document>
-        <Page size="A4" style={styles.page}>
-            {/* Centered Header */}
-            <View style={styles.header}>
-                {/* Using the remote URL as requested/configured in previous steps, 
-                     or falling back to the one user explicitly pasted if API route doesn't pass it.
-                     However, the API route DOES pass `logoSrc` (if using the dynamic version) or this template uses a hardcoded one.
-                     Let's stick to the URL user proved in the previous turn as the default "Design" source. 
-                 */}
-                <Image
-                    src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNul0Kj0hnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
-                    style={styles.logo}
-                />
-                <Text style={styles.title}>INVOICE</Text>
-            </View>
-
-            {/* Main Content Box */}
-            <View style={styles.mainContainer}>
-                {/* 1. Address Grid */}
-                <View style={styles.addressGrid}>
-                    {/* Seller */}
-                    <View style={styles.addressBox}>
-                        <Text style={styles.sectionTitle}>Seller Details</Text>
-                        <Text style={[styles.text, styles.bold]}>
-                            {order.brand?.name || "N/A"}
+export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
+    const items = Array.isArray(order.items) ? order.items : [];
+    const listTotal =
+        items.reduce(
+            (s, i) =>
+                s +
+                Number(i.product?.price ?? 0) *
+                    Math.max(1, Number(i.quantity ?? 1)),
+            0
+        ) || order.amount;
+    const intra = Boolean(
+        order.brand.confidential?.state &&
+            order.state &&
+            order.brand.confidential.state.trim().toLowerCase() ===
+                order.state.trim().toLowerCase()
+    );
+    const lines = items.map((item, index) => {
+        const qty = Math.max(1, Number(item.quantity ?? 1));
+        const listLineValue = Number(item.product?.price ?? 0) * qty;
+        const gross =
+            listLineValue > 0
+                ? Math.round(order.amount * (listLineValue / listTotal))
+                : Math.round(order.amount / Math.max(items.length, 1));
+        const rate = Number(item.gstRateBps ?? 0);
+        const taxable = rate
+            ? Math.round((gross * 10000) / (10000 + rate))
+            : gross;
+        return {
+            index,
+            qty,
+            gross,
+            taxable,
+            tax: gross - taxable,
+            rate,
+            title: item.product?.title ?? "Product",
+            hsn: item.variant?.hsCode ?? item.product?.hsCode ?? "-",
+        };
+    });
+    const taxable = lines.reduce((s, l) => s + l.taxable, 0);
+    const tax = lines.reduce((s, l) => s + l.tax, 0);
+    const cgst = intra ? Math.round(tax / 2) : 0;
+    const sgst = intra ? tax - cgst : 0;
+    const igst = intra ? 0 : tax;
+    const seller = order.brand.confidential;
+    return (
+        <Document>
+            <Page size="A4" style={styles.page}>
+                <View style={styles.header}>
+                    <View>
+                        <Image
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNul0Kj0hnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
+                            style={styles.logo}
+                        />
+                        <Text style={styles.sellerName}>
+                            {order.brand.name}
                         </Text>
-                        <Text style={styles.text}>
-                            {order.brand?.confidential?.addressLine1 || "N/A"}
-                        </Text>
-                        <Text style={styles.text}>
-                            GST: {order.brand?.confidential?.gstin || "N/A"}
+                        <Text style={styles.small}>
+                            {seller?.addressLine1 ?? "Seller address pending"}
+                            {"\n"}
+                            {seller?.city ?? ""} {seller?.state ?? ""}{" "}
+                            {seller?.postalCode ?? ""}
+                            {"\n"}GSTIN: {seller?.gstin ?? "Not provided"}
                         </Text>
                     </View>
-
-                    {/* Buyer */}
-                    <View style={[styles.addressBox, styles.addressBoxRight]}>
-                        <Text style={styles.sectionTitle}>Billing To</Text>
-                        <Text style={[styles.text, styles.bold]}>
-                            {order.customerName || "N/A"}
+                    <View>
+                        <Text style={styles.heading}>TAX INVOICE</Text>
+                        <Text style={styles.original}>
+                            Original for Recipient
                         </Text>
-                        <Text style={styles.text}>
-                            {order.address || "N/A"}
+                    </View>
+                </View>
+                <View style={styles.grid}>
+                    <View style={styles.cell}>
+                        <Text style={styles.label}>BILL TO</Text>
+                        <Text style={styles.sellerName}>
+                            {order.customerName}
                         </Text>
-                        <Text style={styles.text}>
-                            Phone: {order.phone || "N/A"}
+                        <Text style={styles.small}>{order.address}</Text>
+                    </View>
+                    <View style={[styles.cell, styles.cellRight]}>
+                        <Text style={styles.label}>SHIP TO</Text>
+                        <Text style={styles.sellerName}>
+                            {order.customerName}
+                        </Text>
+                        <Text style={styles.small}>
+                            {order.address}
+                            {"\n"}Place of supply:{" "}
+                            {order.state ?? "Not provided"}
                         </Text>
                     </View>
                 </View>
-
-                {/* 2. Order Details */}
-                <View style={styles.orderDetailsSection}>
-                    <Text style={styles.detailsHeader}>Order Details</Text>
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Order ID:</Text>
-                        <Text style={styles.detailValue}>{order.id}</Text>
+                <View style={styles.meta}>
+                    <View style={styles.metaCell}>
+                        <Text style={styles.metaLabel}>Order number</Text>
+                        <Text style={styles.metaValue}>{order.id}</Text>
                     </View>
-                    <View style={styles.detailRow}>
-                        <Text style={styles.detailLabel}>Order Date:</Text>
-                        <Text style={styles.detailValue}>
-                            {new Date(order.date).toLocaleDateString()}
+                    <View style={styles.metaCell}>
+                        <Text style={styles.metaLabel}>Invoice number</Text>
+                        <Text style={styles.metaValue}>
+                            {order.receiptId ?? order.id}
+                        </Text>
+                    </View>
+                    <View style={styles.metaCell}>
+                        <Text style={styles.metaLabel}>Invoice date</Text>
+                        <Text style={styles.metaValue}>
+                            {new Date(order.date).toLocaleDateString("en-IN")}
                         </Text>
                     </View>
                 </View>
-
-                {/* 3. Items */}
-                <View style={styles.itemsSection}>
-                    <Text style={styles.detailsHeader}>Items</Text>
-
-                    <View style={styles.table}>
-                        {/* Header */}
-                        <View style={styles.tableHeader}>
-                            <Text
-                                style={[styles.tableHeaderCell, styles.colIdx]}
-                            >
-                                #
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.tableHeaderCell,
-                                    styles.colProduct,
-                                ]}
-                            >
-                                Product
-                            </Text>
-                            <Text
-                                style={[styles.tableHeaderCell, styles.colQty]}
-                            >
-                                Qty
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.tableHeaderCell,
-                                    styles.colPrice,
-                                ]}
-                            >
-                                Unit Price
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.tableHeaderCell,
-                                    styles.colTotal,
-                                    styles.lastCell,
-                                ]}
-                            >
-                                Total
-                            </Text>
-                        </View>
-
-                        {/* Row */}
-                        <View style={styles.tableRow}>
-                            <Text style={[styles.tableCell, styles.colIdx]}>
-                                1
-                            </Text>
-                            <Text style={[styles.tableCell, styles.colProduct]}>
-                                {order.items?.title || "Product"}
-                            </Text>
-                            <Text style={[styles.tableCell, styles.colQty]}>
-                                1
-                            </Text>
-                            <Text style={[styles.tableCell, styles.colPrice]}>
-                                ₹{convertPaiseToRupees(order.amount)}
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.tableCell,
-                                    styles.colTotal,
-                                    styles.lastCell,
-                                ]}
-                            >
-                                ₹{convertPaiseToRupees(order.amount)}
-                            </Text>
-                        </View>
-                        {/* If we had more rows, we would map them here. The last row should logically close the bottom border which is handled by the table container border. */}
+                <View style={styles.meta}>
+                    <View style={styles.metaCell}>
+                        <Text style={styles.metaLabel}>Payment mode</Text>
+                        <Text style={styles.metaValue}>
+                            {order.paymentMethod?.toUpperCase() === "COD"
+                                ? "Cash on delivery"
+                                : "Prepaid"}
+                        </Text>
                     </View>
-
-                    {/* Summary */}
-                    <View style={styles.summaryContainer}>
-                        <View style={styles.summaryTable}>
-                            <View style={styles.summaryRow}>
-                                <Text style={styles.summaryLabelCell}>
-                                    Subtotal
-                                </Text>
-                                <Text style={styles.summaryValueCell}>
-                                    ₹{convertPaiseToRupees(order.amount)}
-                                </Text>
-                            </View>
-                            <View
-                                style={[
-                                    styles.summaryRow,
-                                    styles.summaryRowLast,
-                                ]}
-                            >
-                                <Text
-                                    style={[
-                                        styles.summaryLabelCell,
-                                        styles.bold,
-                                    ]}
-                                >
-                                    Total
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.summaryValueCell,
-                                        styles.bold,
-                                    ]}
-                                >
-                                    ₹{convertPaiseToRupees(order.amount)}
-                                </Text>
-                            </View>
-                        </View>
+                    <View style={styles.metaCell}>
+                        <Text style={styles.metaLabel}>Transaction ID</Text>
+                        <Text style={styles.metaValue}>
+                            {order.paymentId ?? "Not available"}
+                        </Text>
+                    </View>
+                    <View style={[styles.metaCell, styles.metaLast]}>
+                        <Text style={styles.metaLabel}>GST treatment</Text>
+                        <Text style={styles.metaValue}>
+                            {intra
+                                ? "CGST + SGST (Intra-state)"
+                                : "IGST (Inter-state)"}
+                        </Text>
                     </View>
                 </View>
-            </View>
-
-            {/* Footer */}
-            <View style={styles.footer}>
-                <Text>
+                <View style={styles.table}>
+                    <View style={[styles.row, styles.head]}>
+                        {[
+                            ["#", styles.no],
+                            ["Description", styles.product],
+                            ["HSN", styles.hsn],
+                            ["Qty", styles.qty],
+                            ["Net price", styles.taxable],
+                            ["GST", styles.rate],
+                            ["Tax", styles.tax],
+                            ["Total", styles.total],
+                        ].map(([t, c], i) => (
+                            <Text
+                                key={String(t)}
+                                style={[
+                                    styles.th,
+                                    c as object,
+                                    i === 7 ? styles.last : {},
+                                ]}
+                            >
+                                {t as string}
+                            </Text>
+                        ))}
+                    </View>
+                    {lines.map((l) => (
+                        <View key={l.index} style={styles.row}>
+                            <Text style={[styles.td, styles.no]}>
+                                {l.index + 1}
+                            </Text>
+                            <Text style={[styles.td, styles.product]}>
+                                {l.title}
+                            </Text>
+                            <Text style={[styles.td, styles.hsn]}>{l.hsn}</Text>
+                            <Text style={[styles.td, styles.qty]}>{l.qty}</Text>
+                            <Text style={[styles.td, styles.taxable]}>
+                                {money(l.taxable)}
+                            </Text>
+                            <Text style={[styles.td, styles.rate]}>
+                                {(l.rate / 100).toFixed(2)}%
+                            </Text>
+                            <Text style={[styles.td, styles.tax]}>
+                                {money(l.tax)}
+                            </Text>
+                            <Text
+                                style={[styles.td, styles.total, styles.last]}
+                            >
+                                {money(l.gross)}
+                            </Text>
+                        </View>
+                    ))}
+                </View>
+                <View style={styles.totals}>
+                    <View style={styles.totalRow}>
+                        <Text style={styles.totalLabel}>Net price</Text>
+                        <Text style={styles.totalValue}>{money(taxable)}</Text>
+                    </View>
+                    <View style={styles.totalRow}>
+                        <Text style={styles.totalLabel}>
+                            {intra ? "CGST" : "IGST"}
+                        </Text>
+                        <Text style={styles.totalValue}>
+                            {money(intra ? cgst : igst)}
+                        </Text>
+                    </View>
+                    {intra ? (
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>SGST</Text>
+                            <Text style={styles.totalValue}>{money(sgst)}</Text>
+                        </View>
+                    ) : null}
+                    <View style={[styles.totalRow, styles.final]}>
+                        <Text style={styles.totalLabel}>Invoice total</Text>
+                        <Text style={styles.totalValue}>
+                            {money(order.amount)}
+                        </Text>
+                    </View>
+                </View>
+                <View style={styles.notes}>
+                    <Text style={styles.label}>Declaration</Text>
+                    <Text style={styles.small}>
+                        This is a computer-generated tax invoice. Goods once
+                        sold are subject to the applicable return and exchange
+                        policy.
+                    </Text>
+                </View>
+                <Text style={styles.footer}>
                     This is a system-generated invoice and does not require a
                     signature.
                 </Text>
-                <Text>Thank you for shopping with Renivet!</Text>
-            </View>
-        </Page>
-    </Document>
-);
+            </Page>
+        </Document>
+    );
+}

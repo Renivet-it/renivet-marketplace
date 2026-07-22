@@ -2,6 +2,7 @@
 
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
     Table,
     TableBody,
@@ -16,7 +17,7 @@ import { handleClientError } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
 import type React from "react";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, FileUp, ListFilter, Pencil, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 
 export type HsnMasterRow = {
@@ -69,8 +70,11 @@ export function HsnMasterWorkspace({
         description: "",
         gstRatePercent: "",
         categoryLabel: "",
+        isActive: true,
     });
     const [coveragePage, setCoveragePage] = useState(1);
+    const [activeTab, setActiveTab] = useState("editor");
+    const [searchQuery, setSearchQuery] = useState("");
     const requestedHsnCode = searchParams.get("hsn")?.trim() ?? "";
     const pageSize = 6;
 
@@ -88,6 +92,7 @@ export function HsnMasterWorkspace({
                 description: "",
                 gstRatePercent: "",
                 categoryLabel: "",
+                isActive: true,
             });
             await refresh();
         },
@@ -107,13 +112,22 @@ export function HsnMasterWorkspace({
         }),
         [hsnRows]
     );
-    const totalCoveragePages = Math.max(1, Math.ceil(hsnRows.length / pageSize));
+    const filteredHsnRows = useMemo(() => {
+        const query = searchQuery.trim().toLowerCase();
+        if (!query) return hsnRows;
+        return hsnRows.filter((row) =>
+            [row.hsnCode, row.description, row.categoryLabel ?? ""].some((value) =>
+                value.toLowerCase().includes(query)
+            )
+        );
+    }, [hsnRows, searchQuery]);
+    const totalCoveragePages = Math.max(1, Math.ceil(filteredHsnRows.length / pageSize));
     const paginatedCoverageRows = useMemo(() => {
         const startIndex = (coveragePage - 1) * pageSize;
-        return hsnRows.slice(startIndex, startIndex + pageSize);
-    }, [coveragePage, hsnRows]);
-    const coverageStart = hsnRows.length === 0 ? 0 : (coveragePage - 1) * pageSize + 1;
-    const coverageEnd = Math.min(coveragePage * pageSize, hsnRows.length);
+        return filteredHsnRows.slice(startIndex, startIndex + pageSize);
+    }, [coveragePage, filteredHsnRows]);
+    const coverageStart = filteredHsnRows.length === 0 ? 0 : (coveragePage - 1) * pageSize + 1;
+    const coverageEnd = Math.min(coveragePage * pageSize, filteredHsnRows.length);
 
     useEffect(() => {
         if (!requestedHsnCode) {
@@ -131,8 +145,20 @@ export function HsnMasterWorkspace({
     }, [requestedHsnCode]);
 
     useEffect(() => {
-        setCoveragePage((current) => Math.min(current, Math.max(1, Math.ceil(hsnRows.length / pageSize))));
-    }, [hsnRows.length]);
+        setCoveragePage((current) => Math.min(current, Math.max(1, Math.ceil(filteredHsnRows.length / pageSize))));
+    }, [filteredHsnRows.length]);
+
+    const editRow = (row: HsnMasterRow) => {
+        setManualRow({
+            hsnCode: row.hsnCode,
+            description: row.description,
+            gstRatePercent: String(row.gstRateBps / 100),
+            categoryLabel: row.categoryLabel ?? "",
+            isActive: row.isActive,
+        });
+        setActiveTab("editor");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    };
 
     const submitManualRow = () => {
         if (!manualRow.hsnCode || !manualRow.description || !manualRow.gstRatePercent) {
@@ -145,7 +171,7 @@ export function HsnMasterWorkspace({
             description: manualRow.description,
             gstRateBps: Math.round(Number(manualRow.gstRatePercent) * 100),
             categoryLabel: manualRow.categoryLabel || undefined,
-            isActive: true,
+            isActive: manualRow.isActive,
         });
     };
 
@@ -233,7 +259,22 @@ export function HsnMasterWorkspace({
                 />
             </section>
 
-            <section className="grid gap-5 xl:grid-cols-[1fr_1.08fr]">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-5">
+                <div className="rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+                    <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1">
+                        <TabsTrigger value="editor" className="gap-2 rounded-lg py-3 font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700">
+                            <Plus className="size-4" /> Create / edit
+                        </TabsTrigger>
+                        <TabsTrigger value="import" className="gap-2 rounded-lg py-3 font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700">
+                            <FileUp className="size-4" /> Bulk import
+                        </TabsTrigger>
+                        <TabsTrigger value="directory" className="gap-2 rounded-lg py-3 font-semibold data-[state=active]:bg-white data-[state=active]:text-emerald-700">
+                            <ListFilter className="size-4" /> HSN directory
+                        </TabsTrigger>
+                    </TabsList>
+                </div>
+
+                <TabsContent value="editor" className="mt-0">
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
                         <div>
@@ -306,6 +347,20 @@ export function HsnMasterWorkspace({
                                 }
                             />
                         </FieldShell>
+                        <label className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 sm:col-span-2">
+                            <input
+                                type="checkbox"
+                                checked={manualRow.isActive}
+                                onChange={(event) =>
+                                    setManualRow((current) => ({ ...current, isActive: event.target.checked }))
+                                }
+                                className="size-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                            />
+                            <span>
+                                <span className="block text-sm font-semibold text-slate-900">Active for billing and tax mapping</span>
+                                <span className="block text-xs text-slate-500">Turn this off to retain the record without making it available for new use.</span>
+                            </span>
+                        </label>
                     </div>
 
                     <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
@@ -317,7 +372,12 @@ export function HsnMasterWorkspace({
                         </Button>
                     </div>
 
-                    <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                </section>
+                </TabsContent>
+
+                <TabsContent value="import" className="mt-0">
+                    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
                         <div className="flex items-start justify-between gap-3">
                             <div>
                                 <p className="text-sm font-semibold text-slate-900">One-time CSV import</p>
@@ -395,8 +455,10 @@ export function HsnMasterWorkspace({
                             </Button>
                         </div>
                     </div>
-                </section>
+                    </section>
+                </TabsContent>
 
+                <TabsContent value="directory" className="mt-0">
                 <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
                     <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 sm:flex-row sm:items-start sm:justify-between">
                         <div>
@@ -410,12 +472,25 @@ export function HsnMasterWorkspace({
                                 Showing
                             </p>
                             <p className="mt-1 text-sm font-semibold text-slate-950">
-                                {coverageStart}-{coverageEnd} of {hsnRows.length} rows
+                                {coverageStart}-{coverageEnd} of {filteredHsnRows.length} rows
                             </p>
                         </div>
                     </div>
 
-                    <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+                    <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="relative w-full max-w-md">
+                            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
+                            <Input
+                                value={searchQuery}
+                                onChange={(event) => { setSearchQuery(event.target.value); setCoveragePage(1); }}
+                                placeholder="Search by HSN code, description or category"
+                                className="pl-9"
+                            />
+                        </div>
+                        <p className="text-sm text-slate-500">Select a row to update its details.</p>
+                    </div>
+
+                    <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200">
                         <Table className="min-w-full">
                             <TableHeader className="bg-slate-50">
                                 <TableRow className="hover:bg-slate-50">
@@ -434,13 +509,14 @@ export function HsnMasterWorkspace({
                                     <TableHead className="w-[14%] text-right text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
                                         Status
                                     </TableHead>
+                                    <TableHead className="w-[1%] text-right text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Action</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {paginatedCoverageRows.length === 0 ? (
                                     <TableRow className="hover:bg-transparent">
-                                        <TableCell colSpan={5} className="py-10 text-center text-sm text-slate-500">
-                                            No HSN rows available yet.
+                                        <TableCell colSpan={6} className="py-10 text-center text-sm text-slate-500">
+                                            {searchQuery ? "No HSN rows match your search." : "No HSN rows available yet."}
                                         </TableCell>
                                     </TableRow>
                                 ) : (
@@ -464,7 +540,7 @@ export function HsnMasterWorkspace({
                                             </TableCell>
                                             <TableCell className="text-right">
                                                 <span
-                                                    className={`inline-flex rounded-full px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] ${
+                                                    className={`inline-flex rounded-full px-2.5 py-1 text-11 font-semibold uppercase tracking-[0.14em] ${
                                                         row.isActive
                                                             ? "bg-emerald-100 text-emerald-700"
                                                             : "bg-slate-200 text-slate-600"
@@ -472,6 +548,12 @@ export function HsnMasterWorkspace({
                                                 >
                                                     {row.isActive ? "Active" : "Inactive"}
                                                 </span>
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="sm" onClick={() => editRow(row)} aria-label={`Edit HSN ${row.hsnCode}`}>
+                                                    <Pencil className="size-4" />
+                                                    <span className="hidden lg:inline">Edit</span>
+                                                </Button>
                                             </TableCell>
                                         </TableRow>
                                     ))
@@ -500,7 +582,7 @@ export function HsnMasterWorkspace({
                                 onClick={() =>
                                     setCoveragePage((current) => Math.min(totalCoveragePages, current + 1))
                                 }
-                                disabled={coveragePage === totalCoveragePages || hsnRows.length === 0}
+                                disabled={coveragePage === totalCoveragePages || filteredHsnRows.length === 0}
                             >
                                 Next
                                 <ChevronRight className="ml-1 size-4" />
@@ -508,7 +590,8 @@ export function HsnMasterWorkspace({
                         </div>
                     </div>
                 </section>
-            </section>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }

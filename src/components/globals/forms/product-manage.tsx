@@ -4,20 +4,66 @@ import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-dash";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command-dash";
+import {
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from "@/components/ui/command-dash";
 import { Editor, EditorRef } from "@/components/ui/editor";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+    Form,
+    FormControl,
+    FormField,
+    FormItem,
+    FormLabel,
+    FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input-dash";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "@/components/ui/popover";
 import PriceInput from "@/components/ui/price-input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select-dash";
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select-dash";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea-dash";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees, convertPriceToPaise, generateSKU, handleClientError, sanitizeHtml } from "@/lib/utils";
-import { BrandMediaItem, CachedBrand, CachedCategory, CachedProductType, CachedSubCategory, CreateProduct, createProductSchema, ProductWithBrand, UpdateProductMediaInput } from "@/lib/validations";
+import {
+    cn,
+    convertPaiseToRupees,
+    convertPriceToPaise,
+    generateSKU,
+    handleClientError,
+    sanitizeHtml,
+} from "@/lib/utils";
+import {
+    BrandMediaItem,
+    CachedBrand,
+    CachedCategory,
+    CachedProductType,
+    CachedSubCategory,
+    CreateProduct,
+    createProductSchema,
+    ProductWithBrand,
+    UpdateProductMediaInput,
+} from "@/lib/validations";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Country } from "country-state-city";
 import { Tag, TagInput } from "emblor";
@@ -30,7 +76,6 @@ import { toast } from "sonner";
 import { MediaSelectModal, RequestCategoryModal } from "../modals";
 import { ProductVariantManage } from "./product-variant-manage";
 
-
 interface PageProps {
     brandId: string;
     brand: CachedBrand;
@@ -39,6 +84,164 @@ interface PageProps {
     allSubCategories: CachedSubCategory[];
     allProductTypes: CachedProductType[];
     allMedia: BrandMediaItem[];
+}
+
+type HsnMasterOption = {
+    id: string;
+    hsnCode: string;
+    description: string;
+    gstRateBps: number;
+    categoryLabel: string | null;
+};
+
+function HsnMasterSelect({
+    value,
+    onValueChange,
+    disabled,
+    options,
+}: {
+    value?: string | null;
+    onValueChange: (value: string) => void;
+    disabled?: boolean;
+    options: HsnMasterOption[];
+}) {
+    const [open, setOpen] = useState(false);
+    const [search, setSearch] = useState("");
+    const selected = options.find((option) => option.hsnCode === value);
+    const manualCode = search.trim();
+    const canUseManualCode = /^\d{4,8}$/.test(manualCode);
+    const isKnownCode = options.some((option) => option.hsnCode === manualCode);
+
+    return (
+        <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+                <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={open}
+                    disabled={disabled}
+                    className="h-9 w-full justify-between text-left font-normal"
+                >
+                    <span
+                        className={cn(
+                            "truncate",
+                            !value && "text-muted-foreground"
+                        )}
+                    >
+                        {selected
+                            ? `${selected.hsnCode} - ${selected.description}`
+                            : value || "Select an HSN from Master"}
+                    </span>
+                    <Icons.ChevronDown
+                        size={16}
+                        className="ml-2 shrink-0 text-muted-foreground"
+                    />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent
+                className="w-[min(34rem,var(--radix-popper-anchor-width))] p-0"
+                align="start"
+            >
+                <Command>
+                    <CommandInput
+                        value={search}
+                        onValueChange={setSearch}
+                        placeholder="Search HSN code, description or category"
+                    />
+                    <CommandList>
+                        <CommandEmpty>
+                            No HSN Master records match. You can enter a valid
+                            manual HSN below.
+                        </CommandEmpty>
+                        <CommandGroup heading="Active HSN Master entries">
+                            {options.map((option) => (
+                                <CommandItem
+                                    key={option.id}
+                                    value={`${option.hsnCode} ${option.description} ${option.categoryLabel ?? ""}`}
+                                    onSelect={() => {
+                                        onValueChange(option.hsnCode);
+                                        setOpen(false);
+                                        setSearch("");
+                                    }}
+                                    className="items-start py-3"
+                                >
+                                    <span className="min-w-0 flex-1">
+                                        <span className="block font-medium">
+                                            {option.hsnCode} -{" "}
+                                            {(option.gstRateBps / 100).toFixed(
+                                                2
+                                            )}
+                                            % GST
+                                        </span>
+                                        <span className="block truncate text-xs text-muted-foreground">
+                                            {option.description}
+                                        </span>
+                                    </span>
+                                    {value === option.hsnCode ? (
+                                        <Icons.Check
+                                            size={16}
+                                            className="ml-2 shrink-0"
+                                        />
+                                    ) : null}
+                                </CommandItem>
+                            ))}
+                        </CommandGroup>
+                        {manualCode && !isKnownCode ? (
+                            <CommandGroup heading="Manual HSN entry">
+                                <CommandItem
+                                    value={`manual ${manualCode}`}
+                                    disabled={!canUseManualCode}
+                                    onSelect={() => {
+                                        onValueChange(manualCode);
+                                        setOpen(false);
+                                        setSearch("");
+                                    }}
+                                >
+                                    {canUseManualCode
+                                        ? `Use ${manualCode} temporarily — link it when Finance adds it to HSN Master`
+                                        : "Enter a 4 to 8 digit HSN code to use it manually"}
+                                </CommandItem>
+                            </CommandGroup>
+                        ) : null}
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+        </Popover>
+    );
+}
+
+function HsnMasterRate({
+    value,
+    options,
+}: {
+    value?: string | null;
+    options: HsnMasterOption[];
+}) {
+    const selected = options.find((option) => option.hsnCode === value);
+
+    if (!value) {
+        return (
+            <p className="mt-2 text-xs text-muted-foreground">
+                Choose a master HSN or enter a valid code manually.
+            </p>
+        );
+    }
+
+    if (!selected) {
+        return (
+            <p className="mt-2 text-xs text-amber-700">
+                HSN {value} is not in HSN Master yet. Finance can add it later;
+                the GST rate will appear automatically.
+            </p>
+        );
+    }
+
+    return (
+        <p className="mt-2 text-xs font-medium text-emerald-700">
+            GST rate from HSN Master: {(selected.gstRateBps / 100).toFixed(2)}%
+        </p>
+    );
 }
 
 function normalizeProductVariants(product?: ProductWithBrand) {
@@ -93,6 +296,8 @@ export function ProductManageForm({
     const router = useRouter();
 
     const [isCoOSelectOpen, setIsCoOSelectOpen] = useState(false);
+    const hsnMasterQuery =
+        trpc.brands.products.listAvailableHsnMaster.useQuery();
     const [isRequestCategoryModalOpen, setIsRequestCategoryModalOpen] =
         useState(false);
 
@@ -182,7 +387,8 @@ export function ProductManageForm({
 
             // VARIANTS
             options: product?.options ?? [],
-            variants: validVariants.map((variant) => ({
+            variants:
+                validVariants.map((variant) => ({
                     ...variant,
                     price: +convertPaiseToRupees(variant.price),
                     compareAtPrice: +convertPaiseToRupees(
@@ -205,17 +411,17 @@ export function ProductManageForm({
 
             // SPECIFICATIONS
             specifications:
-            product?.specifications?.map((spec) => ({
-                key: spec.key,
-                value: spec.value,
-            })) ?? [],
+                product?.specifications?.map((spec) => ({
+                    key: spec.key,
+                    value: spec.value,
+                })) ?? [],
 
             //Return
             returnable: product?.returnable ?? false,
             returnDescription: product?.returnDescription ?? null,
             exchangeable: product?.exchangeable ?? false,
             exchangeDescription: product?.exchangeDescription ?? null,
-            },
+        },
     });
 
     const {
@@ -236,8 +442,6 @@ export function ProductManageForm({
         control,
         name: "specifications",
     });
-
-
 
     const countries = useMemo(() => Country.getAllCountries(), []);
 
@@ -318,14 +522,16 @@ export function ProductManageForm({
                 return handleClientError(err, ctx?.toastId);
             },
         });
-        const { mutate: updateProductMedia, isPending: isUpdatingMedia } =
+    const { mutate: updateProductMedia, isPending: isUpdatingMedia } =
         trpc.brands.products.updateProductMedia.useMutation({
             onMutate: () => {
                 const toastId = toast.loading("Updating product media...");
                 return { toastId };
             },
             onSuccess: (_, __, ctx) => {
-                toast.success("Product media updated successfully", { id: ctx.toastId });
+                toast.success("Product media updated successfully", {
+                    id: ctx.toastId,
+                });
                 window.location.reload();
             },
             onError: (err, _, ctx) => {
@@ -347,14 +553,16 @@ export function ProductManageForm({
             // },
             onSuccess: (data, { productId }, { toastId }) => {
                 if (!data || data.id !== productId) {
-                  console.error("Invalid response:", data);
-                  toast.error("Update failed: Invalid product data", { id: toastId });
-                  return;
+                    console.error("Invalid response:", data);
+                    toast.error("Update failed: Invalid product data", {
+                        id: toastId,
+                    });
+                    return;
                 }
                 toast.success("Product updated successfully", { id: toastId });
                 form.reset(form.getValues());
                 window.location.reload();
-              },
+            },
             onError: (err, _, ctx) => {
                 return handleClientError(err, ctx?.toastId);
             },
@@ -367,43 +575,48 @@ export function ProductManageForm({
             <Form {...form}>
                 <form
                     className="space-y-6"
-                    onSubmit={form.handleSubmit((values) => {
-                        values = {
-                            ...values,
-                            price: values.price
-                                ? convertPriceToPaise(values.price)
-                                : null,
-                            compareAtPrice: values.compareAtPrice
-                                ? convertPriceToPaise(values.compareAtPrice)
-                                : null,
-                            costPerItem: values.costPerItem
-                                ? convertPriceToPaise(values.costPerItem)
-                                : null,
-                            variants: values.variants.map((variant) => ({
-                                ...variant,
-                                price: convertPriceToPaise(variant.price),
-                                compareAtPrice: variant.compareAtPrice
-                                    ? convertPriceToPaise(
-                                          variant.compareAtPrice
-                                      )
+                    onSubmit={form.handleSubmit(
+                        (values) => {
+                            values = {
+                                ...values,
+                                price: values.price
+                                    ? convertPriceToPaise(values.price)
                                     : null,
-                                costPerItem: variant.costPerItem
-                                    ? convertPriceToPaise(variant.costPerItem)
+                                compareAtPrice: values.compareAtPrice
+                                    ? convertPriceToPaise(values.compareAtPrice)
                                     : null,
-                            })),
-                        };
+                                costPerItem: values.costPerItem
+                                    ? convertPriceToPaise(values.costPerItem)
+                                    : null,
+                                variants: values.variants.map((variant) => ({
+                                    ...variant,
+                                    price: convertPriceToPaise(variant.price),
+                                    compareAtPrice: variant.compareAtPrice
+                                        ? convertPriceToPaise(
+                                              variant.compareAtPrice
+                                          )
+                                        : null,
+                                    costPerItem: variant.costPerItem
+                                        ? convertPriceToPaise(
+                                              variant.costPerItem
+                                          )
+                                        : null,
+                                })),
+                            };
 
-                        return product
-                            ? updateProduct({
-                                  productId: product.id,
-                                  values,
-                              })
-                            : createProduct(values);
-                    }, () => {
-                        toast.error(
-                            "Please fix the highlighted product form errors before saving."
-                        );
-                    })}
+                            return product
+                                ? updateProduct({
+                                      productId: product.id,
+                                      values,
+                                  })
+                                : createProduct(values);
+                        },
+                        () => {
+                            toast.error(
+                                "Please fix the highlighted product form errors before saving."
+                            );
+                        }
+                    )}
                 >
                     <Card>
                         <CardHeader className="hidden">
@@ -1431,16 +1644,28 @@ export function ProductManageForm({
                                                 </FormLabel>
 
                                                 <FormControl>
-                                                    <Input
-                                                        {...field}
-                                                        placeholder="Add HSN code"
-                                                        className="h-9"
-                                                        value={
-                                                            field.value ?? ""
+                                                    <HsnMasterSelect
+                                                        value={field.value}
+                                                        onValueChange={
+                                                            field.onChange
                                                         }
-                                                        disabled={isPending}
+                                                        disabled={
+                                                            isPending ||
+                                                            hsnMasterQuery.isLoading
+                                                        }
+                                                        options={
+                                                            hsnMasterQuery.data ??
+                                                            []
+                                                        }
                                                     />
                                                 </FormControl>
+                                                <HsnMasterRate
+                                                    value={field.value}
+                                                    options={
+                                                        hsnMasterQuery.data ??
+                                                        []
+                                                    }
+                                                />
 
                                                 <FormMessage />
                                             </FormItem>
@@ -1483,16 +1708,28 @@ export function ProductManageForm({
                                                 </FormLabel>
 
                                                 <FormControl>
-                                                    <Input
-                                                        {...field}
-                                                        placeholder="Add HSN code"
-                                                        className="h-9"
-                                                        value={
-                                                            field.value ?? ""
+                                                    <HsnMasterSelect
+                                                        value={field.value}
+                                                        onValueChange={
+                                                            field.onChange
                                                         }
-                                                        disabled={isPending}
+                                                        disabled={
+                                                            isPending ||
+                                                            hsnMasterQuery.isLoading
+                                                        }
+                                                        options={
+                                                            hsnMasterQuery.data ??
+                                                            []
+                                                        }
                                                     />
                                                 </FormControl>
+                                                <HsnMasterRate
+                                                    value={field.value}
+                                                    options={
+                                                        hsnMasterQuery.data ??
+                                                        []
+                                                    }
+                                                />
 
                                                 <FormMessage />
                                             </FormItem>
@@ -1502,172 +1739,202 @@ export function ProductManageForm({
                             </Card>
                         </>
                     )}
-<Card className="mx-2 md:mx-0">
-                <CardHeader className="p-4 md:p-6">
-                    <CardTitle className="text-lg font-medium">
-                        Product Specification
-                    </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
-                    <div className="flex flex-col gap-6">
-                        {fields.map((field, index) => (
-                            <div
-                                key={field.id}
-                                className="grid grid-cols-1 items-end gap-4 md:grid-cols-[1fr_1fr_auto] md:gap-6"
-                            >
-                                <FormField
-                                    control={control}
-                                   name={`specifications[${index}].key` as any}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Specification Label</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="e.g., Material"
-                                                    value={field.value !== undefined ? String(field.value) : ""}
-                                                   className="h-9"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={control}
-                                   name={`specifications[${index}].value` as any}
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Specification Value</FormLabel>
-                                            <FormControl>
-                                                <Input
-                                                    {...field}
-                                                    placeholder="e.g., Cotton"
-                                                    value={field.value !== undefined ? String(field.value) : ""}
-                                                   className="h-9"
-                                                />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
+                    <Card className="mx-2 md:mx-0">
+                        <CardHeader className="p-4 md:p-6">
+                            <CardTitle className="text-lg font-medium">
+                                Product Specification
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
+                            <div className="flex flex-col gap-6">
+                                {fields.map((field, index) => (
+                                    <div
+                                        key={field.id}
+                                        className="grid grid-cols-1 items-end gap-4 md:grid-cols-[1fr_1fr_auto] md:gap-6"
+                                    >
+                                        <FormField
+                                            control={control}
+                                            name={
+                                                `specifications[${index}].key` as any
+                                            }
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>
+                                                        Specification Label
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            placeholder="e.g., Material"
+                                                            value={
+                                                                field.value !==
+                                                                undefined
+                                                                    ? String(
+                                                                          field.value
+                                                                      )
+                                                                    : ""
+                                                            }
+                                                            className="h-9"
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={control}
+                                            name={
+                                                `specifications[${index}].value` as any
+                                            }
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>
+                                                        Specification Value
+                                                    </FormLabel>
+                                                    <FormControl>
+                                                        <Input
+                                                            {...field}
+                                                            placeholder="e.g., Cotton"
+                                                            value={
+                                                                field.value !==
+                                                                undefined
+                                                                    ? String(
+                                                                          field.value
+                                                                      )
+                                                                    : ""
+                                                            }
+                                                            className="h-9"
+                                                        />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={() => remove(index)}
+                                            className="text-red-500 hover:bg-red-100 hover:text-red-700 focus:ring-red-200"
+                                        >
+                                            <Icons.Trash2 className="size-4" />
+                                        </Button>
+                                    </div>
+                                ))}
                                 <Button
                                     type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => remove(index)}
-                                    className="text-red-500 hover:bg-red-100 hover:text-red-700 focus:ring-red-200"
+                                    variant="outline"
+                                    className="w-fit"
+                                    onClick={() =>
+                                        append({ key: "", value: "" })
+                                    }
                                 >
-                                    <Icons.Trash2 className="size-4" />
+                                    + Add Specification
                                 </Button>
                             </div>
-                        ))}
-                        <Button
-                            type="button"
-                            variant="outline"
-                            className="w-fit"
-                            onClick={() => append({ key: "", value: "" })}
-                        >
-                            + Add Specification
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
                     <Card className="mx-2 mt-6 md:mx-0">
-                    <CardHeader className="p-4 md:p-6">
-                        <CardTitle className="text-lg font-medium">Size & Fit</CardTitle>
-                    </CardHeader>
+                        <CardHeader className="p-4 md:p-6">
+                            <CardTitle className="text-lg font-medium">
+                                Size & Fit
+                            </CardTitle>
+                        </CardHeader>
 
-                    <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
-                        <FormField
-                            control={form.control}
-                            name="sizeChartMedia"
-                            render={() => (
-                                <FormItem>
-                                    <FormLabel>Size Chart Images</FormLabel>
+                        <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
+                            <FormField
+                                control={form.control}
+                                name="sizeChartMedia"
+                                render={() => (
+                                    <FormItem>
+                                        <FormLabel>Size Chart Images</FormLabel>
 
-                                    <FormControl>
-                                        {selectedSizeChartMedia.length > 0 ? (
-                                            <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
-                                                {selectedSizeChartMedia.map(
-                                                    (media) => (
-                                                        <div
-                                                            key={media.id}
-                                                            className="aspect-square overflow-hidden rounded-md border p-2 transition-all ease-in-out hover:bg-muted"
+                                        <FormControl>
+                                            {selectedSizeChartMedia.length >
+                                            0 ? (
+                                                <div className="grid grid-cols-2 gap-2 md:grid-cols-6">
+                                                    {selectedSizeChartMedia.map(
+                                                        (media) => (
+                                                            <div
+                                                                key={media.id}
+                                                                className="aspect-square overflow-hidden rounded-md border p-2 transition-all ease-in-out hover:bg-muted"
+                                                            >
+                                                                <Image
+                                                                    src={
+                                                                        media.url
+                                                                    }
+                                                                    alt={
+                                                                        media.alt ||
+                                                                        media.name
+                                                                    }
+                                                                    height={500}
+                                                                    width={500}
+                                                                    className="size-full rounded-sm object-cover"
+                                                                />
+                                                            </div>
+                                                        )
+                                                    )}
+
+                                                    <div className="aspect-square">
+                                                        <button
+                                                            type="button"
+                                                            className="flex size-full items-center justify-center rounded-md border bg-muted p-2 transition-all ease-in-out hover:bg-muted/60"
+                                                            onClick={() =>
+                                                                setIsSizeChartMediaSelectorOpen(
+                                                                    true
+                                                                )
+                                                            }
+                                                            disabled={isPending}
                                                         >
-                                                            <Image
-                                                                src={media.url}
-                                                                alt={
-                                                                    media.alt ||
-                                                                    media.name
-                                                                }
-                                                                height={500}
-                                                                width={500}
-                                                                className="size-full rounded-sm object-cover"
-                                                            />
-                                                        </div>
-                                                    )
-                                                )}
-
-                                                <div className="aspect-square">
-                                                    <button
-                                                        type="button"
-                                                        className="flex size-full items-center justify-center rounded-md border bg-muted p-2 transition-all ease-in-out hover:bg-muted/60"
-                                                        onClick={() =>
-                                                            setIsSizeChartMediaSelectorOpen(
-                                                                true
-                                                            )
-                                                        }
-                                                        disabled={isPending}
-                                                    >
-                                                        <Icons.Plus />
-                                                    </button>
+                                                            <Icons.Plus />
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ) : (
-                                            <button
-                                                type="button"
-                                                className="flex h-24 w-full items-center justify-center rounded-md border border-dashed bg-muted/40 text-sm text-muted-foreground transition hover:bg-muted"
-                                                onClick={() =>
-                                                    setIsSizeChartMediaSelectorOpen(
-                                                        true
-                                                    )
-                                                }
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="flex h-24 w-full items-center justify-center rounded-md border border-dashed bg-muted/40 text-sm text-muted-foreground transition hover:bg-muted"
+                                                    onClick={() =>
+                                                        setIsSizeChartMediaSelectorOpen(
+                                                            true
+                                                        )
+                                                    }
+                                                    disabled={isPending}
+                                                >
+                                                    Upload / Select Size Chart
+                                                    Images
+                                                </button>
+                                            )}
+                                        </FormControl>
+
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+
+                            <FormField
+                                control={form.control}
+                                name="sizeAndFit"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Editor
+                                                {...field}
+                                                // value={field.value ?? ""} // Coerce null to empty string
+                                                ref={editorRef}
+                                                content={field.value ?? ""}
+                                                classNames={{
+                                                    innerWrapper: "min-h-40",
+                                                }}
                                                 disabled={isPending}
-                                            >
-                                                Upload / Select Size Chart Images
-                                            </button>
-                                        )}
-                                    </FormControl>
-
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                        control={form.control}
-                          name="sizeAndFit"
-                        render={({ field }) => (
-                            <FormItem>
-                            <FormLabel>Description</FormLabel>
-                            <FormControl>
-                          <Editor
-                                {...field}
-                                // value={field.value ?? ""} // Coerce null to empty string
-                                ref={editorRef}
-                                content={field.value ?? ""}
-                                classNames={{
-                                    innerWrapper: "min-h-40",
-                                }}
-                                disabled={isPending}
-                                />
-                            </FormControl>
-                            <FormMessage />
-                            </FormItem>
-                        )}
-                        />
-                    </CardContent>
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </CardContent>
                     </Card>
 
                     <Card className="mx-2 mt-6 md:mx-0">
@@ -1703,101 +1970,120 @@ export function ProductManageForm({
                         </CardContent>
                     </Card>
                     <Card className="mx-2 mt-6 md:mx-0">
-            <CardHeader className="p-4 md:p-6">
-                <CardTitle className="text-lg font-medium">Return & Exchange Policy</CardTitle>
-            </CardHeader>
+                        <CardHeader className="p-4 md:p-6">
+                            <CardTitle className="text-lg font-medium">
+                                Return & Exchange Policy
+                            </CardTitle>
+                        </CardHeader>
 
-            <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
-                <div className="flex flex-col gap-4">
+                        <CardContent className="space-y-4 p-4 pt-0 md:p-6 md:pt-0">
+                            <div className="flex flex-col gap-4">
+                                {/* Returnable Checkbox */}
+                                <FormField
+                                    control={form.control}
+                                    name="returnable"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={
+                                                        field.onChange
+                                                    }
+                                                    disabled={isPending}
+                                                />
+                                            </FormControl>
+                                            <FormLabel className="text-base">
+                                                Returnable
+                                            </FormLabel>
+                                        </FormItem>
+                                    )}
+                                />
 
-                {/* Returnable Checkbox */}
-                <FormField
-                    control={form.control}
-                    name="returnable"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                        <FormControl>
-                        <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                        />
-                        </FormControl>
-                        <FormLabel className="text-base">Returnable</FormLabel>
-                    </FormItem>
-                    )}
-                />
+                                {/* Return Description (Conditional) */}
+                                {form.watch("returnable") && (
+                                    <FormField
+                                        control={form.control}
+                                        name="returnDescription"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Return Description
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Editor
+                                                        {...field}
+                                                        ref={editorRef}
+                                                        content={
+                                                            field.value ?? ""
+                                                        }
+                                                        classNames={{
+                                                            innerWrapper:
+                                                                "min-h-40",
+                                                        }}
+                                                        disabled={isPending}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
 
-                {/* Return Description (Conditional) */}
-                {form.watch("returnable") && (
-                    <FormField
-                    control={form.control}
-                    name="returnDescription"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Return Description</FormLabel>
-                        <FormControl>
-                            <Editor
-                            {...field}
-                            ref={editorRef}
-                            content={field.value ?? ""}
-                            classNames={{
-                                innerWrapper: "min-h-40",
-                            }}
-                            disabled={isPending}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                )}
+                                {/* Exchangeable Checkbox */}
+                                <FormField
+                                    control={form.control}
+                                    name="exchangeable"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={
+                                                        field.onChange
+                                                    }
+                                                    disabled={isPending}
+                                                />
+                                            </FormControl>
+                                            <FormLabel className="text-base">
+                                                Exchangeable
+                                            </FormLabel>
+                                        </FormItem>
+                                    )}
+                                />
 
-                {/* Exchangeable Checkbox */}
-                <FormField
-                    control={form.control}
-                    name="exchangeable"
-                    render={({ field }) => (
-                    <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                        <FormControl>
-                        <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                            disabled={isPending}
-                        />
-                        </FormControl>
-                        <FormLabel className="text-base">Exchangeable</FormLabel>
-                    </FormItem>
-                    )}
-                />
-
-                {/* Exchange Description (Conditional) */}
-                {form.watch("exchangeable") && (
-                    <FormField
-                    control={form.control}
-                    name="exchangeDescription"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Exchange Description</FormLabel>
-                        <FormControl>
-                            <Editor
-                            {...field}
-                            ref={editorRef}
-                            content={field.value ?? ""}
-                            classNames={{
-                                innerWrapper: "min-h-40",
-                            }}
-                            disabled={isPending}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
-                )}
-                </div>
-            </CardContent>
-            </Card>
+                                {/* Exchange Description (Conditional) */}
+                                {form.watch("exchangeable") && (
+                                    <FormField
+                                        control={form.control}
+                                        name="exchangeDescription"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>
+                                                    Exchange Description
+                                                </FormLabel>
+                                                <FormControl>
+                                                    <Editor
+                                                        {...field}
+                                                        ref={editorRef}
+                                                        content={
+                                                            field.value ?? ""
+                                                        }
+                                                        classNames={{
+                                                            innerWrapper:
+                                                                "min-h-40",
+                                                        }}
+                                                        disabled={isPending}
+                                                    />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                     <Card>
                         <CardHeader className="p-4 md:p-6">
                             <CardTitle className="text-lg font-medium">
@@ -1971,11 +2257,9 @@ export function ProductManageForm({
                     }));
                     console.log("Selected Media:", mediaWithPosition);
 
-                    form.setValue(
-                        "media",
-                        mediaWithPosition,
-                        { shouldDirty: true }
-                    );
+                    form.setValue("media", mediaWithPosition, {
+                        shouldDirty: true,
+                    });
 
                     setSelectedMedia(uniqueMedia);
                     // Call tRPC mutation to update product media
