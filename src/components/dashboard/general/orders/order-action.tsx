@@ -370,9 +370,14 @@ export function OrderAction({ order, onAction }: PageProps) {
                             " - " +
                             order.address.zip,
                         amount: order.totalAmount,
-                        items: order.items[0].product,
+                        items: order.items,
                         brand: order.items[0].product.brand,
+                        state: order.address.state,
                         date: order.createdAt,
+                        receiptId: order.receiptId,
+                        paymentMethod: order.paymentMethod,
+                        paymentId: order.paymentId,
+                        paymentStatus: order.paymentStatus,
                     },
                 }),
             });

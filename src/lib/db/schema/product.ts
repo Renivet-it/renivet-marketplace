@@ -21,8 +21,8 @@ import { timestamps } from "../helper";
 import { brands } from "./brand";
 import { categories, productTypes, subCategories } from "./category";
 import { orderItems } from "./order";
-import { users } from "./user";
 import { reviews } from "./review";
+import { users } from "./user";
 
 export const products = pgTable(
     "products",
@@ -74,6 +74,9 @@ export const products = pgTable(
         height: integer("height"),
         originCountry: text("origin_country"),
         hsCode: text("hs_code"),
+        // The database FK is defined in the HSN-link migration. Keeping this as a plain
+        // column avoids a schema-module cycle: finance compliance already references orders.
+        hsnMasterId: uuid("hsn_master_id"),
 
         // SEO
         metaTitle: text("meta_title"),
@@ -164,7 +167,9 @@ export const products = pgTable(
         isUnder999: boolean("is_under_999").default(false).notNull(),
 
         // POSITION/SEQUENCE — for boolean-only sections stored directly on products table
-        bestSellerPosition: integer("best_seller_position").default(0).notNull(),
+        bestSellerPosition: integer("best_seller_position")
+            .default(0)
+            .notNull(),
         under999Position: integer("under999_position").default(0).notNull(),
 
         embeddings: vector("embeddings", { dimensions: 384 }),
@@ -489,6 +494,7 @@ export const productVariants = pgTable(
         height: integer("height").notNull().default(0),
         originCountry: text("origin_country"),
         hsCode: text("hs_code"),
+        hsnMasterId: uuid("hsn_master_id"),
         isDeleted: boolean("is_deleted").default(false).notNull(),
         deletedAt: timestamp("deleted_at"),
         ...timestamps,

@@ -1,7 +1,10 @@
 import fs from "fs";
 import path from "path";
 import { InvoiceTemplate } from "@/components/pdf/invoice-template";
+import { db } from "@/lib/db";
+import { hsnMaster } from "@/lib/db/schema";
 import { renderToStream } from "@react-pdf/renderer";
+import { inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -9,6 +12,33 @@ export const runtime = "nodejs";
 export async function POST(req: Request) {
     try {
         const { order } = await req.json();
+        const items = Array.isArray(order.items) ? order.items : [];
+        const hsnCodes = items
+            .map(
+                (item: any) =>
+                    item.product?.hsCode ?? item.variant?.hsCode ?? item.hsCode
+            )
+            .filter(
+                (code: unknown): code is string =>
+                    typeof code === "string" && Boolean(code.trim())
+            );
+        const hsnRows = hsnCodes.length
+            ? await db.query.hsnMaster.findMany({
+                  where: inArray(hsnMaster.hsnCode, hsnCodes),
+                  columns: { hsnCode: true, gstRateBps: true },
+              })
+            : [];
+        const gstRateByHsn = new Map(
+            hsnRows.map((row) => [row.hsnCode, row.gstRateBps])
+        );
+        order.items = items.map((item: any) => {
+            const hsnCode =
+                item.product?.hsCode ??
+                item.variant?.hsCode ??
+                item.hsCode ??
+                "";
+            return { ...item, gstRateBps: gstRateByHsn.get(hsnCode) ?? 0 };
+        });
 
         // Read logo file
         const logoPath = path.join(

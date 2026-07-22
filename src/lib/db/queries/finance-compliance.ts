@@ -1,16 +1,27 @@
-import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql } from "drizzle-orm";
+import {
+    and,
+    asc,
+    desc,
+    eq,
+    gte,
+    ilike,
+    inArray,
+    lte,
+    or,
+    sql,
+} from "drizzle-orm";
 import { db } from "..";
 import {
     analyticsDailyCommerce,
     auditLogs,
-    carrierClaims,
     brandConfidentials,
+    brandPayoutConfig,
     brandPayoutCycles,
     brandPayoutLineItems,
-    brandPayoutConfig,
     brandPayoutOverrides,
-    brandTdsTracking,
     brands,
+    brandTdsTracking,
+    carrierClaims,
     carrierFeeSchedule,
     categories,
     commissionRules,
@@ -28,12 +39,13 @@ import {
     orderItems,
     orders,
     orderShipments,
+    platformSettings,
     plManualEntries,
     plSnapshots,
     products,
-    refunds,
-    platformSettings,
+    productVariants,
     reasonMasters,
+    refunds,
     userConsents,
     users,
 } from "../schema";
@@ -68,11 +80,17 @@ type AuditLogFilters = {
 
 function buildFinanceAuditLogWhere(filters: AuditLogFilters = {}) {
     return and(
-        filters.entityType ? eq(auditLogs.entityType, filters.entityType) : undefined,
+        filters.entityType
+            ? eq(auditLogs.entityType, filters.entityType)
+            : undefined,
         filters.entityId ? eq(auditLogs.entityId, filters.entityId) : undefined,
-        filters.actionType ? eq(auditLogs.actionType, filters.actionType) : undefined,
+        filters.actionType
+            ? eq(auditLogs.actionType, filters.actionType)
+            : undefined,
         filters.actorId ? eq(auditLogs.userId, filters.actorId) : undefined,
-        filters.actorType ? eq(auditLogs.actorType, filters.actorType) : undefined,
+        filters.actorType
+            ? eq(auditLogs.actorType, filters.actorType)
+            : undefined,
         filters.from ? gte(auditLogs.timestampUtc, filters.from) : undefined,
         filters.to ? lte(auditLogs.timestampUtc, filters.to) : undefined,
         filters.q
@@ -87,14 +105,18 @@ function buildFinanceAuditLogWhere(filters: AuditLogFilters = {}) {
         filters.module
             ? sql`${auditLogs.metadata} ->> 'module' = ${filters.module}`
             : sql`${auditLogs.metadata} ->> 'module' = 'finance_compliance'`,
-        filters.attachmentOnly ? sql`${auditLogs.attachmentUrl} IS NOT NULL` : undefined
+        filters.attachmentOnly
+            ? sql`${auditLogs.attachmentUrl} IS NOT NULL`
+            : undefined
     );
 }
 
 class FinanceComplianceQuery {
     async listRefunds(filters: RefundFilters = {}) {
         const where = and(
-            filters.status ? eq(refunds.status, filters.status as any) : undefined,
+            filters.status
+                ? eq(refunds.status, filters.status as any)
+                : undefined,
             filters.approvalStatus
                 ? eq(refunds.approvalStatus, filters.approvalStatus as any)
                 : undefined,
@@ -144,7 +166,10 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
-    async updateRefund(id: string, values: Partial<typeof refunds.$inferInsert>) {
+    async updateRefund(
+        id: string,
+        values: Partial<typeof refunds.$inferInsert>
+    ) {
         return db
             .update(refunds)
             .set(values)
@@ -171,7 +196,11 @@ class FinanceComplianceQuery {
             with: {
                 parent: true,
             },
-            orderBy: [asc(reasonMasters.level), asc(reasonMasters.shortOrder), asc(reasonMasters.name)],
+            orderBy: [
+                asc(reasonMasters.level),
+                asc(reasonMasters.shortOrder),
+                asc(reasonMasters.name),
+            ],
         });
     }
 
@@ -214,7 +243,9 @@ class FinanceComplianceQuery {
             .limit(20);
     }
 
-    async createCodRun(values: typeof financeCodReconciliationRuns.$inferInsert) {
+    async createCodRun(
+        values: typeof financeCodReconciliationRuns.$inferInsert
+    ) {
         return db
             .insert(financeCodReconciliationRuns)
             .values(values)
@@ -222,7 +253,10 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
-    async finishCodRun(id: string, values: Partial<typeof financeCodReconciliationRuns.$inferInsert>) {
+    async finishCodRun(
+        id: string,
+        values: Partial<typeof financeCodReconciliationRuns.$inferInsert>
+    ) {
         return db
             .update(financeCodReconciliationRuns)
             .set(values)
@@ -231,7 +265,9 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
-    async upsertCodReconciliation(values: typeof financeCodReconciliation.$inferInsert) {
+    async upsertCodReconciliation(
+        values: typeof financeCodReconciliation.$inferInsert
+    ) {
         return db
             .insert(financeCodReconciliation)
             .values(values)
@@ -268,7 +304,9 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
-    async createCodReconciliation(values: typeof financeCodReconciliation.$inferInsert) {
+    async createCodReconciliation(
+        values: typeof financeCodReconciliation.$inferInsert
+    ) {
         return db
             .insert(financeCodReconciliation)
             .values(values)
@@ -294,7 +332,9 @@ class FinanceComplianceQuery {
     async listCodReconciliation(filters: CodFilters = {}) {
         return db.query.financeCodReconciliation.findMany({
             where: and(
-                filters.status ? eq(financeCodReconciliation.status, filters.status as any) : undefined,
+                filters.status
+                    ? eq(financeCodReconciliation.status, filters.status as any)
+                    : undefined,
                 filters.q
                     ? sql`(
                         COALESCE(${financeCodReconciliation.orderId}, '') ILIKE ${`%${filters.q}%`}
@@ -384,13 +424,20 @@ class FinanceComplianceQuery {
 
     async listCarrierFeeSchedules(carrier?: string) {
         return db.query.carrierFeeSchedule.findMany({
-            where: carrier ? eq(carrierFeeSchedule.carrier, carrier) : undefined,
-            orderBy: [desc(carrierFeeSchedule.effectiveFrom), desc(carrierFeeSchedule.createdAt)],
+            where: carrier
+                ? eq(carrierFeeSchedule.carrier, carrier)
+                : undefined,
+            orderBy: [
+                desc(carrierFeeSchedule.effectiveFrom),
+                desc(carrierFeeSchedule.createdAt),
+            ],
             limit: 100,
         });
     }
 
-    async upsertCarrierFeeSchedule(values: typeof carrierFeeSchedule.$inferInsert) {
+    async upsertCarrierFeeSchedule(
+        values: typeof carrierFeeSchedule.$inferInsert
+    ) {
         return db
             .insert(carrierFeeSchedule)
             .values(values)
@@ -400,8 +447,14 @@ class FinanceComplianceQuery {
 
     async getLatestCarrierFeeSchedule(carrier: string) {
         return db.query.carrierFeeSchedule.findFirst({
-            where: and(eq(carrierFeeSchedule.carrier, carrier), eq(carrierFeeSchedule.isActive, true)),
-            orderBy: [desc(carrierFeeSchedule.effectiveFrom), desc(carrierFeeSchedule.createdAt)],
+            where: and(
+                eq(carrierFeeSchedule.carrier, carrier),
+                eq(carrierFeeSchedule.isActive, true)
+            ),
+            orderBy: [
+                desc(carrierFeeSchedule.effectiveFrom),
+                desc(carrierFeeSchedule.createdAt),
+            ],
         });
     }
 
@@ -450,7 +503,10 @@ class FinanceComplianceQuery {
             .then((rows) => rows[0]);
     }
 
-    async updatePayoutCycle(id: string, values: Partial<typeof brandPayoutCycles.$inferInsert>) {
+    async updatePayoutCycle(
+        id: string,
+        values: Partial<typeof brandPayoutCycles.$inferInsert>
+    ) {
         return db
             .update(brandPayoutCycles)
             .set(values)
@@ -472,7 +528,9 @@ class FinanceComplianceQuery {
         });
     }
 
-    async addPayoutLineItems(values: Array<typeof brandPayoutLineItems.$inferInsert>) {
+    async addPayoutLineItems(
+        values: Array<typeof brandPayoutLineItems.$inferInsert>
+    ) {
         if (!values.length) return [];
         return db.insert(brandPayoutLineItems).values(values).returning();
     }
@@ -481,7 +539,9 @@ class FinanceComplianceQuery {
         cycleId: string,
         values: Array<typeof brandPayoutLineItems.$inferInsert>
     ) {
-        await db.delete(brandPayoutLineItems).where(eq(brandPayoutLineItems.cycleId, cycleId));
+        await db
+            .delete(brandPayoutLineItems)
+            .where(eq(brandPayoutLineItems.cycleId, cycleId));
         return this.addPayoutLineItems(values);
     }
 
@@ -517,7 +577,10 @@ class FinanceComplianceQuery {
     async listPayoutLineItems(cycleId: string) {
         return db.query.brandPayoutLineItems.findMany({
             where: eq(brandPayoutLineItems.cycleId, cycleId),
-            orderBy: [asc(brandPayoutLineItems.brandId), asc(brandPayoutLineItems.createdAt)],
+            orderBy: [
+                asc(brandPayoutLineItems.brandId),
+                asc(brandPayoutLineItems.createdAt),
+            ],
         });
     }
 
@@ -530,7 +593,9 @@ class FinanceComplianceQuery {
 
     async listPayoutConfigs(brandIds?: string[]) {
         return db.query.brandPayoutConfig.findMany({
-            where: brandIds?.length ? inArray(brandPayoutConfig.id, brandIds) : undefined,
+            where: brandIds?.length
+                ? inArray(brandPayoutConfig.id, brandIds)
+                : undefined,
             orderBy: [asc(brandPayoutConfig.id)],
         });
     }
@@ -577,11 +642,20 @@ class FinanceComplianceQuery {
     }) {
         return db.query.commissionRules.findMany({
             where: and(
-                filters?.brandId ? eq(commissionRules.brandId, filters.brandId) : undefined,
-                filters?.categoryId ? eq(commissionRules.categoryId, filters.categoryId) : undefined,
-                filters?.isActive !== undefined ? eq(commissionRules.isActive, filters.isActive) : undefined
+                filters?.brandId
+                    ? eq(commissionRules.brandId, filters.brandId)
+                    : undefined,
+                filters?.categoryId
+                    ? eq(commissionRules.categoryId, filters.categoryId)
+                    : undefined,
+                filters?.isActive !== undefined
+                    ? eq(commissionRules.isActive, filters.isActive)
+                    : undefined
             ),
-            orderBy: [asc(commissionRules.priority), desc(commissionRules.createdAt)],
+            orderBy: [
+                asc(commissionRules.priority),
+                desc(commissionRules.createdAt),
+            ],
         });
     }
 
@@ -610,7 +684,10 @@ class FinanceComplianceQuery {
             .insert(brandTdsTracking)
             .values(values)
             .onConflictDoUpdate({
-                target: [brandTdsTracking.brandId, brandTdsTracking.financialYear],
+                target: [
+                    brandTdsTracking.brandId,
+                    brandTdsTracking.financialYear,
+                ],
                 set: {
                     annualCommissionYtdPaise: values.annualCommissionYtdPaise,
                     tdsDeductedYtdPaise: values.tdsDeductedYtdPaise,
@@ -629,17 +706,22 @@ class FinanceComplianceQuery {
 
     async listBrandTdsTracking(financialYear?: string) {
         return db.query.brandTdsTracking.findMany({
-            where: financialYear ? eq(brandTdsTracking.financialYear, financialYear) : undefined,
-            orderBy: [desc(brandTdsTracking.financialYear), asc(brandTdsTracking.brandId)],
+            where: financialYear
+                ? eq(brandTdsTracking.financialYear, financialYear)
+                : undefined,
+            orderBy: [
+                desc(brandTdsTracking.financialYear),
+                asc(brandTdsTracking.brandId),
+            ],
         });
     }
 
-    async listCarrierClaimsForFinanceWindow(input: {
-        start: Date;
-        end: Date;
-    }) {
+    async listCarrierClaimsForFinanceWindow(input: { start: Date; end: Date }) {
         return db.query.carrierClaims.findMany({
-            where: and(gte(carrierClaims.updatedAt, input.start), lte(carrierClaims.updatedAt, input.end)),
+            where: and(
+                gte(carrierClaims.updatedAt, input.start),
+                lte(carrierClaims.updatedAt, input.end)
+            ),
             orderBy: [desc(carrierClaims.updatedAt)],
         });
     }
@@ -651,22 +733,69 @@ class FinanceComplianceQuery {
     }
 
     async upsertHsn(values: typeof hsnMaster.$inferInsert) {
-        return db
-            .insert(hsnMaster)
-            .values(values)
-            .onConflictDoUpdate({
-                target: hsnMaster.hsnCode,
-                set: {
-                    description: values.description,
-                    gstRateBps: values.gstRateBps,
-                    categoryLabel: values.categoryLabel,
-                    isActive: values.isActive,
-                    metadata: values.metadata,
-                    updatedAt: new Date(),
-                },
-            })
-            .returning()
-            .then((rows) => rows[0]);
+        return db.transaction(async (tx) => {
+            const row = await tx
+                .insert(hsnMaster)
+                .values(values)
+                .onConflictDoUpdate({
+                    target: hsnMaster.hsnCode,
+                    set: {
+                        description: values.description,
+                        gstRateBps: values.gstRateBps,
+                        categoryLabel: values.categoryLabel,
+                        isActive: values.isActive,
+                        metadata: values.metadata,
+                        updatedAt: new Date(),
+                    },
+                })
+                .returning()
+                .then((rows) => rows[0]);
+
+            if (!row) {
+                throw new Error("Failed to save HSN Master row");
+            }
+
+            await Promise.all([
+                tx
+                    .update(products)
+                    .set({ hsnMasterId: row.id, updatedAt: new Date() })
+                    .where(eq(products.hsCode, row.hsnCode)),
+                tx
+                    .update(productVariants)
+                    .set({ hsnMasterId: row.id, updatedAt: new Date() })
+                    .where(eq(productVariants.hsCode, row.hsnCode)),
+            ]);
+
+            return row;
+        });
+    }
+
+    async bulkUpsertHsn(values: Array<typeof hsnMaster.$inferInsert>) {
+        return db.transaction(async (tx) => {
+            const rows = await tx
+                .insert(hsnMaster)
+                .values(values)
+                .onConflictDoUpdate({
+                    target: hsnMaster.hsnCode,
+                    set: {
+                        description: sql`excluded.description`,
+                        gstRateBps: sql`excluded.gst_rate_bps`,
+                        categoryLabel: sql`excluded.category_label`,
+                        isActive: sql`excluded.is_active`,
+                        metadata: sql`excluded.metadata`,
+                        updatedAt: new Date(),
+                    },
+                })
+                .returning();
+
+            for (const row of rows) {
+                await Promise.all([
+                    tx.update(products).set({ hsnMasterId: row.id, updatedAt: new Date() }).where(eq(products.hsCode, row.hsnCode)),
+                    tx.update(productVariants).set({ hsnMasterId: row.id, updatedAt: new Date() }).where(eq(productVariants.hsCode, row.hsnCode)),
+                ]);
+            }
+            return rows;
+        });
     }
 
     async createGstReportRun(values: typeof gstReportRuns.$inferInsert) {
@@ -706,7 +835,9 @@ class FinanceComplianceQuery {
 
     async listModuleAccess(moduleKey?: (typeof financeModules)[number]) {
         return db.query.moduleAccess.findMany({
-            where: moduleKey ? eq(moduleAccess.moduleKey, moduleKey) : undefined,
+            where: moduleKey
+                ? eq(moduleAccess.moduleKey, moduleKey)
+                : undefined,
             orderBy: [asc(moduleAccess.moduleKey), asc(moduleAccess.userId)],
         });
     }
@@ -737,14 +868,20 @@ class FinanceComplianceQuery {
 
     async getModuleAccessForUser(userId: string) {
         return db.query.moduleAccess.findMany({
-            where: and(eq(moduleAccess.userId, userId), sql`${moduleAccess.revokedAt} IS NULL`),
+            where: and(
+                eq(moduleAccess.userId, userId),
+                sql`${moduleAccess.revokedAt} IS NULL`
+            ),
         });
     }
 
     async listPlEntries(monthKey?: string) {
         return db.query.plManualEntries.findMany({
             where: monthKey
-                ? or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey))
+                ? or(
+                      eq(plManualEntries.monthKey, monthKey),
+                      eq(plManualEntries.month, monthKey)
+                  )
                 : undefined,
             orderBy: [
                 desc(plManualEntries.monthKey),
@@ -763,7 +900,11 @@ class FinanceComplianceQuery {
     async getLatestPreviousPlEntries(monthKey: string) {
         const previousMonth = await db.query.plManualEntries.findFirst({
             where: sql`COALESCE(${plManualEntries.month}, ${plManualEntries.monthKey}) < ${monthKey}`,
-            orderBy: [desc(sql`COALESCE(${plManualEntries.month}, ${plManualEntries.monthKey})`)],
+            orderBy: [
+                desc(
+                    sql`COALESCE(${plManualEntries.month}, ${plManualEntries.monthKey})`
+                ),
+            ],
         });
 
         if (!previousMonth) return [];
@@ -818,7 +959,12 @@ class FinanceComplianceQuery {
                 lockedAt: new Date(),
                 updatedAt: new Date(),
             })
-            .where(or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey)))
+            .where(
+                or(
+                    eq(plManualEntries.monthKey, monthKey),
+                    eq(plManualEntries.month, monthKey)
+                )
+            )
             .returning();
     }
 
@@ -830,7 +976,12 @@ class FinanceComplianceQuery {
                 lockedAt: null,
                 updatedAt: new Date(),
             })
-            .where(or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey)))
+            .where(
+                or(
+                    eq(plManualEntries.monthKey, monthKey),
+                    eq(plManualEntries.month, monthKey)
+                )
+            )
             .returning();
     }
 
@@ -840,7 +991,12 @@ class FinanceComplianceQuery {
                 totalPaise: sql<number>`COALESCE(SUM(${plManualEntries.amountPaise}), 0)`,
             })
             .from(plManualEntries)
-            .where(or(eq(plManualEntries.monthKey, monthKey), eq(plManualEntries.month, monthKey)));
+            .where(
+                or(
+                    eq(plManualEntries.monthKey, monthKey),
+                    eq(plManualEntries.month, monthKey)
+                )
+            );
 
         return {
             monthKey,
@@ -881,11 +1037,11 @@ class FinanceComplianceQuery {
         const consentGivenAt =
             values.consentGivenAt instanceof Date
                 ? values.consentGivenAt.toISOString()
-                : values.consentGivenAt ?? new Date().toISOString();
+                : (values.consentGivenAt ?? new Date().toISOString());
         const revokedAt =
             values.revokedAt instanceof Date
                 ? values.revokedAt.toISOString()
-                : values.revokedAt ?? null;
+                : (values.revokedAt ?? null);
         const metadataJson = JSON.stringify(values.metadata ?? {});
 
         const result = await db.execute(sql`
@@ -948,20 +1104,33 @@ class FinanceComplianceQuery {
 
     async listConsents(userIds?: string[]) {
         return db.query.userConsents.findMany({
-            where: userIds?.length ? inArray(userConsents.userId, userIds) : undefined,
+            where: userIds?.length
+                ? inArray(userConsents.userId, userIds)
+                : undefined,
             orderBy: [desc(userConsents.consentGivenAt)],
             limit: 200,
         });
     }
 
-    async getLatestConsent(userId: string, consentType: typeof userConsents.$inferSelect.consentType) {
+    async getLatestConsent(
+        userId: string,
+        consentType: typeof userConsents.$inferSelect.consentType
+    ) {
         return db.query.userConsents.findFirst({
-            where: and(eq(userConsents.userId, userId), eq(userConsents.consentType, consentType)),
-            orderBy: [desc(userConsents.consentGivenAt), desc(userConsents.createdAt)],
+            where: and(
+                eq(userConsents.userId, userId),
+                eq(userConsents.consentType, consentType)
+            ),
+            orderBy: [
+                desc(userConsents.consentGivenAt),
+                desc(userConsents.createdAt),
+            ],
         });
     }
 
-    async createDeletionRequest(values: typeof dataDeletionRequests.$inferInsert) {
+    async createDeletionRequest(
+        values: typeof dataDeletionRequests.$inferInsert
+    ) {
         return db
             .insert(dataDeletionRequests)
             .values(values)
@@ -986,7 +1155,10 @@ class FinanceComplianceQuery {
             where: status
                 ? eq(dataDeletionRequests.status, status as any)
                 : undefined,
-            orderBy: [desc(dataDeletionRequests.requestedAt), desc(dataDeletionRequests.createdAt)],
+            orderBy: [
+                desc(dataDeletionRequests.requestedAt),
+                desc(dataDeletionRequests.createdAt),
+            ],
             limit: 100,
         });
     }
@@ -1028,21 +1200,37 @@ class FinanceComplianceQuery {
 
     async listLegalContacts() {
         return db.query.legalContacts.findMany({
-            orderBy: [asc(legalContacts.role), desc(legalContacts.effectiveFrom), desc(legalContacts.createdAt)],
+            orderBy: [
+                asc(legalContacts.role),
+                desc(legalContacts.effectiveFrom),
+                desc(legalContacts.createdAt),
+            ],
         });
     }
 
     async getActiveLegalContacts() {
         return db.query.legalContacts.findMany({
             where: eq(legalContacts.isActive, true),
-            orderBy: [asc(legalContacts.role), desc(legalContacts.effectiveFrom), desc(legalContacts.createdAt)],
+            orderBy: [
+                asc(legalContacts.role),
+                desc(legalContacts.effectiveFrom),
+                desc(legalContacts.createdAt),
+            ],
         });
     }
 
-    async getActiveLegalContactByRole(role: "gro" | "dpo" | "nodal_officer" | "compliance_officer") {
+    async getActiveLegalContactByRole(
+        role: "gro" | "dpo" | "nodal_officer" | "compliance_officer"
+    ) {
         return db.query.legalContacts.findFirst({
-            where: and(eq(legalContacts.role, role), eq(legalContacts.isActive, true)),
-            orderBy: [desc(legalContacts.effectiveFrom), desc(legalContacts.createdAt)],
+            where: and(
+                eq(legalContacts.role, role),
+                eq(legalContacts.isActive, true)
+            ),
+            orderBy: [
+                desc(legalContacts.effectiveFrom),
+                desc(legalContacts.createdAt),
+            ],
         });
     }
 
@@ -1075,12 +1263,12 @@ class FinanceComplianceQuery {
         });
     }
 
-    async listOrdersForFinanceWindow(input: {
-        start: Date;
-        end: Date;
-    }) {
+    async listOrdersForFinanceWindow(input: { start: Date; end: Date }) {
         return db.query.orders.findMany({
-            where: and(gte(orders.createdAt, input.start), lte(orders.createdAt, input.end)),
+            where: and(
+                gte(orders.createdAt, input.start),
+                lte(orders.createdAt, input.end)
+            ),
             with: {
                 address: true,
                 shipments: true,
@@ -1105,17 +1293,19 @@ class FinanceComplianceQuery {
         });
     }
 
-    async listOrderItemsForFinanceWindow(input: {
-        start: Date;
-        end: Date;
-    }) {
+    async listOrderItemsForFinanceWindow(input: { start: Date; end: Date }) {
         return db
             .select()
             .from(orderItems)
             .innerJoin(orders, eq(orderItems.orderId, orders.id))
             .innerJoin(products, eq(orderItems.productId, products.id))
             .innerJoin(categories, eq(products.categoryId, categories.id))
-            .where(and(gte(orders.createdAt, input.start), lte(orders.createdAt, input.end)));
+            .where(
+                and(
+                    gte(orders.createdAt, input.start),
+                    lte(orders.createdAt, input.end)
+                )
+            );
     }
 
     async listRecentRefundsForOrderIds(orderIds: string[]) {
@@ -1143,13 +1333,13 @@ class FinanceComplianceQuery {
         });
     }
 
-    async listRefundsForPayoutWindow(input: {
-        start: Date;
-        end: Date;
-    }) {
+    async listRefundsForPayoutWindow(input: { start: Date; end: Date }) {
         return db.query.refunds.findMany({
             where: or(
-                and(gte(refunds.createdAt, input.start), lte(refunds.createdAt, input.end)),
+                and(
+                    gte(refunds.createdAt, input.start),
+                    lte(refunds.createdAt, input.end)
+                ),
                 and(
                     gte(refunds.returnReceivedAt, input.start),
                     lte(refunds.returnReceivedAt, input.end)
@@ -1185,7 +1375,11 @@ class FinanceComplianceQuery {
         });
     }
 
-    async syncNewsletterConsent(email: string, name: string, isActive: boolean) {
+    async syncNewsletterConsent(
+        email: string,
+        name: string,
+        isActive: boolean
+    ) {
         return db
             .insert(newsletterSubscribers)
             .values({
@@ -1210,7 +1404,11 @@ class FinanceComplianceQuery {
 
     async updateLegalContent(values: Partial<typeof legals.$inferInsert>) {
         // eslint-disable-next-line drizzle/enforce-update-with-where
-        return db.update(legals).set(values).returning().then((rows) => rows[0]);
+        return db
+            .update(legals)
+            .set(values)
+            .returning()
+            .then((rows) => rows[0]);
     }
 
     async listFinanceAuditLogs(filters: AuditLogFilters = {}) {

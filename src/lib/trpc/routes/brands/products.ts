@@ -5,14 +5,18 @@ import {
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { hsnMaster } from "@/lib/db/schema/finance-compliance";
 import {
     products,
     productSpecifications,
     productVariants,
     returnExchangePolicy,
 } from "@/lib/db/schema/product";
+import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
 import { posthog } from "@/lib/posthog/client";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 import { getEmbedding, getEmbedding768 } from "@/lib/python/sematic-search";
 import {
@@ -46,7 +50,7 @@ import {
 } from "@/lib/validations";
 import { TRPCError } from "@trpc/server";
 import { format } from "date-fns";
-import { and, eq, or } from "drizzle-orm";
+import { and, eq, inArray, or } from "drizzle-orm";
 import { z } from "zod";
 import { hasPermission } from "../../../utils";
 
@@ -62,6 +66,28 @@ const catalogIssueSchema = z.enum([
 ]);
 
 export const productsRouter = createTRPCRouter({
+    listAvailableHsnMaster: protectedProcedure
+        .use(
+            isTRPCAuth(
+                BitFieldBrandPermission.MANAGE_PRODUCTS,
+                "all",
+                "brand",
+                BitFieldSitePermission.MANAGE_PRODUCTS
+            )
+        )
+        .query(({ ctx }) =>
+            ctx.db.query.hsnMaster.findMany({
+                where: eq(hsnMaster.isActive, true),
+                columns: {
+                    id: true,
+                    hsnCode: true,
+                    description: true,
+                    gstRateBps: true,
+                    categoryLabel: true,
+                },
+                orderBy: (table, { asc }) => [asc(table.hsnCode)],
+            })
+        ),
     getProducts: publicProcedure
         .input(
             z.object({
@@ -353,6 +379,37 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
+            const hsnCodes = [
+                product.hsCode,
+                ...(product.variants?.map((variant) => variant.hsCode) ?? []),
+            ].filter((code): code is string => Boolean(code?.trim()));
+            if (hsnCodes.length) {
+                const matchingHsnRows = await ctx.db.query.hsnMaster.findMany({
+                    where: inArray(hsnMaster.hsnCode, hsnCodes),
+                    columns: { id: true, hsnCode: true },
+                });
+                const hsnMasterByCode = new Map(
+                    matchingHsnRows.map((row) => [row.hsnCode, row])
+                );
+                Object.assign(product, {
+                    hsnMasterId: product.hsCode
+                        ? (hsnMasterByCode.get(product.hsCode)?.id ?? null)
+                        : null,
+                });
+                product.variants?.forEach((variant) =>
+                    Object.assign(variant, {
+                        hsnMasterId: variant.hsCode
+                            ? (hsnMasterByCode.get(variant.hsCode)?.id ?? null)
+                            : null,
+                    })
+                );
+            } else {
+                Object.assign(product, { hsnMasterId: null });
+                product.variants?.forEach((variant) =>
+                    Object.assign(variant, { hsnMasterId: null })
+                );
+            }
+
             if (!product.productHasVariants) {
                 product.nativeSku = generateSKU({
                     brand: user.brand,
@@ -642,9 +699,15 @@ export const productsRouter = createTRPCRouter({
 
                 const suggestionText = [
                     (product.metaKeywords || []).join(", "),
-                    (product as any).category?.name || (category as any).name || "",
-                    (product as any).subcategory?.name || (subCategoryName as any).name || "",
-                    (product as any).productType?.name || (productTypeName as any).name || "",
+                    (product as any).category?.name ||
+                        (category as any).name ||
+                        "",
+                    (product as any).subcategory?.name ||
+                        (subCategoryName as any).name ||
+                        "",
+                    (product as any).productType?.name ||
+                        (productTypeName as any).name ||
+                        "",
                     user.brand?.name || "",
                 ]
                     .filter((p) => p.trim() !== "")
@@ -652,15 +715,20 @@ export const productsRouter = createTRPCRouter({
 
                 if (suggestionText) {
                     try {
-                        const suggestionEmbeddingArray = await getEmbedding(suggestionText);
+                        const suggestionEmbeddingArray =
+                            await getEmbedding(suggestionText);
                         if (
                             Array.isArray(suggestionEmbeddingArray) &&
                             suggestionEmbeddingArray.length === 384
                         ) {
-                            searchSuggestionEmbeddings = suggestionEmbeddingArray;
+                            searchSuggestionEmbeddings =
+                                suggestionEmbeddingArray;
                         }
                     } catch (error) {
-                        console.error("Error generating suggestion embedding:", error);
+                        console.error(
+                            "Error generating suggestion embedding:",
+                            error
+                        );
                     }
                 }
 
@@ -694,12 +762,19 @@ export const productsRouter = createTRPCRouter({
                             embedding768Array.length === 768
                         ) {
                             semanticSearchEmbeddings = embedding768Array;
-                            console.log(`Generated 768 embedding for product ${product.sku}: ${semanticSearchEmbeddings.length} dimensions`);
+                            console.log(
+                                `Generated 768 embedding for product ${product.sku}: ${semanticSearchEmbeddings.length} dimensions`
+                            );
                         } else {
-                            console.error(`Invalid 768 embedding for product ${product.sku}.`);
+                            console.error(
+                                `Invalid 768 embedding for product ${product.sku}.`
+                            );
                         }
                     } catch (error) {
-                        console.error(`Error generating 768 embedding for product ${product.sku}:`, error);
+                        console.error(
+                            `Error generating 768 embedding for product ${product.sku}:`,
+                            error
+                        );
                     }
                 } else {
                     console.warn(
@@ -1097,6 +1172,37 @@ export const productsRouter = createTRPCRouter({
                     message: "You are not a member of this brand",
                 });
 
+            const hsnCodes = [
+                values.hsCode,
+                ...(values.variants?.map((variant) => variant.hsCode) ?? []),
+            ].filter((code): code is string => Boolean(code?.trim()));
+            if (hsnCodes.length) {
+                const matchingHsnRows = await ctx.db.query.hsnMaster.findMany({
+                    where: inArray(hsnMaster.hsnCode, hsnCodes),
+                    columns: { id: true, hsnCode: true },
+                });
+                const hsnMasterByCode = new Map(
+                    matchingHsnRows.map((row) => [row.hsnCode, row])
+                );
+                Object.assign(values, {
+                    hsnMasterId: values.hsCode
+                        ? (hsnMasterByCode.get(values.hsCode)?.id ?? null)
+                        : null,
+                });
+                values.variants?.forEach((variant) =>
+                    Object.assign(variant, {
+                        hsnMasterId: variant.hsCode
+                            ? (hsnMasterByCode.get(variant.hsCode)?.id ?? null)
+                            : null,
+                    })
+                );
+            } else {
+                Object.assign(values, { hsnMasterId: null });
+                values.variants?.forEach((variant) =>
+                    Object.assign(variant, { hsnMasterId: null })
+                );
+            }
+
             const [existingCategory, existingSubCategory, existingProductType] =
                 await Promise.all([
                     categoryCache.get(values.categoryId),
@@ -1299,7 +1405,9 @@ export const productsRouter = createTRPCRouter({
                 entityId: productId,
                 beforeValue: { isPublished: existingProduct.isPublished },
                 afterValue: { isPublished },
-                reason: isPublished ? "product_approved_go_live" : "product_publish_status_update",
+                reason: isPublished
+                    ? "product_approved_go_live"
+                    : "product_publish_status_update",
             });
 
             // posthog.capture({
