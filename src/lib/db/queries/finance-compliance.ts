@@ -770,6 +770,34 @@ class FinanceComplianceQuery {
         });
     }
 
+    async bulkUpsertHsn(values: Array<typeof hsnMaster.$inferInsert>) {
+        return db.transaction(async (tx) => {
+            const rows = await tx
+                .insert(hsnMaster)
+                .values(values)
+                .onConflictDoUpdate({
+                    target: hsnMaster.hsnCode,
+                    set: {
+                        description: sql`excluded.description`,
+                        gstRateBps: sql`excluded.gst_rate_bps`,
+                        categoryLabel: sql`excluded.category_label`,
+                        isActive: sql`excluded.is_active`,
+                        metadata: sql`excluded.metadata`,
+                        updatedAt: new Date(),
+                    },
+                })
+                .returning();
+
+            for (const row of rows) {
+                await Promise.all([
+                    tx.update(products).set({ hsnMasterId: row.id, updatedAt: new Date() }).where(eq(products.hsCode, row.hsnCode)),
+                    tx.update(productVariants).set({ hsnMasterId: row.id, updatedAt: new Date() }).where(eq(productVariants.hsCode, row.hsnCode)),
+                ]);
+            }
+            return rows;
+        });
+    }
+
     async createGstReportRun(values: typeof gstReportRuns.$inferInsert) {
         return db
             .insert(gstReportRuns)

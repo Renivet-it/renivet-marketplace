@@ -710,6 +710,29 @@ export const financeComplianceRouter = createTRPCRouter({
             return row;
         }),
 
+    bulkUpsertHsnMaster: adminProcedure
+        .input(
+            z.object({
+                rows: z.array(z.object({
+                    hsnCode: z.string(),
+                    description: z.string(),
+                    gstRateBps: z.number().int().nonnegative(),
+                    categoryLabel: z.string().optional(),
+                    isActive: z.boolean().default(true),
+                })).min(1).max(1000),
+            })
+        )
+        .mutation(async ({ ctx, input }) => {
+            const rowsByHsnCode = new Map(
+                input.rows.map((row) => [row.hsnCode.trim(), { ...row, hsnCode: row.hsnCode.trim() }])
+            );
+            const rows = await ctx.queries.financeCompliance.bulkUpsertHsn(
+                Array.from(rowsByHsnCode.values()).map((row) => ({ ...row, metadata: {} }))
+            );
+            await writeFinanceAuditEvent({ actorId: ctx.user.id, actionType: "hsn_master.bulk_upserted", entityType: "hsn_master", entityId: "bulk", afterValue: { count: rows.length } as any });
+            return { count: rows.length };
+        }),
+
     previewGstSplit: protectedProcedure
         .input(
             z.object({

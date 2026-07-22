@@ -11,7 +11,6 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
-import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
 import { useSearchParams } from "next/navigation";
@@ -43,11 +42,14 @@ function parseHsnCsv(text: string) {
         .filter((cells) => cells.some(Boolean))
         .map((cells) => {
             const row = Object.fromEntries(headers.map((header, index) => [header, cells[index] ?? ""]));
-            const ratePercent = Number(row.gst_rate ?? row.gst_rate_percent ?? row.gst_percent ?? "0");
+            const rawRate = String(row.gst_rate ?? row.gst_rate_percent ?? row.gst_percent ?? "0")
+                .replace(/%/g, "")
+                .trim();
+            const ratePercent = rawRate ? Number(rawRate) : Number.NaN;
             return {
                 hsnCode: row.hsn_code ?? row.hsn ?? "",
                 description: row.description ?? "",
-                gstRateBps: Math.round(ratePercent * 100),
+                gstRateBps: Number.isFinite(ratePercent) ? Math.round(ratePercent * 100) : 0,
                 categoryLabel: row.category_hint ?? row.category_label ?? "",
                 isActive: (row.is_active ?? "true").toLowerCase() !== "false",
             };
@@ -100,8 +102,12 @@ export function HsnMasterWorkspace({
             handleClientError(error);
         },
     });
+    const bulkUpsertHsn = trpc.general.financeCompliance.bulkUpsertHsnMaster.useMutation({
+        onError: handleClientError,
+    });
 
     const hsnRows = hsnQuery.data ?? initialHsnRows;
+    const importPreviewRows = useMemo(() => (importText ? parseHsnCsv(importText) : []), [importText]);
     const summary = useMemo(
         () => ({
             activeHsn: hsnRows.filter((row) => row.isActive).length,
@@ -182,16 +188,13 @@ export function HsnMasterWorkspace({
             return;
         }
 
-        for (const row of rows) {
-            if (!row.hsnCode || !row.description) continue;
-            await upsertHsn.mutateAsync({
-                hsnCode: row.hsnCode,
-                description: row.description,
-                gstRateBps: row.gstRateBps,
-                categoryLabel: row.categoryLabel || undefined,
-                isActive: row.isActive,
-            });
+        const validRows = rows.filter((row) => row.hsnCode && row.description);
+        if (!validRows.length) {
+            toast.error("No valid HSN rows found in the CSV");
+            return;
         }
+        await bulkUpsertHsn.mutateAsync({ rows: validRows.map((row) => ({ ...row, categoryLabel: row.categoryLabel || undefined })) });
+        await refresh();
 
         toast.success("HSN import completed");
         setImportText("");
@@ -432,26 +435,24 @@ export function HsnMasterWorkspace({
                                 </p>
                             </div>
                         </div>
-                        {importText ? (
-                            <div className="mt-4 rounded-xl border border-slate-200 bg-white/80 p-3">
-                                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                                    Template preview
-                                </p>
-                                <Textarea
-                                    className="mt-3 min-h-32 border-slate-200 bg-white"
-                                    value={importText}
-                                    onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) =>
-                                        setImportText(event.target.value)
-                                    }
-                                />
+                        {importPreviewRows.length ? (
+                            <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                                <p className="border-b border-slate-200 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Template preview</p>
+                                <div className="overflow-x-auto">
+                                    <Table>
+                                        <TableHeader className="bg-slate-50"><TableRow><TableHead>HSN code</TableHead><TableHead>Description</TableHead><TableHead>GST rate</TableHead><TableHead>Category</TableHead><TableHead>Status</TableHead></TableRow></TableHeader>
+                                        <TableBody>{importPreviewRows.slice(0, 8).map((row, index) => <TableRow key={`${row.hsnCode}-${index}`}><TableCell className="font-medium">{row.hsnCode || "-"}</TableCell><TableCell className="max-w-md truncate">{row.description || "-"}</TableCell><TableCell>{(row.gstRateBps / 100).toFixed(2)}%</TableCell><TableCell>{row.categoryLabel || "-"}</TableCell><TableCell><span className={row.isActive ? "text-emerald-700" : "text-slate-500"}>{row.isActive ? "Active" : "Inactive"}</span></TableCell></TableRow>)}</TableBody>
+                                    </Table>
+                                </div>
+                                {importPreviewRows.length > 8 ? <p className="border-t border-slate-200 px-4 py-2 text-xs text-slate-500">Showing the first 8 of {importPreviewRows.length} rows.</p> : null}
                             </div>
                         ) : null}
                         <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                             <p className="text-xs text-slate-500">
                                 Download, fill, upload, and then run import.
                             </p>
-                            <Button variant="outline" onClick={() => void importRows(importText)} disabled={!importText}>
-                                Import CSV Rows
+                            <Button variant="outline" onClick={() => void importRows(importText)} disabled={!importText || bulkUpsertHsn.isPending}>
+                                {bulkUpsertHsn.isPending ? "Importing..." : "Import CSV Rows"}
                             </Button>
                         </div>
                     </div>
