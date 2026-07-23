@@ -94,17 +94,14 @@ const styles = StyleSheet.create({
     td: { padding: 6, borderRightWidth: 1, borderRightColor: border },
     last: { borderRightWidth: 0 },
     no: { width: "5%" },
-    product: { width: "20%" },
-    hsn: { width: "9%" },
+    product: { width: "28%" },
+    hsn: { width: "10%" },
     qty: { width: "5%" },
-    unit: { width: "10%" },
-    discount: { width: "10%" },
-    discountPct: { width: "8%" },
-    taxable: { width: "8%" },
+    taxable: { width: "16%" },
     // Keep the GST value on one line even in a dense invoice table.
     rate: { width: "8%", fontSize: 7, paddingLeft: 4, paddingRight: 4 },
-    tax: { width: "8%" },
-    total: { width: "9%" },
+    tax: { width: "9%" },
+    total: { width: "19%" },
     totals: {
         marginTop: 12,
         marginLeft: "55%",
@@ -209,12 +206,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
         const netPrice =
             Number(item.variant?.price ?? item.product?.price ?? 0) ||
             Math.round(order.amount / Math.max(items.length, 1) / qty);
-        const unitPrice =
-            Number(
-                item.variant?.compareAtPrice ??
-                    item.product?.compareAtPrice ??
-                    0
-            ) || netPrice;
         const listLineValue =
             Number(item.variant?.price ?? item.product?.price ?? 0) * qty;
         const gross =
@@ -229,11 +220,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
             index,
             qty,
             gross,
-            unitPrice,
             netPrice,
-            discount: Math.max(0, unitPrice * qty - netPrice * qty),
-            discountPercent:
-                unitPrice > 0 ? ((unitPrice - netPrice) / unitPrice) * 100 : 0,
             taxable,
             tax: gross - taxable,
             rate,
@@ -243,7 +230,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
     });
     const taxable = lines.reduce((s, l) => s + l.taxable, 0);
     const tax = lines.reduce((s, l) => s + l.tax, 0);
-    const productDiscount = lines.reduce((s, l) => s + l.discount, 0);
     const cgst = intra ? Math.round(tax / 2) : 0;
     const sgst = intra ? tax - cgst : 0;
     const igst = intra ? 0 : tax;
@@ -345,9 +331,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             ["Description", styles.product],
                             ["HSN", styles.hsn],
                             ["Qty", styles.qty],
-                            ["Unit price", styles.unit],
-                            ["Discount", styles.discount],
-                            ["Disc. %", styles.discountPct],
                             ["Net price", styles.taxable],
                             ["GST", styles.rate],
                             ["Tax", styles.tax],
@@ -358,7 +341,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 style={[
                                     styles.th,
                                     c as object,
-                                    i === 10 ? styles.last : {},
+                                    i === 7 ? styles.last : {},
                                 ]}
                             >
                                 {t as string}
@@ -375,15 +358,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             </Text>
                             <Text style={[styles.td, styles.hsn]}>{l.hsn}</Text>
                             <Text style={[styles.td, styles.qty]}>{l.qty}</Text>
-                            <Text style={[styles.td, styles.unit]}>
-                                {money(l.unitPrice)}
-                            </Text>
-                            <Text style={[styles.td, styles.discount]}>
-                                {money(l.discount)}
-                            </Text>
-                            <Text style={[styles.td, styles.discountPct]}>
-                                {l.discountPercent.toFixed(1)}%
-                            </Text>
                             <Text style={[styles.td, styles.taxable]}>
                                 {money(l.netPrice * l.qty)}
                             </Text>
@@ -414,12 +388,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         </Text>
                         <Text style={styles.totalValue}>
                             -{money(shippingCharge)}
-                        </Text>
-                    </View>
-                    <View style={styles.totalRow}>
-                        <Text style={styles.totalLabel}>Total discount</Text>
-                        <Text style={styles.totalValue}>
-                            {money(productDiscount + shippingCharge)}
                         </Text>
                     </View>
                     <View style={styles.totalRow}>
