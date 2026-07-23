@@ -188,6 +188,7 @@ export async function notifyUser(input: {
     emailSubject: string;
     emailIntro: string;
     emailDetails: string[];
+    deliveryEmail?: string | null;
     metadata?: Record<string, unknown> | null;
 }) {
     const user = await db.query.users.findFirst({
@@ -210,7 +211,7 @@ export async function notifyUser(input: {
     ]);
 
     await sendSupportEmail({
-        to: [user.email],
+        to: [input.deliveryEmail?.trim() || user.email],
         subject: input.emailSubject,
         intro: input.emailIntro,
         details: input.emailDetails,

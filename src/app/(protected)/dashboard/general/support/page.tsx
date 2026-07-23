@@ -20,8 +20,16 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { generatePermittedFileTypes } from "uploadthing/client";
 
-type QueueTab = "user" | "brand";
+type QueueTab = "user" | "grievance" | "brand";
 type StatusTab = "new" | "opened" | "resolved";
+type UserSupportTopic =
+    | "all"
+    | "orders"
+    | "returns_refunds"
+    | "product_issues"
+    | "grievances"
+    | "payments_account"
+    | "general";
 
 type UploadedAttachment = {
     filename: string;
@@ -45,6 +53,11 @@ const queueTabs: Array<{ key: QueueTab; label: string; href: string }> = [
         href: "/dashboard/general/support/user",
     },
     {
+        key: "grievance",
+        label: "Grievance Desk",
+        href: "/dashboard/general/support/grievances",
+    },
+    {
         key: "brand",
         label: "Brand Support",
         href: "/dashboard/general/support/brand",
@@ -56,6 +69,95 @@ const statusTabs: Array<{ key: StatusTab; label: string }> = [
     { key: "opened", label: "Opened" },
     { key: "resolved", label: "Resolved" },
 ];
+
+const userSupportTopics: Array<{
+    key: UserSupportTopic;
+    label: string;
+    description: string;
+}> = [
+    {
+        key: "all",
+        label: "All support",
+        description: "Every customer support request",
+    },
+    {
+        key: "orders",
+        label: "Orders",
+        description: "Delivery, cancellation and order changes",
+    },
+    {
+        key: "returns_refunds",
+        label: "Returns & refunds",
+        description: "Return requests and refund follow-ups",
+    },
+    {
+        key: "product_issues",
+        label: "Product issues",
+        description: "Damaged, defective or incorrect products",
+    },
+    {
+        key: "grievances",
+        label: "Grievances",
+        description: "Complaints, legal and social escalations",
+    },
+    {
+        key: "payments_account",
+        label: "Payments & account",
+        description: "Payment, login and data requests",
+    },
+    {
+        key: "general",
+        label: "General",
+        description: "Pre-purchase questions, feedback and other help",
+    },
+];
+
+const userSupportTopicCategories: Record<
+    Exclude<UserSupportTopic, "all">,
+    string[]
+> = {
+    orders: [
+        "ORDER_NOT_RECEIVED",
+        "ORDER_DELAYED",
+        "ORDER_CANCEL_REQUEST",
+        "ORDER_MODIFY_REQUEST",
+    ],
+    returns_refunds: ["RETURN_REQUEST", "REFUND_STATUS", "REFUND_NOT_RECEIVED"],
+    product_issues: [
+        "PRODUCT_DAMAGED",
+        "PRODUCT_DEFECTIVE",
+        "PRODUCT_NOT_AS_DESCRIBED",
+        "PRODUCT_WRONG_ITEM",
+        "SIZE_FIT_HELP",
+    ],
+    grievances: [
+        "GRIEVANCE",
+        "FEEDBACK_COMPLAINT_GENERAL",
+        "LEGAL_THREAT",
+        "SOCIAL_COMPLAINT",
+    ],
+    payments_account: [
+        "PAYMENT_FAILED",
+        "ACCOUNT_LOGIN_ISSUE",
+        "DATA_DELETION_REQUEST",
+    ],
+    general: [
+        "SUSTAINABILITY_QUERY",
+        "PRE_PURCHASE_QUERY",
+        "BULK_B2B_INQUIRY",
+        "FEEDBACK_PRAISE",
+        "OTHER",
+    ],
+};
+
+function isInUserSupportTopic(item: any, topic: UserSupportTopic) {
+    if (topic === "all") return true;
+
+    const category = String(
+        item.category ?? item.issueType ?? ""
+    ).toUpperCase();
+    return userSupportTopicCategories[topic].includes(category);
+}
 
 const channelLabels: Record<SupportChannel, string> = {
     web_form: "Web form",
@@ -219,10 +321,18 @@ function getSuggestedActions(status: string, queue: QueueTab) {
         ];
     }
 
+    return [{ label: "Reopen case", status: "reopened" as const }];
+}
+
+function isTerminalCaseStatus(status?: string | null) {
     return [
-        { label: "Reopen case", status: "reopened" as const },
-        { label: "Close case", status: "closed" as const },
-    ];
+        "resolved",
+        "refunded",
+        "replaced",
+        "declined",
+        "closed",
+        "auto_closed",
+    ].includes(status ?? "");
 }
 
 function buildSupportDisplayTitle(input: {
@@ -318,9 +428,17 @@ export default function AdminSupportPage() {
     const ticketParam = searchParams.get("ticket") ?? "";
 
     const [queue, setQueue] = useState<QueueTab>(
-        queueParam === "brand" ? "brand" : "user"
+        queueParam === "brand"
+            ? "brand"
+            : queueParam === "grievance"
+              ? "grievance"
+              : "user"
     );
+    const isUserQueue = queue === "user" || queue === "grievance";
+    const [userSupportTopic, setUserSupportTopic] =
+        useState<UserSupportTopic>("all");
     const [statusTab, setStatusTab] = useState<StatusTab>("new");
+    const [casePage, setCasePage] = useState(1);
     const [selectedId, setSelectedId] = useState(ticketParam);
     const [search, setSearch] = useState("");
     const [manualIntakeOpen, setManualIntakeOpen] = useState(false);
@@ -351,8 +469,15 @@ export default function AdminSupportPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setQueue(queueParam === "brand" ? "brand" : "user");
+        setQueue(
+            queueParam === "brand"
+                ? "brand"
+                : queueParam === "grievance"
+                  ? "grievance"
+                  : "user"
+        );
         setSelectedId(ticketParam);
+        setUserSupportTopic("all");
     }, [queueParam, ticketParam]);
 
     const { startUpload, routeConfig } = useUploadThing(
@@ -373,7 +498,7 @@ export default function AdminSupportPage() {
                 search,
                 status: "all",
             },
-            { enabled: queue === "user" }
+            { enabled: isUserQueue }
         );
     const brandTicketsQuery =
         trpc.general.adminSupportRouter.listTickets.useQuery(
@@ -411,7 +536,7 @@ export default function AdminSupportPage() {
 
     const userTicketQuery =
         trpc.general.adminSupportRouter.getUserTicket.useQuery(selectedId, {
-            enabled: queue === "user" && !!selectedId,
+            enabled: isUserQueue && !!selectedId,
         });
     const brandTicketQuery = trpc.general.adminSupportRouter.getTicket.useQuery(
         selectedId,
@@ -420,7 +545,7 @@ export default function AdminSupportPage() {
 
     const userMessagesQuery =
         trpc.general.adminSupportRouter.getUserMessages.useQuery(selectedId, {
-            enabled: queue === "user" && !!selectedId,
+            enabled: isUserQueue && !!selectedId,
         });
     const brandMessagesQuery =
         trpc.general.adminSupportRouter.getMessages.useQuery(selectedId, {
@@ -533,38 +658,76 @@ export default function AdminSupportPage() {
         );
 
     const queueItems: any[] = useMemo(() => {
-        if (queue === "user") return userTicketsQuery.data?.data ?? [];
+        if (isUserQueue) return userTicketsQuery.data?.data ?? [];
         return brandTicketsQuery.data?.data ?? [];
     }, [queue, userTicketsQuery.data, brandTicketsQuery.data]);
 
+    const topicQueueItems = useMemo(
+        () =>
+            isUserQueue
+                ? queueItems.filter((item) =>
+                      isInUserSupportTopic(
+                          item,
+                          queue === "grievance"
+                              ? "grievances"
+                              : userSupportTopic
+                      )
+                  )
+                : queueItems,
+        [queue, queueItems, userSupportTopic, isUserQueue]
+    );
+
     const filteredQueueItems = useMemo(
         () =>
-            queueItems.filter((item) =>
+            topicQueueItems.filter((item) =>
                 isStatusInTab(item.status ?? "new", statusTab)
             ),
-        [queueItems, statusTab]
+        [topicQueueItems, statusTab]
     );
+    const casesPerPage = 8;
+    const totalCasePages = Math.max(
+        1,
+        Math.ceil(filteredQueueItems.length / casesPerPage)
+    );
+    const paginatedQueueItems = useMemo(
+        () =>
+            filteredQueueItems.slice(
+                (casePage - 1) * casesPerPage,
+                casePage * casesPerPage
+            ),
+        [casePage, filteredQueueItems]
+    );
+
+    useEffect(() => {
+        setCasePage(1);
+    }, [queue, userSupportTopic, statusTab, search]);
+
+    useEffect(() => {
+        if (casePage > totalCasePages) setCasePage(totalCasePages);
+    }, [casePage, totalCasePages]);
 
     const statusCounts = useMemo(
         () => ({
-            new: queueItems.filter((item) => isStatusInTab(item.status, "new"))
-                .length,
-            opened: queueItems.filter((item) =>
+            new: topicQueueItems.filter((item) =>
+                isStatusInTab(item.status, "new")
+            ).length,
+            opened: topicQueueItems.filter((item) =>
                 isStatusInTab(item.status, "opened")
             ).length,
-            resolved: queueItems.filter((item) =>
+            resolved: topicQueueItems.filter((item) =>
                 isStatusInTab(item.status, "resolved")
             ).length,
         }),
-        [queueItems]
+        [topicQueueItems]
     );
 
-    const selectedRecord: any =
-        queue === "user" ? userTicketQuery.data : brandTicketQuery.data;
-    const selectedMessages: any[] =
-        queue === "user"
-            ? (userMessagesQuery.data ?? [])
-            : (brandMessagesQuery.data ?? []);
+    const selectedRecord: any = isUserQueue
+        ? userTicketQuery.data
+        : brandTicketQuery.data;
+    const selectedMessages: any[] = isUserQueue
+        ? (userMessagesQuery.data ?? [])
+        : (brandMessagesQuery.data ?? []);
+    const isCaseLocked = isTerminalCaseStatus(selectedRecord?.status);
 
     const uploadAttachments = async (files: File[]) => {
         setIsUploading(true);
@@ -617,7 +780,7 @@ export default function AdminSupportPage() {
             return;
         }
 
-        if (queue === "user") {
+        if (isUserQueue) {
             replyUserMutation.mutate({
                 ticketId: selectedId,
                 text: replyText.trim() || "Shared supporting attachments",
@@ -636,7 +799,7 @@ export default function AdminSupportPage() {
     const addNote = () => {
         if (!selectedId || !noteText.trim()) return;
 
-        if (queue === "user") {
+        if (isUserQueue) {
             addUserNoteMutation.mutate({
                 ticketId: selectedId,
                 note: noteText.trim(),
@@ -652,13 +815,34 @@ export default function AdminSupportPage() {
 
     const updateSelectedStatus = (status: (typeof statusOptions)[number]) => {
         if (!selectedRecord) return;
+        let resolutionSummary: string | undefined;
+
+        if (status === "closed") {
+            const reason = window.prompt(
+                "Closure reason (required). This is shared in chat and emailed to the customer."
+            );
+            if (!reason?.trim()) {
+                toast.error("A closure reason is required.");
+                return;
+            }
+            resolutionSummary = reason.trim();
+        }
+
+        if (status === "reopened") {
+            const reason = window.prompt(
+                "Reopen reason (optional). Leave blank to reopen without a note."
+            );
+            resolutionSummary = reason?.trim() || undefined;
+        }
+
         const resolutionCode = terminalResolutionCodeByStatus[status];
 
-        if (queue === "user") {
+        if (isUserQueue) {
             updateUserStatusMutation.mutate({
                 ticketId: selectedRecord.id,
                 status,
                 ...(resolutionCode ? { resolutionCode } : {}),
+                ...(resolutionSummary ? { resolutionSummary } : {}),
             });
             return;
         }
@@ -667,7 +851,17 @@ export default function AdminSupportPage() {
             ticketId: selectedRecord.id,
             status,
             ...(resolutionCode ? { resolutionCode } : {}),
+            ...(resolutionSummary ? { reason: resolutionSummary } : {}),
         });
+    };
+
+    const openCaseWorkspace = (ticketId: string) => {
+        setSelectedId(ticketId);
+        window.setTimeout(() => {
+            document
+                .getElementById("case-workspace")
+                ?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 0);
     };
 
     return (
@@ -767,8 +961,8 @@ export default function AdminSupportPage() {
                     </Button>
                 </section>
 
-                <Card className="rounded-[34px] border border-[#D7E2EF] bg-white p-6 shadow-[0_18px_50px_rgba(37,61,94,0.06)]">
-                    <div className="space-y-5">
+                <Card className="rounded-[28px] border border-[#D7E2EF] bg-white p-4 shadow-[0_18px_50px_rgba(37,61,94,0.06)] md:p-5">
+                    <div className="space-y-4">
                         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                             <div className="min-w-0">
                                 <div className="inline-flex items-center gap-2 rounded-full border border-[#D5E2F2] bg-[#F8FBFF] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5B8FC5]">
@@ -784,6 +978,7 @@ export default function AdminSupportPage() {
                                                 onClick={() => {
                                                     router.push(tab.href);
                                                     setQueue(tab.key);
+                                                    setUserSupportTopic("all");
                                                     setSelectedId("");
                                                     setReplyText("");
                                                     setNoteText("");
@@ -802,9 +997,11 @@ export default function AdminSupportPage() {
 
                                     <div>
                                         <p className="text-sm font-medium text-slate-900">
-                                            {queue === "user"
-                                                ? "Customer issues and resolution flow"
-                                                : "Brand operations and support requests"}
+                                            {queue === "grievance"
+                                                ? "Dedicated grievance resolution queue"
+                                                : queue === "user"
+                                                  ? "Customer issues and resolution flow"
+                                                  : "Brand operations and support requests"}
                                         </p>
                                         <p className="mt-1 text-sm text-slate-500">
                                             Review active cases, reply faster,
@@ -944,6 +1141,93 @@ export default function AdminSupportPage() {
                             </div>
                         )}
 
+                        {queue === "grievance" && (
+                            <div className="flex flex-col gap-3 rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-950">
+                                        Grievance Desk
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-amber-800">
+                                        Only formal grievances, complaints,
+                                        legal matters, and social escalations
+                                        are shown here.
+                                    </p>
+                                </div>
+                                <span className="inline-flex w-fit rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-semibold text-amber-900">
+                                    {topicQueueItems.length} grievance{" "}
+                                    {topicQueueItems.length === 1
+                                        ? "case"
+                                        : "cases"}
+                                </span>
+                            </div>
+                        )}
+
+                        {queue === "user" && (
+                            <div className="rounded-[22px] border border-[#D7E2EF] bg-[#F8FBFF] p-3 sm:p-4">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-sm font-semibold text-slate-900">
+                                            Browse by support type
+                                        </p>
+                                        <p className="mt-0.5 text-xs text-slate-500">
+                                            Choose a queue to focus on the right
+                                            customer issues.
+                                        </p>
+                                    </div>
+                                    <span className="hidden rounded-full border border-[#D7E2EF] bg-white px-3 py-1 text-xs font-medium text-slate-600 sm:inline-flex">
+                                        {topicQueueItems.length} cases in view
+                                    </span>
+                                </div>
+                                <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1">
+                                    <div className="flex min-w-max gap-2">
+                                        {userSupportTopics.map((topic) => {
+                                            const count = queueItems.filter(
+                                                (item) =>
+                                                    isInUserSupportTopic(
+                                                        item,
+                                                        topic.key
+                                                    )
+                                            ).length;
+                                            const isActive =
+                                                userSupportTopic === topic.key;
+
+                                            return (
+                                                <button
+                                                    key={topic.key}
+                                                    type="button"
+                                                    title={topic.description}
+                                                    onClick={() => {
+                                                        setUserSupportTopic(
+                                                            topic.key
+                                                        );
+                                                        setSelectedId("");
+                                                    }}
+                                                    className={cn(
+                                                        "group flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition",
+                                                        isActive
+                                                            ? "border-[#1F2937] bg-[#1F2937] text-white shadow-sm"
+                                                            : "border-[#D7E2EF] bg-white text-slate-600 hover:border-[#AFC8E2] hover:text-slate-900"
+                                                    )}
+                                                >
+                                                    <span>{topic.label}</span>
+                                                    <span
+                                                        className={cn(
+                                                            "rounded-full px-1.5 py-0.5 text-[11px] leading-none",
+                                                            isActive
+                                                                ? "bg-white/15 text-white"
+                                                                : "bg-[#EDF4FB] text-[#527DAA]"
+                                                        )}
+                                                    >
+                                                        {count}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="overflow-x-auto">
                             <div className="inline-flex min-w-full gap-2 rounded-[18px] border border-[#D7E2EF] bg-[#F8FBFF] p-1.5">
                                 {statusTabs.map((tab) => (
@@ -983,11 +1267,15 @@ export default function AdminSupportPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             <div className="overflow-hidden rounded-[24px] border border-[#DDE6F0] bg-white">
                                 <div className="flex items-center justify-between border-b border-[#E6EEF7] bg-[#F8FBFF] px-5 py-4">
                                     <div>
                                         <p className="text-sm font-semibold text-slate-900">
+                                            {queue === "user" &&
+                                            userSupportTopic !== "all"
+                                                ? `${userSupportTopics.find((topic) => topic.key === userSupportTopic)?.label} · `
+                                                : ""}
                                             Cases in {statusTab}
                                         </p>
                                         <p className="text-xs text-slate-500">
@@ -996,111 +1284,251 @@ export default function AdminSupportPage() {
                                         </p>
                                     </div>
                                     <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#6B94C1]">
-                                        {queue === "user" ? "Users" : "Brands"}
+                                        {isUserQueue ? "Users" : "Brands"}
                                     </span>
                                 </div>
 
-                                <div className="hidden grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px] gap-3 border-b border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 lg:grid">
-                                    <span>Case</span>
-                                    <span>Owner</span>
-                                    <span className="text-right">Status</span>
-                                </div>
-
-                                <div className="max-h-[420px] overflow-y-auto xl:max-h-[480px]">
-                                    {filteredQueueItems.map((item: any) => (
-                                        <button
-                                            key={item.id}
-                                            type="button"
-                                            onClick={() =>
-                                                setSelectedId(item.id)
-                                            }
-                                            className={cn(
-                                                "grid w-full gap-3 border-b border-[#EEF3F8] px-5 py-4 text-left transition last:border-b-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px]",
-                                                selectedId === item.id
-                                                    ? "bg-[#F1F8FF]"
-                                                    : "bg-white hover:bg-[#FAFCFF]"
-                                            )}
-                                        >
-                                            <div className="min-w-0">
-                                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">
-                                                    {buildSupportDisplayTitle({
-                                                        title: item.title,
-                                                        issueLabel:
-                                                            item.issueLabel,
-                                                        issueType:
-                                                            item.issueType,
-                                                        orderId: item.orderId,
-                                                    })}
-                                                </p>
-                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                                    <span>
-                                                        Case{" "}
-                                                        {item.id.slice(0, 8)}
-                                                    </span>
-                                                    <span className="text-slate-300">
-                                                        /
-                                                    </span>
-                                                    <span>
-                                                        {format(
-                                                            new Date(
-                                                                item.updatedAt
-                                                            ),
-                                                            "dd MMM, hh:mm a"
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[960px] text-left">
+                                        <thead className="border-b border-[#E6EEF7] bg-[#FCFDFF] text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                            <tr>
+                                                <th className="px-5 py-3">
+                                                    Case
+                                                </th>
+                                                <th className="px-4 py-3">
+                                                    Customer
+                                                </th>
+                                                <th className="px-4 py-3">
+                                                    Category
+                                                </th>
+                                                <th className="px-4 py-3">
+                                                    Last activity
+                                                </th>
+                                                <th className="px-4 py-3">
+                                                    Priority
+                                                </th>
+                                                <th className="px-5 py-3 text-right">
+                                                    Status
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#EEF3F8]">
+                                            {paginatedQueueItems.map(
+                                                (item: any) => (
+                                                    <tr
+                                                        key={item.id}
+                                                        onClick={() =>
+                                                            openCaseWorkspace(
+                                                                item.id
+                                                            )
+                                                        }
+                                                        className={cn(
+                                                            "cursor-pointer transition hover:bg-[#F7FBFF]",
+                                                            selectedId ===
+                                                                item.id &&
+                                                                "bg-[#EDF6FF]"
                                                         )}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="min-w-0 self-center">
-                                                <p className="truncate text-sm text-slate-700">
-                                                    {queue === "user"
-                                                        ? item.userName ||
-                                                          item.userEmail
-                                                        : (item.brandName ??
-                                                          item.issueType)}
-                                                </p>
-                                            </div>
-                                            <div className="flex justify-start self-center lg:justify-end">
-                                                <StatusBadge
-                                                    status={item.status}
-                                                />
-                                            </div>
-                                        </button>
-                                    ))}
-
+                                                    >
+                                                        <td className="max-w-[300px] px-5 py-3.5">
+                                                            <p className="truncate text-sm font-semibold text-slate-900">
+                                                                {buildSupportDisplayTitle(
+                                                                    {
+                                                                        title: item.title,
+                                                                        issueLabel:
+                                                                            item.issueLabel,
+                                                                        issueType:
+                                                                            item.issueType,
+                                                                        orderId:
+                                                                            item.orderId,
+                                                                    }
+                                                                )}
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-slate-500">
+                                                                Case #
+                                                                {item.id.slice(
+                                                                    0,
+                                                                    8
+                                                                )}
+                                                                {item.orderId
+                                                                    ? " / Order #" +
+                                                                      item.orderId
+                                                                    : ""}
+                                                            </p>
+                                                        </td>
+                                                        <td className="max-w-[180px] px-4 py-3.5">
+                                                            <p className="truncate text-sm font-medium text-slate-700">
+                                                                {isUserQueue
+                                                                    ? item.userName ||
+                                                                      item.userEmail ||
+                                                                      "Customer"
+                                                                    : item.brandName ||
+                                                                      "Brand"}
+                                                            </p>
+                                                            {isUserQueue &&
+                                                                item.userEmail && (
+                                                                    <p className="mt-1 truncate text-xs text-slate-400">
+                                                                        {
+                                                                            item.userEmail
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            <span className="inline-flex max-w-[170px] truncate rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                                                {formatSupportCategoryLabel(
+                                                                    item.category ??
+                                                                        item.issueType ??
+                                                                        "Other"
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-3.5 text-sm text-slate-600">
+                                                            {format(
+                                                                new Date(
+                                                                    item.latestMessageAt ??
+                                                                        item.updatedAt
+                                                                ),
+                                                                "dd MMM, hh:mm a"
+                                                            )}
+                                                        </td>
+                                                        <td className="px-4 py-3.5">
+                                                            <span
+                                                                className={cn(
+                                                                    "rounded-full px-2.5 py-1 text-xs font-semibold capitalize",
+                                                                    item.priority ===
+                                                                        "critical"
+                                                                        ? "bg-rose-100 text-rose-700"
+                                                                        : item.priority ===
+                                                                            "high"
+                                                                          ? "bg-amber-100 text-amber-800"
+                                                                          : "bg-slate-100 text-slate-600"
+                                                                )}
+                                                            >
+                                                                {item.priority ??
+                                                                    "normal"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-5 py-3.5 text-right">
+                                                            <StatusBadge
+                                                                status={
+                                                                    item.status
+                                                                }
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            )}
+                                        </tbody>
+                                    </table>
                                     {!filteredQueueItems.length && (
-                                        <div className="px-5 py-12 text-center text-sm text-slate-500">
-                                            No cases in this tab right now.
+                                        <div className="px-5 py-14 text-center">
+                                            <p className="font-medium text-slate-700">
+                                                No cases found in this view
+                                            </p>
+                                            <p className="mt-1 text-sm text-slate-500">
+                                                Try another status or support
+                                                category.
+                                            </p>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between border-t border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-xs text-slate-500">
+                                <div className="flex flex-col gap-3 border-t border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                                     <span>
-                                        Queue stays scrollable so large case
-                                        volume does not expand the full page.
+                                        Showing{" "}
+                                        {filteredQueueItems.length
+                                            ? (casePage - 1) * casesPerPage + 1
+                                            : 0}
+                                        -
+                                        {Math.min(
+                                            casePage * casesPerPage,
+                                            filteredQueueItems.length
+                                        )}{" "}
+                                        of {filteredQueueItems.length} cases
                                     </span>
-                                    <span className="font-medium text-slate-700">
-                                        {filteredQueueItems.length} case
-                                        {filteredQueueItems.length === 1
-                                            ? ""
-                                            : "s"}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            className="h-8 rounded-full px-3 text-xs"
+                                            disabled={casePage === 1}
+                                            onClick={() =>
+                                                setCasePage((page) =>
+                                                    Math.max(1, page - 1)
+                                                )
+                                            }
+                                        >
+                                            Previous
+                                        </Button>
+                                        <span className="min-w-[72px] text-center font-medium text-slate-700">
+                                            Page {casePage} / {totalCasePages}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            className="h-8 rounded-full px-3 text-xs"
+                                            disabled={
+                                                casePage === totalCasePages
+                                            }
+                                            onClick={() =>
+                                                setCasePage((page) =>
+                                                    Math.min(
+                                                        totalCasePages,
+                                                        page + 1
+                                                    )
+                                                )
+                                            }
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="rounded-[28px] border border-[#DDE6F0] bg-white p-4 md:p-6">
+                            <div
+                                id="case-workspace"
+                                className={cn(
+                                    "rounded-[28px] border border-[#DDE6F0] bg-white p-4 md:p-6",
+                                    selectedRecord &&
+                                        "fixed inset-0 z-[70] overflow-y-auto border-0 bg-slate-950/30 p-4 backdrop-blur-[2px] md:p-6"
+                                )}
+                            >
                                 {!selectedRecord ? (
-                                    <div className="flex min-h-[360px] items-center justify-center rounded-[24px] border border-dashed border-[#D7E2EF] bg-[#F8FBFF] text-sm text-slate-500">
-                                        Select a support case to review it.
+                                    <div className="rounded-[20px] border border-dashed border-[#D7E2EF] bg-[#F8FBFF] px-4 py-5 text-sm text-slate-500">
+                                        Select a case from the table to open its
+                                        full workspace here.
                                     </div>
                                 ) : (
-                                    <div className="space-y-6">
+                                    <div className="mx-auto max-w-6xl space-y-5 rounded-[28px] bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.2)] md:p-6">
+                                        <div className="flex items-center justify-between gap-4 border-b border-[#E6EEF7] pb-4">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-900">
+                                                    Case workspace
+                                                </p>
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    Review the case, take an
+                                                    action, or reply to the
+                                                    customer.
+                                                </p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="rounded-full"
+                                                onClick={() =>
+                                                    setSelectedId("")
+                                                }
+                                            >
+                                                Close workspace
+                                            </Button>
+                                        </div>
                                         <div className="rounded-[28px] border border-[#DDE6F0] bg-[#FBFDFF] p-5">
                                             <div className="space-y-5">
                                                 <div className="max-w-4xl">
                                                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6B94C1]">
-                                                        {queue === "user"
-                                                            ? "Customer support"
+                                                        {isUserQueue
+                                                            ? queue ===
+                                                              "grievance"
+                                                                ? "Grievance case"
+                                                                : "Customer support"
                                                             : "Brand support"}
                                                     </p>
                                                     <h3 className="mt-3 max-w-4xl text-xl font-semibold leading-tight text-slate-900 md:text-[1.75rem]">
@@ -1177,18 +1605,21 @@ export default function AdminSupportPage() {
                                                                     className={cn(
                                                                         "rounded-full border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition",
                                                                         action.status ===
-                                                                            "resolved" ||
-                                                                            action.status ===
-                                                                                "refunded" ||
-                                                                            action.status ===
-                                                                                "replaced"
-                                                                            ? "border-[#CFE3F8] bg-[#F3F8FF] text-[#1D4F80] hover:border-[#A8CBEE] hover:bg-white"
+                                                                            "reopened"
+                                                                            ? "border-emerald-600 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
                                                                             : action.status ===
-                                                                                    "closed" ||
+                                                                                    "resolved" ||
                                                                                 action.status ===
-                                                                                    "declined"
-                                                                              ? "border-[#E2E8F0] bg-[#F8FAFC] text-slate-600 hover:border-slate-300 hover:bg-white"
-                                                                              : "border-[#D7E2EF] bg-white text-slate-700 hover:border-[#BDD6EF] hover:bg-[#FAFCFF]"
+                                                                                    "refunded" ||
+                                                                                action.status ===
+                                                                                    "replaced"
+                                                                              ? "border-[#CFE3F8] bg-[#F3F8FF] text-[#1D4F80] hover:border-[#A8CBEE] hover:bg-white"
+                                                                              : action.status ===
+                                                                                      "closed" ||
+                                                                                  action.status ===
+                                                                                      "declined"
+                                                                                ? "border-[#E2E8F0] bg-[#F8FAFC] text-slate-600 hover:border-slate-300 hover:bg-white"
+                                                                                : "border-[#D7E2EF] bg-white text-slate-700 hover:border-[#BDD6EF] hover:bg-[#FAFCFF]"
                                                                     )}
                                                                 >
                                                                     {
@@ -1199,10 +1630,24 @@ export default function AdminSupportPage() {
                                                         </div>
                                                     </div>
                                                 </div>
+                                                {isCaseLocked && (
+                                                    <div className="rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                                                        This case is{" "}
+                                                        {selectedRecord.status.replace(
+                                                            /_/g,
+                                                            " "
+                                                        )}
+                                                        . Chat, attachments,
+                                                        refunds, notes, and
+                                                        status changes are
+                                                        locked until you reopen
+                                                        it.
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {queue === "user" &&
+                                        {isUserQueue &&
                                             selectedRecord.order && (
                                                 <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
                                                     <div className="space-y-5">
@@ -1604,7 +2049,7 @@ export default function AdminSupportPage() {
 
                                         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
                                             <div className="space-y-5">
-                                                {queue === "user" &&
+                                                {isUserQueue &&
                                                     selectedRecord.order && (
                                                         <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
                                                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
@@ -1808,6 +2253,9 @@ export default function AdminSupportPage() {
                                                             rows={4}
                                                             placeholder="Write the next support reply."
                                                             className="w-full rounded-[20px] border border-[#D7E2EF] bg-[#F8FBFF] px-4 py-4 text-sm text-slate-900"
+                                                            disabled={
+                                                                isCaseLocked
+                                                            }
                                                         />
                                                         <div className="rounded-[24px] border border-dashed border-[#C9DCF0] bg-[#F8FBFF] p-4">
                                                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1825,7 +2273,8 @@ export default function AdminSupportPage() {
                                                                         fileInputRef.current?.click()
                                                                     }
                                                                     disabled={
-                                                                        isUploading
+                                                                        isUploading ||
+                                                                        isCaseLocked
                                                                     }
                                                                 >
                                                                     {isUploading
@@ -1919,6 +2368,7 @@ export default function AdminSupportPage() {
                                                                 className="rounded-full px-6"
                                                                 disabled={
                                                                     isUploading ||
+                                                                    isCaseLocked ||
                                                                     (!replyText.trim() &&
                                                                         attachments.length ===
                                                                             0)
@@ -1948,11 +2398,13 @@ export default function AdminSupportPage() {
                                                         rows={6}
                                                         placeholder="Private notes for the support team."
                                                         className="mt-4 w-full rounded-[22px] border border-[#D7E2EF] bg-white px-4 py-4 text-sm text-slate-900"
+                                                        disabled={isCaseLocked}
                                                     />
                                                     <Button
                                                         onClick={addNote}
                                                         variant="outline"
                                                         className="mt-4 w-full rounded-full"
+                                                        disabled={isCaseLocked}
                                                     >
                                                         Save internal note
                                                     </Button>
@@ -1971,7 +2423,7 @@ export default function AdminSupportPage() {
                                                     </div>
                                                 </div>
 
-                                                {queue === "user" &&
+                                                {isUserQueue &&
                                                     selectedRecord.dispute && (
                                                         <div className="rounded-[28px] border border-[#D5E5F7] bg-[#F7FBFF] p-5">
                                                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
@@ -2007,7 +2459,7 @@ export default function AdminSupportPage() {
                                                         </div>
                                                     )}
 
-                                                {queue === "user" && (
+                                                {isUserQueue && (
                                                     <>
                                                         <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
                                                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
@@ -2105,6 +2557,7 @@ export default function AdminSupportPage() {
                                                                     className="rounded-full"
                                                                     disabled={
                                                                         approveDisputeMutation.isPending ||
+                                                                        isCaseLocked ||
                                                                         [
                                                                             "approved_for_brand_action",
                                                                             "replacement_created",
@@ -2149,12 +2602,63 @@ export default function AdminSupportPage() {
                                                                     }
                                                                     className="rounded-full"
                                                                     disabled={
-                                                                        rejectDisputeMutation.isPending
+                                                                        rejectDisputeMutation.isPending ||
+                                                                        isCaseLocked
                                                                     }
                                                                 >
                                                                     {rejectDisputeMutation.isPending
                                                                         ? "Rejecting..."
                                                                         : "Reject dispute"}
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    className="rounded-full border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                                                                    disabled={
+                                                                        approveDisputeMutation.isPending ||
+                                                                        isCaseLocked ||
+                                                                        !selectedRecord.orderId
+                                                                    }
+                                                                    onClick={() => {
+                                                                        const email =
+                                                                            window
+                                                                                .prompt(
+                                                                                    "Confirm the customer email for the refund update.",
+                                                                                    selectedRecord
+                                                                                        .user
+                                                                                        ?.email ??
+                                                                                        ""
+                                                                                )
+                                                                                ?.trim() ??
+                                                                            "";
+                                                                        if (
+                                                                            !/^\S+@\S+\.\S+$/.test(
+                                                                                email
+                                                                            )
+                                                                        ) {
+                                                                            toast.error(
+                                                                                "Enter a valid customer email to send the refund update."
+                                                                            );
+                                                                            return;
+                                                                        }
+                                                                        approveDisputeMutation.mutate(
+                                                                            {
+                                                                                ticketId:
+                                                                                    selectedRecord.id,
+                                                                                disputeType:
+                                                                                    "refund",
+                                                                                summary:
+                                                                                    "Refund approved for processing.",
+                                                                                customerEmail:
+                                                                                    email,
+                                                                                quantityOverrides:
+                                                                                    [],
+                                                                            }
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    Approve
+                                                                    refund &
+                                                                    email
                                                                 </Button>
                                                             </div>
                                                             {!selectedRecord.orderId && (
