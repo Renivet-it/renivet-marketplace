@@ -203,9 +203,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
     );
     const lines = items.map((item, index) => {
         const qty = Math.max(1, Number(item.quantity ?? 1));
-        const netPrice =
-            Number(item.variant?.price ?? item.product?.price ?? 0) ||
-            Math.round(order.amount / Math.max(items.length, 1) / qty);
         const listLineValue =
             Number(item.variant?.price ?? item.product?.price ?? 0) * qty;
         const gross =
@@ -220,7 +217,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
             index,
             qty,
             gross,
-            netPrice,
             taxable,
             tax: gross - taxable,
             rate,
@@ -359,7 +355,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             <Text style={[styles.td, styles.hsn]}>{l.hsn}</Text>
                             <Text style={[styles.td, styles.qty]}>{l.qty}</Text>
                             <Text style={[styles.td, styles.taxable]}>
-                                {money(l.netPrice * l.qty)}
+                                {money(l.taxable)}
                             </Text>
                             <Text style={[styles.td, styles.rate]} wrap={false}>
                                 {formatGstRate(l.rate)}
