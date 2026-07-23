@@ -370,6 +370,7 @@ export function OrderAction({ order, onAction }: PageProps) {
                             " - " +
                             order.address.zip,
                         amount: order.totalAmount,
+                        deliveryAmount: order.deliveryAmount,
                         items: order.items,
                         brand: order.items[0].product.brand,
                         state: order.address.state,
