@@ -136,9 +136,22 @@ export function ProductCard({
         [imageUrl, mediaUrls]
     );
 
-    const rawPrice = product.variants?.[0]?.price || product.price || 0;
+    // Catalogue filtering and price sorting use the lowest valid variant price.
+    // Use that same variant on the card so a product qualifying for a price cap
+    // never displays an unrelated, more expensive first variant.
+    const lowestPricedVariant = (product.variants ?? [])
+        .filter(
+            (variant) =>
+                !variant.isDeleted &&
+                typeof variant.price === "number" &&
+                variant.price > 0
+        )
+        .reduce<
+            (typeof product.variants)[number] | null
+        >((lowest, variant) => (!lowest || variant.price < lowest.price ? variant : lowest), null);
+    const rawPrice = lowestPricedVariant?.price ?? product.price ?? 0;
     const originalPrice =
-        product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
+        lowestPricedVariant?.compareAtPrice ?? product.compareAtPrice;
     const displayOriginal =
         originalPrice && originalPrice > rawPrice
             ? Math.round(Number(convertPaiseToRupees(originalPrice)))
@@ -151,7 +164,7 @@ export function ProductCard({
     const selectedVariant = useMemo(() => {
         if (!product.variants?.length) return null;
         if (!product.options?.length || !Object.keys(selectedOptions).length) {
-            return product.variants[0];
+            return lowestPricedVariant ?? product.variants[0];
         }
 
         return (
@@ -162,9 +175,16 @@ export function ProductCard({
                             optionId
                         ] === valueId
                 )
-            ) ?? product.variants[0]
+            ) ??
+            lowestPricedVariant ??
+            product.variants[0]
         );
-    }, [product.options, product.variants, selectedOptions]);
+    }, [
+        lowestPricedVariant,
+        product.options,
+        product.variants,
+        selectedOptions,
+    ]);
 
     const sizeOption = useMemo(
         () =>

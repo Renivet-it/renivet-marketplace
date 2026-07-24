@@ -1,7 +1,7 @@
 "use client";
 
-import { Icons } from "@/components/icons";
 import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
+import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { useNavbarStore } from "@/lib/store";
@@ -18,6 +18,7 @@ import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
 import {
     ArrowRight,
+    Bell,
     ChevronRight,
     FileText,
     Headphones,
@@ -25,7 +26,6 @@ import {
     HelpCircle,
     LayoutDashboard,
     LineChart,
-    Bell,
     Lock,
     LogOut,
     MapPin,
@@ -39,7 +39,7 @@ import {
     User,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { ElementRef, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
 
@@ -205,6 +205,7 @@ function PreferenceCard({
 
 export function NavbarMob({ className, ...props }: GenericProps) {
     const router = useRouter();
+    const pathname = usePathname();
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
     const setIsMenuOpen = useNavbarStore((state) => state.setIsOpen);
@@ -230,6 +231,13 @@ export function NavbarMob({ className, ...props }: GenericProps) {
             document.body.style.overflow = "auto";
         };
     }, [isMenuOpen]);
+
+    // The menu state lives outside the page tree, so it can otherwise remain
+    // visible after a client-side redirect. Always dismiss it once navigation
+    // reaches a new page as a fallback for links rendered inside this menu.
+    useEffect(() => {
+        setIsMenuOpen(false);
+    }, [pathname, setIsMenuOpen]);
 
     const { isSignedIn } = useAuth();
     const { data: user } = trpc.general.users.currentUser.useQuery(undefined, {
@@ -354,8 +362,16 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                 "flex flex-col justify-between gap-4",
                 className
             )}
-            ref={navContainerRef}
             {...props}
+            ref={navContainerRef}
+            onClickCapture={(event) => {
+                if (
+                    event.target instanceof Element &&
+                    event.target.closest("a[href]")
+                ) {
+                    setIsMenuOpen(false);
+                }
+            }}
         >
             <div
                 className="space-y-6 overflow-y-scroll px-4 pb-10 pt-24"
@@ -585,37 +601,37 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                             </button>
                         </div>
                     </div>
-	                ) : (
-	                    // NOT LOGGED IN VIEW (Keep existing Grid/List for guests)
-	                    <div className={cn("space-y-6", "mt-5")}>
-	                        <div className="grid grid-cols-2 gap-3">
-	                            <Button
-	                                className="h-11 rounded-full border border-[#d4af37] bg-transparent text-xs font-bold uppercase tracking-[0.08em] text-[#a68a4a] hover:bg-[#d4af37]/5"
-	                                asChild
-	                            >
-	                                <Link
-	                                    href="/auth/signin"
-	                                    onClick={() => setIsMenuOpen(false)}
-	                                >
-	                                    Login
-	                                </Link>
-	                            </Button>
-	                            <Button
-	                                className="h-11 rounded-full bg-[#2f3720] text-xs font-bold uppercase tracking-[0.08em] text-white hover:bg-[#252c18]"
-	                                asChild
-	                            >
-	                                <Link
-	                                    href="/auth/signup"
-	                                    onClick={() => setIsMenuOpen(false)}
-	                                >
-	                                    Sign Up
-	                                </Link>
-	                            </Button>
-	                        </div>
+                ) : (
+                    // NOT LOGGED IN VIEW (Keep existing Grid/List for guests)
+                    <div className={cn("space-y-6", "mt-5")}>
+                        <div className="grid grid-cols-2 gap-3">
+                            <Button
+                                className="h-11 rounded-full border border-[#d4af37] bg-transparent text-xs font-bold uppercase tracking-[0.08em] text-[#a68a4a] hover:bg-[#d4af37]/5"
+                                asChild
+                            >
+                                <Link
+                                    href="/auth/signin"
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    Login
+                                </Link>
+                            </Button>
+                            <Button
+                                className="h-11 rounded-full bg-[#2f3720] text-xs font-bold uppercase tracking-[0.08em] text-white hover:bg-[#252c18]"
+                                asChild
+                            >
+                                <Link
+                                    href="/auth/signup"
+                                    onClick={() => setIsMenuOpen(false)}
+                                >
+                                    Sign Up
+                                </Link>
+                            </Button>
+                        </div>
 
-	                        <ul
-	                            className={cn(
-	                                "grid grid-cols-2 items-center gap-4"
+                        <ul
+                            className={cn(
+                                "grid grid-cols-2 items-center gap-4"
                             )}
                             ref={navListRef}
                         >
