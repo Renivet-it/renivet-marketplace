@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { userSupportMessages, userSupportTickets } from "@/lib/db/schema";
 import { and, eq, inArray, lt } from "drizzle-orm";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 const ACTIVE_STATUSES = [
     "new",
@@ -14,24 +14,9 @@ const ACTIVE_STATUSES = [
     "escalated",
 ] as const;
 
-function isAuthorized(request: NextRequest) {
-    const secret = process.env.CRON_SECRET;
-    if (!secret) return process.env.NODE_ENV !== "production";
-
-    return (
-        request.headers.get("authorization") === `Bearer ${secret}` ||
-        request.nextUrl.searchParams.get("secret") === secret
-    );
-}
-
-export async function GET(request: NextRequest) {
-    if (!isAuthorized(request)) {
-        return NextResponse.json(
-            { ok: false, error: "Unauthorized" },
-            { status: 401 }
-        );
-    }
-
+// Intentionally public at the administrator's request. Configure a scheduler
+// to invoke this endpoint once per day.
+export async function GET() {
     const inactiveSince = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
     const tickets = await db.query.userSupportTickets.findMany({
         where: and(
@@ -40,8 +25,9 @@ export async function GET(request: NextRequest) {
         ),
     });
 
+    let closedCount = 0;
     for (const ticket of tickets) {
-        await db
+        const updated = await db
             .update(userSupportTickets)
             .set({
                 status: "closed",
@@ -59,8 +45,11 @@ export async function GET(request: NextRequest) {
                     eq(userSupportTickets.id, ticket.id),
                     inArray(userSupportTickets.status, ACTIVE_STATUSES)
                 )
-            );
+            )
+            .returning({ id: userSupportTickets.id });
 
+        if (!updated.length) continue;
+        closedCount += 1;
         await db.insert(userSupportMessages).values({
             ticketId: ticket.id,
             sender: "system",
@@ -70,9 +59,5 @@ export async function GET(request: NextRequest) {
         });
     }
 
-    return NextResponse.json({
-        ok: true,
-        closedCount: tickets.length,
-        inactiveSince,
-    });
+    return NextResponse.json({ ok: true, closedCount, inactiveSince });
 }

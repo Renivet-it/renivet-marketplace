@@ -29,7 +29,8 @@ type UserSupportTopic =
     | "product_issues"
     | "grievances"
     | "payments_account"
-    | "general";
+    | "general"
+    | "other";
 
 type UploadedAttachment = {
     filename: string;
@@ -110,6 +111,11 @@ const userSupportTopics: Array<{
         label: "General",
         description: "Pre-purchase questions, feedback and other help",
     },
+    {
+        key: "other",
+        label: "Other requests",
+        description: "Older or uncategorised support requests",
+    },
 ];
 
 const userSupportTopicCategories: Record<
@@ -121,6 +127,9 @@ const userSupportTopicCategories: Record<
         "ORDER_DELAYED",
         "ORDER_CANCEL_REQUEST",
         "ORDER_MODIFY_REQUEST",
+        "ORDER",
+        "DELIVERY_ISSUE",
+        "ITEM_MISSING",
     ],
     returns_refunds: ["RETURN_REQUEST", "REFUND_STATUS", "REFUND_NOT_RECEIVED"],
     product_issues: [
@@ -140,6 +149,7 @@ const userSupportTopicCategories: Record<
         "PAYMENT_FAILED",
         "ACCOUNT_LOGIN_ISSUE",
         "DATA_DELETION_REQUEST",
+        "ACCOUNT",
     ],
     general: [
         "SUSTAINABILITY_QUERY",
@@ -148,15 +158,27 @@ const userSupportTopicCategories: Record<
         "FEEDBACK_PRAISE",
         "OTHER",
     ],
+    other: [],
 };
 
 function isInUserSupportTopic(item: any, topic: UserSupportTopic) {
     if (topic === "all") return true;
 
-    const category = String(
-        item.category ?? item.issueType ?? ""
-    ).toUpperCase();
-    return userSupportTopicCategories[topic].includes(category);
+    const categories = [item.category, item.issueType]
+        .filter(Boolean)
+        .map((value) => String(value).toUpperCase());
+
+    if (topic === "other") {
+        return !Object.entries(userSupportTopicCategories)
+            .filter(([key]) => key !== "other")
+            .some(([, values]) =>
+                categories.some((category) => values.includes(category))
+            );
+    }
+
+    return categories.some((category) =>
+        userSupportTopicCategories[topic].includes(category)
+    );
 }
 
 const channelLabels: Record<SupportChannel, string> = {
@@ -421,11 +443,19 @@ function formatAddressBlock(address: any) {
         .join("\n");
 }
 
-export default function AdminSupportPage() {
+export function AdminSupportPage({
+    caseId,
+    standalone = false,
+    initialQueue,
+}: {
+    caseId?: string;
+    standalone?: boolean;
+    initialQueue?: QueueTab;
+}) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const queueParam = searchParams.get("queue");
-    const ticketParam = searchParams.get("ticket") ?? "";
+    const queueParam = searchParams.get("queue") ?? initialQueue ?? "user";
+    const ticketParam = caseId ?? searchParams.get("ticket") ?? "";
 
     const [queue, setQueue] = useState<QueueTab>(
         queueParam === "brand"
@@ -434,6 +464,7 @@ export default function AdminSupportPage() {
               ? "grievance"
               : "user"
     );
+    const isStandaloneCasePage = standalone;
     const isUserQueue = queue === "user" || queue === "grievance";
     const [userSupportTopic, setUserSupportTopic] =
         useState<UserSupportTopic>("all");
@@ -728,6 +759,13 @@ export default function AdminSupportPage() {
         ? (userMessagesQuery.data ?? [])
         : (brandMessagesQuery.data ?? []);
     const isCaseLocked = isTerminalCaseStatus(selectedRecord?.status);
+    const isOrderRelatedCase = Boolean(
+        selectedRecord?.orderId ||
+            String(selectedRecord?.category ?? "").startsWith("ORDER_") ||
+            /order|delivery|shipment|courier/i.test(
+                String(selectedRecord?.issueType ?? selectedRecord?.title ?? "")
+            )
+    );
 
     const uploadAttachments = async (files: File[]) => {
         setIsUploading(true);
@@ -856,18 +894,30 @@ export default function AdminSupportPage() {
     };
 
     const openCaseWorkspace = (ticketId: string) => {
-        setSelectedId(ticketId);
-        window.setTimeout(() => {
-            document
-                .getElementById("case-workspace")
-                ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 0);
+        router.push(
+            `/dashboard/general/support/case/${ticketId}?queue=${queue}`
+        );
     };
 
     return (
-        <div className="bg-[#EDF2F8] p-6">
-            <div className="space-y-6">
-                <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div
+            className={cn(
+                "min-h-screen bg-[#F6F8FB] p-4 md:p-6",
+                isStandaloneCasePage && "bg-[#F6F8FB] p-4 md:p-6"
+            )}
+        >
+            <div
+                className={cn(
+                    "mx-auto max-w-[1600px] space-y-4",
+                    isStandaloneCasePage && "max-w-[1400px]"
+                )}
+            >
+                <section
+                    className={cn(
+                        "grid gap-3 md:grid-cols-3 xl:grid-cols-6",
+                        isStandaloneCasePage && "hidden"
+                    )}
+                >
                     {[
                         {
                             label: "Open tickets",
@@ -906,25 +956,30 @@ export default function AdminSupportPage() {
                     ].map((item) => (
                         <Card
                             key={item.label}
-                            className="rounded-[22px] border border-[#D7E2EF] bg-white p-4 shadow-[0_12px_36px_rgba(37,61,94,0.05)]"
+                            className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
                         >
-                            <p className="text-[10px] font-semibold uppercase tracking-normal text-[#6B94C1]">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                                 {item.label}
                             </p>
-                            <p className="mt-2 text-2xl font-semibold text-slate-950">
+                            <p className="mt-1 text-xl font-semibold text-slate-950">
                                 {item.value}
                             </p>
                         </Card>
                     ))}
                 </section>
 
-                <section className="flex flex-wrap items-center gap-2">
+                <section
+                    className={cn(
+                        "flex flex-wrap items-center gap-2",
+                        isStandaloneCasePage && "hidden"
+                    )}
+                >
                     {(["morning", "midday", "eod"] as const).map(
                         (checkType) => (
                             <Button
                                 key={checkType}
                                 variant="outline"
-                                className="rounded-full bg-white"
+                                className="h-9 rounded-md bg-white text-sm"
                                 onClick={() =>
                                     dailyCheckInMutation.mutate({
                                         checkType,
@@ -942,7 +997,7 @@ export default function AdminSupportPage() {
                     )}
                     <Button
                         variant="outline"
-                        className="rounded-full bg-white"
+                        className="h-9 rounded-md bg-white text-sm"
                         onClick={() =>
                             weeklySummaryMutation.mutate({
                                 summary:
@@ -954,23 +1009,37 @@ export default function AdminSupportPage() {
                     </Button>
                     <Button
                         variant="outline"
-                        className="rounded-full bg-white"
+                        className="h-9 rounded-md bg-white text-sm"
                         onClick={() => monthlyReviewMutation.mutate({})}
                     >
                         Monthly review
                     </Button>
                 </section>
 
-                <Card className="rounded-[28px] border border-[#D7E2EF] bg-white p-4 shadow-[0_18px_50px_rgba(37,61,94,0.06)] md:p-5">
-                    <div className="space-y-4">
-                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <Card
+                    className={cn(
+                        "rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-4",
+                        isStandaloneCasePage &&
+                            "border-0 bg-transparent p-0 shadow-none"
+                    )}
+                >
+                    <div
+                        className={cn(
+                            "space-y-3",
+                            isStandaloneCasePage &&
+                                "[&>div:last-child>div:first-child]:hidden [&>div:not(:last-child)]:hidden"
+                        )}
+                    >
+                        <div className="flex flex-col gap-3 border-b border-slate-200 pb-3 xl:flex-row xl:items-center xl:justify-between">
                             <div className="min-w-0">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-[#D5E2F2] bg-[#F8FBFF] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5B8FC5]">
-                                    <LifeBuoy className="size-3.5" />
-                                    Support Desk
-                                </div>
-                                <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center">
-                                    <div className="inline-flex rounded-[18px] border border-[#D7E2EF] bg-[#F8FBFF] p-1">
+                                <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+                                    <div className="flex items-center gap-2">
+                                        <LifeBuoy className="size-4 text-[#147D73]" />
+                                        <span className="text-base font-semibold text-slate-950">
+                                            Support inbox
+                                        </span>
+                                    </div>
+                                    <div className="inline-flex w-fit rounded-md bg-slate-100 p-1">
                                         {queueTabs.map((tab) => (
                                             <button
                                                 key={tab.key}
@@ -984,10 +1053,10 @@ export default function AdminSupportPage() {
                                                     setNoteText("");
                                                 }}
                                                 className={cn(
-                                                    "rounded-[14px] px-4 py-2.5 text-sm font-semibold transition",
+                                                    "rounded px-3 py-1.5 text-sm font-medium transition",
                                                     queue === tab.key
-                                                        ? "bg-[#1F2937] text-white shadow-sm"
-                                                        : "text-slate-600 hover:bg-white hover:text-slate-900"
+                                                        ? "bg-white text-[#16324F] shadow-sm"
+                                                        : "text-slate-600 hover:text-slate-950"
                                                 )}
                                             >
                                                 {tab.label}
@@ -995,23 +1064,22 @@ export default function AdminSupportPage() {
                                         ))}
                                     </div>
 
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-900">
+                                    <div className="xl:border-l xl:border-slate-200 xl:pl-4">
+                                        <p className="text-sm font-semibold text-slate-800">
                                             {queue === "grievance"
                                                 ? "Dedicated grievance resolution queue"
                                                 : queue === "user"
                                                   ? "Customer issues and resolution flow"
                                                   : "Brand operations and support requests"}
                                         </p>
-                                        <p className="mt-1 text-sm text-slate-500">
-                                            Review active cases, reply faster,
-                                            and keep every order-linked issue in
-                                            one place.
+                                        <p className="mt-0.5 max-w-xl text-xs text-slate-500">
+                                            Search, triage, and resolve customer
+                                            requests.
                                         </p>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-3 xl:w-[420px]">
+                            <div className="flex flex-col gap-3 xl:w-[400px]">
                                 <div className="flex gap-2">
                                     <Button
                                         type="button"
@@ -1020,7 +1088,7 @@ export default function AdminSupportPage() {
                                                 (value) => !value
                                             )
                                         }
-                                        className="h-12 rounded-2xl bg-[#1F2937] px-4 text-white hover:bg-[#111827]"
+                                        className="h-10 rounded-md bg-[#16324F] px-4 text-sm font-medium text-white hover:bg-[#102A43]"
                                     >
                                         Intake ticket
                                     </Button>
@@ -1030,7 +1098,7 @@ export default function AdminSupportPage() {
                                             setSearch(event.target.value)
                                         }
                                         placeholder="Search support cases"
-                                        className="h-12 rounded-2xl border-[#D7E2EF] bg-[#FBFDFF]"
+                                        className="h-10 rounded-md border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
                                     />
                                 </div>
                             </div>
@@ -1163,23 +1231,19 @@ export default function AdminSupportPage() {
                         )}
 
                         {queue === "user" && (
-                            <div className="rounded-[22px] border border-[#D7E2EF] bg-[#F8FBFF] p-3 sm:p-4">
+                            <div className="border-b border-slate-200 pb-3">
                                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                     <div>
-                                        <p className="text-sm font-semibold text-slate-900">
-                                            Browse by support type
-                                        </p>
-                                        <p className="mt-0.5 text-xs text-slate-500">
-                                            Choose a queue to focus on the right
-                                            customer issues.
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            Filter by category
                                         </p>
                                     </div>
-                                    <span className="hidden rounded-full border border-[#D7E2EF] bg-white px-3 py-1 text-xs font-medium text-slate-600 sm:inline-flex">
-                                        {topicQueueItems.length} cases in view
+                                    <span className="hidden text-xs text-slate-500 sm:inline-flex">
+                                        {topicQueueItems.length} cases
                                     </span>
                                 </div>
                                 <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1">
-                                    <div className="flex min-w-max gap-2">
+                                    <div className="flex min-w-max gap-1.5">
                                         {userSupportTopics.map((topic) => {
                                             const count = queueItems.filter(
                                                 (item) =>
@@ -1203,10 +1267,10 @@ export default function AdminSupportPage() {
                                                         setSelectedId("");
                                                     }}
                                                     className={cn(
-                                                        "group flex items-center gap-2 rounded-xl border px-3.5 py-2 text-sm font-semibold transition",
+                                                        "group flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition",
                                                         isActive
-                                                            ? "border-[#1F2937] bg-[#1F2937] text-white shadow-sm"
-                                                            : "border-[#D7E2EF] bg-white text-slate-600 hover:border-[#AFC8E2] hover:text-slate-900"
+                                                            ? "border-[#16324F] bg-[#16324F] text-white"
+                                                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-950"
                                                     )}
                                                 >
                                                     <span>{topic.label}</span>
@@ -1215,7 +1279,7 @@ export default function AdminSupportPage() {
                                                             "rounded-full px-1.5 py-0.5 text-[11px] leading-none",
                                                             isActive
                                                                 ? "bg-white/15 text-white"
-                                                                : "bg-[#EDF4FB] text-[#527DAA]"
+                                                                : "bg-slate-100 text-slate-600"
                                                         )}
                                                     >
                                                         {count}
@@ -1229,34 +1293,31 @@ export default function AdminSupportPage() {
                         )}
 
                         <div className="overflow-x-auto">
-                            <div className="inline-flex min-w-full gap-2 rounded-[18px] border border-[#D7E2EF] bg-[#F8FBFF] p-1.5">
+                            <div className="inline-flex min-w-full gap-1 border-b border-slate-200">
                                 {statusTabs.map((tab) => (
                                     <button
                                         key={tab.key}
                                         type="button"
                                         onClick={() => setStatusTab(tab.key)}
                                         className={cn(
-                                            "min-w-[150px] flex-1 rounded-[14px] px-4 py-2.5 text-left transition",
+                                            "min-w-[128px] flex-1 border-b-2 border-transparent px-3 py-2 text-left transition",
                                             statusTab === tab.key
-                                                ? "bg-white text-slate-900 shadow-[0_8px_20px_rgba(31,41,55,0.08)]"
-                                                : "text-slate-600 hover:bg-white/80 hover:text-slate-900"
+                                                ? "border-[#147D73] text-[#16324F]"
+                                                : "text-slate-500 hover:text-slate-900"
                                         )}
                                     >
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
-                                                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                                                    Status
-                                                </p>
-                                                <p className="mt-1 text-sm font-semibold md:text-base">
+                                                <p className="text-sm font-medium">
                                                     {tab.label}
                                                 </p>
                                             </div>
                                             <span
                                                 className={cn(
-                                                    "rounded-full px-2.5 py-1 text-xs font-semibold",
+                                                    "rounded-full px-2 py-0.5 text-xs font-semibold",
                                                     statusTab === tab.key
-                                                        ? "bg-slate-100 text-slate-900"
-                                                        : "bg-white text-slate-700"
+                                                        ? "bg-[#E5F3F0] text-[#147D73]"
+                                                        : "bg-slate-100 text-slate-600"
                                                 )}
                                             >
                                                 {statusCounts[tab.key]}
@@ -1268,8 +1329,8 @@ export default function AdminSupportPage() {
                         </div>
 
                         <div className="space-y-4">
-                            <div className="overflow-hidden rounded-[24px] border border-[#DDE6F0] bg-white">
-                                <div className="flex items-center justify-between border-b border-[#E6EEF7] bg-[#F8FBFF] px-5 py-4">
+                            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                                     <div>
                                         <p className="text-sm font-semibold text-slate-900">
                                             {queue === "user" &&
@@ -1283,31 +1344,31 @@ export default function AdminSupportPage() {
                                             support cases
                                         </p>
                                     </div>
-                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#6B94C1]">
+                                    <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
                                         {isUserQueue ? "Users" : "Brands"}
                                     </span>
                                 </div>
 
                                 <div className="overflow-x-auto">
                                     <table className="w-full min-w-[960px] text-left">
-                                        <thead className="border-b border-[#E6EEF7] bg-[#FCFDFF] text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                        <thead className="border-b border-slate-100 bg-slate-50/80 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
                                             <tr>
-                                                <th className="px-5 py-3">
+                                                <th className="px-4 py-2.5">
                                                     Case
                                                 </th>
-                                                <th className="px-4 py-3">
+                                                <th className="px-3 py-2.5">
                                                     Customer
                                                 </th>
-                                                <th className="px-4 py-3">
+                                                <th className="px-3 py-2.5">
                                                     Category
                                                 </th>
-                                                <th className="px-4 py-3">
+                                                <th className="px-3 py-2.5">
                                                     Last activity
                                                 </th>
-                                                <th className="px-4 py-3">
+                                                <th className="px-3 py-2.5">
                                                     Priority
                                                 </th>
-                                                <th className="px-5 py-3 text-right">
+                                                <th className="px-4 py-2.5 text-right">
                                                     Status
                                                 </th>
                                             </tr>
@@ -1323,13 +1384,13 @@ export default function AdminSupportPage() {
                                                             )
                                                         }
                                                         className={cn(
-                                                            "cursor-pointer transition hover:bg-[#F7FBFF]",
+                                                            "cursor-pointer transition hover:bg-[#F4FAF9]",
                                                             selectedId ===
                                                                 item.id &&
-                                                                "bg-[#EDF6FF]"
+                                                                "bg-emerald-50/70"
                                                         )}
                                                     >
-                                                        <td className="max-w-[300px] px-5 py-3.5">
+                                                        <td className="max-w-[300px] px-4 py-2.5">
                                                             <p className="truncate text-sm font-semibold text-slate-900">
                                                                 {buildSupportDisplayTitle(
                                                                     {
@@ -1343,7 +1404,7 @@ export default function AdminSupportPage() {
                                                                     }
                                                                 )}
                                                             </p>
-                                                            <p className="mt-1 text-xs text-slate-500">
+                                                            <p className="mt-0.5 text-xs text-slate-500">
                                                                 Case #
                                                                 {item.id.slice(
                                                                     0,
@@ -1355,7 +1416,7 @@ export default function AdminSupportPage() {
                                                                     : ""}
                                                             </p>
                                                         </td>
-                                                        <td className="max-w-[180px] px-4 py-3.5">
+                                                        <td className="max-w-[180px] px-3 py-2.5">
                                                             <p className="truncate text-sm font-medium text-slate-700">
                                                                 {isUserQueue
                                                                     ? item.userName ||
@@ -1366,14 +1427,14 @@ export default function AdminSupportPage() {
                                                             </p>
                                                             {isUserQueue &&
                                                                 item.userEmail && (
-                                                                    <p className="mt-1 truncate text-xs text-slate-400">
+                                                                    <p className="mt-0.5 truncate text-xs text-slate-400">
                                                                         {
                                                                             item.userEmail
                                                                         }
                                                                     </p>
                                                                 )}
                                                         </td>
-                                                        <td className="px-4 py-3.5">
+                                                        <td className="px-3 py-2.5">
                                                             <span className="inline-flex max-w-[170px] truncate rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
                                                                 {formatSupportCategoryLabel(
                                                                     item.category ??
@@ -1382,7 +1443,7 @@ export default function AdminSupportPage() {
                                                                 )}
                                                             </span>
                                                         </td>
-                                                        <td className="px-4 py-3.5 text-sm text-slate-600">
+                                                        <td className="px-3 py-2.5 text-sm text-slate-600">
                                                             {format(
                                                                 new Date(
                                                                     item.latestMessageAt ??
@@ -1391,7 +1452,7 @@ export default function AdminSupportPage() {
                                                                 "dd MMM, hh:mm a"
                                                             )}
                                                         </td>
-                                                        <td className="px-4 py-3.5">
+                                                        <td className="px-3 py-2.5">
                                                             <span
                                                                 className={cn(
                                                                     "rounded-full px-2.5 py-1 text-xs font-semibold capitalize",
@@ -1408,7 +1469,7 @@ export default function AdminSupportPage() {
                                                                     "normal"}
                                                             </span>
                                                         </td>
-                                                        <td className="px-5 py-3.5 text-right">
+                                                        <td className="px-4 py-2.5 text-right">
                                                             <StatusBadge
                                                                 status={
                                                                     item.status
@@ -1433,7 +1494,7 @@ export default function AdminSupportPage() {
                                     )}
                                 </div>
 
-                                <div className="flex flex-col gap-3 border-t border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                                <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                                     <span>
                                         Showing{" "}
                                         {filteredQueueItems.length
@@ -1449,7 +1510,7 @@ export default function AdminSupportPage() {
                                     <div className="flex items-center gap-2">
                                         <Button
                                             variant="outline"
-                                            className="h-8 rounded-full px-3 text-xs"
+                                            className="h-8 rounded-md px-3 text-xs"
                                             disabled={casePage === 1}
                                             onClick={() =>
                                                 setCasePage((page) =>
@@ -1464,7 +1525,7 @@ export default function AdminSupportPage() {
                                         </span>
                                         <Button
                                             variant="outline"
-                                            className="h-8 rounded-full px-3 text-xs"
+                                            className="h-8 rounded-md px-3 text-xs"
                                             disabled={
                                                 casePage === totalCasePages
                                             }
@@ -1486,19 +1547,22 @@ export default function AdminSupportPage() {
                             <div
                                 id="case-workspace"
                                 className={cn(
-                                    "rounded-[28px] border border-[#DDE6F0] bg-white p-4 md:p-6",
+                                    "rounded-xl border border-slate-200 bg-white p-4 md:p-5",
+                                    isStandaloneCasePage &&
+                                        "mx-auto w-full max-w-[1180px] rounded-md border border-slate-200 bg-white p-4 shadow-sm md:p-5 [&_button]:!rounded-none [&_input]:!rounded-none [&_textarea]:!rounded-none",
                                     selectedRecord &&
+                                        !isStandaloneCasePage &&
                                         "fixed inset-0 z-[70] overflow-y-auto border-0 bg-slate-950/30 p-4 backdrop-blur-[2px] md:p-6"
                                 )}
                             >
                                 {!selectedRecord ? (
-                                    <div className="rounded-[20px] border border-dashed border-[#D7E2EF] bg-[#F8FBFF] px-4 py-5 text-sm text-slate-500">
+                                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
                                         Select a case from the table to open its
                                         full workspace here.
                                     </div>
                                 ) : (
-                                    <div className="mx-auto max-w-6xl space-y-5 rounded-[28px] bg-white p-4 shadow-[0_24px_80px_rgba(15,23,42,0.2)] md:p-6">
-                                        <div className="flex items-center justify-between gap-4 border-b border-[#E6EEF7] pb-4">
+                                    <div className="w-full space-y-3 bg-white p-0">
+                                        <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3">
                                             <div>
                                                 <p className="text-sm font-semibold text-slate-900">
                                                     Case workspace
@@ -1512,18 +1576,26 @@ export default function AdminSupportPage() {
                                             <Button
                                                 type="button"
                                                 variant="outline"
-                                                className="rounded-full"
-                                                onClick={() =>
-                                                    setSelectedId("")
-                                                }
+                                                className="h-9 rounded-md text-sm"
+                                                onClick={() => {
+                                                    if (isStandaloneCasePage) {
+                                                        router.push(
+                                                            `/dashboard/general/support?queue=${queue}`
+                                                        );
+                                                        return;
+                                                    }
+                                                    setSelectedId("");
+                                                }}
                                             >
-                                                Close workspace
+                                                {isStandaloneCasePage
+                                                    ? "Back to Support Desk"
+                                                    : "Close workspace"}
                                             </Button>
                                         </div>
-                                        <div className="rounded-[28px] border border-[#DDE6F0] bg-[#FBFDFF] p-5">
-                                            <div className="space-y-5">
+                                        <div className="border-b border-slate-200 pb-4">
+                                            <div className="space-y-3">
                                                 <div className="max-w-4xl">
-                                                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6B94C1]">
+                                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#147D73]">
                                                         {isUserQueue
                                                             ? queue ===
                                                               "grievance"
@@ -1531,7 +1603,7 @@ export default function AdminSupportPage() {
                                                                 : "Customer support"
                                                             : "Brand support"}
                                                     </p>
-                                                    <h3 className="mt-3 max-w-4xl text-xl font-semibold leading-tight text-slate-900 md:text-[1.75rem]">
+                                                    <h3 className="mt-1 max-w-4xl text-lg font-semibold leading-tight text-slate-900 md:text-xl">
                                                         {buildSupportDisplayTitle(
                                                             {
                                                                 title: selectedRecord.title,
@@ -1547,7 +1619,7 @@ export default function AdminSupportPage() {
                                                 </div>
 
                                                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                                                    <span className="rounded-full border border-[#DDE6F0] bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                                                    <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600">
                                                         Case{" "}
                                                         {selectedRecord.id.slice(
                                                             0,
@@ -1555,14 +1627,14 @@ export default function AdminSupportPage() {
                                                         )}
                                                     </span>
                                                     {selectedRecord.orderId && (
-                                                        <span className="rounded-full border border-[#DDE6F0] bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                                                        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600">
                                                             Order{" "}
                                                             {
                                                                 selectedRecord.orderId
                                                             }
                                                         </span>
                                                     )}
-                                                    <span className="rounded-full border border-[#DDE6F0] bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                                                    <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600">
                                                         Active status:{" "}
                                                         {statusLabels[
                                                             selectedRecord.status as (typeof statusOptions)[number]
@@ -1574,10 +1646,77 @@ export default function AdminSupportPage() {
                                                     </span>
                                                 </div>
 
-                                                <div className="rounded-[20px] border border-[#DDE6F0] bg-white p-4">
+                                                {isOrderRelatedCase &&
+                                                    (selectedRecord.orderId ? (
+                                                        <div className="flex flex-col gap-3 border border-slate-200 bg-slate-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                                                            <div>
+                                                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                                                    Linked order
+                                                                </p>
+                                                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                                                    {
+                                                                        selectedRecord.orderId
+                                                                    }
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <Button
+                                                                    className="h-9 rounded-lg bg-[#1F3B5B] px-3 text-sm text-white hover:bg-[#172C43]"
+                                                                    asChild
+                                                                >
+                                                                    <Link
+                                                                        href={
+                                                                            getOrderDetailsHref(
+                                                                                {
+                                                                                    id: selectedRecord.orderId,
+                                                                                }
+                                                                            )!
+                                                                        }
+                                                                    >
+                                                                        Order
+                                                                        details
+                                                                    </Link>
+                                                                </Button>
+                                                                {getTrackingHref(
+                                                                    selectedRecord.order
+                                                                ) && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 rounded-lg border-[#0F766E] px-3 text-sm text-[#0F766E] hover:bg-emerald-50"
+                                                                        asChild
+                                                                    >
+                                                                        <Link
+                                                                            href={
+                                                                                getTrackingHref(
+                                                                                    selectedRecord.order
+                                                                                )!
+                                                                            }
+                                                                            target="_blank"
+                                                                        >
+                                                                            Delivery
+                                                                            tracking
+                                                                        </Link>
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                                            This is an
+                                                            order-related case,
+                                                            but no order is
+                                                            linked yet. Link the
+                                                            customer order to
+                                                            unlock order details
+                                                            and delivery
+                                                            tracking.
+                                                        </div>
+                                                    ))}
+
+                                                <div className="border-y border-slate-200 bg-slate-50 px-3 py-3">
                                                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                                         <div>
-                                                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B94C1]">
+                                                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#147D73]">
                                                                 Quick actions
                                                             </p>
                                                             <p className="mt-1 text-sm text-slate-500">
@@ -1603,23 +1742,28 @@ export default function AdminSupportPage() {
                                                                         )
                                                                     }
                                                                     className={cn(
-                                                                        "rounded-full border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition",
+                                                                        "rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                                                                         action.status ===
                                                                             "reopened"
-                                                                            ? "border-emerald-600 bg-emerald-600 text-white shadow-sm hover:bg-emerald-700"
+                                                                            ? "border-emerald-700 bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600"
                                                                             : action.status ===
                                                                                     "resolved" ||
                                                                                 action.status ===
                                                                                     "refunded" ||
                                                                                 action.status ===
                                                                                     "replaced"
-                                                                              ? "border-[#CFE3F8] bg-[#F3F8FF] text-[#1D4F80] hover:border-[#A8CBEE] hover:bg-white"
+                                                                              ? "border-[#0F766E] bg-[#0F766E] text-white hover:bg-[#115E59] focus-visible:ring-[#0F766E]"
                                                                               : action.status ===
                                                                                       "closed" ||
                                                                                   action.status ===
                                                                                       "declined"
-                                                                                ? "border-[#E2E8F0] bg-[#F8FAFC] text-slate-600 hover:border-slate-300 hover:bg-white"
-                                                                                : "border-[#D7E2EF] bg-white text-slate-700 hover:border-[#BDD6EF] hover:bg-[#FAFCFF]"
+                                                                                ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 focus-visible:ring-rose-500"
+                                                                                : action.status ===
+                                                                                        "waiting_customer" ||
+                                                                                    action.status ===
+                                                                                        "waiting_brand"
+                                                                                  ? "border-slate-300 bg-white text-[#16324F] hover:bg-slate-50 focus-visible:ring-slate-500"
+                                                                                  : "border-[#1F3B5B] bg-[#1F3B5B] text-white hover:bg-[#172C43] focus-visible:ring-[#1F3B5B]"
                                                                     )}
                                                                 >
                                                                     {
@@ -1631,7 +1775,7 @@ export default function AdminSupportPage() {
                                                     </div>
                                                 </div>
                                                 {isCaseLocked && (
-                                                    <div className="rounded-[18px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+                                                    <div className="border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
                                                         This case is{" "}
                                                         {selectedRecord.status.replace(
                                                             /_/g,
@@ -1649,21 +1793,21 @@ export default function AdminSupportPage() {
 
                                         {isUserQueue &&
                                             selectedRecord.order && (
-                                                <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
-                                                    <div className="space-y-5">
-                                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                                <div className="border border-slate-200 bg-white p-3">
+                                                    <div className="space-y-4">
+                                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                                             <div>
-                                                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
+                                                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#147D73]">
                                                                     Linked order
                                                                 </p>
-                                                                <p className="mt-3 text-2xl font-semibold text-slate-900">
+                                                                <p className="mt-1 text-lg font-semibold text-slate-900">
                                                                     {
                                                                         selectedRecord
                                                                             .order
                                                                             .id
                                                                     }
                                                                 </p>
-                                                                <p className="mt-2 text-sm text-slate-500">
+                                                                <p className="mt-1 text-xs text-slate-500">
                                                                     Placed{" "}
                                                                     {selectedRecord
                                                                         .order
@@ -1681,7 +1825,7 @@ export default function AdminSupportPage() {
                                                             <div className="flex flex-wrap gap-2">
                                                                 <Button
                                                                     variant="outline"
-                                                                    className="rounded-full"
+                                                                    className="h-8 rounded-md text-xs"
                                                                     onClick={() =>
                                                                         navigator.clipboard.writeText(
                                                                             selectedRecord
@@ -1811,8 +1955,8 @@ export default function AdminSupportPage() {
                                                             />
                                                         </div>
 
-                                                        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_1fr]">
-                                                            <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                        <div className="grid gap-2 xl:grid-cols-[1.1fr_0.9fr_1fr]">
+                                                            <div className="border border-slate-200 bg-slate-50 p-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Customer
                                                                     details
@@ -1862,7 +2006,7 @@ export default function AdminSupportPage() {
                                                                 </div>
                                                             </div>
 
-                                                            <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                            <div className="border border-slate-200 bg-slate-50 p-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Shipping
                                                                     address
@@ -1876,7 +2020,7 @@ export default function AdminSupportPage() {
                                                                 </p>
                                                             </div>
 
-                                                            <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                            <div className="border border-slate-200 bg-slate-50 p-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Order
                                                                     summary
@@ -1928,7 +2072,7 @@ export default function AdminSupportPage() {
                                                             </div>
                                                         </div>
 
-                                                        <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                        <div className="border border-slate-200 bg-white p-3">
                                                             <div className="flex items-center justify-between gap-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Ordered
@@ -1939,7 +2083,7 @@ export default function AdminSupportPage() {
                                                                     breakdown
                                                                 </p>
                                                             </div>
-                                                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                                            <div className="mt-3 grid gap-2 lg:grid-cols-2">
                                                                 {selectedRecord.order.items.map(
                                                                     (
                                                                         item: any
@@ -1971,9 +2115,9 @@ export default function AdminSupportPage() {
                                                                                 key={
                                                                                     item.id
                                                                                 }
-                                                                                className="flex gap-4 rounded-2xl border border-[#DDE6F0] bg-[#FCFDFF] p-4"
+                                                                                className="flex gap-3 border border-slate-200 bg-slate-50 p-3"
                                                                             >
-                                                                                <div className="h-20 w-20 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                                                                <div className="h-16 w-16 overflow-hidden rounded-md border border-slate-200 bg-white">
                                                                                     {productImage ? (
                                                                                         <img
                                                                                             src={
@@ -2268,7 +2412,7 @@ export default function AdminSupportPage() {
                                                                 <Button
                                                                     type="button"
                                                                     variant="outline"
-                                                                    className="rounded-full"
+                                                                    className="h-8 rounded-md text-xs"
                                                                     onClick={() =>
                                                                         fileInputRef.current?.click()
                                                                     }
@@ -2383,8 +2527,8 @@ export default function AdminSupportPage() {
                                             </div>
 
                                             <div className="space-y-5">
-                                                <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
-                                                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
+                                                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                                                         Internal notes
                                                     </p>
                                                     <textarea
@@ -2461,7 +2605,7 @@ export default function AdminSupportPage() {
 
                                                 {isUserQueue && (
                                                     <>
-                                                        <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
+                                                        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                                                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
                                                                 Dispute actions
                                                             </p>
@@ -2554,7 +2698,7 @@ export default function AdminSupportPage() {
                                                                             }
                                                                         );
                                                                     }}
-                                                                    className="rounded-full"
+                                                                    className="bg-[#16324F] text-white shadow-none hover:bg-[#102A43]"
                                                                     disabled={
                                                                         approveDisputeMutation.isPending ||
                                                                         isCaseLocked ||
@@ -2600,7 +2744,7 @@ export default function AdminSupportPage() {
                                                                             }
                                                                         )
                                                                     }
-                                                                    className="rounded-full"
+                                                                    className="border-[#E7B1B1] bg-[#FFF8F8] text-[#B42318] hover:bg-[#FEEEEE]"
                                                                     disabled={
                                                                         rejectDisputeMutation.isPending ||
                                                                         isCaseLocked
@@ -2612,7 +2756,7 @@ export default function AdminSupportPage() {
                                                                 </Button>
                                                                 <Button
                                                                     variant="outline"
-                                                                    className="rounded-full border-amber-300 bg-amber-50 text-amber-900 hover:bg-amber-100"
+                                                                    className="border-[#147D73] bg-[#147D73] font-semibold text-white shadow-none hover:bg-[#0F625A]"
                                                                     disabled={
                                                                         approveDisputeMutation.isPending ||
                                                                         isCaseLocked ||
@@ -2674,8 +2818,8 @@ export default function AdminSupportPage() {
                                                             )}
                                                         </div>
 
-                                                        <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
-                                                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
+                                                        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                                                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                                                                 Goodwill coupon
                                                             </p>
                                                             <Input
@@ -2788,7 +2932,7 @@ export default function AdminSupportPage() {
                             </div>
                             <Button
                                 variant="outline"
-                                className="rounded-full"
+                                className="h-8 rounded-md text-xs"
                                 onClick={() => setApprovalPreview(null)}
                             >
                                 Cancel
@@ -2912,6 +3056,8 @@ export default function AdminSupportPage() {
     );
 }
 
+export default AdminSupportPage;
+
 function StatusBadge({ status }: { status: string }) {
     return (
         <Badge
@@ -2925,11 +3071,11 @@ function StatusBadge({ status }: { status: string }) {
 
 function MiniPill({ label, value }: { label: string; value: ReactNode }) {
     return (
-        <div className="min-w-[180px] rounded-[22px] border border-[#DDE6F0] bg-white px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B94C1]">
+        <div className="min-w-[140px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                 {label}
             </p>
-            <p className="mt-2 text-xl font-medium text-slate-900">{value}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
         </div>
     );
 }
