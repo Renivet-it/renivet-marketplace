@@ -1352,6 +1352,7 @@ export const adminSupportRouter = createTRPCRouter({
                 resolutionType: z.string().optional(),
                 resolutionSummary: z.string().optional(),
                 resolutionCode: resolutionCodeSchema.optional(),
+                deliveryEmail: z.string().email().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -1375,9 +1376,12 @@ export const adminSupportRouter = createTRPCRouter({
                     "Resolution code is required before closing a customer support ticket."
                 );
             }
-            if (input.status === "closed" && !input.resolutionSummary?.trim()) {
+            if (
+                ["resolved", "closed"].includes(input.status) &&
+                !input.resolutionSummary?.trim()
+            ) {
                 throw new Error(
-                    "A closure reason is required before closing a customer support ticket."
+                    "A resolution reason is required before resolving or closing a customer support ticket."
                 );
             }
 
@@ -1417,12 +1421,15 @@ export const adminSupportRouter = createTRPCRouter({
                 .where(eq(userSupportTickets.id, input.ticketId))
                 .returning()
                 .then((res) => res[0]);
-            if (input.status === "closed") {
+            if (["resolved", "closed"].includes(input.status)) {
                 await db.insert(userSupportMessages).values({
                     ticketId: existing.id,
                     sender: "system",
                     senderId: ctx.user.id,
-                    text: `Case closed. Reason: ${input.resolutionSummary!.trim()}`,
+                    text:
+                        input.status === "closed"
+                            ? `Case closed. Reason: ${input.resolutionSummary!.trim()}`
+                            : `Case resolved. Resolution: ${input.resolutionSummary!.trim()}`,
                     messageType: "system",
                 });
             } else if (input.status === "reopened") {
@@ -1455,17 +1462,32 @@ export const adminSupportRouter = createTRPCRouter({
                 userId: existing.userId,
                 actorId: ctx.user.id,
                 type: "support.ticket.status_changed",
-                title: "Your support case was updated",
-                body: `"${existing.title}" is now ${input.status.replace(/_/g, " ")}`,
+                title:
+                    input.status === "closed"
+                        ? "Your support case is closed"
+                        : input.status === "resolved"
+                          ? "Your support case is resolved"
+                          : "Your support case was updated",
+                body: input.resolutionSummary?.trim()
+                    ? `"${existing.title}" was ${input.status.replace(/_/g, " ")}. ${input.resolutionSummary.trim()}`
+                    : `"${existing.title}" is now ${input.status.replace(/_/g, " ")}`,
                 href: buildSupportHref(existing.id),
-                emailSubject: `Support case updated: ${existing.title}`,
-                emailIntro: `Your support case "${existing.title}" has been updated.`,
+                emailSubject:
+                    input.status === "closed"
+                        ? `Your support case is closed: ${existing.title}`
+                        : input.status === "resolved"
+                          ? `Your support case is resolved: ${existing.title}`
+                          : `Support case updated: ${existing.title}`,
+                emailIntro: input.resolutionSummary?.trim()
+                    ? `Your support case "${existing.title}" has been ${input.status.replace(/_/g, " ")}.`
+                    : `Your support case "${existing.title}" has been updated.`,
                 emailDetails: [
                     `New status: ${input.status}`,
                     ...(input.resolutionSummary
-                        ? [`Update: ${input.resolutionSummary}`]
+                        ? [`Resolution reason: ${input.resolutionSummary}`]
                         : []),
                 ],
+                deliveryEmail: input.deliveryEmail,
                 metadata: {
                     ticketId: existing.id,
                     status: input.status,

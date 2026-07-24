@@ -3,6 +3,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
 import { Card } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
     SUPPORT_CATEGORY_MATRIX,
@@ -263,7 +271,11 @@ const terminalResolutionCodeByStatus: Partial<
 
 function getSuggestedActions(status: string, queue: QueueTab) {
     if (queue === "brand") {
-        if (status === "new" || status === "acknowledged") {
+        if (
+            status === "new" ||
+            status === "acknowledged" ||
+            status === "open"
+        ) {
             return [
                 { label: "Start review", status: "in_progress" as const },
                 {
@@ -274,7 +286,11 @@ function getSuggestedActions(status: string, queue: QueueTab) {
             ];
         }
 
-        if (status === "in_progress" || status === "reopened") {
+        if (
+            status === "in_progress" ||
+            status === "reopened" ||
+            status === "approved"
+        ) {
             return [
                 {
                     label: "Request brand update",
@@ -293,13 +309,14 @@ function getSuggestedActions(status: string, queue: QueueTab) {
             ];
         }
 
-        return [
-            { label: "Reopen case", status: "reopened" as const },
-            { label: "Close case", status: "closed" as const },
-        ];
+        if (isTerminalCaseStatus(status)) {
+            return [{ label: "Reopen case", status: "reopened" as const }];
+        }
+
+        return [{ label: "Start review", status: "in_progress" as const }];
     }
 
-    if (status === "new" || status === "acknowledged") {
+    if (status === "new" || status === "acknowledged" || status === "open") {
         return [
             { label: "Start review", status: "in_progress" as const },
             {
@@ -310,7 +327,11 @@ function getSuggestedActions(status: string, queue: QueueTab) {
         ];
     }
 
-    if (status === "in_progress" || status === "reopened") {
+    if (
+        status === "in_progress" ||
+        status === "reopened" ||
+        status === "approved"
+    ) {
         return [
             {
                 label: "Need customer reply",
@@ -343,7 +364,11 @@ function getSuggestedActions(status: string, queue: QueueTab) {
         ];
     }
 
-    return [{ label: "Reopen case", status: "reopened" as const }];
+    if (isTerminalCaseStatus(status)) {
+        return [{ label: "Reopen case", status: "reopened" as const }];
+    }
+
+    return [{ label: "Start review", status: "in_progress" as const }];
 }
 
 function isTerminalCaseStatus(status?: string | null) {
@@ -484,6 +509,11 @@ export function AdminSupportPage({
     });
     const [replyText, setReplyText] = useState("");
     const [noteText, setNoteText] = useState("");
+    const [resolutionDialog, setResolutionDialog] = useState<{
+        status: "resolved" | "closed" | "reopened";
+    } | null>(null);
+    const [resolutionReason, setResolutionReason] = useState("");
+    const [resolutionEmail, setResolutionEmail] = useState("");
     const [couponSummary, setCouponSummary] = useState("Apology coupon");
     const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
     const [isUploading, setIsUploading] = useState(false);
@@ -588,6 +618,8 @@ export function AdminSupportPage({
             onSuccess: () => {
                 userTicketQuery.refetch();
                 userTicketsQuery.refetch();
+                userMessagesQuery.refetch();
+                supportHealthQuery.refetch();
             },
             onError: (error) => toast.error(error.message),
         });
@@ -855,22 +887,26 @@ export function AdminSupportPage({
         if (!selectedRecord) return;
         let resolutionSummary: string | undefined;
 
-        if (status === "closed") {
-            const reason = window.prompt(
-                "Closure reason (required). This is shared in chat and emailed to the customer."
+        if (status === "resolved" || status === "closed") {
+            setResolutionReason("");
+            setResolutionEmail(
+                isUserQueue
+                    ? (selectedRecord.userEmail ??
+                          selectedRecord.user?.email ??
+                          selectedRecord.order?.user?.email ??
+                          selectedRecord.intakeContext?.contactEmail ??
+                          "")
+                    : ""
             );
-            if (!reason?.trim()) {
-                toast.error("A closure reason is required.");
-                return;
-            }
-            resolutionSummary = reason.trim();
+            setResolutionDialog({ status });
+            return;
         }
 
         if (status === "reopened") {
-            const reason = window.prompt(
-                "Reopen reason (optional). Leave blank to reopen without a note."
-            );
-            resolutionSummary = reason?.trim() || undefined;
+            setResolutionReason("");
+            setResolutionEmail("");
+            setResolutionDialog({ status });
+            return;
         }
 
         const resolutionCode = terminalResolutionCodeByStatus[status];
@@ -891,6 +927,46 @@ export function AdminSupportPage({
             ...(resolutionCode ? { resolutionCode } : {}),
             ...(resolutionSummary ? { reason: resolutionSummary } : {}),
         });
+    };
+
+    const submitResolution = () => {
+        if (!selectedRecord || !resolutionDialog) return;
+        const reason = resolutionReason.trim();
+        if (resolutionDialog.status !== "reopened" && !reason) {
+            toast.error("A resolution reason is required.");
+            return;
+        }
+        if (
+            resolutionDialog.status !== "reopened" &&
+            isUserQueue &&
+            !resolutionEmail.trim()
+        ) {
+            toast.error("Please enter or confirm the customer email.");
+            return;
+        }
+
+        const status = resolutionDialog.status;
+        const resolutionCode = terminalResolutionCodeByStatus[status];
+
+        if (isUserQueue) {
+            updateUserStatusMutation.mutate({
+                ticketId: selectedRecord.id,
+                status,
+                ...(resolutionCode ? { resolutionCode } : {}),
+                ...(reason ? { resolutionSummary: reason } : {}),
+                ...(resolutionDialog.status !== "reopened"
+                    ? { deliveryEmail: resolutionEmail.trim() }
+                    : {}),
+            });
+        } else {
+            updateBrandStatusMutation.mutate({
+                ticketId: selectedRecord.id,
+                status,
+                ...(resolutionCode ? { resolutionCode } : {}),
+                ...(reason ? { reason } : {}),
+            });
+        }
+        setResolutionDialog(null);
     };
 
     const openCaseWorkspace = (ticketId: string) => {
@@ -1732,45 +1808,58 @@ export function AdminSupportPage({
                                                             {getSuggestedActions(
                                                                 selectedRecord.status,
                                                                 queue
-                                                            ).map((action) => (
-                                                                <button
-                                                                    key={`${selectedRecord.id}-${action.status}`}
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        updateSelectedStatus(
-                                                                            action.status
+                                                            )
+                                                                .filter(
+                                                                    (action) =>
+                                                                        action.status !==
+                                                                            "reopened" ||
+                                                                        isTerminalCaseStatus(
+                                                                            selectedRecord.status
                                                                         )
-                                                                    }
-                                                                    className={cn(
-                                                                        "rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                                                                        action.status ===
-                                                                            "reopened"
-                                                                            ? "border-emerald-700 bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600"
-                                                                            : action.status ===
-                                                                                    "resolved" ||
+                                                                )
+                                                                .map(
+                                                                    (
+                                                                        action
+                                                                    ) => (
+                                                                        <button
+                                                                            key={`${selectedRecord.id}-${action.status}`}
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                updateSelectedStatus(
+                                                                                    action.status
+                                                                                )
+                                                                            }
+                                                                            className={cn(
+                                                                                "rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                                                                                 action.status ===
-                                                                                    "refunded" ||
-                                                                                action.status ===
-                                                                                    "replaced"
-                                                                              ? "border-[#0F766E] bg-[#0F766E] text-white hover:bg-[#115E59] focus-visible:ring-[#0F766E]"
-                                                                              : action.status ===
-                                                                                      "closed" ||
-                                                                                  action.status ===
-                                                                                      "declined"
-                                                                                ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 focus-visible:ring-rose-500"
-                                                                                : action.status ===
-                                                                                        "waiting_customer" ||
-                                                                                    action.status ===
-                                                                                        "waiting_brand"
-                                                                                  ? "border-slate-300 bg-white text-[#16324F] hover:bg-slate-50 focus-visible:ring-slate-500"
-                                                                                  : "border-[#1F3B5B] bg-[#1F3B5B] text-white hover:bg-[#172C43] focus-visible:ring-[#1F3B5B]"
-                                                                    )}
-                                                                >
-                                                                    {
-                                                                        action.label
-                                                                    }
-                                                                </button>
-                                                            ))}
+                                                                                    "reopened"
+                                                                                    ? "border-emerald-700 bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600"
+                                                                                    : action.status ===
+                                                                                            "resolved" ||
+                                                                                        action.status ===
+                                                                                            "refunded" ||
+                                                                                        action.status ===
+                                                                                            "replaced"
+                                                                                      ? "border-[#0F766E] bg-[#0F766E] text-white hover:bg-[#115E59] focus-visible:ring-[#0F766E]"
+                                                                                      : action.status ===
+                                                                                              "closed" ||
+                                                                                          action.status ===
+                                                                                              "declined"
+                                                                                        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 focus-visible:ring-rose-500"
+                                                                                        : action.status ===
+                                                                                                "waiting_customer" ||
+                                                                                            action.status ===
+                                                                                                "waiting_brand"
+                                                                                          ? "border-slate-300 bg-white text-[#16324F] hover:bg-slate-50 focus-visible:ring-slate-500"
+                                                                                          : "border-[#1F3B5B] bg-[#1F3B5B] text-white hover:bg-[#172C43] focus-visible:ring-[#1F3B5B]"
+                                                                            )}
+                                                                        >
+                                                                            {
+                                                                                action.label
+                                                                            }
+                                                                        </button>
+                                                                    )
+                                                                )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -1800,13 +1889,27 @@ export function AdminSupportPage({
                                                                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#147D73]">
                                                                     Linked order
                                                                 </p>
-                                                                <p className="mt-1 text-lg font-semibold text-slate-900">
+                                                                <button
+                                                                    type="button"
+                                                                    title="Copy order ID"
+                                                                    onClick={async () => {
+                                                                        await navigator.clipboard.writeText(
+                                                                            selectedRecord
+                                                                                .order
+                                                                                .id
+                                                                        );
+                                                                        toast.success(
+                                                                            "Order ID copied"
+                                                                        );
+                                                                    }}
+                                                                    className="mt-1 block text-left text-lg font-semibold text-slate-900 underline-offset-4 hover:text-[#147D73] hover:underline"
+                                                                >
                                                                     {
                                                                         selectedRecord
                                                                             .order
                                                                             .id
                                                                     }
-                                                                </p>
+                                                                </button>
                                                                 <p className="mt-1 text-xs text-slate-500">
                                                                     Placed{" "}
                                                                     {selectedRecord
@@ -1823,20 +1926,6 @@ export function AdminSupportPage({
                                                             </div>
 
                                                             <div className="flex flex-wrap gap-2">
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="h-8 rounded-md text-xs"
-                                                                    onClick={() =>
-                                                                        navigator.clipboard.writeText(
-                                                                            selectedRecord
-                                                                                .order
-                                                                                .id
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Copy order
-                                                                    ID
-                                                                </Button>
                                                                 {getOrderDetailsHref(
                                                                     selectedRecord.order
                                                                 ) && (
@@ -2913,6 +3002,88 @@ export function AdminSupportPage({
                     </div>
                 </div>
             )}
+            <Dialog
+                open={!!resolutionDialog}
+                onOpenChange={(open) => !open && setResolutionDialog(null)}
+            >
+                <DialogContent className="max-w-xl rounded-md border-slate-200 p-5 [&_button]:!rounded-none">
+                    <DialogHeader>
+                        <DialogTitle className="text-base text-slate-950">
+                            {resolutionDialog?.status === "reopened"
+                                ? "Reopen case"
+                                : resolutionDialog?.status === "closed"
+                                  ? "Close case and notify customer"
+                                  : "Resolve case and notify customer"}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-500">
+                            {resolutionDialog?.status === "reopened"
+                                ? "Reopen this case to restore chat and support actions. You can add an optional note for the customer timeline."
+                                : "The reason will appear in the customer chat and in the email sent for this case."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {isUserQueue && resolutionDialog?.status !== "reopened" && (
+                        <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                            Customer email
+                            <Input
+                                type="email"
+                                value={resolutionEmail}
+                                onChange={(event) =>
+                                    setResolutionEmail(event.target.value)
+                                }
+                                placeholder="customer@example.com"
+                                className="h-10 rounded-none border-slate-300"
+                            />
+                        </label>
+                    )}
+                    <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                        {resolutionDialog?.status === "reopened"
+                            ? "Reopen reason (optional)"
+                            : "Resolution reason"}{" "}
+                        {resolutionDialog?.status !== "reopened" && (
+                            <span className="text-rose-600">*</span>
+                        )}
+                        <textarea
+                            value={resolutionReason}
+                            onChange={(event) =>
+                                setResolutionReason(event.target.value)
+                            }
+                            placeholder={
+                                resolutionDialog?.status === "reopened"
+                                    ? "Example: Customer sent additional information for review."
+                                    : "Explain what was resolved and why the case is being closed."
+                            }
+                            rows={5}
+                            className="w-full resize-none rounded-none border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#16324F]"
+                        />
+                    </label>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-none"
+                            onClick={() => setResolutionDialog(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            className="rounded-none bg-[#147D73] text-white hover:bg-[#0F625A]"
+                            onClick={submitResolution}
+                            disabled={
+                                updateUserStatusMutation.isPending ||
+                                updateBrandStatusMutation.isPending
+                            }
+                        >
+                            {resolutionDialog?.status === "reopened"
+                                ? "Reopen case"
+                                : resolutionDialog?.status === "closed"
+                                  ? "Close and send email"
+                                  : "Resolve and send email"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {approvalPreview && (
                 <div className="fixed inset-0 z-[79] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-[2px]">
                     <div className="w-full max-w-3xl rounded-[30px] border border-[#D7E2EF] bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
