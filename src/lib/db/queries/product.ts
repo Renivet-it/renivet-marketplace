@@ -1,5 +1,5 @@
-import { hasMedia, noMedia } from "@/lib/db/helperfilter";
 import { evaluateCatalogQc } from "@/lib/catalog/qc";
+import { hasMedia, noMedia } from "@/lib/db/helperfilter";
 import {
     auditEntityChange,
     createOperationalAlert,
@@ -38,9 +38,9 @@ import {
 } from "drizzle-orm";
 import { db } from "..";
 import {
+    backInStockRequests,
     beautyNewArrivals,
     beautyTopPicks,
-    backInStockRequests,
     brands,
     categories,
     homeandlivingNewArrival,
@@ -54,8 +54,8 @@ import {
     menPageFeaturedProducts,
     newProductEventPage,
     orderItems,
-    ordersIntent,
     orders,
+    ordersIntent,
     productEvents,
     productOptions,
     products,
@@ -87,10 +87,7 @@ type EventFilters = {
     sortOrder?: "asc" | "desc" | undefined;
 };
 
-type CatalogIssueFilter =
-    | "oos_but_live"
-    | "stale_inventory"
-    | "claim_mismatch";
+type CatalogIssueFilter = "oos_but_live" | "stale_inventory" | "claim_mismatch";
 
 const toNonNegativeInt = (value: unknown) => {
     const numeric = Number(value);
@@ -387,7 +384,8 @@ class ProductQuery {
                 ? row.variants
                       .filter((variant) => !variant.isDeleted)
                       .reduce(
-                          (total, variant) => total + Math.max(variant.quantity ?? 0, 0),
+                          (total, variant) =>
+                              total + Math.max(variant.quantity ?? 0, 0),
                           0
                       )
                 : Math.max(row.quantity ?? 0, 0);
@@ -469,9 +467,7 @@ class ProductQuery {
                 title: "Critical catalog QC issues detected",
                 message: `${product.title} has critical catalog issues that need attention.`,
                 ownerRole:
-                    snapshot.qcEscalatedTo === "kp"
-                        ? "kp"
-                        : "catalog_intern",
+                    snapshot.qcEscalatedTo === "kp" ? "kp" : "catalog_intern",
                 dedupeKey: `catalog-qc-critical:${productId}:${snapshot.qcFindings
                     .map((finding) => finding.code)
                     .sort()
@@ -498,11 +494,17 @@ class ProductQuery {
 
     async refreshProductAvailabilityAndQc(
         productIds: string[],
-        inventorySource: "manual" | "unicommerce" | "order_adjustment" = "manual",
+        inventorySource:
+            | "manual"
+            | "unicommerce"
+            | "order_adjustment" = "manual",
         actorId?: string | null
     ) {
         const uniqueProductIds = Array.from(new Set(productIds));
-        await this.reconcileAvailabilityForProducts(uniqueProductIds, inventorySource);
+        await this.reconcileAvailabilityForProducts(
+            uniqueProductIds,
+            inventorySource
+        );
         await this.refreshManyProductQc(uniqueProductIds, actorId);
     }
 
@@ -688,7 +690,9 @@ class ProductQuery {
         const filters = and(
             eq(products.isDeleted, false),
             getCatalogSummarySearchFilter(search),
-            !!brandIds?.length ? inArray(products.brandId, brandIds) : undefined,
+            !!brandIds?.length
+                ? inArray(products.brandId, brandIds)
+                : undefined,
             verificationStatus
                 ? eq(products.verificationStatus, verificationStatus)
                 : undefined,
@@ -713,24 +717,15 @@ class ProductQuery {
         const rows = await db
             .select({
                 totalProducts: count(products.id),
-                criticalCount:
-                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'critical')`,
-                warningCount:
-                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'warning')`,
-                passCount:
-                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'pass')`,
-                zeroImageCount:
-                    sql<number>`COUNT(*) FILTER (WHERE jsonb_array_length(${products.media}) = 0)`,
-                lowImageCount:
-                    sql<number>`COUNT(*) FILTER (WHERE jsonb_array_length(${products.media}) > 0 AND jsonb_array_length(${products.media}) < 3)`,
-                oosAvailableCount:
-                    sql<number>`COUNT(*) FILTER (WHERE ${products.isAvailable} = true AND ${stockExpr} <= 0)`,
-                staleInventoryCount:
-                    sql<number>`COUNT(*) FILTER (WHERE COALESCE(${products.inventoryLastSyncedAt}, ${products.updatedAt}) < NOW() - interval '14 days')`,
-                claimMismatchCount:
-                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcFindings}::text LIKE '%claim_scope_mismatch%' OR ${products.qcFindings}::text LIKE '%claim_without_brand_scope%')`,
-                suspiciousPricingCount:
-                    sql<number>`COUNT(*) FILTER (WHERE ${products.qcFindings}::text LIKE '%suspicious_discount%')`,
+                criticalCount: sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'critical')`,
+                warningCount: sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'warning')`,
+                passCount: sql<number>`COUNT(*) FILTER (WHERE ${products.qcStatus} = 'pass')`,
+                zeroImageCount: sql<number>`COUNT(*) FILTER (WHERE jsonb_array_length(${products.media}) = 0)`,
+                lowImageCount: sql<number>`COUNT(*) FILTER (WHERE jsonb_array_length(${products.media}) > 0 AND jsonb_array_length(${products.media}) < 3)`,
+                oosAvailableCount: sql<number>`COUNT(*) FILTER (WHERE ${products.isAvailable} = true AND ${stockExpr} <= 0)`,
+                staleInventoryCount: sql<number>`COUNT(*) FILTER (WHERE COALESCE(${products.inventoryLastSyncedAt}, ${products.updatedAt}) < NOW() - interval '14 days')`,
+                claimMismatchCount: sql<number>`COUNT(*) FILTER (WHERE ${products.qcFindings}::text LIKE '%claim_scope_mismatch%' OR ${products.qcFindings}::text LIKE '%claim_without_brand_scope%')`,
+                suspiciousPricingCount: sql<number>`COUNT(*) FILTER (WHERE ${products.qcFindings}::text LIKE '%suspicious_discount%')`,
                 avgQcScore: sql<number>`COALESCE(ROUND(AVG(${products.qcScore})), 0)`,
             })
             .from(products)
@@ -750,8 +745,8 @@ class ProductQuery {
         const duplicateGroupCount = Array.isArray(duplicateGroups)
             ? Number((duplicateGroups[0] as { count?: number })?.count ?? 0)
             : Number(
-                  (duplicateGroups as { rows?: Array<{ count?: number }> })?.rows?.[0]
-                      ?.count ?? 0
+                  (duplicateGroups as { rows?: Array<{ count?: number }> })
+                      ?.rows?.[0]?.count ?? 0
               );
 
         return {
@@ -764,7 +759,9 @@ class ProductQuery {
             oosAvailableCount: Number(rows[0]?.oosAvailableCount ?? 0),
             staleInventoryCount: Number(rows[0]?.staleInventoryCount ?? 0),
             claimMismatchCount: Number(rows[0]?.claimMismatchCount ?? 0),
-            suspiciousPricingCount: Number(rows[0]?.suspiciousPricingCount ?? 0),
+            suspiciousPricingCount: Number(
+                rows[0]?.suspiciousPricingCount ?? 0
+            ),
             avgQcScore: Number(rows[0]?.avgQcScore ?? 0),
             duplicateGroupCount,
         };
@@ -1277,11 +1274,12 @@ class ProductQuery {
                 : undefined,
             !!maxPrice
                 ? sql`(
-          (${products.price} IS NOT NULL AND ${products.price} <= ${maxPrice})
+          (${products.price} IS NOT NULL AND ${products.price} > 0 AND ${products.price} <= ${maxPrice})
           OR EXISTS (
             SELECT 1 FROM ${productVariants} pv
             WHERE pv.product_id = ${products.id}
             AND pv.price IS NOT NULL
+            AND pv.price > 0
             AND pv.price <= ${maxPrice}
             AND pv.is_deleted = false
           )
@@ -1486,8 +1484,9 @@ class ProductQuery {
                     ? sql`
             (
               SELECT COALESCE(
-                MIN(COALESCE(pv.price, ${products.price}, 0)),
-                COALESCE(${products.price}, 0)
+                MIN(NULLIF(pv.price, 0)),
+                NULLIF(${products.price}, 0),
+                0
               )
               FROM ${productVariants} pv
               WHERE pv.product_id = ${products.id}
@@ -5571,7 +5570,9 @@ class ProductQuery {
                 );
             }
             if (filters?.brandIds?.length) {
-                whereConditions.push(inArray(products.brandId, filters.brandIds));
+                whereConditions.push(
+                    inArray(products.brandId, filters.brandIds)
+                );
             }
 
             const colorOptions = await db
@@ -6044,7 +6045,9 @@ class ProductQuery {
                 );
             }
             if (filters?.brandIds?.length) {
-                whereConditions.push(inArray(products.brandId, filters.brandIds));
+                whereConditions.push(
+                    inArray(products.brandId, filters.brandIds)
+                );
             }
 
             const sizeOptions = await db
@@ -6119,7 +6122,9 @@ class ProductQuery {
                 );
             }
             if (filters?.brandIds?.length) {
-                whereConditions.push(inArray(products.brandId, filters.brandIds));
+                whereConditions.push(
+                    inArray(products.brandId, filters.brandIds)
+                );
             }
 
             const sizeOptions = await db
