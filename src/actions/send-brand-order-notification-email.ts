@@ -1,9 +1,10 @@
 "use server";
 
-import { resend } from "@/lib/resend";
-import { brandOrderNotification as BrandOrderNotification } from "@/lib/resend/emails";
 import { env } from "@/../env";
 import { orderQueries } from "@/lib/db/queries";
+import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
+import { brandOrderNotification as BrandOrderNotification } from "@/lib/resend/emails";
 import { format } from "date-fns";
 
 export async function sendBrandOrderNotificationEmail({
@@ -53,7 +54,7 @@ export async function sendBrandOrderNotificationEmail({
                     zip: brand.zip,
                     country: "India",
                 },
-            items: existingOrder.items.map((item) => ({
+                items: existingOrder.items.map((item) => ({
                     title: item.product.title,
                     slug: item.product.slug,
                     quantity: item.quantity,
@@ -61,20 +62,32 @@ export async function sendBrandOrderNotificationEmail({
                 })),
             },
         };
-        console.log(`Email data for brand ${brand.name} for order ${orderId}:`, emailData);
+        console.log(
+            `Email data for brand ${brand.name} for order ${orderId}:`,
+            emailData
+        );
 
         console.log(`Sending email from: ${env.RESEND_EMAIL_FROM}`);
         console.log(`Sending email to: ${brand.email}`);
         await resend.emails.send({
             from: env.RESEND_EMAIL_FROM,
             to: brand.email,
+            ...emailAuditBcc(),
             subject: `New Order Received: ${orderId}`,
             react: BrandOrderNotification(emailData),
         });
 
-        return { success: true, message: "Brand order notification email sent successfully" };
+        return {
+            success: true,
+            message: "Brand order notification email sent successfully",
+        };
     } catch (error) {
-        console.error(`Failed to send brand order notification email for order ${orderId}:`, error);
-        throw new Error(error instanceof Error ? error.message : "Failed to send email");
+        console.error(
+            `Failed to send brand order notification email for order ${orderId}:`,
+            error
+        );
+        throw new Error(
+            error instanceof Error ? error.message : "Failed to send email"
+        );
     }
 }

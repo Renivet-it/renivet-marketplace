@@ -446,8 +446,10 @@ import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
 import { db } from "@/lib/db";
 import { orderQueries, productQueries, refundQueries } from "@/lib/db/queries";
+import { razorpay } from "@/lib/razorpay";
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
 import {
     OrderPlaced,
     OrderPlaceFailed,
@@ -462,7 +464,6 @@ import {
 } from "@/lib/utils";
 import { razorpayPaymentWebhookSchema } from "@/lib/validations";
 import { NextRequest } from "next/server";
-import { razorpay } from "@/lib/razorpay";
 
 export async function POST(req: NextRequest) {
     try {
@@ -545,6 +546,7 @@ export async function POST(req: NextRequest) {
                             await resend.emails.send({
                                 from: env.RESEND_EMAIL_FROM,
                                 to: existingUser.email,
+                                ...emailAuditBcc(),
                                 subject: "Order Refund Initiated",
                                 react: OrderRefundInitiated({
                                     user: {
@@ -652,6 +654,7 @@ export async function POST(req: NextRequest) {
                         await resend.emails.send({
                             from: env.RESEND_EMAIL_FROM,
                             to: existingUser.email,
+                            ...emailAuditBcc(),
                             subject: "Order Placed Successfully",
                             react: OrderPlaced({
                                 user: {
@@ -762,6 +765,7 @@ export async function POST(req: NextRequest) {
                     await resend.emails.send({
                         from: env.RESEND_EMAIL_FROM,
                         to: user.email,
+                        ...emailAuditBcc(),
                         subject: "Order Payment Failed",
                         react: OrderPlaceFailed({
                             user: {

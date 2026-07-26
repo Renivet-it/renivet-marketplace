@@ -1000,10 +1000,11 @@ export default function AdminSupportPage() {
                                     </span>
                                 </div>
 
-                                <div className="hidden grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px] gap-3 border-b border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 lg:grid">
+                                <div className="hidden grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px_112px] gap-3 border-b border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 lg:grid">
                                     <span>Case</span>
                                     <span>Owner</span>
                                     <span className="text-right">Status</span>
+                                    <span className="text-right">Action</span>
                                 </div>
 
                                 <div className="max-h-[420px] overflow-y-auto xl:max-h-[480px]">
@@ -1012,10 +1013,12 @@ export default function AdminSupportPage() {
                                             key={item.id}
                                             type="button"
                                             onClick={() =>
-                                                setSelectedId(item.id)
+                                                router.push(
+                                                    `/dashboard/general/support/case/${item.id}?queue=${queue}`
+                                                )
                                             }
                                             className={cn(
-                                                "grid w-full gap-3 border-b border-[#EEF3F8] px-5 py-4 text-left transition last:border-b-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px]",
+                                                "grid w-full gap-3 border-b border-[#EEF3F8] px-5 py-4 text-left transition last:border-b-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px_112px]",
                                                 selectedId === item.id
                                                     ? "bg-[#F1F8FF]"
                                                     : "bg-white hover:bg-[#FAFCFF]"
@@ -1063,6 +1066,11 @@ export default function AdminSupportPage() {
                                                 <StatusBadge
                                                     status={item.status}
                                                 />
+                                            </div>
+                                            <div className="hidden self-center text-right lg:block">
+                                                <span className="inline-flex border border-[#16324F] bg-[#16324F] px-3 py-1.5 text-xs font-semibold text-white">
+                                                    Open case
+                                                </span>
                                             </div>
                                         </button>
                                     ))}

@@ -5,6 +5,7 @@ import { orderQueries } from "@/lib/db/queries";
 import { orderShipments, returnShipments } from "@/lib/db/schema";
 import { analytics, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
 import { OrderDelivered } from "@/lib/resend/emails";
 import { swapRewardService } from "@/lib/services/swap-reward";
 import { AppError, CResponse, handleError } from "@/lib/utils";
@@ -207,6 +208,7 @@ async function handleDefaultShipmentFlow(
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: user.email,
+                ...emailAuditBcc(),
                 subject: "Your Order Has Been Delivered",
                 react: OrderDelivered({
                     user: {
@@ -257,7 +259,10 @@ async function handleDefaultShipmentFlow(
                 phone:
                     shipment.order.user?.phone ?? shipment.order.address?.phone,
                 customerName:
-                    [shipment.order.user?.firstName, shipment.order.user?.lastName]
+                    [
+                        shipment.order.user?.firstName,
+                        shipment.order.user?.lastName,
+                    ]
                         .filter(Boolean)
                         .join(" ") || shipment.order.address?.fullName,
                 orderId: shipment.order.id,

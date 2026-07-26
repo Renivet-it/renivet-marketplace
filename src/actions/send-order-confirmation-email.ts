@@ -1,10 +1,11 @@
 // File: /actions/send-order-confirmation-email.ts
 "use server";
 
-import { resend } from "@/lib/resend";
-import { OrderPlaced } from "@/lib/resend/emails";
 import { env } from "@/../env";
 import { orderQueries } from "@/lib/db/queries";
+import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
+import { OrderPlaced } from "@/lib/resend/emails";
 
 export async function sendOrderConfirmationEmail({
     orderId,
@@ -49,13 +50,19 @@ export async function sendOrderConfirmationEmail({
         await resend.emails.send({
             from: env.RESEND_EMAIL_FROM,
             to: user.email,
+            ...emailAuditBcc(),
             subject: "Order Placed Successfully",
             react: OrderPlaced(emailData),
         });
 
-        return { success: true, message: "Order confirmation email sent successfully" };
+        return {
+            success: true,
+            message: "Order confirmation email sent successfully",
+        };
     } catch (error) {
         console.error("Failed to send order confirmation email:", error);
-        throw new Error(error instanceof Error ? error.message : "Failed to send email");
+        throw new Error(
+            error instanceof Error ? error.message : "Failed to send email"
+        );
     }
 }

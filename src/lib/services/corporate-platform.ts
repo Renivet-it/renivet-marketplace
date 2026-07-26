@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { env } from "@/../env";
 import {
     extractCorporateDeliveryAddress,
@@ -6,81 +7,82 @@ import {
 } from "@/lib/corporate-delivery-address";
 import { db } from "@/lib/db";
 import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
-import { createOrder } from "@/lib/delhivery/orders";
-import { schedulePickup } from "@/lib/delhivery/pickup";
 import {
     brandConfidentials,
-    brands,
     brandMembers,
+    brands,
     corporateActivityTimeline,
     corporateAdminAuditLogs,
     corporateBrandAuditLogs,
     corporateDocuments,
     corporateEscalations,
+    corporateFabricCompositions,
+    corporateGsmOptions,
     corporateNotifications,
-    corporateOrderStatusHistory,
     corporateOrders,
+    corporateOrderStatusHistory,
     corporatePayments,
     corporateProductConfigs,
     corporateProductTypes,
     corporateProfiles,
     corporateProformaInvoices,
     corporatePurchaseOrders,
-    corporateReplacementRequests,
-    corporateRtoShipments,
-    corporateFabricCompositions,
-    corporateGsmOptions,
     corporateQcImages,
     corporateQcSubmissions,
     corporateQuoteRevisions,
     corporateQuotes,
+    corporateRefunds,
+    corporateReplacementRequests,
     corporateReports,
-    corporateRfqs,
     corporateRfqBrandMatches,
     corporateRfqDocuments,
+    corporateRfqs,
+    corporateRtoShipments,
     corporateShipments,
-    corporateTaxInvoices,
     corporateTasks,
-    corporateRefunds,
+    corporateTaxInvoices,
     packingTypes,
     products,
 } from "@/lib/db/schema";
-import {
-    corporateCatalogListInputSchema,
-    corporateApprovedQuoteOrderInputSchema,
-    corporateDashboardSummarySchema,
-    corporateForwardOrderInputSchema,
-    corporatePaymentInputSchema,
-    corporatePickupScheduleInputSchema,
-    corporateProfileInputSchema,
-    corporateReportInputSchema,
-    corporatePurchaseOrderInputSchema,
-    corporatePurchaseOrderReviewInputSchema,
-    corporateQcSubmissionInputSchema,
-    corporateQuoteDecisionInputSchema,
-    corporateQuoteInputSchema,
-    corporateQuoteRevisionInputSchema,
-    corporateRfqInputSchema,
-    corporateShipmentInputSchema,
-    corporateProformaInvoiceInputSchema,
-    corporateReplacementRequestInputSchema,
-    corporateReplacementReviewInputSchema,
-    corporateTaskInputSchema,
-    corporateTaxInvoiceInputSchema,
-} from "@/lib/validations/corporate-platform";
-import { CorporateOrderWorkflowStatus } from "@/lib/validations/corporate-order";
+import { createOrder } from "@/lib/delhivery/orders";
+import { schedulePickup } from "@/lib/delhivery/pickup";
 import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
 import {
-    CorporateReplacementRequestAdminEmail,
     CorporateOrderCustomerReadyForDispatchEmail,
     CorporateOrderDeliveredEmail,
     CorporateOrderReadyForDispatchEmail,
+    CorporateReplacementRequestAdminEmail,
 } from "@/lib/resend/emails";
 import {
     convertValueToLabel,
     generatePickupLocationCode,
     getAbsoluteURL,
 } from "@/lib/utils";
+import { CorporateOrderWorkflowStatus } from "@/lib/validations/corporate-order";
+import {
+    corporateApprovedQuoteOrderInputSchema,
+    corporateCatalogListInputSchema,
+    corporateDashboardSummarySchema,
+    corporateForwardOrderInputSchema,
+    corporatePaymentInputSchema,
+    corporatePickupScheduleInputSchema,
+    corporateProfileInputSchema,
+    corporateProformaInvoiceInputSchema,
+    corporatePurchaseOrderInputSchema,
+    corporatePurchaseOrderReviewInputSchema,
+    corporateQcSubmissionInputSchema,
+    corporateQuoteDecisionInputSchema,
+    corporateQuoteInputSchema,
+    corporateQuoteRevisionInputSchema,
+    corporateReplacementRequestInputSchema,
+    corporateReplacementReviewInputSchema,
+    corporateReportInputSchema,
+    corporateRfqInputSchema,
+    corporateShipmentInputSchema,
+    corporateTaskInputSchema,
+    corporateTaxInvoiceInputSchema,
+} from "@/lib/validations/corporate-platform";
 import { TRPCError } from "@trpc/server";
 import {
     and,
@@ -93,7 +95,6 @@ import {
     like,
     notInArray,
 } from "drizzle-orm";
-import crypto from "crypto";
 
 const corporateReplacementReasonLabels = {
     size_issue: "Size issue",
@@ -121,18 +122,25 @@ function parseCorporateOpsEmails() {
 }
 
 class CorporatePlatformService {
-    private readonly brandManagedOrderStatuses: CorporateOrderWorkflowStatus[] = [
-        "under_review",
-        "approved",
-        "in_production",
-        "quality_check",
-        "ready_for_dispatch",
-        "dispatched",
-        "delivered",
-        "completed",
-    ];
+    private readonly brandManagedOrderStatuses: CorporateOrderWorkflowStatus[] =
+        [
+            "under_review",
+            "approved",
+            "in_production",
+            "quality_check",
+            "ready_for_dispatch",
+            "dispatched",
+            "delivered",
+            "completed",
+        ];
 
-    private async createEvent(entityType: string, entityId: string, eventName: string, details: Record<string, unknown>, createdBy?: string) {
+    private async createEvent(
+        entityType: string,
+        entityId: string,
+        eventName: string,
+        details: Record<string, unknown>,
+        createdBy?: string
+    ) {
         await Promise.all([
             db.insert(corporateActivityTimeline).values({
                 entityType,
@@ -192,7 +200,8 @@ class CorporatePlatformService {
             quote.profile.companyName.trim().toLowerCase() ===
                 purchaseOrder.companyName.trim().toLowerCase()
         );
-        const orderValueMatches = !!quote && quote.totalAmountPaise === purchaseOrder.poValuePaise;
+        const orderValueMatches =
+            !!quote && quote.totalAmountPaise === purchaseOrder.poValuePaise;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const deliveryDateFeasible = purchaseOrder.deliveryDate
@@ -205,14 +214,24 @@ class CorporatePlatformService {
         );
 
         const issues = [
-            companyNameMatches ? null : "Company name does not match the approved quote",
-            orderValueMatches ? null : "Purchase order value does not match the quote total",
-            deliveryDateFeasible ? null : "Delivery date is missing or not feasible",
-            productScopeMatches ? null : "Product scope confirmation is missing",
+            companyNameMatches
+                ? null
+                : "Company name does not match the approved quote",
+            orderValueMatches
+                ? null
+                : "Purchase order value does not match the quote total",
+            deliveryDateFeasible
+                ? null
+                : "Delivery date is missing or not feasible",
+            productScopeMatches
+                ? null
+                : "Product scope confirmation is missing",
             authorizedSignatoryPresent
                 ? null
                 : "Authorized signatory details are missing",
-            purchaseOrder.uploadedFileUrl ? null : "Purchase order document is missing",
+            purchaseOrder.uploadedFileUrl
+                ? null
+                : "Purchase order document is missing",
         ].filter(Boolean) as string[];
 
         return {
@@ -267,10 +286,7 @@ class CorporatePlatformService {
 
         const matchedByQuoteNumberInNotes =
             await db.query.corporateOrders.findFirst({
-                where: like(
-                    corporateOrders.customerNotes,
-                    `%${quoteNumber}%`
-                ),
+                where: like(corporateOrders.customerNotes, `%${quoteNumber}%`),
                 orderBy: [desc(corporateOrders.createdAt)],
             });
 
@@ -305,6 +321,7 @@ class CorporatePlatformService {
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: opsEmails,
+                ...emailAuditBcc(),
                 subject: `Dispatch ready: ${params.order.publicOrderId}`,
                 react: CorporateOrderReadyForDispatchEmail({
                     order: {
@@ -344,6 +361,7 @@ class CorporatePlatformService {
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: params.order.emailAddress.trim(),
+                ...emailAuditBcc(),
                 subject: `Your order is ready for dispatch: ${params.order.publicOrderId}`,
                 react: CorporateOrderCustomerReadyForDispatchEmail({
                     order: params.order,
@@ -381,6 +399,7 @@ class CorporatePlatformService {
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: params.order.emailAddress.trim(),
+                ...emailAuditBcc(),
                 subject: `Your order has been delivered: ${params.order.publicOrderId}`,
                 react: CorporateOrderDeliveredEmail({
                     order: params.order,
@@ -422,6 +441,7 @@ class CorporatePlatformService {
             await resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: opsEmails,
+                ...emailAuditBcc(),
                 subject: `Replacement request raised: ${params.order.publicOrderId}`,
                 react: CorporateReplacementRequestAdminEmail({
                     order: params.order,
@@ -542,12 +562,12 @@ class CorporatePlatformService {
         if (!quote.profile) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Cannot create enterprise order without a linked buyer profile",
+                message:
+                    "Cannot create enterprise order without a linked buyer profile",
             });
         }
 
-        const taxableValue =
-            quote.subtotalPaise + quote.customizationCostPaise;
+        const taxableValue = quote.subtotalPaise + quote.customizationCostPaise;
         const gstRateBps = taxableValue
             ? Math.round((quote.gstAmountPaise / taxableValue) * 10000)
             : 0;
@@ -623,11 +643,13 @@ class CorporatePlatformService {
                 totalPaise: quote.totalAmountPaise,
                 advancePercentBps: quote.totalAmountPaise
                     ? Math.round(
-                          (quote.advanceAmountPaise / quote.totalAmountPaise) * 10000
+                          (quote.advanceAmountPaise / quote.totalAmountPaise) *
+                              10000
                       )
                     : 0,
                 advancePaidPaise: 0,
-                balanceDuePaise: quote.balanceAmountPaise || quote.totalAmountPaise,
+                balanceDuePaise:
+                    quote.balanceAmountPaise || quote.totalAmountPaise,
                 balancePaymentStatus: "pending",
                 customerNotes:
                     context.customerNotes ??
@@ -653,7 +675,10 @@ class CorporatePlatformService {
     }) {
         const { sourceOrder, requestedQuantity, replacementRequestId } = params;
         const totalPaise = sourceOrder.quantity
-            ? Math.round((sourceOrder.totalPaise / sourceOrder.quantity) * requestedQuantity)
+            ? Math.round(
+                  (sourceOrder.totalPaise / sourceOrder.quantity) *
+                      requestedQuantity
+              )
             : 0;
         const subtotalPaise = sourceOrder.quantity
             ? Math.round(
@@ -668,7 +693,10 @@ class CorporatePlatformService {
               )
             : 0;
         const gstPaise = sourceOrder.quantity
-            ? Math.round((sourceOrder.gstPaise / sourceOrder.quantity) * requestedQuantity)
+            ? Math.round(
+                  (sourceOrder.gstPaise / sourceOrder.quantity) *
+                      requestedQuantity
+              )
             : 0;
         const sourceSnapshot = (sourceOrder.companySnapshot ?? {}) as Record<
             string,
@@ -741,7 +769,8 @@ class CorporatePlatformService {
                 razorpayPaymentId: sourceOrder.razorpayPaymentId,
                 razorpaySignature: sourceOrder.razorpaySignature,
                 paymentReference:
-                    sourceOrder.paymentReference ?? sourceOrder.razorpayPaymentId,
+                    sourceOrder.paymentReference ??
+                    sourceOrder.razorpayPaymentId,
                 balancePaymentStatus: "paid",
                 customerNotes:
                     "Replacement order created after corporate replacement approval",
@@ -790,12 +819,23 @@ class CorporatePlatformService {
         order?: typeof corporateOrders.$inferSelect | null;
         replacementOrder?: typeof corporateOrders.$inferSelect | null;
         rtoShipment?: typeof corporateRtoShipments.$inferSelect | null;
-        requestedBy?: { id: string; firstName: string | null; lastName: string | null; email: string | null } | null;
-        reviewedBy?: { id: string; firstName: string | null; lastName: string | null; email: string | null } | null;
+        requestedBy?: {
+            id: string;
+            firstName: string | null;
+            lastName: string | null;
+            email: string | null;
+        } | null;
+        reviewedBy?: {
+            id: string;
+            firstName: string | null;
+            lastName: string | null;
+            email: string | null;
+        } | null;
     }) {
         return {
             ...request,
-            reasonLabel: corporateReplacementReasonLabels[request.reasonCode] ?? "Other",
+            reasonLabel:
+                corporateReplacementReasonLabels[request.reasonCode] ?? "Other",
         };
     }
 
@@ -863,11 +903,10 @@ class CorporatePlatformService {
             });
         }
 
-        const pickupLocationCode =
-            generatePickupLocationCode({
-                brandId: params.order.brand.id,
-                brandName: params.order.brand.name,
-            });
+        const pickupLocationCode = generatePickupLocationCode({
+            brandId: params.order.brand.id,
+            brandName: params.order.brand.name,
+        });
 
         const brandConfidential = await db.query.brandConfidentials.findFirst({
             where: eq(brandConfidentials.id, params.order.brand.id),
@@ -906,13 +945,14 @@ class CorporatePlatformService {
         const reverseOrderCode = `${params.order.publicOrderId}-RTO-${params.request.id
             .slice(0, 8)
             .toUpperCase()}`;
-        const returnAddress = [
-            brandConfidential.warehouseAddressLine1,
-            brandConfidential.warehouseAddressLine2,
-        ]
-            .filter(Boolean)
-            .join(", ")
-            .trim() ||
+        const returnAddress =
+            [
+                brandConfidential.warehouseAddressLine1,
+                brandConfidential.warehouseAddressLine2,
+            ]
+                .filter(Boolean)
+                .join(", ")
+                .trim() ||
             [brandConfidential.addressLine1, brandConfidential.addressLine2]
                 .filter(Boolean)
                 .join(", ")
@@ -926,7 +966,8 @@ class CorporatePlatformService {
             brandConfidential.country ??
             "India";
         const returnPin =
-            brandConfidential.warehousePostalCode ?? brandConfidential.postalCode;
+            brandConfidential.warehousePostalCode ??
+            brandConfidential.postalCode;
 
         const reversePayload = {
             format: "json" as const,
@@ -998,7 +1039,8 @@ class CorporatePlatformService {
                       replacementRequestId: params.request.id,
                       provider: "delhivery",
                       pickupLocationCode,
-                      originalAwbNumber: params.order.shipment?.awbNumber ?? null,
+                      originalAwbNumber:
+                          params.order.shipment?.awbNumber ?? null,
                       reasonCode: params.request.reasonCode,
                       status: "draft",
                       rawPayload: baseRawPayload,
@@ -1049,7 +1091,8 @@ class CorporatePlatformService {
                 status: "requested",
                 reverseAwbNumber,
                 reverseTrackingNumber: reverseAwbNumber,
-                reverseTrackingUrl: this.getDelhiveryTrackingUrl(reverseAwbNumber),
+                reverseTrackingUrl:
+                    this.getDelhiveryTrackingUrl(reverseAwbNumber),
                 rawPayload: {
                     ...baseRawPayload,
                     response: rawData,
@@ -1148,7 +1191,10 @@ class CorporatePlatformService {
 
         const filtered = rows.filter((row) => {
             if (parsed.brandId && row.brandId !== parsed.brandId) return false;
-            if (parsed.categoryId && row.product.categoryId !== parsed.categoryId)
+            if (
+                parsed.categoryId &&
+                row.product.categoryId !== parsed.categoryId
+            )
                 return false;
             if (parsed.customizationAvailable) {
                 const hasCustomization = Object.values(
@@ -1166,7 +1212,8 @@ class CorporatePlatformService {
                     .filter(Boolean)
                     .join(" ")
                     .toLowerCase();
-                if (!haystack.includes(parsed.search.toLowerCase())) return false;
+                if (!haystack.includes(parsed.search.toLowerCase()))
+                    return false;
             }
             return true;
         });
@@ -1195,7 +1242,10 @@ class CorporatePlatformService {
                       eq(products.isPublished, true),
                       notInArray(products.id, existingIds)
                   )
-                : and(eq(products.isDeleted, false), eq(products.isPublished, true)),
+                : and(
+                      eq(products.isDeleted, false),
+                      eq(products.isPublished, true)
+                  ),
             with: {
                 brand: true,
             },
@@ -1212,7 +1262,8 @@ class CorporatePlatformService {
                 productId: product.id,
                 brandId: product.brandId,
                 corporateTitle: product.title,
-                corporateDescription: product.description ?? "Corporate-ready product",
+                corporateDescription:
+                    product.description ?? "Corporate-ready product",
                 moq: 25,
                 maxCapacityPerOrder: 500,
                 monthlyCapacity: 1000,
@@ -1230,7 +1281,8 @@ class CorporatePlatformService {
                     custom_packaging: 0,
                 },
                 priceRangeMinPaise: product.price ?? 0,
-                priceRangeMaxPaise: product.compareAtPrice ?? product.price ?? 0,
+                priceRangeMaxPaise:
+                    product.compareAtPrice ?? product.price ?? 0,
                 sustainabilityNotes:
                     "Configured from marketplace catalog for corporate procurement.",
                 displayOrder: index + 1,
@@ -1365,7 +1417,8 @@ class CorporatePlatformService {
                 corporateProfileId: parsed.corporateProfileId,
                 brandId: parsed.brandId,
                 productId: parsed.productId ?? null,
-                corporateProductConfigId: parsed.corporateProductConfigId ?? null,
+                corporateProductConfigId:
+                    parsed.corporateProductConfigId ?? null,
                 productTypeId: parsed.productTypeId ?? null,
                 gsmOptionId: parsed.gsmOptionId ?? null,
                 fabricCompositionId: parsed.fabricCompositionId ?? null,
@@ -1585,17 +1638,19 @@ class CorporatePlatformService {
             });
         }
 
-        const existingOpenRequest = await db.query.corporateReplacementRequests.findFirst({
-            where: and(
-                eq(corporateReplacementRequests.orderId, order.id),
-                eq(corporateReplacementRequests.status, "requested")
-            ),
-        });
+        const existingOpenRequest =
+            await db.query.corporateReplacementRequests.findFirst({
+                where: and(
+                    eq(corporateReplacementRequests.orderId, order.id),
+                    eq(corporateReplacementRequests.status, "requested")
+                ),
+            });
 
         if (existingOpenRequest) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "A replacement request is already pending for this order",
+                message:
+                    "A replacement request is already pending for this order",
             });
         }
 
@@ -1663,7 +1718,8 @@ class CorporatePlatformService {
             request: {
                 id: created.id,
                 requestedQuantity: created.requestedQuantity,
-                reasonCode: created.reasonCode as keyof typeof corporateReplacementReasonLabels,
+                reasonCode:
+                    created.reasonCode as keyof typeof corporateReplacementReasonLabels,
                 reasonDetails: created.reasonDetails,
             },
         });
@@ -1702,14 +1758,14 @@ class CorporatePlatformService {
 
         const reviewedAt = new Date().toISOString().slice(0, 10);
         let replacementOrderId: string | null = null;
-        let corporateRtoShipmentId: string | null = request.rtoShipment?.id ?? null;
-        let reverseAwbNumber: string | null = request.rtoShipment?.reverseAwbNumber ?? null;
+        let corporateRtoShipmentId: string | null =
+            request.rtoShipment?.id ?? null;
+        let reverseAwbNumber: string | null =
+            request.rtoShipment?.reverseAwbNumber ?? null;
         let latestRtoShipment = request.rtoShipment;
-        let forwardOrderResult:
-            | {
-                  awbNumber: string | null;
-              }
-            | null = null;
+        let forwardOrderResult: {
+            awbNumber: string | null;
+        } | null = null;
 
         if (parsed.decision === "approved") {
             const createdRtoShipment =
@@ -1723,18 +1779,22 @@ class CorporatePlatformService {
             corporateRtoShipmentId = createdRtoShipment.id;
             reverseAwbNumber = createdRtoShipment.reverseAwbNumber ?? null;
 
-            const replacementOrder = await this.createReplacementOrderFromCorporateOrder({
-                sourceOrder: request.order,
-                requestedQuantity: request.requestedQuantity,
-                replacementRequestId: request.id,
-            });
+            const replacementOrder =
+                await this.createReplacementOrderFromCorporateOrder({
+                    sourceOrder: request.order,
+                    requestedQuantity: request.requestedQuantity,
+                    replacementRequestId: request.id,
+                });
             replacementOrderId = replacementOrder.id;
 
             const rawPayload =
                 request.order.shipment?.rawPayload &&
                 typeof request.order.shipment.rawPayload === "object" &&
                 !Array.isArray(request.order.shipment.rawPayload)
-                    ? (request.order.shipment.rawPayload as Record<string, unknown>)
+                    ? (request.order.shipment.rawPayload as Record<
+                          string,
+                          unknown
+                      >)
                     : null;
             const packageSelection =
                 rawPayload?.packageSelection &&
@@ -1754,7 +1814,12 @@ class CorporatePlatformService {
             const packageSource =
                 packageSelection?.source === "custom" ? "custom" : "preset";
 
-            if (lengthCm > 0 && widthCm > 0 && heightCm > 0 && weightGrams > 0) {
+            if (
+                lengthCm > 0 &&
+                widthCm > 0 &&
+                heightCm > 0 &&
+                weightGrams > 0
+            ) {
                 try {
                     const forwardCreated = await this.createForwardOrder(
                         actorUserId,
@@ -1795,7 +1860,7 @@ class CorporatePlatformService {
                           ]
                               .filter(Boolean)
                               .join(" ")
-                        : parsed.adminNote ?? null,
+                        : (parsed.adminNote ?? null),
                 reviewedByUserId: actorUserId,
                 reviewedAt,
                 replacementOrderId,
@@ -2013,21 +2078,24 @@ class CorporatePlatformService {
         if (!profile || profile.id !== quote.corporateProfileId) {
             throw new TRPCError({
                 code: "FORBIDDEN",
-                message: "You do not have access to create a purchase order for this quote",
+                message:
+                    "You do not have access to create a purchase order for this quote",
             });
         }
 
         if (quote.status !== "approved") {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Purchase orders can only be uploaded after the quote is approved",
+                message:
+                    "Purchase orders can only be uploaded after the quote is approved",
             });
         }
 
         if (parsed.corporateProfileId !== quote.corporateProfileId) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Purchase order buyer company does not match the approved quote",
+                message:
+                    "Purchase order buyer company does not match the approved quote",
             });
         }
 
@@ -2038,7 +2106,8 @@ class CorporatePlatformService {
                 deliveryDate: parsed.deliveryDate ?? null,
                 productScopeSummary: parsed.productScopeSummary,
                 authorizedSignatoryName: parsed.authorizedSignatoryName,
-                authorizedSignatoryConfirmed: parsed.authorizedSignatoryConfirmed,
+                authorizedSignatoryConfirmed:
+                    parsed.authorizedSignatoryConfirmed,
                 uploadedFileUrl: parsed.uploadedFile.url,
             },
             quote
@@ -2056,7 +2125,8 @@ class CorporatePlatformService {
                 deliveryDate: parsed.deliveryDate ?? null,
                 productScopeSummary: parsed.productScopeSummary,
                 authorizedSignatoryName: parsed.authorizedSignatoryName,
-                authorizedSignatoryConfirmed: parsed.authorizedSignatoryConfirmed,
+                authorizedSignatoryConfirmed:
+                    parsed.authorizedSignatoryConfirmed,
                 uploadedFileUrl: parsed.uploadedFile.url,
                 validationIssues: validationSummary.issues,
                 status: "po_review",
@@ -2113,20 +2183,22 @@ class CorporatePlatformService {
               })
             : null;
 
-        const computedValidationSummary = this.buildPurchaseOrderValidationSummary(
-            {
-                companyName: purchaseOrder.companyName ?? null,
-                poValuePaise: purchaseOrder.poValuePaise,
-                deliveryDate: purchaseOrder.deliveryDate ?? null,
-                productScopeSummary: purchaseOrder.productScopeSummary ?? null,
-                authorizedSignatoryName:
-                    purchaseOrder.authorizedSignatoryName ?? null,
-                authorizedSignatoryConfirmed:
-                    purchaseOrder.authorizedSignatoryConfirmed,
-                uploadedFileUrl: purchaseOrder.uploadedFileUrl ?? null,
-            },
-            quote
-        );
+        const computedValidationSummary =
+            this.buildPurchaseOrderValidationSummary(
+                {
+                    companyName: purchaseOrder.companyName ?? null,
+                    poValuePaise: purchaseOrder.poValuePaise,
+                    deliveryDate: purchaseOrder.deliveryDate ?? null,
+                    productScopeSummary:
+                        purchaseOrder.productScopeSummary ?? null,
+                    authorizedSignatoryName:
+                        purchaseOrder.authorizedSignatoryName ?? null,
+                    authorizedSignatoryConfirmed:
+                        purchaseOrder.authorizedSignatoryConfirmed,
+                    uploadedFileUrl: purchaseOrder.uploadedFileUrl ?? null,
+                },
+                quote
+            );
         const validationSummary = {
             ...computedValidationSummary,
             ...(parsed.validationSummary ?? {}),
@@ -2152,11 +2224,15 @@ class CorporatePlatformService {
         }
 
         let createdOrderId = purchaseOrder.corporateOrderId ?? null;
-        if (parsed.status === "po_accepted" && !purchaseOrder.corporateOrderId) {
+        if (
+            parsed.status === "po_accepted" &&
+            !purchaseOrder.corporateOrderId
+        ) {
             if (!quote) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "A linked quote is required before approving the purchase order",
+                    message:
+                        "A linked quote is required before approving the purchase order",
                 });
             }
 
@@ -2247,7 +2323,8 @@ class CorporatePlatformService {
         if (quote.status !== "approved") {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "Only approved quotes can be moved into order processing",
+                message:
+                    "Only approved quotes can be moved into order processing",
             });
         }
 
@@ -2477,8 +2554,8 @@ class CorporatePlatformService {
             typeof productSnapshot.productType === "object" &&
             productSnapshot.productType &&
             !Array.isArray(productSnapshot.productType) &&
-            typeof (productSnapshot.productType as Record<string, unknown>).name ===
-                "string"
+            typeof (productSnapshot.productType as Record<string, unknown>)
+                .name === "string"
                 ? ((productSnapshot.productType as Record<string, unknown>)
                       .name as string)
                 : "Corporate apparel";
@@ -2708,10 +2785,17 @@ class CorporatePlatformService {
                             pickupResponseRecord.error &&
                             !Array.isArray(pickupResponseRecord.error) &&
                             typeof (
-                                pickupResponseRecord.error as Record<string, unknown>
+                                pickupResponseRecord.error as Record<
+                                    string,
+                                    unknown
+                                >
                             ).message === "string"
-                          ? ((pickupResponseRecord.error as Record<string, unknown>)
-                                .message as string)
+                          ? ((
+                                pickupResponseRecord.error as Record<
+                                    string,
+                                    unknown
+                                >
+                            ).message as string)
                           : "Delhivery pickup could not be scheduled",
             });
         }
@@ -2947,7 +3031,8 @@ class CorporatePlatformService {
                 invoiceNumber: makeNumber("TI", sequence),
                 orderId: order.id,
                 invoiceDate: new Date().toISOString().slice(0, 10),
-                taxableValuePaise: order.subtotalPaise + order.customizationPaise,
+                taxableValuePaise:
+                    order.subtotalPaise + order.customizationPaise,
                 cgstPaise: gstHalf,
                 sgstPaise: order.gstPaise - gstHalf,
                 igstPaise: 0,
@@ -3040,31 +3125,34 @@ class CorporatePlatformService {
     }
 
     async listAdminFinance() {
-        const [payments, refunds, purchaseOrders, reports, quotes, orders] = await Promise.all([
-            db.query.corporatePayments.findMany({
-                orderBy: [desc(corporatePayments.createdAt)],
-            }),
-            db.query.corporateRefunds.findMany({
-                orderBy: [desc(corporateRefunds.createdAt)],
-            }),
-            db.query.corporatePurchaseOrders.findMany({
-                orderBy: [desc(corporatePurchaseOrders.createdAt)],
-            }),
-            db.query.corporateReports.findMany({
-                orderBy: [desc(corporateReports.createdAt)],
-            }),
-            this.listAdminQuotes(),
-            db.query.corporateOrders.findMany({
-                orderBy: [desc(corporateOrders.createdAt)],
-            }),
-        ]);
+        const [payments, refunds, purchaseOrders, reports, quotes, orders] =
+            await Promise.all([
+                db.query.corporatePayments.findMany({
+                    orderBy: [desc(corporatePayments.createdAt)],
+                }),
+                db.query.corporateRefunds.findMany({
+                    orderBy: [desc(corporateRefunds.createdAt)],
+                }),
+                db.query.corporatePurchaseOrders.findMany({
+                    orderBy: [desc(corporatePurchaseOrders.createdAt)],
+                }),
+                db.query.corporateReports.findMany({
+                    orderBy: [desc(corporateReports.createdAt)],
+                }),
+                this.listAdminQuotes(),
+                db.query.corporateOrders.findMany({
+                    orderBy: [desc(corporateOrders.createdAt)],
+                }),
+            ]);
 
         const quoteIds = Array.from(
             new Set(purchaseOrders.map((item) => item.quoteId).filter(Boolean))
         ) as string[];
         const profileIds = Array.from(
             new Set(
-                purchaseOrders.map((item) => item.corporateProfileId).filter(Boolean)
+                purchaseOrders
+                    .map((item) => item.corporateProfileId)
+                    .filter(Boolean)
             )
         ) as string[];
 
@@ -3089,17 +3177,18 @@ class CorporatePlatformService {
 
         const enrichedPurchaseOrders = purchaseOrders.map((purchaseOrder) => {
             const quote = purchaseOrder.quoteId
-                ? quoteById.get(purchaseOrder.quoteId) ?? null
+                ? (quoteById.get(purchaseOrder.quoteId) ?? null)
                 : null;
             const profile = purchaseOrder.corporateProfileId
-                ? profileById.get(purchaseOrder.corporateProfileId) ?? null
+                ? (profileById.get(purchaseOrder.corporateProfileId) ?? null)
                 : null;
             const validationSummary = this.buildPurchaseOrderValidationSummary(
                 {
                     companyName: purchaseOrder.companyName ?? null,
                     poValuePaise: purchaseOrder.poValuePaise,
                     deliveryDate: purchaseOrder.deliveryDate ?? null,
-                    productScopeSummary: purchaseOrder.productScopeSummary ?? null,
+                    productScopeSummary:
+                        purchaseOrder.productScopeSummary ?? null,
                     authorizedSignatoryName:
                         purchaseOrder.authorizedSignatoryName ?? null,
                     authorizedSignatoryConfirmed:
@@ -3154,15 +3243,21 @@ class CorporatePlatformService {
         const [rfqs, quotes, orders, tasks, escalations, refunds] =
             await Promise.all([
                 db.select({ status: corporateRfqs.status }).from(corporateRfqs),
-                db.select({ status: corporateQuotes.status }).from(corporateQuotes),
-                db.select({
-                    status: corporateOrders.status,
-                    balanceDuePaise: corporateOrders.balanceDuePaise,
-                }).from(corporateOrders),
-                db.select({ status: corporateTasks.status }).from(corporateTasks),
-                db.select({ status: corporateEscalations.status }).from(
-                    corporateEscalations
-                ),
+                db
+                    .select({ status: corporateQuotes.status })
+                    .from(corporateQuotes),
+                db
+                    .select({
+                        status: corporateOrders.status,
+                        balanceDuePaise: corporateOrders.balanceDuePaise,
+                    })
+                    .from(corporateOrders),
+                db
+                    .select({ status: corporateTasks.status })
+                    .from(corporateTasks),
+                db
+                    .select({ status: corporateEscalations.status })
+                    .from(corporateEscalations),
                 db.select({ id: corporateRefunds.id }).from(corporateRefunds),
             ]);
 
@@ -3175,21 +3270,27 @@ class CorporatePlatformService {
             quotesPending: quotes.filter((item) =>
                 ["sent", "customer_review"].includes(item.status)
             ).length,
-            activeOrders: orders.filter((item) =>
-                !["completed", "cancelled"].includes(item.status)
+            activeOrders: orders.filter(
+                (item) => !["completed", "cancelled"].includes(item.status)
             ).length,
             qcPending: orders.filter((item) =>
                 ["quality_check", "ready_for_dispatch"].includes(item.status)
             ).length,
             dispatchPending: orders.filter((item) =>
-                ["approved", "in_production", "quality_check", "ready_for_dispatch"].includes(
-                    item.status
-                )
+                [
+                    "approved",
+                    "in_production",
+                    "quality_check",
+                    "ready_for_dispatch",
+                ].includes(item.status)
             ).length,
-            paymentsPending: orders.filter((item) => item.balanceDuePaise > 0).length,
-            refundRequests: refunds.filter((item) => item.refundStatus === "pending")
+            paymentsPending: orders.filter((item) => item.balanceDuePaise > 0)
                 .length,
-            slaBreaches: escalations.filter((item) => item.status === "open").length,
+            refundRequests: refunds.filter(
+                (item) => item.refundStatus === "pending"
+            ).length,
+            slaBreaches: escalations.filter((item) => item.status === "open")
+                .length,
             outstandingBalancePaise: orders.reduce(
                 (sum, item) => sum + (item.balanceDuePaise ?? 0),
                 0
@@ -3238,29 +3339,37 @@ class CorporatePlatformService {
             )
         ) as string[];
 
-        const [productTypes, gsmOptions, fabricCompositions] = await Promise.all([
-            productTypeIds.length
-                ? db.query.corporateProductTypes.findMany({
-                      where: inArray(corporateProductTypes.id, productTypeIds),
-                  })
-                : Promise.resolve([]),
-            gsmOptionIds.length
-                ? db.query.corporateGsmOptions.findMany({
-                      where: inArray(corporateGsmOptions.id, gsmOptionIds),
-                  })
-                : Promise.resolve([]),
-            fabricCompositionIds.length
-                ? db.query.corporateFabricCompositions.findMany({
-                      where: inArray(
-                          corporateFabricCompositions.id,
-                          fabricCompositionIds
-                      ),
-                  })
-                : Promise.resolve([]),
-        ]);
+        const [productTypes, gsmOptions, fabricCompositions] =
+            await Promise.all([
+                productTypeIds.length
+                    ? db.query.corporateProductTypes.findMany({
+                          where: inArray(
+                              corporateProductTypes.id,
+                              productTypeIds
+                          ),
+                      })
+                    : Promise.resolve([]),
+                gsmOptionIds.length
+                    ? db.query.corporateGsmOptions.findMany({
+                          where: inArray(corporateGsmOptions.id, gsmOptionIds),
+                      })
+                    : Promise.resolve([]),
+                fabricCompositionIds.length
+                    ? db.query.corporateFabricCompositions.findMany({
+                          where: inArray(
+                              corporateFabricCompositions.id,
+                              fabricCompositionIds
+                          ),
+                      })
+                    : Promise.resolve([]),
+            ]);
 
-        const productTypeById = new Map(productTypes.map((item) => [item.id, item]));
-        const gsmOptionById = new Map(gsmOptions.map((item) => [item.id, item]));
+        const productTypeById = new Map(
+            productTypes.map((item) => [item.id, item])
+        );
+        const gsmOptionById = new Map(
+            gsmOptions.map((item) => [item.id, item])
+        );
         const fabricCompositionById = new Map(
             fabricCompositions.map((item) => [item.id, item])
         );
@@ -3298,7 +3407,10 @@ class CorporatePlatformService {
                         : null) ?? "Pending admin setup",
             },
             employeeRows: order.employeeRows.map((row, index) => ({
-                employeeCode: this.maskEmployeeName(row.employeeName ?? "", index),
+                employeeCode: this.maskEmployeeName(
+                    row.employeeName ?? "",
+                    index
+                ),
                 size: row.size,
             })),
             statusHistory: order.statusHistory.map((item) => ({
@@ -3340,7 +3452,8 @@ class CorporatePlatformService {
         if (!this.brandManagedOrderStatuses.includes(input.toStatus)) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message: "This status cannot be updated from the brand workspace",
+                message:
+                    "This status cannot be updated from the brand workspace",
             });
         }
 
@@ -3349,9 +3462,12 @@ class CorporatePlatformService {
             input.orderId
         );
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            status: input.toStatus,
-        });
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                status: input.toStatus,
+            }
+        );
 
         if (!updated) {
             throw new TRPCError({
@@ -3441,10 +3557,7 @@ class CorporatePlatformService {
             });
         }
 
-        if (
-            input.toStatus === "delivered" &&
-            order.status !== "delivered"
-        ) {
+        if (input.toStatus === "delivered" && order.status !== "delivered") {
             await this.notifyCustomerOrderDelivered({
                 order: {
                     id: order.id,

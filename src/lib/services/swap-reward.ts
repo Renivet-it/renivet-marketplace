@@ -4,21 +4,22 @@ import { orderQueries, swapRewardQueries } from "@/lib/db/queries";
 import {
     notifications,
     orderReturnRequests,
-    orderShipments,
     orders,
+    orderShipments,
     refunds,
     rewardRedemptions,
     swapRewardEvents,
     userSwapRewards,
 } from "@/lib/db/schema";
 import { posthog } from "@/lib/posthog/client";
+import { userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
 import {
     SwapRewardRedeemedEmail,
     SwapRewardStampEarnedEmail,
     SwapRewardUnlockedEmail,
 } from "@/lib/resend/emails";
-import { userCache } from "@/lib/redis/methods";
 import { sendPlainWhatsAppMessage } from "@/lib/whatsapp";
 import { TRPCError } from "@trpc/server";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
@@ -61,7 +62,12 @@ type HistoricalRewardOrder = {
     userId: string;
     orderId: string;
     deliveredAt: Date | string;
-    orderStatus: "pending" | "processing" | "shipped" | "delivered" | "cancelled";
+    orderStatus:
+        | "pending"
+        | "processing"
+        | "shipped"
+        | "delivered"
+        | "cancelled";
     paymentStatus:
         | "pending"
         | "paid"
@@ -108,7 +114,9 @@ function toIsoTimestamp(value: Date | string) {
 
     const parsed = new Date(value);
     if (Number.isNaN(parsed.getTime())) {
-        throw new Error(`Invalid historical delivery timestamp: ${String(value)}`);
+        throw new Error(
+            `Invalid historical delivery timestamp: ${String(value)}`
+        );
     }
 
     return parsed.toISOString();
@@ -157,6 +165,7 @@ async function notifyStampEarned(input: {
     await resend.emails.send({
         from: env.RESEND_EMAIL_FROM,
         to: user.email,
+        ...emailAuditBcc(),
         subject: "You've earned a new Renivet Stamp",
         react: SwapRewardStampEarnedEmail({
             firstName: user.firstName,
@@ -197,6 +206,7 @@ async function notifyRewardUnlocked(input: {
     await resend.emails.send({
         from: env.RESEND_EMAIL_FROM,
         to: user.email,
+        ...emailAuditBcc(),
         subject: "Your Renivet Reward is Ready",
         react: SwapRewardUnlockedEmail({
             firstName: user.firstName,
@@ -234,6 +244,7 @@ async function notifyRewardRedeemed(input: {
     await resend.emails.send({
         from: env.RESEND_EMAIL_FROM,
         to: user.email,
+        ...emailAuditBcc(),
         subject: "Your Renivet reward has been redeemed",
         react: SwapRewardRedeemedEmail({
             firstName: user.firstName,
@@ -262,7 +273,9 @@ class SwapRewardService {
             return swapRewardQueries.getOrCreateUserReward(order.userId);
         }
 
-        const state = await swapRewardQueries.getOrCreateUserReward(order.userId);
+        const state = await swapRewardQueries.getOrCreateUserReward(
+            order.userId
+        );
 
         if (state.rewardStatus === "unlocked") {
             return state;
@@ -370,7 +383,9 @@ class SwapRewardService {
             return swapRewardQueries.getOrCreateUserReward(order.userId);
         }
 
-        const state = await swapRewardQueries.getOrCreateUserReward(order.userId);
+        const state = await swapRewardQueries.getOrCreateUserReward(
+            order.userId
+        );
 
         if (earnedEvent.rewardCycle < state.activeRewardCycle) {
             return state;
@@ -443,7 +458,9 @@ class SwapRewardService {
         variantId?: string;
         mode?: "checkout" | "cart";
     }) {
-        const state = await swapRewardQueries.getOrCreateUserReward(input.userId);
+        const state = await swapRewardQueries.getOrCreateUserReward(
+            input.userId
+        );
         if (state.rewardStatus !== "unlocked") {
             throw new TRPCError({
                 code: "BAD_REQUEST",
@@ -607,7 +624,9 @@ class SwapRewardService {
             input.redemptionId
         );
 
-        const state = await swapRewardQueries.getOrCreateUserReward(input.userId);
+        const state = await swapRewardQueries.getOrCreateUserReward(
+            input.userId
+        );
         if (state.rewardStatus !== "unlocked") {
             throw new TRPCError({
                 code: "BAD_REQUEST",
@@ -672,7 +691,10 @@ class SwapRewardService {
         return REWARD_PRICE_CAP_PAISE;
     }
 
-    async backfillHistoricalRewards(options?: { userId?: string; dryRun?: boolean }) {
+    async backfillHistoricalRewards(options?: {
+        userId?: string;
+        dryRun?: boolean;
+    }) {
         const snapshots = await this.getHistoricalRewardOrders(options?.userId);
         const groupedSnapshots = new Map<string, HistoricalRewardOrder[]>();
 
@@ -683,8 +705,11 @@ class SwapRewardService {
         }
 
         const userIds = Array.from(groupedSnapshots.keys());
-        const skippedUserIds = await this.getUsersWithRewardRedemptions(userIds);
-        const rebuildableUserIds = userIds.filter((userId) => !skippedUserIds.has(userId));
+        const skippedUserIds =
+            await this.getUsersWithRewardRedemptions(userIds);
+        const rebuildableUserIds = userIds.filter(
+            (userId) => !skippedUserIds.has(userId)
+        );
 
         const summaries = rebuildableUserIds.map((userId) => {
             const state = cloneHistoricalState();
@@ -725,7 +750,9 @@ class SwapRewardService {
                         });
 
                     if (summary.events.length > 0) {
-                        await tx.insert(swapRewardEvents).values(summary.events);
+                        await tx
+                            .insert(swapRewardEvents)
+                            .values(summary.events);
                     }
                 });
             }
@@ -742,15 +769,17 @@ class SwapRewardService {
             totalStampedOrders: summaries.reduce(
                 (count, summary) =>
                     count +
-                    summary.events.filter((event) => event.type === "stamp_earned")
-                        .length,
+                    summary.events.filter(
+                        (event) => event.type === "stamp_earned"
+                    ).length,
                 0
             ),
             totalRevokedOrders: summaries.reduce(
                 (count, summary) =>
                     count +
-                    summary.events.filter((event) => event.type === "stamp_revoked")
-                        .length,
+                    summary.events.filter(
+                        (event) => event.type === "stamp_revoked"
+                    ).length,
                 0
             ),
             unlockedUsers: summaries.filter(
@@ -795,7 +824,11 @@ class SwapRewardService {
                     userId ? eq(orders.userId, userId) : undefined
                 )
             )
-            .orderBy(asc(deliveredAtExpr), asc(orders.createdAt), asc(orders.id));
+            .orderBy(
+                asc(deliveredAtExpr),
+                asc(orders.createdAt),
+                asc(orders.id)
+            );
 
         return rows.map((row) => {
             const revokeReason = row.hasProcessedRefund

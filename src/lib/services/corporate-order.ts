@@ -1,6 +1,11 @@
+import crypto from "crypto";
 import { env } from "@/../env";
-import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
+import {
+    fillCorporateDeliveryAddressDefaults,
+    formatCorporateDeliveryAddress,
+} from "@/lib/corporate-delivery-address";
 import { db } from "@/lib/db";
+import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
 import {
     corporateColorOptions,
     corporateExtraChargeRules,
@@ -14,34 +19,30 @@ import {
 } from "@/lib/db/schema";
 import { razorpay } from "@/lib/razorpay";
 import { resend } from "@/lib/resend";
-import {
-    fillCorporateDeliveryAddressDefaults,
-    formatCorporateDeliveryAddress,
-} from "@/lib/corporate-delivery-address";
-import {
-    corporateBalancePaymentConfirmationInputSchema,
-    corporateBalancePaymentOrderInputSchema,
-    CorporatePaymentPreference,
-    CorporateOrderFormInput,
-    CorporateOrderQuote,
-    CorporateOrderWorkflowStatus,
-    corporateConfigUpsertInputSchema,
-    corporateOrderFormInputSchema,
-    corporateOrderListInputSchema,
-    corporateOrderQuoteSchema,
-    corporateOrderUserListInputSchema,
-    corporatePaymentConfirmationInputSchema,
-} from "@/lib/validations/corporate-order";
-import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
 import {
     CorporateOrderBalanceReminderEmail,
     CorporateOrderDeliveredEmail,
     CorporateOrderInternalNotificationEmail,
     CorporateOrderReceivedEmail,
 } from "@/lib/resend/emails";
+import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
+import {
+    corporateBalancePaymentConfirmationInputSchema,
+    corporateBalancePaymentOrderInputSchema,
+    corporateConfigUpsertInputSchema,
+    CorporateOrderFormInput,
+    corporateOrderFormInputSchema,
+    corporateOrderListInputSchema,
+    CorporateOrderQuote,
+    corporateOrderQuoteSchema,
+    corporateOrderUserListInputSchema,
+    CorporateOrderWorkflowStatus,
+    corporatePaymentConfirmationInputSchema,
+    CorporatePaymentPreference,
+} from "@/lib/validations/corporate-order";
 import { TRPCError } from "@trpc/server";
-import crypto from "crypto";
-import { and, desc, eq, inArray, lte, or, gte, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 
 const ARTWORK_EXTENSIONS = ["ai", "eps", "pdf", "png", "jpg", "jpeg"];
 const SHEET_EXTENSIONS = ["xls", "xlsx", "csv"];
@@ -212,7 +213,10 @@ class CorporateOrderService {
             quoteId: approvedQuote?.id ?? null,
             brandId: approvedQuote?.brandId ?? null,
             status: "inquiry_received" as const,
-            paymentStatus: quote.balanceDuePaise > 0 ? ("pending" as const) : ("paid" as const),
+            paymentStatus:
+                quote.balanceDuePaise > 0
+                    ? ("pending" as const)
+                    : ("paid" as const),
             companyName: parsed.companyName,
             contactPersonName: parsed.contactPersonName,
             emailAddress: parsed.emailAddress,
@@ -272,7 +276,8 @@ class CorporateOrderService {
             internalNotes: parsed.approvedQuoteId
                 ? `Created from approved quote checkout | quote:${parsed.approvedQuoteId}`
                 : null,
-            balancePaymentStatus: quote.balanceDuePaise === 0 ? "paid" : "pending",
+            balancePaymentStatus:
+                quote.balanceDuePaise === 0 ? "paid" : "pending",
         };
     }
 
@@ -377,7 +382,8 @@ class CorporateOrderService {
         }
 
         const subtotalPaise = pricingSlab.unitPricePaise * quantity;
-        const printMethodChargePaise = printMethod.priceModifierPaise * quantity;
+        const printMethodChargePaise =
+            printMethod.priceModifierPaise * quantity;
         const additionalLogoRule = config.extraChargeRules.find(
             (item) => item.code === "additional_logo_location"
         );
@@ -459,7 +465,10 @@ class CorporateOrderService {
         return this.buildQuote(input);
     }
 
-    async createAdvancePaymentOrder(userId: string, input: CorporateOrderFormInput) {
+    async createAdvancePaymentOrder(
+        userId: string,
+        input: CorporateOrderFormInput
+    ) {
         const parsed = corporateOrderFormInputSchema.parse(input);
         const quote = await this.buildQuote(parsed);
         const publicOrderId = `REN-CORP-${Date.now()}-${Math.random()
@@ -546,7 +555,11 @@ class CorporateOrderService {
         }
 
         const createdOrder = await corporateOrderQueries.createCorporateOrder({
-            ...(await this.buildOrderInsertValues(userId, draft.form, draft.quote)),
+            ...(await this.buildOrderInsertValues(
+                userId,
+                draft.form,
+                draft.quote
+            )),
             razorpayOrderId: parsed.razorpayOrderId,
             razorpayPaymentId: parsed.razorpayPaymentId,
             razorpaySignature: parsed.razorpaySignature,
@@ -594,6 +607,7 @@ class CorporateOrderService {
             resend.emails.send({
                 from: env.RESEND_EMAIL_FROM,
                 to: updated.emailAddress,
+                ...emailAuditBcc(),
                 subject: `Corporate Order Received: ${updated.publicOrderId}`,
                 react: CorporateOrderReceivedEmail({
                     order: updated,
@@ -607,6 +621,7 @@ class CorporateOrderService {
                       resend.emails.send({
                           from: env.RESEND_EMAIL_FROM,
                           to: opsEmails,
+                          ...emailAuditBcc(),
                           subject: `New Corporate Order: ${updated.publicOrderId}`,
                           react: CorporateOrderInternalNotificationEmail({
                               order: updated,
@@ -628,7 +643,9 @@ class CorporateOrderService {
 
     async createBalancePaymentOrder(userId: string, input: unknown) {
         const parsed = corporateBalancePaymentOrderInputSchema.parse(input);
-        const order = await corporateOrderQueries.getOrderById(parsed.corporateOrderId);
+        const order = await corporateOrderQueries.getOrderById(
+            parsed.corporateOrderId
+        );
 
         if (!order || order.userId !== userId) {
             throw new TRPCError({
@@ -669,8 +686,11 @@ class CorporateOrderService {
     }
 
     async confirmBalancePayment(userId: string, input: unknown) {
-        const parsed = corporateBalancePaymentConfirmationInputSchema.parse(input);
-        const order = await corporateOrderQueries.getOrderById(parsed.corporateOrderId);
+        const parsed =
+            corporateBalancePaymentConfirmationInputSchema.parse(input);
+        const order = await corporateOrderQueries.getOrderById(
+            parsed.corporateOrderId
+        );
 
         if (!order || order.userId !== userId) {
             throw new TRPCError({
@@ -699,15 +719,18 @@ class CorporateOrderService {
             });
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            paymentStatus: "paid",
-            balanceDuePaise: 0,
-            balancePaymentStatus: "paid",
-            balancePaymentLink: getAbsoluteURL(
-                `/corporate-orders/confirmation/${order.id}`
-            ),
-            paymentReference: parsed.razorpayPaymentId,
-        });
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                paymentStatus: "paid",
+                balanceDuePaise: 0,
+                balancePaymentStatus: "paid",
+                balancePaymentLink: getAbsoluteURL(
+                    `/corporate-orders/confirmation/${order.id}`
+                ),
+                paymentReference: parsed.razorpayPaymentId,
+            }
+        );
 
         if (!updated) {
             throw new TRPCError({
@@ -763,7 +786,8 @@ class CorporateOrderService {
     }
 
     async getOrderById(corporateOrderId: string) {
-        const order = await corporateOrderQueries.getOrderById(corporateOrderId);
+        const order =
+            await corporateOrderQueries.getOrderById(corporateOrderId);
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -780,7 +804,9 @@ class CorporateOrderService {
         changedByUserId: string;
         note?: string;
     }) {
-        const order = await corporateOrderQueries.getOrderById(input.corporateOrderId);
+        const order = await corporateOrderQueries.getOrderById(
+            input.corporateOrderId
+        );
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -795,9 +821,12 @@ class CorporateOrderService {
             });
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            status: input.toStatus,
-        });
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                status: input.toStatus,
+            }
+        );
 
         if (!updated) {
             throw new TRPCError({
@@ -811,14 +840,21 @@ class CorporateOrderService {
             fromStatus: order.status,
             toStatus: input.toStatus,
             changedByUserId: input.changedByUserId,
-            note: input.note ?? `Status changed to ${convertValueToLabel(input.toStatus)}`,
+            note:
+                input.note ??
+                `Status changed to ${convertValueToLabel(input.toStatus)}`,
         });
 
-        if (input.toStatus === "delivered" && order.status !== "delivered" && order.emailAddress?.trim()) {
+        if (
+            input.toStatus === "delivered" &&
+            order.status !== "delivered" &&
+            order.emailAddress?.trim()
+        ) {
             try {
                 await resend.emails.send({
                     from: env.RESEND_EMAIL_FROM,
                     to: order.emailAddress.trim(),
+                    ...emailAuditBcc(),
                     subject: `Your order has been delivered: ${order.publicOrderId}`,
                     react: CorporateOrderDeliveredEmail({
                         order: {
@@ -838,7 +874,10 @@ class CorporateOrderService {
                     }),
                 });
             } catch (error) {
-                console.error("Failed to send customer delivered notification from admin updateStatus", error);
+                console.error(
+                    "Failed to send customer delivered notification from admin updateStatus",
+                    error
+                );
             }
         }
 
@@ -850,7 +889,9 @@ class CorporateOrderService {
         balancePaymentLink: string;
         balancePaymentNotes?: string;
     }) {
-        const order = await corporateOrderQueries.getOrderById(input.corporateOrderId);
+        const order = await corporateOrderQueries.getOrderById(
+            input.corporateOrderId
+        );
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -858,11 +899,14 @@ class CorporateOrderService {
             });
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            balancePaymentLink: input.balancePaymentLink,
-            balancePaymentNotes: input.balancePaymentNotes ?? null,
-            balancePaymentStatus: "shared",
-        });
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                balancePaymentLink: input.balancePaymentLink,
+                balancePaymentNotes: input.balancePaymentNotes ?? null,
+                balancePaymentStatus: "shared",
+            }
+        );
 
         return updated;
     }
@@ -872,7 +916,8 @@ class CorporateOrderService {
         changedByUserId: string;
     }) {
         const { corporateOrderId, changedByUserId } = input;
-        const order = await corporateOrderQueries.getOrderById(corporateOrderId);
+        const order =
+            await corporateOrderQueries.getOrderById(corporateOrderId);
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -894,6 +939,7 @@ class CorporateOrderService {
         await resend.emails.send({
             from: env.RESEND_EMAIL_FROM,
             to: order.emailAddress,
+            ...emailAuditBcc(),
             subject: `Balance payment reminder: ${order.publicOrderId}`,
             react: CorporateOrderBalanceReminderEmail({
                 order,

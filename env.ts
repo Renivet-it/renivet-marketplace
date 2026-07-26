@@ -58,6 +58,10 @@ export const env = createEnv({
             (val) => (val === "" ? undefined : val),
             z.string().optional()
         ),
+        EMAIL_AUDIT_BCC: z.preprocess(
+            (val) => (val === "" ? undefined : val),
+            z.string().email().optional()
+        ),
 
         SHIPROCKET_LOGIN_EMAIL: z
             .string({ required_error: "SHIPROCKET_LOGIN_EMAIL is required" })
@@ -150,6 +154,7 @@ export const env = createEnv({
         RENIVET_EMAIL_1: process.env.RENIVET_EMAIL_1,
         RENIVET_EMAIL_2: process.env.RENIVET_EMAIL_2,
         CORPORATE_OPS_EMAILS: process.env.CORPORATE_OPS_EMAILS,
+        EMAIL_AUDIT_BCC: process.env.EMAIL_AUDIT_BCC,
         SHIPROCKET_LOGIN_EMAIL: process.env.SHIPROCKET_LOGIN_EMAIL,
         SHIPROCKET_LOGIN_PASSWORD: process.env.SHIPROCKET_LOGIN_PASSWORD,
         SHIPROCKET_WEBHOOK_API_KEY: process.env.SHIPROCKET_WEBHOOK_API_KEY,

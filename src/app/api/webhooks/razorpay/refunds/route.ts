@@ -6,6 +6,7 @@ import { writeFinanceAuditEvent } from "@/lib/finance/audit";
 import { createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { analytics, revenue, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
 import { OrderRefundFailed, OrderRefundProcessed } from "@/lib/resend/emails";
 import { swapRewardService } from "@/lib/services/swap-reward";
 import {
@@ -46,7 +47,8 @@ export async function POST(req: NextRequest) {
                             paymentStatus: "refunded",
                             status: "cancelled",
                             cancellationReasonCode: "RTN_GOODWILL",
-                            manualOverrideReason: "Refund processed by Razorpay webhook",
+                            manualOverrideReason:
+                                "Refund processed by Razorpay webhook",
                         }),
                         refundQueries.updateRefundStatus(
                             payload.payload.refund.entity.id,
@@ -66,7 +68,8 @@ export async function POST(req: NextRequest) {
                             paymentStatus: "refunded",
                             refundStatus: payload.payload.refund.entity.status,
                             amount: payload.payload.refund.entity.amount,
-                            gatewayTransactionId: payload.payload.refund.entity.id,
+                            gatewayTransactionId:
+                                payload.payload.refund.entity.id,
                         },
                         reason: "razorpay_refund_processed",
                     });
@@ -148,6 +151,7 @@ export async function POST(req: NextRequest) {
                         await resend.emails.send({
                             from: env.RESEND_EMAIL_FROM,
                             to: existingUser.email,
+                            ...emailAuditBcc(),
                             subject: "Refund Processed Successfully",
                             react: OrderRefundProcessed({
                                 user: {
@@ -183,7 +187,8 @@ export async function POST(req: NextRequest) {
                             paymentStatus: "refund_failed",
                             status: "cancelled",
                             cancellationReasonCode: "RTN_GOODWILL",
-                            manualOverrideReason: "Refund failed by Razorpay webhook",
+                            manualOverrideReason:
+                                "Refund failed by Razorpay webhook",
                         }),
                         refundQueries.updateRefundStatus(
                             payload.payload.refund.entity.id,
@@ -298,6 +303,7 @@ export async function POST(req: NextRequest) {
                             {
                                 from: env.RESEND_EMAIL_FROM,
                                 to: existingUser.email,
+                                ...emailAuditBcc(),
                                 subject: "Refund Processing Failed",
                                 react: OrderRefundFailed({
                                     user: {

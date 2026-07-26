@@ -3,6 +3,7 @@ import { env } from "@/../env";
 import { brandSubscriptionQueries } from "@/lib/db/queries";
 import { brandCache, planCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
+import { emailAuditBcc } from "@/lib/resend/email-audit";
 import {
     BrandSubscribed,
     BrandSubscriptionCharged,
@@ -62,6 +63,7 @@ export async function POST(req: NextRequest) {
                 await resend.emails.send({
                     from: env.RESEND_EMAIL_FROM,
                     to: existingBrand.email,
+                    ...emailAuditBcc(),
                     subject: "Subscription started",
                     react: BrandSubscribed({
                         brand: existingBrand,
@@ -86,6 +88,7 @@ export async function POST(req: NextRequest) {
                 await resend.emails.send({
                     from: env.RESEND_EMAIL_FROM,
                     to: existingBrand.email,
+                    ...emailAuditBcc(),
                     subject: "Subscription renewed",
                     react: BrandSubscriptionCharged({
                         brand: existingBrand,
@@ -109,6 +112,7 @@ export async function POST(req: NextRequest) {
                 await resend.emails.send({
                     from: env.RESEND_EMAIL_FROM,
                     to: existingBrand.email,
+                    ...emailAuditBcc(),
                     subject: "Subscription cancelled",
                     react: BrandUnsubscribed({
                         brand: existingBrand,
