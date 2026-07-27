@@ -24,8 +24,8 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const mobileAspectRatio = 375 / 487;
     const mobileImages = [
         {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNpB968wYoKFqlYMSWzhgNZG6Cm5OtIUjre39T",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoDD6Uqn0WvnGEidmOVIP6xXt4S7befYUykMJ",
+            link: "https://renivet.com/brands/my-mithila/shop",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
@@ -36,20 +36,20 @@ export function Landing({ className, banners, ...props }: PageProps) {
             link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNkD4zwkxYt1TxMBy6jes3QdWaELUvNIiXHwRO",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN27J6WdQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
+            link: "https://renivet.com/brands/bamboology/shop",
         },
         {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqFXOkLGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2on6lEQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
+            link: "https://renivet.com/brands/bamboology/shop",
         },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNSGDBaWVko7HapsZqM8bNKQ6yVL5jDhwcr1AF",
             link: "https://renivet.com/shop?sortBy=best-sellers",
         },
         {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNXwwJqU3We049OUSYNxCLnRIka3FhcqBZlbsP",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNB3WOPNEMmRXWJovF8NdOkhyf9q5rlDYPEtKe",
+            link: "https://renivet.com/brands/greysome/shop",
         },
     ];
     const placeholders = ["Search For Products and Brands"];
@@ -151,7 +151,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                     <div className="absolute bottom-16 flex w-full justify-center">
                                         <Button
                                             size="lg"
-                                            className="group gap-3 btn-liquid btn-liquid-secondary px-8 py-6 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                                            className="btn-liquid btn-liquid-secondary group gap-3 px-8 py-6 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:scale-105 hover:shadow-2xl"
                                             asChild
                                         >
                                             <Link href={item.url || "/shop"}>
@@ -248,7 +248,7 @@ export function Landing({ className, banners, ...props }: PageProps) {
                                             <div className="pointer-events-auto">
                                                 <Link
                                                     href={item.link}
-                                                    className="group relative inline-flex items-center gap-2 overflow-hidden btn-liquid btn-liquid-secondary px-8 py-3 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
+                                                    className="btn-liquid btn-liquid-secondary group relative inline-flex items-center gap-2 overflow-hidden px-8 py-3 text-sm font-bold uppercase tracking-widest shadow-xl backdrop-blur-sm transition-all duration-300 hover:shadow-2xl"
                                                 >
                                                     <span>
                                                         Shop With Purpose
