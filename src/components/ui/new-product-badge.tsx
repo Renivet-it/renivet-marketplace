@@ -16,15 +16,11 @@ export function NewProductBadge({
         return (
             <span
                 className={cn(
-                    "pointer-events-none absolute inline-flex h-6 min-w-[48px] items-center justify-center bg-[linear-gradient(135deg,#315848_0%,#6d7447_100%)] px-2 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_6px_14px_rgba(24,28,44,0.18)]",
+                    "pointer-events-none absolute inline-flex h-6 min-w-[60px] items-center justify-center bg-[linear-gradient(135deg,#315848_0%,#6d7447_100%)] px-2 pr-4 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_6px_14px_rgba(24,28,44,0.18)] [clip-path:polygon(0_0,100%_0,calc(100%-14px)_50%,100%_100%,0_100%)]",
                     className
                 )}
             >
                 New
-                <span
-                    aria-hidden="true"
-                    className="absolute right-[-12px] top-0 border-b-[12px] border-l-[12px] border-t-[12px] border-b-transparent border-l-[#6d7447] border-t-transparent"
-                />
             </span>
         );
     }
