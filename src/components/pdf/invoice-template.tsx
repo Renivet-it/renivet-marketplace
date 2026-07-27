@@ -181,7 +181,6 @@ type InvoiceOrder = {
     deliveryAmount?: number;
     /** Coupon discount saved against this order, in paise. */
     discountAmount?: number;
-    couponDiscountAmount?: number;
     couponCode?: string | null;
     items: InvoiceItem[];
     brand: {
@@ -241,13 +240,10 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
         };
     });
     const shippingCharge = Math.max(0, Number(order.deliveryAmount ?? 0));
-    // Older orders did not persist a coupon code/amount. Do not present their
-    // aggregate discount as a coupon discount, since it may be a product sale.
+    // `discount_amount` is the coupon value for orders created through the
+    // current checkout flow. Older orders without a coupon code stay blank.
     const couponDiscount = order.couponCode
-        ? Math.max(
-              0,
-              Number(order.couponDiscountAmount ?? order.discountAmount ?? 0)
-          )
+        ? Math.max(0, Number(order.discountAmount ?? 0))
         : 0;
     const saleTotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
     let allocatedCouponDiscount = 0;
@@ -482,6 +478,15 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             <Text style={styles.totalValue}>{money(sgst)}</Text>
                         </View>
                     ) : null}
+                    <View style={styles.totalRow}>
+                        <Text style={styles.totalLabel}>
+                            Coupon discount amount
+                            {order.couponCode ? ` (${order.couponCode})` : ""}
+                        </Text>
+                        <Text style={styles.totalValue}>
+                            {couponDiscount ? `-${money(couponDiscount)}` : "-"}
+                        </Text>
+                    </View>
                     <View style={[styles.totalRow, styles.final]}>
                         <Text style={styles.totalLabel}>Invoice total</Text>
                         <Text style={styles.totalValue}>

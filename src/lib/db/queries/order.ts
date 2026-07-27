@@ -828,7 +828,6 @@ class OrderQuery {
                     deliveryAmount: orders.deliveryAmount,
                     discountAmount: orders.discountAmount,
                     couponCode: orders.couponCode,
-                    couponDiscountAmount: orders.couponDiscountAmount,
                     totalAmount: orders.totalAmount,
                     isReturnLabelGenerated:
                         orderShipments.is_return_label_generated,
@@ -892,7 +891,6 @@ class OrderQuery {
                         deliveryAmount: item.deliveryAmount,
                         discountAmount: item.discountAmount,
                         couponCode: item.couponCode,
-                        couponDiscountAmount: item.couponDiscountAmount,
                         totalAmount: item.totalAmount,
                         isReturnLabelGenerated: toBooleanLike(
                             item.isReturnLabelGenerated

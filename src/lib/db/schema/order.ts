@@ -64,8 +64,9 @@ export const orders = pgTable(
         taxAmount: integer("tax_amount").notNull(),
         deliveryAmount: integer("delivery_amount").notNull(),
         discountAmount: integer("discount_amount").notNull().default(0),
-        // Persist coupon information separately from a product's compare-at-price reduction.
         couponCode: text("coupon_code"),
+        // Backup value retained for compatibility; invoice calculations use
+        // discountAmount as the coupon discount source.
         couponDiscountAmount: integer("coupon_discount_amount")
             .notNull()
             .default(0),

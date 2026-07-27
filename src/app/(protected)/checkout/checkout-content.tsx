@@ -585,7 +585,6 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                   )
                               ),
                     discountAmount: brandCouponDiscount,
-                    couponDiscountAmount: brandCouponDiscount,
                     paymentMethod,
                     totalItems: brandItems.reduce(
                         (acc: number, item: any) => acc + item.quantity,

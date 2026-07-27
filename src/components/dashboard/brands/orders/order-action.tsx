@@ -138,7 +138,6 @@ export function OrderAction({ order, onAction }: PageProps) {
                         deliveryAmount: order.deliveryAmount,
                         discountAmount: order.discountAmount,
                         couponCode: order.couponCode,
-                        couponDiscountAmount: order.couponDiscountAmount,
                         items: productData
                             ? [
                                   {
