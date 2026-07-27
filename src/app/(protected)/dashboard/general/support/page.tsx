@@ -3,6 +3,14 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-dash";
 import { Card } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog-dash";
 import { Input } from "@/components/ui/input-dash";
 import {
     SUPPORT_CATEGORY_MATRIX,
@@ -20,8 +28,17 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { generatePermittedFileTypes } from "uploadthing/client";
 
-type QueueTab = "user" | "brand";
+type QueueTab = "user" | "grievance" | "brand";
 type StatusTab = "new" | "opened" | "resolved";
+type UserSupportTopic =
+    | "all"
+    | "orders"
+    | "returns_refunds"
+    | "product_issues"
+    | "grievances"
+    | "payments_account"
+    | "general"
+    | "other";
 
 type UploadedAttachment = {
     filename: string;
@@ -45,6 +62,11 @@ const queueTabs: Array<{ key: QueueTab; label: string; href: string }> = [
         href: "/dashboard/general/support/user",
     },
     {
+        key: "grievance",
+        label: "Grievance Desk",
+        href: "/dashboard/general/support/grievances",
+    },
+    {
         key: "brand",
         label: "Brand Support",
         href: "/dashboard/general/support/brand",
@@ -56,6 +78,116 @@ const statusTabs: Array<{ key: StatusTab; label: string }> = [
     { key: "opened", label: "Opened" },
     { key: "resolved", label: "Resolved" },
 ];
+
+const userSupportTopics: Array<{
+    key: UserSupportTopic;
+    label: string;
+    description: string;
+}> = [
+    {
+        key: "all",
+        label: "All support",
+        description: "Every customer support request",
+    },
+    {
+        key: "orders",
+        label: "Orders",
+        description: "Delivery, cancellation and order changes",
+    },
+    {
+        key: "returns_refunds",
+        label: "Returns & refunds",
+        description: "Return requests and refund follow-ups",
+    },
+    {
+        key: "product_issues",
+        label: "Product issues",
+        description: "Damaged, defective or incorrect products",
+    },
+    {
+        key: "grievances",
+        label: "Grievances",
+        description: "Complaints, legal and social escalations",
+    },
+    {
+        key: "payments_account",
+        label: "Payments & account",
+        description: "Payment, login and data requests",
+    },
+    {
+        key: "general",
+        label: "General",
+        description: "Pre-purchase questions, feedback and other help",
+    },
+    {
+        key: "other",
+        label: "Other requests",
+        description: "Older or uncategorised support requests",
+    },
+];
+
+const userSupportTopicCategories: Record<
+    Exclude<UserSupportTopic, "all">,
+    string[]
+> = {
+    orders: [
+        "ORDER_NOT_RECEIVED",
+        "ORDER_DELAYED",
+        "ORDER_CANCEL_REQUEST",
+        "ORDER_MODIFY_REQUEST",
+        "ORDER",
+        "DELIVERY_ISSUE",
+        "ITEM_MISSING",
+    ],
+    returns_refunds: ["RETURN_REQUEST", "REFUND_STATUS", "REFUND_NOT_RECEIVED"],
+    product_issues: [
+        "PRODUCT_DAMAGED",
+        "PRODUCT_DEFECTIVE",
+        "PRODUCT_NOT_AS_DESCRIBED",
+        "PRODUCT_WRONG_ITEM",
+        "SIZE_FIT_HELP",
+    ],
+    grievances: [
+        "GRIEVANCE",
+        "FEEDBACK_COMPLAINT_GENERAL",
+        "LEGAL_THREAT",
+        "SOCIAL_COMPLAINT",
+    ],
+    payments_account: [
+        "PAYMENT_FAILED",
+        "ACCOUNT_LOGIN_ISSUE",
+        "DATA_DELETION_REQUEST",
+        "ACCOUNT",
+    ],
+    general: [
+        "SUSTAINABILITY_QUERY",
+        "PRE_PURCHASE_QUERY",
+        "BULK_B2B_INQUIRY",
+        "FEEDBACK_PRAISE",
+        "OTHER",
+    ],
+    other: [],
+};
+
+function isInUserSupportTopic(item: any, topic: UserSupportTopic) {
+    if (topic === "all") return true;
+
+    const categories = [item.category, item.issueType]
+        .filter(Boolean)
+        .map((value) => String(value).toUpperCase());
+
+    if (topic === "other") {
+        return !Object.entries(userSupportTopicCategories)
+            .filter(([key]) => key !== "other")
+            .some(([, values]) =>
+                categories.some((category) => values.includes(category))
+            );
+    }
+
+    return categories.some((category) =>
+        userSupportTopicCategories[topic].includes(category)
+    );
+}
 
 const channelLabels: Record<SupportChannel, string> = {
     web_form: "Web form",
@@ -139,7 +271,11 @@ const terminalResolutionCodeByStatus: Partial<
 
 function getSuggestedActions(status: string, queue: QueueTab) {
     if (queue === "brand") {
-        if (status === "new" || status === "acknowledged") {
+        if (
+            status === "new" ||
+            status === "acknowledged" ||
+            status === "open"
+        ) {
             return [
                 { label: "Start review", status: "in_progress" as const },
                 {
@@ -150,7 +286,11 @@ function getSuggestedActions(status: string, queue: QueueTab) {
             ];
         }
 
-        if (status === "in_progress" || status === "reopened") {
+        if (
+            status === "in_progress" ||
+            status === "reopened" ||
+            status === "approved"
+        ) {
             return [
                 {
                     label: "Request brand update",
@@ -169,13 +309,14 @@ function getSuggestedActions(status: string, queue: QueueTab) {
             ];
         }
 
-        return [
-            { label: "Reopen case", status: "reopened" as const },
-            { label: "Close case", status: "closed" as const },
-        ];
+        if (isTerminalCaseStatus(status)) {
+            return [{ label: "Reopen case", status: "reopened" as const }];
+        }
+
+        return [{ label: "Start review", status: "in_progress" as const }];
     }
 
-    if (status === "new" || status === "acknowledged") {
+    if (status === "new" || status === "acknowledged" || status === "open") {
         return [
             { label: "Start review", status: "in_progress" as const },
             {
@@ -186,7 +327,11 @@ function getSuggestedActions(status: string, queue: QueueTab) {
         ];
     }
 
-    if (status === "in_progress" || status === "reopened") {
+    if (
+        status === "in_progress" ||
+        status === "reopened" ||
+        status === "approved"
+    ) {
         return [
             {
                 label: "Need customer reply",
@@ -219,10 +364,22 @@ function getSuggestedActions(status: string, queue: QueueTab) {
         ];
     }
 
+    if (isTerminalCaseStatus(status)) {
+        return [{ label: "Reopen case", status: "reopened" as const }];
+    }
+
+    return [{ label: "Start review", status: "in_progress" as const }];
+}
+
+function isTerminalCaseStatus(status?: string | null) {
     return [
-        { label: "Reopen case", status: "reopened" as const },
-        { label: "Close case", status: "closed" as const },
-    ];
+        "resolved",
+        "refunded",
+        "replaced",
+        "declined",
+        "closed",
+        "auto_closed",
+    ].includes(status ?? "");
 }
 
 function buildSupportDisplayTitle(input: {
@@ -311,16 +468,33 @@ function formatAddressBlock(address: any) {
         .join("\n");
 }
 
-export default function AdminSupportPage() {
+export function AdminSupportPage({
+    caseId,
+    standalone = false,
+    initialQueue,
+}: {
+    caseId?: string;
+    standalone?: boolean;
+    initialQueue?: QueueTab;
+}) {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const queueParam = searchParams.get("queue");
-    const ticketParam = searchParams.get("ticket") ?? "";
+    const queueParam = searchParams.get("queue") ?? initialQueue ?? "user";
+    const ticketParam = caseId ?? searchParams.get("ticket") ?? "";
 
     const [queue, setQueue] = useState<QueueTab>(
-        queueParam === "brand" ? "brand" : "user"
+        queueParam === "brand"
+            ? "brand"
+            : queueParam === "grievance"
+              ? "grievance"
+              : "user"
     );
+    const isStandaloneCasePage = standalone;
+    const isUserQueue = queue === "user" || queue === "grievance";
+    const [userSupportTopic, setUserSupportTopic] =
+        useState<UserSupportTopic>("all");
     const [statusTab, setStatusTab] = useState<StatusTab>("new");
+    const [casePage, setCasePage] = useState(1);
     const [selectedId, setSelectedId] = useState(ticketParam);
     const [search, setSearch] = useState("");
     const [manualIntakeOpen, setManualIntakeOpen] = useState(false);
@@ -335,6 +509,11 @@ export default function AdminSupportPage() {
     });
     const [replyText, setReplyText] = useState("");
     const [noteText, setNoteText] = useState("");
+    const [resolutionDialog, setResolutionDialog] = useState<{
+        status: "resolved" | "closed" | "reopened";
+    } | null>(null);
+    const [resolutionReason, setResolutionReason] = useState("");
+    const [resolutionEmail, setResolutionEmail] = useState("");
     const [couponSummary, setCouponSummary] = useState("Apology coupon");
     const [attachments, setAttachments] = useState<UploadedAttachment[]>([]);
     const [isUploading, setIsUploading] = useState(false);
@@ -351,8 +530,15 @@ export default function AdminSupportPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
-        setQueue(queueParam === "brand" ? "brand" : "user");
+        setQueue(
+            queueParam === "brand"
+                ? "brand"
+                : queueParam === "grievance"
+                  ? "grievance"
+                  : "user"
+        );
         setSelectedId(ticketParam);
+        setUserSupportTopic("all");
     }, [queueParam, ticketParam]);
 
     const { startUpload, routeConfig } = useUploadThing(
@@ -373,7 +559,7 @@ export default function AdminSupportPage() {
                 search,
                 status: "all",
             },
-            { enabled: queue === "user" }
+            { enabled: isUserQueue }
         );
     const brandTicketsQuery =
         trpc.general.adminSupportRouter.listTickets.useQuery(
@@ -411,7 +597,7 @@ export default function AdminSupportPage() {
 
     const userTicketQuery =
         trpc.general.adminSupportRouter.getUserTicket.useQuery(selectedId, {
-            enabled: queue === "user" && !!selectedId,
+            enabled: isUserQueue && !!selectedId,
         });
     const brandTicketQuery = trpc.general.adminSupportRouter.getTicket.useQuery(
         selectedId,
@@ -420,7 +606,7 @@ export default function AdminSupportPage() {
 
     const userMessagesQuery =
         trpc.general.adminSupportRouter.getUserMessages.useQuery(selectedId, {
-            enabled: queue === "user" && !!selectedId,
+            enabled: isUserQueue && !!selectedId,
         });
     const brandMessagesQuery =
         trpc.general.adminSupportRouter.getMessages.useQuery(selectedId, {
@@ -432,6 +618,8 @@ export default function AdminSupportPage() {
             onSuccess: () => {
                 userTicketQuery.refetch();
                 userTicketsQuery.refetch();
+                userMessagesQuery.refetch();
+                supportHealthQuery.refetch();
             },
             onError: (error) => toast.error(error.message),
         });
@@ -533,38 +721,83 @@ export default function AdminSupportPage() {
         );
 
     const queueItems: any[] = useMemo(() => {
-        if (queue === "user") return userTicketsQuery.data?.data ?? [];
+        if (isUserQueue) return userTicketsQuery.data?.data ?? [];
         return brandTicketsQuery.data?.data ?? [];
     }, [queue, userTicketsQuery.data, brandTicketsQuery.data]);
 
+    const topicQueueItems = useMemo(
+        () =>
+            isUserQueue
+                ? queueItems.filter((item) =>
+                      isInUserSupportTopic(
+                          item,
+                          queue === "grievance"
+                              ? "grievances"
+                              : userSupportTopic
+                      )
+                  )
+                : queueItems,
+        [queue, queueItems, userSupportTopic, isUserQueue]
+    );
+
     const filteredQueueItems = useMemo(
         () =>
-            queueItems.filter((item) =>
+            topicQueueItems.filter((item) =>
                 isStatusInTab(item.status ?? "new", statusTab)
             ),
-        [queueItems, statusTab]
+        [topicQueueItems, statusTab]
     );
+    const casesPerPage = 8;
+    const totalCasePages = Math.max(
+        1,
+        Math.ceil(filteredQueueItems.length / casesPerPage)
+    );
+    const paginatedQueueItems = useMemo(
+        () =>
+            filteredQueueItems.slice(
+                (casePage - 1) * casesPerPage,
+                casePage * casesPerPage
+            ),
+        [casePage, filteredQueueItems]
+    );
+
+    useEffect(() => {
+        setCasePage(1);
+    }, [queue, userSupportTopic, statusTab, search]);
+
+    useEffect(() => {
+        if (casePage > totalCasePages) setCasePage(totalCasePages);
+    }, [casePage, totalCasePages]);
 
     const statusCounts = useMemo(
         () => ({
-            new: queueItems.filter((item) => isStatusInTab(item.status, "new"))
-                .length,
-            opened: queueItems.filter((item) =>
+            new: topicQueueItems.filter((item) =>
+                isStatusInTab(item.status, "new")
+            ).length,
+            opened: topicQueueItems.filter((item) =>
                 isStatusInTab(item.status, "opened")
             ).length,
-            resolved: queueItems.filter((item) =>
+            resolved: topicQueueItems.filter((item) =>
                 isStatusInTab(item.status, "resolved")
             ).length,
         }),
-        [queueItems]
+        [topicQueueItems]
     );
 
-    const selectedRecord: any =
-        queue === "user" ? userTicketQuery.data : brandTicketQuery.data;
-    const selectedMessages: any[] =
-        queue === "user"
-            ? (userMessagesQuery.data ?? [])
-            : (brandMessagesQuery.data ?? []);
+    const selectedRecord: any = isUserQueue
+        ? userTicketQuery.data
+        : brandTicketQuery.data;
+    const selectedMessages: any[] = isUserQueue
+        ? (userMessagesQuery.data ?? [])
+        : (brandMessagesQuery.data ?? []);
+    const isCaseLocked = isTerminalCaseStatus(selectedRecord?.status);
+    const isOrderRelatedCase = Boolean(
+        selectedRecord?.orderId ||
+            String(selectedRecord?.category ?? "").startsWith("ORDER_") ||
+            /order|delivery|shipment|courier/i.test(
+                String(selectedRecord?.issueType ?? selectedRecord?.title ?? "")
+            )
+    );
 
     const uploadAttachments = async (files: File[]) => {
         setIsUploading(true);
@@ -617,7 +850,7 @@ export default function AdminSupportPage() {
             return;
         }
 
-        if (queue === "user") {
+        if (isUserQueue) {
             replyUserMutation.mutate({
                 ticketId: selectedId,
                 text: replyText.trim() || "Shared supporting attachments",
@@ -636,7 +869,7 @@ export default function AdminSupportPage() {
     const addNote = () => {
         if (!selectedId || !noteText.trim()) return;
 
-        if (queue === "user") {
+        if (isUserQueue) {
             addUserNoteMutation.mutate({
                 ticketId: selectedId,
                 note: noteText.trim(),
@@ -652,13 +885,38 @@ export default function AdminSupportPage() {
 
     const updateSelectedStatus = (status: (typeof statusOptions)[number]) => {
         if (!selectedRecord) return;
+        let resolutionSummary: string | undefined;
+
+        if (status === "resolved" || status === "closed") {
+            setResolutionReason("");
+            setResolutionEmail(
+                isUserQueue
+                    ? (selectedRecord.userEmail ??
+                          selectedRecord.user?.email ??
+                          selectedRecord.order?.user?.email ??
+                          selectedRecord.intakeContext?.contactEmail ??
+                          "")
+                    : ""
+            );
+            setResolutionDialog({ status });
+            return;
+        }
+
+        if (status === "reopened") {
+            setResolutionReason("");
+            setResolutionEmail("");
+            setResolutionDialog({ status });
+            return;
+        }
+
         const resolutionCode = terminalResolutionCodeByStatus[status];
 
-        if (queue === "user") {
+        if (isUserQueue) {
             updateUserStatusMutation.mutate({
                 ticketId: selectedRecord.id,
                 status,
                 ...(resolutionCode ? { resolutionCode } : {}),
+                ...(resolutionSummary ? { resolutionSummary } : {}),
             });
             return;
         }
@@ -667,13 +925,75 @@ export default function AdminSupportPage() {
             ticketId: selectedRecord.id,
             status,
             ...(resolutionCode ? { resolutionCode } : {}),
+            ...(resolutionSummary ? { reason: resolutionSummary } : {}),
         });
     };
 
+    const submitResolution = () => {
+        if (!selectedRecord || !resolutionDialog) return;
+        const reason = resolutionReason.trim();
+        if (resolutionDialog.status !== "reopened" && !reason) {
+            toast.error("A resolution reason is required.");
+            return;
+        }
+        if (
+            resolutionDialog.status !== "reopened" &&
+            isUserQueue &&
+            !resolutionEmail.trim()
+        ) {
+            toast.error("Please enter or confirm the customer email.");
+            return;
+        }
+
+        const status = resolutionDialog.status;
+        const resolutionCode = terminalResolutionCodeByStatus[status];
+
+        if (isUserQueue) {
+            updateUserStatusMutation.mutate({
+                ticketId: selectedRecord.id,
+                status,
+                ...(resolutionCode ? { resolutionCode } : {}),
+                ...(reason ? { resolutionSummary: reason } : {}),
+                ...(resolutionDialog.status !== "reopened"
+                    ? { deliveryEmail: resolutionEmail.trim() }
+                    : {}),
+            });
+        } else {
+            updateBrandStatusMutation.mutate({
+                ticketId: selectedRecord.id,
+                status,
+                ...(resolutionCode ? { resolutionCode } : {}),
+                ...(reason ? { reason } : {}),
+            });
+        }
+        setResolutionDialog(null);
+    };
+
+    const openCaseWorkspace = (ticketId: string) => {
+        router.push(
+            `/dashboard/general/support/case/${ticketId}?queue=${queue}`
+        );
+    };
+
     return (
-        <div className="bg-[#EDF2F8] p-6">
-            <div className="space-y-6">
-                <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-6">
+        <div
+            className={cn(
+                "min-h-screen bg-[#F6F8FB] p-4 md:p-6",
+                isStandaloneCasePage && "bg-[#F6F8FB] p-4 md:p-6"
+            )}
+        >
+            <div
+                className={cn(
+                    "mx-auto max-w-[1600px] space-y-4",
+                    isStandaloneCasePage && "max-w-[1400px]"
+                )}
+            >
+                <section
+                    className={cn(
+                        "grid gap-3 md:grid-cols-3 xl:grid-cols-6",
+                        isStandaloneCasePage && "hidden"
+                    )}
+                >
                     {[
                         {
                             label: "Open tickets",
@@ -712,25 +1032,30 @@ export default function AdminSupportPage() {
                     ].map((item) => (
                         <Card
                             key={item.label}
-                            className="rounded-[22px] border border-[#D7E2EF] bg-white p-4 shadow-[0_12px_36px_rgba(37,61,94,0.05)]"
+                            className="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm"
                         >
-                            <p className="text-[10px] font-semibold uppercase tracking-normal text-[#6B94C1]">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
                                 {item.label}
                             </p>
-                            <p className="mt-2 text-2xl font-semibold text-slate-950">
+                            <p className="mt-1 text-xl font-semibold text-slate-950">
                                 {item.value}
                             </p>
                         </Card>
                     ))}
                 </section>
 
-                <section className="flex flex-wrap items-center gap-2">
+                <section
+                    className={cn(
+                        "flex flex-wrap items-center gap-2",
+                        isStandaloneCasePage && "hidden"
+                    )}
+                >
                     {(["morning", "midday", "eod"] as const).map(
                         (checkType) => (
                             <Button
                                 key={checkType}
                                 variant="outline"
-                                className="rounded-full bg-white"
+                                className="h-9 rounded-md bg-white text-sm"
                                 onClick={() =>
                                     dailyCheckInMutation.mutate({
                                         checkType,
@@ -748,7 +1073,7 @@ export default function AdminSupportPage() {
                     )}
                     <Button
                         variant="outline"
-                        className="rounded-full bg-white"
+                        className="h-9 rounded-md bg-white text-sm"
                         onClick={() =>
                             weeklySummaryMutation.mutate({
                                 summary:
@@ -760,23 +1085,37 @@ export default function AdminSupportPage() {
                     </Button>
                     <Button
                         variant="outline"
-                        className="rounded-full bg-white"
+                        className="h-9 rounded-md bg-white text-sm"
                         onClick={() => monthlyReviewMutation.mutate({})}
                     >
                         Monthly review
                     </Button>
                 </section>
 
-                <Card className="rounded-[34px] border border-[#D7E2EF] bg-white p-6 shadow-[0_18px_50px_rgba(37,61,94,0.06)]">
-                    <div className="space-y-5">
-                        <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <Card
+                    className={cn(
+                        "rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:p-4",
+                        isStandaloneCasePage &&
+                            "border-0 bg-transparent p-0 shadow-none"
+                    )}
+                >
+                    <div
+                        className={cn(
+                            "space-y-3",
+                            isStandaloneCasePage &&
+                                "[&>div:last-child>div:first-child]:hidden [&>div:not(:last-child)]:hidden"
+                        )}
+                    >
+                        <div className="flex flex-col gap-3 border-b border-slate-200 pb-3 xl:flex-row xl:items-center xl:justify-between">
                             <div className="min-w-0">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-[#D5E2F2] bg-[#F8FBFF] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#5B8FC5]">
-                                    <LifeBuoy className="size-3.5" />
-                                    Support Desk
-                                </div>
-                                <div className="mt-4 flex flex-col gap-4 xl:flex-row xl:items-center">
-                                    <div className="inline-flex rounded-[18px] border border-[#D7E2EF] bg-[#F8FBFF] p-1">
+                                <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+                                    <div className="flex items-center gap-2">
+                                        <LifeBuoy className="size-4 text-[#147D73]" />
+                                        <span className="text-base font-semibold text-slate-950">
+                                            Support inbox
+                                        </span>
+                                    </div>
+                                    <div className="inline-flex w-fit rounded-md bg-slate-100 p-1">
                                         {queueTabs.map((tab) => (
                                             <button
                                                 key={tab.key}
@@ -784,15 +1123,16 @@ export default function AdminSupportPage() {
                                                 onClick={() => {
                                                     router.push(tab.href);
                                                     setQueue(tab.key);
+                                                    setUserSupportTopic("all");
                                                     setSelectedId("");
                                                     setReplyText("");
                                                     setNoteText("");
                                                 }}
                                                 className={cn(
-                                                    "rounded-[14px] px-4 py-2.5 text-sm font-semibold transition",
+                                                    "rounded px-3 py-1.5 text-sm font-medium transition",
                                                     queue === tab.key
-                                                        ? "bg-[#1F2937] text-white shadow-sm"
-                                                        : "text-slate-600 hover:bg-white hover:text-slate-900"
+                                                        ? "bg-white text-[#16324F] shadow-sm"
+                                                        : "text-slate-600 hover:text-slate-950"
                                                 )}
                                             >
                                                 {tab.label}
@@ -800,21 +1140,22 @@ export default function AdminSupportPage() {
                                         ))}
                                     </div>
 
-                                    <div>
-                                        <p className="text-sm font-medium text-slate-900">
-                                            {queue === "user"
-                                                ? "Customer issues and resolution flow"
-                                                : "Brand operations and support requests"}
+                                    <div className="xl:border-l xl:border-slate-200 xl:pl-4">
+                                        <p className="text-sm font-semibold text-slate-800">
+                                            {queue === "grievance"
+                                                ? "Dedicated grievance resolution queue"
+                                                : queue === "user"
+                                                  ? "Customer issues and resolution flow"
+                                                  : "Brand operations and support requests"}
                                         </p>
-                                        <p className="mt-1 text-sm text-slate-500">
-                                            Review active cases, reply faster,
-                                            and keep every order-linked issue in
-                                            one place.
+                                        <p className="mt-0.5 max-w-xl text-xs text-slate-500">
+                                            Search, triage, and resolve customer
+                                            requests.
                                         </p>
                                     </div>
                                 </div>
                             </div>
-                            <div className="flex flex-col gap-3 xl:w-[420px]">
+                            <div className="flex flex-col gap-3 xl:w-[400px]">
                                 <div className="flex gap-2">
                                     <Button
                                         type="button"
@@ -823,7 +1164,7 @@ export default function AdminSupportPage() {
                                                 (value) => !value
                                             )
                                         }
-                                        className="h-12 rounded-2xl bg-[#1F2937] px-4 text-white hover:bg-[#111827]"
+                                        className="h-10 rounded-md bg-[#16324F] px-4 text-sm font-medium text-white hover:bg-[#102A43]"
                                     >
                                         Intake ticket
                                     </Button>
@@ -833,7 +1174,7 @@ export default function AdminSupportPage() {
                                             setSearch(event.target.value)
                                         }
                                         placeholder="Search support cases"
-                                        className="h-12 rounded-2xl border-[#D7E2EF] bg-[#FBFDFF]"
+                                        className="h-10 rounded-md border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400"
                                     />
                                 </div>
                             </div>
@@ -944,35 +1285,115 @@ export default function AdminSupportPage() {
                             </div>
                         )}
 
+                        {queue === "grievance" && (
+                            <div className="flex flex-col gap-3 rounded-[22px] border border-amber-200 bg-amber-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-950">
+                                        Grievance Desk
+                                    </p>
+                                    <p className="mt-0.5 text-xs text-amber-800">
+                                        Only formal grievances, complaints,
+                                        legal matters, and social escalations
+                                        are shown here.
+                                    </p>
+                                </div>
+                                <span className="inline-flex w-fit rounded-full border border-amber-200 bg-white px-3 py-1 text-xs font-semibold text-amber-900">
+                                    {topicQueueItems.length} grievance{" "}
+                                    {topicQueueItems.length === 1
+                                        ? "case"
+                                        : "cases"}
+                                </span>
+                            </div>
+                        )}
+
+                        {queue === "user" && (
+                            <div className="border-b border-slate-200 pb-3">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                    <div>
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                            Filter by category
+                                        </p>
+                                    </div>
+                                    <span className="hidden text-xs text-slate-500 sm:inline-flex">
+                                        {topicQueueItems.length} cases
+                                    </span>
+                                </div>
+                                <div className="-mx-1 mt-3 overflow-x-auto px-1 pb-1">
+                                    <div className="flex min-w-max gap-1.5">
+                                        {userSupportTopics.map((topic) => {
+                                            const count = queueItems.filter(
+                                                (item) =>
+                                                    isInUserSupportTopic(
+                                                        item,
+                                                        topic.key
+                                                    )
+                                            ).length;
+                                            const isActive =
+                                                userSupportTopic === topic.key;
+
+                                            return (
+                                                <button
+                                                    key={topic.key}
+                                                    type="button"
+                                                    title={topic.description}
+                                                    onClick={() => {
+                                                        setUserSupportTopic(
+                                                            topic.key
+                                                        );
+                                                        setSelectedId("");
+                                                    }}
+                                                    className={cn(
+                                                        "group flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition",
+                                                        isActive
+                                                            ? "border-[#16324F] bg-[#16324F] text-white"
+                                                            : "border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:text-slate-950"
+                                                    )}
+                                                >
+                                                    <span>{topic.label}</span>
+                                                    <span
+                                                        className={cn(
+                                                            "rounded-full px-1.5 py-0.5 text-[11px] leading-none",
+                                                            isActive
+                                                                ? "bg-white/15 text-white"
+                                                                : "bg-slate-100 text-slate-600"
+                                                        )}
+                                                    >
+                                                        {count}
+                                                    </span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className="overflow-x-auto">
-                            <div className="inline-flex min-w-full gap-2 rounded-[18px] border border-[#D7E2EF] bg-[#F8FBFF] p-1.5">
+                            <div className="inline-flex min-w-full gap-1 border-b border-slate-200">
                                 {statusTabs.map((tab) => (
                                     <button
                                         key={tab.key}
                                         type="button"
                                         onClick={() => setStatusTab(tab.key)}
                                         className={cn(
-                                            "min-w-[150px] flex-1 rounded-[14px] px-4 py-2.5 text-left transition",
+                                            "min-w-[128px] flex-1 border-b-2 border-transparent px-3 py-2 text-left transition",
                                             statusTab === tab.key
-                                                ? "bg-white text-slate-900 shadow-[0_8px_20px_rgba(31,41,55,0.08)]"
-                                                : "text-slate-600 hover:bg-white/80 hover:text-slate-900"
+                                                ? "border-[#147D73] text-[#16324F]"
+                                                : "text-slate-500 hover:text-slate-900"
                                         )}
                                     >
                                         <div className="flex items-center justify-between gap-3">
                                             <div>
-                                                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                                                    Status
-                                                </p>
-                                                <p className="mt-1 text-sm font-semibold md:text-base">
+                                                <p className="text-sm font-medium">
                                                     {tab.label}
                                                 </p>
                                             </div>
                                             <span
                                                 className={cn(
-                                                    "rounded-full px-2.5 py-1 text-xs font-semibold",
+                                                    "rounded-full px-2 py-0.5 text-xs font-semibold",
                                                     statusTab === tab.key
-                                                        ? "bg-slate-100 text-slate-900"
-                                                        : "bg-white text-slate-700"
+                                                        ? "bg-[#E5F3F0] text-[#147D73]"
+                                                        : "bg-slate-100 text-slate-600"
                                                 )}
                                             >
                                                 {statusCounts[tab.key]}
@@ -983,11 +1404,15 @@ export default function AdminSupportPage() {
                             </div>
                         </div>
 
-                        <div className="space-y-6">
-                            <div className="overflow-hidden rounded-[24px] border border-[#DDE6F0] bg-white">
-                                <div className="flex items-center justify-between border-b border-[#E6EEF7] bg-[#F8FBFF] px-5 py-4">
+                        <div className="space-y-4">
+                            <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                                <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
                                     <div>
                                         <p className="text-sm font-semibold text-slate-900">
+                                            {queue === "user" &&
+                                            userSupportTopic !== "all"
+                                                ? `${userSupportTopics.find((topic) => topic.key === userSupportTopic)?.label} · `
+                                                : ""}
                                             Cases in {statusTab}
                                         </p>
                                         <p className="text-xs text-slate-500">
@@ -995,115 +1420,266 @@ export default function AdminSupportPage() {
                                             support cases
                                         </p>
                                     </div>
-                                    <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-[#6B94C1]">
-                                        {queue === "user" ? "Users" : "Brands"}
+                                    <span className="rounded bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-600">
+                                        {isUserQueue ? "Users" : "Brands"}
                                     </span>
                                 </div>
 
-                                <div className="hidden grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px] gap-3 border-b border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500 lg:grid">
-                                    <span>Case</span>
-                                    <span>Owner</span>
-                                    <span className="text-right">Status</span>
-                                </div>
-
-                                <div className="max-h-[420px] overflow-y-auto xl:max-h-[480px]">
-                                    {filteredQueueItems.map((item: any) => (
-                                        <button
-                                            key={item.id}
-                                            type="button"
-                                            onClick={() =>
-                                                setSelectedId(item.id)
-                                            }
-                                            className={cn(
-                                                "grid w-full gap-3 border-b border-[#EEF3F8] px-5 py-4 text-left transition last:border-b-0 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_120px]",
-                                                selectedId === item.id
-                                                    ? "bg-[#F1F8FF]"
-                                                    : "bg-white hover:bg-[#FAFCFF]"
-                                            )}
-                                        >
-                                            <div className="min-w-0">
-                                                <p className="line-clamp-2 text-sm font-semibold text-slate-900">
-                                                    {buildSupportDisplayTitle({
-                                                        title: item.title,
-                                                        issueLabel:
-                                                            item.issueLabel,
-                                                        issueType:
-                                                            item.issueType,
-                                                        orderId: item.orderId,
-                                                    })}
-                                                </p>
-                                                <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                                    <span>
-                                                        Case{" "}
-                                                        {item.id.slice(0, 8)}
-                                                    </span>
-                                                    <span className="text-slate-300">
-                                                        /
-                                                    </span>
-                                                    <span>
-                                                        {format(
-                                                            new Date(
-                                                                item.updatedAt
-                                                            ),
-                                                            "dd MMM, hh:mm a"
+                                <div className="overflow-x-auto">
+                                    <table className="w-full min-w-[960px] text-left">
+                                        <thead className="border-b border-slate-100 bg-slate-50/80 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                            <tr>
+                                                <th className="px-4 py-2.5">
+                                                    Case
+                                                </th>
+                                                <th className="px-3 py-2.5">
+                                                    Customer
+                                                </th>
+                                                <th className="px-3 py-2.5">
+                                                    Category
+                                                </th>
+                                                <th className="px-3 py-2.5">
+                                                    Last activity
+                                                </th>
+                                                <th className="px-3 py-2.5">
+                                                    Priority
+                                                </th>
+                                                <th className="px-4 py-2.5 text-right">
+                                                    Status
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-[#EEF3F8]">
+                                            {paginatedQueueItems.map(
+                                                (item: any) => (
+                                                    <tr
+                                                        key={item.id}
+                                                        onClick={() =>
+                                                            openCaseWorkspace(
+                                                                item.id
+                                                            )
+                                                        }
+                                                        className={cn(
+                                                            "cursor-pointer transition hover:bg-[#F4FAF9]",
+                                                            selectedId ===
+                                                                item.id &&
+                                                                "bg-emerald-50/70"
                                                         )}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            <div className="min-w-0 self-center">
-                                                <p className="truncate text-sm text-slate-700">
-                                                    {queue === "user"
-                                                        ? item.userName ||
-                                                          item.userEmail
-                                                        : (item.brandName ??
-                                                          item.issueType)}
-                                                </p>
-                                            </div>
-                                            <div className="flex justify-start self-center lg:justify-end">
-                                                <StatusBadge
-                                                    status={item.status}
-                                                />
-                                            </div>
-                                        </button>
-                                    ))}
-
+                                                    >
+                                                        <td className="max-w-[300px] px-4 py-2.5">
+                                                            <p className="truncate text-sm font-semibold text-slate-900">
+                                                                {buildSupportDisplayTitle(
+                                                                    {
+                                                                        title: item.title,
+                                                                        issueLabel:
+                                                                            item.issueLabel,
+                                                                        issueType:
+                                                                            item.issueType,
+                                                                        orderId:
+                                                                            item.orderId,
+                                                                    }
+                                                                )}
+                                                            </p>
+                                                            <p className="mt-0.5 text-xs text-slate-500">
+                                                                Case #
+                                                                {item.id.slice(
+                                                                    0,
+                                                                    8
+                                                                )}
+                                                                {item.orderId
+                                                                    ? " / Order #" +
+                                                                      item.orderId
+                                                                    : ""}
+                                                            </p>
+                                                        </td>
+                                                        <td className="max-w-[180px] px-3 py-2.5">
+                                                            <p className="truncate text-sm font-medium text-slate-700">
+                                                                {isUserQueue
+                                                                    ? item.userName ||
+                                                                      item.userEmail ||
+                                                                      "Customer"
+                                                                    : item.brandName ||
+                                                                      "Brand"}
+                                                            </p>
+                                                            {isUserQueue &&
+                                                                item.userEmail && (
+                                                                    <p className="mt-0.5 truncate text-xs text-slate-400">
+                                                                        {
+                                                                            item.userEmail
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <span className="inline-flex max-w-[170px] truncate rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-600">
+                                                                {formatSupportCategoryLabel(
+                                                                    item.category ??
+                                                                        item.issueType ??
+                                                                        "Other"
+                                                                )}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-3 py-2.5 text-sm text-slate-600">
+                                                            {format(
+                                                                new Date(
+                                                                    item.latestMessageAt ??
+                                                                        item.updatedAt
+                                                                ),
+                                                                "dd MMM, hh:mm a"
+                                                            )}
+                                                        </td>
+                                                        <td className="px-3 py-2.5">
+                                                            <span
+                                                                className={cn(
+                                                                    "rounded-full px-2.5 py-1 text-xs font-semibold capitalize",
+                                                                    item.priority ===
+                                                                        "critical"
+                                                                        ? "bg-rose-100 text-rose-700"
+                                                                        : item.priority ===
+                                                                            "high"
+                                                                          ? "bg-amber-100 text-amber-800"
+                                                                          : "bg-slate-100 text-slate-600"
+                                                                )}
+                                                            >
+                                                                {item.priority ??
+                                                                    "normal"}
+                                                            </span>
+                                                        </td>
+                                                        <td className="px-4 py-2.5 text-right">
+                                                            <StatusBadge
+                                                                status={
+                                                                    item.status
+                                                                }
+                                                            />
+                                                        </td>
+                                                    </tr>
+                                                )
+                                            )}
+                                        </tbody>
+                                    </table>
                                     {!filteredQueueItems.length && (
-                                        <div className="px-5 py-12 text-center text-sm text-slate-500">
-                                            No cases in this tab right now.
+                                        <div className="px-5 py-14 text-center">
+                                            <p className="font-medium text-slate-700">
+                                                No cases found in this view
+                                            </p>
+                                            <p className="mt-1 text-sm text-slate-500">
+                                                Try another status or support
+                                                category.
+                                            </p>
                                         </div>
                                     )}
                                 </div>
 
-                                <div className="flex items-center justify-between border-t border-[#EEF3F8] bg-[#FCFDFF] px-5 py-3 text-xs text-slate-500">
+                                <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 px-4 py-2.5 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
                                     <span>
-                                        Queue stays scrollable so large case
-                                        volume does not expand the full page.
+                                        Showing{" "}
+                                        {filteredQueueItems.length
+                                            ? (casePage - 1) * casesPerPage + 1
+                                            : 0}
+                                        -
+                                        {Math.min(
+                                            casePage * casesPerPage,
+                                            filteredQueueItems.length
+                                        )}{" "}
+                                        of {filteredQueueItems.length} cases
                                     </span>
-                                    <span className="font-medium text-slate-700">
-                                        {filteredQueueItems.length} case
-                                        {filteredQueueItems.length === 1
-                                            ? ""
-                                            : "s"}
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            className="h-8 rounded-md px-3 text-xs"
+                                            disabled={casePage === 1}
+                                            onClick={() =>
+                                                setCasePage((page) =>
+                                                    Math.max(1, page - 1)
+                                                )
+                                            }
+                                        >
+                                            Previous
+                                        </Button>
+                                        <span className="min-w-[72px] text-center font-medium text-slate-700">
+                                            Page {casePage} / {totalCasePages}
+                                        </span>
+                                        <Button
+                                            variant="outline"
+                                            className="h-8 rounded-md px-3 text-xs"
+                                            disabled={
+                                                casePage === totalCasePages
+                                            }
+                                            onClick={() =>
+                                                setCasePage((page) =>
+                                                    Math.min(
+                                                        totalCasePages,
+                                                        page + 1
+                                                    )
+                                                )
+                                            }
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div className="rounded-[28px] border border-[#DDE6F0] bg-white p-4 md:p-6">
+                            <div
+                                id="case-workspace"
+                                className={cn(
+                                    "rounded-xl border border-slate-200 bg-white p-4 md:p-5",
+                                    isStandaloneCasePage &&
+                                        "mx-auto w-full max-w-[1180px] rounded-md border border-slate-200 bg-white p-4 shadow-sm md:p-5 [&_button]:!rounded-none [&_input]:!rounded-none [&_textarea]:!rounded-none",
+                                    selectedRecord &&
+                                        !isStandaloneCasePage &&
+                                        "fixed inset-0 z-[70] overflow-y-auto border-0 bg-slate-950/30 p-4 backdrop-blur-[2px] md:p-6"
+                                )}
+                            >
                                 {!selectedRecord ? (
-                                    <div className="flex min-h-[360px] items-center justify-center rounded-[24px] border border-dashed border-[#D7E2EF] bg-[#F8FBFF] text-sm text-slate-500">
-                                        Select a support case to review it.
+                                    <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-5 text-sm text-slate-500">
+                                        Select a case from the table to open its
+                                        full workspace here.
                                     </div>
                                 ) : (
-                                    <div className="space-y-6">
-                                        <div className="rounded-[28px] border border-[#DDE6F0] bg-[#FBFDFF] p-5">
-                                            <div className="space-y-5">
+                                    <div className="w-full space-y-3 bg-white p-0">
+                                        <div className="flex items-center justify-between gap-4 border-b border-slate-200 pb-3">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-900">
+                                                    Case workspace
+                                                </p>
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    Review the case, take an
+                                                    action, or reply to the
+                                                    customer.
+                                                </p>
+                                            </div>
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                className="h-9 rounded-md text-sm"
+                                                onClick={() => {
+                                                    if (isStandaloneCasePage) {
+                                                        router.push(
+                                                            `/dashboard/general/support?queue=${queue}`
+                                                        );
+                                                        return;
+                                                    }
+                                                    setSelectedId("");
+                                                }}
+                                            >
+                                                {isStandaloneCasePage
+                                                    ? "Back to Support Desk"
+                                                    : "Close workspace"}
+                                            </Button>
+                                        </div>
+                                        <div className="border-b border-slate-200 pb-4">
+                                            <div className="space-y-3">
                                                 <div className="max-w-4xl">
-                                                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#6B94C1]">
-                                                        {queue === "user"
-                                                            ? "Customer support"
+                                                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#147D73]">
+                                                        {isUserQueue
+                                                            ? queue ===
+                                                              "grievance"
+                                                                ? "Grievance case"
+                                                                : "Customer support"
                                                             : "Brand support"}
                                                     </p>
-                                                    <h3 className="mt-3 max-w-4xl text-xl font-semibold leading-tight text-slate-900 md:text-[1.75rem]">
+                                                    <h3 className="mt-1 max-w-4xl text-lg font-semibold leading-tight text-slate-900 md:text-xl">
                                                         {buildSupportDisplayTitle(
                                                             {
                                                                 title: selectedRecord.title,
@@ -1119,7 +1695,7 @@ export default function AdminSupportPage() {
                                                 </div>
 
                                                 <div className="flex flex-wrap items-center gap-2 text-sm text-slate-500">
-                                                    <span className="rounded-full border border-[#DDE6F0] bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                                                    <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600">
                                                         Case{" "}
                                                         {selectedRecord.id.slice(
                                                             0,
@@ -1127,14 +1703,14 @@ export default function AdminSupportPage() {
                                                         )}
                                                     </span>
                                                     {selectedRecord.orderId && (
-                                                        <span className="rounded-full border border-[#DDE6F0] bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                                                        <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600">
                                                             Order{" "}
                                                             {
                                                                 selectedRecord.orderId
                                                             }
                                                         </span>
                                                     )}
-                                                    <span className="rounded-full border border-[#DDE6F0] bg-white px-3 py-1.5 text-xs font-medium text-slate-600">
+                                                    <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs font-medium text-slate-600">
                                                         Active status:{" "}
                                                         {statusLabels[
                                                             selectedRecord.status as (typeof statusOptions)[number]
@@ -1146,10 +1722,77 @@ export default function AdminSupportPage() {
                                                     </span>
                                                 </div>
 
-                                                <div className="rounded-[20px] border border-[#DDE6F0] bg-white p-4">
+                                                {isOrderRelatedCase &&
+                                                    (selectedRecord.orderId ? (
+                                                        <div className="flex flex-col gap-3 border border-slate-200 bg-slate-50 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                                                            <div>
+                                                                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                                                                    Linked order
+                                                                </p>
+                                                                <p className="mt-1 text-sm font-semibold text-slate-800">
+                                                                    {
+                                                                        selectedRecord.orderId
+                                                                    }
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                <Button
+                                                                    className="h-9 rounded-lg bg-[#1F3B5B] px-3 text-sm text-white hover:bg-[#172C43]"
+                                                                    asChild
+                                                                >
+                                                                    <Link
+                                                                        href={
+                                                                            getOrderDetailsHref(
+                                                                                {
+                                                                                    id: selectedRecord.orderId,
+                                                                                }
+                                                                            )!
+                                                                        }
+                                                                    >
+                                                                        Order
+                                                                        details
+                                                                    </Link>
+                                                                </Button>
+                                                                {getTrackingHref(
+                                                                    selectedRecord.order
+                                                                ) && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        className="h-9 rounded-lg border-[#0F766E] px-3 text-sm text-[#0F766E] hover:bg-emerald-50"
+                                                                        asChild
+                                                                    >
+                                                                        <Link
+                                                                            href={
+                                                                                getTrackingHref(
+                                                                                    selectedRecord.order
+                                                                                )!
+                                                                            }
+                                                                            target="_blank"
+                                                                        >
+                                                                            Delivery
+                                                                            tracking
+                                                                        </Link>
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                                            This is an
+                                                            order-related case,
+                                                            but no order is
+                                                            linked yet. Link the
+                                                            customer order to
+                                                            unlock order details
+                                                            and delivery
+                                                            tracking.
+                                                        </div>
+                                                    ))}
+
+                                                <div className="border-y border-slate-200 bg-slate-50 px-3 py-3">
                                                     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                                                         <div>
-                                                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#6B94C1]">
+                                                            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#147D73]">
                                                                 Quick actions
                                                             </p>
                                                             <p className="mt-1 text-sm text-slate-500">
@@ -1165,60 +1808,109 @@ export default function AdminSupportPage() {
                                                             {getSuggestedActions(
                                                                 selectedRecord.status,
                                                                 queue
-                                                            ).map((action) => (
-                                                                <button
-                                                                    key={`${selectedRecord.id}-${action.status}`}
-                                                                    type="button"
-                                                                    onClick={() =>
-                                                                        updateSelectedStatus(
-                                                                            action.status
+                                                            )
+                                                                .filter(
+                                                                    (action) =>
+                                                                        action.status !==
+                                                                            "reopened" ||
+                                                                        isTerminalCaseStatus(
+                                                                            selectedRecord.status
                                                                         )
-                                                                    }
-                                                                    className={cn(
-                                                                        "rounded-full border px-3.5 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] transition",
-                                                                        action.status ===
-                                                                            "resolved" ||
-                                                                            action.status ===
-                                                                                "refunded" ||
-                                                                            action.status ===
-                                                                                "replaced"
-                                                                            ? "border-[#CFE3F8] bg-[#F3F8FF] text-[#1D4F80] hover:border-[#A8CBEE] hover:bg-white"
-                                                                            : action.status ===
-                                                                                    "closed" ||
+                                                                )
+                                                                .map(
+                                                                    (
+                                                                        action
+                                                                    ) => (
+                                                                        <button
+                                                                            key={`${selectedRecord.id}-${action.status}`}
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                updateSelectedStatus(
+                                                                                    action.status
+                                                                                )
+                                                                            }
+                                                                            className={cn(
+                                                                                "rounded-md border px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.1em] transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                                                                                 action.status ===
-                                                                                    "declined"
-                                                                              ? "border-[#E2E8F0] bg-[#F8FAFC] text-slate-600 hover:border-slate-300 hover:bg-white"
-                                                                              : "border-[#D7E2EF] bg-white text-slate-700 hover:border-[#BDD6EF] hover:bg-[#FAFCFF]"
-                                                                    )}
-                                                                >
-                                                                    {
-                                                                        action.label
-                                                                    }
-                                                                </button>
-                                                            ))}
+                                                                                    "reopened"
+                                                                                    ? "border-emerald-700 bg-emerald-600 text-white hover:bg-emerald-700 focus-visible:ring-emerald-600"
+                                                                                    : action.status ===
+                                                                                            "resolved" ||
+                                                                                        action.status ===
+                                                                                            "refunded" ||
+                                                                                        action.status ===
+                                                                                            "replaced"
+                                                                                      ? "border-[#0F766E] bg-[#0F766E] text-white hover:bg-[#115E59] focus-visible:ring-[#0F766E]"
+                                                                                      : action.status ===
+                                                                                              "closed" ||
+                                                                                          action.status ===
+                                                                                              "declined"
+                                                                                        ? "border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 focus-visible:ring-rose-500"
+                                                                                        : action.status ===
+                                                                                                "waiting_customer" ||
+                                                                                            action.status ===
+                                                                                                "waiting_brand"
+                                                                                          ? "border-slate-300 bg-white text-[#16324F] hover:bg-slate-50 focus-visible:ring-slate-500"
+                                                                                          : "border-[#1F3B5B] bg-[#1F3B5B] text-white hover:bg-[#172C43] focus-visible:ring-[#1F3B5B]"
+                                                                            )}
+                                                                        >
+                                                                            {
+                                                                                action.label
+                                                                            }
+                                                                        </button>
+                                                                    )
+                                                                )}
                                                         </div>
                                                     </div>
                                                 </div>
+                                                {isCaseLocked && (
+                                                    <div className="border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-900">
+                                                        This case is{" "}
+                                                        {selectedRecord.status.replace(
+                                                            /_/g,
+                                                            " "
+                                                        )}
+                                                        . Chat, attachments,
+                                                        refunds, notes, and
+                                                        status changes are
+                                                        locked until you reopen
+                                                        it.
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {queue === "user" &&
+                                        {isUserQueue &&
                                             selectedRecord.order && (
-                                                <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
-                                                    <div className="space-y-5">
-                                                        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                                                <div className="border border-slate-200 bg-white p-3">
+                                                    <div className="space-y-4">
+                                                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                                                             <div>
-                                                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
+                                                                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#147D73]">
                                                                     Linked order
                                                                 </p>
-                                                                <p className="mt-3 text-2xl font-semibold text-slate-900">
+                                                                <button
+                                                                    type="button"
+                                                                    title="Copy order ID"
+                                                                    onClick={async () => {
+                                                                        await navigator.clipboard.writeText(
+                                                                            selectedRecord
+                                                                                .order
+                                                                                .id
+                                                                        );
+                                                                        toast.success(
+                                                                            "Order ID copied"
+                                                                        );
+                                                                    }}
+                                                                    className="mt-1 block text-left text-lg font-semibold text-slate-900 underline-offset-4 hover:text-[#147D73] hover:underline"
+                                                                >
                                                                     {
                                                                         selectedRecord
                                                                             .order
                                                                             .id
                                                                     }
-                                                                </p>
-                                                                <p className="mt-2 text-sm text-slate-500">
+                                                                </button>
+                                                                <p className="mt-1 text-xs text-slate-500">
                                                                     Placed{" "}
                                                                     {selectedRecord
                                                                         .order
@@ -1234,20 +1926,6 @@ export default function AdminSupportPage() {
                                                             </div>
 
                                                             <div className="flex flex-wrap gap-2">
-                                                                <Button
-                                                                    variant="outline"
-                                                                    className="rounded-full"
-                                                                    onClick={() =>
-                                                                        navigator.clipboard.writeText(
-                                                                            selectedRecord
-                                                                                .order
-                                                                                .id
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    Copy order
-                                                                    ID
-                                                                </Button>
                                                                 {getOrderDetailsHref(
                                                                     selectedRecord.order
                                                                 ) && (
@@ -1366,8 +2044,8 @@ export default function AdminSupportPage() {
                                                             />
                                                         </div>
 
-                                                        <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr_1fr]">
-                                                            <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                        <div className="grid gap-2 xl:grid-cols-[1.1fr_0.9fr_1fr]">
+                                                            <div className="border border-slate-200 bg-slate-50 p-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Customer
                                                                     details
@@ -1417,7 +2095,7 @@ export default function AdminSupportPage() {
                                                                 </div>
                                                             </div>
 
-                                                            <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                            <div className="border border-slate-200 bg-slate-50 p-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Shipping
                                                                     address
@@ -1431,7 +2109,7 @@ export default function AdminSupportPage() {
                                                                 </p>
                                                             </div>
 
-                                                            <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                            <div className="border border-slate-200 bg-slate-50 p-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Order
                                                                     summary
@@ -1483,7 +2161,7 @@ export default function AdminSupportPage() {
                                                             </div>
                                                         </div>
 
-                                                        <div className="rounded-[22px] border border-[#DDE6F0] bg-white p-4">
+                                                        <div className="border border-slate-200 bg-white p-3">
                                                             <div className="flex items-center justify-between gap-3">
                                                                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                                                                     Ordered
@@ -1494,7 +2172,7 @@ export default function AdminSupportPage() {
                                                                     breakdown
                                                                 </p>
                                                             </div>
-                                                            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                                                            <div className="mt-3 grid gap-2 lg:grid-cols-2">
                                                                 {selectedRecord.order.items.map(
                                                                     (
                                                                         item: any
@@ -1526,9 +2204,9 @@ export default function AdminSupportPage() {
                                                                                 key={
                                                                                     item.id
                                                                                 }
-                                                                                className="flex gap-4 rounded-2xl border border-[#DDE6F0] bg-[#FCFDFF] p-4"
+                                                                                className="flex gap-3 border border-slate-200 bg-slate-50 p-3"
                                                                             >
-                                                                                <div className="h-20 w-20 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                                                                                <div className="h-16 w-16 overflow-hidden rounded-md border border-slate-200 bg-white">
                                                                                     {productImage ? (
                                                                                         <img
                                                                                             src={
@@ -1604,7 +2282,7 @@ export default function AdminSupportPage() {
 
                                         <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
                                             <div className="space-y-5">
-                                                {queue === "user" &&
+                                                {isUserQueue &&
                                                     selectedRecord.order && (
                                                         <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
                                                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
@@ -1808,6 +2486,9 @@ export default function AdminSupportPage() {
                                                             rows={4}
                                                             placeholder="Write the next support reply."
                                                             className="w-full rounded-[20px] border border-[#D7E2EF] bg-[#F8FBFF] px-4 py-4 text-sm text-slate-900"
+                                                            disabled={
+                                                                isCaseLocked
+                                                            }
                                                         />
                                                         <div className="rounded-[24px] border border-dashed border-[#C9DCF0] bg-[#F8FBFF] p-4">
                                                             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -1820,12 +2501,13 @@ export default function AdminSupportPage() {
                                                                 <Button
                                                                     type="button"
                                                                     variant="outline"
-                                                                    className="rounded-full"
+                                                                    className="h-8 rounded-md text-xs"
                                                                     onClick={() =>
                                                                         fileInputRef.current?.click()
                                                                     }
                                                                     disabled={
-                                                                        isUploading
+                                                                        isUploading ||
+                                                                        isCaseLocked
                                                                     }
                                                                 >
                                                                     {isUploading
@@ -1919,6 +2601,7 @@ export default function AdminSupportPage() {
                                                                 className="rounded-full px-6"
                                                                 disabled={
                                                                     isUploading ||
+                                                                    isCaseLocked ||
                                                                     (!replyText.trim() &&
                                                                         attachments.length ===
                                                                             0)
@@ -1933,8 +2616,8 @@ export default function AdminSupportPage() {
                                             </div>
 
                                             <div className="space-y-5">
-                                                <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
-                                                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
+                                                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                                                    <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                                                         Internal notes
                                                     </p>
                                                     <textarea
@@ -1948,11 +2631,13 @@ export default function AdminSupportPage() {
                                                         rows={6}
                                                         placeholder="Private notes for the support team."
                                                         className="mt-4 w-full rounded-[22px] border border-[#D7E2EF] bg-white px-4 py-4 text-sm text-slate-900"
+                                                        disabled={isCaseLocked}
                                                     />
                                                     <Button
                                                         onClick={addNote}
                                                         variant="outline"
                                                         className="mt-4 w-full rounded-full"
+                                                        disabled={isCaseLocked}
                                                     >
                                                         Save internal note
                                                     </Button>
@@ -1971,7 +2656,7 @@ export default function AdminSupportPage() {
                                                     </div>
                                                 </div>
 
-                                                {queue === "user" &&
+                                                {isUserQueue &&
                                                     selectedRecord.dispute && (
                                                         <div className="rounded-[28px] border border-[#D5E5F7] bg-[#F7FBFF] p-5">
                                                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
@@ -2007,9 +2692,9 @@ export default function AdminSupportPage() {
                                                         </div>
                                                     )}
 
-                                                {queue === "user" && (
+                                                {isUserQueue && (
                                                     <>
-                                                        <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
+                                                        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
                                                             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
                                                                 Dispute actions
                                                             </p>
@@ -2102,9 +2787,10 @@ export default function AdminSupportPage() {
                                                                             }
                                                                         );
                                                                     }}
-                                                                    className="rounded-full"
+                                                                    className="bg-[#16324F] text-white shadow-none hover:bg-[#102A43]"
                                                                     disabled={
                                                                         approveDisputeMutation.isPending ||
+                                                                        isCaseLocked ||
                                                                         [
                                                                             "approved_for_brand_action",
                                                                             "replacement_created",
@@ -2147,14 +2833,65 @@ export default function AdminSupportPage() {
                                                                             }
                                                                         )
                                                                     }
-                                                                    className="rounded-full"
+                                                                    className="border-[#E7B1B1] bg-[#FFF8F8] text-[#B42318] hover:bg-[#FEEEEE]"
                                                                     disabled={
-                                                                        rejectDisputeMutation.isPending
+                                                                        rejectDisputeMutation.isPending ||
+                                                                        isCaseLocked
                                                                     }
                                                                 >
                                                                     {rejectDisputeMutation.isPending
                                                                         ? "Rejecting..."
                                                                         : "Reject dispute"}
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    className="border-[#147D73] bg-[#147D73] font-semibold text-white shadow-none hover:bg-[#0F625A]"
+                                                                    disabled={
+                                                                        approveDisputeMutation.isPending ||
+                                                                        isCaseLocked ||
+                                                                        !selectedRecord.orderId
+                                                                    }
+                                                                    onClick={() => {
+                                                                        const email =
+                                                                            window
+                                                                                .prompt(
+                                                                                    "Confirm the customer email for the refund update.",
+                                                                                    selectedRecord
+                                                                                        .user
+                                                                                        ?.email ??
+                                                                                        ""
+                                                                                )
+                                                                                ?.trim() ??
+                                                                            "";
+                                                                        if (
+                                                                            !/^\S+@\S+\.\S+$/.test(
+                                                                                email
+                                                                            )
+                                                                        ) {
+                                                                            toast.error(
+                                                                                "Enter a valid customer email to send the refund update."
+                                                                            );
+                                                                            return;
+                                                                        }
+                                                                        approveDisputeMutation.mutate(
+                                                                            {
+                                                                                ticketId:
+                                                                                    selectedRecord.id,
+                                                                                disputeType:
+                                                                                    "refund",
+                                                                                summary:
+                                                                                    "Refund approved for processing.",
+                                                                                customerEmail:
+                                                                                    email,
+                                                                                quantityOverrides:
+                                                                                    [],
+                                                                            }
+                                                                        );
+                                                                    }}
+                                                                >
+                                                                    Approve
+                                                                    refund &
+                                                                    email
                                                                 </Button>
                                                             </div>
                                                             {!selectedRecord.orderId && (
@@ -2170,8 +2907,8 @@ export default function AdminSupportPage() {
                                                             )}
                                                         </div>
 
-                                                        <div className="rounded-[28px] border border-[#DDE6F0] bg-[#F8FBFF] p-5">
-                                                            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#6B94C1]">
+                                                        <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_8px_24px_rgba(15,23,42,0.04)]">
+                                                            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
                                                                 Goodwill coupon
                                                             </p>
                                                             <Input
@@ -2265,6 +3002,88 @@ export default function AdminSupportPage() {
                     </div>
                 </div>
             )}
+            <Dialog
+                open={!!resolutionDialog}
+                onOpenChange={(open) => !open && setResolutionDialog(null)}
+            >
+                <DialogContent className="max-w-xl rounded-md border-slate-200 p-5 [&_button]:!rounded-none">
+                    <DialogHeader>
+                        <DialogTitle className="text-base text-slate-950">
+                            {resolutionDialog?.status === "reopened"
+                                ? "Reopen case"
+                                : resolutionDialog?.status === "closed"
+                                  ? "Close case and notify customer"
+                                  : "Resolve case and notify customer"}
+                        </DialogTitle>
+                        <DialogDescription className="text-sm text-slate-500">
+                            {resolutionDialog?.status === "reopened"
+                                ? "Reopen this case to restore chat and support actions. You can add an optional note for the customer timeline."
+                                : "The reason will appear in the customer chat and in the email sent for this case."}
+                        </DialogDescription>
+                    </DialogHeader>
+                    {isUserQueue && resolutionDialog?.status !== "reopened" && (
+                        <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                            Customer email
+                            <Input
+                                type="email"
+                                value={resolutionEmail}
+                                onChange={(event) =>
+                                    setResolutionEmail(event.target.value)
+                                }
+                                placeholder="customer@example.com"
+                                className="h-10 rounded-none border-slate-300"
+                            />
+                        </label>
+                    )}
+                    <label className="block space-y-1.5 text-sm font-medium text-slate-700">
+                        {resolutionDialog?.status === "reopened"
+                            ? "Reopen reason (optional)"
+                            : "Resolution reason"}{" "}
+                        {resolutionDialog?.status !== "reopened" && (
+                            <span className="text-rose-600">*</span>
+                        )}
+                        <textarea
+                            value={resolutionReason}
+                            onChange={(event) =>
+                                setResolutionReason(event.target.value)
+                            }
+                            placeholder={
+                                resolutionDialog?.status === "reopened"
+                                    ? "Example: Customer sent additional information for review."
+                                    : "Explain what was resolved and why the case is being closed."
+                            }
+                            rows={5}
+                            className="w-full resize-none rounded-none border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none focus:border-[#16324F]"
+                        />
+                    </label>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            className="rounded-none"
+                            onClick={() => setResolutionDialog(null)}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            type="button"
+                            className="rounded-none bg-[#147D73] text-white hover:bg-[#0F625A]"
+                            onClick={submitResolution}
+                            disabled={
+                                updateUserStatusMutation.isPending ||
+                                updateBrandStatusMutation.isPending
+                            }
+                        >
+                            {resolutionDialog?.status === "reopened"
+                                ? "Reopen case"
+                                : resolutionDialog?.status === "closed"
+                                  ? "Close and send email"
+                                  : "Resolve and send email"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
             {approvalPreview && (
                 <div className="fixed inset-0 z-[79] flex items-center justify-center bg-slate-950/30 px-4 backdrop-blur-[2px]">
                     <div className="w-full max-w-3xl rounded-[30px] border border-[#D7E2EF] bg-white p-7 shadow-[0_24px_80px_rgba(15,23,42,0.18)]">
@@ -2284,7 +3103,7 @@ export default function AdminSupportPage() {
                             </div>
                             <Button
                                 variant="outline"
-                                className="rounded-full"
+                                className="h-8 rounded-md text-xs"
                                 onClick={() => setApprovalPreview(null)}
                             >
                                 Cancel
@@ -2408,6 +3227,8 @@ export default function AdminSupportPage() {
     );
 }
 
+export default AdminSupportPage;
+
 function StatusBadge({ status }: { status: string }) {
     return (
         <Badge
@@ -2421,11 +3242,11 @@ function StatusBadge({ status }: { status: string }) {
 
 function MiniPill({ label, value }: { label: string; value: ReactNode }) {
     return (
-        <div className="min-w-[180px] rounded-[22px] border border-[#DDE6F0] bg-white px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#6B94C1]">
+        <div className="min-w-[140px] border border-slate-200 bg-slate-50 px-3 py-2.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">
                 {label}
             </p>
-            <p className="mt-2 text-xl font-medium text-slate-900">{value}</p>
+            <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
         </div>
     );
 }

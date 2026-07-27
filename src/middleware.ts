@@ -136,6 +136,21 @@ export default clerkMiddleware(async (auth, req) => {
 
                     const accessedRoute = routes.find((route) => {
                         if (
+                            url.pathname.startsWith(
+                                "/dashboard/general/support/case/"
+                            )
+                        ) {
+                            return (
+                                (supportQueue === "brand" &&
+                                    route.url ===
+                                        "/dashboard/general/support/brand") ||
+                                (supportQueue !== "brand" &&
+                                    route.url ===
+                                        "/dashboard/general/support/user")
+                            );
+                        }
+
+                        if (
                             url.pathname === "/dashboard/general/support" &&
                             supportQueue
                         ) {

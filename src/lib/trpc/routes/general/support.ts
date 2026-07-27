@@ -79,9 +79,10 @@ const terminalStatuses = [
 
 function buildAutomatedSupportReply(ticketId: string, customerName?: string) {
     const humanizedId = ticketId.split("-")[0].toUpperCase();
-    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK
-        .replaceAll("[Customer Name]", customerName || "Customer")
-        .replaceAll("[ID]", humanizedId);
+    return SUPPORT_TEMPLATE_LIBRARY.AUTO_ACK.replaceAll(
+        "[Customer Name]",
+        customerName || "Customer"
+    ).replaceAll("[ID]", humanizedId);
 }
 
 function formatSupportCategoryLabel(category: string) {
@@ -795,7 +796,10 @@ export const adminSupportRouter = createTRPCRouter({
                     ticketId: row.id,
                     sender: "system",
                     senderId: "support-bot",
-                    text: buildAutomatedSupportReply(row.id, customer.firstName),
+                    text: buildAutomatedSupportReply(
+                        row.id,
+                        customer.firstName
+                    ),
                     messageType: "system",
                     metadata: {
                         template: "AUTO_ACK",
@@ -963,11 +967,24 @@ export const adminSupportRouter = createTRPCRouter({
             });
             if (!existing) throw new Error("Ticket not found");
             if (
+                terminalStatuses.includes(existing.status as any) &&
+                input.status !== "reopened"
+            ) {
+                throw new Error(
+                    "This case is resolved or closed. Reopen it before changing its status."
+                );
+            }
+            if (
                 terminalStatuses.includes(input.status as any) &&
                 !input.resolutionCode
             ) {
                 throw new Error(
                     "Resolution code is required before closing a support ticket."
+                );
+            }
+            if (input.status === "closed" && !input.reason?.trim()) {
+                throw new Error(
+                    "A closure reason is required before closing a support ticket."
                 );
             }
 
@@ -999,6 +1016,27 @@ export const adminSupportRouter = createTRPCRouter({
                 .where(eq(supportTickets.id, input.ticketId))
                 .returning()
                 .then((res) => res[0]);
+
+            if (input.status === "closed") {
+                await db.insert(supportMessages).values({
+                    ticketId: existing.id,
+                    sender: "system",
+                    senderId: ctx.user.id,
+                    text: `Case closed. Reason: ${input.reason!.trim()}`,
+                    messageType: "system",
+                });
+            }
+            if (input.status === "reopened") {
+                await db.insert(supportMessages).values({
+                    ticketId: existing.id,
+                    sender: "system",
+                    senderId: ctx.user.id,
+                    text: input.reason?.trim()
+                        ? `Case reopened. Reason: ${input.reason.trim()}`
+                        : "Case reopened by the support team.",
+                    messageType: "system",
+                });
+            }
 
             await db.insert(supportTicketStatusHistory).values({
                 ticketId: existing.id,
@@ -1054,6 +1092,11 @@ export const adminSupportRouter = createTRPCRouter({
                 where: eq(supportTickets.id, input.ticketId),
             });
             if (!ticket) throw new Error("Ticket not found");
+            if (terminalStatuses.includes(ticket.status as any)) {
+                throw new Error(
+                    "This case is resolved or closed. Reopen it before sending a reply."
+                );
+            }
 
             const inserted = await db
                 .insert(supportMessages)
@@ -1159,6 +1202,7 @@ export const adminSupportRouter = createTRPCRouter({
                 })
                 .returning()
                 .then((res) => res[0]);
+
             await auditEntityChange({
                 actorId: ctx.user.id,
                 actionType: "ticket_internal_note_added",
@@ -1308,6 +1352,7 @@ export const adminSupportRouter = createTRPCRouter({
                 resolutionType: z.string().optional(),
                 resolutionSummary: z.string().optional(),
                 resolutionCode: resolutionCodeSchema.optional(),
+                deliveryEmail: z.string().email().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -1316,11 +1361,27 @@ export const adminSupportRouter = createTRPCRouter({
             });
             if (!existing) throw new Error("Ticket not found");
             if (
+                terminalStatuses.includes(existing.status as any) &&
+                input.status !== "reopened"
+            ) {
+                throw new Error(
+                    "This case is resolved or closed. Reopen it before changing its status."
+                );
+            }
+            if (
                 terminalStatuses.includes(input.status as any) &&
                 !input.resolutionCode
             ) {
                 throw new Error(
                     "Resolution code is required before closing a customer support ticket."
+                );
+            }
+            if (
+                ["resolved", "closed"].includes(input.status) &&
+                !input.resolutionSummary?.trim()
+            ) {
+                throw new Error(
+                    "A resolution reason is required before resolving or closing a customer support ticket."
                 );
             }
 
@@ -1353,12 +1414,35 @@ export const adminSupportRouter = createTRPCRouter({
                     csatSentAt: terminalStatuses.includes(input.status as any)
                         ? new Date()
                         : existing.csatSentAt,
+                    latestMessageAt: new Date(),
                     updatedAt: new Date(),
                     unreadByUser: "true",
                 })
                 .where(eq(userSupportTickets.id, input.ticketId))
                 .returning()
                 .then((res) => res[0]);
+            if (["resolved", "closed"].includes(input.status)) {
+                await db.insert(userSupportMessages).values({
+                    ticketId: existing.id,
+                    sender: "system",
+                    senderId: ctx.user.id,
+                    text:
+                        input.status === "closed"
+                            ? `Case closed. Reason: ${input.resolutionSummary!.trim()}`
+                            : `Case resolved. Resolution: ${input.resolutionSummary!.trim()}`,
+                    messageType: "system",
+                });
+            } else if (input.status === "reopened") {
+                await db.insert(userSupportMessages).values({
+                    ticketId: existing.id,
+                    sender: "system",
+                    senderId: ctx.user.id,
+                    text: input.resolutionSummary?.trim()
+                        ? `Case reopened. Reason: ${input.resolutionSummary.trim()}`
+                        : "Case reopened by the support team.",
+                    messageType: "system",
+                });
+            }
             await auditEntityChange({
                 actorId: ctx.user.id,
                 actionType: "ticket_status_changed",
@@ -1378,17 +1462,32 @@ export const adminSupportRouter = createTRPCRouter({
                 userId: existing.userId,
                 actorId: ctx.user.id,
                 type: "support.ticket.status_changed",
-                title: "Your support case was updated",
-                body: `"${existing.title}" is now ${input.status.replace(/_/g, " ")}`,
+                title:
+                    input.status === "closed"
+                        ? "Your support case is closed"
+                        : input.status === "resolved"
+                          ? "Your support case is resolved"
+                          : "Your support case was updated",
+                body: input.resolutionSummary?.trim()
+                    ? `"${existing.title}" was ${input.status.replace(/_/g, " ")}. ${input.resolutionSummary.trim()}`
+                    : `"${existing.title}" is now ${input.status.replace(/_/g, " ")}`,
                 href: buildSupportHref(existing.id),
-                emailSubject: `Support case updated: ${existing.title}`,
-                emailIntro: `Your support case "${existing.title}" has been updated.`,
+                emailSubject:
+                    input.status === "closed"
+                        ? `Your support case is closed: ${existing.title}`
+                        : input.status === "resolved"
+                          ? `Your support case is resolved: ${existing.title}`
+                          : `Support case updated: ${existing.title}`,
+                emailIntro: input.resolutionSummary?.trim()
+                    ? `Your support case "${existing.title}" has been ${input.status.replace(/_/g, " ")}.`
+                    : `Your support case "${existing.title}" has been updated.`,
                 emailDetails: [
                     `New status: ${input.status}`,
                     ...(input.resolutionSummary
-                        ? [`Update: ${input.resolutionSummary}`]
+                        ? [`Resolution reason: ${input.resolutionSummary}`]
                         : []),
                 ],
+                deliveryEmail: input.deliveryEmail,
                 metadata: {
                     ticketId: existing.id,
                     status: input.status,
@@ -1410,6 +1509,11 @@ export const adminSupportRouter = createTRPCRouter({
                 where: eq(userSupportTickets.id, input.ticketId),
             });
             if (!ticket) throw new Error("Ticket not found");
+            if (terminalStatuses.includes(ticket.status as any)) {
+                throw new Error(
+                    "This case is resolved or closed. Reopen it before sending a reply."
+                );
+            }
 
             const inserted = await db
                 .insert(userSupportMessages)
@@ -1615,6 +1719,7 @@ export const adminSupportRouter = createTRPCRouter({
                     )
                     .default([]),
                 kpJointApprovalConfirmed: z.boolean().default(false),
+                customerEmail: z.string().email().optional(),
             })
         )
         .mutation(async ({ ctx, input }) => {
@@ -1623,6 +1728,11 @@ export const adminSupportRouter = createTRPCRouter({
             });
             if (!ticket) {
                 throw new Error("Support ticket not found");
+            }
+            if (terminalStatuses.includes(ticket.status as any)) {
+                throw new Error(
+                    "This case is resolved or closed. Reopen it before processing a refund or dispute action."
+                );
             }
             if (!ticket.orderId) {
                 throw new Error(
@@ -1946,6 +2056,9 @@ export const adminSupportRouter = createTRPCRouter({
                     ticketId: ticket.id,
                     replacementOrderId,
                 },
+                ...(isRefundDispute && input.customerEmail
+                    ? { deliveryEmail: input.customerEmail }
+                    : {}),
             });
 
             if (input.disputeType === "refund") {
@@ -1994,6 +2107,11 @@ export const adminSupportRouter = createTRPCRouter({
                 where: eq(userSupportTickets.id, input.ticketId),
             });
             if (!ticket) throw new Error("Ticket not found");
+            if (terminalStatuses.includes(ticket.status as any)) {
+                throw new Error(
+                    "This case is resolved or closed. Reopen it before taking dispute action."
+                );
+            }
 
             const existing = await db.query.userSupportDisputes.findFirst({
                 where: eq(userSupportDisputes.ticketId, ticket.id),
@@ -2065,6 +2183,11 @@ export const adminSupportRouter = createTRPCRouter({
                 where: eq(userSupportTickets.id, input.ticketId),
             });
             if (!ticket) throw new Error("Ticket not found");
+            if (terminalStatuses.includes(ticket.status as any)) {
+                throw new Error(
+                    "This case is resolved or closed. Reopen it before sending a coupon."
+                );
+            }
 
             const code = `CARE${generateId({ length: 6, casing: "upper" })}`;
             const expiresAt = new Date();
