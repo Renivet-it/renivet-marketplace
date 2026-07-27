@@ -3,13 +3,28 @@ import { cn } from "@/lib/utils";
 type NewProductBadgeProps = {
     className?: string;
     side?: "left" | "right";
+    variant?: "corner" | "pill";
 };
 
 /** A right-side corner ribbon for products added in the last 30 days. */
 export function NewProductBadge({
     className,
     side = "left",
+    variant = "corner",
 }: NewProductBadgeProps) {
+    if (variant === "pill") {
+        return (
+            <span
+                className={cn(
+                    "pointer-events-none absolute inline-flex h-7 min-w-[52px] items-center justify-center rounded-md bg-[linear-gradient(135deg,#315848_0%,#6d7447_100%)] px-2.5 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_6px_14px_rgba(24,28,44,0.18)]",
+                    className
+                )}
+            >
+                New
+            </span>
+        );
+    }
+
     return (
         <span
             className={cn(

@@ -428,11 +428,14 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                         <DiscountBadge
                             discount={discount}
                             compact
-                            className="absolute left-0 top-[46px] z-10 sm:top-[56px]"
+                            className="absolute left-0 top-3 z-10"
                         />
                     )}
                     {showNewBadge && (
-                        <NewProductBadge className="left-0 top-0 z-20" />
+                        <NewProductBadge
+                            variant="pill"
+                        className="left-0 top-11 z-20"
+                        />
                     )}
 
                     {/* Floating Wishlist Button */}

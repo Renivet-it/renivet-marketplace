@@ -282,11 +282,14 @@ function Under999ProductCard({
                     <DiscountBadge
                         discount={discount}
                         compact
-                        className="absolute left-0 top-[46px] z-20 sm:top-[56px]"
+                        className="absolute left-0 top-3 z-20"
                     />
                 )}
                 {showNewBadge && (
-                    <NewProductBadge className="left-0 top-0 z-20" />
+                    <NewProductBadge
+                        variant="pill"
+                        className="left-0 top-11 z-20"
+                    />
                 )}
 
                 {/* Wishlist — top right */}
