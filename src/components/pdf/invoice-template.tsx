@@ -240,11 +240,9 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
         };
     });
     const shippingCharge = Math.max(0, Number(order.deliveryAmount ?? 0));
-    // `discount_amount` is the coupon value for orders created through the
-    // current checkout flow. Older orders without a coupon code stay blank.
-    const couponDiscount = order.couponCode
-        ? Math.max(0, Number(order.discountAmount ?? 0))
-        : 0;
+    // `discount_amount` is stored in paise and is the coupon discount source.
+    // `money()` converts it to rupees wherever it is displayed.
+    const couponDiscount = Math.max(0, Number(order.discountAmount ?? 0));
     const saleTotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
     let allocatedCouponDiscount = 0;
     const displayLines = lines.map((line, index) => {
