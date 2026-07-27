@@ -421,7 +421,6 @@ export function OrderPage({
                 // Product discounts are already reflected in brandTotal. Only
                 // the coupon value is subtracted and persisted on the order.
                 discountAmount: brandCouponDiscount,
-                couponDiscountAmount: brandCouponDiscount,
                 paymentMethod,
                 totalItems: brandItems.reduce(
                     (acc, item) => acc + item.quantity,
