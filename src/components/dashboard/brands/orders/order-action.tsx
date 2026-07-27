@@ -135,8 +135,24 @@ export function OrderAction({ order, onAction }: PageProps) {
                             " - " +
                             order.zip,
                         amount: order.totalAmount,
-                        items: productData,
+                        deliveryAmount: order.deliveryAmount,
+                        discountAmount: order.discountAmount,
+                        couponCode: order.couponCode,
+                        couponDiscountAmount: order.couponDiscountAmount,
+                        items: productData
+                            ? [
+                                  {
+                                      product: productData,
+                                      quantity: order.totalItems,
+                                  },
+                              ]
+                            : [],
                         brand: brandData,
+                        state: order.state,
+                        receiptId: order.receiptId,
+                        paymentMethod: order.paymentMethod,
+                        paymentId: order.paymentId,
+                        paymentStatus: order.paymentStatus,
                         date: order.createdAt,
                     },
                 }),

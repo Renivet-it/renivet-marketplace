@@ -3,12 +3,12 @@ import {
     boolean,
     index,
     integer,
+    jsonb,
     pgTable,
     text,
+    timestamp,
     uniqueIndex,
     uuid,
-    jsonb,
-    timestamp,
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
@@ -64,6 +64,11 @@ export const orders = pgTable(
         taxAmount: integer("tax_amount").notNull(),
         deliveryAmount: integer("delivery_amount").notNull(),
         discountAmount: integer("discount_amount").notNull().default(0),
+        // Persist coupon information separately from a product's compare-at-price reduction.
+        couponCode: text("coupon_code"),
+        couponDiscountAmount: integer("coupon_discount_amount")
+            .notNull()
+            .default(0),
         totalAmount: integer("total_amount").notNull(),
         isSwapRewardOrder: boolean("is_swap_reward_order")
             .notNull()
@@ -109,10 +114,9 @@ export const ordersIntent = pgTable(
         paymentId: text("payment_id"),
         paymentStatus: text("payment_status"),
         status: text("status"),
-        orderId: text("order_id")
-            .references(() => orders.id, {
-                onDelete: "cascade",
-            }),
+        orderId: text("order_id").references(() => orders.id, {
+            onDelete: "cascade",
+        }),
         totalItems: integer("total_items"),
         totalAmount: integer("total_amount"),
         logDetails: jsonb("log_details"),
@@ -123,11 +127,14 @@ export const ordersIntent = pgTable(
     },
 
     (table) => ({
-        orderIntentUserIdIdx: index("order_intent_user_id_idx").on(table.userId),
-        orderIntentOrderIdIdx: index("order_intent_order_id_idx").on(table.orderId),
+        orderIntentUserIdIdx: index("order_intent_user_id_idx").on(
+            table.userId
+        ),
+        orderIntentOrderIdIdx: index("order_intent_order_id_idx").on(
+            table.orderId
+        ),
     })
 );
-
 
 export const orderItems = pgTable(
     "order_items",
@@ -179,8 +186,8 @@ export const orderRelations = relations(orders, ({ one, many }) => ({
     intent: many(ordersIntent),
     item: one(orderItems, {
         fields: [orders.id],
-        references: [orderItems.orderId]
-    })
+        references: [orderItems.orderId],
+    }),
 }));
 
 export const orderItemsRelations = relations(orderItems, ({ one }) => ({
@@ -202,7 +209,6 @@ export const orderItemsRelations = relations(orderItems, ({ one }) => ({
     }),
 }));
 
-
 export const orderIntentRelations = relations(ordersIntent, ({ one }) => ({
     order: one(orders, {
         fields: [ordersIntent.orderId],
@@ -216,7 +222,7 @@ export const orderIntentRelations = relations(ordersIntent, ({ one }) => ({
         fields: [ordersIntent.variantId],
         references: [productVariants.id],
     }),
-        user: one(users, {
+    user: one(users, {
         fields: [ordersIntent.userId],
         references: [users.id],
     }),

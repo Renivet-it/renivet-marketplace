@@ -236,7 +236,8 @@ class OrderQuery {
             eq(orders.cancellationReasonCode, "CAN_CUSTOMER_REQUEST"),
             inArray(
                 orders.id,
-                db.select({ orderId: orderShipments.orderId })
+                db
+                    .select({ orderId: orderShipments.orderId })
                     .from(orderShipments)
                     .where(eq(orderShipments.status, "cancelled"))
             )
@@ -516,7 +517,8 @@ class OrderQuery {
             eq(orders.cancellationReasonCode, "CAN_CUSTOMER_REQUEST"),
             inArray(
                 orders.id,
-                db.select({ orderId: orderShipments.orderId })
+                db
+                    .select({ orderId: orderShipments.orderId })
                     .from(orderShipments)
                     .where(eq(orderShipments.status, "cancelled"))
             )
@@ -825,6 +827,8 @@ class OrderQuery {
                     courierName: orderShipments.courierName,
                     deliveryAmount: orders.deliveryAmount,
                     discountAmount: orders.discountAmount,
+                    couponCode: orders.couponCode,
+                    couponDiscountAmount: orders.couponDiscountAmount,
                     totalAmount: orders.totalAmount,
                     isReturnLabelGenerated:
                         orderShipments.is_return_label_generated,
@@ -887,6 +891,8 @@ class OrderQuery {
                         taxAmount: item.taxAmount,
                         deliveryAmount: item.deliveryAmount,
                         discountAmount: item.discountAmount,
+                        couponCode: item.couponCode,
+                        couponDiscountAmount: item.couponDiscountAmount,
                         totalAmount: item.totalAmount,
                         isReturnLabelGenerated: toBooleanLike(
                             item.isReturnLabelGenerated

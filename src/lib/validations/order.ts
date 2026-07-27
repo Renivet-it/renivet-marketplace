@@ -121,15 +121,22 @@ export const orderSchema = z.object({
         .union([z.string(), z.number()])
         .transform((val) => Number(val))
         .pipe(z.number().min(0, "Delivery Amount must be a positive number")),
-discountAmount: z
-  .union([z.string(), z.number()])
-  .transform((val) => Math.round(Number(val)))
-  .pipe(
-    z
-      .number()
-      .int("Discount Amount must be an integer")
-      .min(0, "Discount Amount must be a positive number")
-  ),
+    discountAmount: z
+        .union([z.string(), z.number()])
+        .transform((val) => Math.round(Number(val)))
+        .pipe(
+            z
+                .number()
+                .int("Discount Amount must be an integer")
+                .min(0, "Discount Amount must be a positive number")
+        ),
+    couponCode: z.string().nullable().optional(),
+    couponDiscountAmount: z
+        .union([z.string(), z.number()])
+        .transform((val) => Math.round(Number(val)))
+        .pipe(z.number().int().min(0))
+        .optional()
+        .default(0),
     totalAmount: z
         .union([z.string(), z.number()])
         .transform((val) => Number(val))
@@ -184,15 +191,17 @@ export const createOrderSchema = orderSchema.omit({
     updatedAt: true,
 });
 
-export const updateOrderStatusSchema = orderSchema.pick({
-    paymentId: true,
-    paymentMethod: true,
-    paymentStatus: true,
-    status: true,
-}).extend({
-    cancellationReasonCode: z.string().min(2).max(80).optional(),
-    manualOverrideReason: z.string().min(3).max(500).optional(),
-});
+export const updateOrderStatusSchema = orderSchema
+    .pick({
+        paymentId: true,
+        paymentMethod: true,
+        paymentStatus: true,
+        status: true,
+    })
+    .extend({
+        cancellationReasonCode: z.string().min(2).max(80).optional(),
+        manualOverrideReason: z.string().min(3).max(500).optional(),
+    });
 
 export type Order = z.infer<typeof orderSchema>;
 export type OrderWithItemAndBrand = z.infer<typeof orderWithItemAndBrandSchema>;

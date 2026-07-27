@@ -40,7 +40,9 @@ const styles = StyleSheet.create({
         width: 145,
         height: 40,
         objectFit: "contain",
-        marginLeft: -28,
+        objectPosition: "left",
+        // Start at the same left edge as the seller name beneath it.
+        marginLeft: 0,
         marginBottom: 8,
     },
     header: {
@@ -86,22 +88,32 @@ const styles = StyleSheet.create({
     },
     head: { backgroundColor: "#eef2f7" },
     th: {
-        padding: 6,
+        padding: 4,
+        fontSize: 6,
         fontFamily: "Helvetica-Bold",
         borderRightWidth: 1,
         borderRightColor: border,
     },
-    td: { padding: 6, borderRightWidth: 1, borderRightColor: border },
+    td: {
+        padding: 4,
+        fontSize: 6,
+        borderRightWidth: 1,
+        borderRightColor: border,
+    },
     last: { borderRightWidth: 0 },
-    no: { width: "5%" },
-    product: { width: "28%" },
-    hsn: { width: "10%" },
-    qty: { width: "5%" },
-    taxable: { width: "16%" },
-    // Keep the GST value on one line even in a dense invoice table.
-    rate: { width: "8%", fontSize: 7, paddingLeft: 4, paddingRight: 4 },
-    tax: { width: "9%" },
-    total: { width: "19%" },
+    no: { width: "3%" },
+    product: { width: "15%" },
+    hsn: { width: "7%" },
+    qty: { width: "4%" },
+    gross: { width: "8%" },
+    productDiscount: { width: "8%" },
+    couponDiscount: { width: "8%" },
+    totalDiscount: { width: "10%" },
+    discountPercent: { width: "9%", fontSize: 6 },
+    taxable: { width: "8%" },
+    rate: { width: "5%", fontSize: 6, paddingLeft: 3, paddingRight: 3 },
+    tax: { width: "6%" },
+    total: { width: "8%" },
     totals: {
         marginTop: 12,
         marginLeft: "55%",
@@ -167,9 +179,14 @@ type InvoiceOrder = {
     state?: string;
     amount: number;
     deliveryAmount?: number;
+    /** Coupon discount saved against this order, in paise. */
+    discountAmount?: number;
+    couponDiscountAmount?: number;
+    couponCode?: string | null;
     items: InvoiceItem[];
     brand: {
         name: string;
+        logoUrl?: string | null;
         confidential?: {
             addressLine1?: string;
             city?: string;
@@ -187,14 +204,6 @@ const formatGstRate = (basisPoints: number) => {
 
 export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
     const items = Array.isArray(order.items) ? order.items : [];
-    const listTotal =
-        items.reduce(
-            (s, i) =>
-                s +
-                Number(i.variant?.price ?? i.product?.price ?? 0) *
-                    Math.max(1, Number(i.quantity ?? 1)),
-            0
-        ) || order.amount;
     const intra = Boolean(
         order.brand.confidential?.state &&
             order.state &&
@@ -203,33 +212,76 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
     );
     const lines = items.map((item, index) => {
         const qty = Math.max(1, Number(item.quantity ?? 1));
-        const listLineValue =
-            Number(item.variant?.price ?? item.product?.price ?? 0) * qty;
-        const gross =
-            listLineValue > 0
-                ? Math.round(order.amount * (listLineValue / listTotal))
-                : Math.round(order.amount / Math.max(items.length, 1));
+        const unitPrice = Number(
+            item.variant?.price ?? item.product?.price ?? 0
+        );
+        const compareAtPrice = Number(
+            item.variant?.compareAtPrice ?? item.product?.compareAtPrice ?? 0
+        );
+        const originalUnitPrice =
+            compareAtPrice > unitPrice ? compareAtPrice : unitPrice;
+        const gross = originalUnitPrice * qty;
+        const productDiscount = Math.max(0, gross - unitPrice * qty);
         const rate = Number(item.gstRateBps ?? 0);
+        const lineTotal = unitPrice * qty;
         const taxable = rate
-            ? Math.round((gross * 10000) / (10000 + rate))
-            : gross;
+            ? Math.round((lineTotal * 10000) / (10000 + rate))
+            : lineTotal;
         return {
             index,
             qty,
             gross,
+            productDiscount,
             taxable,
-            tax: gross - taxable,
+            tax: lineTotal - taxable,
+            lineTotal,
             rate,
             title: item.product?.title ?? "Product",
             hsn: item.product?.hsCode ?? item.variant?.hsCode ?? "-",
         };
     });
-    const taxable = lines.reduce((s, l) => s + l.taxable, 0);
-    const tax = lines.reduce((s, l) => s + l.tax, 0);
+    const shippingCharge = Math.max(0, Number(order.deliveryAmount ?? 0));
+    // Older orders did not persist a coupon code/amount. Do not present their
+    // aggregate discount as a coupon discount, since it may be a product sale.
+    const couponDiscount = order.couponCode
+        ? Math.max(
+              0,
+              Number(order.couponDiscountAmount ?? order.discountAmount ?? 0)
+          )
+        : 0;
+    const saleTotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
+    let allocatedCouponDiscount = 0;
+    const displayLines = lines.map((line, index) => {
+        const lineCouponDiscount =
+            index === lines.length - 1
+                ? Math.max(0, couponDiscount - allocatedCouponDiscount)
+                : Math.round(
+                      couponDiscount * (line.lineTotal / Math.max(saleTotal, 1))
+                  );
+        allocatedCouponDiscount += lineCouponDiscount;
+        const lineTotal = Math.max(0, line.lineTotal - lineCouponDiscount);
+        const taxable = line.rate
+            ? Math.round((lineTotal * 10000) / (10000 + line.rate))
+            : lineTotal;
+        const lineTotalDiscount = line.productDiscount + lineCouponDiscount;
+
+        return {
+            ...line,
+            couponDiscount: lineCouponDiscount,
+            totalDiscount: lineTotalDiscount,
+            discountPercentage: line.gross
+                ? (lineTotalDiscount / line.gross) * 100
+                : 0,
+            taxable,
+            tax: lineTotal - taxable,
+            total: lineTotal,
+        };
+    });
+    const taxable = displayLines.reduce((sum, line) => sum + line.taxable, 0);
+    const tax = displayLines.reduce((sum, line) => sum + line.tax, 0);
     const cgst = intra ? Math.round(tax / 2) : 0;
     const sgst = intra ? tax - cgst : 0;
     const igst = intra ? 0 : tax;
-    const shippingCharge = Math.max(0, Number(order.deliveryAmount ?? 0));
     const seller = order.brand.confidential;
     return (
         <Document>
@@ -237,7 +289,10 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                 <View style={styles.header}>
                     <View>
                         <Image
-                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNul0Kj0hnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
+                            src={
+                                order.brand.logoUrl ||
+                                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNul0Kj0hnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
+                            }
                             style={styles.logo}
                         />
                         <Text style={styles.sellerName}>
@@ -327,6 +382,11 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             ["Description", styles.product],
                             ["HSN", styles.hsn],
                             ["Qty", styles.qty],
+                            ["Gross", styles.gross],
+                            ["Product\ndiscount", styles.productDiscount],
+                            ["Discount\u00A0%", styles.discountPercent],
+                            ["Coupon\ndiscount", styles.couponDiscount],
+                            ["Total discount", styles.totalDiscount],
                             ["Net price", styles.taxable],
                             ["GST", styles.rate],
                             ["Tax", styles.tax],
@@ -334,17 +394,18 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         ].map(([t, c], i) => (
                             <Text
                                 key={String(t)}
+                                wrap={i !== 6}
                                 style={[
                                     styles.th,
                                     c as object,
-                                    i === 7 ? styles.last : {},
+                                    i === 12 ? styles.last : {},
                                 ]}
                             >
                                 {t as string}
                             </Text>
                         ))}
                     </View>
-                    {lines.map((l) => (
+                    {displayLines.map((l) => (
                         <View key={l.index} style={styles.row}>
                             <Text style={[styles.td, styles.no]}>
                                 {l.index + 1}
@@ -354,6 +415,23 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             </Text>
                             <Text style={[styles.td, styles.hsn]}>{l.hsn}</Text>
                             <Text style={[styles.td, styles.qty]}>{l.qty}</Text>
+                            <Text style={[styles.td, styles.gross]}>
+                                {money(l.gross)}
+                            </Text>
+                            <Text style={[styles.td, styles.productDiscount]}>
+                                -{money(l.productDiscount)}
+                            </Text>
+                            <Text style={[styles.td, styles.discountPercent]}>
+                                {l.discountPercentage.toFixed(2)}%
+                            </Text>
+                            <Text style={[styles.td, styles.couponDiscount]}>
+                                {l.couponDiscount
+                                    ? `-${money(l.couponDiscount)}`
+                                    : "-"}
+                            </Text>
+                            <Text style={[styles.td, styles.totalDiscount]}>
+                                -{money(l.totalDiscount)}
+                            </Text>
                             <Text style={[styles.td, styles.taxable]}>
                                 {money(l.taxable)}
                             </Text>
@@ -366,7 +444,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             <Text
                                 style={[styles.td, styles.total, styles.last]}
                             >
-                                {money(l.gross)}
+                                {money(l.total)}
                             </Text>
                         </View>
                     ))}
