@@ -12,12 +12,14 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog-general";
 import { DiscountBadge } from "@/components/ui/discount-badge";
+import { NewProductBadge } from "@/components/ui/new-product-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
+import { isNewProduct } from "@/lib/products/is-new-product";
 import { Banner } from "@/lib/validations";
 import {
     Check,
@@ -158,6 +160,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                       100
               )
             : null;
+    const showNewBadge = isNewProduct(product.createdAt);
 
     const mediaUrls =
         Array.from(
@@ -425,8 +428,11 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                         <DiscountBadge
                             discount={discount}
                             compact
-                            className="absolute left-0 top-3 z-10"
+                            className="absolute left-0 top-[46px] z-10 sm:top-[56px]"
                         />
+                    )}
+                    {showNewBadge && (
+                        <NewProductBadge className="left-0 top-0 z-20" />
                     )}
 
                     {/* Floating Wishlist Button */}

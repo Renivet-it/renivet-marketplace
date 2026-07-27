@@ -11,6 +11,7 @@ import {
     DialogTrigger,
 } from "@/components/ui/dialog-general";
 import { DiscountBadge } from "@/components/ui/discount-badge";
+import { NewProductBadge } from "@/components/ui/new-product-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { trpc } from "@/lib/trpc/client";
@@ -21,6 +22,7 @@ import {
     normalizeBrandName,
 } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
+import { isNewProduct } from "@/lib/products/is-new-product";
 import { ProductWithBrand } from "@/lib/validations";
 import { ChevronRight, ShoppingCart } from "lucide-react";
 import Image from "next/image";
@@ -160,6 +162,7 @@ export function ProductCard({
         originalPrice && originalPrice > rawPrice
             ? Math.round(((originalPrice - rawPrice) / originalPrice) * 100)
             : null;
+    const showNewBadge = isNewProduct(product.createdAt);
 
     const selectedVariant = useMemo(() => {
         if (!product.variants?.length) return null;
@@ -418,6 +421,13 @@ export function ProductCard({
                                     discount={discount}
                                     compact
                                     className="absolute left-0 top-3 z-20"
+                                />
+                            ) : null}
+
+                            {showNewBadge ? (
+                                <NewProductBadge
+                                    side="right"
+                                    className="right-0 top-0 z-20"
                                 />
                             ) : null}
 
