@@ -11,6 +11,7 @@ import {
     createOrder as createDelhiveryOrder,
     getShippingCharge,
 } from "@/lib/delhivery/orders";
+import { computeCheckoutTaxLines } from "@/lib/finance/calculations";
 import {
     auditEntityChange,
     createOperationalAlert,
@@ -22,8 +23,8 @@ import {
     categoryCache,
     userCartCache,
 } from "@/lib/redis/methods";
-import { shiprocket } from "@/lib/shiprocket";
 import { swapRewardService } from "@/lib/services/swap-reward";
+import { shiprocket } from "@/lib/shiprocket";
 import {
     createTRPCRouter,
     isTRPCAuth,
@@ -37,7 +38,6 @@ import {
     generateReceiptId,
     getRawNumberFromPhone,
 } from "@/lib/utils";
-import { computeCheckoutTaxLines } from "@/lib/finance/calculations";
 import {
     categorySchema,
     createOrderItemSchema,
@@ -238,7 +238,8 @@ export const ordersRouter = createTRPCRouter({
 
             return {
                 totalTaxPaise: lines.reduce(
-                    (sum: number, line: (typeof lines)[number]) => sum + line.taxPaise,
+                    (sum: number, line: (typeof lines)[number]) =>
+                        sum + line.taxPaise,
                     0
                 ),
                 lines,
@@ -257,7 +258,10 @@ export const ordersRouter = createTRPCRouter({
                             price: productSchema.shape.price,
                             categoryId: categorySchema.shape.id,
                             isSwapRewardItem: z.boolean().optional(),
-                            swapRewardRedemptionId: z.string().uuid().optional(),
+                            swapRewardRedemptionId: z
+                                .string()
+                                .uuid()
+                                .optional(),
                         })
                 ),
                 coupon: z.string().optional(),
@@ -315,7 +319,9 @@ export const ordersRouter = createTRPCRouter({
             const rewardCheckoutMap = new Map<
                 string,
                 Awaited<
-                    ReturnType<typeof swapRewardService.getRewardCheckoutSelection>
+                    ReturnType<
+                        typeof swapRewardService.getRewardCheckoutSelection
+                    >
                 >
             >();
 
@@ -365,7 +371,8 @@ export const ordersRouter = createTRPCRouter({
             if (rewardItems.length > 1) {
                 throw new TRPCError({
                     code: "BAD_REQUEST",
-                    message: "Only one reward item can be redeemed per checkout",
+                    message:
+                        "Only one reward item can be redeemed per checkout",
                 });
             }
 
@@ -472,7 +479,8 @@ export const ordersRouter = createTRPCRouter({
                     { itemsCount: input.items.length }
                 );
 
-                const hsnRows = await ctx.queries.financeCompliance.listHsnMaster();
+                const hsnRows =
+                    await ctx.queries.financeCompliance.listHsnMaster();
                 const hsnRateByCode = new Map(
                     hsnRows.map((row) => [row.hsnCode.trim(), row.gstRateBps])
                 );
@@ -489,7 +497,9 @@ export const ordersRouter = createTRPCRouter({
 
                         const variant =
                             item.variantId && product
-                                ? product.variants.find((v) => v.id === item.variantId)
+                                ? product.variants.find(
+                                      (v) => v.id === item.variantId
+                                  )
                                 : null;
 
                         return { product, variant };
@@ -498,17 +508,21 @@ export const ordersRouter = createTRPCRouter({
                 const taxLines = computeCheckoutTaxLines(
                     input.items.map((item, index) => ({
                         lineId: String(index),
-                        hsnCode: productDetailsByIndex[index]?.product?.hsCode ?? "",
+                        hsnCode:
+                            productDetailsByIndex[index]?.product?.hsCode ?? "",
                         unitPricePaise: Number(item.price ?? 0),
                         quantity: item.quantity,
                     })),
                     {
-                        totalDiscountPaise: input.discountAmount,
+                        totalDiscountPaise: input.couponDiscountAmount,
                         hsnRateByCode,
                     }
                 );
                 const taxLinesById = new Map<string, (typeof taxLines)[number]>(
-                    taxLines.map((line: (typeof taxLines)[number]) => [line.lineId, line])
+                    taxLines.map((line: (typeof taxLines)[number]) => [
+                        line.lineId,
+                        line,
+                    ])
                 );
 
                 // NEW: Array to store all created orders
@@ -541,7 +555,9 @@ export const ordersRouter = createTRPCRouter({
                     // Generate a readable and concise order_id for this item
                     const orderId = generateOrderId(brand.name);
                     console.log("Creating order with new ID:", orderId);
-                    const orderLineTotal = Number((item.price ?? 0) * item.quantity);
+                    const orderLineTotal = Number(
+                        (item.price ?? 0) * item.quantity
+                    );
                     const itemRewardRedemptionId =
                         item.swapRewardRedemptionId ??
                         (input.isSwapRewardOrder
@@ -555,15 +571,20 @@ export const ordersRouter = createTRPCRouter({
                     const taxLine = taxLinesById.get(String(index));
                     const lineDiscountAmount = isRewardOrder
                         ? orderLineTotal
-                        : taxLine?.discountPaise ?? 0;
-                    const lineTaxAmount = isRewardOrder ? 0 : taxLine?.taxPaise ?? 0;
+                        : (taxLine?.discountPaise ?? 0);
+                    const lineTaxAmount = isRewardOrder
+                        ? 0
+                        : (taxLine?.taxPaise ?? 0);
                     const lineTotalAmount = isRewardOrder
                         ? 0
                         : Math.max(
                               0,
-                              (taxLine?.taxableValuePaise ?? orderLineTotal) + lineTaxAmount
+                              (taxLine?.taxableValuePaise ?? orderLineTotal) +
+                                  lineTaxAmount
                           );
-                    const { product, variant } = productDetailsByIndex[index] ?? {
+                    const { product, variant } = productDetailsByIndex[
+                        index
+                    ] ?? {
                         product: null,
                         variant: null,
                     };
@@ -577,6 +598,8 @@ export const ordersRouter = createTRPCRouter({
                         taxAmount: lineTaxAmount,
                         totalAmount: lineTotalAmount,
                         discountAmount: lineDiscountAmount,
+                        couponCode: input.coupon ?? null,
+                        couponDiscountAmount: lineDiscountAmount,
                         isSwapRewardOrder: isRewardOrder,
                         swapRewardCycle: isRewardOrder
                             ? rewardCheckout?.state.activeRewardCycle
@@ -1005,41 +1028,78 @@ export const ordersRouter = createTRPCRouter({
                             );
 
                             try {
-                                const brandConfidential = await db.query.brandConfidentials.findFirst({
-                                    where: eq(schemas.brandConfidentials.id, item.brandId),
-                                });
+                                const brandConfidential =
+                                    await db.query.brandConfidentials.findFirst(
+                                        {
+                                            where: eq(
+                                                schemas.brandConfidentials.id,
+                                                item.brandId
+                                            ),
+                                        }
+                                    );
                                 const originPin = brandConfidential
-                                    ? Number(brandConfidential.warehousePostalCode || brandConfidential.postalCode)
+                                    ? Number(
+                                          brandConfidential.warehousePostalCode ||
+                                              brandConfidential.postalCode
+                                      )
                                     : null;
                                 const destPin = Number(existingAddress.zip);
 
                                 if (originPin && destPin) {
                                     const rateRes = await getShippingCharge({
                                         md: "E",
-                                        cgm: Math.max(100, Math.round(finalVolumetricWeight)),
+                                        cgm: Math.max(
+                                            100,
+                                            Math.round(finalVolumetricWeight)
+                                        ),
                                         o_pin: originPin,
                                         d_pin: destPin,
                                         ss: "Delivered",
                                     });
-                                    if (rateRes.success && rateRes.totalAmount !== undefined) {
-                                        console.log(`🚚 Delhivery Shipping Charge estimate for order ${newOrder.id}: Rs. ${rateRes.totalAmount}`);
-                                        const actualShippingChargeInPaise = Math.round(Number(rateRes.totalAmount) * 100);
+                                    if (
+                                        rateRes.success &&
+                                        rateRes.totalAmount !== undefined
+                                    ) {
+                                        console.log(
+                                            `🚚 Delhivery Shipping Charge estimate for order ${newOrder.id}: Rs. ${rateRes.totalAmount}`
+                                        );
+                                        const actualShippingChargeInPaise =
+                                            Math.round(
+                                                Number(rateRes.totalAmount) *
+                                                    100
+                                            );
 
                                         await db
                                             .update(schemas.orders)
                                             .set({
-                                                deliveryAmount: actualShippingChargeInPaise,
+                                                deliveryAmount:
+                                                    actualShippingChargeInPaise,
                                             })
-                                            .where(eq(schemas.orders.id, newOrder.id));
-                                        console.log(`✅ Updated deliveryAmount for order ${newOrder.id} to ${actualShippingChargeInPaise} paise.`);
+                                            .where(
+                                                eq(
+                                                    schemas.orders.id,
+                                                    newOrder.id
+                                                )
+                                            );
+                                        console.log(
+                                            `✅ Updated deliveryAmount for order ${newOrder.id} to ${actualShippingChargeInPaise} paise.`
+                                        );
                                     } else {
-                                        console.warn(`⚠ Failed to fetch Delhivery shipping charge for order ${newOrder.id}:`, rateRes.error);
+                                        console.warn(
+                                            `⚠ Failed to fetch Delhivery shipping charge for order ${newOrder.id}:`,
+                                            rateRes.error
+                                        );
                                     }
                                 } else {
-                                    console.warn(`⚠ Missing origin pin (${originPin}) or destination pin (${destPin}) for order ${newOrder.id}`);
+                                    console.warn(
+                                        `⚠ Missing origin pin (${originPin}) or destination pin (${destPin}) for order ${newOrder.id}`
+                                    );
                                 }
                             } catch (chargeErr) {
-                                console.error(`❌ Error fetching/saving Delhivery shipping charge for order ${newOrder.id}:`, chargeErr);
+                                console.error(
+                                    `❌ Error fetching/saving Delhivery shipping charge for order ${newOrder.id}:`,
+                                    chargeErr
+                                );
                             }
 
                             // Fetch Order Items for this brand
@@ -1239,10 +1299,10 @@ export const ordersRouter = createTRPCRouter({
                     try {
                         await queries.orders.updateOrderStatus(newOrder.id, {
                             paymentId: isRewardPayment
-                                ? itemRewardRedemptionId ?? null
+                                ? (itemRewardRedemptionId ?? null)
                                 : isCodPayment
                                   ? null
-                                  : input.razorpayPaymentId ?? null,
+                                  : (input.razorpayPaymentId ?? null),
                             paymentMethod: isRewardPayment
                                 ? "reward"
                                 : isCodPayment

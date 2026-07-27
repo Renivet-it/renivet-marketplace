@@ -554,11 +554,7 @@ export function calculateTotalPriceWithCoupon(
         else discount = Math.min(coupon.discountValue, eligibleTotal);
 
         if (coupon.maxDiscountAmount && coupon.maxDiscountAmount > 0) {
-            const value = Math.round(Math.random() * coupon.maxDiscountAmount);
-
-            if (coupon.discountType === "percentage")
-                discount = (eligibleTotal * value) / 100;
-            else discount = Math.min(value, eligibleTotal);
+            discount = Math.min(discount, coupon.maxDiscountAmount);
         }
     }
 

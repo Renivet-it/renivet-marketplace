@@ -5,11 +5,11 @@ import {
     trackInitiateCheckoutCapi,
     trackPurchaseCapi,
 } from "@/actions/analytics";
-import { POSTHOG_EVENTS } from "@/config/posthog";
 // Impoert actions
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 // import { orderQueries } from "@/lib/db/queries"; // No longer needed directly for client-side intent creation
 import { fbEvent } from "@/lib/fbpixel";
 import {
@@ -31,8 +31,8 @@ import { CachedUser, OrderWithItemAndBrand } from "@/lib/validations";
 import { useMutation } from "@tanstack/react-query";
 import { CreditCard, Leaf, Shield, Truck } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
 import { usePostHog } from "posthog-js/react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 // Retry configuration
@@ -82,7 +82,8 @@ export function OrderPage({
 
     const order = isCartPayment ? initialData : fetchedOrder || initialData;
 
-    const { data: activeRewardCartItem } = trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
+    const { data: activeRewardCartItem } =
+        trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
 
     const rewardCartItem = useMemo(() => {
         if (!activeRewardCartItem?.selection) return null;
@@ -154,20 +155,20 @@ export function OrderPage({
             const itemPrice = item.isSwapRewardItem
                 ? 0
                 : item.variantId
-                ? (item.product.variants?.find((v) => v.id === item.variantId)
-                      ?.price ??
-                  item.product.price ??
-                  0)
-                : (item.product.price ?? 0);
+                  ? (item.product.variants?.find((v) => v.id === item.variantId)
+                        ?.price ??
+                    item.product.price ??
+                    0)
+                  : (item.product.price ?? 0);
 
             const compareAtPrice = item.isSwapRewardItem
                 ? (item.rewardValue ?? 0)
                 : item.variantId
-                ? (item.product.variants?.find((v) => v.id === item.variantId)
-                      ?.compareAtPrice ??
-                  item.product.compareAtPrice ??
-                  itemPrice)
-                : (item.product.compareAtPrice ?? itemPrice);
+                  ? (item.product.variants?.find((v) => v.id === item.variantId)
+                        ?.compareAtPrice ??
+                    item.product.compareAtPrice ??
+                    itemPrice)
+                  : (item.product.compareAtPrice ?? itemPrice);
 
             return {
                 price: itemPrice,
@@ -202,17 +203,19 @@ export function OrderPage({
             allAvailableItems.map((item) => {
                 const checkoutItem = item as any;
                 return {
-                lineId: String(checkoutItem.id),
-                hsnCode: checkoutItem.product.hsCode ?? "",
-                unitPricePaise: checkoutItem.isSwapRewardItem
-                    ? 0
-                    : checkoutItem.variantId
-                    ? (checkoutItem.product.variants?.find((v: any) => v.id === checkoutItem.variantId)?.price ??
-                      checkoutItem.product.price ??
-                      0)
-                    : (checkoutItem.product.price ?? 0),
-                quantity: checkoutItem.quantity,
-            };
+                    lineId: String(checkoutItem.id),
+                    hsnCode: checkoutItem.product.hsCode ?? "",
+                    unitPricePaise: checkoutItem.isSwapRewardItem
+                        ? 0
+                        : checkoutItem.variantId
+                          ? (checkoutItem.product.variants?.find(
+                                (v: any) => v.id === checkoutItem.variantId
+                            )?.price ??
+                            checkoutItem.product.price ??
+                            0)
+                          : (checkoutItem.product.price ?? 0),
+                    quantity: checkoutItem.quantity,
+                };
             }),
         [allAvailableItems]
     );
@@ -230,7 +233,10 @@ export function OrderPage({
     const taxLinesById = useMemo(
         () =>
             new Map(
-                (checkoutTaxQuery.data?.lines ?? []).map((line) => [line.lineId, line])
+                (checkoutTaxQuery.data?.lines ?? []).map((line) => [
+                    line.lineId,
+                    line,
+                ])
             ),
         [checkoutTaxQuery.data]
     );
@@ -282,9 +288,13 @@ export function OrderPage({
 
                 posthog?.capture(POSTHOG_EVENTS.COMMERCE.PURCHASE_COMPLETED, {
                     order_id: newOrder.id,
-                    product_ids: variables.items.map((item: any) => item.productId),
+                    product_ids: variables.items.map(
+                        (item: any) => item.productId
+                    ),
                     brand_ids: variables.items.map((item: any) => item.brandId),
-                    total_amount: Number(convertPaiseToRupees(variables.totalAmount)),
+                    total_amount: Number(
+                        convertPaiseToRupees(variables.totalAmount)
+                    ),
                     currency: "INR",
                     total_items: variables.totalItems,
                     payment_method: variables.paymentMethod,
@@ -368,18 +378,22 @@ export function OrderPage({
                 const price = item.isSwapRewardItem
                     ? 0
                     : item.variantId
-                    ? (item.product.variants?.find(
-                          (v) => v.id === item.variantId
-                      )?.price ??
-                      item.product.price ??
-                      0)
-                    : (item.product.price ?? 0);
+                      ? (item.product.variants?.find(
+                            (v) => v.id === item.variantId
+                        )?.price ??
+                        item.product.price ??
+                        0)
+                      : (item.product.price ?? 0);
                 return acc + price * item.quantity;
             }, 0);
-            const brandDiscount = Number(
+            const brandCouponDiscount = Number(
                 (
-                    priceList.discount *
-                    (brandTotal / Math.max(priceList.items, 1))
+                    (priceList.couponDiscount ?? 0) *
+                    (brandTotal /
+                        Math.max(
+                            priceList.items - (priceList.productDiscount ?? 0),
+                            1
+                        ))
                 ).toFixed(2)
             );
             const brandTaxAmount = brandItems.reduce(
@@ -396,9 +410,18 @@ export function OrderPage({
                 taxAmount: brandTaxAmount,
                 totalAmount: Math.max(
                     0,
-                    Number((brandTotal - brandDiscount + brandTaxAmount).toFixed(2))
+                    Number(
+                        (
+                            brandTotal -
+                            brandCouponDiscount +
+                            brandTaxAmount
+                        ).toFixed(2)
+                    )
                 ),
-                discountAmount: brandDiscount,
+                // Product discounts are already reflected in brandTotal. Only
+                // the coupon value is subtracted and persisted on the order.
+                discountAmount: brandCouponDiscount,
+                couponDiscountAmount: brandCouponDiscount,
                 paymentMethod,
                 totalItems: brandItems.reduce(
                     (acc, item) => acc + item.quantity,
@@ -410,16 +433,19 @@ export function OrderPage({
                     price: item.isSwapRewardItem
                         ? 0
                         : item.variantId
-                        ? (item.product.variants.find(
-                              (v) => v.id === item.variantId
-                          )?.price ??
-                          item.product.price ??
-                          0)
-                        : (item.product.price ?? 0),
+                          ? (item.product.variants.find(
+                                (v) => v.id === item.variantId
+                            )?.price ??
+                            item.product.price ??
+                            0)
+                          : (item.product.price ?? 0),
                     brandId: item.product.brandId,
                     productId: item.product.id,
                     variantId: item.variantId,
-                    sku: item.variant?.nativeSku ?? item.product.nativeSku ?? `sku-${item.product.id}`,
+                    sku:
+                        item.variant?.nativeSku ??
+                        item.product.nativeSku ??
+                        `sku-${item.product.id}`,
                     quantity: item.quantity,
                     categoryId: item.product.categoryId,
                     isSwapRewardItem: item.isSwapRewardItem,
@@ -476,13 +502,16 @@ export function OrderPage({
                     price: item.isSwapRewardItem
                         ? 0
                         : item.variantId
-                        ? (item.product.variants?.find(
-                              (v) => v.id === item.variantId
-                          )?.price ??
-                          item.product.price ??
-                          0)
-                        : (item.product.price ?? 0),
-                    sku: item.variant?.nativeSku ?? item.product.nativeSku ?? `sku-${item.product.id}`,
+                          ? (item.product.variants?.find(
+                                (v) => v.id === item.variantId
+                            )?.price ??
+                            item.product.price ??
+                            0)
+                          : (item.product.price ?? 0),
+                    sku:
+                        item.variant?.nativeSku ??
+                        item.product.nativeSku ??
+                        `sku-${item.product.id}`,
                 }));
                 console.log("Order intent processed:", productsForIntent);
                 console.log("Order intent user :", user);
@@ -499,9 +528,8 @@ export function OrderPage({
                 console.log("Order intent created:", orderIntent);
 
                 // Create a single Razorpay order for the total amount
-                const razorpayOrderId = await getShiprocketBalance(
-                    payableTotalPaise
-                );
+                const razorpayOrderId =
+                    await getShiprocketBalance(payableTotalPaise);
                 if (!razorpayOrderId)
                     throw new Error("Failed to create Razorpay order");
 
@@ -636,8 +664,7 @@ export function OrderPage({
             console.error("COD order creation failed:", error);
             setProcessingModalTitle("COD Order Failed");
             setProcessingModalDescription(
-                error?.message ||
-                    "Failed to place COD order. Please try again."
+                error?.message || "Failed to place COD order. Please try again."
             );
             setProcessingModalState("error");
         } finally {
@@ -683,12 +710,12 @@ export function OrderPage({
                         (item.isSwapRewardItem
                             ? 0
                             : item.variantId
-                            ? (item.product.variants?.find(
-                                  (v) => v.id === item.variantId
-                              )?.price ??
-                              item.product.price ??
-                              0)
-                            : (item.product.price ?? 0)) / 100, // convert to rupees
+                              ? (item.product.variants?.find(
+                                    (v) => v.id === item.variantId
+                                )?.price ??
+                                item.product.price ??
+                                0)
+                              : (item.product.price ?? 0)) / 100, // convert to rupees
                 })),
                 content_type: "product",
                 num_items: totalQuantity, // Number of items
@@ -795,7 +822,9 @@ export function OrderPage({
                                     <span className="text-gray-600">GST</span>
                                     <span className="font-medium text-gray-900">
                                         {formatPriceTag(
-                                            +convertPaiseToRupees(gstAmountPaise)
+                                            +convertPaiseToRupees(
+                                                gstAmountPaise
+                                            )
                                         )}
                                     </span>
                                 </li>
@@ -952,5 +981,3 @@ export function OrderPage({
         </>
     );
 }
-
-

@@ -1,5 +1,3 @@
-import fs from "fs";
-import path from "path";
 import { InvoiceTemplate } from "@/components/pdf/invoice-template";
 import { db } from "@/lib/db";
 import { hsnMaster } from "@/lib/db/schema";
@@ -40,25 +38,8 @@ export async function POST(req: Request) {
             return { ...item, gstRateBps: gstRateByHsn.get(hsnCode) ?? 0 };
         });
 
-        // Read logo file
-        const logoPath = path.join(
-            process.cwd(),
-            "public",
-            "images",
-            "renivet-logo.png"
-        );
-        let logoBase64 = "";
-        try {
-            const logoBuffer = fs.readFileSync(logoPath);
-            logoBase64 = `data:image/png;base64,${logoBuffer.toString("base64")}`;
-        } catch (e) {
-            console.error("Failed to read logo:", e);
-        }
-
         // Generate PDF Stream
-        const stream = await renderToStream(
-            <InvoiceTemplate order={order} logoBase64={logoBase64} />
-        );
+        const stream = await renderToStream(<InvoiceTemplate order={order} />);
 
         // Convert stream to buffer
         const chunks: Uint8Array[] = [];
