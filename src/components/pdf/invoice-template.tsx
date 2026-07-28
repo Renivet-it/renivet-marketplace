@@ -19,6 +19,8 @@ Font.register({
 });
 const ink = "#18212f";
 const border = "#cbd5e1";
+const renivetLogoUrl =
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNul0Kj0hnjfTvXWe4YdlSzoaZPyC7xGVghIDL";
 const money = (paise: number) =>
     `\u20B9${(Math.max(0, paise) / 100).toFixed(2)}`;
 
@@ -41,8 +43,8 @@ const styles = StyleSheet.create({
         height: 40,
         objectFit: "contain",
         objectPosition: "left",
-        // Start at the same left edge as the seller name beneath it.
-        marginLeft: 0,
+        // Align the complete Renivet logo with the seller information below.
+        marginLeft: -9,
         marginBottom: 8,
     },
     header: {
@@ -114,9 +116,29 @@ const styles = StyleSheet.create({
     rate: { width: "5%", fontSize: 6, paddingLeft: 3, paddingRight: 3 },
     tax: { width: "6%" },
     total: { width: "8%" },
-    totals: {
+    summary: {
         marginTop: 12,
-        marginLeft: "55%",
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+    },
+    brandSummary: {
+        width: "48%",
+        paddingTop: 4,
+    },
+    brandSummaryRow: {
+        flexDirection: "row",
+        alignItems: "flex-start",
+        marginBottom: 10,
+    },
+    smallBrandLogo: {
+        width: 36,
+        height: 24,
+        objectFit: "contain",
+        objectPosition: "left",
+        marginRight: 0,
+    },
+    totals: {
         width: "45%",
         borderWidth: 1,
         borderColor: border,
@@ -282,13 +304,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
             <Page size="A4" style={styles.page}>
                 <View style={styles.header}>
                     <View>
-                        <Image
-                            src={
-                                order.brand.logoUrl ||
-                                "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNul0Kj0hnjfTvXWe4YdlSzoaZPyC7xGVghIDL"
-                            }
-                            style={styles.logo}
-                        />
+                        <Image src={renivetLogoUrl} style={styles.logo} />
                         <Text style={styles.sellerName}>
                             {order.brand.name}
                         </Text>
@@ -443,53 +459,87 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         </View>
                     ))}
                 </View>
-                <View style={styles.totals}>
-                    <View style={styles.totalRow}>
-                        <Text style={styles.totalLabel}>Shipping charges</Text>
-                        <Text style={styles.totalValue}>
-                            {money(shippingCharge)}
-                        </Text>
-                    </View>
-                    <View style={styles.totalRow}>
-                        <Text style={styles.totalLabel}>
-                            Shipping discount (waived)
-                        </Text>
-                        <Text style={styles.totalValue}>
-                            -{money(shippingCharge)}
-                        </Text>
-                    </View>
-                    <View style={styles.totalRow}>
-                        <Text style={styles.totalLabel}>Net price</Text>
-                        <Text style={styles.totalValue}>{money(taxable)}</Text>
-                    </View>
-                    <View style={styles.totalRow}>
-                        <Text style={styles.totalLabel}>
-                            {intra ? "CGST" : "IGST"}
-                        </Text>
-                        <Text style={styles.totalValue}>
-                            {money(intra ? cgst : igst)}
-                        </Text>
-                    </View>
-                    {intra ? (
-                        <View style={styles.totalRow}>
-                            <Text style={styles.totalLabel}>SGST</Text>
-                            <Text style={styles.totalValue}>{money(sgst)}</Text>
+                <View style={styles.summary}>
+                    <View style={styles.brandSummary}>
+                        <View style={styles.brandSummaryRow}>
+                            {order.brand.logoUrl ? (
+                                <Image
+                                    src={order.brand.logoUrl}
+                                    style={styles.smallBrandLogo}
+                                />
+                            ) : null}
+                            <View>
+                                <Text style={styles.sellerName}>
+                                    {order.brand.name}
+                                </Text>
+                                <Text style={styles.small}>
+                                    {seller?.addressLine1 ??
+                                        "Seller address pending"}
+                                    {"\n"}
+                                    {seller?.city ?? ""} {seller?.state ?? ""}{" "}
+                                    {seller?.postalCode ?? ""}
+                                </Text>
+                            </View>
                         </View>
-                    ) : null}
-                    <View style={styles.totalRow}>
-                        <Text style={styles.totalLabel}>
-                            Coupon discount amount
-                            {order.couponCode ? ` (${order.couponCode})` : ""}
-                        </Text>
-                        <Text style={styles.totalValue}>
-                            {couponDiscount ? `-${money(couponDiscount)}` : "-"}
-                        </Text>
                     </View>
-                    <View style={[styles.totalRow, styles.final]}>
-                        <Text style={styles.totalLabel}>Invoice total</Text>
-                        <Text style={styles.totalValue}>
-                            {money(order.amount)}
-                        </Text>
+                    <View style={styles.totals}>
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>
+                                Shipping charges
+                            </Text>
+                            <Text style={styles.totalValue}>
+                                {money(shippingCharge)}
+                            </Text>
+                        </View>
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>
+                                Shipping discount (waived)
+                            </Text>
+                            <Text style={styles.totalValue}>
+                                -{money(shippingCharge)}
+                            </Text>
+                        </View>
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>Net price</Text>
+                            <Text style={styles.totalValue}>
+                                {money(taxable)}
+                            </Text>
+                        </View>
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>
+                                {intra ? "CGST" : "IGST"}
+                            </Text>
+                            <Text style={styles.totalValue}>
+                                {money(intra ? cgst : igst)}
+                            </Text>
+                        </View>
+                        {intra ? (
+                            <View style={styles.totalRow}>
+                                <Text style={styles.totalLabel}>SGST</Text>
+                                <Text style={styles.totalValue}>
+                                    {money(sgst)}
+                                </Text>
+                            </View>
+                        ) : null}
+                        <View style={styles.totalRow}>
+                            <Text style={styles.totalLabel}>
+                                Coupon discount amount
+                                {order.couponCode
+                                    ? ` (${order.couponCode})`
+                                    : ""}
+                            </Text>
+                            <Text style={styles.totalValue}>
+                                {couponDiscount
+                                    ? `-${money(couponDiscount)}`
+                                    : "-"}
+                            </Text>
+                        </View>
+                        <View style={[styles.totalRow, styles.final]}>
+                            <Text style={styles.totalLabel}>Invoice total</Text>
+                            <Text style={styles.totalValue}>
+                                {money(order.amount)}
+                            </Text>
+                        </View>
                     </View>
                 </View>
                 <View style={styles.notes}>
