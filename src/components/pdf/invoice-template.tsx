@@ -43,8 +43,8 @@ const styles = StyleSheet.create({
         height: 40,
         objectFit: "contain",
         objectPosition: "left",
-        // Align the complete Renivet logo with the seller information below.
-        marginLeft: -9,
+        // Align the logo with the invoice content edge.
+        marginLeft: 0,
         marginBottom: 8,
     },
     header: {
@@ -305,16 +305,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                 <View style={styles.header}>
                     <View>
                         <Image src={renivetLogoUrl} style={styles.logo} />
-                        <Text style={styles.sellerName}>
-                            {order.brand.name}
-                        </Text>
-                        <Text style={styles.small}>
-                            {seller?.addressLine1 ?? "Seller address pending"}
-                            {"\n"}
-                            {seller?.city ?? ""} {seller?.state ?? ""}{" "}
-                            {seller?.postalCode ?? ""}
-                            {"\n"}GSTIN: {seller?.gstin ?? "Not provided"}
-                        </Text>
                     </View>
                     <View>
                         <Text style={styles.heading}>TAX INVOICE</Text>
@@ -478,6 +468,8 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                     {"\n"}
                                     {seller?.city ?? ""} {seller?.state ?? ""}{" "}
                                     {seller?.postalCode ?? ""}
+                                    {"\n"}GSTIN:{" "}
+                                    {seller?.gstin ?? "Not provided"}
                                 </Text>
                             </View>
                         </View>
