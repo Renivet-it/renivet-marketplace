@@ -514,7 +514,7 @@ export const ordersRouter = createTRPCRouter({
                         quantity: item.quantity,
                     })),
                     {
-                        totalDiscountPaise: input.discountAmount,
+                        totalDiscountPaise: input.couponDiscountAmount,
                         hsnRateByCode,
                     }
                 );
@@ -597,8 +597,11 @@ export const ordersRouter = createTRPCRouter({
                         userId: user.id,
                         taxAmount: lineTaxAmount,
                         totalAmount: lineTotalAmount,
-                        discountAmount: lineDiscountAmount,
+                        discountAmount: isRewardOrder ? lineDiscountAmount : 0,
                         couponCode: input.coupon ?? null,
+                        couponDiscountAmount: isRewardOrder
+                            ? 0
+                            : lineDiscountAmount,
                         isSwapRewardOrder: isRewardOrder,
                         swapRewardCycle: isRewardOrder
                             ? rewardCheckout?.state.activeRewardCycle

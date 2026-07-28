@@ -104,12 +104,11 @@ const styles = StyleSheet.create({
     },
     last: { borderRightWidth: 0 },
     no: { width: "3%" },
-    product: { width: "15%" },
+    product: { width: "23%" },
     hsn: { width: "7%" },
     qty: { width: "4%" },
     gross: { width: "8%" },
     productDiscount: { width: "8%" },
-    couponDiscount: { width: "8%" },
     totalDiscount: { width: "10%" },
     discountPercent: { width: "9%", fontSize: 6 },
     taxable: { width: "8%" },
@@ -201,8 +200,6 @@ type InvoiceOrder = {
     state?: string;
     amount: number;
     deliveryAmount?: number;
-    /** Coupon discount saved against this order, in paise. */
-    discountAmount?: number;
     couponCode?: string | null;
     items: InvoiceItem[];
     brand: {
@@ -262,31 +259,16 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
         };
     });
     const shippingCharge = Math.max(0, Number(order.deliveryAmount ?? 0));
-    // `discount_amount` is stored in paise and is the coupon discount source.
-    // `money()` converts it to rupees wherever it is displayed.
-    const couponDiscount = Math.max(0, Number(order.discountAmount ?? 0));
-    const saleTotal = lines.reduce((sum, line) => sum + line.lineTotal, 0);
-    let allocatedCouponDiscount = 0;
-    const displayLines = lines.map((line, index) => {
-        const lineCouponDiscount =
-            index === lines.length - 1
-                ? Math.max(0, couponDiscount - allocatedCouponDiscount)
-                : Math.round(
-                      couponDiscount * (line.lineTotal / Math.max(saleTotal, 1))
-                  );
-        allocatedCouponDiscount += lineCouponDiscount;
-        const lineTotal = Math.max(0, line.lineTotal - lineCouponDiscount);
+    const displayLines = lines.map((line) => {
+        const lineTotal = line.lineTotal;
         const taxable = line.rate
             ? Math.round((lineTotal * 10000) / (10000 + line.rate))
             : lineTotal;
-        const lineTotalDiscount = line.productDiscount + lineCouponDiscount;
-
         return {
             ...line,
-            couponDiscount: lineCouponDiscount,
-            totalDiscount: lineTotalDiscount,
+            totalDiscount: line.productDiscount,
             discountPercentage: line.gross
-                ? (lineTotalDiscount / line.gross) * 100
+                ? (line.productDiscount / line.gross) * 100
                 : 0,
             taxable,
             tax: lineTotal - taxable,
@@ -385,7 +367,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             ["Gross", styles.gross],
                             ["Product\ndiscount", styles.productDiscount],
                             ["Discount\u00A0%", styles.discountPercent],
-                            ["Coupon\ndiscount", styles.couponDiscount],
                             ["Total discount", styles.totalDiscount],
                             ["Net price", styles.taxable],
                             ["GST", styles.rate],
@@ -398,7 +379,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 style={[
                                     styles.th,
                                     c as object,
-                                    i === 12 ? styles.last : {},
+                                    i === 11 ? styles.last : {},
                                 ]}
                             >
                                 {t as string}
@@ -423,11 +404,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             </Text>
                             <Text style={[styles.td, styles.discountPercent]}>
                                 {l.discountPercentage.toFixed(2)}%
-                            </Text>
-                            <Text style={[styles.td, styles.couponDiscount]}>
-                                {l.couponDiscount
-                                    ? `-${money(l.couponDiscount)}`
-                                    : "-"}
                             </Text>
                             <Text style={[styles.td, styles.totalDiscount]}>
                                 -{money(l.totalDiscount)}
@@ -514,16 +490,9 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             </View>
                         ) : null}
                         <View style={styles.totalRow}>
-                            <Text style={styles.totalLabel}>
-                                Coupon discount amount
-                                {order.couponCode
-                                    ? ` (${order.couponCode})`
-                                    : ""}
-                            </Text>
+                            <Text style={styles.totalLabel}>Coupon code</Text>
                             <Text style={styles.totalValue}>
-                                {couponDiscount
-                                    ? `-${money(couponDiscount)}`
-                                    : "-"}
+                                {order.couponCode ?? "-"}
                             </Text>
                         </View>
                         <View style={[styles.totalRow, styles.final]}>

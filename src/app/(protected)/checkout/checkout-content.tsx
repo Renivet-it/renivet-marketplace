@@ -540,7 +540,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 );
                 const brandCouponDiscount = Number(
                     paymentMethod === "reward"
-                        ? brandTotal
+                        ? 0
                         : (
                               (priceList.couponDiscount ?? 0) *
                               (brandTotal /
@@ -584,7 +584,8 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                       ).toFixed(2)
                                   )
                               ),
-                    discountAmount: brandCouponDiscount,
+                    discountAmount: paymentMethod === "reward" ? brandTotal : 0,
+                    couponDiscountAmount: brandCouponDiscount,
                     paymentMethod,
                     totalItems: brandItems.reduce(
                         (acc: number, item: any) => acc + item.quantity,
