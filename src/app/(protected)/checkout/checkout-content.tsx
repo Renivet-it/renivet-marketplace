@@ -5,6 +5,7 @@ import {
     trackInitiateCheckoutCapi,
     trackPurchaseCapi,
 } from "@/actions/analytics";
+import { SwapStampCelebration } from "@/components/checkout/swap-stamp-celebration";
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
@@ -72,12 +73,43 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         "pending" | "success" | "error"
     >("pending");
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isStampCelebrationOpen, setIsStampCelebrationOpen] = useState(false);
+    const [celebrationStampCount, setCelebrationStampCount] = useState(1);
 
     const [isCouponExpanded, setIsCouponExpanded] = useState(false);
     const [couponCode, setCouponCode] = useState("");
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
         "online" | "cod"
     >("online");
+
+    const swapRewardStatusQuery =
+        trpc.general.swapRewards.getSwapRewardStatus.useQuery(undefined, {
+            enabled: !isSwapReward,
+        });
+
+    const playSwapStampCelebration = async () => {
+        let currentStampCount =
+            swapRewardStatusQuery.data?.currentCycleStampCount ?? 0;
+        try {
+            const refreshedStatus = await swapRewardStatusQuery.refetch();
+            currentStampCount =
+                refreshedStatus.data?.currentCycleStampCount ??
+                currentStampCount;
+        } catch {
+            // The animation can safely use the already-loaded campaign value.
+        }
+        const nextStampCount = Math.min(5, currentStampCount + 1);
+        const celebrationDurationMs = nextStampCount === 5 ? 8500 : 5000;
+        setCelebrationStampCount(nextStampCount);
+        setIsProcessingModalOpen(false);
+        setIsStampCelebrationOpen(true);
+        await new Promise<void>((resolve) => {
+            window.setTimeout(() => {
+                setIsStampCelebrationOpen(false);
+                resolve();
+            }, celebrationDurationMs);
+        });
+    };
 
     const { selectedShippingAddress, appliedCoupon, setAppliedCoupon } =
         useCartStore();
@@ -791,6 +823,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         if (!isBuyNow) deleteItemFromCart(input);
                     },
                     orderIntentId: orderIntent.id,
+                    onOrderSuccess: playSwapStampCelebration,
                 });
 
                 initializeRazorpayPayment(options);
@@ -851,8 +884,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             );
             setProcessingModalState("success");
 
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-            setIsProcessingModalOpen(false);
+            await playSwapStampCelebration();
             window.location.href = "/profile/orders";
         } catch (error: any) {
             setProcessingModalTitle("COD Order Failed");
@@ -1527,6 +1559,11 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 title={processingModalTitle}
                 description={processingModalDescription}
                 state={processingModalState}
+            />
+            <SwapStampCelebration
+                isOpen={isStampCelebrationOpen}
+                customerName={user?.firstName}
+                targetStampCount={celebrationStampCount}
             />
         </div>
     );

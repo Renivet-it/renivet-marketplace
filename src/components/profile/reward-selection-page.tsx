@@ -26,6 +26,20 @@ const SORT_OPTIONS = [
     { value: "newest", label: "Newest First" },
 ] as const;
 
+function getShopPrice(product: any, selectedVariant?: any) {
+    if (selectedVariant?.price > 0) return selectedVariant.price;
+    if (product.price > 0) return product.price;
+
+    const variantPrices = (product.eligibleVariants ?? [])
+        .map((variant: any) => variant.price)
+        .filter(
+            (price: unknown): price is number =>
+                typeof price === "number" && Number.isFinite(price) && price > 0
+        );
+
+    return variantPrices.length > 0 ? Math.min(...variantPrices) : 0;
+}
+
 export function RewardSelectionPage() {
     const router = useRouter();
     const [page, setPage] = useState(1);
@@ -47,15 +61,13 @@ export function RewardSelectionPage() {
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
 
     const { data, isLoading, isFetching } =
-        trpc.general.swapRewards.getEligibleRewardProducts.useQuery(
-            {
-                page,
-                limit: PAGE_SIZE,
-                brandId: brandId || undefined,
-                categoryId: categoryId || undefined,
-                sortBy,
-            }
-        );
+        trpc.general.swapRewards.getEligibleRewardProducts.useQuery({
+            page,
+            limit: PAGE_SIZE,
+            brandId: brandId || undefined,
+            categoryId: categoryId || undefined,
+            sortBy,
+        });
 
     const { mutateAsync: redeemSwapReward } =
         trpc.general.swapRewards.redeemSwapReward.useMutation({
@@ -159,10 +171,10 @@ export function RewardSelectionPage() {
     const categories = data?.facets?.categories ?? [];
 
     return (
-        <div className="w-full space-y-6 md:space-y-8 md:basis-3/4">
+        <div className="w-full space-y-6 md:basis-3/4 md:space-y-8">
             <section className="relative overflow-hidden rounded-[24px] border border-[#e0d2b9] bg-[linear-gradient(135deg,#fbf7ef_0%,#f6ecda_55%,#f2e3c3_100%)] shadow-[0_28px_70px_-48px_rgba(99,66,28,0.45)]">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.88),transparent_34%),radial-gradient(circle_at_bottom_right,rgba(211,171,99,0.14),transparent_26%)]" />
-                <div className="absolute -right-10 top-8 hidden size-28 rounded-full bg-[#d7b06b]/12 blur-3xl md:block" />
+                <div className="bg-[#d7b06b]/12 absolute -right-10 top-8 hidden size-28 rounded-full blur-3xl md:block" />
 
                 <div className="relative min-h-[200px] p-4 sm:min-h-[190px] sm:p-5 lg:p-5">
                     <div>
@@ -200,8 +212,14 @@ export function RewardSelectionPage() {
                             >
                                 <option value="">All categories</option>
                                 {categories.map(
-                                    (category: { id: string; name: string }) => (
-                                        <option key={category.id} value={category.id}>
+                                    (category: {
+                                        id: string;
+                                        name: string;
+                                    }) => (
+                                        <option
+                                            key={category.id}
+                                            value={category.id}
+                                        >
                                             {category.name}
                                         </option>
                                     )
@@ -214,11 +232,13 @@ export function RewardSelectionPage() {
                                 className="h-12 w-full rounded-[16px] border border-[#e5d7bd] bg-white/80 px-3 text-sm text-[#43311a] outline-none transition focus:border-[#b98a57]"
                             >
                                 <option value="">All brands</option>
-                                {brands.map((brand: { id: string; name: string }) => (
-                                    <option key={brand.id} value={brand.id}>
-                                        {brand.name}
-                                    </option>
-                                ))}
+                                {brands.map(
+                                    (brand: { id: string; name: string }) => (
+                                        <option key={brand.id} value={brand.id}>
+                                            {brand.name}
+                                        </option>
+                                    )
+                                )}
                             </select>
 
                             <select
@@ -235,7 +255,10 @@ export function RewardSelectionPage() {
                                 className="h-12 w-full rounded-[16px] border border-[#e5d7bd] bg-white/80 px-3 text-sm text-[#43311a] outline-none transition focus:border-[#b98a57]"
                             >
                                 {SORT_OPTIONS.map((option) => (
-                                    <option key={option.value} value={option.value}>
+                                    <option
+                                        key={option.value}
+                                        value={option.value}
+                                    >
                                         {option.label}
                                     </option>
                                 ))}
@@ -288,8 +311,10 @@ export function RewardSelectionPage() {
                 <>
                     <div className="grid min-h-[calc(100vh-10rem)] grid-cols-2 gap-x-3 gap-y-6 pb-10 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 lg:gap-x-4 lg:gap-y-8 xl:grid-cols-4">
                         {products.map((product: any) => {
-                            const variantOptions = product.eligibleVariants ?? [];
-                            const selectedVariantId = selectedVariants[product.id];
+                            const variantOptions =
+                                product.eligibleVariants ?? [];
+                            const selectedVariantId =
+                                selectedVariants[product.id];
                             const selectedVariant = variantOptions.find(
                                 (item: any) => item.id === selectedVariantId
                             );
@@ -297,9 +322,10 @@ export function RewardSelectionPage() {
                                 selectedVariant?.mediaItem?.url ??
                                 product.media?.[0]?.mediaItem?.url ??
                                 "/placeholder.png";
-                            const rewardPrice = selectedVariant
-                                ? selectedVariant.price
-                                : product.price;
+                            const rewardPrice = getShopPrice(
+                                product,
+                                selectedVariant
+                            );
                             const canRedeem =
                                 !variantOptions.length || !!selectedVariantId;
                             const isPreparingCheckout =
@@ -327,9 +353,9 @@ export function RewardSelectionPage() {
                             return (
                                 <article
                                     key={product.id}
-                                    className="group flex h-full flex-col"
+                                    className="group flex h-full min-w-0 flex-col"
                                 >
-                                    <div className="relative aspect-[3/4] overflow-hidden bg-[#f5f5f5] rounded-sm">
+                                    <div className="relative aspect-[3/4] overflow-hidden rounded-sm bg-[#f5f5f5]">
                                         <Image
                                             src={imageSrc}
                                             alt={product.title}
@@ -342,7 +368,7 @@ export function RewardSelectionPage() {
                                             Reward Edit
                                         </span>
 
-                                        <span className="absolute right-3 top-3 z-20 rounded-full bg-white/88 px-2.5 py-1 text-[10px] font-semibold text-[#8a592d] backdrop-blur">
+                                        <span className="bg-white/88 absolute right-3 top-3 z-20 rounded-full px-2.5 py-1 text-[10px] font-semibold text-[#8a592d] backdrop-blur">
                                             {formatPriceTag(0)}
                                         </span>
                                     </div>
@@ -350,7 +376,8 @@ export function RewardSelectionPage() {
                                     <div className="min-h-[5.25rem] space-y-1.5 pb-2 pt-2">
                                         <p className="truncate text-[10px] text-[#7f7662]">
                                             {normalizeBrandName(
-                                                product.brand?.name ?? "Renivet Edit"
+                                                product.brand?.name ??
+                                                    "Renivet Edit"
                                             )}
                                         </p>
 
@@ -376,14 +403,15 @@ export function RewardSelectionPage() {
                                                 Free reward
                                             </span>
                                             <span className="inline-flex items-center gap-1.5 rounded-md border border-[#dde6f2] bg-[#f8fbff] px-2 py-1 text-[10px] font-medium text-[#355272]">
-                                                Under {formatPriceTag(REWARD_CAP)}
+                                                Under{" "}
+                                                {formatPriceTag(REWARD_CAP)}
                                             </span>
                                         </div>
                                     </div>
 
-                                    <div className="mt-auto flex flex-1 flex-col justify-end rounded-xl border border-[#f3e9d8] bg-white p-3 shadow-xs">
-                                        <div className="flex items-center justify-between gap-3 rounded-[12px] bg-gradient-to-br from-[#fdfbf7] to-[#f9f3e6] border border-[#f3e9d8]/80 p-2.5 shadow-2xs">
-                                            <div>
+                                    <div className="shadow-xs mt-auto flex min-w-0 flex-1 flex-col justify-end overflow-hidden rounded-xl border border-[#f3e9d8] bg-white p-3">
+                                        <div className="shadow-2xs flex min-w-0 items-center justify-between gap-3 rounded-[12px] border border-[#f3e9d8]/80 bg-gradient-to-br from-[#fdfbf7] to-[#f9f3e6] p-2.5">
+                                            <div className="min-w-0">
                                                 <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#8a7251]">
                                                     Final payable
                                                 </p>
@@ -394,11 +422,11 @@ export function RewardSelectionPage() {
 
                                             <div className="h-6 w-px bg-[#ebdcb8]" />
 
-                                            <div className="text-right">
+                                            <div className="min-w-0 text-right">
                                                 <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#8a7251]">
                                                     Product value
                                                 </p>
-                                                <p className="mt-0.5 text-xs font-semibold text-gray-700 sm:text-sm">
+                                                <p className="mt-0.5 truncate text-xs font-semibold text-gray-700 sm:text-sm">
                                                     {formatPriceTag(
                                                         +convertPaiseToRupees(
                                                             rewardPrice ?? 0
@@ -411,7 +439,7 @@ export function RewardSelectionPage() {
                                         {variantOptions.length > 0 &&
                                             canShowSizePills && (
                                                 <div className="mt-3 space-y-2">
-                                                    <label className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8a7251] block">
+                                                    <label className="block text-[9px] font-bold uppercase tracking-[0.18em] text-[#8a7251]">
                                                         Choose size
                                                     </label>
 
@@ -478,12 +506,12 @@ export function RewardSelectionPage() {
                                         {variantOptions.length > 0 &&
                                             !canShowSizePills && (
                                                 <div className="mt-3 space-y-1.5">
-                                                    <label className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#8a7251] block">
+                                                    <label className="block text-[9px] font-bold uppercase tracking-[0.18em] text-[#8a7251]">
                                                         Choose a variant
                                                     </label>
 
                                                     <select
-                                                        className="h-9 w-full rounded-lg border border-[#e5decb] bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition-all hover:border-[#b06f3f] focus:border-[#b06f3f] focus:ring-1 focus:ring-[#b06f3f] cursor-pointer"
+                                                        className="h-9 w-full min-w-0 max-w-full cursor-pointer rounded-lg border border-[#e5decb] bg-white px-3 text-xs font-semibold text-gray-700 outline-none transition-all hover:border-[#b06f3f] focus:border-[#b06f3f] focus:ring-1 focus:ring-[#b06f3f]"
                                                         value={
                                                             selectedVariantId ??
                                                             ""
@@ -524,35 +552,40 @@ export function RewardSelectionPage() {
                                             )}
 
                                         {variantOptions.length === 0 && (
-                                            <div className="mt-3 h-[3.25rem] flex items-center justify-center rounded-lg bg-[#faf8f4] border border-dashed border-[#e6dcce]">
+                                            <div className="mt-3 flex h-[3.25rem] items-center justify-center rounded-lg border border-dashed border-[#e6dcce] bg-[#faf8f4] px-2 text-center">
                                                 <span className="text-[10px] font-semibold uppercase tracking-wider text-[#a49683]">
                                                     No variant required
                                                 </span>
                                             </div>
                                         )}
 
-                                        <div className="mt-3 flex gap-2">
+                                        <div className="mt-3 grid min-w-0 grid-cols-2 gap-2">
                                             <Button
-                                                className="h-9 flex-1 rounded-lg bg-[#b06f3f] text-xs font-semibold text-white shadow-[0_8px_16px_-10px_rgba(176,111,63,0.8)] transition hover:bg-[#975c31]"
-                                                disabled={isCardBusy || !canRedeem}
+                                                className="h-9 w-full min-w-0 rounded-lg bg-[#b06f3f] px-2 text-[11px] font-semibold text-white shadow-[0_8px_16px_-10px_rgba(176,111,63,0.8)] transition hover:bg-[#975c31] sm:text-xs"
+                                                disabled={
+                                                    isCardBusy || !canRedeem
+                                                }
                                                 onClick={async () => {
                                                     try {
                                                         setPendingAction({
-                                                            productId: product.id,
+                                                            productId:
+                                                                product.id,
                                                             mode: "checkout",
                                                         });
                                                         const result =
-                                                            await redeemSwapReward({
-                                                                productId:
-                                                                    product.id,
-                                                                ...(selectedVariantId
-                                                                    ? {
-                                                                          variantId:
-                                                                              selectedVariantId,
-                                                                        }
-                                                                    : {}),
-                                                                mode: "checkout",
-                                                            });
+                                                            await redeemSwapReward(
+                                                                {
+                                                                    productId:
+                                                                        product.id,
+                                                                    ...(selectedVariantId
+                                                                        ? {
+                                                                              variantId:
+                                                                                  selectedVariantId,
+                                                                          }
+                                                                        : {}),
+                                                                    mode: "checkout",
+                                                                }
+                                                            );
 
                                                         router.push(
                                                             result.checkoutHref
@@ -569,26 +602,31 @@ export function RewardSelectionPage() {
 
                                             <Button
                                                 variant="outline"
-                                                className="h-9 flex-1 rounded-lg border-[#ebdcb8] bg-white text-xs font-semibold text-[#b06f3f] hover:bg-[#fffcf7] hover:border-[#b06f3f] hover:text-[#b06f3f]"
-                                                disabled={isCardBusy || !canRedeem}
+                                                className="h-9 w-full min-w-0 rounded-lg border-[#ebdcb8] bg-white px-2 text-[11px] font-semibold text-[#b06f3f] hover:border-[#b06f3f] hover:bg-[#fffcf7] hover:text-[#b06f3f] sm:text-xs"
+                                                disabled={
+                                                    isCardBusy || !canRedeem
+                                                }
                                                 onClick={async () => {
                                                     try {
                                                         setPendingAction({
-                                                            productId: product.id,
+                                                            productId:
+                                                                product.id,
                                                             mode: "cart",
                                                         });
                                                         const result =
-                                                            await redeemSwapReward({
-                                                                productId:
-                                                                    product.id,
-                                                                ...(selectedVariantId
-                                                                    ? {
-                                                                          variantId:
-                                                                              selectedVariantId,
-                                                                        }
-                                                                    : {}),
-                                                                mode: "cart",
-                                                            });
+                                                            await redeemSwapReward(
+                                                                {
+                                                                    productId:
+                                                                        product.id,
+                                                                    ...(selectedVariantId
+                                                                        ? {
+                                                                              variantId:
+                                                                                  selectedVariantId,
+                                                                          }
+                                                                        : {}),
+                                                                    mode: "cart",
+                                                                }
+                                                            );
 
                                                         router.push(
                                                             result.cartHref
@@ -630,7 +668,8 @@ export function RewardSelectionPage() {
                             </Button>
                         ) : (
                             <p className="text-sm text-[#8b7650]">
-                                You&apos;ve reached the end of the reward collection.
+                                You&apos;ve reached the end of the reward
+                                collection.
                             </p>
                         )}
                     </div>

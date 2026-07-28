@@ -17,7 +17,9 @@
   },
   "dependencies": {
     "@clerk/nextjs": "^6.11.1",
-    "@hello-pangea/dnd": "^17.0.0",
+    "@fontsource/iosevka-charon-mono": "^5.3.0",
+    "@fontsource/league-spartan": "^5.2.6",
+    "@hello-pangea/dnd": "^18.0.1",
     "@hookform/resolvers": "^3.10.0",
     "@huggingface/inference": "^3.13.2",
     "@mantine/hooks": "^7.16.3",
@@ -152,7 +154,7 @@
     "postcss": "^8.5.1",
     "prettier": "^3.4.2",
     "prettier-plugin-tailwindcss": "^0.6.11",
-    "react-email": "3.0.6",
+    "react-email": "^4.1.0",
     "redux-devtools-extension": "^2.13.9",
     "tailwind-merge": "^2.6.0",
     "tailwindcss": "^3.4.17",
@@ -161,5 +163,8 @@
   },
   "overrides": {
     "react-is": "^19.0.0-rc-69d4b800-20241021"
+  },
+  "optionalDependencies": {
+    "@next/swc-win32-x64-msvc": "15.1.9"
   }
 }
