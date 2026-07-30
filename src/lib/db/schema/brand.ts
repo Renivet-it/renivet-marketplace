@@ -34,14 +34,10 @@ export const brandRequests = pgTable("brand_requests", {
     website: text("website"),
     ownerId: text("owner_id")
         .notNull()
-        .references(() => users.id, {
-            onDelete: "cascade",
-        }),
+        .references(() => users.id, { onDelete: "cascade" }),
     logoUrl: text("logo_url").notNull(),
     demoUrl: text("demo_url"),
-    status: text("status", {
-        enum: ["pending", "approved", "rejected"],
-    })
+    status: text("status", { enum: ["pending", "approved", "rejected"] })
         .notNull()
         .default("pending"),
     rejectionReason: text("rejection_reason"),
@@ -49,13 +45,13 @@ export const brandRequests = pgTable("brand_requests", {
     hasAcceptedTerms: boolean("has_accepted_terms").notNull().default(false),
     ...timestamps,
 });
-
 export const brands = pgTable(
     "brands",
     {
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         rzpAccountId: text("rzp_account_id"),
         name: text("name").notNull(),
+        invoiceCode: text("invoice_code").unique(),
         slug: text("slug").notNull().unique(),
         email: text("email").notNull().unique(),
         phone: text("phone").notNull(),
@@ -65,9 +61,7 @@ export const brands = pgTable(
         ownerId: text("owner_id")
             .notNull()
             .unique()
-            .references(() => users.id, {
-                onDelete: "cascade",
-            }),
+            .references(() => users.id, { onDelete: "cascade" }),
         bio: text("bio"),
         isActive: boolean("is_active").notNull().default(true),
         confidentialVerificationStatus: text(
@@ -89,7 +83,6 @@ export const brands = pgTable(
         contractSignedAt: timestamp("contract_signed_at"),
         contractExpiresAt: timestamp("contract_expires_at"),
         embeddings: vector("embeddings", { dimensions: 384 }),
-
         ...timestamps,
     },
     (table) => ({
@@ -98,7 +91,6 @@ export const brands = pgTable(
         ).on(table.confidentialVerificationStatus),
     })
 );
-
 export const brandConfidentials = pgTable(
     "brand_confidentials",
     {
@@ -106,9 +98,7 @@ export const brandConfidentials = pgTable(
             .primaryKey()
             .notNull()
             .unique()
-            .references(() => brands.id, {
-                onDelete: "cascade",
-            }),
+            .references(() => brands.id, { onDelete: "cascade" }),
         gstin: text("gstin").notNull(),
         pan: text("pan").notNull(),
         bankName: text("bank_name").notNull(),
@@ -126,15 +116,8 @@ export const brandConfidentials = pgTable(
         authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
         udyamRegistrationCertificate: text("udyam_registration_certificate"),
         iecCertificate: text("iec_certificate"),
-        sustainabilityCertificates: jsonb(
-            "sustainability_certificates"
-        )
-            .$type<
-                Array<{
-                    key: string;
-                    documentId: string | null;
-                }>
-            >()
+        sustainabilityCertificates: jsonb("sustainability_certificates")
+            .$type<Array<{ key: string; documentId: string | null }>>()
             .notNull()
             .default([]),
         addressLine1: text("address_line1").notNull(),
@@ -171,7 +154,6 @@ export const brandConfidentials = pgTable(
         ).on(table.verificationStatus),
     })
 );
-
 export const brandInvites = pgTable(
     "brand_invites",
     {
@@ -179,16 +161,10 @@ export const brandInvites = pgTable(
             .primaryKey()
             .notNull()
             .unique()
-            .$defaultFn(() =>
-                generateId({
-                    length: 8,
-                })
-            ),
+            .$defaultFn(() => generateId({ length: 8 })),
         brandId: uuid("brand_id")
             .notNull()
-            .references(() => brands.id, {
-                onDelete: "cascade",
-            }),
+            .references(() => brands.id, { onDelete: "cascade" }),
         expiresAt: timestamp("expires_at"),
         maxUses: integer("max_uses").default(0).notNull(),
         uses: integer("uses").default(0).notNull(),
@@ -198,21 +174,16 @@ export const brandInvites = pgTable(
         inviteBrandIdIdx: index("invite_brand_id_index").on(table.brandId),
     })
 );
-
 export const brandMembers = pgTable(
     "brand_members",
     {
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         memberId: text("member_id")
             .notNull()
-            .references(() => users.id, {
-                onDelete: "cascade",
-            }),
+            .references(() => users.id, { onDelete: "cascade" }),
         brandId: uuid("brand_id")
             .notNull()
-            .references(() => brands.id, {
-                onDelete: "cascade",
-            }),
+            .references(() => brands.id, { onDelete: "cascade" }),
         isOwner: boolean("is_owner").notNull().default(false),
         ...timestamps,
     },
@@ -221,21 +192,16 @@ export const brandMembers = pgTable(
         memberBrandIdIdx: index("member_brand_id_index").on(table.brandId),
     })
 );
-
 export const bannedBrandMembers = pgTable(
     "banned_brand_members",
     {
         id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
         memberId: text("member_id")
             .notNull()
-            .references(() => users.id, {
-                onDelete: "cascade",
-            }),
+            .references(() => users.id, { onDelete: "cascade" }),
         brandId: uuid("brand_id")
             .notNull()
-            .references(() => brands.id, {
-                onDelete: "cascade",
-            }),
+            .references(() => brands.id, { onDelete: "cascade" }),
         reason: text("reason"),
         bannedAt: timestamp("banned_at").notNull().defaultNow(),
         ...timestamps,
@@ -247,19 +213,14 @@ export const bannedBrandMembers = pgTable(
         ),
     })
 );
-
 export const brandRequestRelations = relations(brandRequests, ({ one }) => ({
     owner: one(users, {
         fields: [brandRequests.ownerId],
         references: [users.id],
     }),
 }));
-
 export const brandRelations = relations(brands, ({ one, many }) => ({
-    owner: one(users, {
-        fields: [brands.ownerId],
-        references: [users.id],
-    }),
+    owner: one(users, { fields: [brands.ownerId], references: [users.id] }),
     invites: many(brandInvites),
     members: many(brandMembers),
     bucketItems: many(brandMediaItems),
@@ -275,7 +236,6 @@ export const brandRelations = relations(brands, ({ one, many }) => ({
     pageSections: many(brandPageSections),
     packingRules: many(brandProductTypePacking),
 }));
-
 export const brandConfidentialRelations = relations(
     brandConfidentials,
     ({ one }) => ({
@@ -285,14 +245,12 @@ export const brandConfidentialRelations = relations(
         }),
     })
 );
-
 export const brandInviteRelations = relations(brandInvites, ({ one }) => ({
     brand: one(brands, {
         fields: [brandInvites.brandId],
         references: [brands.id],
     }),
 }));
-
 export const brandMemberRelations = relations(brandMembers, ({ one }) => ({
     member: one(users, {
         fields: [brandMembers.memberId],
@@ -303,18 +261,13 @@ export const brandMemberRelations = relations(brandMembers, ({ one }) => ({
         references: [brands.id],
     }),
 }));
-
 export const brandRolesRelations = relations(brandRoles, ({ one }) => ({
     brand: one(brands, {
         fields: [brandRoles.brandId],
         references: [brands.id],
     }),
-    role: one(roles, {
-        fields: [brandRoles.roleId],
-        references: [roles.id],
-    }),
+    role: one(roles, { fields: [brandRoles.roleId], references: [roles.id] }),
 }));
-
 export const bannedBrandMemberRelations = relations(
     bannedBrandMembers,
     ({ one }) => ({
@@ -328,14 +281,10 @@ export const bannedBrandMemberRelations = relations(
         }),
     })
 );
-
 export const brandReturnOrderRelations = relations(brands, ({ many }) => ({
     returnOrders: many(returnItemDetails),
 }));
-
 export const brandReturnPaymentDetailsRelations = relations(
     brands,
-    ({ many }) => ({
-        returnPaymentDetails: many(returnPaymentDetails),
-    })
+    ({ many }) => ({ returnPaymentDetails: many(returnPaymentDetails) })
 );

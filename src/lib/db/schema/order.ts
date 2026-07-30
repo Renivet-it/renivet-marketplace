@@ -12,6 +12,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
+import { brands } from "./brand";
 import { orderShipments } from "./order-shipment";
 import { products, productVariants, returnExchangePolicy } from "./product";
 import { refunds } from "./refund";
@@ -27,6 +28,8 @@ export const orders = pgTable(
                 onDelete: "cascade",
             }),
         receiptId: text("receipt_id").notNull().unique(),
+        invoiceNumber: text("invoice_number").unique(),
+        invoiceIssuedAt: timestamp("invoice_issued_at"),
         paymentId: text("payment_id"),
         paymentMethod: text("payment_method"),
         paymentStatus: text("payment_status", {
@@ -169,6 +172,23 @@ export const orderItems = pgTable(
         orderItemProductIdVariantIdIdx: index(
             "order_item_product_id_variant_id_idx"
         ).on(table.productId, table.variantId),
+    })
+);
+
+export const brandInvoiceSequences = pgTable(
+    "brand_invoice_sequences",
+    {
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "cascade" }),
+        financialYear: text("financial_year").notNull(),
+        lastSequence: integer("last_sequence").notNull().default(0),
+        ...timestamps,
+    },
+    (table) => ({
+        brandFinancialYearIdx: uniqueIndex(
+            "brand_invoice_sequences_brand_financial_year_idx"
+        ).on(table.brandId, table.financialYear),
     })
 );
 
