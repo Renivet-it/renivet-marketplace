@@ -116,6 +116,48 @@ const normalizeState = (state?: string | null) =>
         .trim();
 const stateCode = (state?: string | null) =>
     STATE_CODES[normalizeState(state)] ?? "-";
+const STATE_NAMES_BY_CODE: Record<string, string> = {
+    "01": "Jammu and Kashmir",
+    "02": "Himachal Pradesh",
+    "03": "Punjab",
+    "04": "Chandigarh",
+    "05": "Uttarakhand",
+    "06": "Haryana",
+    "07": "Delhi",
+    "08": "Rajasthan",
+    "09": "Uttar Pradesh",
+    "10": "Bihar",
+    "11": "Sikkim",
+    "12": "Arunachal Pradesh",
+    "13": "Nagaland",
+    "14": "Manipur",
+    "15": "Mizoram",
+    "16": "Tripura",
+    "17": "Meghalaya",
+    "18": "Assam",
+    "19": "West Bengal",
+    "20": "Jharkhand",
+    "21": "Odisha",
+    "22": "Chhattisgarh",
+    "23": "Madhya Pradesh",
+    "24": "Gujarat",
+    "26": "Dadra and Nagar Haveli and Daman and Diu",
+    "27": "Maharashtra",
+    "29": "Karnataka",
+    "30": "Goa",
+    "31": "Lakshadweep",
+    "32": "Kerala",
+    "33": "Tamil Nadu",
+    "34": "Puducherry",
+    "35": "Andaman and Nicobar Islands",
+    "36": "Telangana",
+    "37": "Andhra Pradesh",
+    "38": "Ladakh",
+};
+const stateName = (state?: string | null) => {
+    const code = stateCode(state);
+    return STATE_NAMES_BY_CODE[code] ?? state?.trim() ?? "Not provided";
+};
 const sameState = (first?: string | null, second?: string | null) => {
     const firstCode = stateCode(first);
     const secondCode = stateCode(second);
@@ -189,6 +231,7 @@ const styles = StyleSheet.create({
         borderRightWidth: 1,
         borderRightColor: line,
     },
+    metaHalf: { width: "50%" },
     metaLast: { borderRightWidth: 0 },
     metaLabel: { fontSize: 6.3, color: "#66756a", marginBottom: 1.5 },
     metaValue: { fontSize: 7, lineHeight: 1.25 },
@@ -230,7 +273,13 @@ const styles = StyleSheet.create({
         flexDirection: "row",
         justifyContent: "space-between",
     },
-    declaration: { width: "49%", paddingRight: 12 },
+    signaturePanel: { width: "49%", paddingRight: 12 },
+    signatureBody: {
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+    },
+    signatureIdentity: { width: "62%" },
     totals: { width: "43%", borderWidth: 1, borderColor: line },
     totalRow: {
         flexDirection: "row",
@@ -247,28 +296,63 @@ const styles = StyleSheet.create({
     },
     final: { backgroundColor: paperAlt, fontFamily: "Helvetica-Bold" },
     signature: {
-        marginTop: 20,
+        marginTop: 4,
         fontSize: 7,
         color: "#526254",
-        textAlign: "right",
+        textAlign: "left",
     },
     signatureLogo: {
-        width: 42,
-        height: 24,
+        width: 54,
+        height: 32,
         objectFit: "contain",
-        objectPosition: "right",
-        alignSelf: "flex-end",
-        marginTop: 14,
-        marginBottom: -14,
+        objectPosition: "left",
+        alignSelf: "flex-start",
+        marginTop: 10,
+        marginBottom: 3,
+    },
+    qrBlock: {
+        width: "32%",
+        alignItems: "center",
+        marginTop: 6,
+    },
+    qrCode: { width: 58, height: 58 },
+    registeredAddress: {
+        marginTop: 12,
+        paddingTop: 6,
+        borderTopWidth: 1,
+        borderTopColor: line,
+        fontSize: 6.5,
+        lineHeight: 1.3,
+        color: "#334155",
+    },
+    legalNotes: {
+        marginTop: 10,
+        paddingTop: 6,
+        borderTopWidth: 1,
+        borderTopColor: line,
+        fontSize: 6.5,
+        lineHeight: 1.45,
+        color: "#526254",
     },
     footer: {
-        position: "absolute",
-        left: 26,
-        right: 26,
-        bottom: 18,
-        textAlign: "center",
+        marginTop: 8,
+        borderTopWidth: 1,
+        borderTopColor: line,
+        paddingTop: 7,
+        flexDirection: "row",
+        justifyContent: "space-between",
+        alignItems: "center",
+    },
+    footerText: {
+        width: "82%",
         fontSize: 6.5,
         color: "#66756a",
+    },
+    footerLogo: {
+        width: 62,
+        height: 18,
+        objectFit: "contain",
+        objectPosition: "right",
     },
 });
 
@@ -301,6 +385,7 @@ type InvoiceOrder = {
     deliveryAmount?: number;
     discountAmount?: number;
     couponCode?: string | null;
+    qrCodeDataUrl?: string;
     items: InvoiceItem[];
     brand: {
         name: string;
@@ -312,6 +397,7 @@ type InvoiceOrder = {
             state?: string;
             postalCode?: string;
             gstin?: string;
+            bankAccountHolderName?: string;
             isSameAsWarehouseAddress?: boolean;
             warehouseAddressLine1?: string;
             warehouseAddressLine2?: string;
@@ -449,6 +535,26 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                 </View>
                 <View style={styles.grid}>
                     <View style={styles.cell}>
+                        <Text style={styles.label}>BILL TO</Text>
+                        <Text style={styles.name}>{order.customerName}</Text>
+                        <Text style={styles.text}>{order.address}</Text>
+                    </View>
+                    <View style={[styles.cell, styles.rightCell]}>
+                        <Text style={styles.label}>SHIP TO</Text>
+                        <Text style={styles.name}>{order.customerName}</Text>
+                        <Text style={styles.text}>{order.address}</Text>
+                    </View>
+                </View>
+                <View style={styles.grid}>
+                    <View style={styles.cell}>
+                        <Text style={styles.label}>SHIP FROM</Text>
+                        <Text style={styles.name}>{order.brand.name}</Text>
+                        <Text style={styles.text}>
+                            {shipFromAddress}
+                            {"\n"}State code: {stateCode(shipFromState)}
+                        </Text>
+                    </View>
+                    <View style={[styles.cell, styles.rightCell]}>
                         <Text style={styles.label}>BILL FROM</Text>
                         <Text style={styles.name}>{order.brand.name}</Text>
                         <Text style={styles.text}>
@@ -460,31 +566,6 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 seller?.postalCode,
                             ])}
                             {"\n"}GSTIN: {seller?.gstin ?? "Not provided"}
-                        </Text>
-                    </View>
-                    <View style={[styles.cell, styles.rightCell]}>
-                        <Text style={styles.label}>SHIP FROM</Text>
-                        <Text style={styles.name}>{order.brand.name}</Text>
-                        <Text style={styles.text}>
-                            {shipFromAddress}
-                            {"\n"}State code: {stateCode(shipFromState)}
-                        </Text>
-                    </View>
-                </View>
-                <View style={styles.grid}>
-                    <View style={styles.cell}>
-                        <Text style={styles.label}>BILL TO</Text>
-                        <Text style={styles.name}>{order.customerName}</Text>
-                        <Text style={styles.text}>{order.address}</Text>
-                    </View>
-                    <View style={[styles.cell, styles.rightCell]}>
-                        <Text style={styles.label}>SHIP TO</Text>
-                        <Text style={styles.name}>{order.customerName}</Text>
-                        <Text style={styles.text}>
-                            {order.address}
-                            {"\n"}Place of supply:{" "}
-                            {order.state ?? "Not provided"} (
-                            {stateCode(order.state)})
                         </Text>
                     </View>
                 </View>
@@ -533,6 +614,24 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             style={[
                                 styles.metaCell,
                                 index === 2 ? styles.metaLast : {},
+                            ]}
+                        >
+                            <Text style={styles.metaLabel}>{label}</Text>
+                            <Text style={styles.metaValue}>{value}</Text>
+                        </View>
+                    ))}
+                </View>
+                <View style={styles.meta}>
+                    {[
+                        ["Place of supply", stateName(order.state)],
+                        ["Nature of supply", "Goods"],
+                    ].map(([label, value], index) => (
+                        <View
+                            key={label}
+                            style={[
+                                styles.metaCell,
+                                styles.metaHalf,
+                                index === 1 ? styles.metaLast : {},
                             ]}
                         >
                             <Text style={styles.metaLabel}>{label}</Text>
@@ -629,29 +728,42 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                     ))}
                 </View>
                 <View style={styles.summary}>
-                    <View style={styles.declaration}>
-                        <Text style={styles.label}>RCM DECLARATION</Text>
-                        <Text style={styles.text}>
-                            GST under RCM is not applicable unless otherwise
-                            specified.
+                    <View style={styles.signaturePanel}>
+                        <Text style={styles.name}>
+                            {seller?.bankAccountHolderName ?? order.brand.name}
                         </Text>
-                        <Text style={[styles.label, { marginTop: 11 }]}>
-                            DECLARATION
-                        </Text>
-                        <Text style={styles.text}>
-                            This is a computer-generated tax invoice. Goods once
-                            sold are subject to the applicable return and
-                            exchange policy.
-                        </Text>
-                        {order.brand.logoUrl ? (
-                            <Image
-                                src={order.brand.logoUrl}
-                                style={styles.signatureLogo}
-                            />
-                        ) : null}
-                        <Text style={styles.signature}>
-                            For {order.brand.name}
-                            {"\n"}Authorised Signatory
+                        <View style={styles.signatureBody}>
+                            <View style={styles.signatureIdentity}>
+                                {order.brand.logoUrl ? (
+                                    <Image
+                                        src={order.brand.logoUrl}
+                                        style={styles.signatureLogo}
+                                    />
+                                ) : null}
+                                <Text style={styles.signature}>
+                                    For {order.brand.name}
+                                    {"\n"}Authorised Signatory
+                                </Text>
+                            </View>
+                            {order.qrCodeDataUrl ? (
+                                <View style={styles.qrBlock}>
+                                    <Image
+                                        src={order.qrCodeDataUrl}
+                                        style={styles.qrCode}
+                                    />
+                                </View>
+                            ) : null}
+                        </View>
+                        <Text style={styles.registeredAddress}>
+                            Registered address:{" "}
+                            {seller?.bankAccountHolderName ?? order.brand.name},{" "}
+                            {formatAddress([
+                                seller?.addressLine1,
+                                seller?.addressLine2,
+                                seller?.city,
+                                seller?.state,
+                                seller?.postalCode,
+                            ])}
                         </Text>
                     </View>
                     <View style={styles.totals}>
@@ -702,10 +814,25 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         ))}
                     </View>
                 </View>
-                <Text style={styles.footer}>
-                    This is a system-generated invoice and does not require a
-                    signature.
-                </Text>
+                <View style={styles.legalNotes}>
+                    <Text>
+                        * GST under RCM is not applicable unless otherwise
+                        specified.
+                    </Text>
+                    <Text>* This is a computer-generated tax invoice.</Text>
+                    <Text>
+                        * Goods once sold are subject to the applicable return
+                        and exchange policy.
+                    </Text>
+                </View>
+                <View style={styles.footer}>
+                    <Text style={styles.footerText}>
+                        If you have any questions, please use the Contact Us
+                        section in the Renivet app or visit
+                        www.renivet.com/contact.
+                    </Text>
+                    <Image src={renivetLogoUrl} style={styles.footerLogo} />
+                </View>
             </Page>
         </Document>
     );

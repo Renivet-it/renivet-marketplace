@@ -1,9 +1,11 @@
 import { InvoiceTemplate } from "@/components/pdf/invoice-template";
 import { db } from "@/lib/db";
 import { brands, hsnMaster, orders } from "@/lib/db/schema";
+import { createInvoiceDownloadToken } from "@/lib/invoice-download";
 import { renderToStream } from "@react-pdf/renderer";
 import { eq, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import QRCode from "qrcode";
 
 export const runtime = "nodejs";
 
@@ -88,6 +90,13 @@ export async function POST(req: Request) {
                                         name: true,
                                         invoiceCode: true,
                                     },
+                                    with: {
+                                        confidential: {
+                                            columns: {
+                                                bankAccountHolderName: true,
+                                            },
+                                        },
+                                    },
                                 },
                             },
                         },
@@ -110,6 +119,11 @@ export async function POST(req: Request) {
         });
         order.invoiceNumber = issuedInvoice.invoiceNumber;
         order.date = issuedInvoice.issuedAt;
+        order.brand.confidential = {
+            ...order.brand.confidential,
+            bankAccountHolderName:
+                invoiceBrand.confidential?.bankAccountHolderName,
+        };
         const items = Array.isArray(order.items) ? order.items : [];
         const hsnCodes = items
             .map(
@@ -136,6 +150,16 @@ export async function POST(req: Request) {
                 item.hsCode ??
                 "";
             return { ...item, gstRateBps: gstRateByHsn.get(hsnCode) ?? 0 };
+        });
+        const token = createInvoiceDownloadToken(order.id, order.invoiceNumber);
+        const appUrl =
+            process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, "") ??
+            new URL(req.url).origin;
+        const downloadUrl = `${appUrl}/api/invoices/${encodeURIComponent(order.id)}/download?token=${encodeURIComponent(token)}`;
+        order.qrCodeDataUrl = await QRCode.toDataURL(downloadUrl, {
+            errorCorrectionLevel: "M",
+            margin: 1,
+            width: 180,
         });
 
         // Generate PDF Stream
