@@ -2,6 +2,7 @@ import { InvoiceTemplate } from "@/components/pdf/invoice-template";
 import { db } from "@/lib/db";
 import { hsnMaster, orders } from "@/lib/db/schema";
 import { verifyInvoiceDownloadToken } from "@/lib/invoice-download";
+import { validateHighValueB2cInvoice } from "@/lib/invoice-validation";
 import { renderToStream } from "@react-pdf/renderer";
 import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -16,6 +17,11 @@ export async function GET(
     try {
         const { orderId } = await context.params;
         const token = new URL(request.url).searchParams.get("token") ?? "";
+        const copyTypeParam = new URL(request.url).searchParams.get("copyType");
+        const copyType =
+            copyTypeParam === "duplicate" || copyTypeParam === "triplicate"
+                ? copyTypeParam
+                : "original";
         const storedOrder = await db.query.orders.findFirst({
             where: eq(orders.id, orderId),
             with: {
@@ -61,6 +67,32 @@ export async function GET(
             );
         }
 
+        const address = storedOrder.address;
+        const customerName =
+            `${storedOrder.user.firstName} ${storedOrder.user.lastName}`.trim();
+        const customerAddress = [
+            address.street,
+            address.city,
+            address.state,
+            address.zip,
+        ]
+            .filter(Boolean)
+            .join(", ");
+        const complianceError = validateHighValueB2cInvoice({
+            totalAmountPaise: storedOrder.totalAmount,
+            customerGstin: storedOrder.customerGstin,
+            copyType,
+            customerName,
+            address: customerAddress,
+            state: address.state,
+        });
+        if (complianceError) {
+            return NextResponse.json(
+                { message: complianceError },
+                { status: 422 }
+            );
+        }
+
         const hsnCodes = storedOrder.items
             .map((item) => item.product?.hsCode ?? item.variant?.hsCode ?? "")
             .filter(Boolean);
@@ -73,7 +105,6 @@ export async function GET(
         const gstRateByHsn = new Map(
             hsnRows.map((row) => [row.hsnCode, row.gstRateBps])
         );
-        const address = storedOrder.address;
         const qrCodeDataUrl = await QRCode.toDataURL(request.url, {
             errorCorrectionLevel: "M",
             margin: 1,
@@ -89,12 +120,11 @@ export async function GET(
                 storedOrder.invoiceIssuedAt ??
                 storedOrder.createdAt ??
                 new Date(),
-            customerName:
-                `${storedOrder.user.firstName} ${storedOrder.user.lastName}`.trim(),
-            address: [address.street, address.city, address.state, address.zip]
-                .filter(Boolean)
-                .join(", "),
+            customerName,
+            address: customerAddress,
             state: address.state,
+            orderDate: storedOrder.createdAt,
+            customerGstin: storedOrder.customerGstin,
             amount: storedOrder.totalAmount,
             deliveryAmount: storedOrder.deliveryAmount,
             discountAmount: storedOrder.discountAmount,
@@ -110,12 +140,16 @@ export async function GET(
                         price: item.product?.price ?? 0,
                         compareAtPrice: item.product?.compareAtPrice,
                         hsCode: item.product?.hsCode,
+                        sku: item.product?.sku,
+                        nativeSku: item.product?.nativeSku,
                     },
                     variant: item.variant
                         ? {
                               price: item.variant.price ?? undefined,
                               compareAtPrice: item.variant.compareAtPrice,
                               hsCode: item.variant.hsCode,
+                              sku: item.variant.sku,
+                              nativeSku: item.variant.nativeSku,
                           }
                         : undefined,
                     gstRateBps: gstRateByHsn.get(hsnCode) ?? 0,
