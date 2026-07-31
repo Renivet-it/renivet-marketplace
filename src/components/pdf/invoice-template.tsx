@@ -355,7 +355,12 @@ const styles = StyleSheet.create({
         borderLeftWidth: 1,
         borderLeftColor: line,
     },
-    final: { backgroundColor: paperAlt, fontFamily: "Helvetica-Bold" },
+    // Helvetica does not reliably contain the Indian Rupee glyph in PDF output.
+    final: {
+        backgroundColor: paperAlt,
+        fontFamily: "NotoSans",
+        fontWeight: 700,
+    },
     signature: {
         marginTop: 4,
         fontSize: 7,
