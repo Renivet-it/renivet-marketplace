@@ -1,5 +1,7 @@
 "use client";
 
+import { SwapStampCelebration } from "@/components/checkout/swap-stamp-celebration";
+import { RewardUnlockedCard } from "@/components/profile/reward-unlocked-card";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -7,6 +9,7 @@ import {
     Briefcase,
     ChevronRight,
     FileText,
+    Eye,
     Headphones,
     Heart,
     HelpCircle,
@@ -15,6 +18,8 @@ import {
     MapPin,
     MessageCircle,
     Package,
+    PartyPopper,
+    Play,
     Ruler,
     Scissors,
     ShieldAlert,
@@ -123,6 +128,12 @@ function PreferenceCard({
 }
 
 export default function OverviewPage() {
+    const [showFiveOfFivePage, setShowFiveOfFivePage] = React.useState(false);
+    const [stampAnimationPreview, setStampAnimationPreview] =
+        React.useState<{
+            stampCount: number;
+            runId: number;
+        } | null>(null);
     const { data: user } = trpc.general.users.currentUser.useQuery();
     const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery(
         { userId: user?.id ?? "" },
@@ -154,6 +165,26 @@ export default function OverviewPage() {
 
     const wishlistCount = wishlist?.length || 0;
     const ordersCount = orders?.length || 0;
+
+    React.useEffect(() => {
+        if (!stampAnimationPreview) return;
+
+        const duration =
+            stampAnimationPreview.stampCount === 5 ? 8_500 : 5_000;
+        const timer = window.setTimeout(
+            () => setStampAnimationPreview(null),
+            duration
+        );
+
+        return () => window.clearTimeout(timer);
+    }, [stampAnimationPreview]);
+
+    const playStampAnimation = (stampCount: number) => {
+        setStampAnimationPreview({
+            stampCount,
+            runId: Date.now(),
+        });
+    };
 
     // Helper for mobile list items
     const MobileNavItem = ({
@@ -212,7 +243,40 @@ export default function OverviewPage() {
                 <p className="text-gray-500">Welcome back, {user?.firstName}</p>
             </div>
 
-            <SwapRewardCard />
+            <div className="flex flex-wrap items-center justify-end gap-2">
+                <button
+                    type="button"
+                    onClick={() => playStampAnimation(3)}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#9c8965] bg-white px-4 text-xs font-semibold text-[#5f5035] shadow-sm transition hover:bg-[#f8f1e5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9c8965]/40 sm:text-sm"
+                >
+                    <Play aria-hidden className="size-4" />
+                    Test stamp animation
+                </button>
+                <button
+                    type="button"
+                    onClick={() => playStampAnimation(5)}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full bg-[#315c4b] px-4 text-xs font-semibold text-white shadow-sm transition hover:bg-[#274d3f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#315c4b]/40 sm:text-sm"
+                >
+                    <PartyPopper aria-hidden className="size-4" />
+                    Test 5/5 congratulations
+                </button>
+                <button
+                    type="button"
+                    onClick={() => setShowFiveOfFivePage((current) => !current)}
+                    className="inline-flex min-h-10 items-center justify-center gap-2 rounded-full border border-[#315c4b] bg-[#edf5f0] px-4 text-xs font-semibold text-[#315c4b] shadow-sm transition hover:bg-[#e1eee6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#315c4b]/40 sm:text-sm"
+                >
+                    <Eye aria-hidden className="size-4" />
+                    {showFiveOfFivePage
+                        ? "Show live ticket"
+                        : "View 5/5 reward page"}
+                </button>
+            </div>
+
+            {showFiveOfFivePage ? (
+                <RewardUnlockedCard stampCount={5} />
+            ) : (
+                <SwapRewardCard />
+            )}
 
             {/* Summary Cards Grid */}
             <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
@@ -374,6 +438,14 @@ export default function OverviewPage() {
                     log out
                 </button>
             </div>
+            {stampAnimationPreview && (
+                <SwapStampCelebration
+                    key={stampAnimationPreview.runId}
+                    isOpen
+                    customerName={user?.firstName}
+                    targetStampCount={stampAnimationPreview.stampCount}
+                />
+            )}
         </div>
     );
 }
