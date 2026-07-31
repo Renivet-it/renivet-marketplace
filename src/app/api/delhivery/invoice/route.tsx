@@ -2,6 +2,7 @@ import { InvoiceTemplate } from "@/components/pdf/invoice-template";
 import { db } from "@/lib/db";
 import { brands, hsnMaster, orders } from "@/lib/db/schema";
 import { createInvoiceDownloadToken } from "@/lib/invoice-download";
+import { validateHighValueB2cInvoice } from "@/lib/invoice-validation";
 import { renderToStream } from "@react-pdf/renderer";
 import { eq, inArray, sql } from "drizzle-orm";
 import { NextResponse } from "next/server";
@@ -77,6 +78,19 @@ async function issueInvoiceNumber(params: {
 export async function POST(req: Request) {
     try {
         const { order } = await req.json();
+        const complianceError = validateHighValueB2cInvoice({
+            totalAmountPaise: Number(order.totalAmount ?? order.amount ?? 0),
+            customerGstin: order.customerGstin,
+            customerName: order.customerName,
+            address: order.address,
+            state: order.state,
+        });
+        if (complianceError) {
+            return NextResponse.json(
+                { message: complianceError },
+                { status: 422 }
+            );
+        }
         const storedOrder = await db.query.orders.findFirst({
             where: eq(orders.id, order.id),
             with: {
@@ -119,6 +133,11 @@ export async function POST(req: Request) {
         });
         order.invoiceNumber = issuedInvoice.invoiceNumber;
         order.date = issuedInvoice.issuedAt;
+        order.orderDate = order.orderDate ?? storedOrder?.createdAt;
+        order.copyType =
+            order.copyType === "duplicate" || order.copyType === "triplicate"
+                ? order.copyType
+                : "original";
         order.brand.confidential = {
             ...order.brand.confidential,
             bankAccountHolderName:
