@@ -6,6 +6,7 @@ import {
     trackPurchaseCapi,
 } from "@/actions/analytics";
 // Impoert actions
+import { SwapStampCelebration } from "@/components/checkout/swap-stamp-celebration";
 import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
@@ -58,10 +59,39 @@ export function OrderPage({
         "pending" | "success" | "error"
     >("pending");
     const [isProcessing, setIsProcessing] = useState(false);
+    const [isStampCelebrationOpen, setIsStampCelebrationOpen] = useState(false);
+    const [celebrationStampCount, setCelebrationStampCount] = useState(1);
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
         "online" | "cod"
     >("online");
     const posthog = usePostHog();
+
+    const swapRewardStatusQuery =
+        trpc.general.swapRewards.getSwapRewardStatus.useQuery();
+
+    const playSwapStampCelebration = async () => {
+        let currentStampCount =
+            swapRewardStatusQuery.data?.currentCycleStampCount ?? 0;
+        try {
+            const refreshedStatus = await swapRewardStatusQuery.refetch();
+            currentStampCount =
+                refreshedStatus.data?.currentCycleStampCount ??
+                currentStampCount;
+        } catch {
+            // The animation can safely use the already-loaded campaign value.
+        }
+        const nextStampCount = Math.min(5, currentStampCount + 1);
+        const celebrationDurationMs = nextStampCount === 5 ? 8500 : 5000;
+        setCelebrationStampCount(nextStampCount);
+        setIsProcessingModalOpen(false);
+        setIsStampCelebrationOpen(true);
+        await new Promise<void>((resolve) => {
+            window.setTimeout(() => {
+                setIsStampCelebrationOpen(false);
+                resolve();
+            }, celebrationDurationMs);
+        });
+    };
 
     const { selectedShippingAddress, appliedCoupon } = useCartStore();
 
@@ -592,6 +622,7 @@ export function OrderPage({
                     orderDetailsByBrand,
                     deleteItemFromCart,
                     orderIntentId: orderIntent.id,
+                    onOrderSuccess: playSwapStampCelebration,
                 });
 
                 initializeRazorpayPayment(options);
@@ -657,8 +688,7 @@ export function OrderPage({
             );
             setProcessingModalState("success");
 
-            await new Promise((resolve) => setTimeout(resolve, 1500));
-            setIsProcessingModalOpen(false);
+            await playSwapStampCelebration();
             window.location.href = "/profile/orders";
         } catch (error: any) {
             console.error("COD order creation failed:", error);
@@ -977,6 +1007,11 @@ export function OrderPage({
                 title={processingModalTitle}
                 description={processingModalDescription}
                 state={processingModalState}
+            />
+            <SwapStampCelebration
+                isOpen={isStampCelebrationOpen}
+                customerName={user?.firstName}
+                targetStampCount={celebrationStampCount}
             />
         </>
     );

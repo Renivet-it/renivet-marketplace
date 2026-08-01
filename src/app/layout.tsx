@@ -4,17 +4,26 @@ import { siteConfig } from "@/config/site";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import type { Metadata, Viewport } from "next";
 import { inter, nunito_sans } from "./fonts";
+import "@fontsource/iosevka-charon-mono/400.css";
+import "@fontsource/iosevka-charon-mono/400-italic.css";
+import "@fontsource/iosevka-charon-mono/500.css";
+import "@fontsource/iosevka-charon-mono/700.css";
+import "@fontsource/league-spartan/400.css";
+import "@fontsource/league-spartan/500.css";
+import "@fontsource/league-spartan/600.css";
+import "@fontsource/league-spartan/700.css";
 import "./globals.css";
 import { env } from "@/../env";
 import { GuestAddToCartPopup } from "@/components/globals/modals/guest-add-to-cart-popup";
 import { WelcomePopupTrigger } from "@/components/globals/modals/welcome-popup-trigger";
+import { SwapProgressFloat } from "@/components/globals/swap-progress-float";
 import { FB_PIXEL_ID } from "@/lib/fbpixel";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
+import NextTopLoader from "nextjs-toploader";
 import { MergeGuestCart } from "../components/globals/layouts/guest/merge-guest-cart";
 import { MergeGuestWishlist } from "../components/globals/layouts/guest/merge-guest-wishlist";
 import FacebookPixel from "./facebook-pixel";
-import NextTopLoader from "nextjs-toploader";
 
 export const viewport: Viewport = {
     themeColor: [
@@ -112,10 +121,7 @@ export default function RootLayout({ children }: LayoutProps) {
         <html
             lang="en"
             suppressHydrationWarning
-            className={cn(
-                inter.variable,
-                nunito_sans.variable
-            )}
+            className={cn(inter.variable, nunito_sans.variable)}
         >
             <head>
                 <meta charSet="utf-8" />
@@ -175,6 +181,7 @@ export default function RootLayout({ children }: LayoutProps) {
                         <WelcomePopupTrigger />
                         <GuestAddToCartPopup />
                         {children}
+                        <SwapProgressFloat />
                         <Toaster />
                         {/* Track page changes + enrich pixel with user data client-side */}
                         <FacebookPixel />

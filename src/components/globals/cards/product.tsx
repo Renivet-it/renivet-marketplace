@@ -10,7 +10,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
-import { DiscountBadge } from "@/components/ui/discount-badge";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { trpc } from "@/lib/trpc/client";
@@ -412,14 +412,7 @@ export function ProductCard({
                                     isProductHovered ? "scale-105" : "scale-100"
                                 )}
                             />
-
-                            {discount ? (
-                                <DiscountBadge
-                                    discount={discount}
-                                    compact
-                                    className="absolute left-0 top-3 z-20"
-                                />
-                            ) : null}
+                            <NewProductRibbon product={product} />
 
                             <div
                                 className="absolute bottom-3 right-3 z-20 md:hidden"
@@ -848,6 +841,11 @@ export function ProductCard({
                         {displayOriginal ? (
                             <span className="text-[10px] text-gray-400 line-through">
                                 {formatINR(originalPrice, { input: "paise" })}
+                            </span>
+                        ) : null}
+                        {discount ? (
+                            <span className="whitespace-nowrap text-[10px] font-medium text-[#ff6f61]">
+                                ({discount}% OFF)
                             </span>
                         ) : null}
                     </div>

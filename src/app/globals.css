@@ -2,6 +2,11 @@
 @tailwind components;
 @tailwind utilities;
 
+.swap-campaign-font,
+.swap-campaign-font * {
+    font-family: "Iosevka Charon Mono", monospace !important;
+}
+
 html {
     font-family: var(--font-nunito-sans);
 }

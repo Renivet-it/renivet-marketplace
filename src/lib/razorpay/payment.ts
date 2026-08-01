@@ -1,4 +1,5 @@
 "use client";
+
 import { env } from "@/../env";
 import { verifyPayment } from "@/actions";
 import { trackPurchaseCapi } from "@/actions/analytics";
@@ -43,6 +44,7 @@ export function createRazorpayPaymentOptions({
     orderDetailsByBrand,
     deleteItemFromCart,
     orderIntentId,
+    onOrderSuccess,
 }: {
     orderId: string;
     deliveryAddress: any;
@@ -114,6 +116,7 @@ export function createRazorpayPaymentOptions({
     }>;
     deleteItemFromCart: (input: { userId: string }) => void;
     orderIntentId: string;
+    onOrderSuccess?: () => Promise<void>;
 }) {
     const options: RazorpayPaymentOptions = {
         key: env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
@@ -268,8 +271,13 @@ export function createRazorpayPaymentOptions({
                 );
                 setProcessingModalState("success");
 
-                await wait(2000);
-                setIsProcessingModalOpen(false);
+                if (onOrderSuccess) {
+                    setIsProcessingModalOpen(false);
+                    await onOrderSuccess();
+                } else {
+                    await wait(2000);
+                    setIsProcessingModalOpen(false);
+                }
                 refetch();
 
                 console.log("Redirecting to /profile/orders...");

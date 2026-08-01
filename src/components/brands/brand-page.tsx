@@ -1,5 +1,6 @@
 "use client";
 
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import {
     cn,
     convertPaiseToRupees,
@@ -267,6 +268,7 @@ function ProductCard({ product }: ProductCardProps) {
                         height={200}
                         className="size-full object-cover"
                     />
+                    <NewProductRibbon product={product} />
                 </div>
 
                 <div className="p-3">

@@ -1,10 +1,10 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
-import { DiscountBadge } from "@/components/ui/discount-badge";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
+import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -215,14 +215,7 @@ export const ProductCard = ({
                         sizes="(max-width: 640px) 120px, 200px"
                         className="object-cover transition-transform duration-300 group-hover/product:scale-105"
                     />
-
-                    {discountPct && discountPct > 0 && (
-                        <DiscountBadge
-                            discount={discountPct}
-                            compact
-                            className="absolute left-0 top-3 z-10"
-                        />
-                    )}
+                    <NewProductRibbon product={product} />
                 </div>
 
                 <div className="pt-2">
@@ -244,6 +237,11 @@ export const ProductCard = ({
                                 ₹0000
                             </span>
                         )}
+                        {discountPct && discountPct > 0 ? (
+                            <span className="whitespace-nowrap text-[10px] font-medium text-[#ff6f61] sm:text-[12px]">
+                                ({discountPct}% OFF)
+                            </span>
+                        ) : null}
                     </div>
                 </div>
             </AnimatedProductLink>

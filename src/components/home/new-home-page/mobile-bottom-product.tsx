@@ -1,6 +1,6 @@
 "use client";
 
-import { DiscountBadge } from "@/components/ui/discount-badge";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { convertPaiseToRupees } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import Image from "next/image";
@@ -27,7 +27,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
     );
 
     const originalConverted =
-        rawOriginal > 0 ? convertPaiseToRupees(rawOriginal) : null;
+        rawOriginal > rawPrice ? convertPaiseToRupees(rawOriginal) : null;
 
     // ----- DISCOUNT -----
     const discount =
@@ -55,15 +55,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
                     sizes="173px"
                     className="object-cover"
                 />
-
-                {/* ⭐ DISCOUNT BADGE */}
-                {discount ? (
-                    <DiscountBadge
-                        discount={discount}
-                        compact
-                        className="absolute left-0 top-3 z-10"
-                    />
-                ) : null}
+                <NewProductRibbon product={product} />
             </div>
 
             {/* TEXT */}
@@ -83,6 +75,11 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
                             ₹{originalConverted}
                         </span>
                     )}
+                    {discount ? (
+                        <span className="whitespace-nowrap text-[13px] font-medium text-[#ff6f61]">
+                            ({discount}% OFF)
+                        </span>
+                    ) : null}
                 </div>
             </div>
         </AnimatedProductLink>

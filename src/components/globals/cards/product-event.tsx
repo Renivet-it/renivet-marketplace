@@ -1,5 +1,6 @@
 "use client";
 
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import { ProductWithBrand } from "@/lib/validations";
 import Image from "next/image";
@@ -94,8 +95,8 @@ export function EventProductCard({
                     {/* Product default image */}
                     {isEmptyArray(mediaUrls) && (
                         <Image
-                            src='https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1'
-                            alt='default image'
+                            src="https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                            alt="default image"
                             width={1000}
                             height={1000}
                             className={cn(
@@ -116,6 +117,7 @@ export function EventProductCard({
                             )}
                         />
                     )}
+                    <NewProductRibbon product={product} />
 
                     {/* Image indicators for slideshow */}
                     {mediaUrls.length > 1 && (
@@ -168,23 +170,23 @@ export function EventProductCard({
                         </p>
 
                         <div className="md:hidden">
-  <WishlistButton
-    size="icon"
-    className={cn(
-      "size-8 rounded-full bg-purple-100 hover:bg-purple-200 text-purple-600 shadow-sm",
-      isProductWishlisted && "text-primary",
-      !userId && "hidden"
-    )}
-    iconClassName={cn("stroke-current")}
-    hideText
-    userId={userId}
-    productId={product.id}
-    isProductWishlisted={isProductWishlisted}
-    setIsProductWishlisted={setIsProductWishlisted}
-    onMouseEnter={() => setIsWishlistHovered(true)}
-    onMouseLeave={() => setIsWishlistHovered(false)}
-  />
-</div>
+                            <WishlistButton
+                                size="icon"
+                                className={cn(
+                                    "size-8 rounded-full bg-purple-100 text-purple-600 shadow-sm hover:bg-purple-200",
+                                    isProductWishlisted && "text-primary",
+                                    !userId && "hidden"
+                                )}
+                                iconClassName={cn("stroke-current")}
+                                hideText
+                                userId={userId}
+                                productId={product.id}
+                                isProductWishlisted={isProductWishlisted}
+                                setIsProductWishlisted={setIsProductWishlisted}
+                                onMouseEnter={() => setIsWishlistHovered(true)}
+                                onMouseLeave={() => setIsWishlistHovered(false)}
+                            />
+                        </div>
                     </div>
 
                     <p className="text-xs text-muted-foreground">
@@ -201,21 +203,41 @@ export function EventProductCard({
 
                 </p> */}
 
-<p className="text-sm font-semibold">
-    <span className="text-gray-900">{formatINR(productPrice, { input: "paise" })}</span>
-    {product.compareAtPrice ? (
-        <>
-            {" "}
-            <span className="text-gray-400 line-through">{formatINR(product.compareAtPrice, { input: "paise" })}</span>
-            {" "}
-            <span className="text-red-600">({Math.round(
-                ((parseFloat(convertPaiseToRupees(product.compareAtPrice)) -
-                 parseFloat(convertPaiseToRupees(productPrice))) /
-                (parseFloat(convertPaiseToRupees(product.compareAtPrice)) || 1) * 100
-            ))}% OFF)</span>
-        </>
-    ) : null}
-</p>
+                <p className="text-sm font-semibold">
+                    <span className="text-gray-900">
+                        {formatINR(productPrice, { input: "paise" })}
+                    </span>
+                    {product.compareAtPrice ? (
+                        <>
+                            {" "}
+                            <span className="text-gray-400 line-through">
+                                {formatINR(product.compareAtPrice, {
+                                    input: "paise",
+                                })}
+                            </span>{" "}
+                            <span className="text-red-600">
+                                (
+                                {Math.round(
+                                    ((parseFloat(
+                                        convertPaiseToRupees(
+                                            product.compareAtPrice
+                                        )
+                                    ) -
+                                        parseFloat(
+                                            convertPaiseToRupees(productPrice)
+                                        )) /
+                                        (parseFloat(
+                                            convertPaiseToRupees(
+                                                product.compareAtPrice
+                                            )
+                                        ) || 1)) *
+                                        100
+                                )}
+                                % OFF)
+                            </span>
+                        </>
+                    ) : null}
+                </p>
             </div>
         </div>
     );

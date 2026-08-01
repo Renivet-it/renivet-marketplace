@@ -1,5 +1,6 @@
 "use client";
 
+import { SwapRewardCard } from "@/components/profile/swap-reward-card";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -24,7 +25,6 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import React from "react";
-import { SwapRewardCard } from "@/components/profile/swap-reward-card";
 
 function SummaryCard({
     icon: Icon,
