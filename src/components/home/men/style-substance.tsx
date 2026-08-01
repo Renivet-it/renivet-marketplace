@@ -1,7 +1,7 @@
 "use client";
 
-import { Icons } from "@/components/icons";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
+import { Icons } from "@/components/icons";
 import {
     Carousel,
     CarouselContent,
@@ -9,6 +9,7 @@ import {
     CarouselNext,
     CarouselPrevious,
 } from "@/components/ui/carousel";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -137,8 +138,8 @@ export function StyleWithSubstance({ products, userId, className }: Props) {
                             </CarouselItem>
                         ))}
                     </CarouselContent>
-                    <CarouselPrevious className="left-4 border-neutral-200 bg-white text-black shadow-lg transition-all  [&>svg]:transition-transform [&>svg]:duration-300 hover:[&>svg]:-translate-x-0.5" />
-                    <CarouselNext className="right-4 border-neutral-200 bg-white text-black shadow-lg transition-all  [&>svg]:transition-transform [&>svg]:duration-300 hover:[&>svg]:translate-x-0.5" />
+                    <CarouselPrevious className="left-4 border-neutral-200 bg-white text-black shadow-lg transition-all [&>svg]:transition-transform [&>svg]:duration-300 hover:[&>svg]:-translate-x-0.5" />
+                    <CarouselNext className="right-4 border-neutral-200 bg-white text-black shadow-lg transition-all [&>svg]:transition-transform [&>svg]:duration-300 hover:[&>svg]:translate-x-0.5" />
                 </Carousel>
             </div>
         </section>
@@ -181,6 +182,7 @@ function ProductCard({
                     fill
                     className="object-cover"
                 />
+                <NewProductRibbon product={product} />
 
                 {/* TAG */}
                 <div

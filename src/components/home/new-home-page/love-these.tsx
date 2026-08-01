@@ -3,6 +3,7 @@
 import { showAddToCartToast } from "@/components/globals/custom-toasts/add-to-cart-toast";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
 import { Icons } from "@/components/icons";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -214,6 +215,7 @@ export const ProductCard = ({
                         sizes="(max-width: 640px) 120px, 200px"
                         className="object-cover transition-transform duration-300 group-hover/product:scale-105"
                     />
+                    <NewProductRibbon product={product} />
                 </div>
 
                 <div className="pt-2">

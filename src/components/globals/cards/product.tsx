@@ -10,6 +10,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { trpc } from "@/lib/trpc/client";
@@ -411,6 +412,7 @@ export function ProductCard({
                                     isProductHovered ? "scale-105" : "scale-100"
                                 )}
                             />
+                            <NewProductRibbon product={product} />
 
                             <div
                                 className="absolute bottom-3 right-3 z-20 md:hidden"

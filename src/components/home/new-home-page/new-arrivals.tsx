@@ -10,6 +10,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -373,6 +374,7 @@ export function ProductCard({
                         className="object-cover transition-transform duration-500 group-hover/card:scale-105"
                         sizes="(max-width: 640px) 33vw, 14vw"
                     />
+                    <NewProductRibbon product={product} />
                     {/* Wishlist — top right */}
                     <button
                         onClick={handleAddToWishlist}

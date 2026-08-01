@@ -1,7 +1,7 @@
 "use client";
 
-import { Icons } from "@/components/icons";
 import { AnimatedProductLink } from "@/components/home/new-home-page/animated-product-link";
+import { Icons } from "@/components/icons";
 import {
     Carousel,
     CarouselContent,
@@ -9,6 +9,7 @@ import {
     CarouselNext,
     CarouselPrevious,
 } from "@/components/ui/carousel";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
@@ -179,6 +180,7 @@ function ProductCard({
                     fill
                     className="object-cover"
                 />
+                <NewProductRibbon product={product} />
 
                 {/* TAG */}
                 <div

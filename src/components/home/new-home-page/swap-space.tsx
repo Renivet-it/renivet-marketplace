@@ -11,6 +11,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -419,6 +420,8 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                             />
                         );
                     })}
+
+                    <NewProductRibbon product={product} />
 
                     {/* Floating Wishlist Button */}
                     <button
@@ -851,7 +854,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                 {displayPrice && (
                     <span
                         className="text-[11px] text-gray-400 line-through sm:text-[12px]"
-                        style={{ marginLeft: "12px" }}
+                        style={{ marginLeft: "5px" }}
                     >
                         {formatINR(displayPrice, { input: "rupees" })}
                     </span>
@@ -859,7 +862,7 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                 {discount && discount > 0 ? (
                     <span
                         className="whitespace-nowrap text-[11px] font-medium text-[#ff6f61] sm:text-[12px]"
-                        style={{ marginLeft: "12px" }}
+                        style={{ marginLeft: "5px" }}
                     >
                         ({discount}% OFF)
                     </span>

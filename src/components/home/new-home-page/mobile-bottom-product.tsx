@@ -1,5 +1,6 @@
 "use client";
 
+import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { convertPaiseToRupees } from "@/lib/utils";
 import { Banner } from "@/lib/validations";
 import Image from "next/image";
@@ -54,6 +55,7 @@ const ProductCard = ({ banner }: { banner: Banner }) => {
                     sizes="173px"
                     className="object-cover"
                 />
+                <NewProductRibbon product={product} />
             </div>
 
             {/* TEXT */}
