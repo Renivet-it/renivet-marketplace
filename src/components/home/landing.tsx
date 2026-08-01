@@ -27,18 +27,18 @@ export function Landing({ className, banners, ...props }: PageProps) {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoDD6Uqn0WvnGEidmOVIP6xXt4S7befYUykMJ",
             link: "https://renivet.com/brands/my-mithila/shop",
         },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
-        },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
-            link: "https://renivet.com/shop?sortBy=best-sellers",
-        },
-        {
-            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN27J6WdQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
-            link: "https://renivet.com/brands/bamboology/shop",
-        },
+        // {
+        //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNKT0ERfdoXWY4M9GmONJv38rnKquVZUx0pjkQ",
+        //     link: "https://renivet.com/shop?sortBy=best-sellers",
+        // },
+        // {
+        //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNH9JLu1pctzNSTlLa4Po2KvFZm05urDqnVswb",
+        //     link: "https://renivet.com/shop?sortBy=best-sellers",
+        // },
+        // {
+        //     src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN27J6WdQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
+        //     link: "https://renivet.com/brands/bamboology/shop",
+        // },
         {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN2on6lEQOYTpvrXwqtZHon4P85jVxyMmDkf3s",
             link: "https://renivet.com/brands/bamboology/shop",
