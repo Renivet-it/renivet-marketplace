@@ -205,10 +205,10 @@ export function RewardUnlockedCard({ stampCount }: RewardUnlockedCardProps) {
                 <div className="relative mx-auto mt-7 grid max-w-[1060px] grid-cols-[42%_58%] overflow-hidden rounded-[24px] border-2 border-dashed border-[#9caab3] bg-white/75 p-3 sm:mt-10 sm:grid-cols-[310px_minmax(0,1fr)] sm:gap-8 sm:p-6">
                     <div className="overflow-hidden rounded-[18px] bg-[#d7e9f8]">
                         <Image
-                            src="/assets/swap-rewards/unlocked/swap-campaign-poster.png"
-                            alt="Swap campaign reward poster"
-                            width={2376}
-                            height={5008}
+                            src="/assets/swap-rewards/unlocked/passport-mobile.png"
+                            alt="Swap Passport reward poster"
+                            width={2484}
+                            height={5235}
                             className="h-full w-full object-cover object-top"
                             priority
                         />

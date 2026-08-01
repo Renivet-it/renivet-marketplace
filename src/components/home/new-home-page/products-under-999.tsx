@@ -10,7 +10,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
-import { DiscountBadge } from "@/components/ui/discount-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -275,14 +274,6 @@ function Under999ProductCard({
                     className="z-0 object-cover transition-transform duration-500 group-hover/card:scale-105"
                     sizes="(max-width: 640px) 33vw, 14vw"
                 />
-                {discount && discount > 0 && (
-                    <DiscountBadge
-                        discount={discount}
-                        compact
-                        className="absolute left-0 top-3 z-20"
-                    />
-                )}
-
                 {/* Wishlist — top right */}
                 <button
                     onClick={handleAddToWishlist}
@@ -680,6 +671,11 @@ function Under999ProductCard({
                             ₹{displayOriginal}
                         </span>
                     )}
+                    {discount && discount > 0 ? (
+                        <span className="whitespace-nowrap text-[10px] font-medium text-[#ff6f61]">
+                            ({discount}% OFF)
+                        </span>
+                    ) : null}
                 </div>
             </AnimatedProductLink>
         </div>

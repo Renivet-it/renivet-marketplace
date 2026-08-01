@@ -250,7 +250,7 @@ function MobileBackSideTicket({
 
     return (
         <section
-            aria-label="How the swap campaign works"
+            aria-label="How the swap passport works"
             aria-hidden={hiddenFromAssistiveTechnology}
             className="swap-ticket-face swap-ticket-back absolute left-0 top-0 h-[540px] w-[760px] overflow-hidden bg-[#d7e9f8]"
             style={{ clipPath: "url(#swap-combined-ticket-shape)" }}
@@ -454,7 +454,7 @@ function BackSideTicket({
 
     return (
         <section
-            aria-label="How the swap campaign works"
+            aria-label="How the swap passport works"
             aria-hidden={hiddenFromAssistiveTechnology}
             className={cn(
                 "swap-ticket-face swap-ticket-back absolute left-0 top-0 grid overflow-hidden bg-[#d7e9f8]",
@@ -1149,8 +1149,8 @@ export function SwapRewardCard() {
                 aria-busy={isFlipAnimating}
                 aria-label={
                     isFlipped
-                        ? "Show the front of the swap campaign ticket"
-                        : "Show how the swap campaign works"
+                        ? "Show the front of the swap passport ticket"
+                        : "Show how the swap passport works"
                 }
                 onClick={toggleTicketSide}
                 onKeyDown={handleTicketKeyDown}
@@ -1185,7 +1185,7 @@ export function SwapRewardCard() {
                     )}
                 >
                     <section
-                        aria-label="Swap campaign rewards"
+                        aria-label="Swap passport rewards"
                         aria-hidden={isFlipped}
                         className={cn(
                             "swap-ticket-face swap-ticket-front absolute left-0 top-0 grid overflow-hidden shadow-[0_18px_42px_-30px_rgba(14,58,119,0.45)]",
@@ -1240,7 +1240,7 @@ export function SwapRewardCard() {
                                             : { margin: 0, marginTop: -28 }
                                     }
                                 >
-                                    CAMPAIGN
+                                    PASSPORT
                                 </p>
                                 <p
                                     className={cn(

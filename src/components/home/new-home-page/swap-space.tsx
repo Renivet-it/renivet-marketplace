@@ -11,7 +11,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "@/components/ui/dialog-general";
-import { DiscountBadge } from "@/components/ui/discount-badge";
 import { Spinner } from "@/components/ui/spinner";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -143,9 +142,10 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
     const originalPrice =
         product.variants?.[0]?.compareAtPrice ?? product.compareAtPrice;
 
-    const displayPriceStr = originalPrice
-        ? convertPaiseToRupees(originalPrice)
-        : null;
+    const displayPriceStr =
+        originalPrice && originalPrice > rawPrice
+            ? convertPaiseToRupees(originalPrice)
+            : null;
     const displayPrice = displayPriceStr
         ? Math.round(Number(displayPriceStr))
         : null;
@@ -420,15 +420,6 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                         );
                     })}
 
-                    {/* 🏷️ Discount badge */}
-                    {discount && discount > 0 && (
-                        <DiscountBadge
-                            discount={discount}
-                            compact
-                            className="absolute left-0 top-3 z-10"
-                        />
-                    )}
-
                     {/* Floating Wishlist Button */}
                     <button
                         onClick={handleAddToWishlist}
@@ -575,7 +566,8 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
                                     <div className="mt-2 flex items-baseline gap-3 md:mt-5">
                                         <span className="text-lg font-medium text-gray-900 md:text-xl">
                                             {formatINR(
-                                                selectedVariant?.price || rawPrice,
+                                                selectedVariant?.price ||
+                                                    rawPrice,
                                                 {
                                                     input: "paise",
                                                     keepDecimals: true,
@@ -850,17 +842,28 @@ const ProductCard = ({ banner, userId }: ProductCardProps) => {
             {/* PRICE ROW */}
             <AnimatedProductLink
                 href={productUrl}
-                className="mt-1 flex items-center justify-center gap-2 px-2 pb-3"
+                className="mt-1 flex flex-wrap items-center justify-center px-2 pb-3"
             >
                 <span className="text-[13px] font-semibold text-gray-900 sm:text-[14px]">
                     {formatINR(price, { input: "rupees" })}
                 </span>
 
                 {displayPrice && (
-                    <span className="text-[11px] text-gray-400 line-through sm:text-[12px]">
+                    <span
+                        className="text-[11px] text-gray-400 line-through sm:text-[12px]"
+                        style={{ marginLeft: "12px" }}
+                    >
                         {formatINR(displayPrice, { input: "rupees" })}
                     </span>
                 )}
+                {discount && discount > 0 ? (
+                    <span
+                        className="whitespace-nowrap text-[11px] font-medium text-[#ff6f61] sm:text-[12px]"
+                        style={{ marginLeft: "12px" }}
+                    >
+                        ({discount}% OFF)
+                    </span>
+                ) : null}
             </AnimatedProductLink>
         </div>
     );
