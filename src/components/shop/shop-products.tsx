@@ -293,6 +293,8 @@ export function ShopProducts({
     );
     const loadedPagesRef = useRef<Set<number>>(new Set([page || 1]));
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
+    const isRefreshingProducts =
+        isFetching && !isLoadingMore && allProducts.length > 0;
 
     const hasMoreProducts = !hasReachedEnd && allProducts.length < totalCount;
     const totalPages = Math.max(1, Math.ceil(totalCount / limit));
@@ -427,35 +429,55 @@ export function ShopProducts({
 
     return (
         <>
-            <div
-                className={cn(
-                    "grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-4",
-                    className
-                )}
-                {...props}
-            >
-                {allProducts.map((product) => {
-                    const isWishlisted =
-                        wishlist?.some(
-                            (item) => item.productId === product.id
-                        ) ?? false;
-
-                    return (
+            <div className="relative" aria-busy={isRefreshingProducts}>
+                {isRefreshingProducts && (
+                    <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-24 backdrop-blur-[1px] md:pt-32">
                         <div
-                            key={product.id}
-                            onClick={() =>
-                                handleProductClick(product.id, product.brandId)
-                            }
-                            className="cursor-pointer"
+                            className="flex items-center gap-2 rounded-full border border-[#dce5ee] bg-white px-4 py-2.5 text-sm font-medium text-[#30455f] shadow-md"
+                            role="status"
+                            aria-live="polite"
                         >
-                            <ProductCard
-                                product={product}
-                                isWishlisted={isWishlisted}
-                                userId={userId}
-                            />
+                            <Spinner className="size-4 animate-spin" />
+                            Loading products...
                         </div>
-                    );
-                })}
+                    </div>
+                )}
+
+                <div
+                    className={cn(
+                        "grid grid-cols-2 gap-x-3 gap-y-6 transition-opacity duration-200 md:grid-cols-3 md:gap-x-4 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-4",
+                        isRefreshingProducts &&
+                            "pointer-events-none opacity-45",
+                        className
+                    )}
+                    {...props}
+                >
+                    {allProducts.map((product) => {
+                        const isWishlisted =
+                            wishlist?.some(
+                                (item) => item.productId === product.id
+                            ) ?? false;
+
+                        return (
+                            <div
+                                key={product.id}
+                                onClick={() =>
+                                    handleProductClick(
+                                        product.id,
+                                        product.brandId
+                                    )
+                                }
+                                className="cursor-pointer"
+                            >
+                                <ProductCard
+                                    product={product}
+                                    isWishlisted={isWishlisted}
+                                    userId={userId}
+                                />
+                            </div>
+                        );
+                    })}
+                </div>
             </div>
 
             <div className="mt-1 flex flex-col items-center gap-3 border-t border-[#e4e9ef] py-8">
