@@ -1142,16 +1142,39 @@ class ProductQuery {
 
         // --- Search embedding (semantic) ---
         if (search?.length) {
-            isRagSearchActive = true;
             // Preprocess query for better matching
             processedSearch = preprocessSearchQuery(search);
+            const normalizedSearch = search.trim().toLowerCase();
+            const exactBrand = await db.query.brands.findFirst({
+                columns: {
+                    id: true,
+                    name: true,
+                },
+                where: and(
+                    eq(brands.isActive, true),
+                    sql`LOWER(TRIM(${brands.name})) = ${normalizedSearch}`
+                ),
+            });
 
-            try {
-                // Generate 384-dim embedding for brand matching (brands still use 384-dim)
-                const searchEmbedding = await getEmbedding(processedSearch);
+            if (exactBrand) {
+                topBrandMatch = {
+                    id: exactBrand.id,
+                    name: exactBrand.name,
+                    distance: 0,
+                };
+                searchQuery = eq(products.brandId, exactBrand.id);
+                console.log(
+                    `[getProducts] Exact brand search detected: ${exactBrand.name}`
+                );
+            } else {
+                isRagSearchActive = true;
 
-                // 🔍 Detect brand intent
-                const brandResult = await db.execute(sql`
+                try {
+                    // Generate 384-dim embedding for brand matching (brands still use 384-dim)
+                    const searchEmbedding = await getEmbedding(processedSearch);
+
+                    // 🔍 Detect brand intent
+                    const brandResult = await db.execute(sql`
                     SELECT id::text AS id, name, (embeddings <=> ${JSON.stringify(searchEmbedding)}::vector) AS distance
                     FROM brands
                     WHERE embeddings IS NOT NULL
@@ -1159,92 +1182,93 @@ class ProductQuery {
                     LIMIT 1
                 `);
 
-                const brandRow = Array.isArray(brandResult)
-                    ? brandResult[0]
-                    : brandResult?.rows?.[0];
-                if (
-                    brandRow &&
-                    Number(brandRow.distance) < BRAND_MATCH_THRESHOLD
-                ) {
-                    topBrandMatch = {
-                        id: brandRow.id,
-                        name: brandRow.name,
-                        distance: Number(brandRow.distance),
-                    };
-                    console.log(
-                        `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
-                    );
-                }
-            } catch (e) {
-                console.warn("Brand intent matching skipped/failed", e);
-            }
-
-            // Fetch absolute best products from the Advanced RAG Python backend
-            try {
-                console.log(
-                    "[getProducts] Hitting Advanced RAG Engine for query:",
-                    processedSearch
-                );
-                const response = await fetch(
-                    `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
-                    { next: { revalidate: 60 } }
-                );
-
-                if (response.ok) {
-                    const data = await response.json();
-                    if (Array.isArray(data)) {
-                        ragProductIds = data.map((d: any) => String(d.id));
+                    const brandRow = Array.isArray(brandResult)
+                        ? brandResult[0]
+                        : brandResult?.rows?.[0];
+                    if (
+                        brandRow &&
+                        Number(brandRow.distance) < BRAND_MATCH_THRESHOLD
+                    ) {
+                        topBrandMatch = {
+                            id: brandRow.id,
+                            name: brandRow.name,
+                            distance: Number(brandRow.distance),
+                        };
                         console.log(
-                            `[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`
+                            `🔥 Brand match detected: ${topBrandMatch.name} (distance ${topBrandMatch.distance})`
                         );
                     }
+                } catch (e) {
+                    console.warn("Brand intent matching skipped/failed", e);
                 }
-            } catch (error) {
-                console.error("[getProducts] RAG Engine failed:", error);
-            }
 
-            const localSearchPattern = `%${processedSearch}%`;
-            const localSearchFallbackQuery = or(
-                ilike(products.title, localSearchPattern),
-                ilike(products.description, localSearchPattern),
-                ilike(products.metaTitle, localSearchPattern),
-                ilike(products.metaDescription, localSearchPattern),
-                sql`EXISTS (
+                // Fetch absolute best products from the Advanced RAG Python backend
+                try {
+                    console.log(
+                        "[getProducts] Hitting Advanced RAG Engine for query:",
+                        processedSearch
+                    );
+                    const response = await fetch(
+                        `http://64.227.137.174:8000/search/advanced-rag?query=${encodeURIComponent(processedSearch)}&limit=150`,
+                        { next: { revalidate: 60 } }
+                    );
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (Array.isArray(data)) {
+                            ragProductIds = data.map((d: any) => String(d.id));
+                            console.log(
+                                `[getProducts] RAG returned ${ragProductIds.length} accurate product IDs.`
+                            );
+                        }
+                    }
+                } catch (error) {
+                    console.error("[getProducts] RAG Engine failed:", error);
+                }
+
+                const localSearchPattern = `%${processedSearch}%`;
+                const localSearchFallbackQuery = or(
+                    ilike(products.title, localSearchPattern),
+                    ilike(products.description, localSearchPattern),
+                    ilike(products.metaTitle, localSearchPattern),
+                    ilike(products.metaDescription, localSearchPattern),
+                    sql`EXISTS (
                     SELECT 1
                     FROM brands b
                     WHERE b.id = ${products.brandId}
                       AND LOWER(b.name) LIKE ${localSearchPattern}
                 )`,
-                sql`EXISTS (
+                    sql`EXISTS (
                     SELECT 1
                     FROM categories c
                     WHERE c.id = ${products.categoryId}
                       AND LOWER(c.name) LIKE ${localSearchPattern}
                 )`,
-                sql`EXISTS (
+                    sql`EXISTS (
                     SELECT 1
                     FROM sub_categories sc
                     WHERE sc.id = ${products.subcategoryId}
                       AND LOWER(sc.name) LIKE ${localSearchPattern}
                 )`,
-                sql`EXISTS (
+                    sql`EXISTS (
                     SELECT 1
                     FROM product_types pt
                     WHERE pt.id = ${products.productTypeId}
                       AND LOWER(pt.name) LIKE ${localSearchPattern}
                 )`
-            );
-
-            // Apply search filter
-            if (ragProductIds.length > 0) {
-                searchQuery = or(
-                    inArray(products.id, ragProductIds),
-                    localSearchFallbackQuery
                 );
-            } else {
-                // Fall back to the local catalogue when the external RAG engine
-                // is connected to a different product copy or returns no ids.
-                searchQuery = localSearchFallbackQuery;
+
+                // Apply search filter
+                if (ragProductIds.length > 0) {
+                    searchQuery = or(
+                        inArray(products.id, ragProductIds),
+                        localSearchFallbackQuery
+                    );
+                } else {
+                    // Fall back to the local catalogue when the external RAG engine
+                    // is connected to a different product copy or returns no ids.
+                    searchQuery = localSearchFallbackQuery;
+                }
             }
         }
 
