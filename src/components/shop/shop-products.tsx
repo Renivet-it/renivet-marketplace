@@ -431,14 +431,42 @@ export function ShopProducts({
         <>
             <div className="relative" aria-busy={isRefreshingProducts}>
                 {isRefreshingProducts && (
-                    <div className="absolute inset-0 z-10 flex items-start justify-center bg-white/60 pt-24 backdrop-blur-[1px] md:pt-32">
+                    <div className="absolute inset-0 z-10 flex items-start justify-center bg-[#f8f6f0]/90 px-3 pt-8 backdrop-blur-[2px] md:px-8 md:pt-14">
                         <div
-                            className="flex items-center gap-2 rounded-full border border-[#dce5ee] bg-white px-4 py-2.5 text-sm font-medium text-[#30455f] shadow-md"
+                            className="relative w-full max-w-[490px] overflow-hidden rounded-[28px] border border-[#e7dfd1] bg-white px-6 py-10 text-center shadow-[0_24px_65px_rgba(55,48,35,0.16)] md:rounded-[34px] md:p-12"
                             role="status"
                             aria-live="polite"
                         >
-                            <Spinner className="size-4 animate-spin" />
-                            Loading products...
+                            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#354229] via-[#c8a55b] to-[#354229]" />
+
+                            <div className="relative mx-auto mb-7 size-24 md:size-28">
+                                <div className="absolute inset-0 animate-spin rounded-full border border-[#e4d8c5] border-t-[#c7a45c] [animation-duration:2.2s]" />
+                                <div className="absolute inset-3 animate-spin rounded-full border-2 border-transparent border-l-[#33412a] border-t-[#33412a] [animation-direction:reverse] [animation-duration:1.45s]" />
+                                <div className="absolute inset-[22px] flex items-center justify-center rounded-full bg-[#293321] shadow-[0_8px_20px_rgba(41,51,33,0.25)] md:inset-[26px]">
+                                    <Icons.Search className="size-7 text-white md:size-8" />
+                                </div>
+                                <Icons.Sparkles className="absolute right-0 top-2 size-5 animate-pulse text-[#d6bd87]" />
+                                <Icons.Sparkles className="absolute bottom-2 left-0 size-4 animate-pulse text-[#7b816f] [animation-delay:450ms]" />
+                            </div>
+
+                            <p className="text-xs font-semibold uppercase tracking-[0.32em] text-[#9a8971] md:text-sm">
+                                Sorting
+                            </p>
+                            <p className="mt-4 text-xl font-semibold text-[#302f2b] md:text-2xl">
+                                Finding your best matches
+                            </p>
+                            <p className="mt-4 text-base text-[#7e7365] md:text-lg">
+                                &ldquo;Curating your results&rdquo;
+                            </p>
+
+                            <div
+                                className="mt-7 flex items-center justify-center gap-2"
+                                aria-hidden="true"
+                            >
+                                <span className="size-2.5 animate-pulse rounded-full bg-[#354229]" />
+                                <span className="size-2.5 animate-pulse rounded-full bg-[#c6a45b] [animation-delay:250ms]" />
+                                <span className="size-2.5 animate-pulse rounded-full bg-[#354229] [animation-delay:500ms]" />
+                            </div>
                         </div>
                     </div>
                 )}
