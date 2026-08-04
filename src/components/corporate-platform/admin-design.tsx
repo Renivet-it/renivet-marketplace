@@ -26,7 +26,9 @@ export function AdminPageIntro({
                         {description}
                     </p>
                 </div>
-                {actions ? <div className="xl:justify-self-end">{actions}</div> : null}
+                {actions ? (
+                    <div className="xl:justify-self-end">{actions}</div>
+                ) : null}
             </div>
         </section>
     );
@@ -35,7 +37,11 @@ export function AdminPageIntro({
 export function AdminMetricGrid({
     items,
 }: {
-    items: Array<{ label: string; value: string; tone?: "blue" | "gold" | "slate" }>;
+    items: Array<{
+        label: string;
+        value: string;
+        tone?: "blue" | "gold" | "slate";
+    }>;
 }) {
     return (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
@@ -46,13 +52,16 @@ export function AdminMetricGrid({
                         "rounded-[24px] border bg-white p-5 shadow-sm",
                         item.tone === "gold" && "border-[#e6d9bf] bg-[#fffdf8]",
                         item.tone === "blue" && "border-[#d7e6f5] bg-[#f8fbff]",
-                        (!item.tone || item.tone === "slate") && "border-slate-200"
+                        (!item.tone || item.tone === "slate") &&
+                            "border-slate-200"
                     )}
                 >
                     <div className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">
                         {item.label}
                     </div>
-                    <div className="mt-3 text-3xl font-semibold text-slate-900">{item.value}</div>
+                    <div className="mt-3 text-3xl font-semibold text-slate-900">
+                        {item.value}
+                    </div>
                 </div>
             ))}
         </div>
@@ -73,12 +82,21 @@ export function AdminPanel({
     className?: string;
 }) {
     return (
-        <section className={cn("rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6", className)}>
+        <section
+            className={cn(
+                "rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm md:p-6",
+                className
+            )}
+        >
             <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                 <div>
-                    <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+                    <h2 className="text-xl font-semibold text-slate-900">
+                        {title}
+                    </h2>
                     {description ? (
-                        <p className="mt-1 text-sm leading-6 text-slate-500">{description}</p>
+                        <p className="mt-1 text-sm leading-6 text-slate-500">
+                            {description}
+                        </p>
                     ) : null}
                 </div>
                 {actions ? <div className="shrink-0">{actions}</div> : null}
@@ -99,11 +117,14 @@ export function StatusBadge({
         <span
             className={cn(
                 "inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em]",
-                tone === "green" && "border-emerald-200 bg-emerald-50 text-emerald-700",
-                tone === "amber" && "border-amber-200 bg-amber-50 text-amber-700",
+                tone === "green" &&
+                    "border-emerald-200 bg-emerald-50 text-emerald-700",
+                tone === "amber" &&
+                    "border-amber-200 bg-amber-50 text-amber-700",
                 tone === "blue" && "border-blue-200 bg-blue-50 text-blue-700",
                 tone === "rose" && "border-rose-200 bg-rose-50 text-rose-700",
-                tone === "slate" && "border-slate-200 bg-slate-50 text-slate-700"
+                tone === "slate" &&
+                    "border-slate-200 bg-slate-50 text-slate-700"
             )}
         >
             {children}
@@ -121,7 +142,9 @@ export function EmptyQueue({
     return (
         <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50/70 p-8 text-center">
             <div className="text-lg font-semibold text-slate-900">{title}</div>
-            <div className="mt-2 text-sm leading-6 text-slate-500">{description}</div>
+            <div className="mt-2 text-sm leading-6 text-slate-500">
+                {description}
+            </div>
         </div>
     );
 }

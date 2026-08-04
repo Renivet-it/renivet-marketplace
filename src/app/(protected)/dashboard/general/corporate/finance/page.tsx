@@ -13,8 +13,8 @@ export default async function Page() {
                 <CorporateTabs />
                 <AdminPageIntro
                     eyebrow="Finance And Purchase Orders"
-                    title="Release approved quotes, validate purchase orders, and run finance operations"
-                    description="This workspace now covers both paths after customer approval: direct corporate order release for approved quotes without purchase orders, and enterprise purchase order validation when a buyer uploads official procurement paperwork."
+                    title="Finance & purchase order operations"
+                    description="Review what needs a decision, release approved quotes, validate purchase orders, record collections, and issue invoices from one focused workspace."
                 />
                 <AdminFinanceQueue initialData={finance} />
             </div>

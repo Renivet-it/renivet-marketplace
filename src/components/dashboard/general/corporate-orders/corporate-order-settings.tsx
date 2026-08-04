@@ -23,8 +23,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea-dash";
 import { trpc } from "@/lib/trpc/client";
-import { CorporateOrderConfigSnapshot } from "@/lib/validations/corporate-order";
 import { handleClientError } from "@/lib/utils";
+import { CorporateOrderConfigSnapshot } from "@/lib/validations/corporate-order";
 import { ReactNode, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -33,8 +33,20 @@ type ConfigResponse = {
         id: string;
         name: string;
         description?: string | null;
+        hsnMasterId?: string | null;
+        hsnMaster?: {
+            id: string;
+            hsnCode: string;
+            gstRateBps: number;
+        } | null;
         isActive: boolean;
         sortOrder: number;
+    }>;
+    hsnOptions: Array<{
+        id: string;
+        hsnCode: string;
+        description: string;
+        gstRateBps: number;
     }>;
     gsmOptions: Array<{
         id: string;
@@ -111,12 +123,15 @@ const bpsToPercent = (value: number) => (value / 100).toString();
 const percentToBps = (value: string) =>
     Number.isFinite(Number(value)) ? Math.round(Number(value) * 100) : 0;
 
-function createInitialDraft(initialData: ConfigResponse): CorporateOrderConfigSnapshot {
+function createInitialDraft(
+    initialData: ConfigResponse
+): CorporateOrderConfigSnapshot {
     return {
         productTypes: initialData.productTypes.map((item) => ({
             id: item.id,
             name: item.name,
             description: item.description ?? null,
+            hsnMasterId: item.hsnMasterId ?? null,
             isActive: item.isActive,
             sortOrder: item.sortOrder,
         })),
@@ -203,9 +218,7 @@ function SectionShell({
                     <h3 className="text-lg font-semibold text-slate-900">
                         {title}
                     </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                        {description}
-                    </p>
+                    <p className="mt-1 text-sm text-slate-500">{description}</p>
                 </div>
                 {action}
             </div>
@@ -230,14 +243,22 @@ export function CorporateOrderSettings({
     const [draft, setDraft] = useState<CorporateOrderConfigSnapshot>(() =>
         createInitialDraft(initialData)
     );
+    const [hsnOptions, setHsnOptions] = useState(initialData.hsnOptions);
 
     const mutation = trpc.general.corporateOrders.upsertConfig.useMutation({
         onSuccess: (data) => {
             toast.success("Corporate order settings updated");
-            setDraft(createInitialDraft(data as ConfigResponse));
+            const updatedConfig = data as ConfigResponse;
+            setHsnOptions(updatedConfig.hsnOptions);
+            setDraft(createInitialDraft(updatedConfig));
         },
         onError: (error) => handleClientError(error),
     });
+
+    const hsnOptionsById = useMemo(
+        () => new Map(hsnOptions.map((item) => [item.id, item])),
+        [hsnOptions]
+    );
 
     const productTypeOptions = useMemo(
         () =>
@@ -309,16 +330,28 @@ export function CorporateOrderSettings({
 
             <Tabs defaultValue="defaults" className="space-y-4">
                 <TabsList className="h-auto flex-wrap justify-start gap-2 bg-transparent p-0">
-                    <TabsTrigger value="defaults" className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary">
+                    <TabsTrigger
+                        value="defaults"
+                        className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary"
+                    >
                         Defaults
                     </TabsTrigger>
-                    <TabsTrigger value="catalog" className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary">
+                    <TabsTrigger
+                        value="catalog"
+                        className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary"
+                    >
                         Product Catalog
                     </TabsTrigger>
-                    <TabsTrigger value="charges" className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary">
+                    <TabsTrigger
+                        value="charges"
+                        className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary"
+                    >
                         Branding & Charges
                     </TabsTrigger>
-                    <TabsTrigger value="pricing" className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary">
+                    <TabsTrigger
+                        value="pricing"
+                        className="rounded-md border bg-white px-4 py-2 data-[state=active]:border-primary"
+                    >
                         Pricing Slabs
                     </TabsTrigger>
                 </TabsList>
@@ -326,23 +359,18 @@ export function CorporateOrderSettings({
                 <TabsContent value="defaults" className="space-y-4">
                     <SectionShell
                         title="Order Defaults"
-                        description="Set GST, advance payment percentage, and the expected timeline shown to customers."
+                        description="Set the advance payment percentage and expected timeline. GST is controlled per product type through its HSN code."
                     >
                         <div className="grid gap-4 md:grid-cols-2">
-                            <div className="space-y-2">
-                                <Label>GST Rate (%)</Label>
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    step="0.01"
-                                    value={bpsToPercent(draft.settings.gstRateBps)}
-                                    onChange={(e) =>
-                                        updateSettings(
-                                            "gstRateBps",
-                                            percentToBps(e.target.value)
-                                        )
-                                    }
-                                />
+                            <div className="rounded-lg border border-[#dbe5f0] bg-[#f8fbff] px-4 py-3 text-sm text-slate-600 md:col-span-2">
+                                <p className="font-medium text-slate-900">
+                                    Product-wise GST is enabled
+                                </p>
+                                <p className="mt-1">
+                                    Assign an HSN code to every corporate
+                                    product type. The matching GST rate from the
+                                    HSN Master is used in new quotes and orders.
+                                </p>
                             </div>
                             <div className="space-y-2">
                                 <Label>Advance Payment (%)</Label>
@@ -403,16 +431,20 @@ export function CorporateOrderSettings({
                             <Button
                                 variant="outline"
                                 onClick={() =>
-                                    updateCollection("productTypes", (items) => [
-                                        ...items,
-                                        {
-                                            id: createId(),
-                                            name: "",
-                                            description: null,
-                                            isActive: true,
-                                            sortOrder: items.length + 1,
-                                        },
-                                    ])
+                                    updateCollection(
+                                        "productTypes",
+                                        (items) => [
+                                            ...items,
+                                            {
+                                                id: createId(),
+                                                name: "",
+                                                description: null,
+                                                hsnMasterId: null,
+                                                isActive: true,
+                                                sortOrder: items.length + 1,
+                                            },
+                                        ]
+                                    )
                                 }
                             >
                                 <Icons.Plus />
@@ -425,7 +457,10 @@ export function CorporateOrderSettings({
                         ) : (
                             <div className="grid gap-4 md:grid-cols-2">
                                 {draft.productTypes.map((item, index) => (
-                                    <div key={item.id} className="rounded-lg border bg-white p-4">
+                                    <div
+                                        key={item.id}
+                                        className="rounded-lg border bg-white p-4"
+                                    >
                                         <div className="grid gap-3">
                                             <div className="flex items-center justify-between">
                                                 <p className="text-sm font-semibold text-slate-900">
@@ -439,7 +474,10 @@ export function CorporateOrderSettings({
                                                             "productTypes",
                                                             (items) =>
                                                                 items.filter(
-                                                                    (_, itemIndex) =>
+                                                                    (
+                                                                        _,
+                                                                        itemIndex
+                                                                    ) =>
                                                                         itemIndex !==
                                                                         index
                                                                 )
@@ -457,7 +495,10 @@ export function CorporateOrderSettings({
                                                         "productTypes",
                                                         (items) =>
                                                             items.map(
-                                                                (row, itemIndex) =>
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex ===
                                                                     index
                                                                         ? {
@@ -480,7 +521,10 @@ export function CorporateOrderSettings({
                                                         "productTypes",
                                                         (items) =>
                                                             items.map(
-                                                                (row, itemIndex) =>
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex ===
                                                                     index
                                                                         ? {
@@ -498,6 +542,310 @@ export function CorporateOrderSettings({
                                                 }
                                             />
                                             <div className="grid gap-3 sm:grid-cols-2">
+                                                <div className="space-y-2">
+                                                    <Label>HSN Code</Label>
+                                                    <Select
+                                                        value={
+                                                            item.hsnMasterId ??
+                                                            "__unassigned__"
+                                                        }
+                                                        onValueChange={(
+                                                            value
+                                                        ) =>
+                                                            updateCollection(
+                                                                "productTypes",
+                                                                (items) =>
+                                                                    items.map(
+                                                                        (
+                                                                            row,
+                                                                            itemIndex
+                                                                        ) =>
+                                                                            itemIndex ===
+                                                                            index
+                                                                                ? {
+                                                                                      ...row,
+                                                                                      hsnMasterId:
+                                                                                          value ===
+                                                                                          "__unassigned__"
+                                                                                              ? null
+                                                                                              : value,
+                                                                                      manualHsn:
+                                                                                          null,
+                                                                                  }
+                                                                                : row
+                                                                    )
+                                                            )
+                                                        }
+                                                    >
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select HSN code" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="__unassigned__">
+                                                                Select HSN code
+                                                            </SelectItem>
+                                                            {hsnOptions.map(
+                                                                (hsn) => (
+                                                                    <SelectItem
+                                                                        key={
+                                                                            hsn.id
+                                                                        }
+                                                                        value={
+                                                                            hsn.id
+                                                                        }
+                                                                    >
+                                                                        {
+                                                                            hsn.hsnCode
+                                                                        }
+                                                                        {" · "}
+                                                                        {(
+                                                                            hsn.gstRateBps /
+                                                                            100
+                                                                        ).toFixed(
+                                                                            2
+                                                                        )}
+                                                                        % GST
+                                                                    </SelectItem>
+                                                                )
+                                                            )}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>
+                                                        GST Rate (from HSN)
+                                                    </Label>
+                                                    <div className="flex min-h-10 items-center rounded-md border bg-slate-50 px-3 text-sm text-slate-700">
+                                                        {item.hsnMasterId &&
+                                                        hsnOptionsById.get(
+                                                            item.hsnMasterId
+                                                        )
+                                                            ? (
+                                                                  hsnOptionsById.get(
+                                                                      item.hsnMasterId
+                                                                  )!
+                                                                      .gstRateBps /
+                                                                  100
+                                                              ).toFixed(2) + "%"
+                                                            : "Select an HSN code"}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            {item.manualHsn ? (
+                                                <div className="space-y-3 rounded-md border border-dashed border-primary/40 bg-primary/5 p-3">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <div>
+                                                            <p className="text-sm font-medium text-slate-900">
+                                                                Add HSN manually
+                                                            </p>
+                                                            <p className="text-xs text-slate-500">
+                                                                A new HSN Master
+                                                                entry will be
+                                                                created when you
+                                                                save. An
+                                                                existing code is
+                                                                reused
+                                                                unchanged.
+                                                            </p>
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="ghost"
+                                                            size="sm"
+                                                            onClick={() =>
+                                                                updateCollection(
+                                                                    "productTypes",
+                                                                    (items) =>
+                                                                        items.map(
+                                                                            (
+                                                                                row,
+                                                                                itemIndex
+                                                                            ) =>
+                                                                                itemIndex ===
+                                                                                index
+                                                                                    ? {
+                                                                                          ...row,
+                                                                                          manualHsn:
+                                                                                              null,
+                                                                                      }
+                                                                                    : row
+                                                                        )
+                                                                )
+                                                            }
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                    </div>
+                                                    <div className="grid gap-3 sm:grid-cols-2">
+                                                        <div className="space-y-2">
+                                                            <Label>
+                                                                New HSN Code
+                                                            </Label>
+                                                            <Input
+                                                                placeholder="e.g. 61091000"
+                                                                value={
+                                                                    item
+                                                                        .manualHsn
+                                                                        .hsnCode
+                                                                }
+                                                                onChange={(e) =>
+                                                                    updateCollection(
+                                                                        "productTypes",
+                                                                        (
+                                                                            items
+                                                                        ) =>
+                                                                            items.map(
+                                                                                (
+                                                                                    row,
+                                                                                    itemIndex
+                                                                                ) =>
+                                                                                    itemIndex ===
+                                                                                    index
+                                                                                        ? {
+                                                                                              ...row,
+                                                                                              manualHsn:
+                                                                                                  {
+                                                                                                      ...row.manualHsn!,
+                                                                                                      hsnCode:
+                                                                                                          e
+                                                                                                              .target
+                                                                                                              .value,
+                                                                                                  },
+                                                                                          }
+                                                                                        : row
+                                                                            )
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <Label>
+                                                                GST Rate (%)
+                                                            </Label>
+                                                            <Input
+                                                                type="number"
+                                                                min="0"
+                                                                max="100"
+                                                                step="0.01"
+                                                                value={bpsToPercent(
+                                                                    item
+                                                                        .manualHsn
+                                                                        .gstRateBps
+                                                                )}
+                                                                onChange={(e) =>
+                                                                    updateCollection(
+                                                                        "productTypes",
+                                                                        (
+                                                                            items
+                                                                        ) =>
+                                                                            items.map(
+                                                                                (
+                                                                                    row,
+                                                                                    itemIndex
+                                                                                ) =>
+                                                                                    itemIndex ===
+                                                                                    index
+                                                                                        ? {
+                                                                                              ...row,
+                                                                                              manualHsn:
+                                                                                                  {
+                                                                                                      ...row.manualHsn!,
+                                                                                                      gstRateBps:
+                                                                                                          percentToBps(
+                                                                                                              e
+                                                                                                                  .target
+                                                                                                                  .value
+                                                                                                          ),
+                                                                                                  },
+                                                                                          }
+                                                                                        : row
+                                                                            )
+                                                                    )
+                                                                }
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label>
+                                                            HSN Description
+                                                        </Label>
+                                                        <Textarea
+                                                            minRows={2}
+                                                            placeholder="Describe the product classification"
+                                                            value={
+                                                                item.manualHsn
+                                                                    .description
+                                                            }
+                                                            onChange={(e) =>
+                                                                updateCollection(
+                                                                    "productTypes",
+                                                                    (items) =>
+                                                                        items.map(
+                                                                            (
+                                                                                row,
+                                                                                itemIndex
+                                                                            ) =>
+                                                                                itemIndex ===
+                                                                                index
+                                                                                    ? {
+                                                                                          ...row,
+                                                                                          manualHsn:
+                                                                                              {
+                                                                                                  ...row.manualHsn!,
+                                                                                                  description:
+                                                                                                      e
+                                                                                                          .target
+                                                                                                          .value,
+                                                                                              },
+                                                                                      }
+                                                                                    : row
+                                                                        )
+                                                                )
+                                                            }
+                                                        />
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="w-fit"
+                                                    onClick={() =>
+                                                        updateCollection(
+                                                            "productTypes",
+                                                            (items) =>
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  hsnMasterId:
+                                                                                      null,
+                                                                                  manualHsn:
+                                                                                      {
+                                                                                          hsnCode:
+                                                                                              "",
+                                                                                          description:
+                                                                                              row.name ||
+                                                                                              "",
+                                                                                          gstRateBps: 0,
+                                                                                      },
+                                                                              }
+                                                                            : row
+                                                                )
+                                                        )
+                                                    }
+                                                >
+                                                    <Icons.Plus />
+                                                    HSN not listed? Add manually
+                                                </Button>
+                                            )}
+                                            <div className="grid gap-3 sm:grid-cols-2">
                                                 <Input
                                                     type="number"
                                                     min="0"
@@ -508,7 +856,10 @@ export function CorporateOrderSettings({
                                                             "productTypes",
                                                             (items) =>
                                                                 items.map(
-                                                                    (row, itemIndex) =>
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
                                                                         itemIndex ===
                                                                         index
                                                                             ? {
@@ -532,7 +883,9 @@ export function CorporateOrderSettings({
                                                     </span>
                                                     <Switch
                                                         checked={item.isActive}
-                                                        onCheckedChange={(checked) =>
+                                                        onCheckedChange={(
+                                                            checked
+                                                        ) =>
                                                             updateCollection(
                                                                 "productTypes",
                                                                 (items) =>
@@ -593,7 +946,9 @@ export function CorporateOrderSettings({
                                     <TableHead>GSM</TableHead>
                                     <TableHead>Sort Order</TableHead>
                                     <TableHead>Active</TableHead>
-                                    <TableHead className="w-[80px]">Action</TableHead>
+                                    <TableHead className="w-[80px]">
+                                        Action
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -607,7 +962,10 @@ export function CorporateOrderSettings({
                                                         "gsmOptions",
                                                         (items) =>
                                                             items.map(
-                                                                (row, itemIndex) =>
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex ===
                                                                     index
                                                                         ? {
@@ -632,7 +990,10 @@ export function CorporateOrderSettings({
                                                         "gsmOptions",
                                                         (items) =>
                                                             items.map(
-                                                                (row, itemIndex) =>
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex ===
                                                                     index
                                                                         ? {
@@ -661,7 +1022,10 @@ export function CorporateOrderSettings({
                                                         "gsmOptions",
                                                         (items) =>
                                                             items.map(
-                                                                (row, itemIndex) =>
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex ===
                                                                     index
                                                                         ? {
@@ -688,7 +1052,10 @@ export function CorporateOrderSettings({
                                                         "gsmOptions",
                                                         (items) =>
                                                             items.map(
-                                                                (row, itemIndex) =>
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex ===
                                                                     index
                                                                         ? {
@@ -711,7 +1078,10 @@ export function CorporateOrderSettings({
                                                         "gsmOptions",
                                                         (items) =>
                                                             items.filter(
-                                                                (_, itemIndex) =>
+                                                                (
+                                                                    _,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex !==
                                                                     index
                                                             )
@@ -761,7 +1131,9 @@ export function CorporateOrderSettings({
                                     <TableHead>Description</TableHead>
                                     <TableHead>Sort Order</TableHead>
                                     <TableHead>Active</TableHead>
-                                    <TableHead className="w-[80px]">Action</TableHead>
+                                    <TableHead className="w-[80px]">
+                                        Action
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -774,13 +1146,20 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "fabricCompositions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          name: e.target.value,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              name: e
+                                                                                  .target
+                                                                                  .value,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -793,15 +1172,23 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "fabricCompositions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          description: fromText(
-                                                                              e.target.value
-                                                                          ),
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              description:
+                                                                                  fromText(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ),
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -816,16 +1203,24 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "fabricCompositions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          sortOrder:
-                                                                              Number(
-                                                                                  e.target.value
-                                                                              ) || 0,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              sortOrder:
+                                                                                  Number(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ) ||
+                                                                                  0,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -838,13 +1233,19 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "fabricCompositions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          isActive: checked,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              isActive:
+                                                                                  checked,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -859,7 +1260,10 @@ export function CorporateOrderSettings({
                                                         "fabricCompositions",
                                                         (items) =>
                                                             items.filter(
-                                                                (_, itemIndex) =>
+                                                                (
+                                                                    _,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex !==
                                                                     index
                                                             )
@@ -882,17 +1286,20 @@ export function CorporateOrderSettings({
                             <Button
                                 variant="outline"
                                 onClick={() =>
-                                    updateCollection("colorOptions", (items) => [
-                                        ...items,
-                                        {
-                                            id: createId(),
-                                            name: "",
-                                            hexCode: null,
-                                            isCustom: false,
-                                            isActive: true,
-                                            sortOrder: items.length + 1,
-                                        },
-                                    ])
+                                    updateCollection(
+                                        "colorOptions",
+                                        (items) => [
+                                            ...items,
+                                            {
+                                                id: createId(),
+                                                name: "",
+                                                hexCode: null,
+                                                isCustom: false,
+                                                isActive: true,
+                                                sortOrder: items.length + 1,
+                                            },
+                                        ]
+                                    )
                                 }
                             >
                                 <Icons.Plus />
@@ -908,7 +1315,9 @@ export function CorporateOrderSettings({
                                     <TableHead>Custom</TableHead>
                                     <TableHead>Active</TableHead>
                                     <TableHead>Sort Order</TableHead>
-                                    <TableHead className="w-[80px]">Action</TableHead>
+                                    <TableHead className="w-[80px]">
+                                        Action
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -921,13 +1330,20 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "colorOptions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          name: e.target.value,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              name: e
+                                                                                  .target
+                                                                                  .value,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -941,15 +1357,23 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "colorOptions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          hexCode: fromText(
-                                                                              e.target.value
-                                                                          ),
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              hexCode:
+                                                                                  fromText(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ),
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -962,13 +1386,19 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "colorOptions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          isCustom: checked,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              isCustom:
+                                                                                  checked,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -981,13 +1411,19 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "colorOptions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          isActive: checked,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              isActive:
+                                                                                  checked,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1002,16 +1438,24 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "colorOptions",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          sortOrder:
-                                                                              Number(
-                                                                                  e.target.value
-                                                                              ) || 0,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              sortOrder:
+                                                                                  Number(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ) ||
+                                                                                  0,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1026,7 +1470,10 @@ export function CorporateOrderSettings({
                                                         "colorOptions",
                                                         (items) =>
                                                             items.filter(
-                                                                (_, itemIndex) =>
+                                                                (
+                                                                    _,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex !==
                                                                     index
                                                             )
@@ -1051,16 +1498,19 @@ export function CorporateOrderSettings({
                             <Button
                                 variant="outline"
                                 onClick={() =>
-                                    updateCollection("printMethods", (items) => [
-                                        ...items,
-                                        {
-                                            id: createId(),
-                                            name: "",
-                                            priceModifierPaise: 0,
-                                            isActive: true,
-                                            sortOrder: items.length + 1,
-                                        },
-                                    ])
+                                    updateCollection(
+                                        "printMethods",
+                                        (items) => [
+                                            ...items,
+                                            {
+                                                id: createId(),
+                                                name: "",
+                                                priceModifierPaise: 0,
+                                                isActive: true,
+                                                sortOrder: items.length + 1,
+                                            },
+                                        ]
+                                    )
                                 }
                             >
                                 <Icons.Plus />
@@ -1075,7 +1525,9 @@ export function CorporateOrderSettings({
                                     <TableHead>Charge (Rs.)</TableHead>
                                     <TableHead>Sort Order</TableHead>
                                     <TableHead>Active</TableHead>
-                                    <TableHead className="w-[80px]">Action</TableHead>
+                                    <TableHead className="w-[80px]">
+                                        Action
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1088,13 +1540,20 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "printMethods",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          name: e.target.value,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              name: e
+                                                                                  .target
+                                                                                  .value,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1112,16 +1571,23 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "printMethods",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          priceModifierPaise:
-                                                                              rupeesToPaise(
-                                                                                  e.target.value
-                                                                              ),
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              priceModifierPaise:
+                                                                                  rupeesToPaise(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ),
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1136,16 +1602,24 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "printMethods",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          sortOrder:
-                                                                              Number(
-                                                                                  e.target.value
-                                                                              ) || 0,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              sortOrder:
+                                                                                  Number(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ) ||
+                                                                                  0,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1158,13 +1632,19 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "printMethods",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          isActive: checked,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              isActive:
+                                                                                  checked,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1179,7 +1659,10 @@ export function CorporateOrderSettings({
                                                         "printMethods",
                                                         (items) =>
                                                             items.filter(
-                                                                (_, itemIndex) =>
+                                                                (
+                                                                    _,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex !==
                                                                     index
                                                             )
@@ -1202,16 +1685,19 @@ export function CorporateOrderSettings({
                             <Button
                                 variant="outline"
                                 onClick={() =>
-                                    updateCollection("logoLocations", (items) => [
-                                        ...items,
-                                        {
-                                            id: createId(),
-                                            name: "",
-                                            placementGroup: "",
-                                            isActive: true,
-                                            sortOrder: items.length + 1,
-                                        },
-                                    ])
+                                    updateCollection(
+                                        "logoLocations",
+                                        (items) => [
+                                            ...items,
+                                            {
+                                                id: createId(),
+                                                name: "",
+                                                placementGroup: "",
+                                                isActive: true,
+                                                sortOrder: items.length + 1,
+                                            },
+                                        ]
+                                    )
                                 }
                             >
                                 <Icons.Plus />
@@ -1226,7 +1712,9 @@ export function CorporateOrderSettings({
                                     <TableHead>Placement Group</TableHead>
                                     <TableHead>Sort Order</TableHead>
                                     <TableHead>Active</TableHead>
-                                    <TableHead className="w-[80px]">Action</TableHead>
+                                    <TableHead className="w-[80px]">
+                                        Action
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1239,13 +1727,20 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "logoLocations",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          name: e.target.value,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              name: e
+                                                                                  .target
+                                                                                  .value,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1258,14 +1753,21 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "logoLocations",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          placementGroup:
-                                                                              e.target.value,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              placementGroup:
+                                                                                  e
+                                                                                      .target
+                                                                                      .value,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1280,16 +1782,24 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "logoLocations",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          sortOrder:
-                                                                              Number(
-                                                                                  e.target.value
-                                                                              ) || 0,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              sortOrder:
+                                                                                  Number(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ) ||
+                                                                                  0,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1302,13 +1812,19 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "logoLocations",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          isActive: checked,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              isActive:
+                                                                                  checked,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1323,7 +1839,10 @@ export function CorporateOrderSettings({
                                                         "logoLocations",
                                                         (items) =>
                                                             items.filter(
-                                                                (_, itemIndex) =>
+                                                                (
+                                                                    _,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex !==
                                                                     index
                                                             )
@@ -1346,19 +1865,22 @@ export function CorporateOrderSettings({
                             <Button
                                 variant="outline"
                                 onClick={() =>
-                                    updateCollection("extraChargeRules", (items) => [
-                                        ...items,
-                                        {
-                                            id: createId(),
-                                            code: "",
-                                            name: "",
-                                            chargeType: "flat",
-                                            amountPaise: 0,
-                                            isDefaultSelected: false,
-                                            isActive: true,
-                                            sortOrder: items.length + 1,
-                                        },
-                                    ])
+                                    updateCollection(
+                                        "extraChargeRules",
+                                        (items) => [
+                                            ...items,
+                                            {
+                                                id: createId(),
+                                                code: "",
+                                                name: "",
+                                                chargeType: "flat",
+                                                amountPaise: 0,
+                                                isDefaultSelected: false,
+                                                isActive: true,
+                                                sortOrder: items.length + 1,
+                                            },
+                                        ]
+                                    )
                                 }
                             >
                                 <Icons.Plus />
@@ -1376,7 +1898,9 @@ export function CorporateOrderSettings({
                                     <TableHead>Default</TableHead>
                                     <TableHead>Active</TableHead>
                                     <TableHead>Sort Order</TableHead>
-                                    <TableHead className="w-[80px]">Action</TableHead>
+                                    <TableHead className="w-[80px]">
+                                        Action
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -1389,13 +1913,20 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "extraChargeRules",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          code: e.target.value,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              code: e
+                                                                                  .target
+                                                                                  .value,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1408,13 +1939,20 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "extraChargeRules",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          name: e.target.value,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              name: e
+                                                                                  .target
+                                                                                  .value,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1427,15 +1965,22 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "extraChargeRules",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          chargeType:
-                                                                              value as
-                                                                                  "flat" | "per_unit" | "per_location",
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              chargeType:
+                                                                                  value as
+                                                                                      | "flat"
+                                                                                      | "per_unit"
+                                                                                      | "per_location",
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1461,21 +2006,30 @@ export function CorporateOrderSettings({
                                                 type="number"
                                                 min="0"
                                                 step="0.01"
-                                                value={paiseToRupees(item.amountPaise)}
+                                                value={paiseToRupees(
+                                                    item.amountPaise
+                                                )}
                                                 onChange={(e) =>
                                                     updateCollection(
                                                         "extraChargeRules",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          amountPaise:
-                                                                              rupeesToPaise(
-                                                                                  e.target.value
-                                                                              ),
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              amountPaise:
+                                                                                  rupeesToPaise(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ),
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1488,14 +2042,19 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "extraChargeRules",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          isDefaultSelected:
-                                                                              checked,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              isDefaultSelected:
+                                                                                  checked,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1508,13 +2067,19 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "extraChargeRules",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          isActive: checked,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              isActive:
+                                                                                  checked,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1529,16 +2094,24 @@ export function CorporateOrderSettings({
                                                     updateCollection(
                                                         "extraChargeRules",
                                                         (items) =>
-                                                            items.map((row, itemIndex) =>
-                                                                itemIndex === index
-                                                                    ? {
-                                                                          ...row,
-                                                                          sortOrder:
-                                                                              Number(
-                                                                                  e.target.value
-                                                                              ) || 0,
-                                                                      }
-                                                                    : row
+                                                            items.map(
+                                                                (
+                                                                    row,
+                                                                    itemIndex
+                                                                ) =>
+                                                                    itemIndex ===
+                                                                    index
+                                                                        ? {
+                                                                              ...row,
+                                                                              sortOrder:
+                                                                                  Number(
+                                                                                      e
+                                                                                          .target
+                                                                                          .value
+                                                                                  ) ||
+                                                                                  0,
+                                                                          }
+                                                                        : row
                                                             )
                                                     )
                                                 }
@@ -1553,7 +2126,10 @@ export function CorporateOrderSettings({
                                                         "extraChargeRules",
                                                         (items) =>
                                                             items.filter(
-                                                                (_, itemIndex) =>
+                                                                (
+                                                                    _,
+                                                                    itemIndex
+                                                                ) =>
                                                                     itemIndex !==
                                                                     index
                                                             )
@@ -1578,20 +2154,25 @@ export function CorporateOrderSettings({
                             <Button
                                 variant="outline"
                                 onClick={() =>
-                                    updateCollection("pricingSlabs", (items) => [
-                                        ...items,
-                                        {
-                                            id: createId(),
-                                            productTypeId:
-                                                productTypeOptions[0]?.value ?? "",
-                                            gsmOptionId: gsmOptions[0]?.value ?? "",
-                                            minQuantity: 1,
-                                            maxQuantity: null,
-                                            unitPricePaise: 0,
-                                            isActive: true,
-                                            sortOrder: items.length + 1,
-                                        },
-                                    ])
+                                    updateCollection(
+                                        "pricingSlabs",
+                                        (items) => [
+                                            ...items,
+                                            {
+                                                id: createId(),
+                                                productTypeId:
+                                                    productTypeOptions[0]
+                                                        ?.value ?? "",
+                                                gsmOptionId:
+                                                    gsmOptions[0]?.value ?? "",
+                                                minQuantity: 1,
+                                                maxQuantity: null,
+                                                unitPricePaise: 0,
+                                                isActive: true,
+                                                sortOrder: items.length + 1,
+                                            },
+                                        ]
+                                    )
                                 }
                                 disabled={
                                     productTypeOptions.length === 0 ||
@@ -1603,7 +2184,8 @@ export function CorporateOrderSettings({
                             </Button>
                         }
                     >
-                        {productTypeOptions.length === 0 || gsmOptions.length === 0 ? (
+                        {productTypeOptions.length === 0 ||
+                        gsmOptions.length === 0 ? (
                             <EmptyState label="pricing slabs because product types and GSM options are required first" />
                         ) : (
                             <Table>
@@ -1616,7 +2198,9 @@ export function CorporateOrderSettings({
                                         <TableHead>Unit Price (Rs.)</TableHead>
                                         <TableHead>Sort Order</TableHead>
                                         <TableHead>Active</TableHead>
-                                        <TableHead className="w-[80px]">Action</TableHead>
+                                        <TableHead className="w-[80px]">
+                                            Action
+                                        </TableHead>
                                     </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1629,15 +2213,19 @@ export function CorporateOrderSettings({
                                                         updateCollection(
                                                             "pricingSlabs",
                                                             (items) =>
-                                                                items.map((row, itemIndex) =>
-                                                                    itemIndex ===
-                                                                    index
-                                                                        ? {
-                                                                              ...row,
-                                                                              productTypeId:
-                                                                                  value,
-                                                                          }
-                                                                        : row
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  productTypeId:
+                                                                                      value,
+                                                                              }
+                                                                            : row
                                                                 )
                                                         )
                                                     }
@@ -1646,14 +2234,22 @@ export function CorporateOrderSettings({
                                                         <SelectValue placeholder="Select product type" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {productTypeOptions.map((option) => (
-                                                            <SelectItem
-                                                                key={option.value}
-                                                                value={option.value}
-                                                            >
-                                                                {option.label}
-                                                            </SelectItem>
-                                                        ))}
+                                                        {productTypeOptions.map(
+                                                            (option) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        option.value
+                                                                    }
+                                                                    value={
+                                                                        option.value
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        option.label
+                                                                    }
+                                                                </SelectItem>
+                                                            )
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </TableCell>
@@ -1664,15 +2260,19 @@ export function CorporateOrderSettings({
                                                         updateCollection(
                                                             "pricingSlabs",
                                                             (items) =>
-                                                                items.map((row, itemIndex) =>
-                                                                    itemIndex ===
-                                                                    index
-                                                                        ? {
-                                                                              ...row,
-                                                                              gsmOptionId:
-                                                                                  value,
-                                                                          }
-                                                                        : row
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  gsmOptionId:
+                                                                                      value,
+                                                                              }
+                                                                            : row
                                                                 )
                                                         )
                                                     }
@@ -1681,14 +2281,22 @@ export function CorporateOrderSettings({
                                                         <SelectValue placeholder="Select GSM" />
                                                     </SelectTrigger>
                                                     <SelectContent>
-                                                        {gsmOptions.map((option) => (
-                                                            <SelectItem
-                                                                key={option.value}
-                                                                value={option.value}
-                                                            >
-                                                                {option.label}
-                                                            </SelectItem>
-                                                        ))}
+                                                        {gsmOptions.map(
+                                                            (option) => (
+                                                                <SelectItem
+                                                                    key={
+                                                                        option.value
+                                                                    }
+                                                                    value={
+                                                                        option.value
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        option.label
+                                                                    }
+                                                                </SelectItem>
+                                                            )
+                                                        )}
                                                     </SelectContent>
                                                 </Select>
                                             </TableCell>
@@ -1701,18 +2309,24 @@ export function CorporateOrderSettings({
                                                         updateCollection(
                                                             "pricingSlabs",
                                                             (items) =>
-                                                                items.map((row, itemIndex) =>
-                                                                    itemIndex ===
-                                                                    index
-                                                                        ? {
-                                                                              ...row,
-                                                                              minQuantity:
-                                                                                  Number(
-                                                                                      e.target.value
-                                                                                  ) ||
-                                                                                  1,
-                                                                          }
-                                                                        : row
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  minQuantity:
+                                                                                      Number(
+                                                                                          e
+                                                                                              .target
+                                                                                              .value
+                                                                                      ) ||
+                                                                                      1,
+                                                                              }
+                                                                            : row
                                                                 )
                                                         )
                                                     }
@@ -1723,29 +2337,36 @@ export function CorporateOrderSettings({
                                                     type="number"
                                                     min="1"
                                                     placeholder="Leave blank for open ended"
-                                                    value={item.maxQuantity ?? ""}
+                                                    value={
+                                                        item.maxQuantity ?? ""
+                                                    }
                                                     onChange={(e) =>
                                                         updateCollection(
                                                             "pricingSlabs",
                                                             (items) =>
-                                                                items.map((row, itemIndex) =>
-                                                                    itemIndex ===
-                                                                    index
-                                                                        ? {
-                                                                              ...row,
-                                                                              maxQuantity:
-                                                                                  e.target
-                                                                                      .value ===
-                                                                                  ""
-                                                                                      ? null
-                                                                                      : Number(
-                                                                                            e
-                                                                                                .target
-                                                                                                .value
-                                                                                        ) ||
-                                                                                        null,
-                                                                          }
-                                                                        : row
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  maxQuantity:
+                                                                                      e
+                                                                                          .target
+                                                                                          .value ===
+                                                                                      ""
+                                                                                          ? null
+                                                                                          : Number(
+                                                                                                e
+                                                                                                    .target
+                                                                                                    .value
+                                                                                            ) ||
+                                                                                            null,
+                                                                              }
+                                                                            : row
                                                                 )
                                                         )
                                                     }
@@ -1763,18 +2384,23 @@ export function CorporateOrderSettings({
                                                         updateCollection(
                                                             "pricingSlabs",
                                                             (items) =>
-                                                                items.map((row, itemIndex) =>
-                                                                    itemIndex ===
-                                                                    index
-                                                                        ? {
-                                                                              ...row,
-                                                                              unitPricePaise:
-                                                                                  rupeesToPaise(
-                                                                                      e.target
-                                                                                          .value
-                                                                                  ),
-                                                                          }
-                                                                        : row
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  unitPricePaise:
+                                                                                      rupeesToPaise(
+                                                                                          e
+                                                                                              .target
+                                                                                              .value
+                                                                                      ),
+                                                                              }
+                                                                            : row
                                                                 )
                                                         )
                                                     }
@@ -1789,17 +2415,24 @@ export function CorporateOrderSettings({
                                                         updateCollection(
                                                             "pricingSlabs",
                                                             (items) =>
-                                                                items.map((row, itemIndex) =>
-                                                                    itemIndex ===
-                                                                    index
-                                                                        ? {
-                                                                              ...row,
-                                                                              sortOrder:
-                                                                                  Number(
-                                                                                      e.target.value
-                                                                                  ) || 0,
-                                                                          }
-                                                                        : row
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  sortOrder:
+                                                                                      Number(
+                                                                                          e
+                                                                                              .target
+                                                                                              .value
+                                                                                      ) ||
+                                                                                      0,
+                                                                              }
+                                                                            : row
                                                                 )
                                                         )
                                                     }
@@ -1808,19 +2441,25 @@ export function CorporateOrderSettings({
                                             <TableCell>
                                                 <Switch
                                                     checked={item.isActive}
-                                                    onCheckedChange={(checked) =>
+                                                    onCheckedChange={(
+                                                        checked
+                                                    ) =>
                                                         updateCollection(
                                                             "pricingSlabs",
                                                             (items) =>
-                                                                items.map((row, itemIndex) =>
-                                                                    itemIndex ===
-                                                                    index
-                                                                        ? {
-                                                                              ...row,
-                                                                              isActive:
-                                                                                  checked,
-                                                                          }
-                                                                        : row
+                                                                items.map(
+                                                                    (
+                                                                        row,
+                                                                        itemIndex
+                                                                    ) =>
+                                                                        itemIndex ===
+                                                                        index
+                                                                            ? {
+                                                                                  ...row,
+                                                                                  isActive:
+                                                                                      checked,
+                                                                              }
+                                                                            : row
                                                                 )
                                                         )
                                                     }
@@ -1835,7 +2474,10 @@ export function CorporateOrderSettings({
                                                             "pricingSlabs",
                                                             (items) =>
                                                                 items.filter(
-                                                                    (_, itemIndex) =>
+                                                                    (
+                                                                        _,
+                                                                        itemIndex
+                                                                    ) =>
                                                                         itemIndex !==
                                                                         index
                                                                 )

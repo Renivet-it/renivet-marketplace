@@ -4,6 +4,7 @@ import {
     corporateBalancePaymentConfirmationInputSchema,
     corporateBalancePaymentOrderInputSchema,
     corporateConfigUpsertInputSchema,
+    corporateOrderBrandAssignmentInputSchema,
     corporateOrderFormInputSchema,
     corporateOrderListInputSchema,
     corporateOrderWorkflowStatusSchema,
@@ -81,6 +82,12 @@ export const corporateOrdersRouter = createTRPCRouter({
         )
         .query(async ({ input }) => {
             return corporateOrderService.getOrderById(input.corporateOrderId);
+        }),
+    assignBrand: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateOrderBrandAssignmentInputSchema)
+        .mutation(async ({ ctx, input }) => {
+            return corporateOrderService.assignBrand(input, ctx.user.id);
         }),
     updateStatus: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))

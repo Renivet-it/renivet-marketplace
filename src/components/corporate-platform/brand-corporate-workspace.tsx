@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertValueToLabel,
-    formatINR,
     handleClientError,
 } from "@/lib/utils";
 import { useState } from "react";
@@ -107,21 +106,18 @@ export function BrandCorporateWorkspace({
                             Corporate Orders
                         </h2>
                         <p className="mt-1 text-sm text-slate-500">
-                            Final brand-assigned corporate orders in a clean review table.
+                            Quote-based and self-service corporate orders assigned to this brand.
                         </p>
                     </div>
                 </div>
 
                 <div className="mt-4 overflow-x-auto">
-                    <table className="w-full min-w-[980px] text-left text-sm">
+                    <table className="w-full min-w-[760px] text-left text-sm">
                         <thead className="bg-slate-50 text-slate-600">
                             <tr>
                                 <th className="px-4 py-3">Order ID</th>
+                                <th className="px-4 py-3">Source</th>
                                 <th className="px-4 py-3">Quantity</th>
-                                <th className="px-4 py-3">Total Value</th>
-                                <th className="px-4 py-3">Advance Paid</th>
-                                <th className="px-4 py-3">Balance Due</th>
-                                <th className="px-4 py-3">Payment</th>
                                 <th className="px-4 py-3">Status</th>
                                 <th className="px-4 py-3">Created</th>
                                 <th className="px-4 py-3">Action</th>
@@ -141,19 +137,14 @@ export function BrandCorporateWorkspace({
                                         <td className="px-4 py-3 font-semibold text-slate-900">
                                             {order.publicOrderId}
                                         </td>
+                                        <td className="px-4 py-3">
+                                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">
+                                                {order.source === "self_service"
+                                                    ? "Self-service"
+                                                    : "Quote-based"}
+                                            </span>
+                                        </td>
                                         <td className="px-4 py-3">{order.quantity}</td>
-                                        <td className="px-4 py-3">
-                                            {formatINR(order.totalPaise)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {formatINR(order.advancePaidPaise)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {formatINR(order.balanceDuePaise)}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {convertValueToLabel(order.paymentStatus)}
-                                        </td>
                                         <td className="px-4 py-3">
                                             {convertValueToLabel(order.status)}
                                         </td>
@@ -204,9 +195,9 @@ export function BrandCorporateWorkspace({
                                 <tr>
                                     <td
                                         className="px-4 py-8 text-center text-slate-500"
-                                        colSpan={9}
+                                        colSpan={6}
                                     >
-                                        No final corporate orders have reached this brand yet.
+                                        No corporate orders have been assigned to this brand yet.
                                     </td>
                                 </tr>
                             )}
@@ -278,7 +269,6 @@ function BrandOrderDetailPanel({
                     </h2>
                     <p className="mt-2 text-sm text-slate-500">
                         Status: {convertValueToLabel(order.status)}
-                        {" | "}Payment: {convertValueToLabel(order.paymentStatus)}
                     </p>
                 </div>
                 <Button variant="outline" onClick={onClose}>
@@ -286,17 +276,8 @@ function BrandOrderDetailPanel({
                 </Button>
             </div>
 
-            <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5">
                 <DataCard label="Quantity" value={String(order.quantity)} />
-                <DataCard label="Total Value" value={formatINR(order.totalPaise)} />
-                <DataCard
-                    label="Advance Paid"
-                    value={formatINR(order.advancePaidPaise)}
-                />
-                <DataCard
-                    label="Balance Due"
-                    value={formatINR(order.balanceDuePaise)}
-                />
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_360px]">

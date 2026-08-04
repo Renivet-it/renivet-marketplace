@@ -16,17 +16,36 @@ interface Item {
     count?: number;
 }
 
-function isActive(pathname: string, item: Item) {
-    if (item.href === "/") {
-        // "overview" and "personal-details" both map to /profile
-        // This logic might need adjustment if sidebar logic changes, but keeping consistent with prev.
-        // If exact match needed:
-        return pathname === "/profile" || pathname === "/profile/";
+function getFinalHref(item: Item): string {
+    if (item.href.startsWith("/profile")) {
+        return item.href;
     }
-    return pathname.includes(item.href.replace("/", ""));
+    if (["contact-us", "shopping-bag"].includes(item.name)) {
+        return item.href;
+    }
+    if (item.href === "/") {
+        return "/profile";
+    }
+    return `/profile${item.href.startsWith("/") ? "" : "/"}${item.href}`;
 }
 
-function NavItem({ item, pathname }: { item: Item; pathname: string }) {
+function isActive(pathname: string, item: Item) {
+    const targetHref = getFinalHref(item);
+    if (targetHref === "/profile") {
+        return pathname === "/profile" || pathname === "/profile/";
+    }
+    return pathname === targetHref || pathname.startsWith(targetHref + "/");
+}
+
+function NavItem({
+    item,
+    pathname,
+    compact = false,
+}: {
+    item: Item;
+    pathname: string;
+    compact?: boolean;
+}) {
     const Icon = Icons[item.icon];
     const active = isActive(pathname, item);
     const isDisabled = item.href === "#";
@@ -34,26 +53,39 @@ function NavItem({ item, pathname }: { item: Item; pathname: string }) {
     const content = (
         <div
             className={cn(
-                "group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50",
-                active
-                    ? "rounded-l-none border-l-4 border-blue-600 bg-blue-50 text-blue-600"
-                    : "text-gray-600 hover:text-gray-900",
+                compact
+                    ? "group flex items-center justify-between rounded-md px-2 py-2 text-[13px] font-medium transition-colors hover:bg-[#f4f8f6]"
+                    : "group flex items-center justify-between rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted/50",
+                active && compact
+                    ? "rounded-l-none border-l-[3px] border-[#1d5b47] bg-[#edf7f1] text-[#164d3d]"
+                    : active
+                      ? "rounded-l-none border-l-4 border-blue-600 bg-blue-50 text-blue-600"
+                      : compact
+                        ? "text-[#536174] hover:text-[#173b30]"
+                        : "text-gray-600 hover:text-gray-900",
                 isDisabled && "cursor-default opacity-60 hover:bg-transparent"
             )}
         >
             <div className="flex items-center gap-3">
                 <Icon
                     className={cn(
-                        "size-[18px] shrink-0",
-                        active
-                            ? "text-blue-600"
-                            : "text-gray-500 group-hover:text-gray-700"
+                        compact ? "size-4 shrink-0" : "size-[18px] shrink-0",
+                        active && compact
+                            ? "text-[#1d5b47]"
+                            : active
+                              ? "text-blue-600"
+                              : compact
+                                ? "text-[#536174] group-hover:text-[#173b30]"
+                                : "text-gray-500 group-hover:text-gray-700"
                     )}
                 />
                 <span>{item.label ?? convertValueToLabel(item.name)}</span>
             </div>
             {item.count !== undefined && item.count > 0 && (
-                <span className="flex size-5 items-center justify-center rounded-full bg-blue-100 text-[10px] font-bold text-blue-600">
+                <span className={cn(
+                    "flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
+                    compact ? "bg-[#edf7f1] text-[#1d5b47]" : "bg-blue-100 text-blue-600"
+                )}>
                     {item.count}
                 </span>
             )}
@@ -64,11 +96,7 @@ function NavItem({ item, pathname }: { item: Item; pathname: string }) {
         return content;
     }
 
-    const finalHref = ["contact-us", "shopping-bag", "help-center"].includes(
-        item.name
-    )
-        ? item.href
-        : `/profile${item.href}`;
+    const finalHref = getFinalHref(item);
 
     return <Link href={finalHref}>{content}</Link>;
 }
@@ -77,21 +105,26 @@ function NavGroup({
     title,
     items,
     pathname,
+    compact = false,
 }: {
     title?: string;
     items: Item[];
     pathname: string;
+    compact?: boolean;
 }) {
     return (
         <div className="mb-6">
             {title && (
-                <h4 className="mb-2 px-3 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                <h4 className={cn(
+                    "mb-2 px-3 text-xs font-semibold uppercase tracking-wider",
+                    compact ? "text-[9px] tracking-[0.08em] text-[#9aa5b3]" : "text-gray-400"
+                )}>
                     {title}
                 </h4>
             )}
             <div className="flex flex-col gap-1">
                 {items.map((item) => (
-                    <NavItem key={item.name} item={item} pathname={pathname} />
+                    <NavItem key={item.name} item={item} pathname={pathname} compact={compact} />
                 ))}
             </div>
         </div>
@@ -100,6 +133,7 @@ function NavGroup({
 
 export function ProfileNav({ className, ...props }: GenericProps) {
     const pathname = usePathname();
+    const isCorporateDashboard = false;
     const { data: user, isPending: isUserLoading } =
         trpc.general.users.currentUser.useQuery();
     const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery(
@@ -141,13 +175,13 @@ export function ProfileNav({ className, ...props }: GenericProps) {
             icon: "Home",
             name: "overview",
             href: "/",
-            label: "Overview",
+            label: isCorporateDashboard ? "Dashboard" : "Overview",
         },
         {
             icon: "ShoppingBag",
             name: "orders",
             href: "/orders",
-            label: "Orders",
+            label: isCorporateDashboard ? "My Orders" : "Orders",
             count: orders?.length,
         },
         {
@@ -160,21 +194,21 @@ export function ProfileNav({ className, ...props }: GenericProps) {
             icon: "Heart",
             name: "wishlist",
             href: "/wishlist",
-            label: "Wishlist",
+            label: isCorporateDashboard ? "Saved Items" : "Wishlist",
             count: wishlist?.length,
         },
         {
             icon: "ShoppingCart",
             name: "shopping-bag",
             href: "/mycart",
-            label: "Shopping Bag",
+            label: isCorporateDashboard ? "Cart" : "Shopping Bag",
             count: cartCount,
         },
         {
             icon: "LayoutDashboard",
             name: "impact-dashboard",
             href: "#",
-            label: "Impact Dashboard",
+            label: isCorporateDashboard ? "Sustainability Impact" : "Impact Dashboard",
         },
     ];
 
@@ -237,18 +271,38 @@ export function ProfileNav({ className, ...props }: GenericProps) {
         <>
             {/* Desktop Sidebar */}
             <div
-                className={cn("hidden md:block", className)}
-                style={{ width: 300, minHeight: 966 }}
+                className={cn(
+                    "hidden md:block",
+                    isCorporateDashboard && "md:-ml-8 md:-my-10",
+                    className
+                )}
+                style={{
+                    width: isCorporateDashboard ? 218 : 300,
+                    minHeight: isCorporateDashboard ? "100vh" : 966,
+                }}
                 {...props}
             >
                 <div
-                    className="h-full rounded-2xl bg-white p-6 shadow-sm ring-1 ring-gray-200"
-                    style={{ minHeight: 966 }}
+                    className={cn(
+                        "h-full bg-white font-inter",
+                        isCorporateDashboard
+                            ? "border-r border-[#e4e9e7] px-3 py-0 shadow-none"
+                            : "rounded-2xl p-6 shadow-sm ring-1 ring-gray-200"
+                    )}
+                    style={{ minHeight: isCorporateDashboard ? "100vh" : 966 }}
                 >
                     {/* User Profile Section */}
                     {user ? (
-                        <div className="mb-8 flex flex-col items-center">
-                            <div className="mb-4 flex size-20 items-center justify-center rounded-full bg-gray-100 p-1">
+                        <div className={cn(
+                            "flex flex-col items-center",
+                            isCorporateDashboard
+                                ? "mb-5 border-b border-[#eef1ef] px-1 pb-5 pt-5"
+                                : "mb-8"
+                        )}>
+                            <div className={cn(
+                                "mb-4 flex items-center justify-center rounded-full bg-gray-100 p-1",
+                                isCorporateDashboard ? "size-14 bg-[#c4512b] p-0 text-white" : "size-20"
+                            )}>
                                 <Avatar className="size-full">
                                     <AvatarImage
                                         src={
@@ -263,25 +317,37 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                                 </Avatar>
                             </div>
 
-                            <h3 className="text-lg font-bold text-gray-900">
+                            <h3 className={cn(
+                                "font-bold text-gray-900",
+                                isCorporateDashboard ? "text-sm" : "text-lg"
+                            )}>
                                 {user.firstName} {user.lastName}
                             </h3>
-                            <p className="text-sm text-gray-500">
+                            <p className={cn(
+                                "text-gray-500",
+                                isCorporateDashboard ? "text-[11px]" : "text-sm"
+                            )}>
                                 {hideEmail(user.email)}
                             </p>
                             <Link
                                 href="/profile"
-                                className="mt-2 text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline"
+                                className={cn(
+                                    "mt-2 text-xs font-semibold hover:underline",
+                                    isCorporateDashboard ? "text-[#1d5b47]" : "text-blue-600 hover:text-blue-700"
+                                )}
                             >
                                 Edit Profile
                             </Link>
                         </div>
                     ) : (
                         <div
-                            className="mb-8 flex flex-col items-center opacity-0"
+                            className={cn(
+                                "flex flex-col items-center opacity-0",
+                                isCorporateDashboard ? "mb-5 border-b border-[#eef1ef] pb-5 pt-5" : "mb-8"
+                            )}
                             aria-hidden="true"
                         >
-                            <div className="mb-4 size-20 rounded-full" />
+                            <div className={cn("mb-4 rounded-full", isCorporateDashboard ? "size-14" : "size-20")} />
                             <div className="h-5 w-32 rounded-full" />
                             <div className="mt-2 h-4 w-40 rounded-full" />
                             <div className="mt-3 h-3 w-20 rounded-full" />
@@ -289,23 +355,26 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                     )}
 
                     {/* Navigation */}
-                    <nav>
+                    <nav className={isCorporateDashboard ? "pt-3" : undefined}>
                         <NavGroup
                             title="DASHBOARD"
                             items={mainNavItems}
                             pathname={pathname}
+                            compact={isCorporateDashboard}
                         />
 
                         <NavGroup
                             title="ACCOUNT"
                             items={accountItems}
                             pathname={pathname}
+                            compact={isCorporateDashboard}
                         />
 
                         <NavGroup
                             title="SUPPORT"
                             items={supportItems}
                             pathname={pathname}
+                            compact={isCorporateDashboard}
                         />
                     </nav>
                 </div>

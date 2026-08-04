@@ -18,6 +18,7 @@ import {
     corporateRtoShipments,
     corporateShipments,
 } from "./corporate-platform";
+import { hsnMaster } from "./finance-compliance";
 import { users } from "./user";
 
 export const corporateProductTypes = pgTable(
@@ -26,6 +27,9 @@ export const corporateProductTypes = pgTable(
         id: uuid("id").primaryKey().notNull().defaultRandom(),
         name: text("name").notNull(),
         description: text("description"),
+        hsnMasterId: uuid("hsn_master_id").references(() => hsnMaster.id, {
+            onDelete: "set null",
+        }),
         isActive: boolean("is_active").notNull().default(true),
         sortOrder: integer("sort_order").notNull().default(0),
         ...timestamps,
@@ -34,6 +38,16 @@ export const corporateProductTypes = pgTable(
         nameUnique: uniqueIndex("corporate_product_types_name_unique").on(
             table.name
         ),
+    })
+);
+
+export const corporateProductTypesRelations = relations(
+    corporateProductTypes,
+    ({ one }) => ({
+        hsnMaster: one(hsnMaster, {
+            fields: [corporateProductTypes.hsnMasterId],
+            references: [hsnMaster.id],
+        }),
     })
 );
 
@@ -65,9 +79,9 @@ export const corporateFabricCompositions = pgTable(
         ...timestamps,
     },
     (table) => ({
-        nameUnique: uniqueIndex(
-            "corporate_fabric_compositions_name_unique"
-        ).on(table.name),
+        nameUnique: uniqueIndex("corporate_fabric_compositions_name_unique").on(
+            table.name
+        ),
     })
 );
 
@@ -292,9 +306,9 @@ export const corporateOrders = pgTable(
         ...timestamps,
     },
     (table) => ({
-        publicOrderUnique: uniqueIndex("corporate_orders_public_order_unique").on(
-            table.publicOrderId
-        ),
+        publicOrderUnique: uniqueIndex(
+            "corporate_orders_public_order_unique"
+        ).on(table.publicOrderId),
         sequenceUnique: uniqueIndex("corporate_orders_sequence_unique").on(
             table.sequenceNo
         ),

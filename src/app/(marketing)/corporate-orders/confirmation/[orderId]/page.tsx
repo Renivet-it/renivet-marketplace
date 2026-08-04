@@ -1,6 +1,3 @@
-import { CorporateOrderConfirmation } from "@/components/corporate-orders/corporate-order-confirmation";
-import { GeneralShell } from "@/components/globals/layouts/shells";
-import { corporateOrderService } from "@/lib/services/corporate-order";
 import { auth } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -21,11 +18,5 @@ export default async function Page({
     }
 
     const { orderId } = await params;
-    const data = await corporateOrderService.getOrderConfirmation(userId, orderId);
-
-    return (
-        <GeneralShell>
-            <CorporateOrderConfirmation data={data} />
-        </GeneralShell>
-    );
+    redirect(`/profile/corporate-orders?confirmed=${orderId}`);
 }
