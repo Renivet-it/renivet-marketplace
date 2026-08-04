@@ -152,7 +152,10 @@ export async function StorefrontCatalogPage({
 
                 <main className="w-full space-y-4 pb-40 md:flex-1 md:space-y-5 md:pb-0">
                     <div className="md:hidden">
-                        <ProductSearch className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]" />
+                        <ProductSearch
+                            searchBasePath={basePath}
+                            className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
+                        />
                     </div>
 
                     <ShopMobileActions

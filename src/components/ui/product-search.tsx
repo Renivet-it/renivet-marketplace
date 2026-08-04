@@ -1,14 +1,5 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
-
-import { trpc } from "@/lib/trpc/client";
-import { cn, formatINR } from "@/lib/utils";
-import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useQueryState } from "nuqs";
-import * as React from "react";
-import { createPortal } from "react-dom";
 import {
     Sheet,
     SheetClose,
@@ -17,17 +8,25 @@ import {
     SheetTitle,
     SheetTrigger,
 } from "@/components/ui/sheet";
+import { Spinner } from "@/components/ui/spinner";
+import { trpc } from "@/lib/trpc/client";
+import { cn, formatINR } from "@/lib/utils";
 import {
-    TrendingUp,
-    Sparkles,
     ArrowRight,
-    Shirt,
-    Droplets,
-    Lamp,
-    Gem,
     Clock3,
+    Droplets,
+    Gem,
+    Lamp,
+    Shirt,
+    Sparkles,
+    TrendingUp,
 } from "lucide-react";
+import Image from "next/image";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQueryState } from "nuqs";
+import * as React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Icons } from "../icons";
 
 type BrowserSpeechRecognition = {
@@ -63,6 +62,7 @@ export type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
         wrapper?: string;
         input?: string;
     };
+    searchBasePath?: string;
 };
 
 type SearchProduct = {
@@ -91,7 +91,7 @@ const SUGGESTION_DEBOUNCE_MS = 35;
 const PRODUCT_PREVIEW_DEBOUNCE_MS = 320;
 
 const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
-    ({ className, disabled, classNames }, ref) => {
+    ({ className, disabled, classNames, searchBasePath = "/shop" }, ref) => {
         const RECENT_SEARCHES_KEY = "renivet-recent-searches";
         const router = useRouter();
         const pathname = usePathname();
@@ -302,7 +302,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             }, 3000);
         }, []);
 
-        const navigateToShopWithSearch = useCallback(
+        const navigateToCatalogWithSearch = useCallback(
             (nextSearch: string) => {
                 const trimmed = nextSearch.trim();
                 const currentSearch = (searchParams.get("search") ?? "").trim();
@@ -332,7 +332,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                             params.set("shopPage", existingShopPage);
                         }
                     }
-                    const nextUrl = `/shop?${params.toString()}`;
+                    const nextUrl = `${searchBasePath}?${params.toString()}`;
                     const currentUrl = `${pathname}${searchParamsString ? `?${searchParamsString}` : ""}`;
                     if (nextUrl === currentUrl) {
                         setIsSearchLoading(false);
@@ -348,7 +348,9 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 );
                 params.set("shopPage", "1");
                 const query = params.toString();
-                const nextUrl = query ? `/shop?${query}` : "/shop";
+                const nextUrl = query
+                    ? `${searchBasePath}?${query}`
+                    : searchBasePath;
                 const currentUrl = `${pathname}${searchParamsString ? `?${searchParamsString}` : ""}`;
                 if (nextUrl === currentUrl) {
                     setIsSearchLoading(false);
@@ -356,7 +358,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 }
                 router.push(nextUrl);
             },
-            [pathname, router, searchParams, searchParamsString]
+            [pathname, router, searchBasePath, searchParams, searchParamsString]
         );
 
         useEffect(() => {
@@ -377,33 +379,59 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 onSuccess: (result) => {
                     setShowSuggestions(false);
                     setIsSheetOpen(false);
-                    navigateToShopWithSearch(result.originalQuery);
+                    navigateToCatalogWithSearch(result.originalQuery);
                 },
                 onError: (error, variables) => {
                     console.error("Search error:", error);
                     setIsSheetOpen(false);
-                    navigateToShopWithSearch(variables.query);
+                    navigateToCatalogWithSearch(variables.query);
                 },
             });
 
         // Fetch sub-categories for the discover section
-        const { data: subCategoriesData } = trpc.general.subCategories.getSubCategories.useQuery();
+        const { data: subCategoriesData } =
+            trpc.general.subCategories.getSubCategories.useQuery();
         const subCategories = subCategoriesData?.data || [];
 
         const targetSubCategories = [
-            { title: "Skincare, Bath & Body", searchPattern: "skincare", bg: "bg-rose-50", icon: Droplets },
-            { title: "Home Decor", searchPattern: "decor", bg: "bg-amber-50", icon: Lamp },
-            { title: "Western Wear", searchPattern: "western", bg: "bg-emerald-50", icon: Gem },
-            { title: "Top Wear", searchPattern: "topwear", bg: "bg-[#e8f4f8]", icon: Shirt },
+            {
+                title: "Skincare, Bath & Body",
+                searchPattern: "skincare",
+                bg: "bg-rose-50",
+                icon: Droplets,
+            },
+            {
+                title: "Home Decor",
+                searchPattern: "decor",
+                bg: "bg-amber-50",
+                icon: Lamp,
+            },
+            {
+                title: "Western Wear",
+                searchPattern: "western",
+                bg: "bg-emerald-50",
+                icon: Gem,
+            },
+            {
+                title: "Top Wear",
+                searchPattern: "topwear",
+                bg: "bg-[#e8f4f8]",
+                icon: Shirt,
+            },
         ];
 
         const discoverCategories = targetSubCategories.map((target) => {
             const found = subCategories.find((sub) =>
-                sub.name.toLowerCase().replace(/\s+/g, "").includes(target.searchPattern.replace(/\s+/g, ""))
+                sub.name
+                    .toLowerCase()
+                    .replace(/\s+/g, "")
+                    .includes(target.searchPattern.replace(/\s+/g, ""))
             );
             return {
                 ...target,
-                link: found ? `/shop?subCategoryId=${found.id}` : `/shop?search=${encodeURIComponent(target.title)}`
+                link: found
+                    ? `${searchBasePath}?subCategoryId=${found.id}`
+                    : `${searchBasePath}?search=${encodeURIComponent(target.title)}`,
             };
         });
 
@@ -441,7 +469,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                 processSearchMutation.mutate({ query: searchQuery });
             } else if (searchQuery.length === 0) {
                 showMainPageSearchLoader("");
-                navigateToShopWithSearch("");
+                navigateToCatalogWithSearch("");
             }
         };
 
@@ -530,9 +558,8 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         useEffect(() => {
             if (typeof window === "undefined") return;
             try {
-                const storedValue = window.localStorage.getItem(
-                    RECENT_SEARCHES_KEY
-                );
+                const storedValue =
+                    window.localStorage.getItem(RECENT_SEARCHES_KEY);
                 if (!storedValue) return;
                 const parsed = JSON.parse(storedValue);
                 if (Array.isArray(parsed)) {
@@ -701,7 +728,8 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                     Find the right piece faster
                                 </h2>
                                 <p className="mt-1 text-sm text-[#7b725f]">
-                                    Search by product, category, occasion, or brand.
+                                    Search by product, category, occasion, or
+                                    brand.
                                 </p>
                             </div>
                             <div className="flex items-center gap-3 rounded-2xl border border-[#e4dfd5] bg-white px-4 py-3 shadow-[0_14px_34px_rgba(51,47,38,0.08)]">
@@ -733,7 +761,11 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                 )}
 
                                 {localSearch && (
-                                    <button type="button" onClick={handleClear} className="p-2">
+                                    <button
+                                        type="button"
+                                        onClick={handleClear}
+                                        className="p-2"
+                                    >
                                         <Icons.X className="size-5 text-[#8d8372] hover:text-primary" />
                                     </button>
                                 )}
@@ -742,22 +774,31 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
 
                         {/* Premium Results Area */}
                         <div className="flex-1 overflow-y-auto px-6 pb-8 pt-3">
-                             {(isFetchingSuggestions || isFetchingProducts) && localSearch.trim().length >= 2 && (
-                                <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#eee8dc] bg-[#fbfaf6] px-3 py-2 text-12 font-medium text-[#7b725f]">
-                                    <Spinner className="size-3.5 text-primary" />
-                                    <span>Searching for &ldquo;{localSearch.trim()}&rdquo;</span>
-                                </div>
-                             )}
+                            {(isFetchingSuggestions || isFetchingProducts) &&
+                                localSearch.trim().length >= 2 && (
+                                    <div className="mb-5 flex items-center gap-2 rounded-xl border border-[#eee8dc] bg-[#fbfaf6] px-3 py-2 text-12 font-medium text-[#7b725f]">
+                                        <Spinner className="size-3.5 text-primary" />
+                                        <span>
+                                            Searching for &ldquo;
+                                            {localSearch.trim()}&rdquo;
+                                        </span>
+                                    </div>
+                                )}
 
-                             {!isFetchingSuggestions && !isFetchingProducts && localSearch.trim().length >= 2 && lastSuggestionQuery === localSearch.trim() && suggestions.length === 0 && products.length === 0 && (
-                                <div className="mt-10 text-center text-[15px] text-[#8c816f]">
-                                    No results found for{" "}
-                                    <span>&ldquo;{localSearch}&rdquo;</span>
-                                </div>
-                             )}
+                            {!isFetchingSuggestions &&
+                                !isFetchingProducts &&
+                                localSearch.trim().length >= 2 &&
+                                lastSuggestionQuery === localSearch.trim() &&
+                                suggestions.length === 0 &&
+                                products.length === 0 && (
+                                    <div className="mt-10 text-center text-[15px] text-[#8c816f]">
+                                        No results found for{" "}
+                                        <span>&ldquo;{localSearch}&rdquo;</span>
+                                    </div>
+                                )}
 
-                             {/* EMPTY STATE (DEFAULT VIEW) */}
-                             {localSearch.trim().length < 2 && (
+                            {/* EMPTY STATE (DEFAULT VIEW) */}
+                            {localSearch.trim().length < 2 && (
                                 <div className="space-y-12 pt-2 duration-500 animate-in fade-in slide-in-from-bottom-2">
                                     {recentSearches.length > 0 && (
                                         <div>
@@ -771,7 +812,11 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                 {recentSearches.map((term) => (
                                                     <button
                                                         key={term}
-                                                        onClick={() => handleSuggestionClick(term)}
+                                                        onClick={() =>
+                                                            handleSuggestionClick(
+                                                                term
+                                                            )
+                                                        }
                                                         className="rounded-full border border-[#e4dfd5] bg-white px-4 py-2.5 text-13 font-medium text-[#5d5649] transition-all hover:border-primary hover:bg-[#fafafa] hover:text-primary"
                                                     >
                                                         {term}
@@ -785,13 +830,19 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                     <div>
                                         <div className="mb-4 flex items-center gap-2 pl-1">
                                             <TrendingUp className="size-[15px] text-primary" />
-                                            <h3 className="text-11 font-bold uppercase tracking-[0.15em] text-primary">Popular Searches</h3>
+                                            <h3 className="text-11 font-bold uppercase tracking-[0.15em] text-primary">
+                                                Popular Searches
+                                            </h3>
                                         </div>
                                         <div className="flex flex-wrap gap-2.5">
                                             {POPULAR_SEARCHES.map((term) => (
                                                 <button
                                                     key={term}
-                                                    onClick={() => handleSuggestionClick(term)}
+                                                    onClick={() =>
+                                                        handleSuggestionClick(
+                                                            term
+                                                        )
+                                                    }
                                                     className="rounded-full border border-[#e4dfd5] bg-white px-4 py-2.5 text-13 font-medium text-[#5f574a] shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary hover:bg-[#fafafa] hover:text-primary hover:shadow-md"
                                                 >
                                                     {term}
@@ -804,7 +855,9 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                     <div>
                                         <div className="mb-4 flex items-center gap-2 pl-1">
                                             <Sparkles className="size-[15px] text-primary" />
-                                            <h3 className="text-11 font-bold uppercase tracking-[0.15em] text-primary">Discover</h3>
+                                            <h3 className="text-11 font-bold uppercase tracking-[0.15em] text-primary">
+                                                Discover
+                                            </h3>
                                         </div>
                                         <div className="flex flex-col gap-3">
                                             {discoverCategories.map((cat) => {
@@ -813,16 +866,30 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                     <button
                                                         key={cat.title}
                                                         onClick={() => {
-                                                            showMainPageSearchLoader(cat.title);
-                                                            router.push(cat.link);
+                                                            showMainPageSearchLoader(
+                                                                cat.title
+                                                            );
+                                                            router.push(
+                                                                cat.link
+                                                            );
                                                         }}
-                                                        className={cn("p-4.5 group relative flex items-center justify-between overflow-hidden rounded-2xl border border-[#ebe7df] bg-white py-4 transition-all hover:border-[#d5cfc4] sm:py-5", cat.bg)}
+                                                        className={cn(
+                                                            "p-4.5 group relative flex items-center justify-between overflow-hidden rounded-2xl border border-[#ebe7df] bg-white py-4 transition-all hover:border-[#d5cfc4] sm:py-5",
+                                                            cat.bg
+                                                        )}
                                                     >
                                                         <div className="relative z-10 flex min-w-0 flex-1 items-center gap-2.5 pr-2 sm:gap-3">
                                                             <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white/75 shadow-sm backdrop-blur-sm transition-all group-hover:bg-white group-hover:shadow-md">
-                                                                <Icon className="size-[14px] text-[#5f574a] transition-colors group-hover:text-primary sm:size-[15px]" strokeWidth={2.5} />
+                                                                <Icon
+                                                                    className="size-[14px] text-[#5f574a] transition-colors group-hover:text-primary sm:size-[15px]"
+                                                                    strokeWidth={
+                                                                        2.5
+                                                                    }
+                                                                />
                                                             </div>
-                                                            <span className="line-clamp-2 text-left text-12 font-bold leading-snug tracking-wide text-[#342f27] transition-colors group-hover:text-primary sm:text-13">{cat.title}</span>
+                                                            <span className="line-clamp-2 text-left text-12 font-bold leading-snug tracking-wide text-[#342f27] transition-colors group-hover:text-primary sm:text-13">
+                                                                {cat.title}
+                                                            </span>
                                                         </div>
                                                         <ArrowRight className="relative z-10 size-4 shrink-0 text-[#8f8575] transition-all group-hover:translate-x-1 group-hover:text-primary" />
 
@@ -834,32 +901,47 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                         </div>
                                     </div>
                                 </div>
-                             )}
+                            )}
 
-                             {(suggestions.length > 0 || products.length > 0) && (
+                            {(suggestions.length > 0 ||
+                                products.length > 0) && (
                                 <div className="space-y-10">
                                     {/* SUGGESTIONS */}
                                     {suggestions.length > 0 && (
                                         <div>
-                                            <div className="mb-4 pl-1 text-11 font-bold uppercase tracking-widest text-[#8c816f]">Suggestions</div>
+                                            <div className="mb-4 pl-1 text-11 font-bold uppercase tracking-widest text-[#8c816f]">
+                                                Suggestions
+                                            </div>
                                             <div className="space-y-1">
-                                                {suggestions.map((suggestion, index) => (
-                                                    <button
-                                                        key={`${suggestion}-${index}`}
-                                                        type="button"
-                                                        className={cn(
-                                                            "flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[#fafafa]",
-                                                            selectedIndex === index && "bg-[#fafafa]"
-                                                        )}
-                                                        onClick={() => handleSuggestionClick(suggestion)}
-                                                        onMouseEnter={() => setSelectedIndex(index)}
-                                                    >
-                                                        <Icons.Search className="size-[15px] shrink-0 text-[#a4957c]" />
-                                                        <span className="truncate text-[15px] font-medium tracking-wide text-[#534c40]">
-                                                            {suggestion}
-                                                        </span>
-                                                    </button>
-                                                ))}
+                                                {suggestions.map(
+                                                    (suggestion, index) => (
+                                                        <button
+                                                            key={`${suggestion}-${index}`}
+                                                            type="button"
+                                                            className={cn(
+                                                                "flex w-full items-center gap-4 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[#fafafa]",
+                                                                selectedIndex ===
+                                                                    index &&
+                                                                    "bg-[#fafafa]"
+                                                            )}
+                                                            onClick={() =>
+                                                                handleSuggestionClick(
+                                                                    suggestion
+                                                                )
+                                                            }
+                                                            onMouseEnter={() =>
+                                                                setSelectedIndex(
+                                                                    index
+                                                                )
+                                                            }
+                                                        >
+                                                            <Icons.Search className="size-[15px] shrink-0 text-[#a4957c]" />
+                                                            <span className="truncate text-[15px] font-medium tracking-wide text-[#534c40]">
+                                                                {suggestion}
+                                                            </span>
+                                                        </button>
+                                                    )
+                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -867,22 +949,34 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                     {/* PRODUCTS */}
                                     {products.length > 0 && (
                                         <div>
-                                            <div className="mb-4 pl-1 text-11 font-bold uppercase tracking-widest text-[#8c816f]">Top Products</div>
+                                            <div className="mb-4 pl-1 text-11 font-bold uppercase tracking-widest text-[#8c816f]">
+                                                Top Products
+                                            </div>
                                             <div className="grid grid-cols-2 gap-x-4 gap-y-6">
                                                 {products.map((product) => (
                                                     <div
                                                         key={product.id}
                                                         onClick={() => {
-                                                            setIsSheetOpen(false);
-                                                            router.push(`/products/${product.slug || product.id}`);
+                                                            setIsSheetOpen(
+                                                                false
+                                                            );
+                                                            router.push(
+                                                                `/products/${product.slug || product.id}`
+                                                            );
                                                         }}
                                                         className="group flex cursor-pointer gap-3 rounded-xl p-2 transition-colors hover:bg-[#fafafa]"
                                                     >
                                                         {product.media ? (
                                                             <div className="relative h-[85px] w-[75px] shrink-0 overflow-hidden rounded-[8px] bg-[#f7f7f7]">
                                                                 <Image
-                                                                    src={product.media.url}
-                                                                    alt={product.name}
+                                                                    src={
+                                                                        product
+                                                                            .media
+                                                                            .url
+                                                                    }
+                                                                    alt={
+                                                                        product.name
+                                                                    }
                                                                     fill
                                                                     sizes="75px"
                                                                     className="size-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -892,12 +986,26 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                             <div className="h-[85px] w-[75px] shrink-0 rounded-[8px] border border-[#ebe7df] bg-[#f7f7f7]" />
                                                         )}
                                                         <div className="flex min-w-0 flex-1 flex-col pt-1">
-                                                            {product.brand?.name && (
-                                                                <span className="mb-1 truncate text-[10px] font-bold uppercase tracking-wider text-[#9a8e7d]">{product.brand.name}</span>
+                                                            {product.brand
+                                                                ?.name && (
+                                                                <span className="mb-1 truncate text-[10px] font-bold uppercase tracking-wider text-[#9a8e7d]">
+                                                                    {
+                                                                        product
+                                                                            .brand
+                                                                            .name
+                                                                    }
+                                                                </span>
                                                             )}
-                                                            <span className="line-clamp-2 text-13 font-medium leading-tight text-[#2f2a23] transition-colors group-hover:text-primary">{product.name}</span>
+                                                            <span className="line-clamp-2 text-13 font-medium leading-tight text-[#2f2a23] transition-colors group-hover:text-primary">
+                                                                {product.name}
+                                                            </span>
                                                             <span className="mt-1.5 text-13 font-semibold text-primary">
-                                                                {formatINR(product.price, { input: "paise" })}
+                                                                {formatINR(
+                                                                    product.price,
+                                                                    {
+                                                                        input: "paise",
+                                                                    }
+                                                                )}
                                                             </span>
                                                         </div>
                                                     </div>
@@ -908,17 +1016,31 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                                                 className="mt-8 flex w-full items-center justify-center gap-2 rounded-xl bg-primary py-3.5 text-12 font-bold uppercase tracking-[0.15em] text-primary-foreground shadow-[0_16px_32px_rgba(49,58,31,0.24)] transition-all hover:brightness-95"
                                             >
                                                 See All Results
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    width="14"
+                                                    height="14"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2.5"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                >
+                                                    <path d="M5 12h14" />
+                                                    <path d="m12 5 7 7-7 7" />
+                                                </svg>
                                             </button>
                                         </div>
                                     )}
                                 </div>
-                             )}
+                            )}
                         </div>
                         <div className="border-t border-[#ebe7df] bg-white px-6 py-4">
                             <div className="flex items-center justify-between gap-4">
                                 <p className="text-xs text-[#7b725f]">
-                                    Tip: try terms like &ldquo;saree&rdquo;, &ldquo;gift&rdquo;, or a brand name.
+                                    Tip: try terms like &ldquo;saree&rdquo;,
+                                    &ldquo;gift&rdquo;, or a brand name.
                                 </p>
                                 <SheetClose asChild>
                                     <button
