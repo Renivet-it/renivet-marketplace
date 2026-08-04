@@ -1784,36 +1784,35 @@ export function ShopSortByWithDefault({
     defaultSortOrder?: "asc" | "desc";
 } = {}) {
     const isMobile = useMediaQuery("(max-width: 768px)");
-    const [sortBy, setSortBy] = useQueryState(
-        "sortBy",
-        parseAsStringLiteral([
+    const [isSortOpen, setIsSortOpen] = useState(false);
+    const [sortState, setSortState] = useQueryStates({
+        sortBy: parseAsStringLiteral([
             "price",
             "createdAt",
             "recommended",
             "best-sellers",
-        ] as const).withDefault(defaultSortBy)
-    );
-    const [sortOrder, setSortOrder] = useQueryState(
-        "sortOrder",
-        parseAsStringLiteral(["asc", "desc"] as const).withDefault(
+        ] as const).withDefault(defaultSortBy),
+        sortOrder: parseAsStringLiteral(["asc", "desc"] as const).withDefault(
             defaultSortOrder
-        )
-    );
-    const [, setPage] = useQueryState(
-        "shopPage",
-        parseAsInteger.withDefault(1)
-    );
+        ),
+        shopPage: parseAsInteger.withDefault(1),
+    });
 
-    const handleSort = (value: string) => {
+    const handleSort = async (value: string) => {
         const [sort, order] = value.split(":");
-        setSortBy(
-            sort as "price" | "createdAt" | "recommended" | "best-sellers"
-        );
-        setSortOrder(order as "asc" | "desc");
-        setPage(1);
+        await setSortState({
+            sortBy: sort as
+                | "price"
+                | "createdAt"
+                | "recommended"
+                | "best-sellers",
+            sortOrder: order as "asc" | "desc",
+            shopPage: 1,
+        });
+        setIsSortOpen(false);
     };
 
-    const currentValue = `${sortBy}:${sortOrder}`;
+    const currentValue = `${sortState.sortBy}:${sortState.sortOrder}`;
     const currentLabel =
         sortByWithOrderTypes.find((o) => o.value === currentValue)?.label ??
         sortByWithOrderTypes.find(
@@ -1843,7 +1842,7 @@ export function ShopSortByWithDefault({
 
     // --- Mobile View (Bottom Sheet) ---
     return (
-        <Sheet>
+        <Sheet open={isSortOpen} onOpenChange={setIsSortOpen}>
             <SheetTrigger asChild>
                 <Button
                     variant="outline"
@@ -1865,29 +1864,31 @@ export function ShopSortByWithDefault({
                     </SheetTitle>
                 </SheetHeader>
                 <div className="p-2">
-                    <RadioGroup value={currentValue} onValueChange={handleSort}>
+                    <RadioGroup
+                        value={currentValue}
+                        onValueChange={(value) => void handleSort(value)}
+                    >
                         {sortByWithOrderTypes.map((option) => (
-                            <SheetClose key={option.value} asChild>
-                                <Label
-                                    htmlFor={option.value}
+                            <Label
+                                key={option.value}
+                                htmlFor={option.value}
+                                className={cn(
+                                    "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3.5 text-sm transition-colors",
+                                    currentValue === option.value
+                                        ? "bg-gray-50 font-semibold text-gray-900"
+                                        : "text-gray-600 hover:bg-gray-50"
+                                )}
+                            >
+                                <RadioGroupItem
+                                    value={option.value}
+                                    id={option.value}
                                     className={cn(
-                                        "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3.5 text-sm transition-colors",
-                                        currentValue === option.value
-                                            ? "bg-gray-50 font-semibold text-gray-900"
-                                            : "text-gray-600 hover:bg-gray-50"
+                                        currentValue === option.value &&
+                                            "border-gray-900 text-gray-900"
                                     )}
-                                >
-                                    <RadioGroupItem
-                                        value={option.value}
-                                        id={option.value}
-                                        className={cn(
-                                            currentValue === option.value &&
-                                                "border-gray-900 text-gray-900"
-                                        )}
-                                    />
-                                    <span>{option.label}</span>
-                                </Label>
-                            </SheetClose>
+                                />
+                                <span>{option.label}</span>
+                            </Label>
                         ))}
                     </RadioGroup>
                 </div>

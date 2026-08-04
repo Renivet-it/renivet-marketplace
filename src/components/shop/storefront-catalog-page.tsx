@@ -1,11 +1,12 @@
+import { SearchableProductTypes } from "@/app/(marketing)/shop/search-component";
 import { GeneralShell } from "@/components/globals/layouts";
 import {
     BreadcrumbSegment,
     buildBreadcrumbJsonLd,
     StorefrontBreadcrumbs,
 } from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
-import { ProductSearch } from "@/components/ui/product-search";
 import { Label } from "@/components/ui/label";
+import { ProductSearch } from "@/components/ui/product-search";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { productQueries, recommendationQueries } from "@/lib/db/queries";
@@ -16,13 +17,12 @@ import {
     userWishlistCache,
 } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
-import { Suspense, type ReactNode } from "react";
 import { unstable_cache } from "next/cache";
-import { SearchableProductTypes } from "@/app/(marketing)/shop/search-component";
+import { Suspense, type ReactNode } from "react";
 import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
 import { ShopFilters, ShopSortByWithDefault } from "./shop-filters";
-import { ShopProducts } from "./shop-products";
 import { ShopMobileActions } from "./shop-mobile-actions";
+import { ShopProducts } from "./shop-products";
 
 export interface StorefrontSearchParams {
     page?: string;
@@ -150,6 +150,8 @@ export async function StorefrontCatalogPage({
                     </div>
 
                     <ShopMobileActions
+                        defaultSortBy={defaultSortBy}
+                        defaultSortOrder={defaultSortOrder}
                         filters={
                             <Suspense
                                 fallback={
@@ -267,9 +269,7 @@ async function StorefrontFiltersFetch(
                 : parseInt(maxPrice, 10)
             : undefined;
     const rawBrandIdsValue = brandIds?.length ? brandIds.split(",") : undefined;
-    const brandIdsValue = lockedBrandId
-        ? [lockedBrandId]
-        : rawBrandIdsValue;
+    const brandIdsValue = lockedBrandId ? [lockedBrandId] : rawBrandIdsValue;
     const colorsValue = colorsParam?.length
         ? colorsParam.split(",")
         : undefined;
@@ -441,7 +441,9 @@ async function StorefrontProductsFetch({
     } = await searchParams;
 
     const limit =
-        limitRaw && !isNaN(parseInt(limitRaw, 10)) ? parseInt(limitRaw, 10) : 28;
+        limitRaw && !isNaN(parseInt(limitRaw, 10))
+            ? parseInt(limitRaw, 10)
+            : 28;
     const pageCandidate = shopPageRaw ?? pageRaw;
     const page =
         pageCandidate && !isNaN(parseInt(pageCandidate, 10))
