@@ -183,6 +183,14 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                                                 >
                                                     View details
                                                 </Link>
+                                                {order.taxInvoice ? (
+                                                    <a
+                                                        href={`/api/corporate-orders/${order.id}/invoice.pdf`}
+                                                        className="font-semibold text-indigo-700 underline-offset-4 hover:underline"
+                                                    >
+                                                        Download invoice
+                                                    </a>
+                                                ) : null}
                                                 {[
                                                     "ready_for_dispatch",
                                                     "dispatched",

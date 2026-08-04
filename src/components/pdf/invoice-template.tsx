@@ -392,6 +392,23 @@ const styles = StyleSheet.create({
         lineHeight: 1.3,
         color: "#334155",
     },
+    corporateDetails: {
+        marginTop: 9,
+        paddingTop: 7,
+        borderTopWidth: 1,
+        borderTopColor: line,
+        flexDirection: "row",
+    },
+    corporateColumn: { width: "50%", paddingRight: 12 },
+    corporateColumnRight: {
+        paddingRight: 0,
+        paddingLeft: 12,
+        borderLeftWidth: 1,
+        borderLeftColor: line,
+    },
+    bankRow: { flexDirection: "row", paddingVertical: 1.2 },
+    bankLabel: { width: "35%", color: "#66756a" },
+    bankValue: { width: "65%", color: "#334155" },
     legalNotes: {
         marginTop: 10,
         paddingTop: 6,
@@ -441,8 +458,15 @@ type InvoiceItem = {
         nativeSku?: string | null;
     };
     gstRateBps?: number;
+    mrpPaise?: number;
+    discountPaise?: number;
+    taxableValuePaise?: number;
+    cgstPaise?: number;
+    sgstPaise?: number;
+    igstPaise?: number;
+    totalPaise?: number;
 };
-type InvoiceOrder = {
+export type InvoiceOrder = {
     id: string;
     receiptId?: string;
     invoiceNumber?: string | null;
@@ -460,6 +484,22 @@ type InvoiceOrder = {
     customerGstin?: string | null;
     copyType?: "original" | "duplicate" | "triplicate";
     qrCodeDataUrl?: string;
+    poReference?: string | null;
+    poDate?: string | Date | null;
+    displayUnitPricing?: boolean;
+    paymentSummary?: {
+        partialPaymentPercentBps: number;
+        partialPaymentRequiredPaise: number;
+        fullPaymentAmountPaise: number;
+        balanceAfterPartialPaise: number;
+    };
+    taxSummary?: {
+        taxableValuePaise: number;
+        cgstPaise: number;
+        sgstPaise: number;
+        igstPaise: number;
+        totalAmountPaise: number;
+    };
     items: InvoiceItem[];
     brand: {
         name: string;
@@ -472,6 +512,15 @@ type InvoiceOrder = {
             postalCode?: string;
             gstin?: string;
             bankAccountHolderName?: string;
+            cin?: string;
+            email?: string;
+            phone?: string;
+            bankName?: string;
+            bankAccountNumber?: string;
+            bankAccountType?: string;
+            bankIfscCode?: string;
+            bankBranch?: string;
+            authorizedSignatoryName?: string;
             isSameAsWarehouseAddress?: boolean;
             warehouseAddressLine1?: string;
             warehouseAddressLine2?: string;
@@ -488,7 +537,9 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
         seller?.isSameAsWarehouseAddress === false
             ? seller.warehouseState || seller.state
             : seller?.state;
-    const intra = sameState(shipFromState, order.state);
+    const intra = order.taxSummary
+        ? order.taxSummary.igstPaise === 0
+        : sameState(shipFromState, order.state);
     const sourceItems = Array.isArray(order.items) ? order.items : [];
     const sourceMerchandiseValue = sourceItems.reduce(
         (sum, item) =>
@@ -533,8 +584,15 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                       )
                 : saleTotal;
         allocatedPaidValue += paidLineTotal;
-        const total = Math.min(mrp, paidLineTotal);
-        const discount = Math.max(0, mrp - total);
+        const total = Math.max(
+            0,
+            Number(item.totalPaise ?? Math.min(mrp, paidLineTotal))
+        );
+        const exactMrp = Math.max(0, Number(item.mrpPaise ?? mrp));
+        const discount = Math.max(
+            0,
+            Number(item.discountPaise ?? exactMrp - total)
+        );
         const hsn = item.product?.hsCode ?? item.variant?.hsCode ?? "-";
         const sku =
             item.variant?.sku ??
@@ -548,19 +606,34 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                 ? 500
                 : 1800
             : fallbackRate;
-        const taxable = rate
-            ? Math.round((total * 10_000) / (10_000 + rate))
-            : total;
+        const taxable = Math.max(
+            0,
+            Number(
+                item.taxableValuePaise ??
+                    (rate
+                        ? Math.round((total * 10_000) / (10_000 + rate))
+                        : total)
+            )
+        );
         const tax = total - taxable;
-        const cgst = intra ? Math.round(tax / 2) : 0;
+        const cgst = Math.max(
+            0,
+            Number(item.cgstPaise ?? (intra ? Math.round(tax / 2) : 0))
+        );
+        const sgst = Math.max(
+            0,
+            Number(item.sgstPaise ?? (intra ? tax - cgst : 0))
+        );
+        const igst = Math.max(0, Number(item.igstPaise ?? (intra ? 0 : tax)));
         return {
             qty,
-            mrp,
+            mrp: exactMrp,
             discount,
             taxable,
             tax,
             cgst,
-            sgst: intra ? tax - cgst : 0,
+            sgst,
+            igst,
             total,
             rate,
             hsn,
@@ -569,10 +642,18 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
             unit: "Pc",
         };
     });
-    const taxable = lines.reduce((sum, item) => sum + item.taxable, 0);
-    const tax = lines.reduce((sum, item) => sum + item.tax, 0);
-    const cgst = lines.reduce((sum, item) => sum + item.cgst, 0);
-    const sgst = lines.reduce((sum, item) => sum + item.sgst, 0);
+    const taxable =
+        order.taxSummary?.taxableValuePaise ??
+        lines.reduce((sum, item) => sum + item.taxable, 0);
+    const cgst =
+        order.taxSummary?.cgstPaise ??
+        lines.reduce((sum, item) => sum + item.cgst, 0);
+    const sgst =
+        order.taxSummary?.sgstPaise ??
+        lines.reduce((sum, item) => sum + item.sgst, 0);
+    const igst =
+        order.taxSummary?.igstPaise ??
+        lines.reduce((sum, item) => sum + item.igst, 0);
     const shippingCharge = Math.max(0, Number(order.deliveryAmount ?? 0));
     // Checkout currently treats delivery as waived; retain that behaviour until a shipping-discount field is persisted.
     const shippingDiscount = shippingCharge;
@@ -583,9 +664,10 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
     const shippingCgst = intra ? Math.round(shippingGst / 2) : 0;
     const shippingSgst = intra ? shippingGst - shippingCgst : 0;
     const invoiceTotal =
+        order.taxSummary?.totalAmountPaise ??
         lines.reduce((sum, item) => sum + item.total, 0) +
-        netShipping +
-        shippingGst;
+            netShipping +
+            shippingGst;
     const copyLabels = {
         original: "Original for Recipient",
         duplicate: "Duplicate for Supplier",
@@ -661,6 +743,9 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 seller?.postalCode,
                             ])}
                             {"\n"}GSTIN: {seller?.gstin ?? "Not provided"}
+                            {seller?.cin ? `\nCIN: ${seller.cin}` : ""}
+                            {seller?.email ? `\nEmail: ${seller.email}` : ""}
+                            {seller?.phone ? ` | Phone: ${seller.phone}` : ""}
                         </Text>
                     </View>
                 </View>
@@ -671,6 +756,9 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             "Invoice number",
                             order.invoiceNumber ?? order.receiptId ?? order.id,
                         ],
+                        ...(order.poReference
+                            ? [["PO reference", order.poReference]]
+                            : []),
                         [
                             "Invoice date",
                             new Date(order.date).toLocaleDateString("en-IN"),
@@ -686,7 +774,12 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             key={label}
                             style={[
                                 styles.metaCell,
-                                index % 3 === 2 ? styles.metaLast : {},
+                                index === (order.poReference ? 4 : 3)
+                                    ? styles.metaLast
+                                    : {},
+                                {
+                                    width: order.poReference ? "20%" : "25%",
+                                },
                             ]}
                         >
                             <Text style={styles.metaLabel}>{label}</Text>
@@ -707,12 +800,37 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             "Nature of Transaction",
                             intra ? "Intra-State" : "Inter-State",
                         ],
+                        ...(order.paymentSummary
+                            ? [
+                                  [
+                                      `Partial required (${order.paymentSummary.partialPaymentPercentBps / 100}%)`,
+                                      money(
+                                          order.paymentSummary
+                                              .partialPaymentRequiredPaise
+                                      ),
+                                  ],
+                                  [
+                                      "Full payment amount",
+                                      money(
+                                          order.paymentSummary
+                                              .fullPaymentAmountPaise
+                                      ),
+                                  ],
+                              ]
+                            : []),
                     ].map(([label, value], index) => (
                         <View
                             key={label}
                             style={[
                                 styles.metaCell,
-                                index === 2 ? styles.metaLast : {},
+                                index === (order.paymentSummary ? 4 : 2)
+                                    ? styles.metaLast
+                                    : {},
+                                {
+                                    width: order.paymentSummary
+                                        ? "20%"
+                                        : "33.333%",
+                                },
                             ]}
                         >
                             <Text style={styles.metaLabel}>{label}</Text>
@@ -749,7 +867,12 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             ["Description", styles.description],
                             ["HSN", styles.hsn],
                             ["Qty / Unit", styles.qty],
-                            ["MRP\nINR", styles.mrp],
+                            [
+                                order.displayUnitPricing
+                                    ? "Rate\nINR"
+                                    : "MRP\nINR",
+                                styles.mrp,
+                            ],
                             ["Discount\nINR", styles.discount],
                             ["Taxable value\nINR", styles.taxable],
                             ["GST\nrate", styles.rate],
@@ -762,7 +885,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 key={text as string}
                                 style={[
                                     styles.th,
-                                    width as object,
+                                    width as any,
                                     index === 11 ? styles.last : {},
                                     index > 2 ? styles.right : {},
                                 ]}
@@ -787,7 +910,11 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 {item.qty} {item.unit}
                             </Text>
                             <Text style={[styles.td, styles.mrp, styles.right]}>
-                                {moneyBare(item.mrp)}
+                                {moneyBare(
+                                    order.displayUnitPricing
+                                        ? Math.round(item.mrp / item.qty)
+                                        : item.mrp
+                                )}
                             </Text>
                             <Text
                                 style={[
@@ -796,7 +923,11 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                     styles.right,
                                 ]}
                             >
-                                {moneyBare(item.discount)}
+                                {moneyBare(
+                                    order.displayUnitPricing
+                                        ? Math.round(item.discount / item.qty)
+                                        : item.discount
+                                )}
                             </Text>
                             <Text
                                 style={[
@@ -819,7 +950,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 {intra ? moneyBare(item.sgst) : "—"}
                             </Text>
                             <Text style={[styles.td, styles.tax, styles.right]}>
-                                {intra ? "—" : moneyBare(item.tax)}
+                                {intra ? "—" : moneyBare(item.igst)}
                             </Text>
                             <Text
                                 style={[
@@ -896,7 +1027,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 money(
                                     intra
                                         ? cgst + shippingCgst
-                                        : tax + shippingGst
+                                        : igst + shippingGst
                                 ),
                             ],
                             ...(intra
@@ -927,6 +1058,53 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         </Text>
                     </View>
                 </View>
+                {order.poReference || seller?.bankName ? (
+                    <View style={styles.corporateDetails}>
+                        <View style={styles.corporateColumn}>
+                            <Text style={styles.label}>BANK DETAILS</Text>
+                            {[
+                                ["Bank name", seller?.bankName],
+                                [
+                                    "Account name",
+                                    seller?.bankAccountHolderName ??
+                                        order.brand.name,
+                                ],
+                                ["Account number", seller?.bankAccountNumber],
+                                ["Account type", seller?.bankAccountType],
+                                ["IFSC code", seller?.bankIfscCode],
+                                ["Branch", seller?.bankBranch],
+                            ].map(([label, value]) => (
+                                <View key={label} style={styles.bankRow}>
+                                    <Text style={styles.bankLabel}>
+                                        {label}
+                                    </Text>
+                                    <Text style={styles.bankValue}>
+                                        {value || "Not provided"}
+                                    </Text>
+                                </View>
+                            ))}
+                        </View>
+                        <View
+                            style={[
+                                styles.corporateColumn,
+                                styles.corporateColumnRight,
+                            ]}
+                        >
+                            <Text style={styles.label}>DECLARATION</Text>
+                            <Text style={styles.text}>
+                                We declare that this invoice shows the actual
+                                price of the goods described and that all
+                                particulars are true and correct.
+                            </Text>
+                            <Text style={[styles.signature, { marginTop: 10 }]}>
+                                For {order.brand.name}
+                                {"\n"}
+                                {seller?.authorizedSignatoryName ??
+                                    "Authorised Signatory"}
+                            </Text>
+                        </View>
+                    </View>
+                ) : null}
                 <View style={styles.legalNotes}>
                     <Text>
                         * GST under RCM is not applicable unless otherwise

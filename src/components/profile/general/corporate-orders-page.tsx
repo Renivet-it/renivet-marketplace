@@ -296,6 +296,14 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                             >
                                                 Download Summary
                                             </a>
+                                            {order.taxInvoice ? (
+                                                <a
+                                                    href={`/api/corporate-orders/${order.id}/invoice.pdf`}
+                                                    className="inline-flex h-11 items-center justify-center rounded-full border border-[#07345f] bg-[#07345f] px-6 text-sm font-semibold text-white transition-colors hover:bg-[#0b477f]"
+                                                >
+                                                    Download Invoice
+                                                </a>
+                                            ) : null}
                                             {order.balancePaymentLink &&
                                             order.balanceDuePaise > 0 ? (
                                                 <a

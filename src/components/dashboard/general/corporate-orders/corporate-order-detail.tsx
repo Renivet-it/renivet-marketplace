@@ -393,6 +393,12 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                             >
                                 Download summary PDF
                             </a>
+                            <a
+                                href={`/api/corporate-orders/${initialData.id}/invoice.pdf`}
+                                className="ml-4 inline-flex font-semibold text-sky-700 underline-offset-4 hover:underline"
+                            >
+                                Download tax invoice
+                            </a>
                         </div>
                     </Panel>
 

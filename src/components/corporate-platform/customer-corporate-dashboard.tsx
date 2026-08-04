@@ -55,12 +55,14 @@ export function CustomerCorporateDashboard({
     initialQuotes,
     initialPurchaseOrders,
     initialOrders,
+    initialTaxInvoices,
 }: {
     initialProfile: any;
     initialRfqs: any[];
     initialQuotes: any[];
     initialPurchaseOrders: any[];
     initialOrders: any[];
+    initialTaxInvoices: Array<{ orderId: string; invoiceNumber: string }>;
 }) {
     const utils = trpc.useUtils();
     const { startUpload } = useUploadThing("corporateDocumentUploader");
@@ -853,6 +855,16 @@ export function CustomerCorporateDashboard({
                                                                         >
                                                                             View
                                                                         </button>
+                                                                        {initialTaxInvoices.some(
+                                                                            (item) => item.orderId === order.id
+                                                                        ) ? (
+                                                                            <a
+                                                                                href={`/api/corporate-orders/${order.id}/invoice.pdf`}
+                                                                                className="text-xs font-bold text-[#07345f] hover:underline"
+                                                                            >
+                                                                                Invoice
+                                                                            </a>
+                                                                        ) : null}
                                                                     </div>
                                                                 </td>
                                                             </tr>
@@ -867,6 +879,9 @@ export function CustomerCorporateDashboard({
                                         <CustomerCorporateOrderDetailPanel
                                             order={selectedOrder}
                                             onPayRemaining={payRemainingBalance}
+                                            invoice={initialTaxInvoices.find(
+                                                (item) => item.orderId === selectedOrder.id
+                                            )}
                                         />
                                     ) : null}
                                 </div>
@@ -1626,9 +1641,11 @@ function CustomerCorporateQuoteDetailPanel({
 function CustomerCorporateOrderDetailPanel({
     order,
     onPayRemaining,
+    invoice,
 }: {
     order: any;
     onPayRemaining: (order: any) => void;
+    invoice?: { orderId: string; invoiceNumber: string };
 }) {
     const hasBalance = order.balanceDuePaise > 0;
     const utils = trpc.useUtils();
@@ -1762,6 +1779,15 @@ function CustomerCorporateOrderDetailPanel({
                     >
                         <span>Download Summary PDF</span>
                     </a>
+                    {invoice ? (
+                        <a
+                            href={`/api/corporate-orders/${order.id}/invoice.pdf`}
+                            className="inline-flex h-11 items-center justify-center rounded-full border border-[#07345f] bg-[#07345f] px-6 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#0b477f]"
+                        >
+                            <Download className="mr-2 size-4" />
+                            <span>Download Tax Invoice</span>
+                        </a>
+                    ) : null}
                     {hasBalance ? (
                         <button
                             type="button"

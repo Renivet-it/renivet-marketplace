@@ -1460,6 +1460,25 @@ class CorporatePlatformService {
         });
     }
 
+    async listMyIssuedTaxInvoices(userId: string) {
+        return db
+            .select({
+                orderId: corporateTaxInvoices.orderId,
+                invoiceNumber: corporateTaxInvoices.invoiceNumber,
+            })
+            .from(corporateTaxInvoices)
+            .innerJoin(
+                corporateOrders,
+                eq(corporateTaxInvoices.orderId, corporateOrders.id)
+            )
+            .where(
+                and(
+                    eq(corporateOrders.userId, userId),
+                    eq(corporateTaxInvoices.status, "issued")
+                )
+            );
+    }
+
     async listMyReplacementRequests(userId: string, orderId?: string) {
         const requests = await db.query.corporateReplacementRequests.findMany({
             where: orderId
@@ -2927,6 +2946,10 @@ class CorporatePlatformService {
         const parsed = corporateTaxInvoiceInputSchema.parse(input);
         const order = await db.query.corporateOrders.findFirst({
             where: eq(corporateOrders.id, parsed.orderId),
+            with: {
+                brand: true,
+                quote: { with: { profile: true } },
+            },
         });
         if (!order) {
             throw new TRPCError({
@@ -2935,11 +2958,51 @@ class CorporatePlatformService {
             });
         }
 
+        if (!order.brand) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Assign a seller brand before issuing the tax invoice",
+            });
+        }
+
+        const existingInvoice = await db.query.corporateTaxInvoices.findFirst({
+            where: and(
+                eq(corporateTaxInvoices.orderId, order.id),
+                eq(corporateTaxInvoices.status, "issued")
+            ),
+            orderBy: [desc(corporateTaxInvoices.createdAt)],
+        });
+        if (existingInvoice) return existingInvoice;
+
         const sequence = await db
             .select({ count: count() })
             .from(corporateTaxInvoices)
             .then((rows) => (rows[0]?.count ?? 0) + 1);
 
+        const sellerConfidential = await db.query.brandConfidentials.findFirst({
+            where: eq(brandConfidentials.id, order.brand.id),
+        });
+        const sellerGstin = sellerConfidential?.gstin?.trim() ?? "";
+        const buyerGstin =
+            order.quote?.profile?.gstNumber?.trim() ?? order.gstNumber?.trim() ?? "";
+        const sellerStateCode = /^\d{2}/.exec(sellerGstin)?.[0];
+        const buyerStateCode = /^\d{2}/.exec(buyerGstin)?.[0];
+        const billingAddress = order.quote?.profile?.billingAddress as
+            | Record<string, unknown>
+            | undefined;
+        const sellerState = sellerConfidential?.state?.trim().toLowerCase();
+        const buyerState =
+            typeof billingAddress?.state === "string"
+                ? billingAddress.state.trim().toLowerCase()
+                : "";
+        // If either GSTIN is unavailable, retain the existing intra-state split.
+        // When both codes exist, use IGST for an inter-state supply.
+        const isIntraState =
+            sellerStateCode && buyerStateCode
+                ? sellerStateCode === buyerStateCode
+                : sellerState && buyerState
+                  ? sellerState === buyerState
+                  : true;
         const gstHalf = Math.round(order.gstPaise / 2);
         const created = await db
             .insert(corporateTaxInvoices)
@@ -2948,9 +3011,9 @@ class CorporatePlatformService {
                 orderId: order.id,
                 invoiceDate: new Date().toISOString().slice(0, 10),
                 taxableValuePaise: order.subtotalPaise + order.customizationPaise,
-                cgstPaise: gstHalf,
-                sgstPaise: order.gstPaise - gstHalf,
-                igstPaise: 0,
+                cgstPaise: isIntraState ? gstHalf : 0,
+                sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
+                igstPaise: isIntraState ? 0 : order.gstPaise,
                 totalAmountPaise: order.totalPaise,
                 status: "issued",
             })

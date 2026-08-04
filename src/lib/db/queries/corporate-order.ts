@@ -4,7 +4,18 @@ import {
     corporateOrderSettingsSchema,
     corporateOrderStatusHistorySchema,
 } from "@/lib/validations/corporate-order";
-import { and, asc, count, desc, eq, ilike, isNotNull, notLike, or } from "drizzle-orm";
+import {
+    and,
+    asc,
+    count,
+    desc,
+    eq,
+    ilike,
+    inArray,
+    isNotNull,
+    notLike,
+    or,
+} from "drizzle-orm";
 import { db } from "..";
 import {
     corporateColorOptions,
@@ -15,6 +26,7 @@ import {
     corporateOrderSettings,
     corporateOrders,
     corporateOrderStatusHistory,
+    corporateTaxInvoices,
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
@@ -448,12 +460,41 @@ class CorporateOrderQueries {
                 .where(where),
         ]);
 
+        const invoiceRows = rows.length
+            ? await db
+                  .select({
+                      orderId: corporateTaxInvoices.orderId,
+                      invoiceNumber: corporateTaxInvoices.invoiceNumber,
+                  })
+                  .from(corporateTaxInvoices)
+                  .where(
+                      and(
+                          inArray(
+                              corporateTaxInvoices.orderId,
+                              rows.map((row) => row.id)
+                          ),
+                          eq(corporateTaxInvoices.status, "issued")
+                      )
+                  )
+                  .orderBy(desc(corporateTaxInvoices.createdAt))
+            : [];
+        const invoiceByOrderId = new Map<
+            string,
+            { orderId: string; invoiceNumber: string }
+        >();
+        for (const invoice of invoiceRows) {
+            if (!invoiceByOrderId.has(invoice.orderId)) {
+                invoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
+
         return {
             data: rows.map((row) => ({
                 ...this.parseOrder(row),
                 brand: row.brand,
                 shipment: row.shipment,
                 replacementRequests: row.replacementRequests,
+                taxInvoice: invoiceByOrderId.get(row.id) ?? null,
             })),
             count: totalCount,
         };
@@ -468,7 +509,38 @@ class CorporateOrderQueries {
             orderBy: [desc(corporateOrders.createdAt)],
         });
 
-        return rows.map((row) => this.parseOrder(row));
+        const invoiceRows = rows.length
+            ? await db
+                  .select({
+                      orderId: corporateTaxInvoices.orderId,
+                      invoiceNumber: corporateTaxInvoices.invoiceNumber,
+                  })
+                  .from(corporateTaxInvoices)
+                  .where(
+                      and(
+                          inArray(
+                              corporateTaxInvoices.orderId,
+                              rows.map((row) => row.id)
+                          ),
+                          eq(corporateTaxInvoices.status, "issued")
+                      )
+                  )
+                  .orderBy(desc(corporateTaxInvoices.createdAt))
+            : [];
+        const invoiceByOrderId = new Map<
+            string,
+            { orderId: string; invoiceNumber: string }
+        >();
+        for (const invoice of invoiceRows) {
+            if (!invoiceByOrderId.has(invoice.orderId)) {
+                invoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
+
+        return rows.map((row) => ({
+            ...this.parseOrder(row),
+            taxInvoice: invoiceByOrderId.get(row.id) ?? null,
+        }));
     }
 
     async createStatusHistory(

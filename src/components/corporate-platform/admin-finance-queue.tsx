@@ -67,7 +67,12 @@ export function AdminFinanceQueue({ initialData }: { initialData: any }) {
     });
 
     const issueTax = trpc.general.corporatePlatform.issueTaxInvoice.useMutation({
-        onSuccess: () => toast.success("Tax invoice issued"),
+        onSuccess: (invoice) => {
+            toast.success("Tax invoice issued. Download starting...");
+            window.location.assign(
+                `/api/corporate-orders/${invoice.orderId}/invoice.pdf`
+            );
+        },
         onError: (error) => handleClientError(error),
     });
 
