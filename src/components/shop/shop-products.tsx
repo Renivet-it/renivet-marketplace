@@ -42,6 +42,7 @@ interface PageProps extends GenericProps {
     lockedBrandId?: string;
     defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
     defaultSortOrder?: "asc" | "desc";
+    prioritizeNewProducts?: boolean;
 }
 
 export function ShopProducts({
@@ -53,6 +54,7 @@ export function ShopProducts({
     lockedBrandId,
     defaultSortBy = "recommended",
     defaultSortOrder = "desc",
+    prioritizeNewProducts = false,
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
@@ -203,6 +205,7 @@ export function ShopProducts({
                 minPrice === 0 &&
                 maxPrice >= SHOP_PRICE_FILTER_MAX &&
                 !minDiscount,
+            prioritizeNewProducts,
             requireMedia: true,
             useRecommendations:
                 !search &&
@@ -218,6 +221,7 @@ export function ShopProducts({
             search,
             effectiveBrandIds,
             defaultSortBy,
+            prioritizeNewProducts,
             minPrice,
             maxPrice,
             categoryId,
@@ -261,7 +265,6 @@ export function ShopProducts({
             !minDiscount
                 ? 60 * 1000
                 : 0,
-        keepPreviousData: true,
         refetchOnWindowFocus: false,
     });
 

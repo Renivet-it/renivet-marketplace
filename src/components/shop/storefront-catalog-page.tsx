@@ -18,7 +18,8 @@ import {
 } from "@/lib/redis/methods";
 import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
-import { Suspense, type ReactNode } from "react";
+import { cache, Suspense, type ReactNode } from "react";
+import { MobileFilterLoadingButton } from "./mobile-filter-loading-button";
 import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
 import { ShopFilters, ShopSortByWithDefault } from "./shop-filters";
 import { ShopMobileActions } from "./shop-mobile-actions";
@@ -52,9 +53,11 @@ interface StorefrontCatalogPageProps {
     hideBrandFilter?: boolean;
     defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
     defaultSortOrder?: "asc" | "desc";
+    prioritizeNewProducts?: boolean;
+    hideRecommendationSorts?: boolean;
 }
 
-const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-[5.55rem] lg:top-[5.75rem]";
+const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
 
 export async function StorefrontCatalogPage({
     searchParams,
@@ -65,6 +68,8 @@ export async function StorefrontCatalogPage({
     hideBrandFilter = false,
     defaultSortBy = "recommended",
     defaultSortOrder = "desc",
+    prioritizeNewProducts = false,
+    hideRecommendationSorts = false,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
@@ -125,9 +130,10 @@ export async function StorefrontCatalogPage({
                 id="brand-shop-catalog"
                 className="mt-6 flex flex-col gap-6 md:mt-8 md:flex-row md:items-start md:gap-8"
             >
-                <aside className="hidden md:sticky md:top-5 md:block md:max-h-[calc(100vh-2.5rem)] md:w-[335px] md:flex-shrink-0 md:overflow-y-auto">
+                <aside className="hidden md:sticky md:top-5 md:z-30 md:block md:max-h-[calc(100vh-2.5rem)] md:w-[335px] md:flex-shrink-0 md:self-start md:overflow-y-auto">
                     <Suspense fallback={<ShopFiltersSkeleton />}>
                         <StorefrontFiltersFetch
+                            displayMode="desktop"
                             brandIds={params.brandIds}
                             categoryId={params.categoryId}
                             subCategoryId={subCategoryId}
@@ -146,29 +152,24 @@ export async function StorefrontCatalogPage({
 
                 <main className="w-full space-y-4 pb-40 md:flex-1 md:space-y-5 md:pb-0">
                     <div className="md:hidden">
-                        <ProductSearch className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]" />
+                        <ProductSearch
+                            searchBasePath={basePath}
+                            className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
+                        />
                     </div>
 
                     <ShopMobileActions
                         defaultSortBy={defaultSortBy}
                         defaultSortOrder={defaultSortOrder}
+                        hideRecommendationSorts={hideRecommendationSorts}
                         filters={
                             <Suspense
                                 fallback={
-                                    <button
-                                        type="button"
-                                        disabled
-                                        className="flex h-full w-full items-center justify-center gap-2 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d]"
-                                    >
-                                        <span className="relative h-4 w-4">
-                                            <span className="absolute left-1 top-0 h-4 w-2 border-x-2 border-t-2 border-[#25321d]" />
-                                            <span className="absolute bottom-0 left-[7px] h-1.5 w-0.5 bg-[#25321d]" />
-                                        </span>
-                                        Filters
-                                    </button>
+                                    <MobileFilterLoadingButton className="h-full w-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]" />
                                 }
                             >
                                 <StorefrontFiltersFetch
+                                    displayMode="mobile"
                                     className="h-full w-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
                                     brandIds={params.brandIds}
                                     categoryId={params.categoryId}
@@ -195,6 +196,7 @@ export async function StorefrontCatalogPage({
                             lockedBrandId={lockedBrandId}
                             defaultSortBy={defaultSortBy}
                             defaultSortOrder={defaultSortOrder}
+                            prioritizeNewProducts={prioritizeNewProducts}
                             desktopCatalogHeader={
                                 <div className="hidden items-center justify-between rounded-2xl border border-[#dce5ee] bg-[#f9fbfd] px-5 py-3.5 md:flex">
                                     <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
@@ -203,6 +205,9 @@ export async function StorefrontCatalogPage({
                                     <ShopSortByWithDefault
                                         defaultSortBy={defaultSortBy}
                                         defaultSortOrder={defaultSortOrder}
+                                        hideRecommendationSorts={
+                                            hideRecommendationSorts
+                                        }
                                     />
                                 </div>
                             }
@@ -226,22 +231,23 @@ interface GenericProps {
     [key: string]: any;
 }
 
-async function StorefrontFiltersFetch(
-    props: GenericProps & {
-        brandIds?: string;
-        categoryId?: string;
-        subCategoryId?: string;
-        productTypeId?: string;
-        search?: string;
-        minPrice?: string;
-        maxPrice?: string;
-        colors?: string;
-        sizes?: string;
-        minDiscount?: string;
-        lockedBrandId?: string;
-        hideBrandFilter?: boolean;
-    }
-) {
+interface StorefrontFilterQueryInput {
+    brandIds?: string;
+    categoryId?: string;
+    subCategoryId?: string;
+    productTypeId?: string;
+    search?: string;
+    minPrice?: string;
+    maxPrice?: string;
+    colors?: string;
+    sizes?: string;
+    minDiscount?: string;
+    lockedBrandId?: string;
+    hideBrandFilter?: boolean;
+}
+
+const getStorefrontFilterData = cache(async (serializedInput: string) => {
+    const input = JSON.parse(serializedInput) as StorefrontFilterQueryInput;
     const {
         brandIds,
         categoryId,
@@ -255,8 +261,7 @@ async function StorefrontFiltersFetch(
         minDiscount,
         lockedBrandId,
         hideBrandFilter,
-        ...rest
-    } = props;
+    } = input;
 
     const minPriceValue =
         minPrice && !isNaN(parseInt(minPrice, 10))
@@ -298,6 +303,7 @@ async function StorefrontFiltersFetch(
         subCategories,
         productTypes,
         brandsMeta,
+        filteredCategoryCounts,
         filteredSubCategoryCounts,
         colors,
         alphaSize,
@@ -307,6 +313,15 @@ async function StorefrontFiltersFetch(
         subCategoryCache.getAll(),
         productTypeCache.getAll(),
         brandMetaPromise,
+        productQueries.getFilteredCategoryCounts({
+            brandIds: brandIdsValue,
+            search: search?.trim() || undefined,
+            minPrice: minPriceValue,
+            maxPrice: maxPriceValue,
+            colors: colorsValue,
+            sizes: sizesValue,
+            minDiscount: minDiscountValue,
+        }),
         productQueries.getFilteredSubCategoryCounts({
             categoryId,
             brandIds: brandIdsValue,
@@ -337,46 +352,69 @@ async function StorefrontFiltersFetch(
         }),
     ]);
 
-    const hasBrandFilter = !!brandIdsValue?.length;
-
-    const subCategoriesWithFilteredCounts = subCategories.map(
-        (subCategory) => ({
+    return {
+        categories: categories.map((category) => ({
+            ...category,
+            productCount: filteredCategoryCounts.get(String(category.id)) ?? 0,
+        })),
+        subCategories: subCategories.map((subCategory) => ({
             ...subCategory,
-            productCount: hasBrandFilter
-                ? (filteredSubCategoryCounts.get(String(subCategory.id)) ?? 0)
-                : (subCategory.productCount ?? 0),
-        })
+            productCount:
+                filteredSubCategoryCounts.get(String(subCategory.id)) ?? 0,
+        })),
+        productTypes,
+        brandsMeta,
+        colors,
+        alphaSize,
+        numSize,
+    };
+});
+
+async function StorefrontFiltersFetch(
+    props: GenericProps & StorefrontFilterQueryInput
+) {
+    const {
+        brandIds,
+        categoryId,
+        subCategoryId,
+        productTypeId,
+        search,
+        minPrice,
+        maxPrice,
+        colors: colorsParam,
+        sizes,
+        minDiscount,
+        lockedBrandId,
+        hideBrandFilter,
+        ...rest
+    } = props;
+    const filterData = await getStorefrontFilterData(
+        JSON.stringify({
+            brandIds,
+            categoryId,
+            subCategoryId,
+            productTypeId,
+            search,
+            minPrice,
+            maxPrice,
+            colors: colorsParam,
+            sizes,
+            minDiscount,
+            lockedBrandId,
+            hideBrandFilter,
+        } satisfies StorefrontFilterQueryInput)
     );
-
-    const categoryCountMapFromSubCategories = new Map<string, number>();
-    if (hasBrandFilter) {
-        subCategoriesWithFilteredCounts.forEach((subCategory) => {
-            const key = String(subCategory.categoryId);
-            const current = categoryCountMapFromSubCategories.get(key) ?? 0;
-            categoryCountMapFromSubCategories.set(
-                key,
-                current + Math.max(subCategory.productCount ?? 0, 0)
-            );
-        });
-    }
-
-    const categoriesWithFilteredCounts = categories.map((category) => ({
-        ...category,
-        productCount: hasBrandFilter
-            ? (categoryCountMapFromSubCategories.get(String(category.id)) ?? 0)
-            : category.productCount,
-    }));
 
     return (
         <ShopFilters
             sizes={[]}
-            categories={categoriesWithFilteredCounts}
-            subCategories={subCategoriesWithFilteredCounts}
-            productTypes={productTypes}
-            brandsMeta={brandsMeta}
-            colors={colors}
-            alphaSize={alphaSize}
-            numSize={numSize}
+            categories={filterData.categories}
+            subCategories={filterData.subCategories}
+            productTypes={filterData.productTypes}
+            brandsMeta={filterData.brandsMeta}
+            colors={filterData.colors}
+            alphaSize={filterData.alphaSize}
+            numSize={filterData.numSize}
             hideBrandFilter={hideBrandFilter}
             {...rest}
         />
@@ -402,6 +440,27 @@ const getCachedDefaultProducts = unstable_cache(
     { revalidate: 60 }
 );
 
+const getCachedNewArrivalProducts = unstable_cache(
+    async () => {
+        return await productQueries.getProducts({
+            page: 1,
+            limit: 28,
+            isAvailable: true,
+            isActive: true,
+            isPublished: true,
+            isDeleted: false,
+            verificationStatus: "approved",
+            minPrice: 0,
+            sortBy: "createdAt",
+            sortOrder: "desc",
+            prioritizeNewProducts: true,
+            requireMedia: true,
+        });
+    },
+    ["new-arrivals-products-cache-v1"],
+    { revalidate: 60 }
+);
+
 async function StorefrontProductsFetch({
     searchParams,
     productTypes,
@@ -409,6 +468,7 @@ async function StorefrontProductsFetch({
     lockedBrandId,
     defaultSortBy = "recommended",
     defaultSortOrder = "desc",
+    prioritizeNewProducts = false,
     desktopCatalogHeader,
 }: {
     searchParams: Promise<StorefrontSearchParams>;
@@ -417,6 +477,7 @@ async function StorefrontProductsFetch({
     lockedBrandId?: string;
     defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
     defaultSortOrder?: "asc" | "desc";
+    prioritizeNewProducts?: boolean;
     desktopCatalogHeader?: ReactNode;
 }) {
     const { userId } = await auth();
@@ -521,22 +582,21 @@ async function StorefrontProductsFetch({
             });
 
         if (recommendations.products.length >= 5) {
-            const regularData = await getCachedDefaultProducts();
-            const recommendedIds = new Set(
-                recommendations.products.map((p) => p.id)
-            );
-            const regularProducts = regularData.data.filter(
-                (p) => !recommendedIds.has(p.id)
-            );
-            const combinedProducts = [
-                ...recommendations.products,
-                ...regularProducts,
-            ].slice(0, limit);
-
-            finalData = {
-                data: combinedProducts,
-                count: regularData.count,
-            };
+            finalData = await productQueries.getProducts({
+                page,
+                limit,
+                isAvailable: true,
+                isActive: true,
+                isPublished: true,
+                isDeleted: false,
+                verificationStatus: "approved",
+                minPrice: 0,
+                prioritizeBestSellers: true,
+                priorityProductIds: recommendations.products.map(
+                    (product) => product.id
+                ),
+                requireMedia: true,
+            });
         } else {
             finalData = await getCachedDefaultProducts();
         }
@@ -558,7 +618,27 @@ async function StorefrontProductsFetch({
             !sizes &&
             !minDiscount;
 
-        if (isDefaultView) {
+        const isDefaultNewArrivalsView =
+            page === 1 &&
+            limit === 28 &&
+            !search &&
+            !brandIds &&
+            minPrice === 0 &&
+            maxPrice >= SHOP_PRICE_FILTER_MAX &&
+            !categoryId &&
+            !subCategoryId &&
+            !productTypeId &&
+            prioritizeNewProducts &&
+            defaultSortBy === "createdAt" &&
+            (!sortByRaw || sortByRaw === "createdAt") &&
+            (!sortOrderRaw || sortOrderRaw === "desc") &&
+            !colors &&
+            !sizes &&
+            !minDiscount;
+
+        if (isDefaultNewArrivalsView) {
+            finalData = await getCachedNewArrivalProducts();
+        } else if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
         } else {
             finalData = await productQueries.getProducts({
@@ -589,6 +669,7 @@ async function StorefrontProductsFetch({
                     !search &&
                     defaultSortBy === "recommended" &&
                     (!sortByRaw || sortByRaw === "recommended"),
+                prioritizeNewProducts,
                 requireMedia: true,
             });
         }
@@ -601,50 +682,40 @@ async function StorefrontProductsFetch({
     const productTypeById = new Map(
         productTypes.map((type: any) => [String(type.id), type])
     );
-    const productTypesForPills = Array.from(
-        new Map(
-            (finalData?.data ?? [])
-                .map((product: any) => {
-                    const typeId = String(
-                        product?.productType?.id ?? product?.productTypeId ?? ""
-                    );
-                    if (!typeId) return null;
+    const productTypesForPillsMap = new Map<
+        string,
+        {
+            id: string;
+            name: string;
+            subCategory?: { name: string };
+        }
+    >();
 
-                    const fallbackType = productTypeById.get(typeId);
-                    const typeName =
-                        product?.productType?.name ?? fallbackType?.name;
-                    const typeSubCategoryName =
-                        product?.productType?.subCategory?.name ??
-                        product?.subcategory?.name ??
-                        fallbackType?.subCategory?.name;
+    for (const product of finalData?.data ?? []) {
+        const typeId = String(
+            product?.productType?.id ?? product?.productTypeId ?? ""
+        );
+        if (!typeId) continue;
 
-                    if (!typeName) return null;
+        const fallbackType = productTypeById.get(typeId);
+        const typeName = product?.productType?.name ?? fallbackType?.name;
+        const typeSubCategoryName =
+            product?.productType?.subCategory?.name ??
+            product?.subcategory?.name ??
+            fallbackType?.subCategory?.name;
 
-                    return [
-                        typeId,
-                        {
-                            id: typeId,
-                            name: String(typeName),
-                            subCategory: typeSubCategoryName
-                                ? { name: String(typeSubCategoryName) }
-                                : undefined,
-                        },
-                    ] as const;
-                })
-                .filter(
-                    (
-                        item
-                    ): item is readonly [
-                        string,
-                        {
-                            id: string;
-                            name: string;
-                            subCategory?: { name: string };
-                        },
-                    ] => item !== null
-                )
-        ).values()
-    );
+        if (!typeName) continue;
+
+        productTypesForPillsMap.set(typeId, {
+            id: typeId,
+            name: String(typeName),
+            subCategory: typeSubCategoryName
+                ? { name: String(typeSubCategoryName) }
+                : undefined,
+        });
+    }
+
+    const productTypesForPills = Array.from(productTypesForPillsMap.values());
 
     return (
         <div className="space-y-4 md:space-y-3">
@@ -658,7 +729,7 @@ async function StorefrontProductsFetch({
             </div>
 
             <div
-                className={`hidden md:sticky ${DESKTOP_CATALOG_STICKY_TOP_CLASS} md:z-20 md:block md:space-y-3 md:bg-white/95 md:pb-2 md:backdrop-blur-sm`}
+                className={`hidden md:sticky ${DESKTOP_CATALOG_STICKY_TOP_CLASS} md:z-40 md:block md:space-y-3 md:bg-[#ffffff] md:pb-2 md:shadow-[0_10px_18px_-18px_rgba(36,55,84,0.55)]`}
             >
                 {desktopCatalogHeader}
 
@@ -685,6 +756,7 @@ async function StorefrontProductsFetch({
                 lockedBrandId={lockedBrandId}
                 defaultSortBy={defaultSortBy}
                 defaultSortOrder={defaultSortOrder}
+                prioritizeNewProducts={prioritizeNewProducts}
             />
         </div>
     );

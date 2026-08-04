@@ -118,13 +118,14 @@ export function SearchableProductTypes({
         <div
             className={cn(
                 "space-y-3",
-                isDesktop && "flex flex-1 flex-col gap-3"
+                isDesktop && "flex flex-1 flex-col gap-3 bg-white"
             )}
         >
             <div
                 className={cn(
                     "scrollbar-hide flex gap-2.5 overflow-x-auto pb-2",
-                    isDesktop && (!showAll ? "flex-nowrap" : "flex-wrap")
+                    isDesktop &&
+                        `bg-white ${!showAll ? "flex-nowrap" : "flex-wrap"}`
                 )}
             >
                 <a
@@ -159,7 +160,7 @@ export function SearchableProductTypes({
                         {isDesktop && activeTypes.length > 6 && (
                             <button
                                 onClick={() => setShowAll(!showAll)}
-                                className="whitespace-nowrap rounded-full border border-dashed border-[#b9c7d6] px-5 py-2.5 text-xs font-medium text-[#48617f] transition-colors hover:bg-[#f5f8fc]"
+                                className="whitespace-nowrap rounded-full border border-dashed border-[#b9c7d6] bg-white px-5 py-2.5 text-xs font-medium text-[#48617f] transition-colors hover:bg-[#f5f8fc]"
                             >
                                 {showAll ? "Show Less" : "Show More"}
                             </button>

@@ -141,6 +141,7 @@ export const productsRouter = createTRPCRouter({
                 sizes: z.array(z.string()).optional(),
                 minDiscount: z.number().min(0).max(100).optional(),
                 prioritizeBestSellers: z.boolean().optional(),
+                prioritizeNewProducts: z.boolean().optional(),
                 requireMedia: z.boolean().optional(),
                 // NEW: Enable personalized recommendations for shop page
                 useRecommendations: z.boolean().optional(),
