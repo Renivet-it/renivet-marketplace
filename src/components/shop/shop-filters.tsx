@@ -390,6 +390,7 @@ interface PageProps extends GenericProps {
     numSize?: string[];
     sizes?: string[];
     hideBrandFilter?: boolean;
+    displayMode?: "mobile" | "desktop";
 }
 
 const getBrandProductCount = (brand: any): number | null => {
@@ -422,9 +423,13 @@ export function ShopFilters({
     numSize,
     sizes,
     hideBrandFilter = false,
+    displayMode,
     ...props
 }: PageProps) {
-    const isMobile = useMediaQuery("(max-width: 768px)");
+    const matchesMobileViewport = useMediaQuery("(max-width: 768px)");
+    const isMobile =
+        displayMode === "mobile" ||
+        (displayMode !== "desktop" && matchesMobileViewport);
     const [search, setSearch] = useQueryState("search", { defaultValue: "" });
 
     // Use useMemo to prevent re-calculating on every render
@@ -499,13 +504,16 @@ export function ShopFilters({
                         variant="outline"
                         className={cn("flex items-center gap-2", className)}
                     >
-                        <Icons.Filter className="size-4" />
+                        <Icons.SlidersHorizontal
+                            aria-hidden="true"
+                            className="size-4"
+                        />
                         Filters
                     </Button>
                 </SheetTrigger>
                 <SheetContent
                     side="bottom"
-                    className="flex h-screen flex-col p-0"
+                    className="z-[1001] flex h-[100dvh] flex-col p-0"
                     style={{ scrollbarWidth: "none" }}
                 >
                     <SheetHeader className="border-b border-[#e3e8ef] bg-[#f8fafd] p-4">
@@ -1778,10 +1786,12 @@ export function ShopSortByWithDefault({
     className,
     defaultSortBy = "recommended",
     defaultSortOrder = "desc",
+    hideRecommendationSorts = false,
 }: {
     className?: string;
     defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
     defaultSortOrder?: "asc" | "desc";
+    hideRecommendationSorts?: boolean;
 } = {}) {
     const isMobile = useMediaQuery("(max-width: 768px)");
     const [isSortOpen, setIsSortOpen] = useState(false);
@@ -1813,12 +1823,19 @@ export function ShopSortByWithDefault({
     };
 
     const currentValue = `${sortState.sortBy}:${sortState.sortOrder}`;
+    const availableSortOptions = hideRecommendationSorts
+        ? sortByWithOrderTypes.filter(
+              (option) =>
+                  !option.value.startsWith("recommended:") &&
+                  !option.value.startsWith("best-sellers:")
+          )
+        : sortByWithOrderTypes;
     const currentLabel =
-        sortByWithOrderTypes.find((o) => o.value === currentValue)?.label ??
-        sortByWithOrderTypes.find(
+        availableSortOptions.find((o) => o.value === currentValue)?.label ??
+        availableSortOptions.find(
             (o) => o.value === `${defaultSortBy}:${defaultSortOrder}`
         )?.label ??
-        "Recommended";
+        "Newest First";
 
     // --- Desktop View (Dropdown) ---
     if (!isMobile) {
@@ -1829,7 +1846,7 @@ export function ShopSortByWithDefault({
                     value={currentValue}
                     onChange={(e) => handleSort(e.target.value)}
                 >
-                    {sortByWithOrderTypes.map((option) => (
+                    {availableSortOptions.map((option) => (
                         <option key={option.value} value={option.value}>
                             {option.label}
                         </option>
@@ -1868,7 +1885,7 @@ export function ShopSortByWithDefault({
                         value={currentValue}
                         onValueChange={(value) => void handleSort(value)}
                     >
-                        {sortByWithOrderTypes.map((option) => (
+                        {availableSortOptions.map((option) => (
                             <Label
                                 key={option.value}
                                 htmlFor={option.value}

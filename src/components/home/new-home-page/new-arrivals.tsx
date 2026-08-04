@@ -19,6 +19,7 @@ import { cn, convertPaiseToRupees, formatINR } from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import { ChevronRight, Layers } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -132,9 +133,18 @@ export function ProductGridNewArrivals({
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-gray-500 md:text-[11px]">
                         Curated For You
                     </span>
-                    <h2 className="mt-2 font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
-                        New Arrivals
-                    </h2>
+                    <div className="mt-2 flex w-full items-end justify-between gap-4">
+                        <h2 className="font-playfair text-[28px] font-normal uppercase leading-[1.3] text-gray-900 md:text-[36px]">
+                            New Arrivals
+                        </h2>
+                        <Link
+                            href="/new-arrivals"
+                            className="mb-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5b684c] transition-colors hover:text-[#28331f] md:text-xs"
+                        >
+                            View all
+                            <ChevronRight className="size-3.5" />
+                        </Link>
+                    </div>
 
                     <div className="scrollbar-hide mt-6 w-full max-w-full overflow-x-auto">
                         <div className="flex w-max items-center overflow-hidden rounded-md border border-gray-200">

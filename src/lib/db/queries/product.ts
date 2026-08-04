@@ -1064,6 +1064,7 @@ class ProductQuery {
         sizes,
         minDiscount,
         prioritizeBestSellers,
+        prioritizeNewProducts,
         requireMedia,
         priorityProductIds,
         isSummerCollection,
@@ -1093,6 +1094,7 @@ class ProductQuery {
         sizes?: string[];
         minDiscount?: number | null;
         prioritizeBestSellers?: boolean;
+        prioritizeNewProducts?: boolean;
         requireMedia?: boolean;
         priorityProductIds?: string[];
         isSummerCollection?: boolean | null;
@@ -1124,8 +1126,7 @@ class ProductQuery {
         const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
         const normalizedColors = colors?.map((c) => c.toLowerCase());
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
-        // Best Sellers should include all products; media-only filtering can hide many items.
-        const shouldRequireMedia = !!requireMedia && sortBy !== "best-sellers";
+        const shouldRequireMedia = !!requireMedia;
         // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
 
@@ -1419,6 +1420,25 @@ class ProductQuery {
 
         // --- OrderBy construction ---
         const orderBy: any[] = [];
+
+        // Keep currently tagged NEW products ahead of the older catalogue on
+        // the New Arrivals landing page. June 2026 has a one-off 3-month tag;
+        // all later products use the normal 2-month tag.
+        if (prioritizeNewProducts) {
+            orderBy.push(sql`
+                CASE
+                    WHEN ${products.createdAt} >= TIMESTAMP '2026-05-31 18:30:00'
+                        AND ${products.createdAt} <= NOW()
+                        AND NOW() < ${products.createdAt} + CASE
+                            WHEN ${products.createdAt} < TIMESTAMP '2026-06-30 18:30:00'
+                                THEN INTERVAL '3 months'
+                            ELSE INTERVAL '2 months'
+                        END
+                    THEN 0
+                    ELSE 1
+                END ASC
+            `);
+        }
 
         // 🎯 Step -1: prioritize user's personalized products (highest priority)
         if (priorityProductIds && priorityProductIds.length > 0) {

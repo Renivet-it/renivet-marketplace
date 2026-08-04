@@ -1,33 +1,6 @@
 import { cn } from "@/lib/utils";
-import { addMonths } from "date-fns";
+import { isNewProduct } from "@/lib/utils/new-product";
 import Image from "next/image";
-
-const NEW_PRODUCT_ELIGIBILITY_START = new Date("2026-07-01T00:00:00+05:30");
-
-function isRecentlyCreated(product: unknown) {
-    if (!product || typeof product !== "object") return false;
-
-    const { createdAt: createdAtValue, publishedAt } = product as {
-        publishedAt?: Date | string | number | null;
-        createdAt?: Date | string | number;
-    };
-    const newListingDate = createdAtValue ?? publishedAt;
-    const createdAt =
-        newListingDate instanceof Date
-            ? newListingDate
-            : new Date(newListingDate ?? "");
-
-    if (Number.isNaN(createdAt.getTime())) return false;
-
-    const now = new Date();
-    const expiresAt = addMonths(createdAt, 2);
-
-    return (
-        createdAt >= NEW_PRODUCT_ELIGIBILITY_START &&
-        createdAt <= now &&
-        now < expiresAt
-    );
-}
 
 export function NewProductRibbon({
     product,
@@ -36,7 +9,7 @@ export function NewProductRibbon({
     product?: unknown;
     className?: string;
 }) {
-    if (!isRecentlyCreated(product)) return null;
+    if (!isNewProduct(product)) return null;
 
     return (
         <span
