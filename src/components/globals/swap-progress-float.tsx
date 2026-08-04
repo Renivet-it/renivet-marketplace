@@ -29,7 +29,9 @@ export function SwapProgressFloat() {
         pathname === "/shop" ||
         pathname.startsWith("/shop/") ||
         pathname === "/new-arrivals" ||
-        pathname.startsWith("/new-arrivals/");
+        pathname.startsWith("/new-arrivals/") ||
+        pathname === "/swap-passport" ||
+        pathname.startsWith("/swap-passport/");
 
     if (!isLoaded || isAuthPage || (!isSignedIn && !isCatalogPage)) {
         return null;

@@ -138,7 +138,7 @@ export function ProductGridNewArrivals({
                             New Arrivals
                         </h2>
                         <Link
-                            href="/new-arrivals"
+                            href="/swap-passport"
                             className="mb-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#5b684c] transition-colors hover:text-[#28331f] md:text-xs"
                         >
                             View all
