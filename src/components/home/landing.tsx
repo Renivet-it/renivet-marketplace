@@ -24,6 +24,10 @@ export function Landing({ className, banners, ...props }: PageProps) {
     const mobileAspectRatio = 375 / 487;
     const mobileImages = [
         {
+            src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzN8o5y85jj1qpSPZJEOTHVgaenl2yArM78zCkm",
+            link: "https://renivet.com/swap-passport",
+        },
+        {
             src: "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNoDD6Uqn0WvnGEidmOVIP6xXt4S7befYUykMJ",
             link: "https://renivet.com/brands/my-mithila/shop",
         },
