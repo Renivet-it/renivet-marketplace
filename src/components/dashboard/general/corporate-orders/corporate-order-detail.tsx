@@ -1,5 +1,6 @@
 "use client";
 
+import { CorporateDocumentChainPanel } from "@/components/dashboard/general/corporate-orders/corporate-document-chain-panel";
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
 import { formatCorporateDeliveryAddress } from "@/lib/corporate-delivery-address";
@@ -23,10 +24,8 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
         string,
         unknown
     >;
-    const brandingSnapshot = (initialData.brandingConfigSnapshot ?? {}) as Record<
-        string,
-        unknown
-    >;
+    const brandingSnapshot = (initialData.brandingConfigSnapshot ??
+        {}) as Record<string, unknown>;
     const pricingSnapshot = (initialData.pricingSnapshot ?? {}) as Record<
         string,
         unknown
@@ -39,10 +38,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
     const gsmLabel = readLabelValue(productSnapshot.gsmOption);
     const fabricComposition = readNamedValue(productSnapshot.fabricComposition);
     const sizeBreakdown = Object.entries(
-        (initialData.sizeBreakdown ?? pricingSnapshot.sizeBreakdown ?? {}) as Record<
-            string,
-            number
-        >
+        (initialData.sizeBreakdown ??
+            pricingSnapshot.sizeBreakdown ??
+            {}) as Record<string, number>
     );
     const [status, setStatus] = useState(initialData.status);
     const [statusNote, setStatusNote] = useState("");
@@ -89,15 +87,14 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                   brandName: initialData.brand.name,
               })
             : "";
-    const updateStatus =
-        trpc.general.corporateOrders.updateStatus.useMutation({
-            onSuccess: async () => {
-                await utils.general.corporateOrders.getOrderById.invalidate({
-                    corporateOrderId: initialData.id,
-                });
-            },
-            onError: (error) => handleClientError(error),
-        });
+    const updateStatus = trpc.general.corporateOrders.updateStatus.useMutation({
+        onSuccess: async () => {
+            await utils.general.corporateOrders.getOrderById.invalidate({
+                corporateOrderId: initialData.id,
+            });
+        },
+        onError: (error) => handleClientError(error),
+    });
     const sendReminder =
         trpc.general.corporateOrders.sendBalancePaymentReminder.useMutation({
             onSuccess: async () => {
@@ -107,15 +104,16 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
             },
             onError: (error) => handleClientError(error),
         });
-    const saveShipment = trpc.general.corporatePlatform.saveShipment.useMutation({
-        onSuccess: async () => {
-            await utils.general.corporateOrders.getOrderById.invalidate({
-                corporateOrderId: initialData.id,
-            });
-            toast.success("Shipment details saved");
-        },
-        onError: (error) => handleClientError(error),
-    });
+    const saveShipment =
+        trpc.general.corporatePlatform.saveShipment.useMutation({
+            onSuccess: async () => {
+                await utils.general.corporateOrders.getOrderById.invalidate({
+                    corporateOrderId: initialData.id,
+                });
+                toast.success("Shipment details saved");
+            },
+            onError: (error) => handleClientError(error),
+        });
 
     const scheduleDelhiveryPickup = async () => {
         if (!shipmentAwbNumber.trim()) {
@@ -159,7 +157,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
 
             const data = await res.json();
             if (!data.success) {
-                toast.error(data.message || "Failed to schedule Delhivery pickup");
+                toast.error(
+                    data.message || "Failed to schedule Delhivery pickup"
+                );
                 return;
             }
 
@@ -193,7 +193,8 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                             {initialData.publicOrderId}
                         </h1>
                         <p className="mt-2 text-sm text-slate-500">
-                            {initialData.companyName} • {initialData.contactPersonName}
+                            {initialData.companyName} •{" "}
+                            {initialData.contactPersonName}
                         </p>
                     </div>
                     <div className="space-y-1 text-right">
@@ -256,7 +257,8 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                     <SnapshotItem
                                         label="GST Number"
                                         value={
-                                            initialData.gstNumber || "Not provided"
+                                            initialData.gstNumber ||
+                                            "Not provided"
                                         }
                                     />
                                     <SnapshotItem
@@ -271,8 +273,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                 <SnapshotBlock
                                     label="Delivery Address"
                                     value={
-                                        formatCorporateDeliveryAddress(initialData) ||
-                                        "No delivery address captured"
+                                        formatCorporateDeliveryAddress(
+                                            initialData
+                                        ) || "No delivery address captured"
                                     }
                                 />
                             </SnapshotSection>
@@ -298,7 +301,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                     />
                                     <SnapshotItem
                                         label="Quantity"
-                                        value={String(initialData.quantity ?? "-")}
+                                        value={String(
+                                            initialData.quantity ?? "-"
+                                        )}
                                     />
                                 </div>
                                 {selectedColors.length ? (
@@ -310,10 +315,12 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                 {sizeBreakdown.length ? (
                                     <MetricStrip
                                         label="Size Breakdown"
-                                        items={sizeBreakdown.map(([size, count]) => ({
-                                            label: size,
-                                            value: String(count),
-                                        }))}
+                                        items={sizeBreakdown.map(
+                                            ([size, count]) => ({
+                                                label: size,
+                                                value: String(count),
+                                            })
+                                        )}
                                     />
                                 ) : null}
                             </SnapshotSection>
@@ -377,6 +384,10 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                         </div>
                     </Panel>
 
+                    <Panel title="Corporate Document Chain">
+                        <CorporateDocumentChainPanel order={initialData} />
+                    </Panel>
+
                     <Panel title="Files">
                         <div className="space-y-3 text-sm">
                             <FileRow
@@ -393,12 +404,22 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                             >
                                 Download summary PDF
                             </a>
-                            <a
-                                href={`/api/corporate-orders/${initialData.id}/invoice.pdf`}
-                                className="ml-4 inline-flex font-semibold text-sky-700 underline-offset-4 hover:underline"
-                            >
-                                Download tax invoice
-                            </a>
+                            {initialData.advancePaidPaise > 0 ? (
+                                <a
+                                    href={`/api/corporate-orders/${initialData.id}/receipt-voucher.pdf`}
+                                    className="ml-4 inline-flex font-semibold text-sky-700 underline-offset-4 hover:underline"
+                                >
+                                    Download receipt voucher
+                                </a>
+                            ) : null}
+                            {initialData.taxInvoice ? (
+                                <a
+                                    href={`/api/corporate-orders/${initialData.id}/invoice.pdf`}
+                                    className="ml-4 inline-flex font-semibold text-sky-700 underline-offset-4 hover:underline"
+                                >
+                                    Download tax invoice
+                                </a>
+                            ) : null}
                         </div>
                     </Panel>
 
@@ -414,9 +435,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                             {convertValueToLabel(item.toStatus)}
                                         </p>
                                         <p className="text-xs text-slate-500">
-                                            {new Date(item.createdAt).toLocaleString(
-                                                "en-IN"
-                                            )}
+                                            {new Date(
+                                                item.createdAt
+                                            ).toLocaleString("en-IN")}
                                         </p>
                                         {item.note && (
                                             <p className="mt-2 text-sm text-slate-700">
@@ -445,10 +466,16 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                 <option value="inquiry_received">
                                     Inquiry Received
                                 </option>
-                                <option value="under_review">Under Review</option>
+                                <option value="under_review">
+                                    Under Review
+                                </option>
                                 <option value="approved">Approved</option>
-                                <option value="in_production">In Production</option>
-                                <option value="quality_check">Quality Check</option>
+                                <option value="in_production">
+                                    In Production
+                                </option>
+                                <option value="quality_check">
+                                    Quality Check
+                                </option>
                                 <option value="ready_for_dispatch">
                                     Ready for Dispatch
                                 </option>
@@ -483,9 +510,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                         <div className="space-y-3">
                             <Input value={customerPaymentPageHref} readOnly />
                             <p className="text-sm leading-6 text-slate-500">
-                                Customers can pay the remaining balance directly from
-                                their corporate order page. Use the reminder button
-                                below if you want to nudge them.
+                                Customers can pay the remaining balance directly
+                                from their corporate order page. Use the
+                                reminder button below if you want to nudge them.
                             </p>
                             <Button
                                 variant="outline"
@@ -516,7 +543,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                         setShipmentProvider(e.target.value)
                                     }
                                 >
-                                    <option value="manual">Manual shipment</option>
+                                    <option value="manual">
+                                        Manual shipment
+                                    </option>
                                     <option value="delhivery">Delhivery</option>
                                 </select>
                                 <Input
@@ -530,7 +559,9 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                     placeholder="Tracking number"
                                     value={shipmentTrackingNumber}
                                     onChange={(e) =>
-                                        setShipmentTrackingNumber(e.target.value)
+                                        setShipmentTrackingNumber(
+                                            e.target.value
+                                        )
                                     }
                                 />
                                 <Input
@@ -552,14 +583,18 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                         type="date"
                                         value={shipmentDispatchDate}
                                         onChange={(e) =>
-                                            setShipmentDispatchDate(e.target.value)
+                                            setShipmentDispatchDate(
+                                                e.target.value
+                                            )
                                         }
                                     />
                                     <Input
                                         type="date"
                                         value={shipmentDeliveryDate}
                                         onChange={(e) =>
-                                            setShipmentDeliveryDate(e.target.value)
+                                            setShipmentDeliveryDate(
+                                                e.target.value
+                                            )
                                         }
                                     />
                                 </div>
@@ -571,8 +606,12 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                     }
                                 >
                                     <option value="ready">Ready</option>
-                                    <option value="dispatched">Dispatched</option>
-                                    <option value="in_transit">In Transit</option>
+                                    <option value="dispatched">
+                                        Dispatched
+                                    </option>
+                                    <option value="in_transit">
+                                        In Transit
+                                    </option>
                                     <option value="delivered">Delivered</option>
                                     <option value="failed">Failed</option>
                                 </select>
@@ -584,7 +623,8 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                 shipmentCourierName || null,
                                             trackingNumber:
                                                 shipmentTrackingNumber || null,
-                                            awbNumber: shipmentAwbNumber || null,
+                                            awbNumber:
+                                                shipmentAwbNumber || null,
                                             trackingUrl:
                                                 shipmentTrackingUrl || null,
                                             dispatchDate:
@@ -608,23 +648,28 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                             Delhivery pickup request
                                         </p>
                                         <p className="mt-1 text-sm text-slate-500">
-                                            Once the brand marks the order ready,
-                                            admin can add this shipment to the
-                                            Delhivery pickup flow from here.
+                                            Once the brand marks the order
+                                            ready, admin can add this shipment
+                                            to the Delhivery pickup flow from
+                                            here.
                                         </p>
                                         <div className="mt-3 grid gap-3 md:grid-cols-2">
                                             <Input
                                                 type="date"
                                                 value={pickupDate}
                                                 onChange={(e) =>
-                                                    setPickupDate(e.target.value)
+                                                    setPickupDate(
+                                                        e.target.value
+                                                    )
                                                 }
                                             />
                                             <select
                                                 className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                                                 value={pickupTime}
                                                 onChange={(e) =>
-                                                    setPickupTime(e.target.value)
+                                                    setPickupTime(
+                                                        e.target.value
+                                                    )
                                                 }
                                             >
                                                 <option value="">
@@ -679,45 +724,54 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                         <Panel title="Shipment Workspace">
                             <p className="text-sm leading-6 text-slate-500">
                                 Shipment tools unlock after the brand moves this
-                                order to <span className="font-medium">Ready for Dispatch</span>.
+                                order to{" "}
+                                <span className="font-medium">
+                                    Ready for Dispatch
+                                </span>
+                                .
                             </p>
                         </Panel>
                     )}
 
                     <Panel title="Customer and Payment References">
                         <div className="space-y-2 text-sm">
-                            <SimpleRow label="Email" value={initialData.emailAddress} />
-                            <SimpleRow label="Phone" value={initialData.mobileNumber} />
+                            <SimpleRow
+                                label="Email"
+                                value={initialData.emailAddress}
+                            />
+                            <SimpleRow
+                                label="Phone"
+                                value={initialData.mobileNumber}
+                            />
                             <SimpleRow
                                 label="Delivery Address"
-                                value={formatCorporateDeliveryAddress(initialData)}
+                                value={formatCorporateDeliveryAddress(
+                                    initialData
+                                )}
                             />
                             <SimpleRow
                                 label="Razorpay Order"
-                                value={initialData.razorpayOrderId || "Not available"}
+                                value={
+                                    initialData.razorpayOrderId ||
+                                    "Not available"
+                                }
                             />
                             <SimpleRow
                                 label="Razorpay Payment"
                                 value={
-                                    initialData.razorpayPaymentId || "Not available"
+                                    initialData.razorpayPaymentId ||
+                                    "Not available"
                                 }
                             />
                         </div>
                     </Panel>
-
                 </div>
             </section>
         </div>
     );
 }
 
-function Panel({
-    title,
-    children,
-}: {
-    title: string;
-    children: ReactNode;
-}) {
+function Panel({ title, children }: { title: string; children: ReactNode }) {
     return (
         <section className="rounded-lg border bg-white p-6 shadow-sm">
             <h2 className="text-lg font-semibold text-slate-900">{title}</h2>
@@ -742,7 +796,9 @@ function FileRow({ label, file }: { label: string; file: any }) {
         <div className="flex items-center justify-between gap-4 rounded-lg border border-slate-200 px-4 py-3">
             <div>
                 <p className="font-medium text-slate-900">{label}</p>
-                <p className="text-xs text-slate-500">{file?.name ?? "Missing"}</p>
+                <p className="text-xs text-slate-500">
+                    {file?.name ?? "Missing"}
+                </p>
             </div>
             {file?.url ? (
                 <a
@@ -866,13 +922,7 @@ function MetricStrip({
     );
 }
 
-function SnapshotMoneyCard({
-    label,
-    value,
-}: {
-    label: string;
-    value: number;
-}) {
+function SnapshotMoneyCard({ label, value }: { label: string; value: number }) {
     return (
         <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-4">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
@@ -911,8 +961,8 @@ function readChargeList(value: unknown) {
 
             return name && amount ? { label: name, value: amount } : null;
         })
-        .filter(
-            (item): item is { label: string; value: string } => Boolean(item)
+        .filter((item): item is { label: string; value: string } =>
+            Boolean(item)
         );
 }
 

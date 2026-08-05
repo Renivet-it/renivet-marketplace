@@ -18,18 +18,24 @@ import {
 } from "drizzle-orm";
 import { db } from "..";
 import {
+    corporateBrandTaxInvoices,
     corporateColorOptions,
+    corporateDeliveryChallans,
     corporateExtraChargeRules,
     corporateFabricCompositions,
     corporateGsmOptions,
     corporateLogoLocations,
-    corporateOrderSettings,
     corporateOrders,
+    corporateOrderSettings,
     corporateOrderStatusHistory,
-    corporateTaxInvoices,
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
+    corporateProformaInvoices,
+    corporatePurchaseOrders,
+    corporateReceiptVouchers,
+    corporateTaxInvoices,
+    corporateVendorPurchaseOrders,
 } from "../schema";
 
 const DEFAULT_TIMELINE_TEXT =
@@ -172,7 +178,9 @@ class CorporateOrderQueries {
             const roundNeck = productTypes.find((item) =>
                 item.name.includes("Round")
             )!;
-            const polo = productTypes.find((item) => item.name.includes("Polo"))!;
+            const polo = productTypes.find((item) =>
+                item.name.includes("Polo")
+            )!;
             const gsm180 = gsmOptions.find((item) => item.gsmValue === 180)!;
             const gsm220 = gsmOptions.find((item) => item.gsmValue === 220)!;
 
@@ -363,24 +371,82 @@ class CorporateOrderQueries {
     }
 
     async getOrderById(id: string) {
-        const order = await db.query.corporateOrders.findFirst({
-            where: eq(corporateOrders.id, id),
-            with: {
-                brand: true,
-                shipment: true,
-                statusHistory: {
-                    orderBy: [desc(corporateOrderStatusHistory.createdAt)],
+        const [order, taxInvoice] = await Promise.all([
+            db.query.corporateOrders.findFirst({
+                where: eq(corporateOrders.id, id),
+                with: {
+                    brand: true,
+                    shipment: true,
+                    statusHistory: {
+                        orderBy: [desc(corporateOrderStatusHistory.createdAt)],
+                    },
+                    user: true,
                 },
-                user: true,
-            },
-        });
+            }),
+            db.query.corporateTaxInvoices.findFirst({
+                where: and(
+                    eq(corporateTaxInvoices.orderId, id),
+                    eq(corporateTaxInvoices.status, "issued")
+                ),
+                orderBy: [desc(corporateTaxInvoices.createdAt)],
+            }),
+        ]);
 
         if (!order) return null;
+
+        const [
+            proformaInvoice,
+            incomingPurchaseOrder,
+            receiptVoucher,
+            vendorPurchaseOrder,
+            brandTaxInvoice,
+            deliveryChallan,
+        ] = await Promise.all([
+            order.quoteId
+                ? db.query.corporateProformaInvoices.findFirst({
+                      where: eq(
+                          corporateProformaInvoices.quoteId,
+                          order.quoteId
+                      ),
+                      orderBy: [desc(corporateProformaInvoices.createdAt)],
+                  })
+                : Promise.resolve(null),
+            db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.corporateOrderId, id),
+                orderBy: [desc(corporatePurchaseOrders.createdAt)],
+            }),
+            db.query.corporateReceiptVouchers.findFirst({
+                where: eq(corporateReceiptVouchers.orderId, id),
+                orderBy: [desc(corporateReceiptVouchers.createdAt)],
+            }),
+            db.query.corporateVendorPurchaseOrders.findFirst({
+                where: eq(corporateVendorPurchaseOrders.orderId, id),
+                orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
+            }),
+            db.query.corporateBrandTaxInvoices.findFirst({
+                where: eq(corporateBrandTaxInvoices.orderId, id),
+                orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
+            }),
+            db.query.corporateDeliveryChallans.findFirst({
+                where: eq(corporateDeliveryChallans.orderId, id),
+                orderBy: [desc(corporateDeliveryChallans.createdAt)],
+            }),
+        ]);
 
         return {
             ...this.parseOrder(order),
             brand: order.brand,
             shipment: order.shipment,
+            taxInvoice: taxInvoice ?? null,
+            documentChain: {
+                proformaInvoice,
+                incomingPurchaseOrder,
+                receiptVoucher,
+                vendorPurchaseOrder,
+                brandTaxInvoice,
+                customerTaxInvoice: taxInvoice ?? null,
+                deliveryChallan,
+            },
             statusHistory: order.statusHistory.map((item) =>
                 corporateOrderStatusHistorySchema.parse({
                     ...item,
@@ -410,7 +476,6 @@ class CorporateOrderQueries {
         return order ? this.parseOrder(order) : null;
     }
 
-
     async listOrders(input: {
         page: number;
         limit: number;
@@ -427,12 +492,17 @@ class CorporateOrderQueries {
                 : showReplacements === "only"
                   ? ilike(corporateOrders.publicOrderId, "REN-CORP-RPL-%")
                   : undefined,
-            input.status ? eq(corporateOrders.status, input.status as any) : undefined,
+            input.status
+                ? eq(corporateOrders.status, input.status as any)
+                : undefined,
             input.search
                 ? or(
                       ilike(corporateOrders.publicOrderId, `%${input.search}%`),
                       ilike(corporateOrders.companyName, `%${input.search}%`),
-                      ilike(corporateOrders.contactPersonName, `%${input.search}%`),
+                      ilike(
+                          corporateOrders.contactPersonName,
+                          `%${input.search}%`
+                      ),
                       ilike(corporateOrders.emailAddress, `%${input.search}%`)
                   )
                 : undefined,
@@ -454,10 +524,7 @@ class CorporateOrderQueries {
                 offset: (input.page - 1) * input.limit,
                 limit: input.limit,
             }),
-            db
-                .select({ count: count() })
-                .from(corporateOrders)
-                .where(where),
+            db.select({ count: count() }).from(corporateOrders).where(where),
         ]);
 
         const invoiceRows = rows.length
@@ -527,6 +594,25 @@ class CorporateOrderQueries {
                   )
                   .orderBy(desc(corporateTaxInvoices.createdAt))
             : [];
+        const deliveryChallanRows = rows.length
+            ? await db
+                  .select({
+                      id: corporateDeliveryChallans.id,
+                      orderId: corporateDeliveryChallans.orderId,
+                      challanNumber: corporateDeliveryChallans.challanNumber,
+                  })
+                  .from(corporateDeliveryChallans)
+                  .where(
+                      and(
+                          inArray(
+                              corporateDeliveryChallans.orderId,
+                              rows.map((row) => row.id)
+                          ),
+                          eq(corporateDeliveryChallans.status, "issued")
+                      )
+                  )
+                  .orderBy(desc(corporateDeliveryChallans.createdAt))
+            : [];
         const invoiceByOrderId = new Map<
             string,
             { orderId: string; invoiceNumber: string }
@@ -536,10 +622,14 @@ class CorporateOrderQueries {
                 invoiceByOrderId.set(invoice.orderId, invoice);
             }
         }
+        const deliveryChallanByOrderId = new Map(
+            deliveryChallanRows.map((challan) => [challan.orderId, challan])
+        );
 
         return rows.map((row) => ({
             ...this.parseOrder(row),
             taxInvoice: invoiceByOrderId.get(row.id) ?? null,
+            deliveryChallan: deliveryChallanByOrderId.get(row.id) ?? null,
         }));
     }
 
@@ -760,9 +850,10 @@ class CorporateOrderQueries {
                     });
             }
 
-            const existingSettings = await tx.query.corporateOrderSettings.findFirst({
-                orderBy: [desc(corporateOrderSettings.createdAt)],
-            });
+            const existingSettings =
+                await tx.query.corporateOrderSettings.findFirst({
+                    orderBy: [desc(corporateOrderSettings.createdAt)],
+                });
 
             if (!existingSettings) {
                 await tx.insert(corporateOrderSettings).values(input.settings);

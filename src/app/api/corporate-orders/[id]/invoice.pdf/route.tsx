@@ -3,14 +3,22 @@ import {
     type CorporateTaxInvoiceData,
 } from "@/components/pdf/corporate-tax-invoice-template";
 import { BitFieldSitePermission } from "@/config/permissions";
+import {
+    corporateDocumentNumber,
+    RENIVET_CORPORATE_SELLER_NAME,
+} from "@/lib/corporate-documents";
 import { db } from "@/lib/db";
 import {
-    brandConfidentials,
     corporatePurchaseOrders,
+    corporateReceiptVouchers,
     corporateTaxInvoices,
     products,
 } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
+import {
+    corporatePartyAddress,
+    getCorporateDocumentSettings,
+} from "@/lib/services/corporate-documents";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
@@ -62,6 +70,7 @@ export async function GET(
             with: {
                 brand: true,
                 quote: { with: { profile: true } },
+                shipment: true,
             },
         });
         if (!order) {
@@ -82,30 +91,22 @@ export async function GET(
             return NextResponse.json({ message: "Forbidden" }, { status: 403 });
         }
 
-        const [invoice, purchaseOrder, product, confidential] =
-            await Promise.all([
-                db.query.corporateTaxInvoices.findFirst({
-                    where: eq(corporateTaxInvoices.orderId, order.id),
-                    orderBy: [desc(corporateTaxInvoices.createdAt)],
-                }),
-                db.query.corporatePurchaseOrders.findFirst({
-                    where: eq(
-                        corporatePurchaseOrders.corporateOrderId,
-                        order.id
-                    ),
-                    orderBy: [desc(corporatePurchaseOrders.createdAt)],
-                }),
-                order.quote?.productId
-                    ? db.query.products.findFirst({
-                          where: eq(products.id, order.quote.productId),
-                      })
-                    : Promise.resolve(null),
-                order.brandId
-                    ? db.query.brandConfidentials.findFirst({
-                          where: eq(brandConfidentials.id, order.brandId),
-                      })
-                    : Promise.resolve(null),
-            ]);
+        const [invoice, purchaseOrder, product, settings] = await Promise.all([
+            db.query.corporateTaxInvoices.findFirst({
+                where: eq(corporateTaxInvoices.orderId, order.id),
+                orderBy: [desc(corporateTaxInvoices.createdAt)],
+            }),
+            db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
+                orderBy: [desc(corporatePurchaseOrders.createdAt)],
+            }),
+            order.quote?.productId
+                ? db.query.products.findFirst({
+                      where: eq(products.id, order.quote.productId),
+                  })
+                : Promise.resolve(null),
+            getCorporateDocumentSettings(),
+        ]);
 
         if (!invoice || invoice.status !== "issued") {
             return NextResponse.json(
@@ -141,16 +142,15 @@ export async function GET(
         ]
             .filter(Boolean)
             .join(", ");
-        const sellerAddress = [
-            confidential?.addressLine1,
-            confidential?.addressLine2,
-            confidential?.city,
-            confidential?.state,
-            confidential?.postalCode,
-            confidential?.country,
-        ]
-            .filter(Boolean)
-            .join(", ");
+        const receiptVoucher = invoice.receiptVoucherId
+            ? await db.query.corporateReceiptVouchers.findFirst({
+                  where: eq(
+                      corporateReceiptVouchers.id,
+                      invoice.receiptVoucherId
+                  ),
+              })
+            : null;
+        const sellerAddress = corporatePartyAddress(settings);
         const downloadUrl = `${new URL(request.url).origin}/api/corporate-orders/${order.id}/invoice.pdf`;
         const qrCodeDataUrl = await QRCode.toDataURL(downloadUrl, {
             errorCorrectionLevel: "M",
@@ -159,9 +159,26 @@ export async function GET(
         });
 
         const data: CorporateTaxInvoiceData = {
-            invoice,
+            invoice: {
+                ...invoice,
+                receiptVoucherNumber: receiptVoucher?.voucherNumber ?? null,
+            },
             order: {
                 ...order,
+                eWayBillNumber: text(
+                    (
+                        order.shipment?.rawPayload as Record<
+                            string,
+                            unknown
+                        > | null
+                    )?.eWayBillNumber ??
+                        (
+                            order.shipment?.rawPayload as Record<
+                                string,
+                                unknown
+                            > | null
+                        )?.ewayBillNumber
+                ),
                 paymentMethod: "prepaid",
                 paymentId:
                     order.paymentReference ??
@@ -169,24 +186,27 @@ export async function GET(
                     "Not available",
             },
             seller: {
-                name: order.brand.name,
-                logoUrl: order.brand.logoUrl,
-                email: order.brand.email,
-                phone: order.brand.phone,
-                gstin: confidential?.gstin,
+                name: RENIVET_CORPORATE_SELLER_NAME,
+                logoUrl:
+                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqU6nAZGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
+                email: settings.email,
+                phone: settings.phone,
+                gstin: settings.gstin,
+                cin: settings.cin,
                 address: sellerAddress || "Not provided",
-                addressLine1: confidential?.addressLine1,
-                addressLine2: confidential?.addressLine2,
-                city: confidential?.city,
-                state: confidential?.state,
-                postalCode: confidential?.postalCode,
-                country: confidential?.country,
-                bankName: confidential?.bankName,
-                bankAccountHolderName: confidential?.bankAccountHolderName,
-                bankAccountNumber: confidential?.bankAccountNumber,
-                bankAccountType: confidential?.bankAccountType,
-                bankIfscCode: confidential?.bankIfscCode,
-                authorizedSignatoryName: confidential?.authorizedSignatoryName,
+                addressLine1: settings.addressLine1,
+                addressLine2: settings.addressLine2,
+                city: settings.city,
+                state: settings.state,
+                postalCode: settings.postalCode,
+                country: settings.country,
+                bankName: settings.bankName,
+                bankAccountHolderName: settings.bankAccountName,
+                bankAccountNumber: settings.bankAccountNumber,
+                bankAccountType: settings.bankAccountType,
+                bankIfscCode: settings.bankIfscCode,
+                bankBranch: settings.bankBranch,
+                authorizedSignatoryName: settings.authorizedSignatoryName,
             },
             buyer: {
                 companyName: profile?.companyName ?? order.companyName,
@@ -219,15 +239,24 @@ export async function GET(
         for await (const chunk of stream) {
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
         }
-        const safeInvoiceNumber = invoice.invoiceNumber.replace(
+        const displayedInvoiceNumber = invoice.invoiceNumber.startsWith("CINV/")
+            ? invoice.invoiceNumber
+            : corporateDocumentNumber(
+                  "CINV",
+                  order.sequenceNo,
+                  invoice.invoiceDate ?? new Date()
+              );
+        const safeInvoiceNumber = displayedInvoiceNumber.replace(
             /[^a-z0-9_-]+/gi,
             "_"
         );
+        const paymentStage =
+            order.balanceDuePaise > 0 ? "partial-payment" : "paid-in-full";
 
         return new NextResponse(Buffer.concat(chunks), {
             headers: {
                 "Content-Type": "application/pdf",
-                "Content-Disposition": `attachment; filename="corporate-tax-invoice_${safeInvoiceNumber}.pdf"`,
+                "Content-Disposition": `attachment; filename="corporate-${paymentStage}-invoice_${safeInvoiceNumber}.pdf"`,
                 "Cache-Control": "private, no-store",
             },
         });

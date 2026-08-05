@@ -1,33 +1,39 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { corporateDocumentService } from "@/lib/services/corporate-documents";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
-import { corporateOrderWorkflowStatusSchema } from "@/lib/validations/corporate-order";
-import {
-    corporateCatalogListInputSchema,
-    corporateApprovedQuoteOrderInputSchema,
-    corporateForwardOrderInputSchema,
-    corporateProfileInputSchema,
-    corporatePickupScheduleInputSchema,
-    corporateReportInputSchema,
-    corporatePurchaseOrderInputSchema,
-    corporatePurchaseOrderReviewInputSchema,
-    corporatePaymentInputSchema,
-    corporateQcSubmissionInputSchema,
-    corporateProformaInvoiceInputSchema,
-    corporateReplacementRequestInputSchema,
-    corporateReplacementReviewInputSchema,
-    corporateQuoteDecisionInputSchema,
-    corporateQuoteInputSchema,
-    corporateQuoteRevisionInputSchema,
-    corporateRfqInputSchema,
-    corporateShipmentInputSchema,
-    corporateTaskInputSchema,
-    corporateTaxInvoiceInputSchema,
-} from "@/lib/validations/corporate-platform";
 import {
     createTRPCRouter,
     isTRPCAuth,
     protectedProcedure,
 } from "@/lib/trpc/trpc";
+import { corporateOrderWorkflowStatusSchema } from "@/lib/validations/corporate-order";
+import {
+    corporateApprovedQuoteOrderInputSchema,
+    corporateBrandTaxInvoiceInputSchema,
+    corporateBrandTaxInvoiceReviewInputSchema,
+    corporateCatalogListInputSchema,
+    corporateDeliveryChallanInputSchema,
+    corporateDocumentSettingsInputSchema,
+    corporateForwardOrderInputSchema,
+    corporatePaymentInputSchema,
+    corporatePickupScheduleInputSchema,
+    corporateProfileInputSchema,
+    corporateProformaInvoiceInputSchema,
+    corporatePurchaseOrderInputSchema,
+    corporatePurchaseOrderReviewInputSchema,
+    corporateQcSubmissionInputSchema,
+    corporateQuoteDecisionInputSchema,
+    corporateQuoteInputSchema,
+    corporateQuoteRevisionInputSchema,
+    corporateReplacementRequestInputSchema,
+    corporateReplacementReviewInputSchema,
+    corporateReportInputSchema,
+    corporateRfqInputSchema,
+    corporateShipmentInputSchema,
+    corporateTaskInputSchema,
+    corporateTaxInvoiceInputSchema,
+    corporateVendorPurchaseOrderInputSchema,
+} from "@/lib/validations/corporate-platform";
 import { z } from "zod";
 
 export const corporatePlatformRouter = createTRPCRouter({
@@ -67,7 +73,10 @@ export const corporatePlatformRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateQuoteRevisionInputSchema)
         .mutation(({ ctx, input }) => {
-            return corporatePlatformService.addQuoteRevision(ctx.user.id, input);
+            return corporatePlatformService.addQuoteRevision(
+                ctx.user.id,
+                input
+            );
         }),
     listMyQuotes: protectedProcedure.query(({ ctx }) => {
         return corporatePlatformService.listMyQuotes(ctx.user.id);
@@ -105,13 +114,19 @@ export const corporatePlatformRouter = createTRPCRouter({
     createPurchaseOrder: protectedProcedure
         .input(corporatePurchaseOrderInputSchema)
         .mutation(({ ctx, input }) => {
-            return corporatePlatformService.createPurchaseOrder(ctx.user.id, input);
+            return corporatePlatformService.createPurchaseOrder(
+                ctx.user.id,
+                input
+            );
         }),
     reviewPurchaseOrder: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporatePurchaseOrderReviewInputSchema)
         .mutation(({ ctx, input }) => {
-            return corporatePlatformService.reviewPurchaseOrder(ctx.user.id, input);
+            return corporatePlatformService.reviewPurchaseOrder(
+                ctx.user.id,
+                input
+            );
         }),
     createOrderFromApprovedQuote: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
@@ -143,7 +158,10 @@ export const corporatePlatformRouter = createTRPCRouter({
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateForwardOrderInputSchema)
         .mutation(({ ctx, input }) => {
-            return corporatePlatformService.createForwardOrder(ctx.user.id, input);
+            return corporatePlatformService.createForwardOrder(
+                ctx.user.id,
+                input
+            );
         }),
     scheduleCorporatePickup: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
@@ -247,6 +265,56 @@ export const corporatePlatformRouter = createTRPCRouter({
                 ctx.user.id,
                 input.brandId
             );
+        }),
+    getOrderDocumentChain: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
+        .input(z.object({ orderId: z.string().uuid() }))
+        .query(({ input }) => {
+            return corporateDocumentService.getOrderDocumentChain(
+                input.orderId
+            );
+        }),
+    issueVendorPurchaseOrder: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateVendorPurchaseOrderInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporateDocumentService.issueVendorPurchaseOrder(
+                ctx.user.id,
+                input
+            );
+        }),
+    recordBrandTaxInvoice: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateBrandTaxInvoiceInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporateDocumentService.recordBrandTaxInvoice(
+                ctx.user.id,
+                input
+            );
+        }),
+    reviewBrandTaxInvoice: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateBrandTaxInvoiceReviewInputSchema)
+        .mutation(({ input }) => {
+            return corporateDocumentService.reviewBrandTaxInvoice(input);
+        }),
+    issueDeliveryChallan: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateDeliveryChallanInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporateDocumentService.issueDeliveryChallan(
+                ctx.user.id,
+                input
+            );
+        }),
+    getCorporateDocumentSettings: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.VIEW_ORDERS))
+        .query(() => corporateDocumentService.getSettings()),
+    updateCorporateDocumentSettings: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_SETTINGS))
+        .input(corporateDocumentSettingsInputSchema)
+        .mutation(({ input }) => {
+            return corporateDocumentService.updateSettings(input);
         }),
     updateBrandAssignedOrderStatus: protectedProcedure
         .input(

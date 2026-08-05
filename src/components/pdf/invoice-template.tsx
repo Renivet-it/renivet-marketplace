@@ -7,6 +7,7 @@ import {
     Text,
     View,
 } from "@react-pdf/renderer";
+import React from "react";
 
 Font.register({
     family: "NotoSans",
@@ -236,7 +237,14 @@ const formatAddress = (parts: Array<string | null | undefined>) =>
     "Not provided";
 
 const styles = StyleSheet.create({
-    page: { padding: 26, fontFamily: "NotoSans", fontSize: 7.4, color: ink },
+    page: {
+        paddingTop: 26,
+        paddingHorizontal: 26,
+        paddingBottom: 16,
+        fontFamily: "NotoSans",
+        fontSize: 7.4,
+        color: ink,
+    },
     header: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -410,8 +418,8 @@ const styles = StyleSheet.create({
     bankLabel: { width: "35%", color: "#66756a" },
     bankValue: { width: "65%", color: "#334155" },
     legalNotes: {
-        marginTop: 10,
-        paddingTop: 6,
+        marginTop: 7,
+        paddingTop: 4,
         borderTopWidth: 1,
         borderTopColor: line,
         fontSize: 6.5,
@@ -419,22 +427,25 @@ const styles = StyleSheet.create({
         color: "#526254",
     },
     footer: {
-        marginTop: 8,
+        position: "absolute",
+        bottom: 8,
+        left: 26,
+        right: 26,
         borderTopWidth: 1,
         borderTopColor: line,
-        paddingTop: 7,
+        paddingTop: 4,
         flexDirection: "row",
         justifyContent: "space-between",
         alignItems: "center",
     },
     footerText: {
         width: "82%",
-        fontSize: 6.5,
+        fontSize: 6.2,
         color: "#66756a",
     },
     footerLogo: {
         width: 62,
-        height: 18,
+        height: 14,
         objectFit: "contain",
         objectPosition: "right",
     },
@@ -486,12 +497,18 @@ export type InvoiceOrder = {
     qrCodeDataUrl?: string;
     poReference?: string | null;
     poDate?: string | Date | null;
+    receiptVoucherNumber?: string | null;
+    balanceDueDate?: string | Date | null;
+    eWayBillNumber?: string | null;
     displayUnitPricing?: boolean;
+    declarationCompanyName?: string;
+    sellerOfRecord?: boolean;
     paymentSummary?: {
-        partialPaymentPercentBps: number;
-        partialPaymentRequiredPaise: number;
+        paymentStatus: "unpaid" | "partially_paid" | "paid_in_full";
+        paymentPercentBps: number;
+        paidAmountPaise: number;
         fullPaymentAmountPaise: number;
-        balanceAfterPartialPaise: number;
+        balanceDuePaise: number;
     };
     taxSummary?: {
         taxableValuePaise: number;
@@ -676,6 +693,13 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
     const customerType = order.customerGstin?.trim()
         ? "Registered"
         : "Unregistered";
+    const paymentStatusLabel = order.paymentSummary
+        ? {
+              unpaid: "Payment pending",
+              partially_paid: "Partially paid",
+              paid_in_full: "Paid in full",
+          }[order.paymentSummary.paymentStatus]
+        : null;
     const shipFromAddress =
         seller?.isSameAsWarehouseAddress === false
             ? formatAddress([
@@ -702,6 +726,9 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         <Text style={styles.title}>TAX INVOICE</Text>
                         <Text style={styles.subtitle}>
                             {copyLabels[order.copyType ?? "original"]}
+                            {paymentStatusLabel
+                                ? ` | ${paymentStatusLabel}`
+                                : ""}
                         </Text>
                     </View>
                 </View>
@@ -803,17 +830,21 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         ...(order.paymentSummary
                             ? [
                                   [
-                                      `Partial required (${order.paymentSummary.partialPaymentPercentBps / 100}%)`,
+                                      "Payment status",
+                                      paymentStatusLabel ?? "Payment pending",
+                                  ],
+                                  [
+                                      order.receiptVoucherNumber
+                                          ? `Advance received (${order.receiptVoucherNumber})`
+                                          : `Amount paid (${order.paymentSummary.paymentPercentBps / 100}%)`,
                                       money(
-                                          order.paymentSummary
-                                              .partialPaymentRequiredPaise
+                                          order.paymentSummary.paidAmountPaise
                                       ),
                                   ],
                                   [
-                                      "Full payment amount",
+                                      "Balance due",
                                       money(
-                                          order.paymentSummary
-                                              .fullPaymentAmountPaise
+                                          order.paymentSummary.balanceDuePaise
                                       ),
                                   ],
                               ]
@@ -823,12 +854,12 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             key={label}
                             style={[
                                 styles.metaCell,
-                                index === (order.paymentSummary ? 4 : 2)
+                                index === (order.paymentSummary ? 5 : 2)
                                     ? styles.metaLast
                                     : {},
                                 {
                                     width: order.paymentSummary
-                                        ? "20%"
+                                        ? "16.666%"
                                         : "33.333%",
                                 },
                             ]}
@@ -847,12 +878,20 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         ["Nature of supply", "Goods"],
                         ["Reverse Charge", "No"],
                         ["Customer Type", customerType],
+                        ...(order.eWayBillNumber
+                            ? [["E-way bill", order.eWayBillNumber]]
+                            : []),
                     ].map(([label, value], index) => (
                         <View
                             key={label}
                             style={[
                                 styles.metaCell,
-                                index % 3 === 2 ? styles.metaLast : {},
+                                index === (order.eWayBillNumber ? 4 : 3)
+                                    ? styles.metaLast
+                                    : {},
+                                {
+                                    width: order.eWayBillNumber ? "20%" : "25%",
+                                },
                             ]}
                         >
                             <Text style={styles.metaLabel}>{label}</Text>
@@ -1039,6 +1078,39 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                   ]
                                 : []),
                             ["Invoice total", money(invoiceTotal)],
+                            ...(order.paymentSummary
+                                ? [
+                                      [
+                                          order.receiptVoucherNumber
+                                              ? `Less: advance (${order.receiptVoucherNumber})`
+                                              : `Amount paid (${order.paymentSummary.paymentPercentBps / 100}%)`,
+                                          money(
+                                              order.paymentSummary
+                                                  .paidAmountPaise
+                                          ),
+                                      ],
+                                      [
+                                          "Balance due",
+                                          money(
+                                              order.paymentSummary
+                                                  .balanceDuePaise
+                                          ),
+                                      ],
+                                      ...(order.balanceDueDate &&
+                                      order.paymentSummary.balanceDuePaise > 0
+                                          ? [
+                                                [
+                                                    "Due date",
+                                                    new Date(
+                                                        order.balanceDueDate
+                                                    ).toLocaleDateString(
+                                                        "en-IN"
+                                                    ),
+                                                ],
+                                            ]
+                                          : []),
+                                  ]
+                                : []),
                         ].map(([label, value], index, rows) => (
                             <View
                                 key={label}
@@ -1097,7 +1169,9 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                                 particulars are true and correct.
                             </Text>
                             <Text style={[styles.signature, { marginTop: 10 }]}>
-                                For {order.brand.name}
+                                For{" "}
+                                {order.declarationCompanyName ??
+                                    order.brand.name}
                                 {"\n"}
                                 {seller?.authorizedSignatoryName ??
                                     "Authorised Signatory"}
@@ -1111,18 +1185,18 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         specified.
                     </Text>
                     <Text>
-                        * This transaction is between{" "}
-                        {seller?.bankAccountHolderName ?? order.brand.name} and
-                        the customer. Renivet facilitates payment collection and
-                        logistics on the seller&apos;s behalf.
+                        {order.sellerOfRecord
+                            ? "* This is a direct B2B sale by Renivet, the seller of record, to the corporate customer."
+                            : `* This transaction is between ${seller?.bankAccountHolderName ?? order.brand.name} and the customer. Renivet facilitates payment collection and logistics on the seller's behalf.`}
                     </Text>
                     <Text>* This is a computer-generated tax invoice.</Text>
+                    <Text>* E&amp;OE - Errors and Omissions Excepted.</Text>
                     <Text>
                         * Goods once sold are subject to the applicable return
                         and exchange policy.
                     </Text>
                 </View>
-                <View style={styles.footer}>
+                <View style={styles.footer} fixed>
                     <Text style={styles.footerText}>
                         If you have any questions, please use the Contact Us
                         section in the Renivet app or visit

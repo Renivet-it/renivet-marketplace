@@ -1,3 +1,4 @@
+import { CorporateDocumentSettingsPanel } from "@/components/dashboard/general/corporate-orders/corporate-document-settings-panel";
 import { CorporateOrderSettings } from "@/components/dashboard/general/corporate-orders/corporate-order-settings";
 import { CorporateOrderTabs } from "@/components/dashboard/general/corporate-orders/corporate-order-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
@@ -16,6 +17,7 @@ export default async function Page() {
         <DashShell>
             <div className="space-y-6">
                 <CorporateOrderTabs />
+                <CorporateDocumentSettingsPanel />
                 <CorporateOrderSettings initialData={initialData} />
             </div>
         </DashShell>

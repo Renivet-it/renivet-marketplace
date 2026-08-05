@@ -10,19 +10,31 @@ import {
 } from "@/lib/corporate-delivery-address";
 import { initializeRazorpayPayment } from "@/lib/razorpay/payment";
 import { trpc } from "@/lib/trpc/client";
-import { formatINR, handleClientError } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
+import { formatINR, handleClientError } from "@/lib/utils";
+import {
+    AlertTriangle,
+    ArrowUpRight,
+    CheckCircle2,
+    Clock,
+    Download,
+    Eye,
+    FileText,
+    Upload,
+    XCircle,
+} from "lucide-react";
 import { motion } from "motion/react";
 import Script from "next/script";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
-import { FileText, CheckCircle2, AlertTriangle, Clock, XCircle, ArrowUpRight, Download, Upload, Eye } from "lucide-react";
 
 function ensureRazorpaySdk() {
     return new Promise<void>((resolve, reject) => {
         if (typeof window === "undefined") {
-            reject(new Error("Razorpay checkout is only available in the browser"));
+            reject(
+                new Error("Razorpay checkout is only available in the browser")
+            );
             return;
         }
 
@@ -32,7 +44,7 @@ function ensureRazorpaySdk() {
         }
 
         const existing = document.querySelector<HTMLScriptElement>(
-            "script[src=\"https://checkout.razorpay.com/v1/checkout.js\"]"
+            'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
         );
 
         if (existing) {
@@ -75,7 +87,9 @@ export function CustomerCorporateDashboard({
     const [poFiles, setPoFiles] = useState<Record<string, File | null>>({});
     const [poNumbers, setPoNumbers] = useState<Record<string, string>>({});
     const [poScopes, setPoScopes] = useState<Record<string, string>>({});
-    const [poSignatories, setPoSignatories] = useState<Record<string, string>>({});
+    const [poSignatories, setPoSignatories] = useState<Record<string, string>>(
+        {}
+    );
     const [purchaseOrderChoice, setPurchaseOrderChoice] = useState<
         Record<string, "direct" | "purchase_order" | undefined>
     >({});
@@ -89,45 +103,53 @@ export function CustomerCorporateDashboard({
         initialQuotes[0]?.id ?? null
     );
 
-    const quoteDecision = trpc.general.corporatePlatform.decideQuote.useMutation({
-        onSuccess: async (updatedQuote) => {
-            toast.success("Quote approved");
-            setQuotes((current) =>
-                current.map((quote) =>
-                    quote.id === updatedQuote.id
-                        ? {
-                              ...quote,
-                              ...updatedQuote,
-                          }
-                        : quote
-                )
-            );
-            setActiveTab("quotes");
-            await Promise.all([
-                utils.general.corporatePlatform.listMyQuotes.invalidate(),
-                utils.general.corporatePlatform.listMyRfqs.invalidate(),
-            ]);
-        },
-        onError: (error) => handleClientError(error),
-    });
+    const quoteDecision =
+        trpc.general.corporatePlatform.decideQuote.useMutation({
+            onSuccess: async (updatedQuote) => {
+                toast.success("Quote approved");
+                setQuotes((current) =>
+                    current.map((quote) =>
+                        quote.id === updatedQuote.id
+                            ? {
+                                  ...quote,
+                                  ...updatedQuote,
+                              }
+                            : quote
+                    )
+                );
+                setActiveTab("quotes");
+                await Promise.all([
+                    utils.general.corporatePlatform.listMyQuotes.invalidate(),
+                    utils.general.corporatePlatform.listMyRfqs.invalidate(),
+                ]);
+            },
+            onError: (error) => handleClientError(error),
+        });
 
-    const createPo = trpc.general.corporatePlatform.createPurchaseOrder.useMutation({
-        onSuccess: async (createdPurchaseOrder) => {
-            toast.success("Purchase order uploaded");
-            setPurchaseOrders((current) => [createdPurchaseOrder, ...current]);
-            setPurchaseOrderChoice((current) => ({
-                ...current,
-                [createdPurchaseOrder.quoteId]: "purchase_order",
-            }));
-            setOrderSetupQuoteId(createdPurchaseOrder.quoteId);
-            setActiveTab("order-setup");
-            await Promise.all([
-                utils.general.corporatePlatform.listMyQuotes.invalidate(),
-                utils.general.corporatePlatform.listMyRfqs.invalidate(),
-            ]);
-        },
-        onError: (error) => handleClientError(error),
-    });
+    const createPo =
+        trpc.general.corporatePlatform.createPurchaseOrder.useMutation({
+            onSuccess: async (createdPurchaseOrder) => {
+                toast.success("Purchase order uploaded");
+                setPurchaseOrders((current) => [
+                    createdPurchaseOrder,
+                    ...current,
+                ]);
+                const createdQuoteId = createdPurchaseOrder.quoteId;
+                if (createdQuoteId) {
+                    setPurchaseOrderChoice((current) => ({
+                        ...current,
+                        [createdQuoteId]: "purchase_order",
+                    }));
+                    setOrderSetupQuoteId(createdQuoteId);
+                }
+                setActiveTab("order-setup");
+                await Promise.all([
+                    utils.general.corporatePlatform.listMyQuotes.invalidate(),
+                    utils.general.corporatePlatform.listMyRfqs.invalidate(),
+                ]);
+            },
+            onError: (error) => handleClientError(error),
+        });
     const createBalancePaymentOrder =
         trpc.general.corporateOrders.createBalancePaymentOrder.useMutation({
             onError: (error) => handleClientError(error),
@@ -151,7 +173,12 @@ export function CustomerCorporateDashboard({
             const poNumber = poNumbers[quote.id];
             const productScopeSummary = poScopes[quote.id];
             const authorizedSignatoryName = poSignatories[quote.id];
-            if (!file || !poNumber || !productScopeSummary || !authorizedSignatoryName) {
+            if (
+                !file ||
+                !poNumber ||
+                !productScopeSummary ||
+                !authorizedSignatoryName
+            ) {
                 return toast.error(
                     "Add purchase order number, product scope, authorized signatory, and the uploaded file"
                 );
@@ -177,7 +204,9 @@ export function CustomerCorporateDashboard({
                     size: uploadedFile.size,
                     url: uploadedFile.url,
                     key: uploadedFile.key,
-                    type: (uploadedFile as any).type ?? "application/octet-stream",
+                    type:
+                        (uploadedFile as any).type ??
+                        "application/octet-stream",
                 },
             });
         } catch (error) {
@@ -195,9 +224,12 @@ export function CustomerCorporateDashboard({
         (order) => order.status === "delivered"
     ).length;
     const quotesNeedingAction = quotes.filter((quote) =>
-        ["sent", "quote_sent", "customer_review", "revision_requested"].includes(
-            String(quote.status)
-        )
+        [
+            "sent",
+            "quote_sent",
+            "customer_review",
+            "revision_requested",
+        ].includes(String(quote.status))
     );
     const purchaseOrderByQuoteId = new Map(
         purchaseOrders
@@ -275,7 +307,7 @@ export function CustomerCorporateDashboard({
     return (
         <div className="w-full space-y-8 pb-6 font-sans">
             <Script src="https://checkout.razorpay.com/v1/checkout.js" />
-            
+
             {/* Header / Hero Section */}
             <section className="overflow-hidden rounded-[32px] border border-[#e8e5db] bg-[linear-gradient(135deg,#faf9f5_0%,#f5f6f2_50%,#ffffff_100%)] shadow-[0_30px_80px_-55px_rgba(49,58,31,0.15)]">
                 <div className="grid gap-6 p-6 md:p-8 xl:grid-cols-[minmax(0,1.55fr)_320px]">
@@ -283,7 +315,7 @@ export function CustomerCorporateDashboard({
                         <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#4b7c37]">
                             Corporate Procurement Hub
                         </p>
-                        <h1 className="mt-4 max-w-3xl font-serif font-playfair text-3xl font-semibold leading-tight text-slate-900 md:text-4xl 2xl:text-5xl">
+                        <h1 className="mt-4 max-w-3xl font-playfair font-serif text-3xl font-semibold leading-tight text-slate-900 md:text-4xl 2xl:text-5xl">
                             Corporate buying made simple for your team
                         </h1>
                         <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
@@ -315,7 +347,7 @@ export function CustomerCorporateDashboard({
                     <div className="space-y-4 xl:pl-2">
                         <SurfacePanel
                             title="Company Snapshot"
-                            className="bg-white/85 backdrop-blur border-[#e8e5db]"
+                            className="border-[#e8e5db] bg-white/85 backdrop-blur"
                         >
                             {initialProfile ? (
                                 <div className="space-y-4">
@@ -342,7 +374,7 @@ export function CustomerCorporateDashboard({
                         <SurfacePanel
                             title="What happens next"
                             description="After approval, buyers can continue directly into order setup or upload a company purchase order first."
-                            className="bg-[linear-gradient(135deg,#ffffff_0%,#faf9f5_100%)] border-[#e8e5db]"
+                            className="border-[#e8e5db] bg-[linear-gradient(135deg,#ffffff_0%,#faf9f5_100%)]"
                         >
                             <div className="space-y-3">
                                 <MiniPill
@@ -408,22 +440,39 @@ export function CustomerCorporateDashboard({
                 <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.15)]">
                     <TabsList
                         className={`grid h-auto w-full grid-cols-2 gap-2 rounded-[22px] bg-slate-50 p-2 ${
-                            unlockedQuotes.length ? "md:grid-cols-6" : "md:grid-cols-5"
+                            unlockedQuotes.length
+                                ? "md:grid-cols-6"
+                                : "md:grid-cols-5"
                         }`}
                     >
-                        <TabsTrigger value="overview" className="rounded-[18px] py-3 text-sm font-semibold transition-all">
+                        <TabsTrigger
+                            value="overview"
+                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                        >
                             Overview
                         </TabsTrigger>
-                        <TabsTrigger value="requests" className="rounded-[18px] py-3 text-sm font-semibold transition-all">
+                        <TabsTrigger
+                            value="requests"
+                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                        >
                             Requests
                         </TabsTrigger>
-                        <TabsTrigger value="quotes" className="rounded-[18px] py-3 text-sm font-semibold transition-all">
+                        <TabsTrigger
+                            value="quotes"
+                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                        >
                             Quotes
                         </TabsTrigger>
-                        <TabsTrigger value="orders" className="rounded-[18px] py-3 text-sm font-semibold transition-all">
+                        <TabsTrigger
+                            value="orders"
+                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                        >
                             Orders
                         </TabsTrigger>
-                        <TabsTrigger value="company" className="rounded-[18px] py-3 text-sm font-semibold transition-all">
+                        <TabsTrigger
+                            value="company"
+                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                        >
                             Company
                         </TabsTrigger>
                         {unlockedQuotes.length ? (
@@ -448,29 +497,43 @@ export function CustomerCorporateDashboard({
                             <SurfacePanel
                                 title="Quotes Requiring Action"
                                 description="The most important area for your team to review and approve quotations."
-                                className="xl:col-span-6 border-[#e8e5db]"
+                                className="border-[#e8e5db] xl:col-span-6"
                             >
                                 <div className="space-y-3">
-                                    {quotesNeedingAction.slice(0, 3).map((quote) => (
-                                        <div key={quote.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 bg-[#faf9f5]/40 hover:bg-[#faf9f5]/85 transition duration-150 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-                                            <div>
-                                                <span className="text-sm font-semibold text-slate-900">{quote.quoteNumber}</span>
-                                                <div className="mt-1 text-xs text-slate-500">
-                                                    {formatINR(quote.totalAmountPaise)} • {quote.brand?.name ?? "Renivet"}
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    setSelectedQuoteId(quote.id);
-                                                    setActiveTab("quotes");
-                                                }}
-                                                className="text-xs font-semibold text-white bg-[#2f3720] hover:bg-[#1e2314] px-4 py-2 rounded-full transition"
+                                    {quotesNeedingAction
+                                        .slice(0, 3)
+                                        .map((quote) => (
+                                            <div
+                                                key={quote.id}
+                                                className="flex items-center justify-between rounded-2xl border border-slate-100 bg-[#faf9f5]/40 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition duration-150 hover:bg-[#faf9f5]/85"
                                             >
-                                                Review
-                                            </button>
-                                        </div>
-                                    ))}
+                                                <div>
+                                                    <span className="text-sm font-semibold text-slate-900">
+                                                        {quote.quoteNumber}
+                                                    </span>
+                                                    <div className="mt-1 text-xs text-slate-500">
+                                                        {formatINR(
+                                                            quote.totalAmountPaise
+                                                        )}{" "}
+                                                        •{" "}
+                                                        {quote.brand?.name ??
+                                                            "Renivet"}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setSelectedQuoteId(
+                                                            quote.id
+                                                        );
+                                                        setActiveTab("quotes");
+                                                    }}
+                                                    className="rounded-full bg-[#2f3720] px-4 py-2 text-xs font-semibold text-white transition hover:bg-[#1e2314]"
+                                                >
+                                                    Review
+                                                </button>
+                                            </div>
+                                        ))}
                                     {quotesNeedingAction.length === 0 && (
                                         <Empty label="No quotes require action right now." />
                                     )}
@@ -480,7 +543,7 @@ export function CustomerCorporateDashboard({
                             <SurfacePanel
                                 title="Recent Requests"
                                 description="Track the latest quotation requests your team has submitted."
-                                className="xl:col-span-3 border-[#e8e5db]"
+                                className="border-[#e8e5db] xl:col-span-3"
                             >
                                 {initialRfqs.length ? (
                                     <div className="space-y-3">
@@ -491,14 +554,22 @@ export function CustomerCorporateDashboard({
                                                     setSelectedRfqId(rfq.id);
                                                     setActiveTab("requests");
                                                 }}
-                                                className="cursor-pointer rounded-[22px] border border-slate-200 bg-slate-50 p-4 hover:border-[#4b7c37] hover:bg-[#faf9f5]/60 transition duration-150"
+                                                className="cursor-pointer rounded-[22px] border border-slate-200 bg-slate-50 p-4 transition duration-150 hover:border-[#4b7c37] hover:bg-[#faf9f5]/60"
                                             >
-                                                <div className="flex justify-between items-start">
+                                                <div className="flex items-start justify-between">
                                                     <div>
-                                                        <div className="font-semibold text-slate-900">{rfq.rfqNumber}</div>
-                                                        <div className="mt-1 text-xs text-slate-600 line-clamp-1">{rfq.useCase}</div>
+                                                        <div className="font-semibold text-slate-900">
+                                                            {rfq.rfqNumber}
+                                                        </div>
+                                                        <div className="mt-1 line-clamp-1 text-xs text-slate-600">
+                                                            {rfq.useCase}
+                                                        </div>
                                                     </div>
-                                                    <StatusChip label={toLabel(rfq.status)} />
+                                                    <StatusChip
+                                                        label={toLabel(
+                                                            rfq.status
+                                                        )}
+                                                    />
                                                 </div>
                                             </div>
                                         ))}
@@ -511,28 +582,44 @@ export function CustomerCorporateDashboard({
                             <SurfacePanel
                                 title="Current Orders"
                                 description="Live visibility into active corporate orders."
-                                className="xl:col-span-3 border-[#e8e5db]"
+                                className="border-[#e8e5db] xl:col-span-3"
                             >
                                 {initialOrders.length ? (
                                     <div className="space-y-3">
-                                        {initialOrders.slice(0, 3).map((order) => (
-                                            <div
-                                                key={order.id}
-                                                onClick={() => {
-                                                    setSelectedOrderId(order.id);
-                                                    setActiveTab("orders");
-                                                }}
-                                                className="cursor-pointer rounded-[22px] border border-slate-200 bg-slate-50 p-4 hover:border-[#4b7c37] hover:bg-[#faf9f5]/60 transition duration-150"
-                                            >
-                                                <div className="flex justify-between items-start">
-                                                    <div>
-                                                        <div className="font-semibold text-slate-900">{order.publicOrderId}</div>
-                                                        <div className="mt-1 text-xs text-slate-600">{formatINR(order.totalPaise)}</div>
+                                        {initialOrders
+                                            .slice(0, 3)
+                                            .map((order) => (
+                                                <div
+                                                    key={order.id}
+                                                    onClick={() => {
+                                                        setSelectedOrderId(
+                                                            order.id
+                                                        );
+                                                        setActiveTab("orders");
+                                                    }}
+                                                    className="cursor-pointer rounded-[22px] border border-slate-200 bg-slate-50 p-4 transition duration-150 hover:border-[#4b7c37] hover:bg-[#faf9f5]/60"
+                                                >
+                                                    <div className="flex items-start justify-between">
+                                                        <div>
+                                                            <div className="font-semibold text-slate-900">
+                                                                {
+                                                                    order.publicOrderId
+                                                                }
+                                                            </div>
+                                                            <div className="mt-1 text-xs text-slate-600">
+                                                                {formatINR(
+                                                                    order.totalPaise
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <StatusChip
+                                                            label={toLabel(
+                                                                order.status
+                                                            )}
+                                                        />
                                                     </div>
-                                                    <StatusChip label={toLabel(order.status)} />
                                                 </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
                                 ) : (
                                     <Empty label="No corporate orders yet." />
@@ -559,54 +646,96 @@ export function CustomerCorporateDashboard({
                                 <div className="space-y-6">
                                     <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-full text-left border-collapse">
-                                                <thead className="bg-slate-50 border-b border-slate-100">
-                                                    <tr className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold">
-                                                        <th className="px-6 py-4">RFQ Number</th>
-                                                        <th className="px-6 py-4">Date Created</th>
-                                                        <th className="px-6 py-4">Use Case</th>
-                                                        <th className="px-6 py-4">Target Quantity</th>
-                                                        <th className="px-6 py-4">Procurement Mode</th>
-                                                        <th className="px-6 py-4">Status</th>
-                                                        <th className="px-6 py-4 text-right">Action</th>
+                                            <table className="min-w-full border-collapse text-left">
+                                                <thead className="border-b border-slate-100 bg-slate-50">
+                                                    <tr className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                        <th className="px-6 py-4">
+                                                            RFQ Number
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Date Created
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Use Case
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Target Quantity
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Procurement Mode
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Status
+                                                        </th>
+                                                        <th className="px-6 py-4 text-right">
+                                                            Action
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
                                                     {initialRfqs.map((rfq) => {
-                                                        const isSelected = selectedRfqId === rfq.id;
+                                                        const isSelected =
+                                                            selectedRfqId ===
+                                                            rfq.id;
                                                         return (
                                                             <tr
                                                                 key={rfq.id}
-                                                                onClick={() => setSelectedRfqId(rfq.id)}
+                                                                onClick={() =>
+                                                                    setSelectedRfqId(
+                                                                        rfq.id
+                                                                    )
+                                                                }
                                                                 className={`cursor-pointer transition-colors duration-150 hover:bg-[#faf9f5]/50 ${
-                                                                    isSelected ? "bg-[#faf9f5]" : "bg-white"
+                                                                    isSelected
+                                                                        ? "bg-[#faf9f5]"
+                                                                        : "bg-white"
                                                                 }`}
                                                             >
                                                                 <td className="px-6 py-4 font-semibold text-slate-900">
-                                                                    {rfq.rfqNumber}
+                                                                    {
+                                                                        rfq.rfqNumber
+                                                                    }
                                                                 </td>
                                                                 <td className="px-6 py-4 text-sm text-slate-500">
-                                                                    {new Date(rfq.createdAt).toLocaleDateString("en-IN")}
+                                                                    {new Date(
+                                                                        rfq.createdAt
+                                                                    ).toLocaleDateString(
+                                                                        "en-IN"
+                                                                    )}
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm text-slate-700 max-w-[200px] truncate">
-                                                                    {rfq.useCase}
+                                                                <td className="max-w-[200px] truncate px-6 py-4 text-sm text-slate-700">
+                                                                    {
+                                                                        rfq.useCase
+                                                                    }
                                                                 </td>
                                                                 <td className="px-6 py-4 text-sm font-medium text-slate-900">
-                                                                    {rfq.quantity}
+                                                                    {
+                                                                        rfq.quantity
+                                                                    }
                                                                 </td>
                                                                 <td className="px-6 py-4 text-sm text-slate-600">
-                                                                    {toLabel(rfq.procurementMode)}
+                                                                    {toLabel(
+                                                                        rfq.procurementMode
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-6 py-4">
-                                                                    <StatusChip label={toLabel(rfq.status)} />
+                                                                    <StatusChip
+                                                                        label={toLabel(
+                                                                            rfq.status
+                                                                        )}
+                                                                    />
                                                                 </td>
                                                                 <td className="px-6 py-4 text-right">
                                                                     <button
                                                                         type="button"
                                                                         className="text-xs font-bold text-[#4b7c37] hover:underline"
-                                                                        onClick={(e) => {
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
                                                                             e.stopPropagation();
-                                                                            setSelectedRfqId(rfq.id);
+                                                                            setSelectedRfqId(
+                                                                                rfq.id
+                                                                            );
                                                                         }}
                                                                     >
                                                                         Details
@@ -621,8 +750,15 @@ export function CustomerCorporateDashboard({
                                     </div>
 
                                     {/* Detailed view of selected RFQ */}
-                                    {selectedRfqId && initialRfqs.find((r) => r.id === selectedRfqId) ? (
-                                        <CustomerCorporateRfqDetailPanel rfq={initialRfqs.find((r) => r.id === selectedRfqId)} />
+                                    {selectedRfqId &&
+                                    initialRfqs.find(
+                                        (r) => r.id === selectedRfqId
+                                    ) ? (
+                                        <CustomerCorporateRfqDetailPanel
+                                            rfq={initialRfqs.find(
+                                                (r) => r.id === selectedRfqId
+                                            )}
+                                        />
                                     ) : null}
                                 </div>
                             ) : (
@@ -649,54 +785,96 @@ export function CustomerCorporateDashboard({
                                 <div className="space-y-6">
                                     <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-full text-left border-collapse">
-                                                <thead className="bg-slate-50 border-b border-slate-100">
-                                                    <tr className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold">
-                                                        <th className="px-6 py-4">Quote Number</th>
-                                                        <th className="px-6 py-4">Brand</th>
-                                                        <th className="px-6 py-4">Quantity</th>
-                                                        <th className="px-6 py-4">Total Value</th>
-                                                        <th className="px-6 py-4">Date Received</th>
-                                                        <th className="px-6 py-4">Status</th>
-                                                        <th className="px-6 py-4 text-right">Action</th>
+                                            <table className="min-w-full border-collapse text-left">
+                                                <thead className="border-b border-slate-100 bg-slate-50">
+                                                    <tr className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                        <th className="px-6 py-4">
+                                                            Quote Number
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Brand
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Quantity
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Total Value
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Date Received
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Status
+                                                        </th>
+                                                        <th className="px-6 py-4 text-right">
+                                                            Action
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
                                                     {quotes.map((quote) => {
-                                                        const isSelected = selectedQuoteId === quote.id;
+                                                        const isSelected =
+                                                            selectedQuoteId ===
+                                                            quote.id;
                                                         return (
                                                             <tr
                                                                 key={quote.id}
-                                                                onClick={() => setSelectedQuoteId(quote.id)}
+                                                                onClick={() =>
+                                                                    setSelectedQuoteId(
+                                                                        quote.id
+                                                                    )
+                                                                }
                                                                 className={`cursor-pointer transition-colors duration-150 hover:bg-[#faf9f5]/50 ${
-                                                                    isSelected ? "bg-[#faf9f5]" : "bg-white"
+                                                                    isSelected
+                                                                        ? "bg-[#faf9f5]"
+                                                                        : "bg-white"
                                                                 }`}
                                                             >
                                                                 <td className="px-6 py-4 font-semibold text-slate-900">
-                                                                    {quote.quoteNumber}
+                                                                    {
+                                                                        quote.quoteNumber
+                                                                    }
                                                                 </td>
                                                                 <td className="px-6 py-4 text-sm text-slate-700">
-                                                                    {quote.brand?.name ?? "Renivet"}
+                                                                    {quote.brand
+                                                                        ?.name ??
+                                                                        "Renivet"}
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm text-slate-900 font-medium">
-                                                                    {quote.quantity}
+                                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                                                    {
+                                                                        quote.quantity
+                                                                    }
                                                                 </td>
                                                                 <td className="px-6 py-4 text-sm font-semibold text-slate-900">
-                                                                    {formatINR(quote.totalAmountPaise)}
+                                                                    {formatINR(
+                                                                        quote.totalAmountPaise
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-6 py-4 text-sm text-slate-500">
-                                                                    {new Date(quote.createdAt).toLocaleDateString("en-IN")}
+                                                                    {new Date(
+                                                                        quote.createdAt
+                                                                    ).toLocaleDateString(
+                                                                        "en-IN"
+                                                                    )}
                                                                 </td>
                                                                 <td className="px-6 py-4">
-                                                                    <StatusChip label={toLabel(quote.status)} />
+                                                                    <StatusChip
+                                                                        label={toLabel(
+                                                                            quote.status
+                                                                        )}
+                                                                    />
                                                                 </td>
                                                                 <td className="px-6 py-4 text-right">
                                                                     <button
                                                                         type="button"
                                                                         className="text-xs font-bold text-[#4b7c37] hover:underline"
-                                                                        onClick={(e) => {
+                                                                        onClick={(
+                                                                            e
+                                                                        ) => {
                                                                             e.stopPropagation();
-                                                                            setSelectedQuoteId(quote.id);
+                                                                            setSelectedQuoteId(
+                                                                                quote.id
+                                                                            );
                                                                         }}
                                                                     >
                                                                         Review
@@ -711,12 +889,25 @@ export function CustomerCorporateDashboard({
                                     </div>
 
                                     {/* Quote Details Action Panel */}
-                                    {selectedQuoteId && quotes.find((q) => q.id === selectedQuoteId) ? (
+                                    {selectedQuoteId &&
+                                    quotes.find(
+                                        (q) => q.id === selectedQuoteId
+                                    ) ? (
                                         <CustomerCorporateQuoteDetailPanel
-                                            quote={quotes.find((q) => q.id === selectedQuoteId)}
-                                            purchaseOrder={purchaseOrderByQuoteId.get(selectedQuoteId)}
-                                            purchaseOrderChoice={purchaseOrderChoice[selectedQuoteId]}
-                                            poNumber={poNumbers[selectedQuoteId] ?? ""}
+                                            quote={quotes.find(
+                                                (q) => q.id === selectedQuoteId
+                                            )}
+                                            purchaseOrder={purchaseOrderByQuoteId.get(
+                                                selectedQuoteId
+                                            )}
+                                            purchaseOrderChoice={
+                                                purchaseOrderChoice[
+                                                    selectedQuoteId
+                                                ]
+                                            }
+                                            poNumber={
+                                                poNumbers[selectedQuoteId] ?? ""
+                                            }
                                             onPoNumberChange={(value) =>
                                                 setPoNumbers((current) => ({
                                                     ...current,
@@ -736,34 +927,58 @@ export function CustomerCorporateDashboard({
                                                     notes: "Approved from customer dashboard",
                                                 })
                                             }
-                                            onUploadPo={() => submitPo(quotes.find((q) => q.id === selectedQuoteId))}
+                                            onUploadPo={() =>
+                                                submitPo(
+                                                    quotes.find(
+                                                        (q) =>
+                                                            q.id ===
+                                                            selectedQuoteId
+                                                    )
+                                                )
+                                            }
                                             uploadPending={createPo.isPending}
                                             onChooseDirectOrder={() => {
-                                                setPurchaseOrderChoice((current) => ({
-                                                    ...current,
-                                                    [selectedQuoteId]: "direct",
-                                                }));
-                                                setOrderSetupQuoteId(selectedQuoteId);
+                                                setPurchaseOrderChoice(
+                                                    (current) => ({
+                                                        ...current,
+                                                        [selectedQuoteId]:
+                                                            "direct",
+                                                    })
+                                                );
+                                                setOrderSetupQuoteId(
+                                                    selectedQuoteId
+                                                );
                                                 setActiveTab("order-setup");
                                             }}
                                             onChoosePurchaseOrder={() =>
-                                                setPurchaseOrderChoice((current) => ({
-                                                    ...current,
-                                                    [selectedQuoteId]: "purchase_order",
-                                                }))
+                                                setPurchaseOrderChoice(
+                                                    (current) => ({
+                                                        ...current,
+                                                        [selectedQuoteId]:
+                                                            "purchase_order",
+                                                    })
+                                                )
                                             }
                                             onContinueToOrderSetup={() => {
-                                                setOrderSetupQuoteId(selectedQuoteId);
+                                                setOrderSetupQuoteId(
+                                                    selectedQuoteId
+                                                );
                                                 setActiveTab("order-setup");
                                             }}
-                                            poScope={poScopes[selectedQuoteId] ?? ""}
+                                            poScope={
+                                                poScopes[selectedQuoteId] ?? ""
+                                            }
                                             onPoScopeChange={(value) =>
                                                 setPoScopes((current) => ({
                                                     ...current,
                                                     [selectedQuoteId]: value,
                                                 }))
                                             }
-                                            signatoryName={poSignatories[selectedQuoteId] ?? ""}
+                                            signatoryName={
+                                                poSignatories[
+                                                    selectedQuoteId
+                                                ] ?? ""
+                                            }
                                             onSignatoryNameChange={(value) =>
                                                 setPoSignatories((current) => ({
                                                     ...current,
@@ -797,79 +1012,151 @@ export function CustomerCorporateDashboard({
                                     <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
                                         <div className="overflow-x-auto">
                                             <table className="min-w-full text-left">
-                                                <thead className="bg-slate-50 border-b border-slate-100">
-                                                    <tr className="text-xs uppercase tracking-[0.18em] text-slate-500 font-semibold">
-                                                        <th className="px-6 py-4">Order ID</th>
-                                                        <th className="px-6 py-4">Value</th>
-                                                        <th className="px-6 py-4">Paid</th>
-                                                        <th className="px-6 py-4">Balance</th>
-                                                        <th className="px-6 py-4">Payment</th>
-                                                        <th className="px-6 py-4">Fulfillment</th>
-                                                        <th className="px-6 py-4 text-right">Action</th>
+                                                <thead className="border-b border-slate-100 bg-slate-50">
+                                                    <tr className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                                        <th className="px-6 py-4">
+                                                            Order ID
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Value
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Paid
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Balance
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Payment
+                                                        </th>
+                                                        <th className="px-6 py-4">
+                                                            Fulfillment
+                                                        </th>
+                                                        <th className="px-6 py-4 text-right">
+                                                            Action
+                                                        </th>
                                                     </tr>
                                                 </thead>
                                                 <tbody className="divide-y divide-slate-100">
-                                                    {initialOrders.map((order) => {
-                                                        const hasBalance = order.balanceDuePaise > 0;
-                                                        const isSelected = selectedOrderId === order.id;
+                                                    {initialOrders.map(
+                                                        (order) => {
+                                                            const hasBalance =
+                                                                order.balanceDuePaise >
+                                                                0;
+                                                            const isSelected =
+                                                                selectedOrderId ===
+                                                                order.id;
 
-                                                        return (
-                                                            <tr
-                                                                key={order.id}
-                                                                onClick={() => setSelectedOrderId(order.id)}
-                                                                className={`cursor-pointer transition-colors duration-150 hover:bg-[#faf9f5]/50 ${
-                                                                    isSelected ? "bg-[#faf9f5]" : "bg-white"
-                                                                }`}
-                                                            >
-                                                                <td className="px-6 py-4">
-                                                                    <div className="font-semibold text-slate-900">
-                                                                        {order.publicOrderId}
-                                                                    </div>
-                                                                    <div className="mt-1 text-xs text-slate-500">
-                                                                        {new Date(order.createdAt).toLocaleDateString("en-IN")}
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm font-semibold text-slate-900">
-                                                                    {formatINR(order.totalPaise)}
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm text-slate-700 font-medium">
-                                                                    {formatINR(order.advancePaidPaise)}
-                                                                </td>
-                                                                <td className="px-6 py-4 text-sm font-semibold text-slate-900">
-                                                                    {formatINR(order.balanceDuePaise)}
-                                                                </td>
-                                                                <td className="px-6 py-4">
-                                                                    <StatusChip
-                                                                        label={hasBalance ? "Remaining Payment Due" : "Paid in Full"}
-                                                                    />
-                                                                </td>
-                                                                <td className="px-6 py-4">
-                                                                    <StatusChip label={toLabel(order.status)} />
-                                                                </td>
-                                                                <td className="px-6 py-4 text-right">
-                                                                    <div className="flex justify-end gap-2" onClick={(e) => e.stopPropagation()}>
-                                                                        <button
-                                                                            type="button"
-                                                                            className="text-xs font-bold text-[#4b7c37] hover:underline"
-                                                                            onClick={() => setSelectedOrderId(order.id)}
+                                                            return (
+                                                                <tr
+                                                                    key={
+                                                                        order.id
+                                                                    }
+                                                                    onClick={() =>
+                                                                        setSelectedOrderId(
+                                                                            order.id
+                                                                        )
+                                                                    }
+                                                                    className={`cursor-pointer transition-colors duration-150 hover:bg-[#faf9f5]/50 ${
+                                                                        isSelected
+                                                                            ? "bg-[#faf9f5]"
+                                                                            : "bg-white"
+                                                                    }`}
+                                                                >
+                                                                    <td className="px-6 py-4">
+                                                                        <div className="font-semibold text-slate-900">
+                                                                            {
+                                                                                order.publicOrderId
+                                                                            }
+                                                                        </div>
+                                                                        <div className="mt-1 text-xs text-slate-500">
+                                                                            {new Date(
+                                                                                order.createdAt
+                                                                            ).toLocaleDateString(
+                                                                                "en-IN"
+                                                                            )}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                                                                        {formatINR(
+                                                                            order.totalPaise
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm font-medium text-slate-700">
+                                                                        {formatINR(
+                                                                            order.advancePaidPaise
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                                                                        {formatINR(
+                                                                            order.balanceDuePaise
+                                                                        )}
+                                                                    </td>
+                                                                    <td className="px-6 py-4">
+                                                                        <StatusChip
+                                                                            label={
+                                                                                hasBalance
+                                                                                    ? "Remaining Payment Due"
+                                                                                    : "Paid in Full"
+                                                                            }
+                                                                        />
+                                                                    </td>
+                                                                    <td className="px-6 py-4">
+                                                                        <StatusChip
+                                                                            label={toLabel(
+                                                                                order.status
+                                                                            )}
+                                                                        />
+                                                                    </td>
+                                                                    <td className="px-6 py-4 text-right">
+                                                                        <div
+                                                                            className="flex justify-end gap-2"
+                                                                            onClick={(
+                                                                                e
+                                                                            ) =>
+                                                                                e.stopPropagation()
+                                                                            }
                                                                         >
-                                                                            View
-                                                                        </button>
-                                                                        {initialTaxInvoices.some(
-                                                                            (item) => item.orderId === order.id
-                                                                        ) ? (
-                                                                            <a
-                                                                                href={`/api/corporate-orders/${order.id}/invoice.pdf`}
-                                                                                className="text-xs font-bold text-[#07345f] hover:underline"
+                                                                            <button
+                                                                                type="button"
+                                                                                className="text-xs font-bold text-[#4b7c37] hover:underline"
+                                                                                onClick={() =>
+                                                                                    setSelectedOrderId(
+                                                                                        order.id
+                                                                                    )
+                                                                                }
                                                                             >
-                                                                                Invoice
-                                                                            </a>
-                                                                        ) : null}
-                                                                    </div>
-                                                                </td>
-                                                            </tr>
-                                                        );
-                                                    })}
+                                                                                View
+                                                                            </button>
+                                                                            {order.advancePaidPaise >
+                                                                            0 ? (
+                                                                                <a
+                                                                                    href={`/api/corporate-orders/${order.id}/receipt-voucher.pdf`}
+                                                                                    className="text-xs font-bold text-[#4b7c37] hover:underline"
+                                                                                >
+                                                                                    Receipt
+                                                                                </a>
+                                                                            ) : null}
+                                                                            {initialTaxInvoices.some(
+                                                                                (
+                                                                                    item
+                                                                                ) =>
+                                                                                    item.orderId ===
+                                                                                    order.id
+                                                                            ) ? (
+                                                                                <a
+                                                                                    href={`/api/corporate-orders/${order.id}/invoice.pdf`}
+                                                                                    className="text-xs font-bold text-[#07345f] hover:underline"
+                                                                                >
+                                                                                    Invoice
+                                                                                </a>
+                                                                            ) : null}
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            );
+                                                        }
+                                                    )}
                                                 </tbody>
                                             </table>
                                         </div>
@@ -880,7 +1167,9 @@ export function CustomerCorporateDashboard({
                                             order={selectedOrder}
                                             onPayRemaining={payRemainingBalance}
                                             invoice={initialTaxInvoices.find(
-                                                (item) => item.orderId === selectedOrder.id
+                                                (item) =>
+                                                    item.orderId ===
+                                                    selectedOrder.id
                                             )}
                                         />
                                     ) : null}
@@ -911,20 +1200,29 @@ export function CustomerCorporateDashboard({
                                             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
                                                 Ready To Order
                                             </div>
-                                            <div className="mt-3 text-2xl font-serif font-semibold text-slate-900">
-                                                {selectedOrderSetupQuote?.quoteNumber ?? "Approved quote"}
+                                            <div className="mt-3 font-serif text-2xl font-semibold text-slate-900">
+                                                {selectedOrderSetupQuote?.quoteNumber ??
+                                                    "Approved quote"}
                                             </div>
                                             <div className="mt-2 text-sm leading-6 text-slate-600">
-                                                Configure size breakdown, upload artwork files, and review final pricing matching your custom quotation details.
+                                                Configure size breakdown, upload
+                                                artwork files, and review final
+                                                pricing matching your custom
+                                                quotation details.
                                             </div>
                                             <div className="mt-5 grid gap-3 md:grid-cols-2">
                                                 {unlockedQuotes.map((quote) => (
                                                     <button
                                                         key={quote.id}
                                                         type="button"
-                                                        onClick={() => setOrderSetupQuoteId(quote.id)}
+                                                        onClick={() =>
+                                                            setOrderSetupQuoteId(
+                                                                quote.id
+                                                            )
+                                                        }
                                                         className={`rounded-[20px] border p-4 text-left transition-all ${
-                                                            selectedOrderSetupQuote?.id === quote.id
+                                                            selectedOrderSetupQuote?.id ===
+                                                            quote.id
                                                                 ? "border-[#4b7c37] bg-[#f8fbf6] shadow-sm"
                                                                 : "border-slate-200 bg-white hover:border-[#c5d6bf]"
                                                         }`}
@@ -933,10 +1231,14 @@ export function CustomerCorporateDashboard({
                                                             {quote.quoteNumber}
                                                         </div>
                                                         <div className="mt-1 text-sm font-medium text-slate-700">
-                                                            {formatINR(quote.totalAmountPaise)}
+                                                            {formatINR(
+                                                                quote.totalAmountPaise
+                                                            )}
                                                         </div>
                                                         <div className="mt-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                                                            {purchaseOrderByQuoteId.has(quote.id)
+                                                            {purchaseOrderByQuoteId.has(
+                                                                quote.id
+                                                            )
                                                                 ? "PO Mode Active"
                                                                 : "Direct Checkout Mode"}
                                                         </div>
@@ -948,13 +1250,25 @@ export function CustomerCorporateDashboard({
                                         <SurfacePanel
                                             title="Order Setup Walkthrough"
                                             description="Provide sizing, artwork specifications, and submit advance payment to start production."
-                                            className="bg-[#2c3022] text-white border-none shadow-md"
+                                            className="border-none bg-[#2c3022] text-white shadow-md"
                                             inverse
                                         >
-                                            <MiniPill label="1. Authorized details prefilled" dark />
-                                            <MiniPill label="2. Specify size breakdown & labels" dark />
-                                            <MiniPill label="3. Upload customization artwork uploader" dark />
-                                            <MiniPill label="4. Review advance checkout" dark />
+                                            <MiniPill
+                                                label="1. Authorized details prefilled"
+                                                dark
+                                            />
+                                            <MiniPill
+                                                label="2. Specify size breakdown & labels"
+                                                dark
+                                            />
+                                            <MiniPill
+                                                label="3. Upload customization artwork uploader"
+                                                dark
+                                            />
+                                            <MiniPill
+                                                label="4. Review advance checkout"
+                                                dark
+                                            />
                                         </SurfacePanel>
                                     </div>
                                 </SurfacePanel>
@@ -965,17 +1279,23 @@ export function CustomerCorporateDashboard({
                                         initialPrefill={{
                                             ...extractCorporateDeliveryAddress(
                                                 initialProfile?.shippingAddress ??
-                                                    selectedOrderSetupQuote.profile
+                                                    selectedOrderSetupQuote
+                                                        .profile
                                                         ?.shippingAddress
                                             ),
                                             companyName:
                                                 initialProfile?.companyName ??
-                                                selectedOrderSetupQuote.profile?.companyName,
+                                                selectedOrderSetupQuote.profile
+                                                    ?.companyName,
                                             contactPersonName:
-                                                initialProfile?.contactPerson ?? "",
-                                            emailAddress: initialProfile?.email ?? "",
-                                            mobileNumber: initialProfile?.phone ?? "",
-                                            gstNumber: initialProfile?.gstNumber ?? "",
+                                                initialProfile?.contactPerson ??
+                                                "",
+                                            emailAddress:
+                                                initialProfile?.email ?? "",
+                                            mobileNumber:
+                                                initialProfile?.phone ?? "",
+                                            gstNumber:
+                                                initialProfile?.gstNumber ?? "",
                                             productTypeId:
                                                 selectedOrderSetupQuote.productTypeId ??
                                                 undefined,
@@ -985,9 +1305,12 @@ export function CustomerCorporateDashboard({
                                             fabricCompositionId:
                                                 selectedOrderSetupQuote.fabricCompositionId ??
                                                 undefined,
-                                            quantity: selectedOrderSetupQuote.quantity ?? 0,
+                                            quantity:
+                                                selectedOrderSetupQuote.quantity ??
+                                                0,
                                             numberOfEmployees:
-                                                selectedOrderSetupQuote.quantity ?? 0,
+                                                selectedOrderSetupQuote.quantity ??
+                                                0,
                                             lockApprovedQuoteSelections: true,
                                             approvedQuoteId:
                                                 selectedOrderSetupQuote.id,
@@ -996,14 +1319,14 @@ export function CustomerCorporateDashboard({
                                             approvedQuoteUnitPricePaise:
                                                 selectedOrderSetupQuote.quantity
                                                     ? Math.round(
-                                                          selectedOrderSetupQuote
-                                                              .totalAmountPaise /
+                                                          selectedOrderSetupQuote.totalAmountPaise /
                                                               selectedOrderSetupQuote.quantity
                                                       )
                                                     : 0,
                                             customerNotes: `Approved quotation ${selectedOrderSetupQuote.quoteNumber} for ${selectedOrderSetupQuote.quantity} unit(s).`,
                                             paymentPreference:
-                                                selectedOrderSetupQuote.balanceAmountPaise === 0
+                                                selectedOrderSetupQuote.balanceAmountPaise ===
+                                                0
                                                     ? "full_upfront"
                                                     : "partial_advance",
                                         }}
@@ -1036,7 +1359,9 @@ export function CustomerCorporateDashboard({
                                         <div className="grid gap-4 md:grid-cols-2">
                                             <StatusRow
                                                 label="Contact Person"
-                                                value={initialProfile.contactPerson}
+                                                value={
+                                                    initialProfile.contactPerson
+                                                }
                                             />
                                             <StatusRow
                                                 label="Email"
@@ -1044,11 +1369,17 @@ export function CustomerCorporateDashboard({
                                             />
                                             <StatusRow
                                                 label="Industry"
-                                                value={initialProfile.industry || "Pending"}
+                                                value={
+                                                    initialProfile.industry ||
+                                                    "Pending"
+                                                }
                                             />
                                             <StatusRow
                                                 label="Company Size"
-                                                value={initialProfile.companySize || "Pending"}
+                                                value={
+                                                    initialProfile.companySize ||
+                                                    "Pending"
+                                                }
                                             />
                                         </div>
                                     </div>
@@ -1060,7 +1391,7 @@ export function CustomerCorporateDashboard({
                             <SurfacePanel
                                 title="Enterprise Procurement Support"
                                 description="Renivet managed workflows cover quality review, testing, packaging, and custom labels."
-                                className="bg-[linear-gradient(135deg,#ffffff_0%,#faf9f5_100%)] border-[#e8e5db]"
+                                className="border-[#e8e5db] bg-[linear-gradient(135deg,#ffffff_0%,#faf9f5_100%)]"
                             >
                                 <div className="grid grid-cols-2 gap-3">
                                     <MiniPill label="Requests Management" />
@@ -1099,7 +1430,7 @@ function SurfacePanel({
             className={`rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_40px_-30px_rgba(49,58,31,0.12)] ${className}`}
         >
             <h2
-                className={`text-xl font-serif font-semibold tracking-tight ${
+                className={`font-serif text-xl font-semibold tracking-tight ${
                     inverse ? "text-white" : "text-slate-900"
                 }`}
             >
@@ -1130,15 +1461,24 @@ function MetricCard({
 }) {
     return (
         <motion.div
-            whileHover={{ y: -4, scale: 1.01, boxShadow: "0 20px 40px -25px rgba(49,58,31,0.15)", borderColor: "#4b7c37" }}
+            whileHover={{
+                y: -4,
+                scale: 1.01,
+                boxShadow: "0 20px 40px -25px rgba(49,58,31,0.15)",
+                borderColor: "#4b7c37",
+            }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
             className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_-20px_rgba(0,0,0,0.03)] transition-colors duration-200"
         >
             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
                 {label}
             </div>
-            <div className="mt-3 font-serif font-playfair text-4xl font-semibold text-slate-900">{value}</div>
-            <div className="mt-2 text-xs text-slate-500 font-medium leading-relaxed">{hint}</div>
+            <div className="mt-3 font-playfair font-serif text-4xl font-semibold text-slate-900">
+                {value}
+            </div>
+            <div className="mt-2 text-xs font-medium leading-relaxed text-slate-500">
+                {hint}
+            </div>
         </motion.div>
     );
 }
@@ -1190,8 +1530,8 @@ function ActionCard({
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
             className={
                 dark
-                    ? "group block rounded-[28px] border border-[#c8d6c3] bg-[linear-gradient(135deg,#f4f8f2_0%,#e7f0e3_100%)] p-6 text-slate-900 shadow-[0_28px_70px_-42px_rgba(47,55,32,0.15)] hover:border-[#b1c7ab] transition-colors duration-200"
-                    : "group block rounded-[28px] border border-[#e3decb] bg-[linear-gradient(135deg,#faf9f5_0%,#f5f2e9_100%)] p-6 text-slate-900 shadow-[0_24px_60px_-44px_rgba(91,155,213,0.1)] hover:border-[#cfc7ae] transition-colors duration-200"
+                    ? "group block rounded-[28px] border border-[#c8d6c3] bg-[linear-gradient(135deg,#f4f8f2_0%,#e7f0e3_100%)] p-6 text-slate-900 shadow-[0_28px_70px_-42px_rgba(47,55,32,0.15)] transition-colors duration-200 hover:border-[#b1c7ab]"
+                    : "group block rounded-[28px] border border-[#e3decb] bg-[linear-gradient(135deg,#faf9f5_0%,#f5f2e9_100%)] p-6 text-slate-900 shadow-[0_24px_60px_-44px_rgba(91,155,213,0.1)] transition-colors duration-200 hover:border-[#cfc7ae]"
             }
         >
             <div
@@ -1203,15 +1543,17 @@ function ActionCard({
             >
                 {eyebrow}
             </div>
-            <div className="mt-3 font-serif font-playfair text-2xl font-semibold leading-tight text-slate-900">{title}</div>
+            <div className="mt-3 font-playfair font-serif text-2xl font-semibold leading-tight text-slate-900">
+                {title}
+            </div>
             <div className="mt-3 text-sm leading-relaxed text-slate-600">
                 {description}
             </div>
             <div
                 className={
                     dark
-                        ? "mt-6 inline-flex rounded-full btn-liquid btn-liquid-primary px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
-                        : "mt-6 inline-flex rounded-full btn-liquid btn-liquid-secondary px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
+                        ? "btn-liquid btn-liquid-primary mt-6 inline-flex rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
+                        : "btn-liquid btn-liquid-secondary mt-6 inline-flex rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
                 }
             >
                 <span>{cta}</span>
@@ -1223,8 +1565,12 @@ function ActionCard({
 function StatusRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="rounded-[20px] border border-slate-200 bg-slate-50/50 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
-            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
-            <div className="mt-1.5 text-sm font-semibold text-slate-900 leading-relaxed">{value}</div>
+            <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                {label}
+            </div>
+            <div className="mt-1.5 text-sm font-semibold leading-relaxed text-slate-900">
+                {value}
+            </div>
         </div>
     );
 }
@@ -1235,7 +1581,9 @@ function HeroStat({ label, value }: { label: string; value: string }) {
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 {label}
             </div>
-            <div className="mt-2 font-serif font-semibold text-xl text-slate-900">{value}</div>
+            <div className="mt-2 font-serif text-xl font-semibold text-slate-900">
+                {value}
+            </div>
         </div>
     );
 }
@@ -1244,17 +1592,49 @@ function DetailLine({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 text-sm last:border-b-0 last:pb-0">
             <div className="font-semibold text-slate-400">{label}</div>
-            <div className="text-right font-semibold text-slate-900">{value}</div>
+            <div className="text-right font-semibold text-slate-900">
+                {value}
+            </div>
         </div>
     );
 }
 
 function StatusChip({ label }: { label: string }) {
     const rawVal = label.toLowerCase().replaceAll(" ", "_");
-    const isApproved = ["approved", "quote_accepted", "po_accepted", "qc_approved", "delivered", "completed", "paid_in_full"].includes(rawVal);
-    const isPending = ["pending", "rfq_submitted", "under_review", "brand_matching", "quote_preparation", "customer_review", "po_uploaded", "po_review"].includes(rawVal);
-    const isActionNeeded = ["sent", "quote_sent", "revision_requested", "po_requires_changes", "remaining_payment_due"].includes(rawVal);
-    const isRejected = ["rejected", "quote_rejected", "po_rejected", "cancelled", "closed", "expired"].includes(rawVal);
+    const isApproved = [
+        "approved",
+        "quote_accepted",
+        "po_accepted",
+        "qc_approved",
+        "delivered",
+        "completed",
+        "paid_in_full",
+    ].includes(rawVal);
+    const isPending = [
+        "pending",
+        "rfq_submitted",
+        "under_review",
+        "brand_matching",
+        "quote_preparation",
+        "customer_review",
+        "po_uploaded",
+        "po_review",
+    ].includes(rawVal);
+    const isActionNeeded = [
+        "sent",
+        "quote_sent",
+        "revision_requested",
+        "po_requires_changes",
+        "remaining_payment_due",
+    ].includes(rawVal);
+    const isRejected = [
+        "rejected",
+        "quote_rejected",
+        "po_rejected",
+        "cancelled",
+        "closed",
+        "expired",
+    ].includes(rawVal);
 
     let classes = "border-slate-200 bg-slate-50 text-slate-700";
     if (isApproved) {
@@ -1268,7 +1648,9 @@ function StatusChip({ label }: { label: string }) {
     }
 
     return (
-        <div className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] shadow-sm ${classes}`}>
+        <div
+            className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] shadow-sm ${classes}`}
+        >
             {label}
         </div>
     );
@@ -1279,16 +1661,17 @@ function CustomerCorporateRfqDetailPanel({ rfq }: { rfq: any }) {
 
     return (
         <div className="rounded-[26px] border border-[#e8e5db] bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] p-6 shadow-[0_12px_36px_rgba(49,58,31,0.06)]">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between border-b border-slate-100 pb-4 mb-6">
+            <div className="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
                         Selected Request Details
                     </span>
-                    <h3 className="mt-2 text-2xl font-serif font-playfair font-semibold text-slate-900">
+                    <h3 className="mt-2 font-playfair font-serif text-2xl font-semibold text-slate-900">
                         {rfq.rfqNumber}
                     </h3>
                     <p className="mt-1 text-xs text-slate-400">
-                        Submitted {new Date(rfq.createdAt).toLocaleDateString("en-IN")}
+                        Submitted{" "}
+                        {new Date(rfq.createdAt).toLocaleDateString("en-IN")}
                     </p>
                 </div>
                 <StatusChip label={toLabel(rfq.status)} />
@@ -1296,54 +1679,92 @@ function CustomerCorporateRfqDetailPanel({ rfq }: { rfq: any }) {
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <div className="rounded-[18px] border border-slate-100 bg-white p-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Use Case</span>
-                    <p className="mt-1.5 text-sm font-semibold text-slate-900">{rfq.useCase}</p>
-                </div>
-                <div className="rounded-[18px] border border-slate-100 bg-white p-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Quantity</span>
-                    <p className="mt-1.5 text-sm font-semibold text-slate-900">{rfq.quantity} units</p>
-                </div>
-                <div className="rounded-[18px] border border-slate-100 bg-white p-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Budget Limit</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Use Case
+                    </span>
                     <p className="mt-1.5 text-sm font-semibold text-slate-900">
-                        {rfq.budgetPerUnitPaise ? formatINR(rfq.budgetPerUnitPaise) : "Open budget"}
+                        {rfq.useCase}
                     </p>
                 </div>
                 <div className="rounded-[18px] border border-slate-100 bg-white p-4">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Target Delivery</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Quantity
+                    </span>
                     <p className="mt-1.5 text-sm font-semibold text-slate-900">
-                        {rfq.deliveryDate ? new Date(rfq.deliveryDate).toLocaleDateString("en-IN") : "Flexible"}
+                        {rfq.quantity} units
+                    </p>
+                </div>
+                <div className="rounded-[18px] border border-slate-100 bg-white p-4">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Budget Limit
+                    </span>
+                    <p className="mt-1.5 text-sm font-semibold text-slate-900">
+                        {rfq.budgetPerUnitPaise
+                            ? formatINR(rfq.budgetPerUnitPaise)
+                            : "Open budget"}
+                    </p>
+                </div>
+                <div className="rounded-[18px] border border-slate-100 bg-white p-4">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                        Target Delivery
+                    </span>
+                    <p className="mt-1.5 text-sm font-semibold text-slate-900">
+                        {rfq.deliveryDate
+                            ? new Date(rfq.deliveryDate).toLocaleDateString(
+                                  "en-IN"
+                              )
+                            : "Flexible"}
                     </p>
                 </div>
             </div>
 
             <div className="mt-5 space-y-4">
                 <div className="rounded-[18px] border border-slate-100 bg-white p-5">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-2">Requirement Specifications</h4>
-                    <p className="text-sm leading-relaxed text-slate-600 whitespace-pre-wrap">{rfq.requirementDescription}</p>
+                    <h4 className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-800">
+                        Requirement Specifications
+                    </h4>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed text-slate-600">
+                        {rfq.requirementDescription}
+                    </p>
                 </div>
 
                 <div className="grid gap-4 md:grid-cols-2">
                     <div className="rounded-[18px] border border-slate-100 bg-white p-5">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">Customization details</h4>
+                        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-800">
+                            Customization details
+                        </h4>
                         <div className="space-y-3 text-sm">
                             <div className="flex justify-between">
-                                <span className="text-slate-400">Branding Required:</span>
-                                <span className="font-bold text-slate-900">{rfq.brandingRequired ? "Yes" : "No"}</span>
+                                <span className="text-slate-400">
+                                    Branding Required:
+                                </span>
+                                <span className="font-bold text-slate-900">
+                                    {rfq.brandingRequired ? "Yes" : "No"}
+                                </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-400">Sustainability Materials:</span>
-                                <span className="font-bold text-slate-900">{rfq.sustainabilityRequired ? "Yes" : "No"}</span>
+                                <span className="text-slate-400">
+                                    Sustainability Materials:
+                                </span>
+                                <span className="font-bold text-slate-900">
+                                    {rfq.sustainabilityRequired ? "Yes" : "No"}
+                                </span>
                             </div>
                             <div className="flex justify-between">
-                                <span className="text-slate-400">Procurement Strategy:</span>
-                                <span className="font-bold text-[#4b7c37] uppercase text-xs tracking-wider">{toLabel(rfq.procurementMode)}</span>
+                                <span className="text-slate-400">
+                                    Procurement Strategy:
+                                </span>
+                                <span className="text-xs font-bold uppercase tracking-wider text-[#4b7c37]">
+                                    {toLabel(rfq.procurementMode)}
+                                </span>
                             </div>
                         </div>
                     </div>
 
                     <div className="rounded-[18px] border border-slate-100 bg-white p-5">
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">Uploaded Artwork / Specsheets</h4>
+                        <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-800">
+                            Uploaded Artwork / Specsheets
+                        </h4>
                         {rfq.documents && rfq.documents.length > 0 ? (
                             <div className="space-y-2">
                                 {rfq.documents.map((doc: any) => (
@@ -1352,16 +1773,20 @@ function CustomerCorporateRfqDetailPanel({ rfq }: { rfq: any }) {
                                         href={doc.fileUrl}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center gap-2 text-sm text-[#4b7c37] hover:underline font-semibold"
+                                        className="flex items-center gap-2 text-sm font-semibold text-[#4b7c37] hover:underline"
                                     >
                                         <FileText className="size-4 shrink-0" />
-                                        <span className="truncate max-w-[220px]">{doc.fileName}</span>
-                                        <ArrowUpRight className="size-3 text-slate-400 shrink-0" />
+                                        <span className="max-w-[220px] truncate">
+                                            {doc.fileName}
+                                        </span>
+                                        <ArrowUpRight className="size-3 shrink-0 text-slate-400" />
                                     </a>
                                 ))}
                             </div>
                         ) : (
-                            <p className="text-xs text-slate-400">No attachments provided.</p>
+                            <p className="text-xs text-slate-400">
+                                No attachments provided.
+                            </p>
                         )}
                     </div>
                 </div>
@@ -1410,16 +1835,17 @@ function CustomerCorporateQuoteDetailPanel({
     const canApprove = !isApproved && !isRejected;
     const purchaseOrderUploaded = !!purchaseOrder;
     const directRouteUnlocked = isApproved && purchaseOrderChoice === "direct";
-    const purchaseOrderRouteOpen = isApproved && purchaseOrderChoice === "purchase_order";
+    const purchaseOrderRouteOpen =
+        isApproved && purchaseOrderChoice === "purchase_order";
 
     return (
         <div className="rounded-[26px] border border-[#e8e5db] bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] p-6 shadow-[0_12px_36px_rgba(49,58,31,0.06)]">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between border-b border-slate-100 pb-4 mb-6">
+            <div className="mb-6 flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
                         Quote Evaluation
                     </span>
-                    <h3 className="mt-2 text-2xl font-serif font-playfair font-semibold text-slate-900">
+                    <h3 className="mt-2 font-playfair font-serif text-2xl font-semibold text-slate-900">
                         {quote.quoteNumber}
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
@@ -1432,24 +1858,32 @@ function CustomerCorporateQuoteDetailPanel({
             <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
                 {/* Pricing Table */}
                 <div className="rounded-[18px] border border-slate-100 bg-white p-5 shadow-sm">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">Pricing Breakdown</h4>
+                    <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-800">
+                        Pricing Breakdown
+                    </h4>
                     <div className="space-y-2.5 text-sm">
-                        <div className="flex justify-between text-slate-500 font-medium">
+                        <div className="flex justify-between font-medium text-slate-500">
                             <span>Sourcing Subtotal</span>
-                            <span className="text-slate-800 font-semibold">{formatINR(quote.subtotalPaise)}</span>
+                            <span className="font-semibold text-slate-800">
+                                {formatINR(quote.subtotalPaise)}
+                            </span>
                         </div>
                         {quote.customizationCostPaise > 0 && (
-                            <div className="flex justify-between text-slate-500 font-medium">
+                            <div className="flex justify-between font-medium text-slate-500">
                                 <span>Branding/Customization</span>
-                                <span className="text-slate-800 font-semibold">{formatINR(quote.customizationCostPaise)}</span>
+                                <span className="font-semibold text-slate-800">
+                                    {formatINR(quote.customizationCostPaise)}
+                                </span>
                             </div>
                         )}
-                        <div className="flex justify-between text-slate-500 font-medium">
+                        <div className="flex justify-between font-medium text-slate-500">
                             <span>Applicable GST / Taxes</span>
-                            <span className="text-slate-800 font-semibold">{formatINR(quote.gstAmountPaise)}</span>
+                            <span className="font-semibold text-slate-800">
+                                {formatINR(quote.gstAmountPaise)}
+                            </span>
                         </div>
-                        <div className="border-t border-slate-100 my-2"></div>
-                        <div className="flex justify-between font-serif text-slate-900 font-bold text-base">
+                        <div className="my-2 border-t border-slate-100"></div>
+                        <div className="flex justify-between font-serif text-base font-bold text-slate-900">
                             <span>Total Quote Value</span>
                             <span>{formatINR(quote.totalAmountPaise)}</span>
                         </div>
@@ -1458,20 +1892,36 @@ function CustomerCorporateQuoteDetailPanel({
 
                 {/* Sourcing details */}
                 <div className="rounded-[18px] border border-slate-100 bg-white p-5 shadow-sm">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">Order Quantities</h4>
+                    <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-800">
+                        Order Quantities
+                    </h4>
                     <div className="space-y-3 text-sm">
                         <div className="flex justify-between">
-                            <span className="text-slate-400">Target Quantity:</span>
-                            <span className="font-semibold text-slate-900">{quote.quantity} units</span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-slate-400">Unit Price Estimate:</span>
+                            <span className="text-slate-400">
+                                Target Quantity:
+                            </span>
                             <span className="font-semibold text-slate-900">
-                                {quote.quantity ? formatINR(Math.round(quote.totalAmountPaise / quote.quantity)) : formatINR(0)} / unit
+                                {quote.quantity} units
                             </span>
                         </div>
-                        <div className="border-t border-slate-100 my-2"></div>
-                        <div className="flex justify-between font-bold text-emerald-800 bg-emerald-50/50 p-2 rounded-lg text-xs">
+                        <div className="flex justify-between">
+                            <span className="text-slate-400">
+                                Unit Price Estimate:
+                            </span>
+                            <span className="font-semibold text-slate-900">
+                                {quote.quantity
+                                    ? formatINR(
+                                          Math.round(
+                                              quote.totalAmountPaise /
+                                                  quote.quantity
+                                          )
+                                      )
+                                    : formatINR(0)}{" "}
+                                / unit
+                            </span>
+                        </div>
+                        <div className="my-2 border-t border-slate-100"></div>
+                        <div className="flex justify-between rounded-lg bg-emerald-50/50 p-2 text-xs font-bold text-emerald-800">
                             <span>Advance Required</span>
                             <span>{formatINR(quote.advanceAmountPaise)}</span>
                         </div>
@@ -1480,19 +1930,32 @@ function CustomerCorporateQuoteDetailPanel({
 
                 {/* Status overview */}
                 <div className="rounded-[18px] border border-slate-100 bg-white p-5 shadow-sm">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-3">Approval Flow</h4>
-                    <div className="space-y-3 text-xs leading-relaxed text-slate-500 font-medium">
+                    <h4 className="mb-3 text-xs font-bold uppercase tracking-wider text-slate-800">
+                        Approval Flow
+                    </h4>
+                    <div className="space-y-3 text-xs font-medium leading-relaxed text-slate-500">
                         {canApprove ? (
-                            <p>This draft quotation requires your approval. Once approved, you can proceed directly to setup size charts and place your deposit.</p>
+                            <p>
+                                This draft quotation requires your approval.
+                                Once approved, you can proceed directly to setup
+                                size charts and place your deposit.
+                            </p>
                         ) : isApproved ? (
                             <div className="space-y-2">
-                                <p className="text-emerald-800 font-semibold flex items-center gap-1.5">
-                                    <CheckCircle2 className="size-4" /> Quote approved successfully
+                                <p className="flex items-center gap-1.5 font-semibold text-emerald-800">
+                                    <CheckCircle2 className="size-4" /> Quote
+                                    approved successfully
                                 </p>
-                                <p>You can checkout immediately or configure your enterprise purchase order parameters first.</p>
+                                <p>
+                                    You can checkout immediately or configure
+                                    your enterprise purchase order parameters
+                                    first.
+                                </p>
                             </div>
                         ) : (
-                            <p className="text-red-700 font-semibold">This quotation was closed or rejected.</p>
+                            <p className="font-semibold text-red-700">
+                                This quotation was closed or rejected.
+                            </p>
                         )}
                     </div>
                 </div>
@@ -1500,12 +1963,21 @@ function CustomerCorporateQuoteDetailPanel({
 
             {/* Action buttons */}
             <div className="mt-6 border-t border-slate-100 pt-5">
+                {quote.proformaInvoice ? (
+                    <a
+                        href={`/api/corporate-proforma-invoices/${quote.proformaInvoice.id}/download`}
+                        className="mb-4 inline-flex h-11 items-center justify-center rounded-full border border-[#07345f] bg-white px-6 text-xs font-bold uppercase tracking-wider text-[#07345f] transition hover:bg-slate-50"
+                    >
+                        <Download className="mr-2 size-4" />
+                        <span>Download Proforma Invoice</span>
+                    </a>
+                ) : null}
                 {canApprove && (
                     <div className="flex justify-start">
                         <button
                             type="button"
                             onClick={onApprove}
-                            className="inline-flex rounded-full btn-liquid btn-liquid-primary px-8 py-3 text-xs font-bold uppercase tracking-widest shadow-md"
+                            className="btn-liquid btn-liquid-primary inline-flex rounded-full px-8 py-3 text-xs font-bold uppercase tracking-widest shadow-md"
                         >
                             <span>Approve Quotation</span>
                         </button>
@@ -1514,31 +1986,42 @@ function CustomerCorporateQuoteDetailPanel({
 
                 {isApproved && (
                     <div className="space-y-4">
-                        <div className="text-sm font-bold text-slate-900 mb-2">Configure Routing Step</div>
-                        
+                        <div className="mb-2 text-sm font-bold text-slate-900">
+                            Configure Routing Step
+                        </div>
+
                         {!purchaseOrderChoice && !purchaseOrderUploaded ? (
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="rounded-[20px] border border-emerald-100 bg-emerald-50/40 p-5 transition hover:shadow-sm">
-                                    <div className="font-bold text-slate-900 text-sm">Fast-Track Checkout</div>
+                                    <div className="text-sm font-bold text-slate-900">
+                                        Fast-Track Checkout
+                                    </div>
                                     <div className="mt-2 text-xs leading-relaxed text-slate-600">
-                                        Perfect for direct transactions. Complete sizes, configure labels, and checkout with advance payment immediately.
+                                        Perfect for direct transactions.
+                                        Complete sizes, configure labels, and
+                                        checkout with advance payment
+                                        immediately.
                                     </div>
                                     <button
                                         type="button"
-                                        className="mt-4 inline-flex rounded-full btn-liquid btn-liquid-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
+                                        className="btn-liquid btn-liquid-primary mt-4 inline-flex rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
                                         onClick={onChooseDirectOrder}
                                     >
                                         <span>Continue to Setup</span>
                                     </button>
                                 </div>
                                 <div className="rounded-[20px] border border-slate-200 bg-white p-5 transition hover:shadow-sm">
-                                    <div className="font-bold text-slate-900 text-sm">Enterprise Purchase Order</div>
+                                    <div className="text-sm font-bold text-slate-900">
+                                        Enterprise Purchase Order
+                                    </div>
                                     <div className="mt-2 text-xs leading-relaxed text-slate-600">
-                                        For teams needing PO verification. Upload your company PO document first to unlock size layout setup.
+                                        For teams needing PO verification.
+                                        Upload your company PO document first to
+                                        unlock size layout setup.
                                     </div>
                                     <button
                                         type="button"
-                                        className="mt-4 inline-flex rounded-full btn-liquid btn-liquid-secondary px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
+                                        className="btn-liquid btn-liquid-secondary mt-4 inline-flex rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
                                         onClick={onChoosePurchaseOrder}
                                     >
                                         <span>Choose PO Route</span>
@@ -1548,13 +2031,14 @@ function CustomerCorporateQuoteDetailPanel({
                         ) : null}
 
                         {directRouteUnlocked && (
-                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5">
                                 <div className="text-sm font-semibold text-emerald-800">
-                                    Direct order route verified. Switch to the Setup tab to complete sizes and uploader.
+                                    Direct order route verified. Switch to the
+                                    Setup tab to complete sizes and uploader.
                                 </div>
                                 <button
                                     type="button"
-                                    className="inline-flex rounded-full btn-liquid btn-liquid-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
+                                    className="btn-liquid btn-liquid-primary inline-flex rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
                                     onClick={onContinueToOrderSetup}
                                 >
                                     <span>Open Setup Tab</span>
@@ -1563,43 +2047,68 @@ function CustomerCorporateQuoteDetailPanel({
                         )}
 
                         {purchaseOrderRouteOpen && !purchaseOrderUploaded ? (
-                            <div className="rounded-2xl border border-slate-200 bg-[#faf9f5]/50 p-6 space-y-4">
-                                <div className="text-sm font-semibold text-slate-800">Upload Enterprise Purchase Order Details</div>
+                            <div className="space-y-4 rounded-2xl border border-slate-200 bg-[#faf9f5]/50 p-6">
+                                <div className="text-sm font-semibold text-slate-800">
+                                    Upload Enterprise Purchase Order Details
+                                </div>
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <div className="space-y-1">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400">PO Number</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-400">
+                                            PO Number
+                                        </span>
                                         <Input
                                             placeholder="PO-XXXXX"
                                             value={poNumber}
-                                            onChange={(e) => onPoNumberChange(e.target.value)}
-                                            className="bg-white border-slate-200 rounded-xl"
+                                            onChange={(e) =>
+                                                onPoNumberChange(e.target.value)
+                                            }
+                                            className="rounded-xl border-slate-200 bg-white"
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400">Product Scope Summary</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-400">
+                                            Product Scope Summary
+                                        </span>
                                         <Input
                                             placeholder="Quantity and configuration summary"
-                                            value={poScope || `${quote.quantity ?? ""} unit(s) as per approved quote`}
-                                            onChange={(e) => onPoScopeChange(e.target.value)}
-                                            className="bg-white border-slate-200 rounded-xl"
+                                            value={
+                                                poScope ||
+                                                `${quote.quantity ?? ""} unit(s) as per approved quote`
+                                            }
+                                            onChange={(e) =>
+                                                onPoScopeChange(e.target.value)
+                                            }
+                                            className="rounded-xl border-slate-200 bg-white"
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400">Authorized Signatory Name</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-400">
+                                            Authorized Signatory Name
+                                        </span>
                                         <Input
                                             placeholder="Enter full legal name"
                                             value={signatoryName}
-                                            onChange={(e) => onSignatoryNameChange(e.target.value)}
-                                            className="bg-white border-slate-200 rounded-xl"
+                                            onChange={(e) =>
+                                                onSignatoryNameChange(
+                                                    e.target.value
+                                                )
+                                            }
+                                            className="rounded-xl border-slate-200 bg-white"
                                         />
                                     </div>
                                     <div className="space-y-1">
-                                        <span className="text-[10px] font-bold uppercase text-slate-400">PO Document File (PDF)</span>
+                                        <span className="text-[10px] font-bold uppercase text-slate-400">
+                                            PO Document File (PDF)
+                                        </span>
                                         <input
                                             type="file"
                                             accept=".pdf,image/*"
                                             className="block w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 focus:outline-none"
-                                            onChange={(e) => onFileChange(e.target.files?.[0] ?? null)}
+                                            onChange={(e) =>
+                                                onFileChange(
+                                                    e.target.files?.[0] ?? null
+                                                )
+                                            }
                                         />
                                     </div>
                                 </div>
@@ -1607,28 +2116,49 @@ function CustomerCorporateQuoteDetailPanel({
                                     type="button"
                                     onClick={onUploadPo}
                                     disabled={uploadPending}
-                                    className="inline-flex rounded-full btn-liquid btn-liquid-primary px-8 py-3 text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                                    className="btn-liquid btn-liquid-primary inline-flex rounded-full px-8 py-3 text-xs font-bold uppercase tracking-widest disabled:opacity-50"
                                 >
-                                    <span>{uploadPending ? "Uploading document..." : "Upload PO Document"}</span>
+                                    <span>
+                                        {uploadPending
+                                            ? "Uploading document..."
+                                            : "Upload PO Document"}
+                                    </span>
                                 </button>
                             </div>
                         ) : null}
 
                         {purchaseOrderUploaded && (
-                            <div className="rounded-2xl border border-slate-200 bg-white p-5 flex items-center justify-between gap-4 flex-wrap">
+                            <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-5">
                                 <div>
                                     <div className="text-sm font-semibold text-slate-800">
-                                        Purchase Order Verified: <span className="font-bold text-[#4b7c37]">{purchaseOrder.poNumber}</span>
+                                        Purchase Order Verified:{" "}
+                                        <span className="font-bold text-[#4b7c37]">
+                                            {purchaseOrder.poNumber}
+                                        </span>
                                     </div>
-                                    <div className="mt-1 text-xs text-slate-500">Authorized Signatory: {purchaseOrder.authorizedSignatoryName}</div>
+                                    <div className="mt-1 text-xs text-slate-500">
+                                        Authorized Signatory:{" "}
+                                        {purchaseOrder.authorizedSignatoryName}
+                                    </div>
                                 </div>
-                                <button
-                                    type="button"
-                                    className="inline-flex rounded-full btn-liquid btn-liquid-primary px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
-                                    onClick={onContinueToOrderSetup}
-                                >
-                                    <span>Open Setup Tab</span>
-                                </button>
+                                <div className="flex flex-wrap gap-2">
+                                    <a
+                                        href={purchaseOrder.uploadedFileUrl}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="inline-flex rounded-full border border-slate-200 px-6 py-2.5 text-xs font-bold uppercase tracking-wider text-slate-700"
+                                    >
+                                        <Download className="mr-2 size-4" />
+                                        Download PO
+                                    </a>
+                                    <button
+                                        type="button"
+                                        className="btn-liquid btn-liquid-primary inline-flex rounded-full px-6 py-2.5 text-xs font-bold uppercase tracking-wider"
+                                        onClick={onContinueToOrderSetup}
+                                    >
+                                        <span>Open Setup Tab</span>
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1668,9 +2198,11 @@ function CustomerCorporateOrderDetailPanel({
                 setReasonCode("size_issue");
                 setReasonDetails("");
                 setReplacementFiles([]);
-                await utils.general.corporatePlatform.listMyReplacementRequests.invalidate({
-                    orderId: order.id,
-                });
+                await utils.general.corporatePlatform.listMyReplacementRequests.invalidate(
+                    {
+                        orderId: order.id,
+                    }
+                );
             },
             onError: (error) => handleClientError(error),
         });
@@ -1728,29 +2260,38 @@ function CustomerCorporateOrderDetailPanel({
 
     return (
         <div className="rounded-[26px] border border-[#e8e5db] bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] p-6 shadow-[0_12px_36px_rgba(49,58,31,0.06)]">
-            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between border-b border-slate-100 pb-4 mb-5">
+            <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
                 <div>
                     <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#4b7c37]">
                         Selected Order Profile
                     </span>
-                    <h3 className="mt-2 text-2xl font-serif font-playfair font-semibold text-slate-900">
+                    <h3 className="mt-2 font-playfair font-serif text-2xl font-semibold text-slate-900">
                         {order.publicOrderId}
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
-                        Created {new Date(order.createdAt).toLocaleDateString("en-IN")} for {order.companyName}
+                        Created{" "}
+                        {new Date(order.createdAt).toLocaleDateString("en-IN")}{" "}
+                        for {order.companyName}
                     </p>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
                     <StatusChip label={toLabel(order.status)} />
                     <StatusChip
-                        label={hasBalance ? "Remaining payment due" : "Paid in full"}
+                        label={
+                            hasBalance
+                                ? "Remaining payment due"
+                                : "Paid in full"
+                        }
                     />
                 </div>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-                <StatusRow label="Quantity Ordered" value={`${order.quantity} units`} />
+                <StatusRow
+                    label="Quantity Ordered"
+                    value={`${order.quantity} units`}
+                />
                 <StatusRow
                     label="Advance Payment Received"
                     value={formatINR(order.advancePaidPaise)}
@@ -1765,20 +2306,29 @@ function CustomerCorporateOrderDetailPanel({
                 />
             </div>
 
-            <div className="mt-6 grid gap-4 xl:grid-cols-[minmax(0,1fr)_auto] border-t border-slate-100 pt-5">
-                <div className="rounded-[22px] border border-slate-100 bg-white p-4 text-sm leading-relaxed text-slate-500 font-medium">
+            <div className="mt-6 grid gap-4 border-t border-slate-100 pt-5 xl:grid-cols-[minmax(0,1fr)_auto]">
+                <div className="rounded-[22px] border border-slate-100 bg-white p-4 text-sm font-medium leading-relaxed text-slate-500">
                     {hasBalance
                         ? "This order has a remaining outstanding balance. You can complete the payment via card or bank transfer directly from this dashboard."
                         : "This order is fully paid. Production tracking, quality approvals, and freight updates are displayed live below."}
                 </div>
 
-                <div className="flex flex-wrap gap-2 items-center xl:justify-end">
+                <div className="flex flex-wrap items-center gap-2 xl:justify-end">
                     <a
                         href={`/api/corporate-orders/${order.id}/summary.pdf`}
-                        className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-xs font-bold uppercase tracking-wider text-slate-700 hover:border-slate-400 transition"
+                        className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
                     >
                         <span>Download Summary PDF</span>
                     </a>
+                    {order.advancePaidPaise > 0 ? (
+                        <a
+                            href={`/api/corporate-orders/${order.id}/receipt-voucher.pdf`}
+                            className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
+                        >
+                            <Download className="mr-2 size-4" />
+                            <span>Receipt Voucher</span>
+                        </a>
+                    ) : null}
                     {invoice ? (
                         <a
                             href={`/api/corporate-orders/${order.id}/invoice.pdf`}
@@ -1788,29 +2338,46 @@ function CustomerCorporateOrderDetailPanel({
                             <span>Download Tax Invoice</span>
                         </a>
                     ) : null}
+                    {order.deliveryChallan ? (
+                        <a
+                            href={`/api/corporate-orders/${order.id}/delivery-challan.pdf`}
+                            className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
+                        >
+                            <Download className="mr-2 size-4" />
+                            <span>Delivery Challan</span>
+                        </a>
+                    ) : null}
                     {hasBalance ? (
                         <button
                             type="button"
                             onClick={() => onPayRemaining(order)}
-                            className="inline-flex rounded-full btn-liquid btn-liquid-primary px-6 py-3 text-xs font-bold uppercase tracking-wider"
+                            className="btn-liquid btn-liquid-primary inline-flex rounded-full px-6 py-3 text-xs font-bold uppercase tracking-wider"
                         >
                             <span>Pay Remaining Balance</span>
                         </button>
                     ) : null}
                 </div>
             </div>
-            
+
             {/* Embedded details for active order */}
             <div className="mt-8">
-                <div className="text-sm font-bold text-slate-900 mb-4 uppercase tracking-wider">Production & Delivery Status</div>
-                <div className="rounded-2xl border border-slate-100 bg-white p-5 space-y-3">
+                <div className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-900">
+                    Production & Delivery Status
+                </div>
+                <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-5">
                     <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Signatory Details:</span>
-                        <span className="font-semibold text-slate-800">{order.contactPersonName} ({order.emailAddress})</span>
+                        <span className="text-slate-400">
+                            Signatory Details:
+                        </span>
+                        <span className="font-semibold text-slate-800">
+                            {order.contactPersonName} ({order.emailAddress})
+                        </span>
                     </div>
                     <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">Delivery Location:</span>
-                        <span className="font-semibold text-slate-800 text-right max-w-[400px]">
+                        <span className="text-slate-400">
+                            Delivery Location:
+                        </span>
+                        <span className="max-w-[400px] text-right font-semibold text-slate-800">
                             {formatCorporateDeliveryAddress(order) ||
                                 "No address specified"}
                         </span>
@@ -1826,7 +2393,10 @@ function CustomerCorporateOrderDetailPanel({
                                 Request Replacement
                             </div>
                             <p className="mt-1 text-sm text-slate-500">
-                                For bulk orders, raise a request with quantity, issue type, and evidence photos first. Our team will review it before creating the replacement order.
+                                For bulk orders, raise a request with quantity,
+                                issue type, and evidence photos first. Our team
+                                will review it before creating the replacement
+                                order.
                             </p>
                         </div>
                         <StatusChip
@@ -1846,7 +2416,9 @@ function CustomerCorporateOrderDetailPanel({
                                 min={1}
                                 max={order.quantity}
                                 value={requestedQuantity}
-                                onChange={(e) => setRequestedQuantity(e.target.value)}
+                                onChange={(e) =>
+                                    setRequestedQuantity(e.target.value)
+                                }
                             />
                         </div>
                         <div className="space-y-2">
@@ -1859,9 +2431,13 @@ function CustomerCorporateOrderDetailPanel({
                                 onChange={(e) => setReasonCode(e.target.value)}
                             >
                                 <option value="size_issue">Size issue</option>
-                                <option value="damaged_item">Damaged item</option>
+                                <option value="damaged_item">
+                                    Damaged item
+                                </option>
                                 <option value="print_issue">Print issue</option>
-                                <option value="stitching_issue">Stitching issue</option>
+                                <option value="stitching_issue">
+                                    Stitching issue
+                                </option>
                                 <option value="wrong_item_received">
                                     Wrong item received
                                 </option>
@@ -1928,7 +2504,8 @@ function CustomerCorporateOrderDetailPanel({
 
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
                         <p className="text-xs text-slate-500">
-                            You can request up to {order.quantity} units from this order.
+                            You can request up to {order.quantity} units from
+                            this order.
                         </p>
                         <button
                             type="button"
@@ -1937,7 +2514,7 @@ function CustomerCorporateOrderDetailPanel({
                                 createReplacementRequest.isPending ||
                                 uploadingReplacementFiles
                             }
-                            className="inline-flex rounded-full btn-liquid btn-liquid-primary px-6 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
+                            className="btn-liquid btn-liquid-primary inline-flex rounded-full px-6 py-3 text-xs font-bold uppercase tracking-wider disabled:opacity-50"
                         >
                             <span>
                                 {createReplacementRequest.isPending ||
@@ -1966,13 +2543,17 @@ function CustomerCorporateOrderDetailPanel({
                                                 {request.reasonLabel}
                                             </div>
                                             <div className="mt-1 text-xs text-slate-500">
-                                                Requested for {request.requestedQuantity} unit(s) on{" "}
-                                                {new Date(request.createdAt).toLocaleDateString(
-                                                    "en-IN"
-                                                )}
+                                                Requested for{" "}
+                                                {request.requestedQuantity}{" "}
+                                                unit(s) on{" "}
+                                                {new Date(
+                                                    request.createdAt
+                                                ).toLocaleDateString("en-IN")}
                                             </div>
                                         </div>
-                                        <StatusChip label={toLabel(request.status)} />
+                                        <StatusChip
+                                            label={toLabel(request.status)}
+                                        />
                                     </div>
                                     {request.reasonDetails ? (
                                         <p className="mt-3 text-sm leading-6 text-slate-600">
@@ -1992,7 +2573,10 @@ function CustomerCorporateOrderDetailPanel({
                                     {request.replacementOrder?.publicOrderId ? (
                                         <div className="mt-3 text-xs font-semibold uppercase tracking-[0.12em] text-[#4b7c37]">
                                             Replacement order created:{" "}
-                                            {request.replacementOrder.publicOrderId}
+                                            {
+                                                request.replacementOrder
+                                                    .publicOrderId
+                                            }
                                         </div>
                                     ) : null}
                                 </div>

@@ -2,6 +2,16 @@ import {
     InvoiceTemplate,
     type InvoiceOrder,
 } from "@/components/pdf/invoice-template";
+import {
+    corporateDocumentNumber,
+    corporateReceiptVoucherNumber,
+    RENIVET_CORPORATE_SELLER_NAME,
+    RENIVET_CORPORATE_SIGNATORY,
+} from "@/lib/corporate-documents";
+import React from "react";
+
+const renivetLogoUrl =
+    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNul0Kj0hnjfTvXWe4YdlSzoaZPyC7xGVghIDL";
 
 export type CorporateTaxInvoiceData = {
     invoice: {
@@ -12,8 +22,12 @@ export type CorporateTaxInvoiceData = {
         sgstPaise: number;
         igstPaise: number;
         totalAmountPaise: number;
+        dueDate?: string | Date | null;
+        eWayBillNumber?: string | null;
+        receiptVoucherNumber?: string | null;
     };
     order: {
+        sequenceNo: number;
         publicOrderId: string;
         createdAt?: string | Date | null;
         companyName: string;
@@ -31,6 +45,7 @@ export type CorporateTaxInvoiceData = {
         balanceDuePaise: number;
         paymentMethod?: string | null;
         paymentId?: string | null;
+        eWayBillNumber?: string | null;
         productConfigSnapshot?: Record<string, any> | null;
         pricingSnapshot?: Record<string, any> | null;
     };
@@ -84,6 +99,7 @@ export function CorporateTaxInvoiceTemplate({
     data: CorporateTaxInvoiceData;
 }) {
     const { invoice, order, seller, buyer, purchaseOrder, product } = data;
+    const corporateInvoicePayeeName = RENIVET_CORPORATE_SELLER_NAME;
     const productSnapshot = order.productConfigSnapshot ?? {};
     const pricingSnapshot = order.pricingSnapshot ?? {};
     const productName =
@@ -97,19 +113,47 @@ export function CorporateTaxInvoiceTemplate({
             : productName;
     const quantity = Math.max(1, order.quantity);
     const totalPaise = invoice.totalAmountPaise;
+    const balanceDuePaise = Math.min(
+        totalPaise,
+        Math.max(0, order.balanceDuePaise)
+    );
+    const paidAmountPaise = Math.max(0, totalPaise - balanceDuePaise);
+    const paymentPercentBps = totalPaise
+        ? Math.round((paidAmountPaise * 10_000) / totalPaise)
+        : 0;
     const discountPaise = Math.max(
         0,
         Number(pricingSnapshot.discountPaise ?? 0)
     );
     const mrpPaise = invoice.taxableValuePaise + discountPaise;
+    const invoiceDate = invoice.invoiceDate ?? new Date();
+    const balanceDueDate = invoice.dueDate
+        ? new Date(invoice.dueDate)
+        : new Date(invoiceDate);
+    if (!invoice.dueDate) balanceDueDate.setDate(balanceDueDate.getDate() + 15);
+    const invoiceNumber = invoice.invoiceNumber.startsWith("CINV/")
+        ? invoice.invoiceNumber
+        : corporateDocumentNumber(
+              "CINV",
+              order.sequenceNo,
+              invoice.invoiceDate ?? new Date()
+          );
+    const receiptVoucherNumber =
+        invoice.receiptVoucherNumber ??
+        (paidAmountPaise > 0
+            ? corporateReceiptVoucherNumber(
+                  order.sequenceNo,
+                  order.createdAt ?? invoiceDate
+              )
+            : null);
 
     const invoiceOrder: InvoiceOrder = {
         id: order.publicOrderId,
         receiptId: order.publicOrderId,
-        invoiceNumber: invoice.invoiceNumber,
+        invoiceNumber,
         paymentMethod: order.paymentMethod ?? "prepaid",
         paymentId: order.paymentId ?? "Not available",
-        date: invoice.invoiceDate ?? new Date(),
+        date: invoiceDate,
         orderDate: order.createdAt ?? invoice.invoiceDate ?? new Date(),
         customerName: buyer.companyName,
         address: buyer.billingAddress,
@@ -121,21 +165,23 @@ export function CorporateTaxInvoiceTemplate({
         qrCodeDataUrl: data.qrCodeDataUrl,
         poReference: purchaseOrder?.poNumber,
         poDate: purchaseOrder?.poDate,
+        receiptVoucherNumber,
+        balanceDueDate: balanceDuePaise > 0 ? balanceDueDate : null,
+        eWayBillNumber: invoice.eWayBillNumber ?? order.eWayBillNumber,
         displayUnitPricing: true,
+        declarationCompanyName: corporateInvoicePayeeName,
+        sellerOfRecord: true,
         paymentSummary: {
-            partialPaymentPercentBps: order.advancePercentBps,
-            partialPaymentRequiredPaise: Math.round(
-                (invoice.totalAmountPaise * order.advancePercentBps) / 10_000
-            ),
+            paymentStatus:
+                paidAmountPaise <= 0
+                    ? "unpaid"
+                    : balanceDuePaise > 0
+                      ? "partially_paid"
+                      : "paid_in_full",
+            paymentPercentBps,
+            paidAmountPaise,
             fullPaymentAmountPaise: invoice.totalAmountPaise,
-            balanceAfterPartialPaise: Math.max(
-                0,
-                invoice.totalAmountPaise -
-                    Math.round(
-                        (invoice.totalAmountPaise * order.advancePercentBps) /
-                            10_000
-                    )
-            ),
+            balanceDuePaise,
         },
         taxSummary: {
             taxableValuePaise: invoice.taxableValuePaise,
@@ -165,8 +211,8 @@ export function CorporateTaxInvoiceTemplate({
             },
         ],
         brand: {
-            name: seller.name,
-            logoUrl: seller.logoUrl,
+            name: RENIVET_CORPORATE_SELLER_NAME,
+            logoUrl: renivetLogoUrl,
             confidential: {
                 addressLine1: seller.addressLine1 ?? seller.address,
                 addressLine2: seller.addressLine2 ?? undefined,
@@ -175,17 +221,15 @@ export function CorporateTaxInvoiceTemplate({
                 postalCode: seller.postalCode ?? undefined,
                 gstin: seller.gstin ?? undefined,
                 cin: seller.cin ?? undefined,
-                email: seller.email ?? undefined,
+                email: "contact@renivet.com",
                 phone: seller.phone ?? undefined,
                 bankName: seller.bankName ?? undefined,
-                bankAccountHolderName:
-                    seller.bankAccountHolderName ?? seller.name,
+                bankAccountHolderName: corporateInvoicePayeeName,
                 bankAccountNumber: seller.bankAccountNumber ?? undefined,
                 bankAccountType: seller.bankAccountType ?? undefined,
                 bankIfscCode: seller.bankIfscCode ?? undefined,
                 bankBranch: seller.bankBranch ?? undefined,
-                authorizedSignatoryName:
-                    seller.authorizedSignatoryName ?? undefined,
+                authorizedSignatoryName: RENIVET_CORPORATE_SIGNATORY,
             },
         },
     };
