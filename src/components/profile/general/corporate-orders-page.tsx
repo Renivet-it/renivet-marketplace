@@ -5,8 +5,16 @@ import { Icons } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button-general";
 import { cn, convertValueToLabel, formatINR } from "@/lib/utils";
+import {
+    BarChart3,
+    CreditCard,
+    FileText,
+    PackageCheck,
+    Plus,
+    ShieldCheck,
+} from "lucide-react";
 import Script from "next/script";
-import { useState } from "react";
+import { type ReactNode, useState } from "react";
 
 export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
     const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -23,16 +31,16 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
     );
 
     return (
-        <div className="min-w-0 flex-1 bg-[#f8f7f4]">
+        <div className="min-w-0 max-w-full flex-1 overflow-x-hidden bg-[#fbfaf8] font-inter">
             <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
-            <section className="mb-8 overflow-hidden rounded-[30px] border border-[#e7e1d4] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.98),_rgba(248,243,236,0.96)_42%,_rgba(238,244,252,0.95)_100%)] shadow-[0_28px_80px_-52px_rgba(45,53,31,0.35)]">
+            <section className="mb-8 overflow-hidden rounded-[14px] border border-[#e9e4dc] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.98),_rgba(250,247,242,0.96)_46%,_rgba(245,248,252,0.98)_100%)] shadow-[0_18px_48px_-38px_rgba(45,53,31,0.28)]">
                 <div className="flex flex-col gap-8 p-6 md:p-8 xl:flex-row xl:items-end xl:justify-between">
                     <div className="max-w-3xl">
                         <p className="text-xs font-semibold uppercase tracking-[0.34em] text-[#8f7750]">
                             Self-Service Ordering
                         </p>
-                        <h1 className="mt-3 font-serif text-3xl font-semibold leading-tight text-[#1f2937] md:text-5xl">
+                        <h1 className="mt-3 max-w-2xl font-serif text-3xl font-semibold leading-[1.08] tracking-[-0.025em] text-[#172033] md:text-5xl">
                             Configure and place bulk orders with confidence
                         </h1>
                         <p className="mt-4 max-w-2xl text-sm leading-7 text-[#667085] md:text-base">
@@ -43,16 +51,18 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                         </p>
 
                         <div className="mt-5 flex flex-wrap gap-2">
-                            <span className="rounded-full border border-[#dbcdb7] bg-white/80 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#6f5b3e]">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-[#d9eadf] bg-[#eaf5ef] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#27634e]">
+                                <ShieldCheck className="size-3.5" />
                                 Premium bulk ordering
                             </span>
-                            <span className="rounded-full border border-[#d9e7f7] bg-[#f4f8fd] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-[#4c7fb6]">
+                            <span className="inline-flex items-center gap-2 rounded-full border border-[#d9e7f7] bg-[#eff6ff] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#3b73c4]">
+                                <BarChart3 className="size-3.5" />
                                 Live pricing and payment tracking
                             </span>
                         </div>
                     </div>
 
-                    <div className="w-full max-w-xl rounded-[26px] border border-white/80 bg-white/80 p-3 shadow-[0_18px_50px_-36px_rgba(31,41,55,0.28)] backdrop-blur">
+                    <div className="w-full max-w-xl rounded-[16px] border border-[#eef0f2] bg-white/90 p-3 shadow-[0_12px_34px_-26px_rgba(31,41,55,0.2)]">
                         <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
                             <MetricCard
                                 label="Total Orders"
@@ -79,7 +89,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                         <div
                             role="tablist"
                             aria-label="Corporate order views"
-                            className="inline-flex w-fit rounded-full border border-[#dde4ec] bg-white p-1 shadow-sm"
+                            className="inline-flex w-fit rounded-lg border border-[#dde4ec] bg-white p-1 shadow-sm"
                         >
                             <button
                                 type="button"
@@ -87,7 +97,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                 aria-selected={!isPlacingOrder}
                                 onClick={() => setIsPlacingOrder(false)}
                                 className={cn(
-                                    "rounded-full px-5 py-2.5 text-sm font-semibold transition-colors",
+                                    "rounded-md px-5 py-2.5 text-sm font-semibold transition-colors",
                                     !isPlacingOrder
                                         ? "bg-[#2f3720] text-white shadow-sm"
                                         : "text-[#475467] hover:text-[#1f2937]"
@@ -101,13 +111,13 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                 aria-selected={isPlacingOrder}
                                 onClick={() => setIsPlacingOrder(true)}
                                 className={cn(
-                                    "rounded-full px-5 py-2.5 text-sm font-semibold transition-colors",
+                                    "rounded-md px-5 py-2.5 text-sm font-semibold transition-colors",
                                     isPlacingOrder
-                                        ? "bg-[#5B9BD5] text-white shadow-sm"
+                                        ? "bg-[#2f3720] text-white shadow-sm"
                                         : "text-[#475467] hover:text-[#1f2937]"
                                 )}
                             >
-                                New Self-Service Order
+                                New Self-Service Order <Plus className="ml-1 inline size-4" />
                             </button>
                         </div>
 
@@ -135,7 +145,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                 <section className="mt-2 space-y-4">
                     <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                         <div>
-                            <h2 className="font-serif text-2xl font-semibold text-[#1f2937] md:text-3xl">
+                            <h2 className="font-serif text-2xl font-semibold tracking-[-0.02em] text-[#172033] md:text-3xl">
                                 Your Self-Service Orders
                             </h2>
                             <p className="mt-2 text-sm text-[#667085]">
@@ -154,7 +164,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                     </div>
 
                     {initialData.length === 0 ? (
-                        <div className="overflow-hidden rounded-[28px] border border-[#eadfce] bg-[linear-gradient(135deg,#fffdf9_0%,#fff8ef_45%,#f8fbff_100%)] shadow-[0_26px_60px_-50px_rgba(61,44,22,0.35)]">
+                        <div className="overflow-hidden rounded-[14px] border border-[#e9e4dc] bg-[linear-gradient(135deg,#fffdf9_0%,#fff9f1_45%,#f8fbff_100%)] shadow-[0_18px_46px_-38px_rgba(61,44,22,0.28)]">
                             <div className="grid gap-0 lg:grid-cols-[1.1fr_0.9fr]">
                                 <div className="p-8 md:p-10">
                                     <div className="flex size-14 items-center justify-center rounded-2xl bg-white text-[#8f7750] shadow-sm">
@@ -184,17 +194,20 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                     </div>
                                 </div>
 
-                                <div className="border-t border-[#f1e6d6] bg-white/60 p-8 lg:border-l lg:border-t-0">
+                                        <div className="border-t border-[#f1e6d6] bg-[#f8fafb] p-6 lg:border-l lg:border-t-0 lg:p-7">
                                     <div className="space-y-4">
-                                        <LuxuryPoint
+                                            <LuxuryPoint
+                                                icon={<PackageCheck className="size-5" />}
                                             title="Easy order setup"
                                             description="Add company details, product preferences, branding instructions, and employee sizes in one guided flow."
                                         />
-                                        <LuxuryPoint
+                                            <LuxuryPoint
+                                                icon={<CreditCard className="size-5" />}
                                             title="Clear payment visibility"
                                             description="See the amount paid, remaining balance, and payment status for every corporate order."
                                         />
-                                        <LuxuryPoint
+                                            <LuxuryPoint
+                                                icon={<FileText className="size-5" />}
                                             title="Everything in one place"
                                             description="Return anytime to download order summaries, review status updates, and complete pending payments."
                                         />
@@ -352,11 +365,11 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
 
 function MetricCard({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-2xl border border-white/80 bg-[linear-gradient(180deg,#ffffff_0%,#fbfbfc_100%)] p-4 shadow-[0_10px_30px_-24px_rgba(15,23,42,0.28)]">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#98a2b3]">
+        <div className="border-r border-[#eef0f2] px-3 py-1 last:border-r-0">
+            <p className="text-[10px] font-bold uppercase leading-3 tracking-[0.12em] text-[#28644f]">
                 {label}
             </p>
-            <p className="mt-2 text-lg font-semibold text-[#1f2937]">{value}</p>
+            <p className="mt-2 text-2xl font-bold tracking-[-0.04em] text-[#182131]">{value}</p>
         </div>
     );
 }
@@ -371,10 +384,10 @@ function StatusChip({
     return (
         <span
             className={cn(
-                "rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.18em]",
+                "inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.12em]",
                 tone === "blue"
-                    ? "border-blue-200 bg-blue-50 text-blue-700"
-                    : "border-amber-200 bg-amber-50 text-amber-700"
+                    ? "border-blue-200 bg-blue-50 text-blue-700 before:size-1.5 before:rounded-full before:bg-blue-500 before:content-['']"
+                    : "border-amber-200 bg-amber-50 text-amber-700 before:size-1.5 before:rounded-full before:bg-amber-500 before:content-['']"
             )}
         >
             {label}
@@ -383,18 +396,27 @@ function StatusChip({
 }
 
 function LuxuryPoint({
+    icon,
     title,
     description,
 }: {
+    icon: ReactNode;
     title: string;
     description: string;
 }) {
     return (
-        <div className="rounded-2xl border border-white/80 bg-white/90 p-4 shadow-[0_16px_34px_-28px_rgba(31,41,55,0.24)]">
-            <p className="text-sm font-semibold text-[#1f2937]">{title}</p>
-            <p className="mt-1 text-sm leading-6 text-[#667085]">
-                {description}
-            </p>
+        <div className="rounded-xl border border-[#e8edf0] bg-[#f8fafb] p-4">
+            <div className="flex items-start gap-3">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-[#e3ebe7] bg-white text-[#28644f] shadow-sm">
+                    {icon}
+                </span>
+                <div>
+                    <p className="text-sm font-semibold text-[#1f2937]">{title}</p>
+                    <p className="mt-1 text-sm leading-6 text-[#667085]">
+                        {description}
+                    </p>
+                </div>
+            </div>
         </div>
     );
 }

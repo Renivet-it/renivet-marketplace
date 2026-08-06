@@ -15,11 +15,16 @@ import { formatINR, handleClientError } from "@/lib/utils";
 import {
     AlertTriangle,
     ArrowUpRight,
+    ArrowRight,
+    Building2,
     CheckCircle2,
     Clock,
     Download,
     Eye,
     FileText,
+    Headphones,
+    LockKeyhole,
+    ShoppingCart,
     Upload,
     XCircle,
 } from "lucide-react";
@@ -44,7 +49,7 @@ function ensureRazorpaySdk() {
         }
 
         const existing = document.querySelector<HTMLScriptElement>(
-            'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+            "script[src=\"https://checkout.razorpay.com/v1/checkout.js\"]"
         );
 
         if (existing) {
@@ -305,100 +310,93 @@ export function CustomerCorporateDashboard({
     };
 
     return (
-        <div className="w-full space-y-8 pb-6 font-sans">
+        <div className="w-full max-w-full space-y-7 overflow-x-hidden pb-6 font-inter text-[#182131]">
             <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
-            {/* Header / Hero Section */}
-            <section className="overflow-hidden rounded-[32px] border border-[#e8e5db] bg-[linear-gradient(135deg,#faf9f5_0%,#f5f6f2_50%,#ffffff_100%)] shadow-[0_30px_80px_-55px_rgba(49,58,31,0.15)]">
-                <div className="grid gap-6 p-6 md:p-8 xl:grid-cols-[minmax(0,1.55fr)_320px]">
-                    <div>
-                        <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#4b7c37]">
-                            Corporate Procurement Hub
-                        </p>
-                        <h1 className="mt-4 max-w-3xl font-playfair font-serif text-3xl font-semibold leading-tight text-slate-900 md:text-4xl 2xl:text-5xl">
-                            Corporate buying made simple for your team
-                        </h1>
-                        <p className="mt-4 max-w-3xl text-sm leading-7 text-slate-600 md:text-base">
-                            {initialProfile
-                                ? `Welcome back, ${initialProfile.companyName}. Start a self-service order, request a managed quotation, review quotes, and track progress from one clear workspace.`
-                                : "Choose the buying path that fits your business. Start a self-service order for standard bulk purchases, or request a managed quotation when you need sourcing and customization support."}
-                        </p>
-
-                        <div className="mt-8 grid gap-4 xl:grid-cols-2">
-                            <ActionCard
-                                eyebrow="Fastest Route"
-                                title="Self-Service Ordering"
-                                description="Browse catalog-led products, configure quantity and branding, review pricing, and place the order directly."
-                                href="/profile/corporate/self-service"
-                                cta="Start Self-Service Ordering"
-                                tone="dark"
-                            />
-                            <ActionCard
-                                eyebrow="Managed Route"
-                                title="Request a Custom Quotation"
-                                description="Share the requirement and let Renivet prepare sourcing, pricing, and the full business quotation workflow."
-                                href="/profile/corporate/request-quote"
-                                cta="Start Managed Procurement"
-                                tone="light"
-                            />
+            <section className="grid gap-7 lg:grid-cols-[minmax(0,1fr)_236px]">
+                <div>
+                    <div className="flex items-start justify-between gap-5">
+                        <div>
+                            <p className="text-[13px] font-medium text-[#1d5b47]">
+                                Good afternoon, {initialProfile?.contactPerson?.split(" ")[0] ?? "Dark"} 👋
+                            </p>
+                            <h1 className="mt-3 max-w-[610px] text-4xl font-bold leading-[1.08] tracking-[-0.04em] text-[#172033] md:text-[42px]">
+                                Everything your team<br />
+                                needs to procure<br />
+                                sustainably.
+                            </h1>
+                            <p className="mt-4 max-w-[430px] text-[15px] leading-6 text-[#5d6879]">
+                                Choose how you&apos;d like to place your order.<br />
+                                We&apos;ll take care of the rest.
+                            </p>
                         </div>
                     </div>
 
-                    <div className="space-y-4 xl:pl-2">
-                        <SurfacePanel
-                            title="Company Snapshot"
-                            className="border-[#e8e5db] bg-white/85 backdrop-blur"
-                        >
-                            {initialProfile ? (
-                                <div className="space-y-4">
-                                    <HeroStat
-                                        label="Buyer Company"
-                                        value={initialProfile.companyName}
-                                    />
-                                    <div className="grid gap-3">
-                                        <DetailLine
-                                            label="Contact"
-                                            value={initialProfile.contactPerson}
-                                        />
-                                        <DetailLine
-                                            label="Email"
-                                            value={initialProfile.email}
-                                        />
-                                    </div>
-                                </div>
-                            ) : (
-                                <Empty label="Your company profile will be created automatically from your first request for quotation." />
-                            )}
-                        </SurfacePanel>
+                    <section className="mt-7 rounded-xl border border-[#dde3e6] bg-white p-5 shadow-[0_7px_20px_rgba(25,42,56,0.03)]">
+                        <h2 className="text-[17px] font-bold text-[#1b2536]">How would you like to buy?</h2>
+                        <div className="mt-5 grid gap-4 md:grid-cols-2">
+                            <ActionCard
+                                eyebrow=""
+                                title="Browse Products"
+                                description="Browse our catalog, customize quantities, and place your order instantly."
+                                href="/profile/corporate/self-service"
+                                cta="Browse Products"
+                                tone="reference-primary"
+                                icon={<ShoppingCart className="size-6" strokeWidth={1.8} />}
+                            />
+                            <ActionCard
+                                eyebrow=""
+                                title="Request a Custom Quote"
+                                description="Tell us what you need, and our procurement team will prepare a tailored quotation."
+                                href="/profile/corporate/request-quote"
+                                cta="Request Quote"
+                                tone="reference-secondary"
+                                icon={<FileText className="size-6" strokeWidth={1.8} />}
+                            />
+                        </div>
+                    </section>
 
-                        <SurfacePanel
-                            title="What happens next"
-                            description="After approval, buyers can continue directly into order setup or upload a company purchase order first."
-                            className="border-[#e8e5db] bg-[linear-gradient(135deg,#ffffff_0%,#faf9f5_100%)]"
-                        >
-                            <div className="space-y-3">
-                                <MiniPill
-                                    label={
-                                        quotesNeedingAction.length
-                                            ? `${quotesNeedingAction.length} quote(s) awaiting your decision`
-                                            : "No pending quote approvals right now"
-                                    }
-                                />
-                                <MiniPill
-                                    label={
-                                        purchaseOrdersReadyCount
-                                            ? `${purchaseOrdersReadyCount} approved quote(s) ready for order setup`
-                                            : "Order setup unlocks after quotation approval"
-                                    }
-                                />
-                            </div>
-                        </SurfacePanel>
-                    </div>
+                    <section className="mt-7 grid grid-cols-2 divide-x divide-y divide-[#edf0f1] rounded-xl border border-[#dde3e6] bg-white px-2 py-4 shadow-[0_7px_20px_rgba(25,42,56,0.03)] sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-6">
+                        <MetricCard label="Quote Requests" value={String(initialRfqs.length)} hint="Requests submitted" compact />
+                        <MetricCard label="Quotes" value={String(quotes.length)} hint="Quotes received" compact />
+                        <MetricCard label="Orders" value={String(initialOrders.length)} hint="Orders placed" compact />
+                        <MetricCard label="Approved Quotes" value={String(purchaseOrdersReadyCount)} hint="Ready for checkout" compact />
+                        <MetricCard label="Payments" value={String(paidOrdersCount)} hint="Completed payments" compact />
+                        <MetricCard label="Deliveries" value={String(deliveredOrdersCount)} hint="Delivered orders" compact />
+                    </section>
                 </div>
+
+                <aside className="space-y-5">
+                    <SideInfoCard
+                        icon={<Building2 className="size-4" />}
+                        title="Company Profile"
+                        body={initialProfile?.companyName
+                            ? `${initialProfile.companyName} is ready for corporate orders.`
+                            : "Your company details will be saved after your first quotation request."}
+                        action={initialProfile ? "View Profile" : "Complete Profile"}
+                    />
+                    <div>
+                        <div className="flex items-center gap-2 text-[16px] font-bold text-[#182131]">
+                            <span className="flex size-5 items-center justify-center rounded-full bg-[#1d5b47] text-white"><CheckCircle2 className="size-3.5" /></span>
+                            Next Steps
+                        </div>
+                        <p className="mt-2 text-[13px] leading-5 text-[#687487]">Once your quote is approved, you can continue with your order.</p>
+                        <div className="mt-4 space-y-3">
+                            <InfoRow icon={<CheckCircle2 className="size-5 text-[#1d5b47]" />} text={quotesNeedingAction.length ? `${quotesNeedingAction.length} quote(s) awaiting your review` : "No quotes awaiting approval"} />
+                            <InfoRow icon={<LockKeyhole className="size-5 text-[#a4adba]" />} text="Ordering becomes available after approval" muted />
+                        </div>
+                    </div>
+                    <SideInfoCard
+                        icon={<Headphones className="size-4" />}
+                        title="Need Help?"
+                        body="Our procurement team is here to support you."
+                        action="Contact Procurement Team"
+                    />
+                </aside>
             </section>
 
             {/* Metrics Section */}
-            <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <section className="hidden">
                 <MetricCard
                     label="Requests for Quotation"
                     value={String(initialRfqs.length)}
@@ -437,9 +435,9 @@ export function CustomerCorporateDashboard({
                 onValueChange={setActiveTab}
                 className="space-y-6"
             >
-                <div className="rounded-[28px] border border-slate-200 bg-white p-3 shadow-[0_24px_70px_-50px_rgba(15,23,42,0.15)]">
+                <div className="border-b border-[#dde3e6]">
                     <TabsList
-                        className={`grid h-auto w-full grid-cols-2 gap-2 rounded-[22px] bg-slate-50 p-2 ${
+                        className={`grid h-auto w-full grid-cols-2 gap-1 rounded-none bg-transparent p-0 ${
                             unlockedQuotes.length
                                 ? "md:grid-cols-6"
                                 : "md:grid-cols-5"
@@ -447,38 +445,38 @@ export function CustomerCorporateDashboard({
                     >
                         <TabsTrigger
                             value="overview"
-                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Overview
                         </TabsTrigger>
                         <TabsTrigger
                             value="requests"
-                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Requests
                         </TabsTrigger>
                         <TabsTrigger
                             value="quotes"
-                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Quotes
                         </TabsTrigger>
                         <TabsTrigger
                             value="orders"
-                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Orders
                         </TabsTrigger>
                         <TabsTrigger
                             value="company"
-                            className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Company
                         </TabsTrigger>
                         {unlockedQuotes.length ? (
                             <TabsTrigger
                                 value="order-setup"
-                                className="rounded-[18px] py-3 text-sm font-semibold transition-all"
+                                className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                             >
                                 Order Setup
                             </TabsTrigger>
@@ -493,7 +491,37 @@ export function CustomerCorporateDashboard({
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.35, ease: "easeOut" }}
                     >
-                        <section className="grid gap-6 xl:grid-cols-12">
+                        <section className="rounded-xl border border-[#dde3e6] bg-white p-5 shadow-[0_7px_20px_rgba(25,42,56,0.03)]">
+                            <h2 className="text-[17px] font-bold text-[#1b2536]">Activity Overview</h2>
+                            <div className="mt-6 grid gap-5 md:grid-cols-3">
+                                <ActivityCard
+                                    icon={<FileText className="size-5" />}
+                                    title="Awaiting Your Review"
+                                    description="Review and approve quotations assigned to your team."
+                                    tone="green"
+                                    empty={quotesNeedingAction.length === 0 ? "You're all caught up." : `${quotesNeedingAction.length} quote(s) need your review.`}
+                                    onClick={() => quotesNeedingAction.length && setActiveTab("quotes")}
+                                />
+                                <ActivityCard
+                                    icon={<FileText className="size-5" />}
+                                    title="Latest Requests"
+                                    description="View the most recent quotation requests submitted by your team."
+                                    tone="purple"
+                                    empty={initialRfqs.length ? `${initialRfqs.length} request(s) submitted.` : "No requests submitted yet."}
+                                    onClick={() => setActiveTab("requests")}
+                                />
+                                <ActivityCard
+                                    icon={<ShoppingCart className="size-5" />}
+                                    title="Active Orders"
+                                    description="Track every active corporate order in one place."
+                                    tone="orange"
+                                    empty={initialOrders.length ? `${initialOrders.length} active order(s).` : "Your orders will appear here once they're placed."}
+                                    onClick={() => setActiveTab("orders")}
+                                />
+                            </div>
+                        </section>
+
+                        <section className="hidden">
                             <SurfacePanel
                                 title="Quotes Requiring Action"
                                 description="The most important area for your team to review and approve quotations."
@@ -1200,7 +1228,7 @@ export function CustomerCorporateDashboard({
                                             <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
                                                 Ready To Order
                                             </div>
-                                            <div className="mt-3 font-serif text-2xl font-semibold text-slate-900">
+                                            <div className="mt-3 text-2xl font-semibold text-slate-900">
                                                 {selectedOrderSetupQuote?.quoteNumber ??
                                                     "Approved quote"}
                                             </div>
@@ -1430,7 +1458,7 @@ function SurfacePanel({
             className={`rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_16px_40px_-30px_rgba(49,58,31,0.12)] ${className}`}
         >
             <h2
-                className={`font-serif text-xl font-semibold tracking-tight ${
+                className={`text-xl font-semibold tracking-tight ${
                     inverse ? "text-white" : "text-slate-900"
                 }`}
             >
@@ -1454,10 +1482,12 @@ function MetricCard({
     label,
     value,
     hint,
+    compact = false,
 }: {
     label: string;
     value: string;
     hint: string;
+    compact?: boolean;
 }) {
     return (
         <motion.div
@@ -1468,15 +1498,17 @@ function MetricCard({
                 borderColor: "#4b7c37",
             }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
-            className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_-20px_rgba(0,0,0,0.03)] transition-colors duration-200"
+            className={compact
+                ? "min-w-0 rounded-none border-0 bg-transparent px-2 py-1 shadow-none"
+                : "rounded-[24px] border border-slate-200 bg-white p-5 shadow-[0_12px_30px_-20px_rgba(0,0,0,0.03)] transition-colors duration-200"}
         >
-            <div className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
+            <div className={compact ? "flex items-start gap-1 text-[10px] font-semibold leading-3 text-[#5d6879]" : "text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]"}>
                 {label}
             </div>
-            <div className="mt-3 font-playfair font-serif text-4xl font-semibold text-slate-900">
+            <div className={compact ? "mt-3 text-3xl font-bold tracking-[-0.04em] text-[#182131]" : "mt-3 text-4xl font-semibold text-slate-900"}>
                 {value}
             </div>
-            <div className="mt-2 text-xs font-medium leading-relaxed text-slate-500">
+            <div className={compact ? "mt-1 text-[9px] uppercase leading-3 text-[#8a94a3]" : "mt-2 text-xs font-medium leading-relaxed text-slate-500"}>
                 {hint}
             </div>
         </motion.div>
@@ -1512,15 +1544,19 @@ function ActionCard({
     href,
     cta,
     tone,
+    icon,
 }: {
     eyebrow: string;
     title: string;
     description: string;
     href: string;
     cta: string;
-    tone: "dark" | "light";
+    tone: "dark" | "light" | "reference-primary" | "reference-secondary";
+    icon?: ReactNode;
 }) {
     const dark = tone === "dark";
+    const referencePrimary = tone === "reference-primary";
+    const referenceSecondary = tone === "reference-secondary";
 
     return (
         <motion.a
@@ -1529,36 +1565,127 @@ function ActionCard({
             whileTap={{ scale: 0.995 }}
             transition={{ type: "spring", stiffness: 350, damping: 20 }}
             className={
-                dark
+                referencePrimary
+                    ? "group block rounded-xl border border-[#edf0f1] bg-[#f8fafb] p-5 text-slate-900 transition-colors duration-200 hover:border-[#b7d9cb] hover:bg-[#f4fbf7]"
+                    : referenceSecondary
+                      ? "group block rounded-xl border border-[#f1eeeb] bg-[#fcfaf8] p-5 text-slate-900 transition-colors duration-200 hover:border-[#e8c9a9] hover:bg-[#fffaf4]"
+                      : dark
                     ? "group block rounded-[28px] border border-[#c8d6c3] bg-[linear-gradient(135deg,#f4f8f2_0%,#e7f0e3_100%)] p-6 text-slate-900 shadow-[0_28px_70px_-42px_rgba(47,55,32,0.15)] transition-colors duration-200 hover:border-[#b1c7ab]"
                     : "group block rounded-[28px] border border-[#e3decb] bg-[linear-gradient(135deg,#faf9f5_0%,#f5f2e9_100%)] p-6 text-slate-900 shadow-[0_24px_60px_-44px_rgba(91,155,213,0.1)] transition-colors duration-200 hover:border-[#cfc7ae]"
             }
         >
+            {referencePrimary || referenceSecondary ? (
+                <div className={`flex size-11 items-center justify-center rounded-full border bg-white shadow-sm ${referencePrimary ? "border-[#e5f1eb] text-[#1d5b47]" : "border-[#f1e8dd] text-[#d98535]"}`}>
+                    {icon}
+                </div>
+            ) : null}
             <div
                 className={
-                    dark
+                    referencePrimary || referenceSecondary
+                        ? "mt-4 hidden"
+                        : dark
                         ? "text-[10px] font-bold uppercase tracking-[0.24em] text-[#315721]"
                         : "text-[10px] font-bold uppercase tracking-[0.24em] text-[#6d6447]"
                 }
             >
                 {eyebrow}
             </div>
-            <div className="mt-3 font-playfair font-serif text-2xl font-semibold leading-tight text-slate-900">
+            <div className={referencePrimary || referenceSecondary ? "mt-[-3rem] ml-16 min-h-[52px] text-[17px] font-bold leading-6 text-[#1b2536]" : "mt-3 text-2xl font-semibold leading-tight text-slate-900"}>
                 {title}
             </div>
-            <div className="mt-3 text-sm leading-relaxed text-slate-600">
+            <div className={referencePrimary || referenceSecondary ? "ml-16 mt-1 min-h-[66px] text-[13px] leading-5 text-[#687487]" : "mt-3 text-sm leading-relaxed text-slate-600"}>
                 {description}
             </div>
             <div
                 className={
-                    dark
+                    referencePrimary
+                        ? "mt-5 inline-flex items-center gap-2 rounded-md bg-[#1d5b47] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#164d3d]"
+                        : referenceSecondary
+                          ? "mt-5 inline-flex items-center gap-2 rounded-md border border-[#e1e5e8] bg-white px-5 py-2.5 text-[13px] font-semibold text-[#182131] shadow-sm transition hover:border-[#cfd7dc]"
+                          : dark
                         ? "btn-liquid btn-liquid-primary mt-6 inline-flex rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
                         : "btn-liquid btn-liquid-secondary mt-6 inline-flex rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
                 }
             >
                 <span>{cta}</span>
+                {referencePrimary || referenceSecondary ? <ArrowRight className="size-4" /> : null}
             </div>
         </motion.a>
+    );
+}
+
+function SideInfoCard({
+    icon,
+    title,
+    body,
+    action,
+}: {
+    icon: ReactNode;
+    title: string;
+    body: string;
+    action: string;
+}) {
+    return (
+        <div className="rounded-xl border border-[#dde3e6] bg-white p-4 shadow-[0_7px_20px_rgba(25,42,56,0.04)]">
+            <div className="flex items-center gap-2 text-[15px] font-bold text-[#1d2738]">
+                <span className="text-[#1d5b47]">{icon}</span>
+                {title}
+            </div>
+            <p className="mt-4 rounded-lg border border-dashed border-[#55d1a8] bg-[#f4fbf7] px-3 py-4 text-center text-[12px] leading-5 text-[#687487]">
+                {body}
+            </p>
+            <a href="#" className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-[#1d5b47] hover:underline">
+                {action} <ArrowRight className="size-3.5" />
+            </a>
+        </div>
+    );
+}
+
+function InfoRow({ icon, text, muted = false }: { icon: ReactNode; text: string; muted?: boolean }) {
+    return (
+        <div className={`flex items-center gap-3 rounded-lg border border-[#e1e5e8] bg-white px-3 py-3 text-[12px] leading-5 shadow-[0_4px_12px_rgba(25,42,56,0.03)] ${muted ? "text-[#687487]" : "text-[#2b4f43]"}`}>
+            {icon}
+            <span>{text}</span>
+        </div>
+    );
+}
+
+function ActivityCard({
+    icon,
+    title,
+    description,
+    empty,
+    tone,
+    onClick,
+}: {
+    icon: ReactNode;
+    title: string;
+    description: string;
+    empty: string;
+    tone: "green" | "purple" | "orange";
+    onClick: () => void;
+}) {
+    const toneStyles = {
+        green: "border-[#f0dfc8] bg-[#fffaf4] text-[#d98535]",
+        purple: "border-[#ded9fa] bg-[#faf8ff] text-[#7c54f2]",
+        orange: "border-[#f2e1cb] bg-[#fffaf3] text-[#e77b20]",
+    }[tone];
+
+    return (
+        <button type="button" onClick={onClick} className="text-left">
+            <div className="flex items-start gap-3">
+                <span className={`flex size-9 shrink-0 items-center justify-center rounded-md ${toneStyles}`}>
+                    {icon}
+                </span>
+                <span>
+                    <span className="block text-[13px] font-bold text-[#1d2738]">{title}</span>
+                    <span className="mt-1 block text-[11px] leading-4 text-[#788293]">{description}</span>
+                </span>
+            </div>
+            <span className={`mt-4 flex min-h-[88px] items-center justify-center rounded-lg border border-dashed px-4 text-center text-[12px] leading-5 text-[#697485] ${toneStyles}`}>
+                {empty}
+            </span>
+        </button>
     );
 }
 
@@ -1581,7 +1708,7 @@ function HeroStat({ label, value }: { label: string; value: string }) {
             <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
                 {label}
             </div>
-            <div className="mt-2 font-serif text-xl font-semibold text-slate-900">
+            <div className="mt-2 text-xl font-semibold text-slate-900">
                 {value}
             </div>
         </div>
@@ -1666,7 +1793,7 @@ function CustomerCorporateRfqDetailPanel({ rfq }: { rfq: any }) {
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
                         Selected Request Details
                     </span>
-                    <h3 className="mt-2 font-playfair font-serif text-2xl font-semibold text-slate-900">
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">
                         {rfq.rfqNumber}
                     </h3>
                     <p className="mt-1 text-xs text-slate-400">
@@ -1845,7 +1972,7 @@ function CustomerCorporateQuoteDetailPanel({
                     <span className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#4b7c37]">
                         Quote Evaluation
                     </span>
-                    <h3 className="mt-2 font-playfair font-serif text-2xl font-semibold text-slate-900">
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">
                         {quote.quoteNumber}
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
@@ -1883,7 +2010,7 @@ function CustomerCorporateQuoteDetailPanel({
                             </span>
                         </div>
                         <div className="my-2 border-t border-slate-100"></div>
-                        <div className="flex justify-between font-serif text-base font-bold text-slate-900">
+                        <div className="flex justify-between text-base font-bold text-slate-900">
                             <span>Total Quote Value</span>
                             <span>{formatINR(quote.totalAmountPaise)}</span>
                         </div>
@@ -2265,7 +2392,7 @@ function CustomerCorporateOrderDetailPanel({
                     <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#4b7c37]">
                         Selected Order Profile
                     </span>
-                    <h3 className="mt-2 font-playfair font-serif text-2xl font-semibold text-slate-900">
+                    <h3 className="mt-2 text-2xl font-semibold text-slate-900">
                         {order.publicOrderId}
                     </h3>
                     <p className="mt-1 text-xs text-slate-500">
