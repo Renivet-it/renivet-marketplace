@@ -16,14 +16,25 @@ interface Item {
     count?: number;
 }
 
-function isActive(pathname: string, item: Item) {
+function getFinalHref(item: Item): string {
+    if (item.href.startsWith("/profile")) {
+        return item.href;
+    }
+    if (["contact-us", "shopping-bag"].includes(item.name)) {
+        return item.href;
+    }
     if (item.href === "/") {
-        // "overview" and "personal-details" both map to /profile
-        // This logic might need adjustment if sidebar logic changes, but keeping consistent with prev.
-        // If exact match needed:
+        return "/profile";
+    }
+    return `/profile${item.href.startsWith("/") ? "" : "/"}${item.href}`;
+}
+
+function isActive(pathname: string, item: Item) {
+    const targetHref = getFinalHref(item);
+    if (targetHref === "/profile") {
         return pathname === "/profile" || pathname === "/profile/";
     }
-    return pathname.includes(item.href.replace("/", ""));
+    return pathname === targetHref || pathname.startsWith(targetHref + "/");
 }
 
 function NavItem({
@@ -57,16 +68,16 @@ function NavItem({
         >
             <div className="flex items-center gap-3">
                 <Icon
-                        className={cn(
-                            compact ? "size-4 shrink-0" : "size-[18px] shrink-0",
-                            active && compact
-                                ? "text-[#1d5b47]"
-                                : active
-                                  ? "text-blue-600"
-                                  : compact
-                                    ? "text-[#536174] group-hover:text-[#173b30]"
-                                    : "text-gray-500 group-hover:text-gray-700"
-                        )}
+                    className={cn(
+                        compact ? "size-4 shrink-0" : "size-[18px] shrink-0",
+                        active && compact
+                            ? "text-[#1d5b47]"
+                            : active
+                              ? "text-blue-600"
+                              : compact
+                                ? "text-[#536174] group-hover:text-[#173b30]"
+                                : "text-gray-500 group-hover:text-gray-700"
+                    )}
                 />
                 <span>{item.label ?? convertValueToLabel(item.name)}</span>
             </div>
@@ -85,11 +96,7 @@ function NavItem({
         return content;
     }
 
-    const finalHref = ["contact-us", "shopping-bag", "help-center"].includes(
-        item.name
-    )
-        ? item.href
-        : `/profile${item.href}`;
+    const finalHref = getFinalHref(item);
 
     return <Link href={finalHref}>{content}</Link>;
 }
