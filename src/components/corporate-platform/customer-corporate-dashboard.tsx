@@ -25,13 +25,14 @@ import {
     Headphones,
     LockKeyhole,
     ShoppingCart,
+    X,
     Upload,
     XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
 import Script from "next/script";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 function ensureRazorpaySdk() {
@@ -104,6 +105,22 @@ export function CustomerCorporateDashboard({
     const [selectedRfqId, setSelectedRfqId] = useState<string | null>(
         initialRfqs[0]?.id ?? null
     );
+    const [isRfqDetailsOpen, setIsRfqDetailsOpen] = useState(false);
+    const [isQuoteDetailsOpen, setIsQuoteDetailsOpen] = useState(false);
+    const [isOrderDetailsOpen, setIsOrderDetailsOpen] = useState(false);
+
+    useEffect(() => {
+        if (!isRfqDetailsOpen && !isQuoteDetailsOpen && !isOrderDetailsOpen) return;
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setIsRfqDetailsOpen(false);
+                setIsQuoteDetailsOpen(false);
+                setIsOrderDetailsOpen(false);
+            }
+        };
+        document.addEventListener("keydown", handleEscape);
+        return () => document.removeEventListener("keydown", handleEscape);
+    }, [isRfqDetailsOpen, isQuoteDetailsOpen, isOrderDetailsOpen]);
     const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(
         initialQuotes[0]?.id ?? null
     );
@@ -668,34 +685,34 @@ export function CustomerCorporateDashboard({
                         <SurfacePanel
                             title="Request History"
                             description="Track and review every request for quotation submitted by your team."
-                            className="border-[#e8e5db]"
+                            className="!rounded-none border-[#dbe3e9]"
                         >
                             {initialRfqs.length ? (
                                 <div className="space-y-6">
-                                    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+                                    <div className="overflow-hidden !rounded-none border border-[#dbe3e9] bg-white shadow-[0_8px_24px_rgba(20,45,60,0.06)]">
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-full border-collapse text-left">
-                                                <thead className="border-b border-slate-100 bg-slate-50">
-                                                    <tr className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                                        <th className="px-6 py-4">
+                                            <table className="w-full min-w-[860px] border-collapse text-left">
+                                                <thead className="border-b border-[#dbe3e9] bg-[#eef5f2]">
+                                                    <tr className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#45645a]">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             RFQ Number
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Date Created
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Use Case
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Target Quantity
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Procurement Mode
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Status
                                                         </th>
-                                                        <th className="px-6 py-4 text-right">
+                                                        <th className="whitespace-nowrap px-5 py-4 text-right">
                                                             Action
                                                         </th>
                                                     </tr>
@@ -708,55 +725,48 @@ export function CustomerCorporateDashboard({
                                                         return (
                                                             <tr
                                                                 key={rfq.id}
-                                                                onClick={() =>
-                                                                    setSelectedRfqId(
-                                                                        rfq.id
-                                                                    )
-                                                                }
-                                                                className={`cursor-pointer transition-colors duration-150 hover:bg-[#faf9f5]/50 ${
-                                                                    isSelected
-                                                                        ? "bg-[#faf9f5]"
-                                                                        : "bg-white"
+                                                                className={`border-b border-[#edf1f3] transition-colors duration-150 last:border-b-0 hover:bg-[#f7fbf9] ${
+                                                                    isSelected ? "bg-[#f5faf7]" : "bg-white"
                                                                 }`}
                                                             >
-                                                                <td className="px-6 py-4 font-semibold text-slate-900">
+                                                                <td className="px-5 py-4 text-sm font-bold text-[#182131]">
                                                                     {
                                                                         rfq.rfqNumber
                                                                     }
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm text-slate-500">
+                                                                <td className="px-5 py-4 text-sm text-[#637184]">
                                                                     {new Date(
                                                                         rfq.createdAt
                                                                     ).toLocaleDateString(
                                                                         "en-IN"
                                                                     )}
                                                                 </td>
-                                                                <td className="max-w-[200px] truncate px-6 py-4 text-sm text-slate-700">
+                                                                <td className="max-w-[220px] truncate px-5 py-4 text-sm text-[#344054]">
                                                                     {
                                                                         rfq.useCase
                                                                     }
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                                                <td className="px-5 py-4 text-sm font-semibold text-[#182131]">
                                                                     {
                                                                         rfq.quantity
                                                                     }
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm text-slate-600">
+                                                                <td className="px-5 py-4 text-sm text-[#637184]">
                                                                     {toLabel(
                                                                         rfq.procurementMode
                                                                     )}
                                                                 </td>
-                                                                <td className="px-6 py-4">
+                                                                <td className="px-5 py-4">
                                                                     <StatusChip
                                                                         label={toLabel(
                                                                             rfq.status
                                                                         )}
                                                                     />
                                                                 </td>
-                                                                <td className="px-6 py-4 text-right">
+                                                                <td className="px-5 py-4 text-right">
                                                                     <button
                                                                         type="button"
-                                                                        className="text-xs font-bold text-[#4b7c37] hover:underline"
+                                                                        className="inline-flex items-center rounded border border-[#1d6a50] px-3 py-1.5 text-xs font-semibold text-[#1d6a50] transition-colors hover:bg-[#1d6a50] hover:text-white"
                                                                         onClick={(
                                                                             e
                                                                         ) => {
@@ -764,6 +774,7 @@ export function CustomerCorporateDashboard({
                                                                             setSelectedRfqId(
                                                                                 rfq.id
                                                                             );
+                                                                            setIsRfqDetailsOpen(true);
                                                                         }}
                                                                     >
                                                                         Details
@@ -777,15 +788,12 @@ export function CustomerCorporateDashboard({
                                         </div>
                                     </div>
 
-                                    {/* Detailed view of selected RFQ */}
-                                    {selectedRfqId &&
-                                    initialRfqs.find(
-                                        (r) => r.id === selectedRfqId
-                                    ) ? (
-                                        <CustomerCorporateRfqDetailPanel
+                                    {selectedRfqId && isRfqDetailsOpen ? (
+                                        <RfqDetailsModal
                                             rfq={initialRfqs.find(
                                                 (r) => r.id === selectedRfqId
                                             )}
+                                            onClose={() => setIsRfqDetailsOpen(false)}
                                         />
                                     ) : null}
                                 </div>
@@ -807,34 +815,34 @@ export function CustomerCorporateDashboard({
                         <SurfacePanel
                             title="Quotation Approvals & Route Configuration"
                             description="Approve quotes, decide on PO or Direct routing, and kick off the guided order builder."
-                            className="border-[#e8e5db]"
+                            className="!rounded-none border-[#dbe3e9]"
                         >
                             {quotes.length ? (
                                 <div className="space-y-6">
-                                    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_8px_30px_rgb(0,0,0,0.02)]">
+                                    <div className="overflow-hidden !rounded-none border border-[#dbe3e9] bg-white shadow-[0_8px_24px_rgba(20,45,60,0.06)]">
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-full border-collapse text-left">
-                                                <thead className="border-b border-slate-100 bg-slate-50">
-                                                    <tr className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                                        <th className="px-6 py-4">
+                                            <table className="w-full min-w-[900px] border-collapse text-left">
+                                                <thead className="border-b border-[#dbe3e9] bg-[#eef5f2]">
+                                                    <tr className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#45645a]">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Quote Number
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Brand
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Quantity
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Total Value
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Date Received
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Status
                                                         </th>
-                                                        <th className="px-6 py-4 text-right">
+                                                        <th className="whitespace-nowrap px-5 py-4 text-right">
                                                             Action
                                                         </th>
                                                     </tr>
@@ -847,55 +855,50 @@ export function CustomerCorporateDashboard({
                                                         return (
                                                             <tr
                                                                 key={quote.id}
-                                                                onClick={() =>
-                                                                    setSelectedQuoteId(
-                                                                        quote.id
-                                                                    )
-                                                                }
-                                                                className={`cursor-pointer transition-colors duration-150 hover:bg-[#faf9f5]/50 ${
+                                                                className={`border-b border-[#edf1f3] transition-colors duration-150 last:border-b-0 hover:bg-[#f7fbf9] ${
                                                                     isSelected
                                                                         ? "bg-[#faf9f5]"
                                                                         : "bg-white"
                                                                 }`}
                                                             >
-                                                                <td className="px-6 py-4 font-semibold text-slate-900">
+                                                                <td className="px-5 py-4 text-sm font-bold text-[#182131]">
                                                                     {
                                                                         quote.quoteNumber
                                                                     }
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm text-slate-700">
+                                                                <td className="px-5 py-4 text-sm text-[#344054]">
                                                                     {quote.brand
                                                                         ?.name ??
                                                                         "Renivet"}
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm font-medium text-slate-900">
+                                                                <td className="px-5 py-4 text-sm font-semibold text-[#182131]">
                                                                     {
                                                                         quote.quantity
                                                                     }
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                                                                <td className="px-5 py-4 text-sm font-semibold text-[#182131]">
                                                                     {formatINR(
                                                                         quote.totalAmountPaise
                                                                     )}
                                                                 </td>
-                                                                <td className="px-6 py-4 text-sm text-slate-500">
+                                                                <td className="px-5 py-4 text-sm text-[#637184]">
                                                                     {new Date(
                                                                         quote.createdAt
                                                                     ).toLocaleDateString(
                                                                         "en-IN"
                                                                     )}
                                                                 </td>
-                                                                <td className="px-6 py-4">
+                                                                <td className="px-5 py-4">
                                                                     <StatusChip
                                                                         label={toLabel(
                                                                             quote.status
                                                                         )}
                                                                     />
                                                                 </td>
-                                                                <td className="px-6 py-4 text-right">
+                                                                <td className="px-5 py-4 text-right">
                                                                     <button
                                                                         type="button"
-                                                                        className="text-xs font-bold text-[#4b7c37] hover:underline"
+                                                                        className="inline-flex items-center rounded border border-[#1d6a50] px-3 py-1.5 text-xs font-semibold text-[#1d6a50] transition-colors hover:bg-[#1d6a50] hover:text-white"
                                                                         onClick={(
                                                                             e
                                                                         ) => {
@@ -903,9 +906,10 @@ export function CustomerCorporateDashboard({
                                                                             setSelectedQuoteId(
                                                                                 quote.id
                                                                             );
+                                                                            setIsQuoteDetailsOpen(true);
                                                                         }}
                                                                     >
-                                                                        Review
+                                                                        Details
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -918,10 +922,16 @@ export function CustomerCorporateDashboard({
 
                                     {/* Quote Details Action Panel */}
                                     {selectedQuoteId &&
+                                    isQuoteDetailsOpen &&
                                     quotes.find(
                                         (q) => q.id === selectedQuoteId
                                     ) ? (
-                                        <CustomerCorporateQuoteDetailPanel
+                                        <DashboardDetailsModal
+                                            title="Quote details"
+                                            subtitle={selectedQuoteId}
+                                            onClose={() => setIsQuoteDetailsOpen(false)}
+                                        >
+                                          <CustomerCorporateQuoteDetailPanel
                                             quote={quotes.find(
                                                 (q) => q.id === selectedQuoteId
                                             )}
@@ -1013,7 +1023,8 @@ export function CustomerCorporateDashboard({
                                                     [selectedQuoteId]: value,
                                                 }))
                                             }
-                                        />
+                                          />
+                                        </DashboardDetailsModal>
                                     ) : null}
                                 </div>
                             ) : (
@@ -1033,34 +1044,34 @@ export function CustomerCorporateDashboard({
                         <SurfacePanel
                             title="Corporate Orders"
                             description="Review final order status, payment progress, remaining balance, and full order details from one place."
-                            className="border-[#e8e5db]"
+                            className="!rounded-none border-[#dbe3e9]"
                         >
                             {initialOrders.length ? (
                                 <div className="space-y-5">
-                                    <div className="overflow-hidden rounded-[24px] border border-slate-200 bg-white">
+                                    <div className="overflow-hidden !rounded-none border border-[#dbe3e9] bg-white shadow-[0_8px_24px_rgba(20,45,60,0.06)]">
                                         <div className="overflow-x-auto">
-                                            <table className="min-w-full text-left">
-                                                <thead className="border-b border-slate-100 bg-slate-50">
-                                                    <tr className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                                        <th className="px-6 py-4">
+                                            <table className="w-full min-w-[920px] border-collapse text-left">
+                                                <thead className="border-b border-[#dbe3e9] bg-[#eef5f2]">
+                                                    <tr className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#45645a]">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Order ID
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Value
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Paid
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Balance
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Payment
                                                         </th>
-                                                        <th className="px-6 py-4">
+                                                        <th className="whitespace-nowrap px-5 py-4">
                                                             Fulfillment
                                                         </th>
-                                                        <th className="px-6 py-4 text-right">
+                                                        <th className="whitespace-nowrap px-5 py-4 text-right">
                                                             Action
                                                         </th>
                                                     </tr>
@@ -1080,24 +1091,19 @@ export function CustomerCorporateDashboard({
                                                                     key={
                                                                         order.id
                                                                     }
-                                                                    onClick={() =>
-                                                                        setSelectedOrderId(
-                                                                            order.id
-                                                                        )
-                                                                    }
-                                                                    className={`cursor-pointer transition-colors duration-150 hover:bg-[#faf9f5]/50 ${
+                                                                    className={`border-b border-[#edf1f3] transition-colors duration-150 last:border-b-0 hover:bg-[#f7fbf9] ${
                                                                         isSelected
                                                                             ? "bg-[#faf9f5]"
                                                                             : "bg-white"
                                                                     }`}
                                                                 >
-                                                                    <td className="px-6 py-4">
-                                                                        <div className="font-semibold text-slate-900">
+                                                                    <td className="px-5 py-4">
+                                                                        <div className="text-sm font-bold text-[#182131]">
                                                                             {
                                                                                 order.publicOrderId
                                                                             }
                                                                         </div>
-                                                                        <div className="mt-1 text-xs text-slate-500">
+                                                                        <div className="mt-1 text-xs text-[#637184]">
                                                                             {new Date(
                                                                                 order.createdAt
                                                                             ).toLocaleDateString(
@@ -1105,22 +1111,22 @@ export function CustomerCorporateDashboard({
                                                                             )}
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                                                                    <td className="px-5 py-4 text-sm font-semibold text-[#182131]">
                                                                         {formatINR(
                                                                             order.totalPaise
                                                                         )}
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-sm font-medium text-slate-700">
+                                                                    <td className="px-5 py-4 text-sm text-[#344054]">
                                                                         {formatINR(
                                                                             order.advancePaidPaise
                                                                         )}
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-sm font-semibold text-slate-900">
+                                                                    <td className="px-5 py-4 text-sm font-semibold text-[#182131]">
                                                                         {formatINR(
                                                                             order.balanceDuePaise
                                                                         )}
                                                                     </td>
-                                                                    <td className="px-6 py-4">
+                                                                    <td className="px-5 py-4">
                                                                         <StatusChip
                                                                             label={
                                                                                 hasBalance
@@ -1129,14 +1135,14 @@ export function CustomerCorporateDashboard({
                                                                             }
                                                                         />
                                                                     </td>
-                                                                    <td className="px-6 py-4">
+                                                                    <td className="px-5 py-4">
                                                                         <StatusChip
                                                                             label={toLabel(
                                                                                 order.status
                                                                             )}
                                                                         />
                                                                     </td>
-                                                                    <td className="px-6 py-4 text-right">
+                                                                    <td className="px-5 py-4 text-right">
                                                                         <div
                                                                             className="flex justify-end gap-2"
                                                                             onClick={(
@@ -1147,14 +1153,13 @@ export function CustomerCorporateDashboard({
                                                                         >
                                                                             <button
                                                                                 type="button"
-                                                                                className="text-xs font-bold text-[#4b7c37] hover:underline"
-                                                                                onClick={() =>
-                                                                                    setSelectedOrderId(
-                                                                                        order.id
-                                                                                    )
-                                                                                }
+                                                                                className="inline-flex items-center rounded border border-[#1d6a50] px-3 py-1.5 text-xs font-semibold text-[#1d6a50] transition-colors hover:bg-[#1d6a50] hover:text-white"
+                                                                                onClick={() => {
+                                                                                    setSelectedOrderId(order.id);
+                                                                                    setIsOrderDetailsOpen(true);
+                                                                                }}
                                                                             >
-                                                                                View
+                                                                                Details
                                                                             </button>
                                                                             {order.advancePaidPaise >
                                                                             0 ? (
@@ -1190,16 +1195,20 @@ export function CustomerCorporateDashboard({
                                         </div>
                                     </div>
 
-                                    {selectedOrder ? (
-                                        <CustomerCorporateOrderDetailPanel
-                                            order={selectedOrder}
-                                            onPayRemaining={payRemainingBalance}
-                                            invoice={initialTaxInvoices.find(
-                                                (item) =>
-                                                    item.orderId ===
-                                                    selectedOrder.id
-                                            )}
-                                        />
+                                    {selectedOrder && isOrderDetailsOpen ? (
+                                        <DashboardDetailsModal
+                                            title="Order details"
+                                            subtitle={selectedOrder.publicOrderId}
+                                            onClose={() => setIsOrderDetailsOpen(false)}
+                                        >
+                                            <CustomerCorporateOrderDetailPanel
+                                                order={selectedOrder}
+                                                onPayRemaining={payRemainingBalance}
+                                                invoice={initialTaxInvoices.find(
+                                                    (item) => item.orderId === selectedOrder.id
+                                                )}
+                                            />
+                                        </DashboardDetailsModal>
                                     ) : null}
                                 </div>
                             ) : (
@@ -1779,6 +1788,85 @@ function StatusChip({ label }: { label: string }) {
             className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[10px] font-bold uppercase tracking-[0.12em] shadow-sm ${classes}`}
         >
             {label}
+        </div>
+    );
+}
+
+function DashboardDetailsModal({
+    title,
+    subtitle,
+    onClose,
+    children,
+}: {
+    title: string;
+    subtitle: string;
+    onClose: () => void;
+    children: ReactNode;
+}) {
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#12251f]/45 p-3 backdrop-blur-[2px] sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) onClose();
+            }}
+        >
+            <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden !rounded-none border border-[#dbe3e9] bg-[#fbfcfc] shadow-[0_24px_80px_rgba(9,30,24,0.25)]">
+                <div className="flex items-center justify-between border-b border-[#dbe3e9] bg-white px-4 py-3 sm:px-6">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1d6a50]">{title}</p>
+                        <h2 className="mt-1 text-lg font-bold text-[#182131]">{subtitle}</h2>
+                    </div>
+                    <button type="button" onClick={onClose} aria-label="Close details" className="inline-flex size-9 items-center justify-center border border-[#dbe3e9] text-[#637184] transition-colors hover:bg-[#eef5f2] hover:text-[#1d6a50]">
+                        <X className="size-4" />
+                    </button>
+                </div>
+                <div className="overflow-y-auto p-3 sm:p-6">{children}</div>
+            </div>
+        </div>
+    );
+}
+
+function RfqDetailsModal({
+    rfq,
+    onClose,
+}: {
+    rfq: any;
+    onClose: () => void;
+}) {
+    if (!rfq) return null;
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-[#12251f]/45 p-3 backdrop-blur-[2px] sm:p-6"
+            role="dialog"
+            aria-modal="true"
+            aria-label={`Details for ${rfq.rfqNumber}`}
+            onMouseDown={(event) => {
+                if (event.target === event.currentTarget) onClose();
+            }}
+        >
+            <div className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden !rounded-none border border-[#dbe3e9] bg-[#fbfcfc] shadow-[0_24px_80px_rgba(9,30,24,0.25)]">
+                <div className="flex items-center justify-between border-b border-[#dbe3e9] bg-white px-4 py-3 sm:px-6">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#1d6a50]">Request details</p>
+                        <h2 className="mt-1 text-lg font-bold text-[#182131]">{rfq.rfqNumber}</h2>
+                    </div>
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        aria-label="Close request details"
+                        className="inline-flex size-9 items-center justify-center border border-[#dbe3e9] text-[#637184] transition-colors hover:bg-[#eef5f2] hover:text-[#1d6a50]"
+                    >
+                        <X className="size-4" />
+                    </button>
+                </div>
+                <div className="overflow-y-auto p-3 sm:p-6">
+                    <CustomerCorporateRfqDetailPanel rfq={rfq} />
+                </div>
+            </div>
         </div>
     );
 }

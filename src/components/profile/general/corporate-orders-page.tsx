@@ -31,7 +31,7 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
     );
 
     return (
-        <div className="min-w-0 max-w-full flex-1 overflow-x-hidden bg-[#fbfaf8] font-inter">
+        <div className="min-w-0 max-w-full flex-1 overflow-x-hidden bg-[#f8f7f4] font-inter">
             <Script src="https://checkout.razorpay.com/v1/checkout.js" />
 
             <section className="mb-8 overflow-hidden rounded-[14px] border border-[#e9e4dc] bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.98),_rgba(250,247,242,0.96)_46%,_rgba(245,248,252,0.98)_100%)] shadow-[0_18px_48px_-38px_rgba(45,53,31,0.28)]">
