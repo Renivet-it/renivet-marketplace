@@ -84,33 +84,43 @@ export const corporateCatalogListInputSchema = z.object({
     limit: z.number().int().positive().max(50).default(12),
 });
 
-export const corporateRfqInputSchema = z.object({
-    profileId: z.string().uuid().nullable().optional(),
-    companyName: z.string().min(2),
-    contactPerson: z.string().min(2),
-    email: z.string().email(),
-    phone: z.string().min(8).max(20),
-    useCase: z.string().min(2),
-    quantity: z.number().int().positive(),
-    budgetPerUnitPaise: z.number().int().nonnegative().nullable().optional(),
-    deliveryDate: z.string().date(),
-    sustainabilityRequired: z.boolean().default(false),
-    brandingRequired: z.boolean().default(true),
-    requirementDescription: z.string().min(10),
-    procurementMode: z
-        .enum(["self_service", "rfq", "enterprise_po"])
-        .default("rfq"),
-    attachments: z.array(corporatePlatformFileSchema).max(6).default([]),
-}).superRefine((value, ctx) => {
-    const totalSize = value.attachments.reduce((sum, file) => sum + file.size, 0);
-    if (totalSize > 50 * 1024 * 1024) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["attachments"],
-            message: "Total attachment size must be 50 MB or less",
-        });
-    }
-});
+export const corporateRfqInputSchema = z
+    .object({
+        profileId: z.string().uuid().nullable().optional(),
+        companyName: z.string().min(2),
+        contactPerson: z.string().min(2),
+        email: z.string().email(),
+        phone: z.string().min(8).max(20),
+        useCase: z.string().min(2),
+        quantity: z.number().int().positive(),
+        budgetPerUnitPaise: z
+            .number()
+            .int()
+            .nonnegative()
+            .nullable()
+            .optional(),
+        deliveryDate: z.string().date(),
+        sustainabilityRequired: z.boolean().default(false),
+        brandingRequired: z.boolean().default(true),
+        requirementDescription: z.string().min(10),
+        procurementMode: z
+            .enum(["self_service", "rfq", "enterprise_po"])
+            .default("rfq"),
+        attachments: z.array(corporatePlatformFileSchema).max(6).default([]),
+    })
+    .superRefine((value, ctx) => {
+        const totalSize = value.attachments.reduce(
+            (sum, file) => sum + file.size,
+            0
+        );
+        if (totalSize > 50 * 1024 * 1024) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["attachments"],
+                message: "Total attachment size must be 50 MB or less",
+            });
+        }
+    });
 
 export const corporateQuoteInputSchema = z.object({
     rfqId: z.string().uuid().nullable().optional(),
@@ -202,28 +212,37 @@ export const corporateShipmentInputSchema = z.object({
     dispatchDate: z.string().date().nullable().optional(),
     deliveryDate: z.string().date().nullable().optional(),
     status: z
-        .enum(["draft", "ready", "dispatched", "in_transit", "delivered", "failed"])
+        .enum([
+            "draft",
+            "ready",
+            "dispatched",
+            "in_transit",
+            "delivered",
+            "failed",
+        ])
         .default("draft"),
     provider: z.string().trim().max(80).default("manual"),
 });
 
-export const corporateForwardOrderInputSchema = z.object({
-    orderId: z.string().uuid(),
-    packageSource: z.enum(["preset", "custom"]),
-    selectedPackingTypeId: z.string().uuid().nullable().optional(),
-    lengthCm: z.number().int().positive(),
-    widthCm: z.number().int().positive(),
-    heightCm: z.number().int().positive(),
-    weightGrams: z.number().int().positive(),
-}).superRefine((value, ctx) => {
-    if (value.packageSource === "preset" && !value.selectedPackingTypeId) {
-        ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["selectedPackingTypeId"],
-            message: "Select a package preset",
-        });
-    }
-});
+export const corporateForwardOrderInputSchema = z
+    .object({
+        orderId: z.string().uuid(),
+        packageSource: z.enum(["preset", "custom"]),
+        selectedPackingTypeId: z.string().uuid().nullable().optional(),
+        lengthCm: z.number().int().positive(),
+        widthCm: z.number().int().positive(),
+        heightCm: z.number().int().positive(),
+        weightGrams: z.number().int().positive(),
+    })
+    .superRefine((value, ctx) => {
+        if (value.packageSource === "preset" && !value.selectedPackingTypeId) {
+            ctx.addIssue({
+                code: z.ZodIssueCode.custom,
+                path: ["selectedPackingTypeId"],
+                message: "Select a package preset",
+            });
+        }
+    });
 
 export const corporatePickupScheduleInputSchema = z.object({
     orderId: z.string().uuid(),
@@ -264,7 +283,13 @@ export const corporateReplacementReviewInputSchema = z.object({
 export const corporateQcSubmissionInputSchema = z.object({
     orderId: z.string().uuid(),
     remarks: z.string().trim().max(1000).nullable().optional(),
-    sampleCoveragePercent: z.number().int().min(0).max(100).nullable().optional(),
+    sampleCoveragePercent: z
+        .number()
+        .int()
+        .min(0)
+        .max(100)
+        .nullable()
+        .optional(),
     images: z.array(corporatePlatformFileSchema).min(1).max(10),
 });
 
@@ -292,8 +317,85 @@ export const corporateProformaInvoiceInputSchema = z.object({
     quoteId: z.string().uuid(),
 });
 
+export const corporateOrderProformaInvoiceInputSchema = z.object({
+    orderId: z.string().uuid(),
+});
+
 export const corporateTaxInvoiceInputSchema = z.object({
     orderId: z.string().uuid(),
+});
+
+const gstinSchema = z
+    .string()
+    .trim()
+    .regex(
+        /^\d{2}[A-Z]{5}\d{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/,
+        "Enter a valid 15-character GSTIN"
+    );
+
+export const corporateVendorPurchaseOrderInputSchema = z.object({
+    orderId: z.string().uuid(),
+    unitBuyPricePaise: z.number().int().positive(),
+    gstRateBps: z.number().int().min(0).max(2800),
+    expectedDeliveryDate: z.string().date().nullable().optional(),
+    deliveryMode: z.enum(["renivet_warehouse", "direct_to_customer"]),
+    paymentTerms: z.string().trim().min(3).max(500),
+    deliveryInstructions: z.string().trim().max(1000).nullable().optional(),
+});
+
+export const corporateBrandTaxInvoiceInputSchema = z.object({
+    orderId: z.string().uuid(),
+    vendorPurchaseOrderId: z.string().uuid().nullable().optional(),
+    invoiceNumber: z.string().trim().min(1).max(100),
+    invoiceDate: z.string().date(),
+    supplierGstin: gstinSchema,
+    recipientGstin: gstinSchema,
+    hsnCode: z.string().trim().min(4).max(8),
+    taxableValuePaise: z.number().int().nonnegative(),
+    cgstPaise: z.number().int().nonnegative().default(0),
+    sgstPaise: z.number().int().nonnegative().default(0),
+    igstPaise: z.number().int().nonnegative().default(0),
+    totalAmountPaise: z.number().int().positive(),
+    file: corporatePlatformFileSchema,
+});
+
+export const corporateBrandTaxInvoiceReviewInputSchema = z.object({
+    invoiceId: z.string().uuid(),
+    validationStatus: z.enum(["validated", "rejected"]),
+    gstr2bStatus: z.enum(["pending", "matched", "mismatch"]),
+    reviewNotes: z.string().trim().max(1000).nullable().optional(),
+});
+
+export const corporateDeliveryChallanInputSchema = z.object({
+    orderId: z.string().uuid(),
+    vendorPurchaseOrderId: z.string().uuid().nullable().optional(),
+    eWayBillNumber: z.string().trim().max(50).nullable().optional(),
+});
+
+export const corporateDocumentSettingsInputSchema = z.object({
+    legalName: z.string().trim().min(2),
+    tradeName: z.string().trim().min(2),
+    gstin: gstinSchema.nullable().optional(),
+    cin: z.string().trim().max(30).nullable().optional(),
+    addressLine1: z.string().trim().max(300).nullable().optional(),
+    addressLine2: z.string().trim().max(300).nullable().optional(),
+    city: z.string().trim().max(100).nullable().optional(),
+    state: z.string().trim().max(100).nullable().optional(),
+    postalCode: z.string().trim().max(12).nullable().optional(),
+    country: z.string().trim().min(2).max(100),
+    email: z.string().email().nullable().optional(),
+    phone: z.string().trim().max(30).nullable().optional(),
+    bankName: z.string().trim().max(100).nullable().optional(),
+    bankAccountName: z.string().trim().min(2).max(150),
+    bankAccountNumber: z.string().trim().max(50).nullable().optional(),
+    bankAccountType: z.string().trim().max(50).nullable().optional(),
+    bankIfscCode: z.string().trim().max(20).nullable().optional(),
+    bankBranch: z.string().trim().max(150).nullable().optional(),
+    authorizedSignatoryName: z.string().trim().min(2).max(150),
+    defaultPaymentTerms: z.string().trim().min(3).max(1000),
+    proformaValidityDays: z.number().int().min(1).max(90),
+    balanceDueDays: z.number().int().min(0).max(180),
+    isActive: z.boolean().default(true),
 });
 
 export const corporateApprovedQuoteOrderInputSchema = z.object({

@@ -4,20 +4,39 @@ import {
     corporateOrderSettingsSchema,
     corporateOrderStatusHistorySchema,
 } from "@/lib/validations/corporate-order";
-import { and, asc, count, desc, eq, ilike, isNotNull, notLike, or } from "drizzle-orm";
+import {
+    and,
+    asc,
+    count,
+    desc,
+    eq,
+    ilike,
+    inArray,
+    isNotNull,
+    notLike,
+    or,
+} from "drizzle-orm";
 import { db } from "..";
 import {
+    corporateBrandTaxInvoices,
     corporateColorOptions,
+    corporateDeliveryChallans,
     corporateExtraChargeRules,
     corporateFabricCompositions,
     corporateGsmOptions,
     corporateLogoLocations,
-    corporateOrderSettings,
     corporateOrders,
+    corporateOrderSettings,
     corporateOrderStatusHistory,
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
+    corporateProformaInvoices,
+    corporatePurchaseOrders,
+    corporateReceiptVouchers,
+    corporateTaxInvoices,
+    corporateVendorPurchaseOrders,
+    hsnMaster,
 } from "../schema";
 
 const DEFAULT_TIMELINE_TEXT =
@@ -160,7 +179,9 @@ class CorporateOrderQueries {
             const roundNeck = productTypes.find((item) =>
                 item.name.includes("Round")
             )!;
-            const polo = productTypes.find((item) => item.name.includes("Polo"))!;
+            const polo = productTypes.find((item) =>
+                item.name.includes("Polo")
+            )!;
             const gsm180 = gsmOptions.find((item) => item.gsmValue === 180)!;
             const gsm220 = gsmOptions.find((item) => item.gsmValue === 220)!;
 
@@ -273,11 +294,15 @@ class CorporateOrderQueries {
             logoLocations,
             extraChargeRules,
             pricingSlabs,
+            hsnOptions,
             settings,
         ] = await Promise.all([
             db.query.corporateProductTypes.findMany({
                 where: eq(corporateProductTypes.isActive, true),
                 orderBy: [asc(corporateProductTypes.sortOrder)],
+                with: {
+                    hsnMaster: true,
+                },
             }),
             db.query.corporateGsmOptions.findMany({
                 where: eq(corporateGsmOptions.isActive, true),
@@ -307,6 +332,10 @@ class CorporateOrderQueries {
                 where: eq(corporatePricingSlabs.isActive, true),
                 orderBy: [asc(corporatePricingSlabs.sortOrder)],
             }),
+            db.query.hsnMaster.findMany({
+                where: eq(hsnMaster.isActive, true),
+                orderBy: [asc(hsnMaster.hsnCode)],
+            }),
             this.getOrderSettings(),
         ]);
 
@@ -319,6 +348,7 @@ class CorporateOrderQueries {
             logoLocations,
             extraChargeRules,
             pricingSlabs,
+            hsnOptions,
             settings,
         };
     }
@@ -351,24 +381,83 @@ class CorporateOrderQueries {
     }
 
     async getOrderById(id: string) {
-        const order = await db.query.corporateOrders.findFirst({
-            where: eq(corporateOrders.id, id),
-            with: {
-                brand: true,
-                shipment: true,
-                statusHistory: {
-                    orderBy: [desc(corporateOrderStatusHistory.createdAt)],
+        const [order, taxInvoice] = await Promise.all([
+            db.query.corporateOrders.findFirst({
+                where: eq(corporateOrders.id, id),
+                with: {
+                    brand: true,
+                    shipment: true,
+                    statusHistory: {
+                        orderBy: [desc(corporateOrderStatusHistory.createdAt)],
+                    },
+                    user: true,
                 },
-                user: true,
-            },
-        });
+            }),
+            db.query.corporateTaxInvoices.findFirst({
+                where: and(
+                    eq(corporateTaxInvoices.orderId, id),
+                    eq(corporateTaxInvoices.status, "issued")
+                ),
+                orderBy: [desc(corporateTaxInvoices.createdAt)],
+            }),
+        ]);
 
         if (!order) return null;
+
+        const [
+            proformaInvoice,
+            incomingPurchaseOrder,
+            receiptVoucher,
+            vendorPurchaseOrder,
+            brandTaxInvoice,
+            deliveryChallan,
+        ] = await Promise.all([
+            db.query.corporateProformaInvoices.findFirst({
+                where: eq(corporateProformaInvoices.orderId, id),
+                orderBy: [desc(corporateProformaInvoices.createdAt)],
+            }).then(async (orderInvoice) => {
+                if (orderInvoice || !order.quoteId) return orderInvoice;
+                return db.query.corporateProformaInvoices.findFirst({
+                    where: eq(corporateProformaInvoices.quoteId, order.quoteId),
+                    orderBy: [desc(corporateProformaInvoices.createdAt)],
+                });
+            }),
+            db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.corporateOrderId, id),
+                orderBy: [desc(corporatePurchaseOrders.createdAt)],
+            }),
+            db.query.corporateReceiptVouchers.findFirst({
+                where: eq(corporateReceiptVouchers.orderId, id),
+                orderBy: [desc(corporateReceiptVouchers.createdAt)],
+            }),
+            db.query.corporateVendorPurchaseOrders.findFirst({
+                where: eq(corporateVendorPurchaseOrders.orderId, id),
+                orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
+            }),
+            db.query.corporateBrandTaxInvoices.findFirst({
+                where: eq(corporateBrandTaxInvoices.orderId, id),
+                orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
+            }),
+            db.query.corporateDeliveryChallans.findFirst({
+                where: eq(corporateDeliveryChallans.orderId, id),
+                orderBy: [desc(corporateDeliveryChallans.createdAt)],
+            }),
+        ]);
 
         return {
             ...this.parseOrder(order),
             brand: order.brand,
             shipment: order.shipment,
+            taxInvoice: taxInvoice ?? null,
+            documentChain: {
+                proformaInvoice,
+                incomingPurchaseOrder,
+                receiptVoucher,
+                vendorPurchaseOrder,
+                brandTaxInvoice,
+                customerTaxInvoice: taxInvoice ?? null,
+                deliveryChallan,
+            },
             statusHistory: order.statusHistory.map((item) =>
                 corporateOrderStatusHistorySchema.parse({
                     ...item,
@@ -398,7 +487,6 @@ class CorporateOrderQueries {
         return order ? this.parseOrder(order) : null;
     }
 
-
     async listOrders(input: {
         page: number;
         limit: number;
@@ -415,12 +503,17 @@ class CorporateOrderQueries {
                 : showReplacements === "only"
                   ? ilike(corporateOrders.publicOrderId, "REN-CORP-RPL-%")
                   : undefined,
-            input.status ? eq(corporateOrders.status, input.status as any) : undefined,
+            input.status
+                ? eq(corporateOrders.status, input.status as any)
+                : undefined,
             input.search
                 ? or(
                       ilike(corporateOrders.publicOrderId, `%${input.search}%`),
                       ilike(corporateOrders.companyName, `%${input.search}%`),
-                      ilike(corporateOrders.contactPersonName, `%${input.search}%`),
+                      ilike(
+                          corporateOrders.contactPersonName,
+                          `%${input.search}%`
+                      ),
                       ilike(corporateOrders.emailAddress, `%${input.search}%`)
                   )
                 : undefined,
@@ -442,11 +535,36 @@ class CorporateOrderQueries {
                 offset: (input.page - 1) * input.limit,
                 limit: input.limit,
             }),
-            db
-                .select({ count: count() })
-                .from(corporateOrders)
-                .where(where),
+            db.select({ count: count() }).from(corporateOrders).where(where),
         ]);
+
+        const invoiceRows = rows.length
+            ? await db
+                  .select({
+                      orderId: corporateTaxInvoices.orderId,
+                      invoiceNumber: corporateTaxInvoices.invoiceNumber,
+                  })
+                  .from(corporateTaxInvoices)
+                  .where(
+                      and(
+                          inArray(
+                              corporateTaxInvoices.orderId,
+                              rows.map((row) => row.id)
+                          ),
+                          eq(corporateTaxInvoices.status, "issued")
+                      )
+                  )
+                  .orderBy(desc(corporateTaxInvoices.createdAt))
+            : [];
+        const invoiceByOrderId = new Map<
+            string,
+            { orderId: string; invoiceNumber: string }
+        >();
+        for (const invoice of invoiceRows) {
+            if (!invoiceByOrderId.has(invoice.orderId)) {
+                invoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
 
         return {
             data: rows.map((row) => ({
@@ -454,6 +572,7 @@ class CorporateOrderQueries {
                 brand: row.brand,
                 shipment: row.shipment,
                 replacementRequests: row.replacementRequests,
+                taxInvoice: invoiceByOrderId.get(row.id) ?? null,
             })),
             count: totalCount,
         };
@@ -468,7 +587,61 @@ class CorporateOrderQueries {
             orderBy: [desc(corporateOrders.createdAt)],
         });
 
-        return rows.map((row) => this.parseOrder(row));
+        const invoiceRows = rows.length
+            ? await db
+                  .select({
+                      orderId: corporateTaxInvoices.orderId,
+                      invoiceNumber: corporateTaxInvoices.invoiceNumber,
+                  })
+                  .from(corporateTaxInvoices)
+                  .where(
+                      and(
+                          inArray(
+                              corporateTaxInvoices.orderId,
+                              rows.map((row) => row.id)
+                          ),
+                          eq(corporateTaxInvoices.status, "issued")
+                      )
+                  )
+                  .orderBy(desc(corporateTaxInvoices.createdAt))
+            : [];
+        const deliveryChallanRows = rows.length
+            ? await db
+                  .select({
+                      id: corporateDeliveryChallans.id,
+                      orderId: corporateDeliveryChallans.orderId,
+                      challanNumber: corporateDeliveryChallans.challanNumber,
+                  })
+                  .from(corporateDeliveryChallans)
+                  .where(
+                      and(
+                          inArray(
+                              corporateDeliveryChallans.orderId,
+                              rows.map((row) => row.id)
+                          ),
+                          eq(corporateDeliveryChallans.status, "issued")
+                      )
+                  )
+                  .orderBy(desc(corporateDeliveryChallans.createdAt))
+            : [];
+        const invoiceByOrderId = new Map<
+            string,
+            { orderId: string; invoiceNumber: string }
+        >();
+        for (const invoice of invoiceRows) {
+            if (!invoiceByOrderId.has(invoice.orderId)) {
+                invoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
+        const deliveryChallanByOrderId = new Map(
+            deliveryChallanRows.map((challan) => [challan.orderId, challan])
+        );
+
+        return rows.map((row) => ({
+            ...this.parseOrder(row),
+            taxInvoice: invoiceByOrderId.get(row.id) ?? null,
+            deliveryChallan: deliveryChallanByOrderId.get(row.id) ?? null,
+        }));
     }
 
     async createStatusHistory(
@@ -616,12 +789,49 @@ class CorporateOrderQueries {
             }
 
             for (const item of input.productTypes) {
+                const { manualHsn, ...productType } = item;
+                let hsnMasterId = productType.hsnMasterId ?? null;
+
+                if (manualHsn) {
+                    const existingHsn = await tx
+                        .select({ id: hsnMaster.id })
+                        .from(hsnMaster)
+                        .where(eq(hsnMaster.hsnCode, manualHsn.hsnCode))
+                        .limit(1)
+                        .then((rows) => rows[0]);
+
+                    if (existingHsn) {
+                        hsnMasterId = existingHsn.id;
+                    } else {
+                        const createdHsn = await tx
+                            .insert(hsnMaster)
+                            .values({
+                                hsnCode: manualHsn.hsnCode,
+                                description: manualHsn.description,
+                                gstRateBps: manualHsn.gstRateBps,
+                                categoryLabel: "Corporate Orders",
+                                isActive: true,
+                                metadata: {
+                                    source: "corporate_product_type",
+                                },
+                            })
+                            .returning({ id: hsnMaster.id })
+                            .then((rows) => rows[0]);
+
+                        if (!createdHsn) {
+                            throw new Error("Failed to create HSN Master row");
+                        }
+
+                        hsnMasterId = createdHsn.id;
+                    }
+                }
+
                 await tx
                     .insert(corporateProductTypes)
-                    .values(item)
+                    .values({ ...productType, hsnMasterId })
                     .onConflictDoUpdate({
                         target: corporateProductTypes.id,
-                        set: { ...item, updatedAt: now },
+                        set: { ...productType, hsnMasterId, updatedAt: now },
                     });
             }
             for (const item of input.gsmOptions) {
@@ -688,9 +898,10 @@ class CorporateOrderQueries {
                     });
             }
 
-            const existingSettings = await tx.query.corporateOrderSettings.findFirst({
-                orderBy: [desc(corporateOrderSettings.createdAt)],
-            });
+            const existingSettings =
+                await tx.query.corporateOrderSettings.findFirst({
+                    orderBy: [desc(corporateOrderSettings.createdAt)],
+                });
 
             if (!existingSettings) {
                 await tx.insert(corporateOrderSettings).values(input.settings);

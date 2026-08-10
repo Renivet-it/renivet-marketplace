@@ -27,6 +27,12 @@ export const corporateOrderWorkflowStatusSchema = z.enum([
     "completed",
 ]);
 
+export const corporateOrderBrandAssignmentInputSchema = z.object({
+    corporateOrderId: z.string().uuid(),
+    brandId: z.string().uuid(),
+    note: z.string().trim().max(500).optional(),
+});
+
 export const corporatePaymentStatusSchema = z.enum([
     "pending",
     "paid",
@@ -68,6 +74,15 @@ export const corporateBaseConfigSchema = z.object({
 export const corporateProductTypeSchema = corporateBaseConfigSchema.extend({
     name: z.string().min(1),
     description: z.string().nullable().optional(),
+    hsnMasterId: z.string().uuid().nullable().optional(),
+    manualHsn: z
+        .object({
+            hsnCode: z.string().trim().min(1).max(32),
+            description: z.string().trim().min(1).max(500),
+            gstRateBps: z.number().int().nonnegative().max(10000),
+        })
+        .nullable()
+        .optional(),
 });
 
 export const corporateGsmOptionSchema = corporateBaseConfigSchema.extend({
@@ -75,10 +90,11 @@ export const corporateGsmOptionSchema = corporateBaseConfigSchema.extend({
     gsmValue: z.number().int().positive(),
 });
 
-export const corporateFabricCompositionSchema = corporateBaseConfigSchema.extend({
-    name: z.string().min(1),
-    description: z.string().nullable().optional(),
-});
+export const corporateFabricCompositionSchema =
+    corporateBaseConfigSchema.extend({
+        name: z.string().min(1),
+        description: z.string().nullable().optional(),
+    });
 
 export const corporateColorOptionSchema = corporateBaseConfigSchema.extend({
     name: z.string().min(1),
@@ -145,9 +161,8 @@ export const corporateOrderFormInputSchema = z.object({
     logoLocationIds: z.array(z.string().uuid()).min(1),
     printMethodId: z.string().uuid(),
     extraChargeRuleIds: z.array(z.string().uuid()).default([]),
-    paymentPreference: corporatePaymentPreferenceSchema.default(
-        "partial_advance"
-    ),
+    paymentPreference:
+        corporatePaymentPreferenceSchema.default("partial_advance"),
     approvedQuoteId: z.string().uuid().nullable().optional(),
     artworkFile: corporateFileSchema,
     employeeSheetFile: corporateFileSchema,
@@ -159,6 +174,7 @@ export const corporateOrderQuoteSchema = z.object({
     quantity: z.number().int().positive(),
     employeeCount: z.number().int().positive(),
     sizeBreakdown: z.record(z.string(), z.number().int().nonnegative()),
+    hsnCode: z.string().min(1),
     subtotalPaise: z.number().int().nonnegative(),
     printMethodChargePaise: z.number().int().nonnegative(),
     extraChargesPaise: z.number().int().nonnegative(),
@@ -286,6 +302,15 @@ export const corporateConfigUpsertInputSchema = z.object({
                 id: z.string().uuid().optional(),
                 name: z.string().min(1),
                 description: z.string().nullable().optional(),
+                hsnMasterId: z.string().uuid().nullable().optional(),
+                manualHsn: z
+                    .object({
+                        hsnCode: z.string().trim().min(1).max(32),
+                        description: z.string().trim().min(1).max(500),
+                        gstRateBps: z.number().int().nonnegative().max(10000),
+                    })
+                    .nullable()
+                    .optional(),
                 isActive: z.boolean().default(true),
                 sortOrder: z.number().int().default(0),
             })

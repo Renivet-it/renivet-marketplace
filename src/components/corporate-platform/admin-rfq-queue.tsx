@@ -43,13 +43,14 @@ export function AdminRfqQueue({
         onError: (error) => handleClientError(error),
     });
 
-    const addRevision = trpc.general.corporatePlatform.addQuoteRevision.useMutation({
-        onSuccess: async () => {
-            toast.success("Quote revision added");
-            await utils.general.corporatePlatform.listAdminQuotes.invalidate();
-        },
-        onError: (error) => handleClientError(error),
-    });
+    const addRevision =
+        trpc.general.corporatePlatform.addQuoteRevision.useMutation({
+            onSuccess: async () => {
+                toast.success("Quote revision added");
+                await utils.general.corporatePlatform.listAdminQuotes.invalidate();
+            },
+            onError: (error) => handleClientError(error),
+        });
 
     const quoteByRfqId = useMemo(
         () =>
@@ -80,8 +81,12 @@ export function AdminRfqQueue({
         );
     }, [initialRfqs, search]);
 
-    const awaitingReview = filteredRfqs.filter((rfq) => !quoteByRfqId.has(rfq.id));
-    const alreadyQuoted = filteredRfqs.filter((rfq) => quoteByRfqId.has(rfq.id));
+    const awaitingReview = filteredRfqs.filter(
+        (rfq) => !quoteByRfqId.has(rfq.id)
+    );
+    const alreadyQuoted = filteredRfqs.filter((rfq) =>
+        quoteByRfqId.has(rfq.id)
+    );
     const selectedRfq =
         filteredRfqs.find((rfq) => rfq.id === selectedRfqId) ??
         awaitingReview[0] ??
@@ -121,14 +126,17 @@ export function AdminRfqQueue({
                                   100
                           )
                       )
-                    : "30",
+                    : String(
+                          (orderConfig?.settings.advancePercentBps ?? 3000) /
+                              100
+                      ),
             comments:
                 selectedExistingQuote?.revisions?.[0]?.comments ??
                 selectedExistingQuote?.customerDecisionNotes ??
                 "",
             ...(drafts[selectedRfq.id] ?? {}),
         };
-    }, [drafts, selectedExistingQuote, selectedRfq]);
+    }, [drafts, orderConfig, selectedExistingQuote, selectedRfq]);
     const matchedPricingSlab = useMemo(() => {
         if (
             !selectedRfq ||
@@ -219,7 +227,9 @@ export function AdminRfqQueue({
                                     rfq={rfq}
                                     active={selectedRfq?.id === rfq.id}
                                     onSelect={() => setSelectedRfqId(rfq.id)}
-                                    trailingLabel={quoteByRfqId.get(rfq.id)?.quoteNumber}
+                                    trailingLabel={
+                                        quoteByRfqId.get(rfq.id)?.quoteNumber
+                                    }
                                 />
                             ))}
                         </QueueSection>
@@ -234,9 +244,13 @@ export function AdminRfqQueue({
                                 <div className="space-y-4">
                                     <div className="rounded-[22px] border border-slate-200 bg-slate-50 p-4">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <StatusBadge tone="blue">{selectedRfq.rfqNumber}</StatusBadge>
+                                            <StatusBadge tone="blue">
+                                                {selectedRfq.rfqNumber}
+                                            </StatusBadge>
                                             <StatusBadge tone="slate">
-                                                {toLabel(selectedRfq.procurementMode)}
+                                                {toLabel(
+                                                    selectedRfq.procurementMode
+                                                )}
                                             </StatusBadge>
                                             <StatusBadge tone="amber">
                                                 {selectedRfq.documents?.length
@@ -248,7 +262,8 @@ export function AdminRfqQueue({
                                             {selectedRfq.companyName}
                                         </div>
                                         <div className="mt-1 text-sm text-slate-500">
-                                            {selectedRfq.contactPerson} • {selectedRfq.email}
+                                            {selectedRfq.contactPerson} •{" "}
+                                            {selectedRfq.email}
                                         </div>
                                         <div className="mt-3 text-sm leading-6 text-slate-600">
                                             {selectedRfq.requirementDescription}
@@ -275,12 +290,25 @@ export function AdminRfqQueue({
                                                     )
                                                 }
                                             >
-                                                <option value="">Select buyer company</option>
-                                                {profileOptions.map((profile) => (
-                                                    <option key={profile.id} value={profile.id}>
-                                                        {profile.companyName} • {profile.contactPerson}
-                                                    </option>
-                                                ))}
+                                                <option value="">
+                                                    Select buyer company
+                                                </option>
+                                                {profileOptions.map(
+                                                    (profile) => (
+                                                        <option
+                                                            key={profile.id}
+                                                            value={profile.id}
+                                                        >
+                                                            {
+                                                                profile.companyName
+                                                            }{" "}
+                                                            •{" "}
+                                                            {
+                                                                profile.contactPerson
+                                                            }
+                                                        </option>
+                                                    )
+                                                )}
                                             </select>
                                         </label>
                                         <label className="block space-y-2">
@@ -289,16 +317,29 @@ export function AdminRfqQueue({
                                             </span>
                                             <select
                                                 className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
-                                                value={selectedDraft.brandId ?? ""}
+                                                value={
+                                                    selectedDraft.brandId ?? ""
+                                                }
                                                 onChange={(e) =>
-                                                    setDraft(selectedRfq.id, "brandId", e.target.value)
+                                                    setDraft(
+                                                        selectedRfq.id,
+                                                        "brandId",
+                                                        e.target.value
+                                                    )
                                                 }
                                             >
-                                                <option value="">Select fulfilling brand</option>
+                                                <option value="">
+                                                    Select fulfilling brand
+                                                </option>
                                                 {brandOptions.map((brand) => (
-                                                    <option key={brand.id} value={brand.id}>
+                                                    <option
+                                                        key={brand.id}
+                                                        value={brand.id}
+                                                    >
                                                         {brand.name}
-                                                        {brand.isActive ? "" : " (Inactive)"}
+                                                        {brand.isActive
+                                                            ? ""
+                                                            : " (Inactive)"}
                                                     </option>
                                                 ))}
                                             </select>
@@ -311,7 +352,8 @@ export function AdminRfqQueue({
                                                 <select
                                                     className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
                                                     value={
-                                                        selectedDraft.productTypeId ?? ""
+                                                        selectedDraft.productTypeId ??
+                                                        ""
                                                     }
                                                     onChange={(e) =>
                                                         setDraft(
@@ -324,11 +366,16 @@ export function AdminRfqQueue({
                                                     <option value="">
                                                         Select product type
                                                     </option>
-                                                    {orderConfig?.productTypes.map((item) => (
-                                                        <option key={item.id} value={item.id}>
-                                                            {item.name}
-                                                        </option>
-                                                    ))}
+                                                    {orderConfig?.productTypes.map(
+                                                        (item) => (
+                                                            <option
+                                                                key={item.id}
+                                                                value={item.id}
+                                                            >
+                                                                {item.name}
+                                                            </option>
+                                                        )
+                                                    )}
                                                 </select>
                                             </label>
                                             <label className="block space-y-2">
@@ -338,7 +385,8 @@ export function AdminRfqQueue({
                                                 <select
                                                     className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
                                                     value={
-                                                        selectedDraft.gsmOptionId ?? ""
+                                                        selectedDraft.gsmOptionId ??
+                                                        ""
                                                     }
                                                     onChange={(e) =>
                                                         setDraft(
@@ -348,12 +396,19 @@ export function AdminRfqQueue({
                                                         )
                                                     }
                                                 >
-                                                    <option value="">Select GSM</option>
-                                                    {orderConfig?.gsmOptions.map((item) => (
-                                                        <option key={item.id} value={item.id}>
-                                                            {item.label}
-                                                        </option>
-                                                    ))}
+                                                    <option value="">
+                                                        Select GSM
+                                                    </option>
+                                                    {orderConfig?.gsmOptions.map(
+                                                        (item) => (
+                                                            <option
+                                                                key={item.id}
+                                                                value={item.id}
+                                                            >
+                                                                {item.label}
+                                                            </option>
+                                                        )
+                                                    )}
                                                 </select>
                                             </label>
                                             <label className="block space-y-2">
@@ -363,7 +418,8 @@ export function AdminRfqQueue({
                                                 <select
                                                     className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm"
                                                     value={
-                                                        selectedDraft.fabricCompositionId ?? ""
+                                                        selectedDraft.fabricCompositionId ??
+                                                        ""
                                                     }
                                                     onChange={(e) =>
                                                         setDraft(
@@ -374,13 +430,19 @@ export function AdminRfqQueue({
                                                     }
                                                 >
                                                     <option value="">
-                                                        Select fabric composition
+                                                        Select fabric
+                                                        composition
                                                     </option>
-                                                    {orderConfig?.fabricCompositions.map((item) => (
-                                                        <option key={item.id} value={item.id}>
-                                                            {item.name}
-                                                        </option>
-                                                    ))}
+                                                    {orderConfig?.fabricCompositions.map(
+                                                        (item) => (
+                                                            <option
+                                                                key={item.id}
+                                                                value={item.id}
+                                                            >
+                                                                {item.name}
+                                                            </option>
+                                                        )
+                                                    )}
                                                 </select>
                                             </label>
                                         </div>
@@ -399,7 +461,9 @@ export function AdminRfqQueue({
                                                 label="RFQ Quantity"
                                                 value={
                                                     selectedRfq
-                                                        ? String(selectedRfq.quantity)
+                                                        ? String(
+                                                              selectedRfq.quantity
+                                                          )
                                                         : "-"
                                                 }
                                             />
@@ -435,7 +499,11 @@ export function AdminRfqQueue({
                                                 type="number"
                                                 value={selectedDraft.gst ?? ""}
                                                 onChange={(value) =>
-                                                    setDraft(selectedRfq.id, "gst", value)
+                                                    setDraft(
+                                                        selectedRfq.id,
+                                                        "gst",
+                                                        value
+                                                    )
                                                 }
                                             />
                                         </div>
@@ -444,17 +512,30 @@ export function AdminRfqQueue({
                                                 label="Advance percentage"
                                                 placeholder="Advance percentage"
                                                 type="number"
-                                                value={selectedDraft.advancePercent ?? "30"}
+                                                value={
+                                                    selectedDraft.advancePercent ??
+                                                    "30"
+                                                }
                                                 onChange={(value) =>
-                                                    setDraft(selectedRfq.id, "advancePercent", value)
+                                                    setDraft(
+                                                        selectedRfq.id,
+                                                        "advancePercent",
+                                                        value
+                                                    )
                                                 }
                                             />
                                             <LabelledInput
                                                 label="Commercial notes"
                                                 placeholder="Commercial notes"
-                                                value={selectedDraft.comments ?? ""}
+                                                value={
+                                                    selectedDraft.comments ?? ""
+                                                }
                                                 onChange={(value) =>
-                                                    setDraft(selectedRfq.id, "comments", value)
+                                                    setDraft(
+                                                        selectedRfq.id,
+                                                        "comments",
+                                                        value
+                                                    )
                                                 }
                                             />
                                         </div>
@@ -466,16 +547,21 @@ export function AdminRfqQueue({
                                             const subtotalPaise =
                                                 computedSubtotalPaise;
                                             const gstAmountPaise = Math.round(
-                                                Number(selectedDraft.gst ?? 0) * 100
+                                                Number(selectedDraft.gst ?? 0) *
+                                                    100
                                             );
                                             const totalAmountPaise =
                                                 subtotalPaise + gstAmountPaise;
                                             const advancePercent = Number(
-                                                selectedDraft.advancePercent ?? 30
+                                                selectedDraft.advancePercent ??
+                                                    30
                                             );
-                                            const advanceAmountPaise = Math.round(
-                                                (totalAmountPaise * advancePercent) / 100
-                                            );
+                                            const advanceAmountPaise =
+                                                Math.round(
+                                                    (totalAmountPaise *
+                                                        advancePercent) /
+                                                        100
+                                                );
 
                                             createQuote.mutate({
                                                 rfqId: selectedRfq.id,
@@ -484,9 +570,11 @@ export function AdminRfqQueue({
                                                     selectedRfq.corporateProfileId,
                                                 brandId: selectedDraft.brandId,
                                                 productTypeId:
-                                                    selectedDraft.productTypeId || null,
+                                                    selectedDraft.productTypeId ||
+                                                    null,
                                                 gsmOptionId:
-                                                    selectedDraft.gsmOptionId || null,
+                                                    selectedDraft.gsmOptionId ||
+                                                    null,
                                                 fabricCompositionId:
                                                     selectedDraft.fabricCompositionId ||
                                                     null,
@@ -497,12 +585,16 @@ export function AdminRfqQueue({
                                                 totalAmountPaise,
                                                 advanceAmountPaise,
                                                 balanceAmountPaise:
-                                                    totalAmountPaise - advanceAmountPaise,
-                                                comments: selectedDraft.comments || null,
+                                                    totalAmountPaise -
+                                                    advanceAmountPaise,
+                                                comments:
+                                                    selectedDraft.comments ||
+                                                    null,
                                             });
                                         }}
                                         disabled={
                                             createQuote.isPending ||
+                                            !matchedPricingSlab ||
                                             !(
                                                 (selectedDraft.corporateProfileId ??
                                                     selectedRfq.corporateProfileId) &&
@@ -541,22 +633,36 @@ export function AdminRfqQueue({
                                 className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
                             >
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <StatusBadge tone="blue">{quote.quoteNumber}</StatusBadge>
-                                    <StatusBadge tone={quote.status === "approved" ? "green" : "slate"}>
+                                    <StatusBadge tone="blue">
+                                        {quote.quoteNumber}
+                                    </StatusBadge>
+                                    <StatusBadge
+                                        tone={
+                                            quote.status === "approved"
+                                                ? "green"
+                                                : "slate"
+                                        }
+                                    >
                                         {toLabel(quote.status)}
                                     </StatusBadge>
                                     <StatusBadge tone="amber">
-                                        {quote.revisions?.length ?? 0} revision(s)
+                                        {quote.revisions?.length ?? 0}{" "}
+                                        revision(s)
                                     </StatusBadge>
                                 </div>
                                 <div className="mt-3 text-lg font-semibold text-slate-900">
-                                    {quote.profile?.companyName ?? "Unknown company"}
+                                    {quote.profile?.companyName ??
+                                        "Unknown company"}
                                 </div>
                                 <div className="mt-1 text-sm text-slate-500">
-                                    Total value {formatINR(quote.totalAmountPaise)}
+                                    Total value{" "}
+                                    {formatINR(quote.totalAmountPaise)}
                                 </div>
                                 <div className="mt-3 text-sm text-slate-600">
-                                    Latest update {new Date(quote.updatedAt).toLocaleDateString("en-IN")}
+                                    Latest update{" "}
+                                    {new Date(
+                                        quote.updatedAt
+                                    ).toLocaleDateString("en-IN")}
                                 </div>
                                 <Button
                                     className="mt-4"
@@ -565,10 +671,14 @@ export function AdminRfqQueue({
                                         addRevision.mutate({
                                             quoteId: quote.id,
                                             subtotalPaise: quote.subtotalPaise,
-                                            customizationCostPaise: quote.customizationCostPaise,
-                                            gstAmountPaise: quote.gstAmountPaise,
-                                            totalAmountPaise: quote.totalAmountPaise,
-                                            comments: "Administrative revision snapshot",
+                                            customizationCostPaise:
+                                                quote.customizationCostPaise,
+                                            gstAmountPaise:
+                                                quote.gstAmountPaise,
+                                            totalAmountPaise:
+                                                quote.totalAmountPaise,
+                                            comments:
+                                                "Administrative revision snapshot",
                                         })
                                     }
                                     disabled={addRevision.isPending}
@@ -605,14 +715,19 @@ function QueueSection({
     return (
         <div>
             <div className="mb-3 flex items-center justify-between">
-                <div className="text-lg font-semibold text-slate-900">{title}</div>
+                <div className="text-lg font-semibold text-slate-900">
+                    {title}
+                </div>
                 <StatusBadge tone="slate">{count} item(s)</StatusBadge>
             </div>
             <div className="space-y-4">
                 {count ? (
                     children
                 ) : (
-                    <EmptyQueue title={emptyTitle} description={emptyDescription} />
+                    <EmptyQueue
+                        title={emptyTitle}
+                        description={emptyDescription}
+                    />
                 )}
             </div>
         </div>
@@ -643,38 +758,46 @@ function RfqCard({
             <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge tone="blue">{rfq.rfqNumber}</StatusBadge>
                 <StatusBadge tone="slate">{toLabel(rfq.status)}</StatusBadge>
-                <StatusBadge tone="amber">{toLabel(rfq.procurementMode)}</StatusBadge>
-                {trailingLabel ? <StatusBadge tone="green">{trailingLabel}</StatusBadge> : null}
+                <StatusBadge tone="amber">
+                    {toLabel(rfq.procurementMode)}
+                </StatusBadge>
+                {trailingLabel ? (
+                    <StatusBadge tone="green">{trailingLabel}</StatusBadge>
+                ) : null}
             </div>
             <div className="mt-3 flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
                 <div>
-                    <div className="text-lg font-semibold text-slate-900">{rfq.companyName}</div>
+                    <div className="text-lg font-semibold text-slate-900">
+                        {rfq.companyName}
+                    </div>
                     <div className="mt-1 text-sm text-slate-500">
                         {rfq.contactPerson} • {rfq.email}
                     </div>
-                    <div className="mt-3 text-sm leading-6 text-slate-600">{rfq.useCase}</div>
+                    <div className="mt-3 text-sm leading-6 text-slate-600">
+                        {rfq.useCase}
+                    </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 text-sm text-slate-600 md:min-w-[280px]">
                     <MetaPill label="Quantity" value={String(rfq.quantity)} />
-                                            <MetaPill
-                                                label="Attachments"
-                                                value={
-                                                    rfq.documents?.length
-                                                        ? `${rfq.documents.length} uploaded`
-                                                        : "None"
-                                                }
-                                            />
-                                            <MetaPill
-                                                label="Buyer Company"
-                                                value={
-                                                    rfq.corporateProfileId
-                                                        ? "Buyer company linked"
-                                                        : "Buyer company not assigned"
-                                                }
-                                            />
-                                        </div>
-                                    </div>
-                                </button>
+                    <MetaPill
+                        label="Attachments"
+                        value={
+                            rfq.documents?.length
+                                ? `${rfq.documents.length} uploaded`
+                                : "None"
+                        }
+                    />
+                    <MetaPill
+                        label="Buyer Company"
+                        value={
+                            rfq.corporateProfileId
+                                ? "Buyer company linked"
+                                : "Buyer company not assigned"
+                        }
+                    />
+                </div>
+            </div>
+        </button>
     );
 }
 

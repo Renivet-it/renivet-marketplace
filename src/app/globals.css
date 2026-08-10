@@ -2,6 +2,37 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Corporate ordering pages use a deliberately square, operational UI. */
+.square-corporate-ui,
+.square-corporate-ui * {
+    border-radius: 0 !important;
+}
+
+/* Compact field treatment for the corporate-order workspace. */
+.corporate-order-workspace .business-step input,
+.corporate-order-workspace .business-step select {
+    height: 2.25rem !important;
+    border-radius: 0.375rem !important;
+    padding-inline: 0.75rem !important;
+    background-color: #f8fafc !important;
+    font-size: 0.75rem !important;
+}
+
+.corporate-order-workspace .business-step textarea {
+    min-height: 7rem !important;
+    border-radius: 0.375rem !important;
+    padding: 0.75rem !important;
+    background-color: #f8fafc !important;
+    font-size: 0.75rem !important;
+}
+
+.corporate-order-workspace .order-flow-nav button {
+    min-height: 2.25rem;
+    border-radius: 0.375rem !important;
+    padding-inline: 0.875rem;
+    font-size: 0.75rem;
+}
+
 .swap-campaign-font,
 .swap-campaign-font * {
     font-family: "Iosevka Charon Mono", monospace !important;

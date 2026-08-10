@@ -8,11 +8,9 @@ import { Spinner } from "@/components/ui/spinner";
 import { formatCorporateDeliveryAddress } from "@/lib/corporate-delivery-address";
 import { initializeRazorpayPayment } from "@/lib/razorpay/payment";
 import { trpc } from "@/lib/trpc/client";
-import type { CorporateOrderFormInput } from "@/lib/validations/corporate-order";
-import { cn, formatINR, handleClientError } from "@/lib/utils";
 import { useUploadThing } from "@/lib/uploadthing";
-import { motion } from "motion/react";
-import * as XLSX from "xlsx";
+import { cn, formatINR, handleClientError } from "@/lib/utils";
+import type { CorporateOrderFormInput } from "@/lib/validations/corporate-order";
 import {
     Building2,
     Check,
@@ -24,10 +22,19 @@ import {
     Sparkles,
     Upload,
 } from "lucide-react";
+import { motion } from "motion/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useEffect, useId, useMemo, useState, type CSSProperties } from "react";
+import {
+    useEffect,
+    useId,
+    useMemo,
+    useState,
+    type CSSProperties,
+    type ReactNode,
+} from "react";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 const STEPS = [
     "Company",
@@ -73,7 +80,9 @@ type FieldErrors = Partial<Record<string, string>>;
 function ensureRazorpaySdk() {
     return new Promise<void>((resolve, reject) => {
         if (typeof window === "undefined") {
-            reject(new Error("Razorpay checkout is only available in the browser"));
+            reject(
+                new Error("Razorpay checkout is only available in the browser")
+            );
             return;
         }
 
@@ -83,7 +92,7 @@ function ensureRazorpaySdk() {
         }
 
         const existingScript = document.querySelector<HTMLScriptElement>(
-            "script[src=\"https://checkout.razorpay.com/v1/checkout.js\"]"
+            'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
         );
 
         if (existingScript) {
@@ -127,7 +136,9 @@ export function CorporateOrderPage({
     const [isQuoting, setIsQuoting] = useState(false);
     const [isPaying, setIsPaying] = useState(false);
     const [artworkLocalFile, setArtworkLocalFile] = useState<File | null>(null);
-    const [employeeLocalFile, setEmployeeLocalFile] = useState<File | null>(null);
+    const [employeeLocalFile, setEmployeeLocalFile] = useState<File | null>(
+        null
+    );
     const [artworkUploaded, setArtworkUploaded] = useState<UploadedFile | null>(
         null
     );
@@ -146,7 +157,9 @@ export function CorporateOrderPage({
         companyName: initialPrefill?.companyName ?? "",
         contactPersonName:
             initialPrefill?.contactPersonName ??
-            (user ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim() : ""),
+            (user
+                ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
+                : ""),
         emailAddress: initialPrefill?.emailAddress ?? user?.email ?? "",
         mobileNumber: initialPrefill?.mobileNumber ?? user?.phone ?? "",
         gstNumber: initialPrefill?.gstNumber ?? "",
@@ -165,9 +178,7 @@ export function CorporateOrderPage({
         printMethodId: "",
         extraChargeRuleIds: [] as string[],
         paymentPreference: (initialPrefill?.paymentPreference ??
-            "partial_advance") as
-            | "partial_advance"
-            | "full_upfront",
+            "partial_advance") as "partial_advance" | "full_upfront",
         approvedQuoteId: initialPrefill?.approvedQuoteId ?? null,
         customerNotes: initialPrefill?.customerNotes ?? "",
     });
@@ -251,8 +262,9 @@ export function CorporateOrderPage({
     const selectedExtraCharges = config?.extraChargeRules.filter((item) =>
         selectedExtraChargeRuleIds.has(item.id)
     );
-    const configuredAdvancePercent =
-        config ? Math.round(config.settings.advancePercentBps / 100) : 30;
+    const configuredAdvancePercent = config
+        ? Math.round(config.settings.advancePercentBps / 100)
+        : 30;
     const initialPaymentLabel = quote
         ? quote.balanceDuePaise === 0
             ? "100% upfront payment"
@@ -307,7 +319,10 @@ export function CorporateOrderPage({
             if (!form.companyName || form.companyName.trim().length < 2) {
                 errors.companyName = "Enter a valid company name.";
             }
-            if (!form.contactPersonName || form.contactPersonName.trim().length < 2) {
+            if (
+                !form.contactPersonName ||
+                form.contactPersonName.trim().length < 2
+            ) {
                 errors.contactPersonName = "Enter the contact person name.";
             }
             if (!form.emailAddress) {
@@ -316,7 +331,10 @@ export function CorporateOrderPage({
             if (!form.mobileNumber) {
                 errors.mobileNumber = "Enter the mobile number.";
             }
-            if (!form.deliveryCountry || form.deliveryCountry.trim().length < 2) {
+            if (
+                !form.deliveryCountry ||
+                form.deliveryCountry.trim().length < 2
+            ) {
                 errors.deliveryCountry = "Enter the delivery country.";
             }
             if (!form.deliveryCity || form.deliveryCity.trim().length < 2) {
@@ -326,7 +344,10 @@ export function CorporateOrderPage({
                 errors.deliveryPincode =
                     "Enter a valid 6-digit delivery pincode.";
             }
-            if (!form.deliveryAddress || form.deliveryAddress.trim().length < 10) {
+            if (
+                !form.deliveryAddress ||
+                form.deliveryAddress.trim().length < 10
+            ) {
                 errors.deliveryAddress =
                     "Add a complete delivery address before continuing.";
             }
@@ -410,7 +431,9 @@ export function CorporateOrderPage({
             customColorRequest: form.customColorRequest || null,
             customerNotes: form.customerNotes || null,
             quantity:
-                form.quantity > 0 ? form.quantity : Math.max(employeeRows.length, 1),
+                form.quantity > 0
+                    ? form.quantity
+                    : Math.max(employeeRows.length, 1),
             artworkFile,
             employeeSheetFile,
             employeeRows: employeeRows.map((row) => ({
@@ -454,20 +477,27 @@ export function CorporateOrderPage({
                 return;
             }
 
+            if (!artworkLocalFile || !employeeLocalFile) {
+                setStep(2);
+                return;
+            }
+
             setIsQuoting(true);
             const quoteResult = await quoteMutation.mutateAsync(
                 getPayload(
                     artworkUploaded ?? {
                         name: artworkLocalFile.name,
                         size: artworkLocalFile.size,
-                        type: artworkLocalFile.type || "application/octet-stream",
+                        type:
+                            artworkLocalFile.type || "application/octet-stream",
                         url: "https://example.com/pending-artwork",
                     },
                     employeeSheetUploaded ?? {
                         name: employeeLocalFile.name,
                         size: employeeLocalFile.size,
                         type:
-                            employeeLocalFile.type || "application/octet-stream",
+                            employeeLocalFile.type ||
+                            "application/octet-stream",
                         url: "https://example.com/pending-sheet",
                     }
                 )
@@ -478,6 +508,17 @@ export function CorporateOrderPage({
             setIsQuoting(false);
         }
     };
+
+    useEffect(() => {
+        if (step !== 4) return;
+
+        void refreshQuote().catch((error) => {
+            handleClientError(error);
+        });
+        // Step 5 is the quote checkpoint. Its data is assembled from the
+        // completed steps, so entering it is the single automatic trigger.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [step]);
 
     const parseEmployeeSheet = async (file: File) => {
         const buffer = await file.arrayBuffer();
@@ -529,13 +570,17 @@ export function CorporateOrderPage({
             numberOfEmployees: isApprovedQuoteFlow
                 ? current.numberOfEmployees
                 : parsedRows.length,
-            quantity: isApprovedQuoteFlow ? current.quantity : parsedRows.length,
+            quantity: isApprovedQuoteFlow
+                ? current.quantity
+                : parsedRows.length,
         }));
     };
 
     const uploadRequiredFiles = async () => {
         if (!artworkLocalFile || !employeeLocalFile) {
-            throw new Error("Please upload the artwork file and employee sheet");
+            throw new Error(
+                "Please upload the artwork file and employee sheet"
+            );
         }
 
         const [artworkResponse, sheetResponse] = await Promise.all([
@@ -607,8 +652,7 @@ export function CorporateOrderPage({
             setIsPaying(true);
             const { artworkFile, sheetFile } = await uploadRequiredFiles();
             const payload = getPayload(artworkFile, sheetFile);
-            const created =
-                await createAdvanceMutation.mutateAsync(payload);
+            const created = await createAdvanceMutation.mutateAsync(payload);
 
             const options = {
                 key: env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
@@ -664,14 +708,14 @@ export function CorporateOrderPage({
     }
 
     return (
-        <div className="space-y-6">
-            <section className="overflow-hidden rounded-[32px] border border-[#dbe5f0] bg-[linear-gradient(135deg,#ffffff_0%,#f5f9fd_48%,#edf5ff_100%)] shadow-[0_28px_90px_-58px_rgba(44,72,108,0.45)]">
+        <div className="corporate-order-workspace min-w-0 space-y-4 bg-[#f7f8fa] pb-8">
+            <section className="hidden">
                 <div className="grid gap-6 p-5 md:p-8 xl:grid-cols-[minmax(0,1.5fr)_380px]">
                     <div>
                         <p className="text-xs font-semibold uppercase tracking-[0.26em] text-[#5B9BD5]">
                             Corporate Order Studio
                         </p>
-                        <h1 className="mt-3 max-w-4xl font-serif text-3xl font-semibold leading-[1.02] text-slate-950 md:text-5xl">
+                        <h1 className="mt-3 max-w-4xl font-inter text-3xl font-bold leading-[1.02] text-slate-950 md:text-5xl">
                             Build branded teamwear with live visual approval and
                             payment-ready bulk checkout
                         </h1>
@@ -740,7 +784,8 @@ export function CorporateOrderPage({
                             <StudioMetric
                                 label="Employee size rows"
                                 value={
-                                    isApprovedQuoteFlow && approvedQuoteQuantity > 0
+                                    isApprovedQuoteFlow &&
+                                    approvedQuoteQuantity > 0
                                         ? `${employeeRows.length}/${approvedQuoteQuantity} loaded`
                                         : `${employeeRows.length} loaded`
                                 }
@@ -754,15 +799,17 @@ export function CorporateOrderPage({
                 </div>
 
                 <div className="border-t border-white/70 px-5 pb-5 pt-4 md:px-8 md:pb-8">
-                    <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto py-4">
+                    <div className="relative mx-auto flex w-full max-w-4xl items-center justify-between py-4">
                         {/* Background line */}
-                        <div className="absolute top-[28px] left-[5%] w-[90%] h-0.5 bg-slate-200/70 rounded-full" />
+                        <div className="absolute left-[5%] top-[28px] h-0.5 w-[90%] rounded-full bg-slate-200/70" />
 
                         {/* Animated Active Line */}
                         <motion.div
-                            className="absolute top-[28px] left-[5%] h-0.5 bg-[#5B9BD5] rounded-full"
+                            className="absolute left-[5%] top-[28px] h-0.5 rounded-full bg-[#5B9BD5]"
                             initial={{ width: "0%" }}
-                            animate={{ width: `${(step / (STEPS.length - 1)) * 90}%` }}
+                            animate={{
+                                width: `${(step / (STEPS.length - 1)) * 90}%`,
+                            }}
                             transition={{ duration: 0.4, ease: "easeInOut" }}
                         />
 
@@ -774,19 +821,19 @@ export function CorporateOrderPage({
                                     key={label}
                                     type="button"
                                     onClick={() => setStep(index)}
-                                    className="relative z-10 flex flex-col items-center group focus:outline-none w-20"
+                                    className="group relative z-10 flex w-20 flex-col items-center focus:outline-none"
                                 >
                                     {/* Circle */}
                                     <motion.div
                                         whileHover={{ scale: 1.08 }}
                                         whileTap={{ scale: 0.96 }}
                                         className={cn(
-                                            "flex size-9 items-center justify-center rounded-full border-2 transition-all duration-300 font-semibold text-xs",
+                                            "flex size-9 items-center justify-center rounded-full border-2 text-xs font-semibold transition-all duration-300",
                                             isActive
                                                 ? "border-[#5B9BD5] bg-white text-[#5B9BD5] shadow-[0_0_12px_rgba(91,155,213,0.35)] ring-4 ring-[#5B9BD5]/10"
                                                 : isCompleted
-                                                    ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
-                                                    : "border-slate-200 bg-white text-slate-400"
+                                                  ? "border-[#5B9BD5] bg-[#5B9BD5] text-white"
+                                                  : "border-slate-200 bg-white text-slate-400"
                                         )}
                                     >
                                         {isCompleted ? (
@@ -799,12 +846,12 @@ export function CorporateOrderPage({
                                     {/* Label */}
                                     <span
                                         className={cn(
-                                            "mt-2 text-[10px] font-semibold uppercase tracking-wider text-center transition-colors duration-300",
+                                            "mt-2 text-center text-[10px] font-semibold uppercase tracking-wider transition-colors duration-300",
                                             isActive
                                                 ? "text-[#5B9BD5]"
                                                 : isCompleted
-                                                    ? "text-slate-700"
-                                                    : "text-slate-400 group-hover:text-slate-600"
+                                                  ? "text-slate-700"
+                                                  : "text-slate-400 group-hover:text-slate-600"
                                         )}
                                     >
                                         {label}
@@ -816,29 +863,196 @@ export function CorporateOrderPage({
                 </div>
             </section>
 
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.22fr)_460px]">
+            <section className="rounded-[12px] border border-[#e3e8ed] bg-white px-5 py-5 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.28)] md:px-7 md:py-6">
+                <div className="grid items-center gap-6 xl:grid-cols-[minmax(0,1fr)_330px]">
+                    <div>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#28644f]">
+                            Corporate procurement
+                        </p>
+                        <h1 className="mt-3 font-inter text-2xl font-bold tracking-[-0.025em] text-[#172033] md:text-3xl">
+                            Create your corporate order
+                        </h1>
+                        <p className="mt-3 max-w-2xl text-sm leading-6 text-[#667085]">
+                            Everything you need to configure products, upload
+                            branding, review pricing, and place a bulk order—in
+                            one guided workflow.
+                        </p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            <Badge className="border border-[#c9efd7] bg-[#effbf3] text-[10px] font-semibold text-[#197342] hover:bg-[#effbf3]">
+                                <Check className="mr-1 size-3" /> Production
+                                ready
+                            </Badge>
+                            <Badge
+                                variant="outline"
+                                className="border-[#e2e6eb] bg-[#f8fafb] text-[10px] font-semibold text-[#667085]"
+                            >
+                                Secure &amp; reliable
+                            </Badge>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 divide-x divide-[#edf0f2] rounded-[12px] border border-[#edf0f2] bg-[#fbfcfc] px-2 py-4">
+                        <HeroMetric
+                            label="Employees"
+                            value={
+                                form.numberOfEmployees > 0
+                                    ? String(form.numberOfEmployees)
+                                    : "—"
+                            }
+                            detail="Team size"
+                        />
+                        <HeroMetric
+                            label="Completed"
+                            value={`${step + 1}/5`}
+                            detail="Steps"
+                        />
+                        <HeroMetric
+                            label="Estimated spend"
+                            value={quote ? formatINR(quote.totalPaise) : "—"}
+                            detail="Current quote"
+                        />
+                    </div>
+                </div>
+            </section>
+
+            <div className="flex items-center gap-2 rounded-[8px] border border-[#bce9ca] bg-[#effcf3] px-4 py-3 text-xs text-[#276749]">
+                <Check className="size-4 shrink-0" />
+                <span>
+                    Complete each step to generate an accurate quotation and
+                    production-ready order.
+                </span>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
+                <section className="rounded-[12px] border border-[#e3e8ed] bg-white p-5 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.28)] md:p-6">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#28644f]">
+                        Bulk order workspace
+                    </p>
+                    <h2 className="mt-2 text-xl font-bold tracking-[-0.02em] text-[#172033]">
+                        Design your branded apparel
+                    </h2>
+                    <p className="mt-2 max-w-xl text-xs leading-5 text-[#667085]">
+                        Preview your branding, upload artwork, review pricing,
+                        and prepare your order before checkout.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <span className="rounded-full border border-[#c9efd7] bg-[#effbf3] px-3 py-1 text-[10px] font-semibold text-[#197342]">
+                            Production Ready
+                        </span>
+                        <span className="rounded-full border border-[#e4e8ec] bg-[#f7f8fa] px-3 py-1 text-[10px] font-semibold text-[#667085]">
+                            MOQ Pricing
+                        </span>
+                        <span className="rounded-full border border-[#e4e8ec] bg-[#f7f8fa] px-3 py-1 text-[10px] font-semibold text-[#667085]">
+                            Live Preview
+                        </span>
+                    </div>
+                    <div className="relative mt-6 grid grid-cols-5 gap-1">
+                        <div className="absolute left-[10%] right-[10%] top-3 h-px bg-[#dfe5e9]" />
+                        <motion.div
+                            className="absolute left-[10%] top-3 h-px bg-[#1f6b43]"
+                            initial={{ width: 0 }}
+                            animate={{
+                                width: `${Math.max(0, (step / (STEPS.length - 1)) * 80)}%`,
+                            }}
+                            transition={{ duration: 0.3 }}
+                        />
+                        {STEPS.map((label, index) => (
+                            <button
+                                key={label}
+                                type="button"
+                                onClick={() => setStep(index)}
+                                className="relative z-10 flex min-w-0 flex-col items-center gap-2 text-center"
+                            >
+                                <span
+                                    className={cn(
+                                        "flex size-6 items-center justify-center rounded-full border text-[10px] font-bold",
+                                        index <= step
+                                            ? "border-[#1f6b43] bg-[#1f6b43] text-white"
+                                            : "border-[#d4dbe0] bg-white text-[#8b98a5]"
+                                    )}
+                                >
+                                    {index < step ? (
+                                        <Check className="size-3" />
+                                    ) : (
+                                        index + 1
+                                    )}
+                                </span>
+                                <span className="truncate text-[9px] font-semibold text-[#667085]">
+                                    {label}
+                                </span>
+                            </button>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="rounded-[12px] border border-[#e3e8ed] bg-white p-4 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.28)]">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#28644f]">
+                        Order progress
+                    </p>
+                    <div className="mt-3 divide-y divide-[#edf0f2]">
+                        <ProgressRow
+                            icon={Shirt}
+                            label="Product"
+                            value={selectedProductType?.name ?? "Not selected"}
+                        />
+                        <ProgressRow
+                            icon={Palette}
+                            label="Logo placement"
+                            value={
+                                selectedLogoLocations?.length
+                                    ? `${selectedLogoLocations.length} selected`
+                                    : "Not selected"
+                            }
+                        />
+                        <ProgressRow
+                            icon={FileSpreadsheet}
+                            label="Size list"
+                            value={
+                                employeeRows.length
+                                    ? `${employeeRows.length} loaded`
+                                    : "No sizes added"
+                            }
+                        />
+                        <ProgressRow
+                            icon={Sparkles}
+                            label="Payment terms"
+                            value={initialPaymentLabel.replace(" payment", "")}
+                        />
+                    </div>
+                </section>
+            </div>
+
+            <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
                 <div className="space-y-6">
                     {step === 0 && (
-                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                        <section className="business-step rounded-[10px] border border-[#e3e8ed] bg-white p-5 shadow-[0_12px_32px_-28px_rgba(15,23,42,0.2)] md:p-6">
                             <StepHeader
                                 icon={Building2}
                                 eyebrow="Step 1"
-                                title="Company and delivery details"
-                                description="Tell us where the bulk order is going and who should receive all production, pricing, and payment updates."
+                                title="Business Information"
+                                description="Tell us where production and delivery updates should be sent."
+                                hideIcon
                             />
                             <div className="mt-4 grid gap-4 md:grid-cols-2">
                                 <div>
+                                    <FormLabel>Business Name</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Company Name"
                                         value={form.companyName}
                                         onChange={(e) =>
-                                            setFieldValue("companyName", e.target.value)
+                                            setFieldValue(
+                                                "companyName",
+                                                e.target.value
+                                            )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.companyName} />
+                                    <FieldError
+                                        message={fieldErrors.companyName}
+                                    />
                                 </div>
                                 <div>
+                                    <FormLabel>Contact Person</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Contact Person Name"
@@ -850,42 +1064,61 @@ export function CorporateOrderPage({
                                             )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.contactPersonName} />
+                                    <FieldError
+                                        message={fieldErrors.contactPersonName}
+                                    />
                                 </div>
                                 <div>
+                                    <FormLabel>Email Address</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Email Address"
                                         type="email"
                                         value={form.emailAddress}
                                         onChange={(e) =>
-                                            setFieldValue("emailAddress", e.target.value)
+                                            setFieldValue(
+                                                "emailAddress",
+                                                e.target.value
+                                            )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.emailAddress} />
+                                    <FieldError
+                                        message={fieldErrors.emailAddress}
+                                    />
                                 </div>
                                 <div>
+                                    <FormLabel>Mobile Number</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Mobile Number"
                                         value={form.mobileNumber}
                                         onChange={(e) =>
-                                            setFieldValue("mobileNumber", e.target.value)
+                                            setFieldValue(
+                                                "mobileNumber",
+                                                e.target.value
+                                            )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.mobileNumber} />
+                                    <FieldError
+                                        message={fieldErrors.mobileNumber}
+                                    />
                                 </div>
                                 <div>
+                                    <FormLabel optional>GSTIN</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="GST Number (Optional)"
                                         value={form.gstNumber}
                                         onChange={(e) =>
-                                            setFieldValue("gstNumber", e.target.value)
+                                            setFieldValue(
+                                                "gstNumber",
+                                                e.target.value
+                                            )
                                         }
                                     />
                                 </div>
                                 <div>
+                                    <FormLabel>Country</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Delivery Country"
@@ -897,9 +1130,12 @@ export function CorporateOrderPage({
                                             )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.deliveryCountry} />
+                                    <FieldError
+                                        message={fieldErrors.deliveryCountry}
+                                    />
                                 </div>
                                 <div>
+                                    <FormLabel>City</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Delivery City"
@@ -911,9 +1147,12 @@ export function CorporateOrderPage({
                                             )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.deliveryCity} />
+                                    <FieldError
+                                        message={fieldErrors.deliveryCity}
+                                    />
                                 </div>
                                 <div>
+                                    <FormLabel>Pincode</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Delivery Pincode"
@@ -923,13 +1162,19 @@ export function CorporateOrderPage({
                                         onChange={(e) =>
                                             setFieldValue(
                                                 "deliveryPincode",
-                                                e.target.value.replace(/\D/g, "")
+                                                e.target.value.replace(
+                                                    /\D/g,
+                                                    ""
+                                                )
                                             )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.deliveryPincode} />
+                                    <FieldError
+                                        message={fieldErrors.deliveryPincode}
+                                    />
                                 </div>
                                 <div>
+                                    <FormLabel>Estimated Quantity</FormLabel>
                                     <Input
                                         className="h-12 rounded-2xl border-slate-200 bg-slate-50/60 px-4"
                                         placeholder="Number of Employees"
@@ -943,15 +1188,21 @@ export function CorporateOrderPage({
                                             )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.numberOfEmployees} />
+                                    <FieldError
+                                        message={fieldErrors.numberOfEmployees}
+                                    />
                                 </div>
                             </div>
+                            <FormLabel>Shipping Address</FormLabel>
                             <textarea
-                                className="mt-4 min-h-32 w-full rounded-[24px] border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm outline-none transition focus:border-[#5B9BD5]"
+                                className="mt-1.5 min-h-32 w-full rounded-[24px] border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm outline-none transition focus:border-[#5B9BD5]"
                                 placeholder="Delivery Address"
                                 value={form.deliveryAddress}
                                 onChange={(e) =>
-                                    setFieldValue("deliveryAddress", e.target.value)
+                                    setFieldValue(
+                                        "deliveryAddress",
+                                        e.target.value
+                                    )
                                 }
                             />
                             <FieldError message={fieldErrors.deliveryAddress} />
@@ -964,7 +1215,7 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 1 && (
-                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                        <section className="rounded-[12px] border border-slate-200 bg-white p-5 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.24)] md:p-6">
                             <StepHeader
                                 icon={Shirt}
                                 eyebrow="Step 2"
@@ -980,7 +1231,10 @@ export function CorporateOrderPage({
                                     {isApprovedQuoteFlow ? (
                                         <Input
                                             className="h-12 rounded-2xl border-slate-200 bg-slate-100 px-4"
-                                            value={selectedProductType?.name ?? "Admin selected"}
+                                            value={
+                                                selectedProductType?.name ??
+                                                "Admin selected"
+                                            }
                                             disabled
                                         />
                                     ) : (
@@ -988,24 +1242,56 @@ export function CorporateOrderPage({
                                             className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
                                             value={form.productTypeId}
                                             onChange={(e) =>
-                                                setFieldValue("productTypeId", e.target.value)
+                                                setFieldValue(
+                                                    "productTypeId",
+                                                    e.target.value
+                                                )
                                             }
                                         >
-                                            <option value="">Select Product Type</option>
+                                            <option value="">
+                                                Select Product Type
+                                            </option>
                                             {config.productTypes.map((item) => (
-                                                <option key={item.id} value={item.id}>
+                                                <option
+                                                    key={item.id}
+                                                    value={item.id}
+                                                >
                                                     {item.name}
+                                                    {item.hsnMaster?.hsnCode
+                                                        ? " · HSN " +
+                                                          item.hsnMaster.hsnCode
+                                                        : " · HSN pending"}
                                                 </option>
                                             ))}
                                         </select>
                                     )}
-                                    <FieldError message={fieldErrors.productTypeId} />
+                                    <FieldError
+                                        message={fieldErrors.productTypeId}
+                                    />
+                                    {selectedProductType?.hsnMaster ? (
+                                        <p className="mt-2 text-xs text-slate-500">
+                                            HSN{" "}
+                                            {
+                                                selectedProductType.hsnMaster
+                                                    .hsnCode
+                                            }
+                                            {" · GST "}
+                                            {(
+                                                selectedProductType.hsnMaster
+                                                    .gstRateBps / 100
+                                            ).toFixed(2)}
+                                            %
+                                        </p>
+                                    ) : null}
                                 </div>
                                 <div>
                                     {isApprovedQuoteFlow ? (
                                         <Input
                                             className="h-12 rounded-2xl border-slate-200 bg-slate-100 px-4"
-                                            value={selectedGsm?.label ?? "Admin selected"}
+                                            value={
+                                                selectedGsm?.label ??
+                                                "Admin selected"
+                                            }
                                             disabled
                                         />
                                     ) : (
@@ -1013,18 +1299,26 @@ export function CorporateOrderPage({
                                             className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
                                             value={form.gsmOptionId}
                                             onChange={(e) =>
-                                                setFieldValue("gsmOptionId", e.target.value)
+                                                setFieldValue(
+                                                    "gsmOptionId",
+                                                    e.target.value
+                                                )
                                             }
                                         >
                                             <option value="">Select GSM</option>
                                             {config.gsmOptions.map((item) => (
-                                                <option key={item.id} value={item.id}>
+                                                <option
+                                                    key={item.id}
+                                                    value={item.id}
+                                                >
                                                     {item.label}
                                                 </option>
                                             ))}
                                         </select>
                                     )}
-                                    <FieldError message={fieldErrors.gsmOptionId} />
+                                    <FieldError
+                                        message={fieldErrors.gsmOptionId}
+                                    />
                                 </div>
                                 <div>
                                     {isApprovedQuoteFlow ? (
@@ -1047,15 +1341,26 @@ export function CorporateOrderPage({
                                                 )
                                             }
                                         >
-                                            <option value="">Select Fabric Composition</option>
-                                            {config.fabricCompositions.map((item) => (
-                                                <option key={item.id} value={item.id}>
-                                                    {item.name}
-                                                </option>
-                                            ))}
+                                            <option value="">
+                                                Select Fabric Composition
+                                            </option>
+                                            {config.fabricCompositions.map(
+                                                (item) => (
+                                                    <option
+                                                        key={item.id}
+                                                        value={item.id}
+                                                    >
+                                                        {item.name}
+                                                    </option>
+                                                )
+                                            )}
                                         </select>
                                     )}
-                                    <FieldError message={fieldErrors.fabricCompositionId} />
+                                    <FieldError
+                                        message={
+                                            fieldErrors.fabricCompositionId
+                                        }
+                                    />
                                 </div>
                                 <div>
                                     <Input
@@ -1070,10 +1375,15 @@ export function CorporateOrderPage({
                                         value={form.quantity || ""}
                                         disabled={isApprovedQuoteFlow}
                                         onChange={(e) =>
-                                            setFieldValue("quantity", Number(e.target.value))
+                                            setFieldValue(
+                                                "quantity",
+                                                Number(e.target.value)
+                                            )
                                         }
                                     />
-                                    <FieldError message={fieldErrors.quantity} />
+                                    <FieldError
+                                        message={fieldErrors.quantity}
+                                    />
                                 </div>
                             </div>
 
@@ -1092,7 +1402,9 @@ export function CorporateOrderPage({
                                     />
                                     <SummaryStat
                                         label="Price Per Unit"
-                                        value={formatINR(approvedQuoteUnitPricePaise)}
+                                        value={formatINR(
+                                            approvedQuoteUnitPricePaise
+                                        )}
                                     />
                                 </div>
                             ) : null}
@@ -1103,42 +1415,57 @@ export function CorporateOrderPage({
                                 </p>
                                 <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                                     {config.colorOptions.map((color) => {
-                                        const checked = selectedColorIds.has(color.id);
+                                        const checked = selectedColorIds.has(
+                                            color.id
+                                        );
                                         return (
                                             <motion.button
                                                 type="button"
                                                 key={color.id}
-                                                whileHover={{ y: -2, scale: 1.02 }}
+                                                whileHover={{
+                                                    y: -2,
+                                                    scale: 1.02,
+                                                }}
                                                 whileTap={{ scale: 0.98 }}
-                                                transition={{ type: "spring", stiffness: 450, damping: 18 }}
+                                                transition={{
+                                                    type: "spring",
+                                                    stiffness: 450,
+                                                    damping: 18,
+                                                }}
                                                 className={cn(
                                                     "flex items-center gap-3 rounded-[22px] border px-4 py-3 text-sm transition-all duration-200",
                                                     checked
                                                         ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_12px_24px_-16px_rgba(91,155,213,0.6)] ring-2 ring-[#5B9BD5]/30"
-                                                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-350"
+                                                        : "hover:border-slate-350 border-slate-200 bg-white text-slate-700"
                                                 )}
-                                                onClick={() =>
-                                                    {
-                                                        setForm((current) => ({
-                                                            ...current,
-                                                            colorOptionIds: checked
-                                                                ? current.colorOptionIds.filter(
-                                                                      (item) =>
-                                                                          item !== color.id
-                                                                  )
-                                                                : [
-                                                                      ...current.colorOptionIds,
-                                                                      color.id,
-                                                                  ],
-                                                        }));
-                                                        setFieldErrors((current) => {
-                                                            if (!current.colorOptionIds) return current;
-                                                            const next = { ...current };
+                                                onClick={() => {
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        colorOptionIds: checked
+                                                            ? current.colorOptionIds.filter(
+                                                                  (item) =>
+                                                                      item !==
+                                                                      color.id
+                                                              )
+                                                            : [
+                                                                  ...current.colorOptionIds,
+                                                                  color.id,
+                                                              ],
+                                                    }));
+                                                    setFieldErrors(
+                                                        (current) => {
+                                                            if (
+                                                                !current.colorOptionIds
+                                                            )
+                                                                return current;
+                                                            const next = {
+                                                                ...current,
+                                                            };
                                                             delete next.colorOptionIds;
                                                             return next;
-                                                        });
-                                                    }
-                                                }
+                                                        }
+                                                    );
+                                                }}
                                             >
                                                 <span
                                                     className="size-5 rounded-full border border-black/5 shadow-inner"
@@ -1155,7 +1482,9 @@ export function CorporateOrderPage({
                                         );
                                     })}
                                 </div>
-                                <FieldError message={fieldErrors.colorOptionIds} />
+                                <FieldError
+                                    message={fieldErrors.colorOptionIds}
+                                />
                                 <textarea
                                     className="mt-4 min-h-24 w-full rounded-[24px] border border-slate-200 bg-slate-50/60 px-4 py-3 text-sm outline-none transition focus:border-[#5B9BD5]"
                                     placeholder="Custom color request (optional)"
@@ -1172,7 +1501,7 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 2 && (
-                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                        <section className="rounded-[12px] border border-slate-200 bg-white p-5 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.24)] md:p-6">
                             <StepHeader
                                 icon={Palette}
                                 eyebrow="Step 3"
@@ -1185,50 +1514,66 @@ export function CorporateOrderPage({
                                 </p>
                                 <div className="mt-3 grid gap-3 sm:grid-cols-2">
                                     {config.logoLocations.map((location) => {
-                                        const checked = selectedLogoLocationIds.has(
-                                            location.id
-                                        );
+                                        const checked =
+                                            selectedLogoLocationIds.has(
+                                                location.id
+                                            );
                                         return (
                                             <motion.button
                                                 type="button"
                                                 key={location.id}
-                                                whileHover={{ y: -2, scale: 1.01 }}
+                                                whileHover={{
+                                                    y: -2,
+                                                    scale: 1.01,
+                                                }}
                                                 whileTap={{ scale: 0.99 }}
-                                                transition={{ type: "spring", stiffness: 450, damping: 18 }}
+                                                transition={{
+                                                    type: "spring",
+                                                    stiffness: 450,
+                                                    damping: 18,
+                                                }}
                                                 className={cn(
                                                     "rounded-[22px] border px-4 py-3 text-left text-sm transition-all duration-200",
                                                     checked
                                                         ? "border-[#5B9BD5] bg-[#eff7ff] text-[#20476c] shadow-[0_12px_24px_-16px_rgba(91,155,213,0.6)] ring-2 ring-[#5B9BD5]/30"
-                                                        : "border-slate-200 bg-white text-slate-700 hover:border-slate-350"
+                                                        : "hover:border-slate-350 border-slate-200 bg-white text-slate-700"
                                                 )}
-                                                onClick={() =>
-                                                    {
-                                                        setForm((current) => ({
-                                                            ...current,
-                                                            logoLocationIds: checked
-                                                                ? current.logoLocationIds.filter(
-                                                                      (item) =>
-                                                                          item !== location.id
-                                                                  )
-                                                                : [
-                                                                      ...current.logoLocationIds,
-                                                                      location.id,
-                                                                  ],
-                                                        }));
-                                                        setFieldErrors((current) => {
-                                                            if (!current.logoLocationIds) return current;
-                                                            const next = { ...current };
+                                                onClick={() => {
+                                                    setForm((current) => ({
+                                                        ...current,
+                                                        logoLocationIds: checked
+                                                            ? current.logoLocationIds.filter(
+                                                                  (item) =>
+                                                                      item !==
+                                                                      location.id
+                                                              )
+                                                            : [
+                                                                  ...current.logoLocationIds,
+                                                                  location.id,
+                                                              ],
+                                                    }));
+                                                    setFieldErrors(
+                                                        (current) => {
+                                                            if (
+                                                                !current.logoLocationIds
+                                                            )
+                                                                return current;
+                                                            const next = {
+                                                                ...current,
+                                                            };
                                                             delete next.logoLocationIds;
                                                             return next;
-                                                        });
-                                                    }
-                                                }
+                                                        }
+                                                    );
+                                                }}
                                             >
                                                 <p className="font-semibold">
                                                     {location.name}
                                                 </p>
                                                 <p className="mt-1 text-xs opacity-75">
-                                                    {isBackPlacement(location.name)
+                                                    {isBackPlacement(
+                                                        location.name
+                                                    )
                                                         ? "Visible on the back view"
                                                         : "Visible on the front view"}
                                                 </p>
@@ -1236,7 +1581,9 @@ export function CorporateOrderPage({
                                         );
                                     })}
                                 </div>
-                                <FieldError message={fieldErrors.logoLocationIds} />
+                                <FieldError
+                                    message={fieldErrors.logoLocationIds}
+                                />
                             </div>
                             <div className="mt-5 grid gap-4 md:grid-cols-2">
                                 <div>
@@ -1244,17 +1591,27 @@ export function CorporateOrderPage({
                                         className="h-12 w-full rounded-2xl border border-slate-200 bg-slate-50/60 px-4 text-sm"
                                         value={form.printMethodId}
                                         onChange={(e) =>
-                                            setFieldValue("printMethodId", e.target.value)
+                                            setFieldValue(
+                                                "printMethodId",
+                                                e.target.value
+                                            )
                                         }
                                     >
-                                        <option value="">Select Printing Method</option>
+                                        <option value="">
+                                            Select Printing Method
+                                        </option>
                                         {config.printMethods.map((item) => (
-                                            <option key={item.id} value={item.id}>
+                                            <option
+                                                key={item.id}
+                                                value={item.id}
+                                            >
                                                 {item.name}
                                             </option>
                                         ))}
                                     </select>
-                                    <FieldError message={fieldErrors.printMethodId} />
+                                    <FieldError
+                                        message={fieldErrors.printMethodId}
+                                    />
                                 </div>
                             </div>
                             <div className="mt-5">
@@ -1384,11 +1741,13 @@ export function CorporateOrderPage({
                                     type="file"
                                     accept=".ai,.eps,.pdf,.png,.jpg,.jpeg"
                                     onChange={(e) => {
-                                        const file = e.target.files?.[0] ?? null;
+                                        const file =
+                                            e.target.files?.[0] ?? null;
                                         setArtworkLocalFile(file);
                                         setArtworkUploaded(null);
                                         setFieldErrors((current) => {
-                                            if (!current.artworkFile) return current;
+                                            if (!current.artworkFile)
+                                                return current;
                                             const next = { ...current };
                                             delete next.artworkFile;
                                             return next;
@@ -1406,7 +1765,7 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 3 && (
-                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
+                        <section className="rounded-[12px] border border-slate-200 bg-white p-5 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.24)] md:p-6">
                             <StepHeader
                                 icon={FileSpreadsheet}
                                 eyebrow="Step 4"
@@ -1435,14 +1794,16 @@ export function CorporateOrderPage({
                                     type="file"
                                     accept=".xls,.xlsx,.csv"
                                     onChange={async (e) => {
-                                        const file = e.target.files?.[0] ?? null;
+                                        const file =
+                                            e.target.files?.[0] ?? null;
                                         if (!file) return;
                                         try {
                                             setEmployeeLocalFile(file);
                                             setEmployeeSheetUploaded(null);
                                             await parseEmployeeSheet(file);
                                             setFieldErrors((current) => {
-                                                if (!current.employeeSheetFile) return current;
+                                                if (!current.employeeSheetFile)
+                                                    return current;
                                                 const next = { ...current };
                                                 delete next.employeeSheetFile;
                                                 return next;
@@ -1461,7 +1822,9 @@ export function CorporateOrderPage({
                                         {employeeLocalFile.name}
                                     </p>
                                 )}
-                                <FieldError message={fieldErrors.employeeSheetFile} />
+                                <FieldError
+                                    message={fieldErrors.employeeSheetFile}
+                                />
                             </div>
 
                             <div className="mt-5 overflow-hidden rounded-[26px] border border-slate-200">
@@ -1477,25 +1840,33 @@ export function CorporateOrderPage({
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-slate-50 text-slate-600">
                                             <tr>
-                                                <th className="px-4 py-2">Employee Name</th>
-                                                <th className="px-4 py-2">Size</th>
+                                                <th className="px-4 py-2">
+                                                    Employee Name
+                                                </th>
+                                                <th className="px-4 py-2">
+                                                    Size
+                                                </th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {employeeRows.length > 0 ? (
-                                                employeeRows.map((row, index) => (
-                                                    <tr
-                                                        key={`${row.employeeName}-${index}`}
-                                                        className="border-t border-slate-100"
-                                                    >
-                                                        <td className="px-4 py-2">
-                                                            {row.employeeName}
-                                                        </td>
-                                                        <td className="px-4 py-2">
-                                                            {row.size}
-                                                        </td>
-                                                    </tr>
-                                                ))
+                                                employeeRows.map(
+                                                    (row, index) => (
+                                                        <tr
+                                                            key={`${row.employeeName}-${index}`}
+                                                            className="border-t border-slate-100"
+                                                        >
+                                                            <td className="px-4 py-2">
+                                                                {
+                                                                    row.employeeName
+                                                                }
+                                                            </td>
+                                                            <td className="px-4 py-2">
+                                                                {row.size}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                )
                                             ) : (
                                                 <tr>
                                                     <td
@@ -1516,75 +1887,270 @@ export function CorporateOrderPage({
                     )}
 
                     {step === 4 && (
-                        <section className="rounded-[30px] border border-slate-200 bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.28)] md:p-7">
-                            <div className="flex flex-wrap items-center justify-between gap-3">
-                                <div>
-                                    <StepHeader
-                                        icon={Sparkles}
-                                        eyebrow="Step 5"
-                                        title="Final quote and payment"
-                                        description={`Review the quote and complete your ${initialPaymentLabel.toLowerCase()}.`}
-                                    />
-                                </div>
-                                <div className="pt-5">
-                                    <p className="text-sm text-slate-500">
-                                        Pricing refresh checks every selected
-                                        option before generating the final
-                                        payment summary.
-                                    </p>
-                                </div>
-                                <Button
-                                    variant="outline"
-                                    className="rounded-2xl"
-                                    onClick={refreshQuote}
-                                    disabled={isQuoting}
+                        <section className="rounded-[12px] border border-slate-200 bg-white p-5 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.28)] md:p-7">
+                            <div className="flex flex-wrap items-start justify-between gap-4">
+                                <StepHeader
+                                    icon={Sparkles}
+                                    eyebrow="Step 5"
+                                    title="Final quote and payment"
+                                    description={`Review the quote and complete your ${initialPaymentLabel.toLowerCase()}.`}
+                                />
+                                <div
+                                    className={cn(
+                                        "mt-1 inline-flex items-center gap-2 rounded-full border px-3 py-2 text-[10px] font-semibold",
+                                        isQuoting
+                                            ? "border-[#cfe1f5] bg-[#f4f8fd] text-[#356ea5]"
+                                            : "border-[#c9efd7] bg-[#effbf3] text-[#197342]"
+                                    )}
+                                    aria-live="polite"
                                 >
-                                    {isQuoting ? "Refreshing..." : "Refresh quote"}
-                                </Button>
+                                    <span
+                                        className={cn(
+                                            "size-1.5 rounded-full",
+                                            isQuoting
+                                                ? "animate-pulse bg-[#5B9BD5]"
+                                                : "bg-[#1f9d61]"
+                                        )}
+                                    />
+                                    {isQuoting
+                                        ? "Updating quote automatically"
+                                        : "Quote up to date"}
+                                </div>
+                            </div>
+                            <div className="mt-5 rounded-[10px] border border-[#e6edf2] bg-[#f8fafb] px-4 py-3 text-xs text-[#667085]">
+                                Pricing is recalculated automatically from your
+                                selected garment, branding, sizes, extras, and
+                                payment preference.
                             </div>
                             {quote ? (
-                                <div className="mt-5 grid gap-4 md:grid-cols-2">
-                                    <SummaryStat
-                                        label="Quantity"
-                                        value={String(quote.quantity)}
-                                    />
-                                    <SummaryStat
-                                        label="Employee Count"
-                                        value={String(quote.employeeCount)}
-                                    />
-                                    <SummaryStat
-                                        label="Unit Cost"
-                                        value={formatINR(quote.unitPricePaise)}
-                                    />
-                                    <SummaryStat
-                                        label="Subtotal"
-                                        value={formatINR(quote.subtotalPaise)}
-                                    />
-                                    <SummaryStat
-                                        label="Customization"
-                                        value={formatINR(quote.customizationPaise)}
-                                    />
-                                    <SummaryStat
-                                        label="GST"
-                                        value={formatINR(quote.gstPaise)}
-                                    />
-                                    <SummaryStat
-                                        label="Total Order Value"
-                                        value={formatINR(quote.totalPaise)}
-                                    />
-                                    <SummaryStat
-                                        label={
-                                            quote.balanceDuePaise === 0
-                                                ? "Amount Due Now"
-                                                : `Initial Payment (${Math.round(quote.advancePercentBps / 100)}%)`
-                                        }
-                                        value={formatINR(quote.advancePaidPaise)}
-                                    />
-                                </div>
+                                <>
+                                    <div className="mt-5 grid gap-4 md:grid-cols-2">
+                                        <SummaryStat
+                                            label="Quantity"
+                                            value={String(quote.quantity)}
+                                        />
+                                        <SummaryStat
+                                            label="Employee Count"
+                                            value={String(quote.employeeCount)}
+                                        />
+                                        <SummaryStat
+                                            label="Unit Cost"
+                                            value={formatINR(
+                                                quote.unitPricePaise
+                                            )}
+                                        />
+                                        <SummaryStat
+                                            label="Subtotal"
+                                            value={formatINR(
+                                                quote.subtotalPaise
+                                            )}
+                                        />
+                                        <SummaryStat
+                                            label="Customization"
+                                            value={formatINR(
+                                                quote.customizationPaise
+                                            )}
+                                        />
+                                        <SummaryStat
+                                            label="GST"
+                                            value={formatINR(quote.gstPaise)}
+                                        />
+                                        <SummaryStat
+                                            label="HSN Code"
+                                            value={quote.hsnCode}
+                                        />
+                                        <SummaryStat
+                                            label="Total Order Value"
+                                            value={formatINR(quote.totalPaise)}
+                                        />
+                                        <SummaryStat
+                                            label={
+                                                quote.balanceDuePaise === 0
+                                                    ? "Amount Due Now"
+                                                    : `Initial Payment (${Math.round(quote.advancePercentBps / 100)}%)`
+                                            }
+                                            value={formatINR(
+                                                quote.advancePaidPaise
+                                            )}
+                                        />
+                                        <SummaryStat
+                                            label="Balance Due Later"
+                                            value={formatINR(
+                                                quote.balanceDuePaise
+                                            )}
+                                        />
+                                    </div>
+
+                                    <div className="mt-5 rounded-[22px] border border-[#dbe5f0] bg-[linear-gradient(180deg,#fbfdff_0%,#f7fafc_100%)] p-4 md:p-5">
+                                        <div className="flex flex-wrap items-start justify-between gap-3">
+                                            <div>
+                                                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#28644f]">
+                                                    Cost breakdown
+                                                </p>
+                                                <h3 className="mt-1 text-base font-bold text-slate-900">
+                                                    How your final quote is
+                                                    calculated
+                                                </h3>
+                                                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">
+                                                    This shows exactly what is
+                                                    included in the order value
+                                                    before you pay.
+                                                </p>
+                                            </div>
+                                            <span className="rounded-full border border-[#cfe1f5] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#315f8a]">
+                                                {quote.quantity} garments{" · "}
+                                                {quote.employeeCount} employees
+                                            </span>
+                                        </div>
+
+                                        <div className="mt-4 divide-y divide-slate-200 rounded-[16px] border border-slate-200 bg-white px-4">
+                                            <QuoteBreakdownRow
+                                                label="Garments"
+                                                description={
+                                                    quote.quantity +
+                                                    " × " +
+                                                    formatINR(
+                                                        quote.unitPricePaise
+                                                    ) +
+                                                    " per garment"
+                                                }
+                                                amount={formatINR(
+                                                    quote.subtotalPaise
+                                                )}
+                                            />
+                                            <QuoteBreakdownRow
+                                                label="Print / branding method"
+                                                description={
+                                                    quote.printMethod.name
+                                                }
+                                                amount={formatINR(
+                                                    quote.printMethodChargePaise
+                                                )}
+                                            />
+                                            <QuoteBreakdownRow
+                                                label="Additional add-ons"
+                                                description={
+                                                    quote.appliedExtraCharges
+                                                        .length
+                                                        ? quote.appliedExtraCharges
+                                                              .map(
+                                                                  (item: {
+                                                                      name: string;
+                                                                      amountPaise: number;
+                                                                  }) =>
+                                                                      item.name +
+                                                                      " (" +
+                                                                      formatINR(
+                                                                          item.amountPaise
+                                                                      ) +
+                                                                      ")"
+                                                              )
+                                                              .join(", ")
+                                                        : "No additional add-ons selected"
+                                                }
+                                                amount={formatINR(
+                                                    quote.extraChargesPaise
+                                                )}
+                                            />
+                                            <QuoteBreakdownRow
+                                                label="Customization total"
+                                                description="Print / branding plus selected add-ons"
+                                                amount={formatINR(
+                                                    quote.customizationPaise
+                                                )}
+                                            />
+                                            <QuoteBreakdownRow
+                                                label="Taxable amount"
+                                                description="Garments + customization before GST"
+                                                amount={formatINR(
+                                                    quote.subtotalPaise +
+                                                        quote.customizationPaise
+                                                )}
+                                            />
+                                            <QuoteBreakdownRow
+                                                label={
+                                                    "GST (" +
+                                                    (
+                                                        quote.gstRateBps / 100
+                                                    ).toFixed(2) +
+                                                    "%)"
+                                                }
+                                                description={
+                                                    "HSN " +
+                                                    quote.hsnCode +
+                                                    " · Applicable tax on the taxable amount"
+                                                }
+                                                amount={formatINR(
+                                                    quote.gstPaise
+                                                )}
+                                            />
+                                            <div className="flex items-center justify-between gap-4 py-4">
+                                                <div>
+                                                    <p className="text-sm font-bold text-slate-900">
+                                                        Total order value
+                                                    </p>
+                                                    <p className="mt-1 text-xs text-slate-500">
+                                                        Complete value of this
+                                                        corporate order
+                                                    </p>
+                                                </div>
+                                                <p className="text-lg font-bold text-[#173b2b]">
+                                                    {formatINR(
+                                                        quote.totalPaise
+                                                    )}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="mt-4 rounded-[22px] border border-[#d9eadf] bg-[#f4fbf6] p-4 md:p-5">
+                                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#28644f]">
+                                            Payment schedule
+                                        </p>
+                                        <p className="mt-1 text-sm font-semibold text-slate-900">
+                                            Know what is collected now and what
+                                            remains later.
+                                        </p>
+                                        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                                            <PaymentScheduleCard
+                                                label={
+                                                    quote.balanceDuePaise === 0
+                                                        ? "Pay now"
+                                                        : "Initial payment"
+                                                }
+                                                value={formatINR(
+                                                    quote.advancePaidPaise
+                                                )}
+                                                detail={
+                                                    quote.balanceDuePaise === 0
+                                                        ? "100% collected at checkout"
+                                                        : Math.round(
+                                                              quote.advancePercentBps /
+                                                                  100
+                                                          ) +
+                                                          "% advance collected at checkout"
+                                                }
+                                            />
+                                            <PaymentScheduleCard
+                                                label="Balance due later"
+                                                value={formatINR(
+                                                    quote.balanceDuePaise
+                                                )}
+                                                detail={
+                                                    quote.balanceDuePaise === 0
+                                                        ? "No remaining payment"
+                                                        : "Remaining order value after the advance"
+                                                }
+                                            />
+                                        </div>
+                                    </div>
+                                </>
                             ) : (
-                                <div className="mt-5 rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-6 text-sm text-slate-600">
-                                    Refresh the quote to generate the final pricing
-                                    summary.
+                                <div className="mt-5 flex items-center gap-3 rounded-[12px] border border-dashed border-[#cfdce5] bg-[#fbfcfd] p-6 text-sm text-[#667085]">
+                                    <Spinner className="size-4 animate-spin text-[#5B9BD5]" />
+                                    <span>
+                                        Generating your final pricing summary…
+                                    </span>
                                 </div>
                             )}
                             <textarea
@@ -1601,234 +2167,255 @@ export function CorporateOrderPage({
                         </section>
                     )}
 
-                        <div className="flex items-center justify-between">
-                            <Button
-                                variant="outline"
-                                className="rounded-2xl"
-                                onClick={() =>
-                                    setStep((current) => Math.max(0, current - 1))
-                                }
-                                disabled={step === 0 || isPaying}
-                            >
-                                <ChevronLeft className="size-4" />
-                                Back
-                            </Button>
-                            {step < 4 ? (
-                                <Button
-                                    className="rounded-2xl"
-                                    onClick={() => {
-                                        const validation = validateStepBeforeNext(step);
-                                        if (!validation.valid) {
-                                            setFieldErrors(validation.errors);
-                                            return;
-                                        }
-
-                                        setFieldErrors({});
-                                        setStep((current) =>
-                                            Math.min(STEPS.length - 1, current + 1)
-                                        );
-                                    }}
-                                    disabled={isPaying}
-                                >
-                                    Next
-                                    <ChevronRight className="size-4" />
-                                </Button>
-                            ) : (
-                                <Button
-                                    className="rounded-2xl bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
-                                    onClick={handleProceedToPayment}
-                                    disabled={isPaying || !quote}
-                                >
-                                    {isPaying
-                                        ? "Opening payment..."
-                                        : quote?.balanceDuePaise === 0
-                                          ? "Pay 100% Now"
-                                          : `Pay ${Math.round((quote?.advancePercentBps ?? config.settings.advancePercentBps) / 100)}% Now`}
-                                </Button>
-                            )}
-                        </div>
-                    </div>
-
-                    <aside className="space-y-5 xl:sticky xl:top-6 xl:h-fit">
-                        <motion.div
-                            initial={{ opacity: 0, y: 16 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.4, ease: "easeOut" }}
-                            className="overflow-hidden rounded-[30px] border border-[#dbe5f0] bg-[linear-gradient(180deg,#fdfefe_0%,#f5f9ff_100%)] p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.35)]"
+                    <div className="order-flow-nav mt-5 flex items-center justify-between border-t border-[#edf0f2] pt-4">
+                        <Button
+                            variant="outline"
+                            className="rounded-2xl"
+                            onClick={() =>
+                                setStep((current) => Math.max(0, current - 1))
+                            }
+                            disabled={step === 0 || isPaying}
                         >
-                            <div className="flex items-center justify-between gap-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-50 text-[#5B9BD5]">
-                                        <Upload className="size-5" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
-                                            Live Preview
-                                        </p>
-                                        <h3 className="text-lg font-semibold text-slate-900">
-                                            Branded garment mockup
-                                        </h3>
-                                    </div>
+                            <ChevronLeft className="size-4" />
+                            Back
+                        </Button>
+                        {step < 4 ? (
+                            <Button
+                                className="rounded-2xl"
+                                onClick={() => {
+                                    const validation =
+                                        validateStepBeforeNext(step);
+                                    if (!validation.valid) {
+                                        setFieldErrors(validation.errors);
+                                        return;
+                                    }
+
+                                    setFieldErrors({});
+                                    setStep((current) =>
+                                        Math.min(STEPS.length - 1, current + 1)
+                                    );
+                                }}
+                                disabled={isPaying}
+                            >
+                                Next
+                                <ChevronRight className="size-4" />
+                            </Button>
+                        ) : (
+                            <Button
+                                className="rounded-2xl bg-[#5B9BD5] text-white hover:bg-[#4A8BC5]"
+                                onClick={handleProceedToPayment}
+                                disabled={isPaying || !quote}
+                            >
+                                {isPaying
+                                    ? "Opening payment..."
+                                    : quote?.balanceDuePaise === 0
+                                      ? "Pay 100% Now"
+                                      : `Pay ${Math.round((quote?.advancePercentBps ?? config.settings.advancePercentBps) / 100)}% Now`}
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                <aside className="space-y-5 xl:sticky xl:top-6 xl:h-fit">
+                    <motion.div
+                        initial={{ opacity: 0, y: 16 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, ease: "easeOut" }}
+                        className="overflow-hidden rounded-[12px] border border-[#dbe5f0] bg-[linear-gradient(180deg,#fdfefe_0%,#f5f9ff_100%)] p-4 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.24)]"
+                    >
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3">
+                                <div className="flex size-10 items-center justify-center rounded-2xl bg-blue-50 text-[#5B9BD5]">
+                                    <Upload className="size-5" />
                                 </div>
-                                <div className="flex rounded-full border border-slate-200 bg-white p-1">
-                                    <button
-                                        type="button"
-                                        className={cn(
-                                            "rounded-full px-3 py-1 text-xs font-semibold transition",
-                                            previewSide === "front"
-                                                ? "bg-[#1f3b17] text-white"
-                                                : "text-slate-500"
-                                        )}
-                                        onClick={() => setPreviewSide("front")}
-                                    >
-                                        Front
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={cn(
-                                            "rounded-full px-3 py-1 text-xs font-semibold transition",
-                                            previewSide === "back"
-                                                ? "bg-[#1f3b17] text-white"
-                                                : "text-slate-500"
-                                        )}
-                                        onClick={() => setPreviewSide("back")}
-                                    >
-                                        Back
-                                    </button>
+                                <div>
+                                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#28644f]">
+                                        Live Product Preview
+                                    </p>
+                                    <h3 className="text-base font-bold text-slate-900">
+                                        Branded garment mockup
+                                    </h3>
                                 </div>
                             </div>
+                            <div className="flex rounded-full border border-slate-200 bg-white p-1">
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        "rounded-full px-3 py-1 text-xs font-semibold transition",
+                                        previewSide === "front"
+                                            ? "bg-[#1f3b17] text-white"
+                                            : "text-slate-500"
+                                    )}
+                                    onClick={() => setPreviewSide("front")}
+                                >
+                                    Front
+                                </button>
+                                <button
+                                    type="button"
+                                    className={cn(
+                                        "rounded-full px-3 py-1 text-xs font-semibold transition",
+                                        previewSide === "back"
+                                            ? "bg-[#1f3b17] text-white"
+                                            : "text-slate-500"
+                                    )}
+                                    onClick={() => setPreviewSide("back")}
+                                >
+                                    Back
+                                </button>
+                            </div>
+                        </div>
 
-                            <CorporateGarmentPreview
-                                side={previewSide}
-                                artworkPreviewUrl={artworkPreviewUrl}
-                                artworkName={artworkLocalFile?.name}
-                                productName={selectedProductType?.name}
-                                colorHex={selectedColors?.[0]?.hexCode ?? undefined}
-                                colorName={selectedColors?.[0]?.name}
-                                productTone={selectedFabricComposition?.name}
-                                logoLocations={selectedLogoLocations?.map((item) => ({
+                        <CorporateGarmentPreview
+                            side={previewSide}
+                            artworkPreviewUrl={artworkPreviewUrl}
+                            artworkName={artworkLocalFile?.name}
+                            productName={selectedProductType?.name}
+                            colorHex={selectedColors?.[0]?.hexCode ?? undefined}
+                            colorName={selectedColors?.[0]?.name}
+                            productTone={selectedFabricComposition?.name}
+                            logoLocations={selectedLogoLocations?.map(
+                                (item) => ({
                                     id: item.id,
                                     name: item.name,
-                                }))}
+                                })
+                            )}
+                        />
+
+                        <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                            <StudioMiniCard
+                                label="Garment"
+                                value={
+                                    selectedProductType?.name ??
+                                    "Waiting for selection"
+                                }
                             />
-
-                            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                                <StudioMiniCard
-                                    label="Garment"
-                                    value={selectedProductType?.name ?? "Waiting for selection"}
-                                />
-                                <StudioMiniCard
-                                    label="Primary color"
-                                    value={selectedColors?.[0]?.name ?? "No color selected"}
-                                />
-                                <StudioMiniCard
-                                    label="Print method"
-                                    value={
-                                        selectedPrintMethod?.name ??
-                                        "Choose a printing method"
-                                    }
-                                />
-                                <StudioMiniCard
-                                    label="Branding coverage"
-                                    value={
-                                        selectedLogoLocations?.length
-                                            ? `${selectedLogoLocations.length} placement(s)`
-                                            : "No placement selected"
-                                    }
-                                />
-                            </div>
-                        </motion.div>
-
-                        <div className="rounded-[30px] border border-[#dbe5f0] bg-white p-5 shadow-[0_24px_60px_-42px_rgba(15,23,42,0.3)]">
-                            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
-                                Quote Snapshot
-                            </p>
-                            <h3 className="mt-1 text-lg font-semibold text-slate-900">
-                                Corporate order summary
-                            </h3>
-                            <div className="mt-5 space-y-3 text-sm text-slate-700">
-                                <InfoRow
-                                    label="Expected timeline"
-                                    value={config.settings.expectedTimelineText}
-                                />
-                                <InfoRow
-                                    label="GST"
-                                    value={`${(config.settings.gstRateBps / 100).toFixed(2)}%`}
-                                />
-                                <InfoRow
-                                    label="Payment plan"
-                                    value={initialPaymentLabel}
-                                />
-                                <InfoRow
-                                    label="Parsed employees"
-                                    value={String(employeeRows.length)}
-                                />
-                                <InfoRow
-                                    label="Selected fabric"
-                                    value={
-                                        selectedFabricComposition?.name ??
-                                        "Fabric not selected"
-                                    }
-                                />
-                                <InfoRow
-                                    label="Selected GSM"
-                                    value={selectedGsm?.label ?? "GSM not selected"}
-                                />
-                            </div>
-
-                            {quote && (
-                                <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
-                                        Payment snapshot
-                                    </p>
-                                    <div className="mt-3 space-y-2 text-sm text-slate-700">
-                                        <InfoRow
-                                            label="Total order value"
-                                            value={formatINR(quote.totalPaise)}
-                                        />
-                                        <InfoRow
-                                            label={
-                                                quote.balanceDuePaise === 0
-                                                    ? "Paying now"
-                                                    : "Initial payment"
-                                            }
-                                            value={formatINR(quote.advancePaidPaise)}
-                                        />
-                                        <InfoRow
-                                            label="Balance due later"
-                                            value={formatINR(quote.balanceDuePaise)}
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {!!selectedExtraCharges?.length && (
-                                <div className="mt-5 rounded-[24px] border border-[#dbe5f0] bg-[#f8fbff] p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
-                                        Add-ons selected
-                                    </p>
-                                    <div className="mt-3 flex flex-wrap gap-2">
-                                        {selectedExtraCharges.map((item) => (
-                                            <span
-                                                key={item.id}
-                                                className="rounded-full border border-[#cfe1f5] bg-white px-3 py-1 text-xs font-medium text-[#315f8a]"
-                                            >
-                                                {item.name}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="mt-5 space-y-2">
-                                <Checkline label="Signed-in corporate checkout" />
-                                <Checkline label="Visual logo placement preview" />
-                                <Checkline label="Live pricing with slabs and extras" />
-                                <Checkline label="Razorpay payment handoff" />
-                            </div>
+                            <StudioMiniCard
+                                label="Primary color"
+                                value={
+                                    selectedColors?.[0]?.name ??
+                                    "No color selected"
+                                }
+                            />
+                            <StudioMiniCard
+                                label="Print method"
+                                value={
+                                    selectedPrintMethod?.name ??
+                                    "Choose a printing method"
+                                }
+                            />
+                            <StudioMiniCard
+                                label="Branding coverage"
+                                value={
+                                    selectedLogoLocations?.length
+                                        ? `${selectedLogoLocations.length} placement(s)`
+                                        : "No placement selected"
+                                }
+                            />
                         </div>
-                    </aside>
-                </div>
+                    </motion.div>
+
+                    <div className="rounded-[12px] border border-[#dbe5f0] bg-white p-4 shadow-[0_16px_42px_-34px_rgba(15,23,42,0.24)]">
+                        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#28644f]">
+                            Estimated Quote
+                        </p>
+                        <h3 className="mt-1 text-base font-bold text-slate-900">
+                            Live estimate based on your selections
+                        </h3>
+                        <div className="mt-5 space-y-3 text-sm text-slate-700">
+                            <InfoRow
+                                label="Expected timeline"
+                                value={config.settings.expectedTimelineText}
+                            />
+                            <InfoRow
+                                label="GST"
+                                value={
+                                    quote
+                                        ? (quote.gstRateBps / 100).toFixed(2) +
+                                          "%"
+                                        : selectedProductType?.hsnMaster
+                                          ? (
+                                                selectedProductType.hsnMaster
+                                                    .gstRateBps / 100
+                                            ).toFixed(2) + "%"
+                                          : "Select product HSN"
+                                }
+                            />
+                            <InfoRow
+                                label="Payment plan"
+                                value={initialPaymentLabel}
+                            />
+                            <InfoRow
+                                label="Parsed employees"
+                                value={String(employeeRows.length)}
+                            />
+                            <InfoRow
+                                label="Selected fabric"
+                                value={
+                                    selectedFabricComposition?.name ??
+                                    "Fabric not selected"
+                                }
+                            />
+                            <InfoRow
+                                label="Selected GSM"
+                                value={selectedGsm?.label ?? "GSM not selected"}
+                            />
+                        </div>
+
+                        {quote && (
+                            <div className="mt-5 rounded-[24px] border border-slate-200 bg-slate-50 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                    Payment snapshot
+                                </p>
+                                <div className="mt-3 space-y-2 text-sm text-slate-700">
+                                    <InfoRow
+                                        label="Total order value"
+                                        value={formatINR(quote.totalPaise)}
+                                    />
+                                    <InfoRow
+                                        label={
+                                            quote.balanceDuePaise === 0
+                                                ? "Paying now"
+                                                : "Initial payment"
+                                        }
+                                        value={formatINR(
+                                            quote.advancePaidPaise
+                                        )}
+                                    />
+                                    <InfoRow
+                                        label="Balance due later"
+                                        value={formatINR(quote.balanceDuePaise)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {!!selectedExtraCharges?.length && (
+                            <div className="mt-5 rounded-[24px] border border-[#dbe5f0] bg-[#f8fbff] p-4">
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#5B9BD5]">
+                                    Add-ons selected
+                                </p>
+                                <div className="mt-3 flex flex-wrap gap-2">
+                                    {selectedExtraCharges.map((item) => (
+                                        <span
+                                            key={item.id}
+                                            className="rounded-full border border-[#cfe1f5] bg-white px-3 py-1 text-xs font-medium text-[#315f8a]"
+                                        >
+                                            {item.name}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="mt-5 space-y-2">
+                            <Checkline label="Signed-in corporate checkout" />
+                            <Checkline label="Visual logo placement preview" />
+                            <Checkline label="Live pricing with slabs and extras" />
+                            <Checkline label="Razorpay payment handoff" />
+                        </div>
+                    </div>
+                </aside>
+            </div>
         </div>
     );
 }
@@ -1838,28 +2425,81 @@ function StepHeader({
     eyebrow,
     title,
     description,
+    hideIcon = false,
 }: {
     icon: typeof Building2;
     eyebrow: string;
     title: string;
     description: string;
+    hideIcon?: boolean;
 }) {
     return (
         <div className="flex items-start gap-4">
-            <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-[#eff6ff] text-[#5B9BD5]">
-                <Icon className="size-5" />
-            </div>
+            {!hideIcon ? (
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[#d9eadf] bg-[#eff9f0] text-[#28644f]">
+                    <Icon className="size-5" />
+                </div>
+            ) : null}
             <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#5B9BD5]">
+                <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#667085]">
                     {eyebrow}
                 </p>
-                <h2 className="mt-1 text-2xl font-semibold text-slate-900">
+                <h2 className="mt-1 text-xl font-bold tracking-[-0.02em] text-[#172033]">
                     {title}
                 </h2>
-                <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-500">
+                <p className="mt-1.5 max-w-3xl text-xs leading-5 text-[#667085]">
                     {description}
                 </p>
             </div>
+        </div>
+    );
+}
+
+function HeroMetric({
+    label,
+    value,
+    detail,
+}: {
+    label: string;
+    value: string;
+    detail: string;
+}) {
+    return (
+        <div className="min-w-0 px-3 text-center">
+            <p className="truncate text-[8px] font-medium text-[#98a2b3]">
+                {label}
+            </p>
+            <p className="mt-2 truncate text-base font-bold tracking-[-0.03em] text-[#172033]">
+                {value}
+            </p>
+            <p className="mt-1 text-[8px] font-medium text-[#98a2b3]">
+                {detail}
+            </p>
+        </div>
+    );
+}
+
+function ProgressRow({
+    icon: Icon,
+    label,
+    value,
+}: {
+    icon: typeof Shirt;
+    label: string;
+    value: string;
+}) {
+    return (
+        <div className="flex items-center gap-2.5 py-3">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-md border border-[#e3e8ed] bg-[#f8fafb] text-[#8b98a5]">
+                <Icon className="size-3.5" />
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[11px] font-semibold text-[#344054]">
+                {label}
+            </span>
+            <span className="max-w-[110px] truncate text-right text-[10px] text-[#8b98a5]">
+                {value}
+            </span>
+            <ChevronRight className="size-3 shrink-0 text-[#b3bdc7]" />
         </div>
     );
 }
@@ -1875,17 +2515,84 @@ function SummaryStat({ label, value }: { label: string; value: string }) {
     );
 }
 
+function QuoteBreakdownRow({
+    label,
+    description,
+    amount,
+}: {
+    label: string;
+    description: string;
+    amount: string;
+}) {
+    return (
+        <div className="flex items-start justify-between gap-4 py-3.5">
+            <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-900">{label}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                    {description}
+                </p>
+            </div>
+            <p className="shrink-0 text-sm font-semibold text-slate-900">
+                {amount}
+            </p>
+        </div>
+    );
+}
+
+function PaymentScheduleCard({
+    label,
+    value,
+    detail,
+}: {
+    label: string;
+    value: string;
+    detail: string;
+}) {
+    return (
+        <div className="rounded-[16px] border border-[#d9eadf] bg-white px-4 py-3.5">
+            <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#667085]">
+                {label}
+            </p>
+            <p className="mt-2 text-xl font-bold text-[#173b2b]">{value}</p>
+            <p className="mt-1 text-xs leading-5 text-slate-500">{detail}</p>
+        </div>
+    );
+}
+
 function FieldError({ message }: { message?: string }) {
     if (!message) return null;
 
     return <p className="mt-2 text-sm text-rose-600">{message}</p>;
 }
 
+function FormLabel({
+    children,
+    optional = false,
+}: {
+    children: ReactNode;
+    optional?: boolean;
+}) {
+    return (
+        <p className="mb-1.5 text-[10px] font-semibold text-[#475467]">
+            {children}
+            {optional ? (
+                <span className="ml-1 font-normal text-[#98a2b3]">
+                    (Optional)
+                </span>
+            ) : (
+                <span className="ml-0.5 text-[#d92d20]">*</span>
+            )}
+        </p>
+    );
+}
+
 function InfoRow({ label, value }: { label: string; value: string }) {
     return (
         <div className="flex items-start justify-between gap-3">
             <span className="text-slate-500">{label}</span>
-            <span className="text-right font-medium text-slate-900">{value}</span>
+            <span className="text-right font-medium text-slate-900">
+                {value}
+            </span>
         </div>
     );
 }
@@ -1977,7 +2684,8 @@ function CorporateGarmentPreview({
                     </p>
                 </div>
                 <div className="rounded-full border border-white bg-white/90 px-3 py-1 text-xs font-semibold text-slate-600 shadow-sm">
-                    {placements.length} logo zone{placements.length === 1 ? "" : "s"}
+                    {placements.length} logo zone
+                    {placements.length === 1 ? "" : "s"}
                 </div>
             </div>
 
@@ -1986,7 +2694,10 @@ function CorporateGarmentPreview({
                 <div className="absolute inset-x-10 top-8 h-24 rounded-full bg-white/70 blur-3xl" />
                 <motion.div
                     key={side}
-                    initial={{ opacity: 0, rotateY: side === "front" ? -90 : 90 }}
+                    initial={{
+                        opacity: 0,
+                        rotateY: side === "front" ? -90 : 90,
+                    }}
                     animate={{ opacity: 1, rotateY: 0 }}
                     transition={{ duration: 0.55, ease: "easeInOut" }}
                     style={{ transformStyle: "preserve-3d", perspective: 1200 }}
@@ -2045,7 +2756,8 @@ function CorporateGarmentPreview({
                     ))
                 ) : (
                     <span className="text-sm text-slate-600">
-                        Choose logo placement options to activate the live mockup.
+                        Choose logo placement options to activate the live
+                        mockup.
                     </span>
                 )}
             </div>
@@ -2140,10 +2852,42 @@ function GarmentFigure({
             />
 
             {/* Left and Right Shoulder Seam Stitching */}
-            <line x1="152" y1="83" x2="92" y2="101" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
-            <line x1="152" y1="84" x2="92" y2="102" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
-            <line x1="268" y1="83" x2="328" y2="101" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
-            <line x1="268" y1="84" x2="328" y2="102" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
+            <line
+                x1="152"
+                y1="83"
+                x2="92"
+                y2="101"
+                stroke="rgba(0,0,0,0.12)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
+            <line
+                x1="152"
+                y1="84"
+                x2="92"
+                y2="102"
+                stroke="rgba(255,255,255,0.15)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
+            <line
+                x1="268"
+                y1="83"
+                x2="328"
+                y2="101"
+                stroke="rgba(0,0,0,0.12)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
+            <line
+                x1="268"
+                y1="84"
+                x2="328"
+                y2="102"
+                stroke="rgba(255,255,255,0.15)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
 
             {/* Collar Band / Ribbing */}
             <path
@@ -2182,11 +2926,43 @@ function GarmentFigure({
 
             {/* Sleeve Cuff Stitching */}
             {/* Left sleeve cuff stitching */}
-            <line x1="45" y1="162" x2="77" y2="184" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
-            <line x1="47" y1="164" x2="79" y2="186" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
+            <line
+                x1="45"
+                y1="162"
+                x2="77"
+                y2="184"
+                stroke="rgba(0,0,0,0.12)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
+            <line
+                x1="47"
+                y1="164"
+                x2="79"
+                y2="186"
+                stroke="rgba(255,255,255,0.15)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
             {/* Right sleeve cuff stitching */}
-            <line x1="375" y1="162" x2="343" y2="184" stroke="rgba(0,0,0,0.12)" strokeDasharray="3 2" strokeWidth="1" />
-            <line x1="373" y1="164" x2="341" y2="186" stroke="rgba(255,255,255,0.15)" strokeDasharray="3 2" strokeWidth="1" />
+            <line
+                x1="375"
+                y1="162"
+                x2="343"
+                y2="184"
+                stroke="rgba(0,0,0,0.12)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
+            <line
+                x1="373"
+                y1="164"
+                x2="341"
+                y2="186"
+                stroke="rgba(255,255,255,0.15)"
+                strokeDasharray="3 2"
+                strokeWidth="1"
+            />
 
             {/* Bottom Hem Stitching */}
             <path
@@ -2399,12 +3175,13 @@ function darken(hex: string, amount: number) {
 
 function shiftHex(hex: string, amount: number) {
     const safeHex = hex.startsWith("#") ? hex.slice(1) : hex;
-    const normalized = safeHex.length === 3
-        ? safeHex
-              .split("")
-              .map((char) => `${char}${char}`)
-              .join("")
-        : safeHex;
+    const normalized =
+        safeHex.length === 3
+            ? safeHex
+                  .split("")
+                  .map((char) => `${char}${char}`)
+                  .join("")
+            : safeHex;
 
     if (normalized.length !== 6) return "#5B9BD5";
 
@@ -2413,7 +3190,5 @@ function shiftHex(hex: string, amount: number) {
     const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + amount));
     const b = Math.min(255, Math.max(0, (num & 0x0000ff) + amount));
 
-    return `#${((1 << 24) + (r << 16) + (g << 8) + b)
-        .toString(16)
-        .slice(1)}`;
+    return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
 }

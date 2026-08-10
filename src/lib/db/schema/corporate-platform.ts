@@ -54,6 +54,68 @@ const paymentStatuses = [
     "payment_partial",
 ] as const;
 
+export const corporateDocumentSettings = pgTable(
+    "corporate_document_settings",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        legalName: text("legal_name").notNull().default("Renivet"),
+        tradeName: text("trade_name").notNull().default("Renivet"),
+        gstin: text("gstin"),
+        cin: text("cin"),
+        addressLine1: text("address_line_1"),
+        addressLine2: text("address_line_2"),
+        city: text("city"),
+        state: text("state"),
+        postalCode: text("postal_code"),
+        country: text("country").notNull().default("India"),
+        email: text("email"),
+        phone: text("phone"),
+        bankName: text("bank_name").default("IDFC First Bank"),
+        bankAccountName: text("bank_account_name")
+            .notNull()
+            .default("Renivet Solutions Pvt Ltd"),
+        bankAccountNumber: text("bank_account_number").default("73564993505"),
+        bankAccountType: text("bank_account_type").default("Business"),
+        bankIfscCode: text("bank_ifsc_code").default("IDFB0080174"),
+        bankBranch: text("bank_branch").default("Thubarahallii Branch"),
+        authorizedSignatoryName: text("authorized_signatory_name")
+            .notNull()
+            .default("Renivet"),
+        defaultPaymentTerms: text("default_payment_terms")
+            .notNull()
+            .default(
+                "30% advance on PO confirmation; balance within 15 days of dispatch."
+            ),
+        proformaValidityDays: integer("proforma_validity_days")
+            .notNull()
+            .default(14),
+        balanceDueDays: integer("balance_due_days").notNull().default(15),
+        isActive: boolean("is_active").notNull().default(true),
+        ...timestamps,
+    },
+    (table) => ({
+        activeIdx: index("corporate_document_settings_active_idx").on(
+            table.isActive
+        ),
+    })
+);
+
+export const corporateDocumentSequences = pgTable(
+    "corporate_document_sequences",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        documentPrefix: text("document_prefix").notNull(),
+        financialYear: text("financial_year").notNull(),
+        lastSequence: integer("last_sequence").notNull().default(0),
+        ...timestamps,
+    },
+    (table) => ({
+        prefixFinancialYearUnique: uniqueIndex(
+            "corporate_document_sequences_prefix_fy_idx"
+        ).on(table.documentPrefix, table.financialYear),
+    })
+);
+
 export const corporateProfiles = pgTable(
     "corporate_profiles",
     {
@@ -118,7 +180,9 @@ export const corporateProductConfigs = pgTable(
             .$type<Record<string, number>>()
             .default({})
             .notNull(),
-        priceRangeMinPaise: integer("price_range_min_paise").notNull().default(0),
+        priceRangeMinPaise: integer("price_range_min_paise")
+            .notNull()
+            .default(0),
         priceRangeMaxPaise: integer("price_range_max_paise"),
         sustainabilityNotes: text("sustainability_notes"),
         displayOrder: integer("display_order").notNull().default(0),
@@ -128,7 +192,9 @@ export const corporateProductConfigs = pgTable(
         productIdx: index("corporate_product_configs_product_idx").on(
             table.productId
         ),
-        brandIdx: index("corporate_product_configs_brand_idx").on(table.brandId),
+        brandIdx: index("corporate_product_configs_brand_idx").on(
+            table.brandId
+        ),
     })
 );
 
@@ -201,9 +267,12 @@ export const corporateRfqDocuments = pgTable(
         fileUrl: text("file_url").notNull(),
         fileType: text("file_type").notNull(),
         fileSizeBytes: integer("file_size_bytes"),
-        uploadedByUserId: text("uploaded_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        uploadedByUserId: text("uploaded_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         ...timestamps,
     },
     (table) => ({
@@ -221,9 +290,12 @@ export const corporateRfqAssignments = pgTable(
         assignedToUserId: text("assigned_to_user_id")
             .notNull()
             .references(() => users.id, { onDelete: "cascade" }),
-        assignedByUserId: text("assigned_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        assignedByUserId: text("assigned_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         ...timestamps,
     },
     (table) => ({
@@ -241,7 +313,9 @@ export const corporateRfqBrandMatches = pgTable(
         brandId: uuid("brand_id")
             .notNull()
             .references(() => brands.id, { onDelete: "cascade" }),
-        confidenceScoreBps: integer("confidence_score_bps").notNull().default(0),
+        confidenceScoreBps: integer("confidence_score_bps")
+            .notNull()
+            .default(0),
         recommendationNotes: text("recommendation_notes"),
         ...timestamps,
     },
@@ -267,10 +341,11 @@ export const corporateQuotes = pgTable(
         productId: uuid("product_id").references(() => products.id, {
             onDelete: "set null",
         }),
-        corporateProductConfigId: uuid("corporate_product_config_id").references(
-            () => corporateProductConfigs.id,
-            { onDelete: "set null" }
-        ),
+        corporateProductConfigId: uuid(
+            "corporate_product_config_id"
+        ).references(() => corporateProductConfigs.id, {
+            onDelete: "set null",
+        }),
         productTypeId: uuid("product_type_id").references(
             () => corporateProductTypes.id,
             { onDelete: "set null" }
@@ -290,8 +365,12 @@ export const corporateQuotes = pgTable(
             .default(0),
         gstAmountPaise: integer("gst_amount_paise").notNull().default(0),
         totalAmountPaise: integer("total_amount_paise").notNull(),
-        advanceAmountPaise: integer("advance_amount_paise").notNull().default(0),
-        balanceAmountPaise: integer("balance_amount_paise").notNull().default(0),
+        advanceAmountPaise: integer("advance_amount_paise")
+            .notNull()
+            .default(0),
+        balanceAmountPaise: integer("balance_amount_paise")
+            .notNull()
+            .default(0),
         validUntil: date("valid_until"),
         status: text("status", {
             enum: [
@@ -310,8 +389,12 @@ export const corporateQuotes = pgTable(
         ...timestamps,
     },
     (table) => ({
-        quoteNumberIdx: index("corporate_quotes_number_idx").on(table.quoteNumber),
-        profileIdx: index("corporate_quotes_profile_idx").on(table.corporateProfileId),
+        quoteNumberIdx: index("corporate_quotes_number_idx").on(
+            table.quoteNumber
+        ),
+        profileIdx: index("corporate_quotes_profile_idx").on(
+            table.corporateProfileId
+        ),
         statusIdx: index("corporate_quotes_status_idx").on(table.status),
     })
 );
@@ -337,7 +420,9 @@ export const corporateQuoteRevisions = pgTable(
         ...timestamps,
     },
     (table) => ({
-        quoteIdx: index("corporate_quote_revisions_quote_idx").on(table.quoteId),
+        quoteIdx: index("corporate_quote_revisions_quote_idx").on(
+            table.quoteId
+        ),
     })
 );
 
@@ -353,9 +438,12 @@ export const corporateDocuments = pgTable(
         fileSizeBytes: integer("file_size_bytes"),
         mimeType: text("mime_type"),
         version: integer("version").notNull().default(1),
-        uploadedByUserId: text("uploaded_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        uploadedByUserId: text("uploaded_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         ...timestamps,
     },
     (table) => ({
@@ -407,36 +495,35 @@ export const corporateSizeBreakdowns = pgTable(
         ...timestamps,
     },
     (table) => ({
-        orderIdx: index("corporate_size_breakdowns_order_idx").on(table.orderId),
+        orderIdx: index("corporate_size_breakdowns_order_idx").on(
+            table.orderId
+        ),
     })
 );
 
-export const corporatePaymentTerms = pgTable(
-    "corporate_payment_terms",
-    {
-        id: uuid("id").primaryKey().notNull().defaultRandom(),
-        orderId: uuid("order_id").references(() => corporateOrders.id, {
-            onDelete: "cascade",
-        }),
-        quoteId: uuid("quote_id").references(() => corporateQuotes.id, {
-            onDelete: "cascade",
-        }),
-        paymentTerm: text("payment_term", {
-            enum: ["immediate", "net_7", "net_15", "net_30", "custom"],
-        })
-            .notNull()
-            .default("immediate"),
-        advancePercentageBps: integer("advance_percentage_bps")
-            .notNull()
-            .default(0),
-        balanceDueDays: integer("balance_due_days"),
-        approvedByUserId: text("approved_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
-        customTermsText: text("custom_terms_text"),
-        ...timestamps,
-    }
-);
+export const corporatePaymentTerms = pgTable("corporate_payment_terms", {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    orderId: uuid("order_id").references(() => corporateOrders.id, {
+        onDelete: "cascade",
+    }),
+    quoteId: uuid("quote_id").references(() => corporateQuotes.id, {
+        onDelete: "cascade",
+    }),
+    paymentTerm: text("payment_term", {
+        enum: ["immediate", "net_7", "net_15", "net_30", "custom"],
+    })
+        .notNull()
+        .default("immediate"),
+    advancePercentageBps: integer("advance_percentage_bps")
+        .notNull()
+        .default(0),
+    balanceDueDays: integer("balance_due_days"),
+    approvedByUserId: text("approved_by_user_id").references(() => users.id, {
+        onDelete: "set null",
+    }),
+    customTermsText: text("custom_terms_text"),
+    ...timestamps,
+});
 
 export const corporatePurchaseOrders = pgTable(
     "corporate_purchase_orders",
@@ -479,9 +566,12 @@ export const corporatePurchaseOrders = pgTable(
         })
             .notNull()
             .default("po_uploaded"),
-        approvedByUserId: text("approved_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        approvedByUserId: text("approved_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         approvedAt: date("approved_at"),
         reviewNotes: text("review_notes"),
         ...timestamps,
@@ -500,9 +590,12 @@ export const corporateQcSubmissions = pgTable(
         orderId: uuid("order_id")
             .notNull()
             .references(() => corporateOrders.id, { onDelete: "cascade" }),
-        submittedByUserId: text("submitted_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        submittedByUserId: text("submitted_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         status: text("status", {
             enum: ["pending", "submitted", "approved", "rejected"],
         })
@@ -511,9 +604,12 @@ export const corporateQcSubmissions = pgTable(
         remarks: text("remarks"),
         sampleCoveragePercent: integer("sample_coverage_percent"),
         submittedAt: date("submitted_at"),
-        reviewedByUserId: text("reviewed_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        reviewedByUserId: text("reviewed_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         reviewedAt: date("reviewed_at"),
         ...timestamps,
     },
@@ -528,7 +624,9 @@ export const corporateQcImages = pgTable(
         id: uuid("id").primaryKey().notNull().defaultRandom(),
         qcSubmissionId: uuid("qc_submission_id")
             .notNull()
-            .references(() => corporateQcSubmissions.id, { onDelete: "cascade" }),
+            .references(() => corporateQcSubmissions.id, {
+                onDelete: "cascade",
+            }),
         imageUrl: text("image_url").notNull(),
         imageType: text("image_type").notNull(),
         ...timestamps,
@@ -552,7 +650,14 @@ export const corporateShipments = pgTable(
         dispatchDate: date("dispatch_date"),
         deliveryDate: date("delivery_date"),
         status: text("status", {
-            enum: ["draft", "ready", "dispatched", "in_transit", "delivered", "failed"],
+            enum: [
+                "draft",
+                "ready",
+                "dispatched",
+                "in_transit",
+                "delivered",
+                "failed",
+            ],
         })
             .notNull()
             .default("draft"),
@@ -616,7 +721,9 @@ export const corporatePayments = pgTable(
     },
     (table) => ({
         orderIdx: index("corporate_payments_order_idx").on(table.orderId),
-        statusIdx: index("corporate_payments_status_idx").on(table.paymentStatus),
+        statusIdx: index("corporate_payments_status_idx").on(
+            table.paymentStatus
+        ),
     })
 );
 
@@ -625,9 +732,12 @@ export const corporateProformaInvoices = pgTable(
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
         invoiceNumber: text("invoice_number").notNull(),
-        quoteId: uuid("quote_id")
-            .notNull()
-            .references(() => corporateQuotes.id, { onDelete: "cascade" }),
+        quoteId: uuid("quote_id").references(() => corporateQuotes.id, {
+            onDelete: "cascade",
+        }),
+        orderId: uuid("order_id").references(() => corporateOrders.id, {
+            onDelete: "cascade",
+        }),
         customerId: uuid("customer_id").references(() => corporateProfiles.id, {
             onDelete: "set null",
         }),
@@ -635,96 +745,295 @@ export const corporateProformaInvoices = pgTable(
         subtotalPaise: integer("subtotal_paise").notNull(),
         gstAmountPaise: integer("gst_amount_paise").notNull(),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        validUntil: date("valid_until"),
+        paymentTerms: text("payment_terms"),
+        deliveryTimeline: text("delivery_timeline"),
+        termsAndConditions: text("terms_and_conditions"),
         status: text("status", {
             enum: ["draft", "issued", "cancelled"],
         })
             .notNull()
             .default("draft"),
         ...timestamps,
-    }
+    },
+    (table) => ({
+        orderIdx: index("corporate_proforma_invoices_order_id_idx").on(
+            table.orderId
+        ),
+    })
 );
 
-export const corporateTaxInvoices = pgTable(
-    "corporate_tax_invoices",
+export const corporateReceiptVouchers = pgTable(
+    "corporate_receipt_vouchers",
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
-        invoiceNumber: text("invoice_number").notNull(),
+        voucherNumber: text("voucher_number").notNull(),
         orderId: uuid("order_id")
             .notNull()
             .references(() => corporateOrders.id, { onDelete: "cascade" }),
-        invoiceDate: date("invoice_date"),
+        paymentId: uuid("payment_id").references(() => corporatePayments.id, {
+            onDelete: "set null",
+        }),
+        voucherDate: date("voucher_date").notNull(),
+        amountPaise: integer("amount_paise").notNull(),
+        paymentMode: text("payment_mode").notNull(),
+        paymentReference: text("payment_reference"),
+        poReference: text("po_reference"),
+        status: text("status", {
+            enum: ["issued", "cancelled"],
+        })
+            .notNull()
+            .default("issued"),
+        ...timestamps,
+    },
+    (table) => ({
+        voucherNumberUnique: uniqueIndex(
+            "corporate_receipt_vouchers_number_idx"
+        ).on(table.voucherNumber),
+        orderIdx: index("corporate_receipt_vouchers_order_idx").on(
+            table.orderId
+        ),
+        paymentIdx: uniqueIndex("corporate_receipt_vouchers_payment_idx").on(
+            table.paymentId
+        ),
+    })
+);
+
+export const corporateVendorPurchaseOrders = pgTable(
+    "corporate_vendor_purchase_orders",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        poNumber: text("po_number").notNull(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "restrict" }),
+        issueDate: date("issue_date").notNull(),
+        expectedDeliveryDate: date("expected_delivery_date"),
+        quantity: integer("quantity").notNull(),
+        unitBuyPricePaise: integer("unit_buy_price_paise").notNull(),
+        taxableValuePaise: integer("taxable_value_paise").notNull(),
+        gstRateBps: integer("gst_rate_bps").notNull(),
+        cgstPaise: integer("cgst_paise").notNull().default(0),
+        sgstPaise: integer("sgst_paise").notNull().default(0),
+        igstPaise: integer("igst_paise").notNull().default(0),
+        totalAmountPaise: integer("total_amount_paise").notNull(),
+        deliveryMode: text("delivery_mode", {
+            enum: ["renivet_warehouse", "direct_to_customer"],
+        })
+            .notNull()
+            .default("renivet_warehouse"),
+        deliveryAddress: text("delivery_address").notNull(),
+        paymentTerms: text("payment_terms").notNull(),
+        deliveryInstructions: text("delivery_instructions"),
+        status: text("status", {
+            enum: ["draft", "issued", "accepted", "cancelled"],
+        })
+            .notNull()
+            .default("issued"),
+        createdByUserId: text("created_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        ...timestamps,
+    },
+    (table) => ({
+        poNumberUnique: uniqueIndex(
+            "corporate_vendor_purchase_orders_number_idx"
+        ).on(table.poNumber),
+        orderIdx: index("corporate_vendor_purchase_orders_order_idx").on(
+            table.orderId
+        ),
+        brandIdx: index("corporate_vendor_purchase_orders_brand_idx").on(
+            table.brandId
+        ),
+    })
+);
+
+export const corporateBrandTaxInvoices = pgTable(
+    "corporate_brand_tax_invoices",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "restrict" }),
+        vendorPurchaseOrderId: uuid("vendor_purchase_order_id").references(
+            () => corporateVendorPurchaseOrders.id,
+            { onDelete: "set null" }
+        ),
+        invoiceNumber: text("invoice_number").notNull(),
+        invoiceDate: date("invoice_date").notNull(),
+        supplierGstin: text("supplier_gstin").notNull(),
+        recipientGstin: text("recipient_gstin").notNull(),
+        hsnCode: text("hsn_code").notNull(),
         taxableValuePaise: integer("taxable_value_paise").notNull(),
         cgstPaise: integer("cgst_paise").notNull().default(0),
         sgstPaise: integer("sgst_paise").notNull().default(0),
         igstPaise: integer("igst_paise").notNull().default(0),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        fileName: text("file_name").notNull(),
+        fileUrl: text("file_url").notNull(),
+        validationStatus: text("validation_status", {
+            enum: ["pending", "validated", "rejected"],
+        })
+            .notNull()
+            .default("pending"),
+        validationIssues: jsonb("validation_issues")
+            .$type<string[]>()
+            .notNull()
+            .default([]),
+        gstr2bStatus: text("gstr2b_status", {
+            enum: ["pending", "matched", "mismatch"],
+        })
+            .notNull()
+            .default("pending"),
+        reviewNotes: text("review_notes"),
+        uploadedByUserId: text("uploaded_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
+        ...timestamps,
+    },
+    (table) => ({
+        invoiceUnique: uniqueIndex(
+            "corporate_brand_tax_invoices_brand_number_idx"
+        ).on(table.brandId, table.invoiceNumber),
+        orderIdx: index("corporate_brand_tax_invoices_order_idx").on(
+            table.orderId
+        ),
+        gstr2bIdx: index("corporate_brand_tax_invoices_gstr2b_idx").on(
+            table.gstr2bStatus
+        ),
+    })
+);
+
+export const corporateDeliveryChallans = pgTable(
+    "corporate_delivery_challans",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        challanNumber: text("challan_number").notNull(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        vendorPurchaseOrderId: uuid("vendor_purchase_order_id").references(
+            () => corporateVendorPurchaseOrders.id,
+            { onDelete: "set null" }
+        ),
+        challanDate: date("challan_date").notNull(),
+        consignorName: text("consignor_name").notNull(),
+        consignorAddress: text("consignor_address").notNull(),
+        consigneeName: text("consignee_name").notNull(),
+        consigneeAddress: text("consignee_address").notNull(),
+        onBehalfOf: text("on_behalf_of").notNull().default("Renivet"),
+        reasonForMovement: text("reason_for_movement")
+            .notNull()
+            .default("Supply of goods"),
+        eWayBillNumber: text("e_way_bill_number"),
         status: text("status", {
             enum: ["draft", "issued", "cancelled"],
         })
             .notNull()
-            .default("draft"),
-        ...timestamps,
-    }
-);
-
-export const corporateCancellations = pgTable(
-    "corporate_cancellations",
-    {
-        id: uuid("id").primaryKey().notNull().defaultRandom(),
-        orderId: uuid("order_id")
-            .notNull()
-            .references(() => corporateOrders.id, { onDelete: "cascade" }),
-        requestedByUserId: text("requested_by_user_id").references(() => users.id, {
+            .default("issued"),
+        createdByUserId: text("created_by_user_id").references(() => users.id, {
             onDelete: "set null",
         }),
-        cancellationReason: text("cancellation_reason").notNull(),
-        refundPercentageBps: integer("refund_percentage_bps").notNull().default(0),
-        refundAmountPaise: integer("refund_amount_paise").notNull().default(0),
-        status: text("status", {
-            enum: ["requested", "approved", "rejected", "processed"],
-        })
-            .notNull()
-            .default("requested"),
         ...timestamps,
-    }
-);
-
-export const corporateRefunds = pgTable(
-    "corporate_refunds",
-    {
-        id: uuid("id").primaryKey().notNull().defaultRandom(),
-        cancellationId: uuid("cancellation_id").references(
-            () => corporateCancellations.id,
-            { onDelete: "set null" }
+    },
+    (table) => ({
+        challanNumberUnique: uniqueIndex(
+            "corporate_delivery_challans_number_idx"
+        ).on(table.challanNumber),
+        orderIdx: index("corporate_delivery_challans_order_idx").on(
+            table.orderId
         ),
-        orderId: uuid("order_id").references(() => corporateOrders.id, {
-            onDelete: "cascade",
-        }),
-        refundAmountPaise: integer("refund_amount_paise").notNull(),
-        refundMethod: text("refund_method").notNull(),
-        refundReference: text("refund_reference"),
-        refundStatus: text("refund_status", {
-            enum: ["pending", "processed", "failed"],
-        })
-            .notNull()
-            .default("pending"),
-        ...timestamps,
-    }
+    })
 );
 
-export const corporateCreditNotes = pgTable(
-    "corporate_credit_notes",
-    {
-        id: uuid("id").primaryKey().notNull().defaultRandom(),
-        taxInvoiceId: uuid("tax_invoice_id").references(() => corporateTaxInvoices.id, {
+export const corporateTaxInvoices = pgTable("corporate_tax_invoices", {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    invoiceNumber: text("invoice_number").notNull(),
+    orderId: uuid("order_id")
+        .notNull()
+        .references(() => corporateOrders.id, { onDelete: "cascade" }),
+    invoiceDate: date("invoice_date"),
+    taxableValuePaise: integer("taxable_value_paise").notNull(),
+    cgstPaise: integer("cgst_paise").notNull().default(0),
+    sgstPaise: integer("sgst_paise").notNull().default(0),
+    igstPaise: integer("igst_paise").notNull().default(0),
+    totalAmountPaise: integer("total_amount_paise").notNull(),
+    receiptVoucherId: uuid("receipt_voucher_id").references(
+        () => corporateReceiptVouchers.id,
+        { onDelete: "set null" }
+    ),
+    dueDate: date("due_date"),
+    eWayBillNumber: text("e_way_bill_number"),
+    irn: text("irn"),
+    status: text("status", {
+        enum: ["draft", "issued", "cancelled"],
+    })
+        .notNull()
+        .default("draft"),
+    ...timestamps,
+});
+
+export const corporateCancellations = pgTable("corporate_cancellations", {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    orderId: uuid("order_id")
+        .notNull()
+        .references(() => corporateOrders.id, { onDelete: "cascade" }),
+    requestedByUserId: text("requested_by_user_id").references(() => users.id, {
+        onDelete: "set null",
+    }),
+    cancellationReason: text("cancellation_reason").notNull(),
+    refundPercentageBps: integer("refund_percentage_bps").notNull().default(0),
+    refundAmountPaise: integer("refund_amount_paise").notNull().default(0),
+    status: text("status", {
+        enum: ["requested", "approved", "rejected", "processed"],
+    })
+        .notNull()
+        .default("requested"),
+    ...timestamps,
+});
+
+export const corporateRefunds = pgTable("corporate_refunds", {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    cancellationId: uuid("cancellation_id").references(
+        () => corporateCancellations.id,
+        { onDelete: "set null" }
+    ),
+    orderId: uuid("order_id").references(() => corporateOrders.id, {
+        onDelete: "cascade",
+    }),
+    refundAmountPaise: integer("refund_amount_paise").notNull(),
+    refundMethod: text("refund_method").notNull(),
+    refundReference: text("refund_reference"),
+    refundStatus: text("refund_status", {
+        enum: ["pending", "processed", "failed"],
+    })
+        .notNull()
+        .default("pending"),
+    ...timestamps,
+});
+
+export const corporateCreditNotes = pgTable("corporate_credit_notes", {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    taxInvoiceId: uuid("tax_invoice_id").references(
+        () => corporateTaxInvoices.id,
+        {
             onDelete: "set null",
-        }),
-        creditNoteNumber: text("credit_note_number").notNull(),
-        amountPaise: integer("amount_paise").notNull(),
-        reason: text("reason"),
-        ...timestamps,
-    }
-);
+        }
+    ),
+    creditNoteNumber: text("credit_note_number").notNull(),
+    amountPaise: integer("amount_paise").notNull(),
+    reason: text("reason"),
+    ...timestamps,
+});
 
 export const corporateBrandCommissions = pgTable(
     "corporate_brand_commissions",
@@ -741,28 +1050,25 @@ export const corporateBrandCommissions = pgTable(
     }
 );
 
-export const corporateBrandPayouts = pgTable(
-    "corporate_brand_payouts",
-    {
-        id: uuid("id").primaryKey().notNull().defaultRandom(),
-        orderId: uuid("order_id")
-            .notNull()
-            .references(() => corporateOrders.id, { onDelete: "cascade" }),
-        brandId: uuid("brand_id")
-            .notNull()
-            .references(() => brands.id, { onDelete: "cascade" }),
-        grossOrderValuePaise: integer("gross_order_value_paise").notNull(),
-        commissionAmountPaise: integer("commission_amount_paise").notNull(),
-        netPayablePaise: integer("net_payable_paise").notNull(),
-        payoutStatus: text("payout_status", {
-            enum: ["queued", "approved", "paid", "held"],
-        })
-            .notNull()
-            .default("queued"),
-        payoutDate: date("payout_date"),
-        ...timestamps,
-    }
-);
+export const corporateBrandPayouts = pgTable("corporate_brand_payouts", {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    orderId: uuid("order_id")
+        .notNull()
+        .references(() => corporateOrders.id, { onDelete: "cascade" }),
+    brandId: uuid("brand_id")
+        .notNull()
+        .references(() => brands.id, { onDelete: "cascade" }),
+    grossOrderValuePaise: integer("gross_order_value_paise").notNull(),
+    commissionAmountPaise: integer("commission_amount_paise").notNull(),
+    netPayablePaise: integer("net_payable_paise").notNull(),
+    payoutStatus: text("payout_status", {
+        enum: ["queued", "approved", "paid", "held"],
+    })
+        .notNull()
+        .default("queued"),
+    payoutDate: date("payout_date"),
+    ...timestamps,
+});
 
 export const corporateTasks = pgTable(
     "corporate_tasks",
@@ -771,9 +1077,12 @@ export const corporateTasks = pgTable(
         taskType: text("task_type").notNull(),
         entityType: text("entity_type").notNull(),
         entityId: uuid("entity_id").notNull(),
-        assignedToUserId: text("assigned_to_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        assignedToUserId: text("assigned_to_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         dueDate: date("due_date"),
         status: text("status", {
             enum: ["open", "in_progress", "completed", "escalated"],
@@ -793,7 +1102,9 @@ export const corporateTasks = pgTable(
             table.entityType,
             table.entityId
         ),
-        assigneeIdx: index("corporate_tasks_assignee_idx").on(table.assignedToUserId),
+        assigneeIdx: index("corporate_tasks_assignee_idx").on(
+            table.assignedToUserId
+        ),
     })
 );
 
@@ -936,8 +1247,12 @@ export const corporateAdminAuditLogs = pgTable("corporate_admin_audit_logs", {
     actionType: text("action_type").notNull(),
     entityType: text("entity_type").notNull(),
     entityId: uuid("entity_id"),
-    oldValue: jsonb("old_value").$type<Record<string, unknown> | null>().default(null),
-    newValue: jsonb("new_value").$type<Record<string, unknown> | null>().default(null),
+    oldValue: jsonb("old_value")
+        .$type<Record<string, unknown> | null>()
+        .default(null),
+    newValue: jsonb("new_value")
+        .$type<Record<string, unknown> | null>()
+        .default(null),
     ...timestamps,
 });
 
@@ -985,18 +1300,21 @@ export const corporateProfilesRelations = relations(
     })
 );
 
-export const corporateRfqsRelations = relations(corporateRfqs, ({ one, many }) => ({
-    profile: one(corporateProfiles, {
-        fields: [corporateRfqs.corporateProfileId],
-        references: [corporateProfiles.id],
-    }),
-    user: one(users, {
-        fields: [corporateRfqs.userId],
-        references: [users.id],
-    }),
-    documents: many(corporateRfqDocuments),
-    quotes: many(corporateQuotes),
-}));
+export const corporateRfqsRelations = relations(
+    corporateRfqs,
+    ({ one, many }) => ({
+        profile: one(corporateProfiles, {
+            fields: [corporateRfqs.corporateProfileId],
+            references: [corporateProfiles.id],
+        }),
+        user: one(users, {
+            fields: [corporateRfqs.userId],
+            references: [users.id],
+        }),
+        documents: many(corporateRfqDocuments),
+        quotes: many(corporateQuotes),
+    })
+);
 
 export const corporateRfqDocumentsRelations = relations(
     corporateRfqDocuments,
@@ -1052,12 +1370,18 @@ export const corporateReplacementRequests = pgTable(
         orderId: uuid("order_id")
             .notNull()
             .references(() => corporateOrders.id, { onDelete: "cascade" }),
-        requestedByUserId: text("requested_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
-        reviewedByUserId: text("reviewed_by_user_id").references(() => users.id, {
-            onDelete: "set null",
-        }),
+        requestedByUserId: text("requested_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
+        reviewedByUserId: text("reviewed_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
         replacementOrderId: uuid("replacement_order_id").references(
             () => corporateOrders.id,
             { onDelete: "set null" }
@@ -1097,7 +1421,9 @@ export const corporateReplacementRequests = pgTable(
         ...timestamps,
     },
     (table) => ({
-        orderIdx: index("corporate_replacement_requests_order_idx").on(table.orderId),
+        orderIdx: index("corporate_replacement_requests_order_idx").on(
+            table.orderId
+        ),
         statusIdx: index("corporate_replacement_requests_status_idx").on(
             table.status
         ),
@@ -1191,6 +1517,110 @@ export const corporatePurchaseOrdersRelations = relations(
         order: one(corporateOrders, {
             fields: [corporatePurchaseOrders.corporateOrderId],
             references: [corporateOrders.id],
+        }),
+    })
+);
+
+export const corporateProformaInvoicesRelations = relations(
+    corporateProformaInvoices,
+    ({ one }) => ({
+        quote: one(corporateQuotes, {
+            fields: [corporateProformaInvoices.quoteId],
+            references: [corporateQuotes.id],
+        }),
+        order: one(corporateOrders, {
+            fields: [corporateProformaInvoices.orderId],
+            references: [corporateOrders.id],
+        }),
+        customer: one(corporateProfiles, {
+            fields: [corporateProformaInvoices.customerId],
+            references: [corporateProfiles.id],
+        }),
+    })
+);
+
+export const corporateReceiptVouchersRelations = relations(
+    corporateReceiptVouchers,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateReceiptVouchers.orderId],
+            references: [corporateOrders.id],
+        }),
+        payment: one(corporatePayments, {
+            fields: [corporateReceiptVouchers.paymentId],
+            references: [corporatePayments.id],
+        }),
+    })
+);
+
+export const corporateVendorPurchaseOrdersRelations = relations(
+    corporateVendorPurchaseOrders,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateVendorPurchaseOrders.orderId],
+            references: [corporateOrders.id],
+        }),
+        brand: one(brands, {
+            fields: [corporateVendorPurchaseOrders.brandId],
+            references: [brands.id],
+        }),
+        createdBy: one(users, {
+            fields: [corporateVendorPurchaseOrders.createdByUserId],
+            references: [users.id],
+        }),
+    })
+);
+
+export const corporateBrandTaxInvoicesRelations = relations(
+    corporateBrandTaxInvoices,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateBrandTaxInvoices.orderId],
+            references: [corporateOrders.id],
+        }),
+        brand: one(brands, {
+            fields: [corporateBrandTaxInvoices.brandId],
+            references: [brands.id],
+        }),
+        vendorPurchaseOrder: one(corporateVendorPurchaseOrders, {
+            fields: [corporateBrandTaxInvoices.vendorPurchaseOrderId],
+            references: [corporateVendorPurchaseOrders.id],
+        }),
+        uploadedBy: one(users, {
+            fields: [corporateBrandTaxInvoices.uploadedByUserId],
+            references: [users.id],
+        }),
+    })
+);
+
+export const corporateDeliveryChallansRelations = relations(
+    corporateDeliveryChallans,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateDeliveryChallans.orderId],
+            references: [corporateOrders.id],
+        }),
+        vendorPurchaseOrder: one(corporateVendorPurchaseOrders, {
+            fields: [corporateDeliveryChallans.vendorPurchaseOrderId],
+            references: [corporateVendorPurchaseOrders.id],
+        }),
+        createdBy: one(users, {
+            fields: [corporateDeliveryChallans.createdByUserId],
+            references: [users.id],
+        }),
+    })
+);
+
+export const corporateTaxInvoicesRelations = relations(
+    corporateTaxInvoices,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateTaxInvoices.orderId],
+            references: [corporateOrders.id],
+        }),
+        receiptVoucher: one(corporateReceiptVouchers, {
+            fields: [corporateTaxInvoices.receiptVoucherId],
+            references: [corporateReceiptVouchers.id],
         }),
     })
 );

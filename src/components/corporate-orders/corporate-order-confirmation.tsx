@@ -10,7 +10,9 @@ import { toast } from "sonner";
 function ensureRazorpaySdk() {
     return new Promise<void>((resolve, reject) => {
         if (typeof window === "undefined") {
-            reject(new Error("Razorpay checkout is only available in the browser"));
+            reject(
+                new Error("Razorpay checkout is only available in the browser")
+            );
             return;
         }
 
@@ -19,8 +21,9 @@ function ensureRazorpaySdk() {
             return;
         }
 
-        const existing = document.querySelector<HTMLScriptElement>(
-            "script[src=\"https://checkout.razorpay.com/v1/checkout.js\"]"
+        const existing = Array.from(document.scripts).find(
+            (script) =>
+                script.src === "https://checkout.razorpay.com/v1/checkout.js"
         );
 
         if (existing) {
@@ -40,6 +43,7 @@ function ensureRazorpaySdk() {
 export function CorporateOrderConfirmation({ data }: { data: any }) {
     const { order, settings } = data;
     const paidInFull = order.balanceDuePaise === 0;
+    const amountPaid = Math.max(0, order.totalPaise - order.balanceDuePaise);
     const createBalancePaymentOrder =
         trpc.general.corporateOrders.createBalancePaymentOrder.useMutation();
     const confirmBalancePayment =
@@ -111,7 +115,7 @@ export function CorporateOrderConfirmation({ data }: { data: any }) {
                 <Card label="Order ID" value={order.publicOrderId} />
                 <Card
                     label={paidInFull ? "Amount Paid" : "Initial Payment"}
-                    value={formatINR(order.advancePaidPaise)}
+                    value={formatINR(amountPaid)}
                 />
                 <Card
                     label="Balance Due"
@@ -132,8 +136,28 @@ export function CorporateOrderConfirmation({ data }: { data: any }) {
                         Download Order Summary PDF
                     </a>
                 </Button>
+                {order.advancePaidPaise > 0 ? (
+                    <Button asChild variant="outline">
+                        <a
+                            href={`/api/corporate-orders/${order.id}/receipt-voucher.pdf`}
+                        >
+                            Download Receipt Voucher
+                        </a>
+                    </Button>
+                ) : null}
+                {order.taxInvoice ? (
+                    <Button asChild variant="outline">
+                        <a
+                            href={`/api/corporate-orders/${order.id}/invoice.pdf`}
+                        >
+                            Download Tax Invoice
+                        </a>
+                    </Button>
+                ) : null}
                 <Button asChild variant="outline">
-                    <a href="/profile/corporate-orders">View Corporate Orders</a>
+                    <a href="/profile/corporate-orders">
+                        View Corporate Orders
+                    </a>
                 </Button>
                 {!paidInFull ? (
                     <Button

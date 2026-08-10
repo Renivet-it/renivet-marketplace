@@ -1,47 +1,61 @@
+import crypto from "crypto";
 import { env } from "@/../env";
-import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
-import { db } from "@/lib/db";
-import {
-    corporateColorOptions,
-    corporateExtraChargeRules,
-    corporateFabricCompositions,
-    corporateGsmOptions,
-    corporateLogoLocations,
-    corporatePricingSlabs,
-    corporatePrintMethods,
-    corporateProductTypes,
-    corporateQuotes,
-} from "@/lib/db/schema";
-import { razorpay } from "@/lib/razorpay";
-import { resend } from "@/lib/resend";
 import {
     fillCorporateDeliveryAddressDefaults,
     formatCorporateDeliveryAddress,
 } from "@/lib/corporate-delivery-address";
+import { db } from "@/lib/db";
+import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
 import {
-    corporateBalancePaymentConfirmationInputSchema,
-    corporateBalancePaymentOrderInputSchema,
-    CorporatePaymentPreference,
-    CorporateOrderFormInput,
-    CorporateOrderQuote,
-    CorporateOrderWorkflowStatus,
-    corporateConfigUpsertInputSchema,
-    corporateOrderFormInputSchema,
-    corporateOrderListInputSchema,
-    corporateOrderQuoteSchema,
-    corporateOrderUserListInputSchema,
-    corporatePaymentConfirmationInputSchema,
-} from "@/lib/validations/corporate-order";
-import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
+    brands,
+    corporateColorOptions,
+    corporateDeliveryChallans,
+    corporateExtraChargeRules,
+    corporateFabricCompositions,
+    corporateGsmOptions,
+    corporateLogoLocations,
+    corporatePayments,
+    corporatePricingSlabs,
+    corporatePrintMethods,
+    corporateProductTypes,
+    corporateQuotes,
+    corporateReceiptVouchers,
+    corporateTaxInvoices,
+} from "@/lib/db/schema";
+import { hsnMaster } from "@/lib/db/schema/finance-compliance";
+import { razorpay } from "@/lib/razorpay";
+import { resend } from "@/lib/resend";
 import {
     CorporateOrderBalanceReminderEmail,
     CorporateOrderDeliveredEmail,
     CorporateOrderInternalNotificationEmail,
     CorporateOrderReceivedEmail,
 } from "@/lib/resend/emails";
+import {
+    assertCorporateLegalIdentity,
+    corporateDocumentService,
+    getCorporateDocumentSettings,
+    gstStateCode,
+    nextCorporateDocumentNumber,
+} from "@/lib/services/corporate-documents";
+import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
+import {
+    corporateBalancePaymentConfirmationInputSchema,
+    corporateBalancePaymentOrderInputSchema,
+    corporateConfigUpsertInputSchema,
+    corporateOrderBrandAssignmentInputSchema,
+    CorporateOrderFormInput,
+    corporateOrderFormInputSchema,
+    corporateOrderListInputSchema,
+    CorporateOrderQuote,
+    corporateOrderQuoteSchema,
+    corporateOrderUserListInputSchema,
+    CorporateOrderWorkflowStatus,
+    corporatePaymentConfirmationInputSchema,
+    CorporatePaymentPreference,
+} from "@/lib/validations/corporate-order";
 import { TRPCError } from "@trpc/server";
-import crypto from "crypto";
-import { and, desc, eq, inArray, lte, or, gte, isNull } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 
 const ARTWORK_EXTENSIONS = ["ai", "eps", "pdf", "png", "jpg", "jpeg"];
 const SHEET_EXTENSIONS = ["xls", "xlsx", "csv"];
@@ -164,6 +178,101 @@ class CorporateOrderService {
         } as CorporateOrderDraftTokenPayload;
     }
 
+    private async ensureTaxInvoiceForDispatchedOrder(corporateOrderId: string) {
+        const order = await db.query.corporateOrders.findFirst({
+            where: (table, { eq }) => eq(table.id, corporateOrderId),
+            with: {
+                brand: true,
+                quote: { with: { profile: true } },
+            },
+        });
+
+        if (
+            !order?.brand ||
+            ![
+                "ready_for_dispatch",
+                "dispatched",
+                "delivered",
+                "completed",
+            ].includes(order.status)
+        ) {
+            return null;
+        }
+
+        const existingInvoice = await db.query.corporateTaxInvoices.findFirst({
+            where: and(
+                eq(corporateTaxInvoices.orderId, order.id),
+                eq(corporateTaxInvoices.status, "issued")
+            ),
+            orderBy: [desc(corporateTaxInvoices.createdAt)],
+        });
+        if (existingInvoice) return existingInvoice;
+
+        const [documentSettings, receiptVoucher, deliveryChallan] =
+            await Promise.all([
+                getCorporateDocumentSettings(),
+                db.query.corporateReceiptVouchers.findFirst({
+                    where: eq(corporateReceiptVouchers.orderId, order.id),
+                    orderBy: [desc(corporateReceiptVouchers.createdAt)],
+                }),
+                db.query.corporateDeliveryChallans.findFirst({
+                    where: eq(corporateDeliveryChallans.orderId, order.id),
+                    orderBy: [desc(corporateDeliveryChallans.createdAt)],
+                }),
+            ]);
+        const sellerGstin = documentSettings.gstin?.trim() ?? "";
+        assertCorporateLegalIdentity(documentSettings);
+        const buyerGstin =
+            order.quote?.profile?.gstNumber?.trim() ??
+            order.gstNumber?.trim() ??
+            "";
+        const sellerStateCode = gstStateCode(sellerGstin);
+        const buyerStateCode = gstStateCode(buyerGstin);
+        const billingAddress = order.quote?.profile?.billingAddress as
+            | Record<string, unknown>
+            | undefined;
+        const sellerState = documentSettings.state?.trim().toLowerCase();
+        const buyerState =
+            typeof billingAddress?.state === "string"
+                ? billingAddress.state.trim().toLowerCase()
+                : "";
+        const isIntraState =
+            sellerStateCode && buyerStateCode
+                ? sellerStateCode === buyerStateCode
+                : sellerState && buyerState
+                  ? sellerState === buyerState
+                  : true;
+        const gstHalf = Math.round(order.gstPaise / 2);
+
+        const invoiceDate = new Date();
+        const invoiceNumber = await nextCorporateDocumentNumber(
+            "CINV",
+            invoiceDate
+        );
+        const dueDate = new Date(invoiceDate);
+        dueDate.setDate(dueDate.getDate() + documentSettings.balanceDueDays);
+
+        return db
+            .insert(corporateTaxInvoices)
+            .values({
+                invoiceNumber,
+                orderId: order.id,
+                receiptVoucherId: receiptVoucher?.id ?? null,
+                invoiceDate: invoiceDate.toISOString().slice(0, 10),
+                dueDate: dueDate.toISOString().slice(0, 10),
+                taxableValuePaise:
+                    order.subtotalPaise + order.customizationPaise,
+                cgstPaise: isIntraState ? gstHalf : 0,
+                sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
+                igstPaise: isIntraState ? 0 : order.gstPaise,
+                totalAmountPaise: order.totalPaise,
+                eWayBillNumber: deliveryChallan?.eWayBillNumber ?? null,
+                status: "issued",
+            })
+            .returning()
+            .then((rows) => rows[0]);
+    }
+
     private async buildOrderInsertValues(
         userId: string,
         parsed: CorporateOrderFormInput,
@@ -212,7 +321,10 @@ class CorporateOrderService {
             quoteId: approvedQuote?.id ?? null,
             brandId: approvedQuote?.brandId ?? null,
             status: "inquiry_received" as const,
-            paymentStatus: quote.balanceDuePaise > 0 ? ("pending" as const) : ("paid" as const),
+            paymentStatus:
+                quote.balanceDuePaise > 0
+                    ? ("pending" as const)
+                    : ("paid" as const),
             companyName: parsed.companyName,
             contactPersonName: parsed.contactPersonName,
             emailAddress: parsed.emailAddress,
@@ -243,6 +355,9 @@ class CorporateOrderService {
             },
             productConfigSnapshot: {
                 productType,
+                hsnMasterId: productType?.hsnMasterId ?? null,
+                hsnCode: quote.hsnCode,
+                gstRateBps: quote.gstRateBps,
                 gsmOption,
                 fabricComposition,
                 colors,
@@ -272,7 +387,10 @@ class CorporateOrderService {
             internalNotes: parsed.approvedQuoteId
                 ? `Created from approved quote checkout | quote:${parsed.approvedQuoteId}`
                 : null,
-            balancePaymentStatus: quote.balanceDuePaise === 0 ? "paid" : "pending",
+            balancePaymentStatus:
+                quote.balanceDuePaise === 0
+                    ? ("paid" as const)
+                    : ("pending" as const),
         };
     }
 
@@ -316,6 +434,23 @@ class CorporateOrderService {
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "Selected corporate order options are invalid",
+            });
+        }
+
+        const productHsn = productType.hsnMasterId
+            ? await db.query.hsnMaster.findFirst({
+                  where: and(
+                      eq(hsnMaster.id, productType.hsnMasterId),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : null;
+
+        if (!productHsn) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "The selected product type needs an active HSN code before it can be quoted",
             });
         }
 
@@ -377,7 +512,8 @@ class CorporateOrderService {
         }
 
         const subtotalPaise = pricingSlab.unitPricePaise * quantity;
-        const printMethodChargePaise = printMethod.priceModifierPaise * quantity;
+        const printMethodChargePaise =
+            printMethod.priceModifierPaise * quantity;
         const additionalLogoRule = config.extraChargeRules.find(
             (item) => item.code === "additional_logo_location"
         );
@@ -426,7 +562,7 @@ class CorporateOrderService {
         const customizationPaise = printMethodChargePaise + extraChargesPaise;
         const preTaxPaise = subtotalPaise + customizationPaise;
         const gstPaise = Math.round(
-            (preTaxPaise * config.settings.gstRateBps) / 10000
+            (preTaxPaise * productHsn.gstRateBps) / 10000
         );
         const totalPaise = preTaxPaise + gstPaise;
         const advancePaidPaise = Math.round(
@@ -438,11 +574,12 @@ class CorporateOrderService {
             quantity,
             employeeCount,
             sizeBreakdown: summarizeSizes(parsed.employeeRows),
+            hsnCode: productHsn.hsnCode,
             subtotalPaise,
             printMethodChargePaise,
             extraChargesPaise,
             customizationPaise,
-            gstRateBps: config.settings.gstRateBps,
+            gstRateBps: productHsn.gstRateBps,
             gstPaise,
             totalPaise,
             advancePercentBps,
@@ -459,7 +596,10 @@ class CorporateOrderService {
         return this.buildQuote(input);
     }
 
-    async createAdvancePaymentOrder(userId: string, input: CorporateOrderFormInput) {
+    async createAdvancePaymentOrder(
+        userId: string,
+        input: CorporateOrderFormInput
+    ) {
         const parsed = corporateOrderFormInputSchema.parse(input);
         const quote = await this.buildQuote(parsed);
         const publicOrderId = `REN-CORP-${Date.now()}-${Math.random()
@@ -529,7 +669,7 @@ class CorporateOrderService {
             return {
                 success: true,
                 order: existingOrder,
-                confirmationHref: `/corporate-orders/confirmation/${existingOrder.id}`,
+                confirmationHref: `/profile/corporate-orders?confirmed=${existingOrder.id}`,
             };
         }
 
@@ -546,7 +686,11 @@ class CorporateOrderService {
         }
 
         const createdOrder = await corporateOrderQueries.createCorporateOrder({
-            ...(await this.buildOrderInsertValues(userId, draft.form, draft.quote)),
+            ...(await this.buildOrderInsertValues(
+                userId,
+                draft.form,
+                draft.quote
+            )),
             razorpayOrderId: parsed.razorpayOrderId,
             razorpayPaymentId: parsed.razorpayPaymentId,
             razorpaySignature: parsed.razorpaySignature,
@@ -580,9 +724,55 @@ class CorporateOrderService {
             },
         });
 
+        const existingAdvancePayment =
+            await db.query.corporatePayments.findFirst({
+                where: and(
+                    eq(corporatePayments.orderId, updated.id),
+                    eq(
+                        corporatePayments.paymentReference,
+                        parsed.razorpayPaymentId
+                    )
+                ),
+            });
+        const advancePayment =
+            existingAdvancePayment ??
+            (await db
+                .insert(corporatePayments)
+                .values({
+                    orderId: updated.id,
+                    paymentType:
+                        updated.balanceDuePaise > 0 ? "advance" : "manual",
+                    paymentMode: "razorpay",
+                    amountPaise: updated.advancePaidPaise,
+                    paymentReference: parsed.razorpayPaymentId,
+                    paymentStatus:
+                        updated.balanceDuePaise > 0
+                            ? "payment_partial"
+                            : "payment_success",
+                    paymentDate: new Date().toISOString().slice(0, 10),
+                    metadata: {
+                        percentageBps: updated.advancePercentBps,
+                    },
+                })
+                .returning()
+                .then((rows) => rows[0]));
+
+        if (!advancePayment) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to record the corporate advance payment",
+            });
+        }
+
+        await corporateDocumentService.ensureReceiptVoucher(
+            updated.id,
+            advancePayment.id
+        );
+        await corporateDocumentService.ensureProformaInvoiceForOrder(updated.id);
+
         const settings = await corporateOrderQueries.getOrderSettings();
         const customerHref = getAbsoluteURL(
-            `/corporate-orders/confirmation/${updated.id}`
+            `/profile/corporate-orders?confirmed=${updated.id}`
         );
         const pdfHref = getAbsoluteURL(
             `/api/corporate-orders/${updated.id}/summary.pdf`
@@ -622,13 +812,15 @@ class CorporateOrderService {
         return {
             success: true,
             order: updated,
-            confirmationHref: `/corporate-orders/confirmation/${updated.id}`,
+            confirmationHref: `/profile/corporate-orders?confirmed=${updated.id}`,
         };
     }
 
     async createBalancePaymentOrder(userId: string, input: unknown) {
         const parsed = corporateBalancePaymentOrderInputSchema.parse(input);
-        const order = await corporateOrderQueries.getOrderById(parsed.corporateOrderId);
+        const order = await corporateOrderQueries.getOrderById(
+            parsed.corporateOrderId
+        );
 
         if (!order || order.userId !== userId) {
             throw new TRPCError({
@@ -669,8 +861,11 @@ class CorporateOrderService {
     }
 
     async confirmBalancePayment(userId: string, input: unknown) {
-        const parsed = corporateBalancePaymentConfirmationInputSchema.parse(input);
-        const order = await corporateOrderQueries.getOrderById(parsed.corporateOrderId);
+        const parsed =
+            corporateBalancePaymentConfirmationInputSchema.parse(input);
+        const order = await corporateOrderQueries.getOrderById(
+            parsed.corporateOrderId
+        );
 
         if (!order || order.userId !== userId) {
             throw new TRPCError({
@@ -683,7 +878,7 @@ class CorporateOrderService {
             return {
                 success: true,
                 order,
-                confirmationHref: `/corporate-orders/confirmation/${order.id}`,
+                confirmationHref: `/profile/corporate-orders?confirmed=${order.id}`,
             };
         }
 
@@ -699,15 +894,18 @@ class CorporateOrderService {
             });
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            paymentStatus: "paid",
-            balanceDuePaise: 0,
-            balancePaymentStatus: "paid",
-            balancePaymentLink: getAbsoluteURL(
-                `/corporate-orders/confirmation/${order.id}`
-            ),
-            paymentReference: parsed.razorpayPaymentId,
-        });
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                paymentStatus: "paid",
+                balanceDuePaise: 0,
+                balancePaymentStatus: "paid",
+                balancePaymentLink: getAbsoluteURL(
+                    `/profile/corporate-orders?confirmed=${order.id}`
+                ),
+                paymentReference: parsed.razorpayPaymentId,
+            }
+        );
 
         if (!updated) {
             throw new TRPCError({
@@ -729,10 +927,35 @@ class CorporateOrderService {
             },
         });
 
+        const existingBalancePayment =
+            await db.query.corporatePayments.findFirst({
+                where: and(
+                    eq(corporatePayments.orderId, updated.id),
+                    eq(
+                        corporatePayments.paymentReference,
+                        parsed.razorpayPaymentId
+                    )
+                ),
+            });
+        if (!existingBalancePayment) {
+            await db.insert(corporatePayments).values({
+                orderId: updated.id,
+                paymentType: "balance",
+                paymentMode: "razorpay",
+                amountPaise: order.balanceDuePaise,
+                paymentReference: parsed.razorpayPaymentId,
+                paymentStatus: "payment_success",
+                paymentDate: new Date().toISOString().slice(0, 10),
+                metadata: {
+                    publicOrderId: updated.publicOrderId,
+                },
+            });
+        }
+
         return {
             success: true,
             order: updated,
-            confirmationHref: `/corporate-orders/confirmation/${updated.id}`,
+            confirmationHref: `/profile/corporate-orders?confirmed=${updated.id}`,
         };
     }
 
@@ -763,7 +986,8 @@ class CorporateOrderService {
     }
 
     async getOrderById(corporateOrderId: string) {
-        const order = await corporateOrderQueries.getOrderById(corporateOrderId);
+        const order =
+            await corporateOrderQueries.getOrderById(corporateOrderId);
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -774,13 +998,90 @@ class CorporateOrderService {
         return order;
     }
 
+    async assignBrand(input: unknown, changedByUserId: string) {
+        const parsed = corporateOrderBrandAssignmentInputSchema.parse(input);
+        const order = await corporateOrderQueries.getOrderById(
+            parsed.corporateOrderId
+        );
+        if (!order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+        if (order.quoteId) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "This quote-based order keeps the supplier brand selected in its approved quote",
+            });
+        }
+        if (
+            order.documentChain?.vendorPurchaseOrder &&
+            order.brandId !== parsed.brandId
+        ) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "The supplier brand cannot be changed after the Renivet purchase order is issued",
+            });
+        }
+
+        const brand = await db.query.brands.findFirst({
+            where: eq(brands.id, parsed.brandId),
+            columns: { id: true, name: true, isActive: true },
+        });
+        if (!brand || !brand.isActive) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Select an active supplier brand",
+            });
+        }
+
+        const nextStatus =
+            order.status === "inquiry_received" ? "under_review" : order.status;
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                brandId: brand.id,
+                status: nextStatus,
+            }
+        );
+        if (!updated) {
+            throw new TRPCError({
+                code: "INTERNAL_SERVER_ERROR",
+                message: "Failed to assign the supplier brand",
+            });
+        }
+
+        await corporateOrderQueries.createStatusHistory({
+            corporateOrderId: order.id,
+            fromStatus: order.status,
+            toStatus: nextStatus,
+            changedByUserId,
+            note:
+                parsed.note ||
+                `Supplier brand assigned: ${brand.name}`,
+            metadata: {
+                action: "brand_assigned",
+                brandId: brand.id,
+                brandName: brand.name,
+                previousBrandId: order.brandId ?? null,
+            },
+        });
+
+        return { order: updated, brand };
+    }
+
     async updateStatus(input: {
         corporateOrderId: string;
         toStatus: CorporateOrderWorkflowStatus;
         changedByUserId: string;
         note?: string;
     }) {
-        const order = await corporateOrderQueries.getOrderById(input.corporateOrderId);
+        const order = await corporateOrderQueries.getOrderById(
+            input.corporateOrderId
+        );
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -788,16 +1089,34 @@ class CorporateOrderService {
             });
         }
 
-        if (order.balanceDuePaise <= 0) {
-            throw new TRPCError({
-                code: "BAD_REQUEST",
-                message: "This order is already fully paid",
-            });
+        if (["ready_for_dispatch", "dispatched"].includes(input.toStatus)) {
+            const chain = order.documentChain;
+            if (!chain?.vendorPurchaseOrder) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message:
+                        "Issue the Renivet purchase order to the supplier brand first",
+                });
+            }
+            if (
+                chain.vendorPurchaseOrder.deliveryMode ===
+                    "direct_to_customer" &&
+                !chain.deliveryChallan
+            ) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message:
+                        "Issue the delivery challan before direct dispatch",
+                });
+            }
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            status: input.toStatus,
-        });
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                status: input.toStatus,
+            }
+        );
 
         if (!updated) {
             throw new TRPCError({
@@ -811,10 +1130,20 @@ class CorporateOrderService {
             fromStatus: order.status,
             toStatus: input.toStatus,
             changedByUserId: input.changedByUserId,
-            note: input.note ?? `Status changed to ${convertValueToLabel(input.toStatus)}`,
+            note:
+                input.note ??
+                `Status changed to ${convertValueToLabel(input.toStatus)}`,
         });
 
-        if (input.toStatus === "delivered" && order.status !== "delivered" && order.emailAddress?.trim()) {
+        if (["ready_for_dispatch", "dispatched"].includes(input.toStatus)) {
+            await this.ensureTaxInvoiceForDispatchedOrder(updated.id);
+        }
+
+        if (
+            input.toStatus === "delivered" &&
+            order.status !== "delivered" &&
+            order.emailAddress?.trim()
+        ) {
             try {
                 await resend.emails.send({
                     from: env.RESEND_EMAIL_FROM,
@@ -830,7 +1159,7 @@ class CorporateOrderService {
                             quantity: order.quantity,
                         },
                         confirmationHref: getAbsoluteURL(
-                            `/corporate-orders/confirmation/${order.id}`
+                            `/profile/corporate-orders?confirmed=${order.id}`
                         ),
                         pdfHref: getAbsoluteURL(
                             `/api/corporate-orders/${order.id}/summary.pdf`
@@ -838,7 +1167,10 @@ class CorporateOrderService {
                     }),
                 });
             } catch (error) {
-                console.error("Failed to send customer delivered notification from admin updateStatus", error);
+                console.error(
+                    "Failed to send customer delivered notification from admin updateStatus",
+                    error
+                );
             }
         }
 
@@ -850,7 +1182,9 @@ class CorporateOrderService {
         balancePaymentLink: string;
         balancePaymentNotes?: string;
     }) {
-        const order = await corporateOrderQueries.getOrderById(input.corporateOrderId);
+        const order = await corporateOrderQueries.getOrderById(
+            input.corporateOrderId
+        );
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -858,11 +1192,14 @@ class CorporateOrderService {
             });
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(order.id, {
-            balancePaymentLink: input.balancePaymentLink,
-            balancePaymentNotes: input.balancePaymentNotes ?? null,
-            balancePaymentStatus: "shared",
-        });
+        const updated = await corporateOrderQueries.updateCorporateOrder(
+            order.id,
+            {
+                balancePaymentLink: input.balancePaymentLink,
+                balancePaymentNotes: input.balancePaymentNotes ?? null,
+                balancePaymentStatus: "shared",
+            }
+        );
 
         return updated;
     }
@@ -872,7 +1209,8 @@ class CorporateOrderService {
         changedByUserId: string;
     }) {
         const { corporateOrderId, changedByUserId } = input;
-        const order = await corporateOrderQueries.getOrderById(corporateOrderId);
+        const order =
+            await corporateOrderQueries.getOrderById(corporateOrderId);
         if (!order) {
             throw new TRPCError({
                 code: "NOT_FOUND",
@@ -889,7 +1227,7 @@ class CorporateOrderService {
 
         const paymentHref =
             order.balancePaymentLink ||
-            getAbsoluteURL(`/corporate-orders/confirmation/${order.id}`);
+            getAbsoluteURL(`/profile/corporate-orders?confirmed=${order.id}`);
 
         await resend.emails.send({
             from: env.RESEND_EMAIL_FROM,
