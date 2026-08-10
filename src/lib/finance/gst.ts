@@ -124,16 +124,29 @@ function getMonthRange(monthKey: string) {
 }
 
 function normalizeState(value?: string | null) {
-    return value?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "_") ?? "";
+    return (
+        value
+            ?.trim()
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "_") ?? ""
+    );
 }
 
 function stateCodeFromName(value?: string | null) {
     return STATE_CODE_MAP[normalizeState(value)] ?? "";
 }
 
-function formatInvoiceNumber(prefix: "INV" | "CRN", reference: string, monthKey: string) {
+function formatInvoiceNumber(
+    prefix: "INV" | "CRN",
+    reference: string,
+    monthKey: string
+) {
     const compactMonth = monthKey.replace("-", "");
-    const suffix = reference.replace(/[^A-Za-z0-9]/g, "").slice(-4).toUpperCase().padStart(4, "0");
+    const suffix = reference
+        .replace(/[^A-Za-z0-9]/g, "")
+        .slice(-4)
+        .toUpperCase()
+        .padStart(4, "0");
     return `${prefix}-${compactMonth}-${suffix}`;
 }
 
@@ -150,7 +163,10 @@ function formatRate(bps: number) {
     return (bps / 100).toFixed(2);
 }
 
-function readCorporateState(snapshot: Record<string, unknown> | null, fallbackCity?: string | null) {
+function readCorporateState(
+    snapshot: Record<string, unknown> | null,
+    fallbackCity?: string | null
+) {
     const shippingAddress =
         snapshot?.shippingAddress &&
         typeof snapshot.shippingAddress === "object" &&
@@ -193,7 +209,9 @@ function emptyCsvRow(): GstCsvRow {
     };
 }
 
-export async function previewGstExport(monthKey: string): Promise<GstExportPreview> {
+export async function previewGstExport(
+    monthKey: string
+): Promise<GstExportPreview> {
     const { start, end } = getMonthRange(monthKey);
     const [orders, corporateRows, refundRows, hsnRows] = await Promise.all([
         financeComplianceQueries.listOrdersForFinanceWindow({ start, end }),
@@ -219,7 +237,15 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
     const hsnByCode = new Map(hsnRows.map((row) => [row.hsnCode, row]));
     const validationIssues: ValidationIssue[] = [];
     const rows: GstCsvRow[] = [];
-    const tcsBuckets = new Map<string, { supplierGstin: string; supplierName: string; state: string; taxablePaise: number }>();
+    const tcsBuckets = new Map<
+        string,
+        {
+            supplierGstin: string;
+            supplierName: string;
+            state: string;
+            taxablePaise: number;
+        }
+    >();
 
     let totalInvoices = 0;
     let totalTaxableValuePaise = 0;
@@ -229,7 +255,11 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
     let totalCreditNotePaise = 0;
 
     for (const order of orders) {
-        if (order.paymentStatus !== "paid" && order.paymentStatus !== "refunded") continue;
+        if (
+            order.paymentStatus !== "paid" &&
+            order.paymentStatus !== "refunded"
+        )
+            continue;
 
         const customerState = order.address?.state?.trim() ?? "";
         const customerStateCode = stateCodeFromName(customerState);
@@ -244,7 +274,10 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
         }
 
         const grossBeforeDiscount = order.items.reduce(
-            (sum, item) => sum + Number(item.variant?.price ?? item.product?.price ?? 0) * item.quantity,
+            (sum, item) =>
+                sum +
+                Number(item.variant?.price ?? item.product?.price ?? 0) *
+                    item.quantity,
             0
         );
         let orderHasInvoiceRows = false;
@@ -255,18 +288,40 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
             const brandGstin = brand?.confidential?.gstin?.trim() ?? "";
             const hsnCode = product?.hsCode?.trim() ?? "";
             const hsn = hsnCode ? hsnByCode.get(hsnCode) : undefined;
-            const unitPricePaise = Number(item.variant?.price ?? product?.price ?? 0);
+            const unitPricePaise = Number(
+                item.variant?.price ?? product?.price ?? 0
+            );
             const lineGrossPaise = unitPricePaise * item.quantity;
             const discountSharePaise =
                 grossBeforeDiscount > 0
-                    ? Math.round((lineGrossPaise / grossBeforeDiscount) * (order.discountAmount ?? 0))
+                    ? Math.round(
+                          (lineGrossPaise / grossBeforeDiscount) *
+                              (order.discountAmount ?? 0)
+                      )
                     : 0;
-            const taxableValuePaise = Math.max(0, lineGrossPaise - discountSharePaise);
+            const inclusiveLineValuePaise = Math.max(
+                0,
+                lineGrossPaise - discountSharePaise
+            );
             const gstRateBps = deriveGstRateBps({
                 hsnCode,
                 fallbackRateBps: hsn?.gstRateBps ?? 0,
                 unitPricePaise,
             });
+            // Storefront orders now persist the customer-facing, GST-inclusive
+            // amount. Older orders may contain a separately added GST amount,
+            // so retain their historic treatment when their stored total is
+            // higher than the listed line value.
+            const pricesIncludeGst =
+                Number(order.totalAmount ?? 0) <= inclusiveLineValuePaise;
+            const taxableValuePaise = pricesIncludeGst
+                ? gstRateBps > 0
+                    ? Math.round(
+                          (inclusiveLineValuePaise * 10_000) /
+                              (10_000 + gstRateBps)
+                      )
+                    : inclusiveLineValuePaise
+                : inclusiveLineValuePaise;
             const gstSplit = splitGstByState({
                 taxableValuePaise,
                 gstRateBps,
@@ -314,7 +369,9 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
             row.section = "GST";
             row.subsection = order.customerGstin ? "B2B" : "B2C";
             row.invoiceNumber = formatInvoiceNumber("INV", order.id, monthKey);
-            row.invoiceDate = new Date(order.createdAt ?? new Date()).toISOString().slice(0, 10);
+            row.invoiceDate = new Date(order.createdAt ?? new Date())
+                .toISOString()
+                .slice(0, 10);
             row.customerGstin = order.customerGstin ?? "";
             row.customerState = customerState;
             row.customerStateCode = customerStateCode;
@@ -363,15 +420,24 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
         const customerStateCode = stateCodeFromName(customerState);
         const brandGstin = order.brand?.confidential?.gstin?.trim() ?? "";
         const hsnCode =
-            typeof (order.productConfigSnapshot as Record<string, unknown> | null)?.hsnCode === "string"
-                ? String((order.productConfigSnapshot as Record<string, unknown>).hsnCode)
+            typeof (
+                order.productConfigSnapshot as Record<string, unknown> | null
+            )?.hsnCode === "string"
+                ? String(
+                      (order.productConfigSnapshot as Record<string, unknown>)
+                          .hsnCode
+                  )
                 : "";
         const hsn = hsnCode ? hsnByCode.get(hsnCode) : undefined;
-        const taxableValuePaise = order.subtotalPaise + order.customizationPaise;
+        const taxableValuePaise =
+            order.subtotalPaise + order.customizationPaise;
         const gstRateBps = deriveGstRateBps({
             hsnCode,
             fallbackRateBps: hsn?.gstRateBps ?? order.gstRateBps,
-            unitPricePaise: order.quantity > 0 ? Math.round(taxableValuePaise / order.quantity) : taxableValuePaise,
+            unitPricePaise:
+                order.quantity > 0
+                    ? Math.round(taxableValuePaise / order.quantity)
+                    : taxableValuePaise,
         });
         const gstSplit = splitGstByState({
             taxableValuePaise,
@@ -429,8 +495,14 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
         const row = emptyCsvRow();
         row.section = "GST";
         row.subsection = "B2B";
-        row.invoiceNumber = formatInvoiceNumber("INV", order.publicOrderId, monthKey);
-        row.invoiceDate = new Date(order.createdAt ?? new Date()).toISOString().slice(0, 10);
+        row.invoiceNumber = formatInvoiceNumber(
+            "INV",
+            order.publicOrderId,
+            monthKey
+        );
+        row.invoiceDate = new Date(order.createdAt ?? new Date())
+            .toISOString()
+            .slice(0, 10);
         row.customerGstin = order.gstNumber ?? "";
         row.customerState = customerState;
         row.customerStateCode = customerStateCode;
@@ -473,13 +545,18 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
         const eventTime = new Date(eventDate).getTime();
         if (eventTime < start.getTime() || eventTime > end.getTime()) continue;
 
-        const order = orders.find((candidate) => candidate.id === refund.orderId);
+        const order = orders.find(
+            (candidate) => candidate.id === refund.orderId
+        );
         if (!order || !order.items.length) continue;
 
         const customerState = order.address?.state?.trim() ?? "";
         const customerStateCode = stateCodeFromName(customerState);
         const grossBeforeDiscount = order.items.reduce(
-            (sum, item) => sum + Number(item.variant?.price ?? item.product?.price ?? 0) * item.quantity,
+            (sum, item) =>
+                sum +
+                Number(item.variant?.price ?? item.product?.price ?? 0) *
+                    item.quantity,
             0
         );
 
@@ -489,23 +566,36 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
             const brandGstin = brand?.confidential?.gstin?.trim() ?? "";
             const hsnCode = product?.hsCode?.trim() ?? "";
             const hsn = hsnCode ? hsnByCode.get(hsnCode) : undefined;
-            const unitPricePaise = Number(item.variant?.price ?? product?.price ?? 0);
+            const unitPricePaise = Number(
+                item.variant?.price ?? product?.price ?? 0
+            );
             const lineGrossPaise = unitPricePaise * item.quantity;
             const discountSharePaise =
                 grossBeforeDiscount > 0
-                    ? Math.round((lineGrossPaise / grossBeforeDiscount) * (order.discountAmount ?? 0))
+                    ? Math.round(
+                          (lineGrossPaise / grossBeforeDiscount) *
+                              (order.discountAmount ?? 0)
+                      )
                     : 0;
-            const originalTaxablePaise = Math.max(0, lineGrossPaise - discountSharePaise);
+            const originalTaxablePaise = Math.max(
+                0,
+                lineGrossPaise - discountSharePaise
+            );
             const refundSharePaise =
                 grossBeforeDiscount > 0
-                    ? Math.round((lineGrossPaise / grossBeforeDiscount) * refund.amount)
+                    ? Math.round(
+                          (lineGrossPaise / grossBeforeDiscount) * refund.amount
+                      )
                     : refund.amount;
             const gstRateBps = deriveGstRateBps({
                 hsnCode,
                 fallbackRateBps: hsn?.gstRateBps ?? 0,
                 unitPricePaise,
             });
-            const taxableCreditPaise = Math.min(originalTaxablePaise, refundSharePaise);
+            const taxableCreditPaise = Math.min(
+                originalTaxablePaise,
+                refundSharePaise
+            );
             const gstSplit = splitGstByState({
                 taxableValuePaise: taxableCreditPaise,
                 gstRateBps,
@@ -593,14 +683,18 @@ export async function previewGstExport(monthKey: string): Promise<GstExportPrevi
             rowCount: rows.length,
         },
         rows,
-        isReady: validationIssues.filter((issue) => issue.severity === "error").length === 0,
+        isReady:
+            validationIssues.filter((issue) => issue.severity === "error")
+                .length === 0,
     };
 }
 
 export async function generateGstExport(monthKey: string, actorId: string) {
     const preview = await previewGstExport(monthKey);
     const csv = toCsv(preview.rows, CSV_HEADERS as string[]);
-    const hasErrors = preview.validationIssues.some((issue) => issue.severity === "error");
+    const hasErrors = preview.validationIssues.some(
+        (issue) => issue.severity === "error"
+    );
     const run = await financeComplianceQueries.createGstReportRun({
         monthKey,
         status: "generated",
@@ -621,7 +715,9 @@ export async function generateGstExport(monthKey: string, actorId: string) {
         entityId: run.id,
         afterValue: run as Record<string, unknown>,
         reason: hasErrors ? "export_generated_with_issues" : "export_generated",
-        title: hasErrors ? "GST export generated with issues" : "GST export generated",
+        title: hasErrors
+            ? "GST export generated with issues"
+            : "GST export generated",
         message: hasErrors
             ? `GST/TCS export generated for ${monthKey} with validation issues.`
             : `GST/TCS export generated for ${monthKey}.`,

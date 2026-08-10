@@ -1,12 +1,11 @@
 "use server";
 
-
-import { shiprocket } from "@/lib/shiprocket";
-import { auth } from "@clerk/nextjs/server";
-import Razorpay from "razorpay";
 import crypto from "crypto";
 import { env } from "@/../env";
 import { RazorpayPaymentResponse } from "@/lib/validations";
+import { auth } from "@clerk/nextjs/server";
+import Razorpay from "razorpay";
+
 // Initialize Razorpay with your credentials
 const razorpay = new Razorpay({
     key_id: process.env.RAZOR_PAY_KEY_ID!,
@@ -21,20 +20,8 @@ export async function getShiprocketBalance(amount: number): Promise<string> {
         throw new Error("Unauthorized");
     }
 
-    // Check Shiprocket balance
-    const sr = await shiprocket();
-    const srBalance = await sr.getBalance();
-    if (!srBalance.status || !srBalance.data) {
-        console.error("Failed to fetch Shiprocket balance", srBalance);
-        throw new Error("Cannot proceed with payment, please try again later");
-    }
-
-    if (srBalance.data < 101) {
-        console.error("Insufficient Shiprocket balance", srBalance);
-        throw new Error("Cannot proceed with payment, please try again later");
-    }
-
-    // Create Razorpay order if balance check passes
+    // Checkout payments are processed by Razorpay. Shiprocket is a fulfilment
+    // provider and must not affect a customer's ability to place an order.
     try {
         const order = await razorpay.orders.create({
             amount: amount, // Amount in paise
@@ -42,7 +29,9 @@ export async function getShiprocketBalance(amount: number): Promise<string> {
             receipt: `receipt_${Date.now()}`,
         });
         if (!order.id) {
-            console.error("Razorpay order creation failed: No order ID returned");
+            console.error(
+                "Razorpay order creation failed: No order ID returned"
+            );
             throw new Error("Failed to create Razorpay order");
         }
         console.log("Razorpay order created successfully:", order.id);
