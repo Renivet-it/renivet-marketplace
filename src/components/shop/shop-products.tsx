@@ -296,8 +296,10 @@ export function ShopProducts({
     );
     const loadedPagesRef = useRef<Set<number>>(new Set([page || 1]));
     const autoLoadTriggerRef = useRef<HTMLButtonElement | null>(null);
+    // A header search already owns the full-screen loading state. Do not show
+    // a second catalogue "Sorting" overlay after the URL changes.
     const isRefreshingProducts =
-        isFetching && !isLoadingMore && allProducts.length > 0;
+        isFetching && !isLoadingMore && allProducts.length > 0 && !search;
 
     const hasMoreProducts = !hasReachedEnd && allProducts.length < totalCount;
     const totalPages = Math.max(1, Math.ceil(totalCount / limit));
@@ -355,6 +357,16 @@ export function ShopProducts({
         });
         setIsLoadingMore(false);
     }, [count, isFetching, limit, page, visibleProducts]);
+
+    useEffect(() => {
+        if (isFetching || isError || !queryData) return;
+
+        window.dispatchEvent(
+            new CustomEvent("renivet:shop-search-results-ready", {
+                detail: { query: search },
+            })
+        );
+    }, [isError, isFetching, queryData, search]);
 
     useEffect(() => {
         if (isFetching || isError || !hasMoreProducts) return;

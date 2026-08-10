@@ -110,9 +110,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const inputRef = useRef<HTMLInputElement | null>(null);
         const recognitionRef = useRef<BrowserSpeechRecognition | null>(null);
         const suggestionRequestIdRef = useRef(0);
-        const searchLoadingTimerRef = useRef<ReturnType<
-            typeof setTimeout
-        > | null>(null);
         const suggestionsAbortRef = useRef<AbortController | null>(null);
         const productsAbortRef = useRef<AbortController | null>(null);
         const suggestionsCacheRef = useRef(new Map<string, string[]>());
@@ -293,13 +290,6 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
             setIsSheetOpen(false);
             setShowSuggestions(false);
             setSelectedIndex(-1);
-
-            if (searchLoadingTimerRef.current) {
-                clearTimeout(searchLoadingTimerRef.current);
-            }
-            searchLoadingTimerRef.current = setTimeout(() => {
-                setIsSearchLoading(false);
-            }, 3000);
         }, []);
 
         const navigateToCatalogWithSearch = useCallback(
@@ -362,16 +352,33 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         );
 
         useEffect(() => {
-            setIsSearchLoading(false);
-        }, [pathname, searchParamsString]);
+            const handleSearchResultsReady = (event: Event) => {
+                const completedQuery = (
+                    (event as CustomEvent<{ query?: string }>).detail?.query ??
+                    ""
+                )
+                    .trim()
+                    .toLowerCase();
 
-        useEffect(() => {
-            return () => {
-                if (searchLoadingTimerRef.current) {
-                    clearTimeout(searchLoadingTimerRef.current);
+                if (
+                    completedQuery !== loadingSearchQuery.trim().toLowerCase()
+                ) {
+                    return;
                 }
+
+                setIsSearchLoading(false);
             };
-        }, []);
+
+            window.addEventListener(
+                "renivet:shop-search-results-ready",
+                handleSearchResultsReady
+            );
+            return () =>
+                window.removeEventListener(
+                    "renivet:shop-search-results-ready",
+                    handleSearchResultsReady
+                );
+        }, [loadingSearchQuery]);
 
         // TRPC mutation for search processing
         const processSearchMutation =
