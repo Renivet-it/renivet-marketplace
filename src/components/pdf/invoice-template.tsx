@@ -720,10 +720,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
               ["Description", styles.description],
               ["HSN", styles.hsn],
               ["Qty / Unit", styles.qty],
-              [
-                  order.displayUnitPricing ? "Rate\nINR" : "MRP\nINR",
-                  styles.mrp,
-              ],
+              [order.displayUnitPricing ? "Rate\nINR" : "MRP\nINR", styles.mrp],
               ["Discount\nINR", styles.discount],
               ["Taxable value\nINR", styles.taxable],
               ["GST\nrate", styles.rate],
@@ -1262,7 +1259,8 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         </Text>
                     </View>
                 </View>
-                {order.poReference || seller?.bankName ? (
+                {order.taxDisplay === "single_gst" &&
+                (order.poReference || seller?.bankName) ? (
                     <View style={styles.corporateDetails}>
                         <View style={styles.corporateColumn}>
                             <Text style={styles.label}>BANK DETAILS</Text>

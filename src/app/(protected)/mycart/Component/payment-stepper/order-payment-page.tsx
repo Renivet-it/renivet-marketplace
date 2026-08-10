@@ -271,7 +271,9 @@ export function OrderPage({
         [checkoutTaxQuery.data]
     );
     const gstAmountPaise = checkoutTaxQuery.data?.totalTaxPaise ?? 0;
-    const payableTotalPaise = priceList.total + gstAmountPaise;
+    // Product prices already include GST. The GST value below is an invoice
+    // split only and must not be charged again at checkout.
+    const payableTotalPaise = priceList.total;
 
     const totalQuantity = allAvailableItems.reduce(
         (acc, item) => acc + item.quantity,
@@ -440,13 +442,7 @@ export function OrderPage({
                 taxAmount: brandTaxAmount,
                 totalAmount: Math.max(
                     0,
-                    Number(
-                        (
-                            brandTotal -
-                            brandCouponDiscount +
-                            brandTaxAmount
-                        ).toFixed(2)
-                    )
+                    Number((brandTotal - brandCouponDiscount).toFixed(2))
                 ),
                 // Product discounts are already reflected in brandTotal.
                 // Persist coupon savings separately from discount_amount.
@@ -849,7 +845,9 @@ export function OrderPage({
                             </li>
                             {gstAmountPaise > 0 ? (
                                 <li className="flex justify-between text-sm">
-                                    <span className="text-gray-600">GST</span>
+                                    <span className="text-gray-600">
+                                        GST (included)
+                                    </span>
                                     <span className="font-medium text-gray-900">
                                         {formatPriceTag(
                                             +convertPaiseToRupees(

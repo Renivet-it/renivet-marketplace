@@ -416,9 +416,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const gstAmountPaise = isSwapReward
         ? 0
         : (checkoutTaxQuery.data?.totalTaxPaise ?? 0);
-    const payableTotalPaise = isSwapReward
-        ? priceList.total
-        : priceList.total + gstAmountPaise;
+    // Product prices already include GST. Keep the embedded tax visible, but
+    // never add it to the amount the customer pays.
+    const payableTotalPaise = priceList.total;
 
     const cartValue = useMemo(
         () =>
@@ -610,9 +610,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                   0,
                                   Number(
                                       (
-                                          brandTotal -
-                                          brandCouponDiscount +
-                                          brandTaxAmount
+                                          brandTotal - brandCouponDiscount
                                       ).toFixed(2)
                                   )
                               ),
@@ -1453,7 +1451,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     </div>
                     {!isSwapReward && gstAmountPaise > 0 ? (
                         <div className="flex justify-between text-sm font-medium text-gray-600">
-                            <span>GST</span>
+                            <span>GST (included)</span>
                             <span>
                                 {formatPriceTag(
                                     +convertPaiseToRupees(gstAmountPaise)

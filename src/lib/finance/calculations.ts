@@ -24,7 +24,8 @@ export type CheckoutTaxLineResult = {
 };
 
 export function getFinancialYearForDate(value: Date) {
-    const year = value.getMonth() >= 3 ? value.getFullYear() : value.getFullYear() - 1;
+    const year =
+        value.getMonth() >= 3 ? value.getFullYear() : value.getFullYear() - 1;
     const shortNextYear = String((year + 1) % 100).padStart(2, "0");
     return `FY${year}-${shortNextYear}`;
 }
@@ -34,7 +35,7 @@ export function computeTdsDeduction(params: {
     cycleCommissionPaise: number;
     thresholdPaise?: number;
     rateBps?: number;
-}) : TdsComputation {
+}): TdsComputation {
     const thresholdPaise = params.thresholdPaise ?? 3_000_000;
     const rateBps = params.rateBps ?? 100;
     const current = params.cumulativeCommissionPaise;
@@ -139,21 +140,36 @@ export function computeCheckoutTaxLines(
                     ? Math.max(0, totalDiscountPaise - assignedDiscountPaise)
                     : Math.max(
                           0,
-                          Math.round((totalDiscountPaise * subtotalPaise) / subtotalSum)
+                          Math.round(
+                              (totalDiscountPaise * subtotalPaise) / subtotalSum
+                          )
                       )
                 : 0;
 
         assignedDiscountPaise += discountPaise;
 
-        const taxableValuePaise = Math.max(0, subtotalPaise - discountPaise);
+        // Storefront prices are GST-inclusive. Discounts reduce the inclusive
+        // selling price, then the embedded GST is backed out for the invoice.
+        const inclusiveLineTotalPaise = Math.max(
+            0,
+            subtotalPaise - discountPaise
+        );
         const gstRateBps = deriveGstRateBps({
             hsnCode: normalizedHsn,
             fallbackRateBps: normalizedHsn
-                ? opts.hsnRateByCode?.get(normalizedHsn) ?? line.fallbackRateBps ?? 0
-                : line.fallbackRateBps ?? 0,
+                ? (opts.hsnRateByCode?.get(normalizedHsn) ??
+                  line.fallbackRateBps ??
+                  0)
+                : (line.fallbackRateBps ?? 0),
             unitPricePaise: line.unitPricePaise,
         });
-        const taxPaise = Math.round(taxableValuePaise * (gstRateBps / 10_000));
+        const taxableValuePaise =
+            gstRateBps > 0
+                ? Math.round(
+                      (inclusiveLineTotalPaise * 10_000) / (10_000 + gstRateBps)
+                  )
+                : inclusiveLineTotalPaise;
+        const taxPaise = inclusiveLineTotalPaise - taxableValuePaise;
 
         return {
             lineId: line.lineId,
@@ -179,15 +195,22 @@ export function categorizeCodDiscrepancy(params: {
         ? Math.max(
               0,
               Math.floor(
-                  (now.getTime() - params.remittanceDate.getTime()) / (1000 * 60 * 60 * 24)
+                  (now.getTime() - params.remittanceDate.getTime()) /
+                      (1000 * 60 * 60 * 24)
               )
           )
         : 0;
 
     if (params.remittedAmountPaise === 0) {
-        return { status: ageingDays > 14 ? "missing" : "delayed", discrepancyAmountPaise: diff, ageingDays };
+        return {
+            status: ageingDays > 14 ? "missing" : "delayed",
+            discrepancyAmountPaise: diff,
+            ageingDays,
+        };
     }
-    if (diff === 0) return { status: "matched", discrepancyAmountPaise: 0, ageingDays };
-    if (diff < 0) return { status: "short", discrepancyAmountPaise: diff, ageingDays };
+    if (diff === 0)
+        return { status: "matched", discrepancyAmountPaise: 0, ageingDays };
+    if (diff < 0)
+        return { status: "short", discrepancyAmountPaise: diff, ageingDays };
     return { status: "excess", discrepancyAmountPaise: diff, ageingDays };
 }
