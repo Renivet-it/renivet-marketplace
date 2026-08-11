@@ -1,0 +1,22 @@
+import { NavbarHome, NavbarMob } from "@/components/globals/layouts";
+import { FooterWithLegal } from "@/components/globals/layouts/footer/footer-with-legal";
+import { siteConfig } from "@/config/site";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+    title: {
+        default: "Swap Passport",
+        template: "%s | " + siteConfig.name,
+    },
+};
+
+export default function Layout({ children }: LayoutProps) {
+    return (
+        <div className="relative flex min-h-screen flex-col bg-white">
+            <NavbarHome />
+            <main className="flex flex-1 flex-col">{children}</main>
+            <FooterWithLegal />
+            <NavbarMob />
+        </div>
+    );
+}
