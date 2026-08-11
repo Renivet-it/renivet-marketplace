@@ -150,7 +150,7 @@ export async function StorefrontCatalogPage({
                     </Suspense>
                 </aside>
 
-                <main className="w-full space-y-4 pb-40 md:flex-1 md:space-y-5 md:pb-0">
+                <main className="w-full space-y-4 pb-56 md:flex-1 md:space-y-5 md:pb-0">
                     <div className="md:hidden">
                         <ProductSearch
                             searchBasePath={basePath}

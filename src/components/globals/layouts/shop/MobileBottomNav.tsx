@@ -5,7 +5,7 @@ import { useAuth } from "@clerk/nextjs";
 import { trpc } from "@/lib/trpc/client";
 import { Heart, Home, Search, ShoppingBag, Store } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 type CartItem = {
@@ -41,6 +41,7 @@ function useGuestCartCount() {
 
 export function MobileBottomNav() {
     const pathname = usePathname();
+    const searchParams = useSearchParams();
     const { userId } = useAuth();
     const guestCartCount = useGuestCartCount();
     const { data: userCart } = trpc.general.users.cart.getCartForUser.useQuery(
@@ -81,7 +82,9 @@ export function MobileBottomNav() {
     const navItems = [
         { href: "/", icon: Home, label: "Home" },
         { href: "/shop", icon: Store, label: "Shop" },
-        { href: "/shop", icon: Search, label: "Search" },
+        // Search is deliberately a separate destination. ProductSearch reads this
+        // flag and opens with focus, so users can search immediately on arrival.
+        { href: "/shop?focusSearch=1", icon: Search, label: "Search" },
         {
             href: userId ? "/profile/wishlist" : "/guestWishlist",
             icon: Heart,
@@ -107,7 +110,8 @@ export function MobileBottomNav() {
                     {navItems.map((item) => {
                         const isActive =
                             item.label === "Search"
-                                ? false
+                                ? pathname === "/shop" &&
+                                  searchParams.get("focusSearch") === "1"
                                 : item.label === "Home"
                                 ? pathname === "/"
                                 : pathname.startsWith(item.href);
@@ -117,7 +121,7 @@ export function MobileBottomNav() {
                                 key={item.label}
                                 href={item.href}
                                 className={cn(
-                                    "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-2xl px-1.5 py-2 text-[10px] font-semibold tracking-[0.08em] transition-all duration-200",
+                                    "relative flex min-w-0 flex-col items-center justify-center gap-1 rounded-xl px-1.5 py-2 text-[10px] font-semibold tracking-[0.04em] transition-all duration-200 active:scale-95",
                                     isActive
                                         ? "bg-[linear-gradient(180deg,#31401f_0%,#263018_100%)] text-white shadow-[0_14px_26px_rgba(49,64,31,0.28)]"
                                         : "text-[#726a58]"

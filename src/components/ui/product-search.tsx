@@ -97,6 +97,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const pathname = usePathname();
         const searchParams = useSearchParams();
         const searchParamsString = searchParams.toString();
+        const shouldFocusSearch = searchParams.get("focusSearch") === "1";
         const [search] = useQueryState("search", {
             defaultValue: "",
         });
@@ -142,6 +143,17 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
         const [isSearchLoading, setIsSearchLoading] = useState(false);
         const [loadingSearchQuery, setLoadingSearchQuery] = useState("");
         const [recentSearches, setRecentSearches] = useState<string[]>([]);
+
+        // The bottom navigation can send people directly into search. Delaying
+        // one frame ensures the input has mounted after the route transition.
+        useEffect(() => {
+            if (!shouldFocusSearch) return;
+            const frame = window.requestAnimationFrame(() => {
+                inputRef.current?.focus();
+                setShowSuggestions(true);
+            });
+            return () => window.cancelAnimationFrame(frame);
+        }, [shouldFocusSearch]);
 
         // Fetch suggestions when search term changes
         useEffect(() => {

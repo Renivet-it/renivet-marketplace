@@ -15,8 +15,12 @@ export default function Layout({ children }: LayoutProps) {
     return (
         <div className="bg-white relative flex min-h-screen flex-col">
             <NavbarHome />
-            <main className="flex flex-1 flex-col">{children}</main>
-            <FooterWithLegal />
+            <main className="flex flex-1 flex-col pb-[calc(74px+env(safe-area-inset-bottom))] md:pb-0">
+                {children}
+            </main>
+            <div className="hidden md:block">
+                <FooterWithLegal />
+            </div>
             <NavbarMob />
             <MobileBottomNav />
         </div>

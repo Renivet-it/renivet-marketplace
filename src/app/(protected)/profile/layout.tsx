@@ -4,6 +4,7 @@ import {
     NavbarMob,
 } from "@/components/globals/layouts";
 import { FooterWithLegal } from "@/components/globals/layouts/footer/footer-with-legal";
+import { MobileBottomNav } from "@/components/globals/layouts/shop/MobileBottomNav";
 import { ProfileNav } from "@/components/profile";
 import { siteConfig } from "@/config/site";
 import { Metadata } from "next";
@@ -20,8 +21,13 @@ export default function Layout({ children }: LayoutProps) {
     return (
         <ProfileLayoutShell
             navbar={<NavbarHome />}
-            footer={<FooterWithLegal />}
+            footer={
+                <div className="hidden md:block">
+                    <FooterWithLegal />
+                </div>
+            }
             mobileNav={<NavbarMob />}
+            bottomNav={<MobileBottomNav />}
         >
             <GeneralShell>
                 <div className="flex w-full flex-col gap-6 md:flex-row">

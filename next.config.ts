@@ -48,7 +48,9 @@ const nextConfig: NextConfig = {
         ],
         // Optimize image loading (reduces build time)
         formats: ["image/avif", "image/webp"],
-        minimumCacheTTL: 60,
+        // Uploaded product assets use stable URLs. Retaining optimized variants
+        // for a day makes repeat category and product visits noticeably faster.
+        minimumCacheTTL: 86400,
     },
     compress: true,
 
