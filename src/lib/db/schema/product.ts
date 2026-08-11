@@ -44,6 +44,9 @@ export const products = pgTable(
         productHasVariants: boolean("product_has_variants")
             .default(false)
             .notNull(),
+        customizationAvailable: boolean("customization_available")
+            .default(false)
+            .notNull(),
 
         // CATEGORY
         categoryId: uuid("category_id")

@@ -159,6 +159,7 @@ export const orderItems = pgTable(
         }),
         sku: text("sku"),
         quantity: integer("quantity").notNull().default(1),
+        customizationRequest: text("customization_request"),
         ...timestamps,
     },
     (table) => ({

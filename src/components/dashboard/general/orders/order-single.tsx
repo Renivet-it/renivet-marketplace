@@ -145,20 +145,29 @@ export function OrderSingle({ order }: PageProps) {
 
                                     <div className="space-y-2">
                                         {items.map((item) => (
-                                            <ProductOrderCard
-                                                item={item}
-                                                key={item.id}
-                                                trackingInfo={
-                                                    shipment && {
-                                                        trackingNumber:
-                                                            shipment.trackingNumber,
-                                                        awbNumber:
-                                                            shipment.awbNumber,
-                                                        estimatedDelivery:
-                                                            shipment.estimatedDeliveryDate,
+                                            <div key={item.id} className="space-y-2">
+                                                <ProductOrderCard
+                                                    item={item}
+                                                    trackingInfo={
+                                                        shipment && {
+                                                            trackingNumber:
+                                                                shipment.trackingNumber,
+                                                            awbNumber:
+                                                                shipment.awbNumber,
+                                                            estimatedDelivery:
+                                                                shipment.estimatedDeliveryDate,
+                                                        }
                                                     }
-                                                }
-                                            />
+                                                />
+                                                {item.customizationRequest && (
+                                                    <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950 space-y-1">
+                                                        <div className="font-semibold text-amber-900 flex items-center gap-1.5">
+                                                            ✨ Customized Request Raised:
+                                                        </div>
+                                                        <p className="text-amber-900 font-medium">{item.customizationRequest}</p>
+                                                    </div>
+                                                )}
+                                            </div>
                                         ))}
                                     </div>
 

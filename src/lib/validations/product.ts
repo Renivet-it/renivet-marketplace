@@ -238,6 +238,10 @@ export const productSchema = z.object({
         required_error: "Product has variants status is required",
         invalid_type_error: "Product has variants status must be a boolean",
     }),
+    customizationAvailable: z.boolean({
+        required_error: "Customization availability is required",
+        invalid_type_error: "Customization availability must be a boolean",
+    }),
 
     // CATEGORY
     categoryId: z

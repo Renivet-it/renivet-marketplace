@@ -105,6 +105,7 @@ export default function CartDataFetcher({ userId, user }: CartDataFetcherProps) 
                     variant: item.variant || null,
                     variantId: item.variantId || null,
                     quantity: item.quantity,
+                    customizationRequest: item.customizationRequest ?? null,
                 })),
                 ...(activeRewardCartItem?.selection ? [{
                     id: activeRewardCartItem.redemption.id,

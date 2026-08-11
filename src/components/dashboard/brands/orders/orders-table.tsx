@@ -32,12 +32,13 @@ import {
     VisibilityState,
 } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { PackageCheck, Search, Truck } from "lucide-react";
+import { PackageCheck, Search, Sparkles, Truck, Wrench } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { useMemo, useState } from "react";
 import { OrderAction } from "./order-action";
+import { CustomizationRequestModal } from "@/components/dashboard/general/orders/customization-request-modal";
 
 export type TableOrder = Order;
 
@@ -228,6 +229,15 @@ const columns = (
         enableHiding: false,
         cell: ({ row }) => {
             const data = row.original;
+            const items = (data as any).items as any[] | undefined;
+            const customizationRequests = items
+                ?.map((item) => item.customizationRequest?.trim())
+                .filter((req): req is string => Boolean(req));
+            const hasCustomizationRequest =
+                Boolean(customizationRequests && customizationRequests.length > 0);
+            const hasCustomizableProduct = items?.some(
+                (item) => item.product?.customizationAvailable
+            );
 
             return (
                 <div className="min-w-[210px] space-y-1.5">
@@ -248,6 +258,18 @@ const columns = (
                             {data.totalItems} item
                             {data.totalItems === 1 ? "" : "s"}
                         </Badge>
+                        {hasCustomizationRequest && (
+                            <CustomizationRequestModal order={data as any} />
+                        )}
+                        {hasCustomizableProduct && (
+                            <Badge
+                                variant="outline"
+                                className="rounded-md border-purple-200 bg-purple-50 px-2 py-0.5 font-medium text-purple-700 flex items-center gap-1"
+                            >
+                                <Wrench className="size-3 text-purple-600 shrink-0" />
+                                Customize Available
+                            </Badge>
+                        )}
                         {data.paymentMethod && (
                             <Badge
                                 variant="outline"

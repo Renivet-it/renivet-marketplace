@@ -42,7 +42,7 @@ import {
 import { format } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { ChevronDown, MapPin, PackageCheck, Search, Truck } from "lucide-react";
+import { ChevronDown, MapPin, PackageCheck, Search, Sparkles, Truck, Wrench } from "lucide-react";
 import Link from "next/link";
 import {
     parseAsArrayOf,
@@ -55,6 +55,7 @@ import {
 import { useMemo, useState } from "react";
 import { OrderAction } from "./order-action";
 import { OrderSingle } from "./order-single";
+import { CustomizationRequestModal } from "./customization-request-modal";
 
 // Status tab configuration
 const STATUS_TABS = [
@@ -159,6 +160,15 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
         cell: ({ row }) => {
             const data = row.original;
 
+            const customizationRequests = data.items
+                ?.map((item) => item.customizationRequest?.trim())
+                .filter((req): req is string => Boolean(req));
+            const hasCustomizationRequest =
+                Boolean(customizationRequests && customizationRequests.length > 0);
+            const hasCustomizableProduct = data.items?.some(
+                (item) => item.product?.customizationAvailable
+            );
+
             return (
                 <div className="max-w-[150px] space-y-1 text-xs sm:max-w-[180px]">
                     <div className="truncate font-semibold text-sky-700">
@@ -181,6 +191,18 @@ const columns = (onAction: () => void): ColumnDef<TableOrder>[] => [
                         >
                             Smart Order
                         </Badge>
+                        {hasCustomizationRequest && (
+                            <CustomizationRequestModal order={data} />
+                        )}
+                        {hasCustomizableProduct && (
+                            <Badge
+                                variant="outline"
+                                className="rounded-md border-purple-200 bg-purple-50 px-1.5 py-0 text-[11px] font-medium text-purple-700 flex items-center gap-1"
+                            >
+                                <Wrench className="size-3 text-purple-600 shrink-0" />
+                                Customize Available
+                            </Badge>
+                        )}
                         {getOrderSourceLabel(data.paymentMethod) && (
                             <Badge
                                 variant="outline"

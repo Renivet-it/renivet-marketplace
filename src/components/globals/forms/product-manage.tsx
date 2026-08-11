@@ -365,6 +365,7 @@ export function ProductManageForm({
             sustainabilityCertificate:
                 product?.sustainabilityCertificate?.id ?? "",
             productHasVariants: product?.productHasVariants ?? false,
+            customizationAvailable: product?.customizationAvailable ?? false,
 
             // PRICING
             price: +convertPaiseToRupees(product?.price ?? 0),
@@ -1000,6 +1001,27 @@ export function ProductManageForm({
                                             </FormLabel>
                                         </div>
 
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="customizationAvailable"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <div className="flex items-center gap-2">
+                                            <FormControl>
+                                                <Checkbox
+                                                    checked={field.value}
+                                                    onCheckedChange={field.onChange}
+                                                    disabled={isPending}
+                                                />
+                                            </FormControl>
+                                            <FormLabel>
+                                                Customization is available for this product
+                                            </FormLabel>
+                                        </div>
                                         <FormMessage />
                                     </FormItem>
                                 )}
