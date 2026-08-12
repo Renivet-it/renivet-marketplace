@@ -29,6 +29,7 @@ export const carts = pgTable(
             onDelete: "cascade",
         }),
         quantity: integer("quantity").notNull().default(1),
+        customizationRequest: text("customization_request"),
         status: boolean("status").notNull().default(true),
         ...timestamps,
     },

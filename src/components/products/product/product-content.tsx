@@ -169,6 +169,13 @@ export function ProductContent({
 
                 <div className="mb-6 border-t border-neutral-200" />
 
+                {product.customizationAvailable && (
+                    <div className="mb-5 inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-medium text-amber-900">
+                        <Package2 className="size-4" />
+                        Customization available for this product
+                    </div>
+                )}
+
                 <ProductCartAddForm
                     product={product}
                     isWishlisted={isWishlisted}

@@ -4,6 +4,7 @@ import { ProductCartQuantityChangeForm } from "@/components/globals/forms";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea-general";
 import {
     Dialog,
     DialogContent,
@@ -40,6 +41,55 @@ interface PageProps extends GenericProps {
     item: CachedCart;
     userId: string;
     readOnly?: boolean;
+}
+
+function CustomizationRequestField({
+    item,
+    userId,
+    readOnly,
+}: Pick<PageProps, "item" | "userId" | "readOnly">) {
+    const [request, setRequest] = useState(item.customizationRequest ?? "");
+    const { refetch } = trpc.general.users.cart.getCartForUser.useQuery({
+        userId,
+    });
+    const { mutate: saveRequest, isPending } =
+        trpc.general.users.cart.updateCustomizationRequest.useMutation({
+            onSuccess: () => refetch(),
+            onError: (error) => toast.error(error.message),
+        });
+
+    if (!item.product.customizationAvailable) return null;
+
+    const persistRequest = () => {
+        const nextRequest = request.trim();
+        if (nextRequest === (item.customizationRequest ?? "")) return;
+        saveRequest({
+            userId,
+            productId: item.productId,
+            variantId: item.variantId,
+            customizationRequest: nextRequest || null,
+        });
+    };
+
+    return (
+        <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2.5">
+            <label className="mb-1 block text-xs font-semibold text-amber-900">
+                Customization request
+            </label>
+            <Textarea
+                value={request}
+                onChange={(event) => setRequest(event.target.value.slice(0, 500))}
+                onBlur={persistRequest}
+                disabled={readOnly || isPending}
+                placeholder="E.g. Add initials, preferred color, or special instructions"
+                className="min-h-16 resize-none border-amber-200 bg-white text-xs"
+                maxLength={500}
+            />
+            <p className="mt-1 text-[10px] text-amber-800">
+                Saved when you leave this field.
+            </p>
+        </div>
+    );
 }
 
 export function ProductCartCard({
@@ -216,6 +266,12 @@ export function ProductCartCard({
                                 })}
                             </div>
                         )}
+
+                        <CustomizationRequestField
+                            item={item}
+                            userId={userId}
+                            readOnly={readOnly}
+                        />
 
                         {/* Supporting artisan text */}
                         <p className="text-[11px] font-medium text-amber-700">
@@ -442,6 +498,12 @@ export function ProductCartCard({
                                 })}
                             </div>
                         )}
+
+                        <CustomizationRequestField
+                            item={item}
+                            userId={userId}
+                            readOnly={readOnly}
+                        />
 
                         {/* Product details toggle */}
                         <button

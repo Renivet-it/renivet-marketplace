@@ -42,6 +42,11 @@ export const cartSchema = z.object({
         })
         .int("Quantity must be an integer")
         .positive("Quantity must be positive"),
+    customizationRequest: z
+        .string()
+        .trim()
+        .max(500, "Customization request must be 500 characters or less")
+        .nullable(),
     status: z.boolean({
         required_error: "Status is required",
         invalid_type_error: "Status must be a boolean",
@@ -108,6 +113,7 @@ export const cachedCartSchema = cartSchema.extend({
             isAvailable: true,
             verificationStatus: true,
             isDeleted: true,
+            customizationAvailable: true,
         })
         .extend({
             brand: brandSchema.pick({

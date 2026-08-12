@@ -355,6 +355,57 @@ export const cartRouter = createTRPCRouter({
             ]);
             return data;
         }),
+    updateCustomizationRequest: protectedProcedure
+        .input(
+            z.object({
+                userId: z.string(),
+                productId: cartSchema.shape.productId,
+                variantId: cartSchema.shape.variantId,
+                customizationRequest: z
+                    .string()
+                    .trim()
+                    .max(500, "Customization request must be 500 characters or less")
+                    .nullable(),
+            })
+        )
+        .use(({ ctx, input, next }) => {
+            if (ctx.user.id !== input.userId)
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "You are not authorized to update this cart",
+                });
+
+            return next({ ctx, input });
+        })
+        .mutation(async ({ ctx, input }) => {
+            const { userId, productId, variantId } = input;
+            const existingCart = await userCartCache.getProduct({
+                userId,
+                productId,
+                variantId: variantId ?? undefined,
+            });
+
+            if (!existingCart)
+                throw new TRPCError({
+                    code: "NOT_FOUND",
+                    message: "This product is not in your cart",
+                });
+            if (!existingCart.product.customizationAvailable)
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "Customization is not available for this product",
+                });
+
+            const data = await ctx.queries.userCarts.updateProductInCart(
+                existingCart.id,
+                {
+                    ...existingCart,
+                    customizationRequest: input.customizationRequest || null,
+                }
+            );
+            await userCartCache.drop(userId);
+            return data;
+        }),
     updateStatusInCart: protectedProcedure
         .input(
             z.object({

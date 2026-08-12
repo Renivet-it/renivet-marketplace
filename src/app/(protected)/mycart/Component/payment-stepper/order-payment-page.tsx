@@ -473,6 +473,7 @@ export function OrderPage({
                         item.product.nativeSku ??
                         `sku-${item.product.id}`,
                     quantity: item.quantity,
+                    customizationRequest: item.customizationRequest ?? null,
                     categoryId: item.product.categoryId,
                     isSwapRewardItem: item.isSwapRewardItem,
                     swapRewardRedemptionId: item.swapRewardRedemptionId,

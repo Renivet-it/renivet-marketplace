@@ -126,11 +126,23 @@ export function ProductOrderCard({
                         </Link>
                     </h2>
 
-                    <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground">
-                        <Link href={`/brands/${item.product.brand.id}`}>
-                            {item.product.brand.name}
-                        </Link>
-                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                        <p className="w-min bg-accent p-1 px-2 text-xs text-accent-foreground whitespace-nowrap">
+                            <Link href={`/brands/${item.product.brand.id}`}>
+                                {item.product.brand.name}
+                            </Link>
+                        </p>
+                        {item.product.customizationAvailable && (
+                            <span className="inline-flex items-center gap-1 rounded border border-purple-200 bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-700">
+                                Customize Available
+                            </span>
+                        )}
+                        {item.customizationRequest && (
+                            <span className="inline-flex items-center gap-1 rounded border border-amber-300 bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900 shadow-sm">
+                                ✨ Customized Request Raised
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex">
