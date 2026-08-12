@@ -1,5 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { corporateOrderService } from "@/lib/services/corporate-order";
+import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import {
     corporateBalancePaymentConfirmationInputSchema,
     corporateBalancePaymentOrderInputSchema,
@@ -51,6 +52,30 @@ export const corporateOrdersRouter = createTRPCRouter({
         .input(corporateBalancePaymentConfirmationInputSchema)
         .mutation(async ({ ctx, input }) => {
             return corporateOrderService.confirmBalancePayment(ctx.user.id, input);
+        }),
+    createRequestedPaymentOrder: protectedProcedure
+        .input(z.object({ paymentRequestId: z.string().uuid() }))
+        .mutation(({ ctx, input }) => {
+            return corporatePaymentRequestService.createAccountCheckout(
+                ctx.user.id,
+                input.paymentRequestId
+            );
+        }),
+    confirmRequestedPayment: protectedProcedure
+        .input(
+            z.object({
+                paymentRequestId: z.string().uuid(),
+                razorpayOrderId: z.string().min(1),
+                razorpayPaymentId: z.string().min(1),
+                razorpaySignature: z.string().min(1),
+            })
+        )
+        .mutation(({ ctx, input }) => {
+            return corporatePaymentRequestService.confirmAccount(
+                ctx.user.id,
+                input.paymentRequestId,
+                input
+            );
         }),
     getOrderConfirmation: protectedProcedure
         .input(

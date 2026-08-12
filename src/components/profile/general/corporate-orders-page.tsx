@@ -64,6 +64,10 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
         trpc.general.corporateOrders.createBalancePaymentOrder.useMutation();
     const confirmBalancePayment =
         trpc.general.corporateOrders.confirmBalancePayment.useMutation();
+    const createRequestedPaymentOrder =
+        trpc.general.corporateOrders.createRequestedPaymentOrder.useMutation();
+    const confirmRequestedPayment =
+        trpc.general.corporateOrders.confirmRequestedPayment.useMutation();
     const totalOrders = initialData.length;
     const pendingOrders = initialData.filter(
         (order) => order.balanceDuePaise > 0
@@ -117,6 +121,41 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
             } as any);
         } catch (error: any) {
             toast.error(error?.message || "Failed to open balance payment");
+        }
+    };
+
+    const payRequestedAmount = async (order: any) => {
+        try {
+            const created = await createRequestedPaymentOrder.mutateAsync({
+                paymentRequestId: order.paymentRequest.id,
+            });
+            await ensureRazorpaySdk();
+            initializeRazorpayPayment({
+                key: created.key,
+                amount: created.amount,
+                currency: created.currency,
+                name: created.name,
+                description: created.description,
+                order_id: created.orderId,
+                prefill: {
+                    name: order.contactPersonName,
+                    email: order.emailAddress,
+                    contact: order.mobileNumber,
+                },
+                theme: { color: "#2f3720" },
+                handler: async (response: any) => {
+                    await confirmRequestedPayment.mutateAsync({
+                        paymentRequestId: order.paymentRequest.id,
+                        razorpayOrderId: response.razorpay_order_id,
+                        razorpayPaymentId: response.razorpay_payment_id,
+                        razorpaySignature: response.razorpay_signature,
+                    });
+                    toast.success("Payment received and receipt issued");
+                    window.location.href = `/profile/corporate-orders?confirmed=${order.id}`;
+                },
+            } as any);
+        } catch (error: any) {
+            toast.error(error?.message || "Failed to open payment request");
         }
     };
 
@@ -488,7 +527,17 @@ export function CorporateOrdersPage({ initialData }: { initialData: any[] }) {
                                                                             Invoice
                                                                         </a>
                                                                     ) : null}
+                                                                    {order.paymentRequest ? (
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => payRequestedAmount(order)}
+                                                                            className="mt-1 inline-flex min-h-8 w-full items-center justify-center whitespace-nowrap bg-[#2f3720] px-2.5 text-[11px] font-semibold text-white transition-colors hover:bg-[#252c18]"
+                                                                        >
+                                                                            Pay requested {formatINR(order.paymentRequest.amountPaise)}
+                                                                        </button>
+                                                                    ) : null}
                                                                     {order.balancePaymentLink &&
+                                                                    !order.paymentRequest &&
                                                                     order.balanceDuePaise >
                                                                         0 ? (
                                                                         <a

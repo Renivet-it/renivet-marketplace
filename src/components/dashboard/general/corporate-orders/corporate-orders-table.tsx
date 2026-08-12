@@ -16,11 +16,13 @@ import { toast } from "sonner";
 const volumetricWeightGrams = (length: number, width: number, height: number) =>
     Math.round((length * width * height) / 5);
 
-const buildPresetDimensions = (packingType?: {
-    baseLength?: number | null;
-    baseWidth?: number | null;
-    baseHeight?: number | null;
-} | null) => ({
+const buildPresetDimensions = (
+    packingType?: {
+        baseLength?: number | null;
+        baseWidth?: number | null;
+        baseHeight?: number | null;
+    } | null
+) => ({
     length: Number(packingType?.baseLength ?? 0),
     width: Number(packingType?.baseWidth ?? 0),
     height: Number(packingType?.baseHeight ?? 0),
@@ -37,7 +39,9 @@ const PICKUP_TIME_SLOTS = [
 export function CorporateOrdersTable({ initialData }: { initialData: any }) {
     const [search, setSearch] = useState("");
     const [status, setStatus] = useState("");
-    const [showReplacements, setShowReplacements] = useState<"exclude" | "only" | "all">("all");
+    const [showReplacements, setShowReplacements] = useState<
+        "exclude" | "only" | "all"
+    >("all");
     const [shipmentOrderId, setShipmentOrderId] = useState<string | null>(null);
     const { data, isFetching, refetch } =
         trpc.general.corporateOrders.listOrders.useQuery(
@@ -73,7 +77,9 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                     <option value="approved">Approved</option>
                     <option value="in_production">In Production</option>
                     <option value="quality_check">Quality Check</option>
-                    <option value="ready_for_dispatch">Ready for Dispatch</option>
+                    <option value="ready_for_dispatch">
+                        Ready for Dispatch
+                    </option>
                     <option value="dispatched">Dispatched</option>
                     <option value="delivered">Delivered</option>
                     <option value="completed">Completed</option>
@@ -112,43 +118,60 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                         {data?.data?.length ? (
                             data.data.map((order: any) => (
                                 <Fragment key={order.id}>
-                                    <tr
-                                        className="border-t border-slate-100"
-                                    >
+                                    <tr className="border-t border-slate-100">
                                         <td className="px-4 py-3 text-slate-900">
                                             <div className="flex flex-col gap-1">
                                                 <div className="flex flex-wrap items-center gap-1.5">
                                                     <span className="font-semibold text-slate-900">
                                                         {order.publicOrderId}
                                                     </span>
-                                                    {order.publicOrderId.startsWith("REN-CORP-RPL-") ? (
+                                                    {order.publicOrderId.startsWith(
+                                                        "REN-CORP-RPL-"
+                                                    ) ? (
                                                         <span className="inline-flex items-center rounded-md bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
                                                             Replacement
                                                         </span>
-                                                    ) : order.replacementRequests && order.replacementRequests.length > 0 ? (
+                                                    ) : order.replacementRequests &&
+                                                      order.replacementRequests
+                                                          .length > 0 ? (
                                                         <Link
                                                             href={`/dashboard/general/corporate-orders/replacements?search=${order.publicOrderId}`}
-                                                            className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 hover:bg-amber-100/80 transition-colors"
+                                                            className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-800 ring-1 ring-inset ring-amber-600/20 transition-colors hover:bg-amber-100/80"
                                                         >
-                                                            Has Replacement ({order.replacementRequests.length})
+                                                            Has Replacement (
+                                                            {
+                                                                order
+                                                                    .replacementRequests
+                                                                    .length
+                                                            }
+                                                            )
                                                         </Link>
                                                     ) : null}
                                                 </div>
-                                                {order.publicOrderId.startsWith("REN-CORP-RPL-") &&
-                                                    order.companySnapshot?.replacementForPublicOrderId && (
+                                                {order.publicOrderId.startsWith(
+                                                    "REN-CORP-RPL-"
+                                                ) &&
+                                                    order.companySnapshot
+                                                        ?.replacementForPublicOrderId && (
                                                         <div className="text-xs text-slate-500">
                                                             Replacement for{" "}
                                                             <Link
                                                                 href={`/dashboard/general/corporate-orders/${order.companySnapshot.replacementForOrderId}`}
                                                                 className="font-semibold text-sky-700 hover:underline"
                                                             >
-                                                                {order.companySnapshot.replacementForPublicOrderId}
+                                                                {
+                                                                    order
+                                                                        .companySnapshot
+                                                                        .replacementForPublicOrderId
+                                                                }
                                                             </Link>
                                                         </div>
-                                                )}
+                                                    )}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">{order.companyName}</td>
+                                        <td className="px-4 py-3">
+                                            {order.companyName}
+                                        </td>
                                         <td className="px-4 py-3">
                                             <div className="font-medium">
                                                 {order.contactPersonName}
@@ -157,7 +180,9 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                                                 {order.emailAddress}
                                             </div>
                                         </td>
-                                        <td className="px-4 py-3">{order.quantity}</td>
+                                        <td className="px-4 py-3">
+                                            {order.quantity}
+                                        </td>
                                         <td className="px-4 py-3">
                                             {formatINR(order.totalPaise)}
                                         </td>
@@ -171,9 +196,9 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                                             {convertValueToLabel(order.status)}
                                         </td>
                                         <td className="px-4 py-3">
-                                            {new Date(order.createdAt).toLocaleDateString(
-                                                "en-IN"
-                                            )}
+                                            {new Date(
+                                                order.createdAt
+                                            ).toLocaleDateString("en-IN")}
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex flex-wrap gap-3">
@@ -196,14 +221,20 @@ export function CorporateOrdersTable({ initialData }: { initialData: any }) {
                                                     "dispatched",
                                                     "delivered",
                                                     "completed",
-                                                ].includes(order.status) || (order.status === "approved" && order.publicOrderId.startsWith("REN-CORP-RPL-")) ? (
+                                                ].includes(order.status) ||
+                                                (order.status === "approved" &&
+                                                    order.publicOrderId.startsWith(
+                                                        "REN-CORP-RPL-"
+                                                    )) ? (
                                                     <button
                                                         type="button"
                                                         onClick={() =>
-                                                            setShipmentOrderId((current) =>
-                                                                current === order.id
-                                                                    ? null
-                                                                    : order.id
+                                                            setShipmentOrderId(
+                                                                (current) =>
+                                                                    current ===
+                                                                    order.id
+                                                                        ? null
+                                                                        : order.id
                                                             )
                                                         }
                                                         className="font-semibold text-emerald-700 underline-offset-4 hover:underline"
@@ -269,19 +300,19 @@ function CorporateShipmentInlinePanel({
             retry: 1,
         }
     );
-    const { data: packingTypesData } = trpc.general.packingTypes.getAll.useQuery({
-        page: 1,
-        limit: 100,
-    });
+    const { data: packingTypesData } =
+        trpc.general.packingTypes.getAll.useQuery({
+            page: 1,
+            limit: 100,
+        });
     const [pickupDate, setPickupDate] = useState("");
     const [pickupTime, setPickupTime] = useState("");
     const existingPackageSelection =
         order?.shipment?.rawPayload &&
         typeof order.shipment.rawPayload === "object" &&
         !Array.isArray(order.shipment.rawPayload)
-            ? (
-                  order.shipment.rawPayload as Record<string, unknown>
-              ).packageSelection as Record<string, unknown> | undefined
+            ? ((order.shipment.rawPayload as Record<string, unknown>)
+                  .packageSelection as Record<string, unknown> | undefined)
             : undefined;
     const [packageSource, setPackageSource] = useState<"preset" | "custom">(
         existingPackageSelection?.source === "custom" ? "custom" : "preset"
@@ -349,8 +380,9 @@ function CorporateShipmentInlinePanel({
     const brand = hydratedOrder?.brand ?? order?.brand;
     const packingTypes = packingTypesData?.data ?? [];
     const selectedPackingType =
-        packingTypes.find((packingType) => packingType.id === selectedPackingTypeId) ??
-        null;
+        packingTypes.find(
+            (packingType) => packingType.id === selectedPackingTypeId
+        ) ?? null;
     const presetDimensions = buildPresetDimensions(selectedPackingType);
     const customDimensions = {
         length: Number(customLength) || 0,
@@ -403,22 +435,14 @@ function CorporateShipmentInlinePanel({
         shipment?.rawPayload &&
         typeof shipment.rawPayload === "object" &&
         !Array.isArray(shipment.rawPayload)
-            ? (
-                  shipment.rawPayload as Record<string, unknown>
-              ).pickupRequest as Record<string, unknown> | undefined
+            ? ((shipment.rawPayload as Record<string, unknown>)
+                  .pickupRequest as Record<string, unknown> | undefined)
             : undefined;
     const pickupScheduled = Boolean(
         pickupRequest?.pickupId ||
             pickupRequest?.scheduledAt ||
             pickupRequest?.pickupDate
     );
-    const currentStep = shipmentDispatched
-        ? 2
-        : pickupScheduled
-          ? 2
-          : shipmentCreated
-            ? 1
-            : 0;
     const forwardOrderAction = async () => {
         if (!packageSelectionReady) {
             toast.error(
@@ -459,378 +483,367 @@ function CorporateShipmentInlinePanel({
     };
 
     return (
-        <div className="rounded-lg border bg-white p-5 shadow-sm">
-            <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+        <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
                 <div>
-                    <h3 className="text-base font-semibold text-slate-900">
-                        Shipment Workspace
+                    <h3 className="text-sm font-semibold text-slate-900">
+                        Shipment
                     </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Create the Delhivery forward order first, then add this shipment to the pickup request.
+                    <p className="mt-0.5 text-[11px] text-slate-500">
+                        Delhivery · {quantity} units
                     </p>
                 </div>
-                <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-600">
-                    Qty {quantity}
+                <div className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[10px] font-semibold text-slate-600">
+                    {shipmentDispatched
+                        ? "Dispatched"
+                        : pickupScheduled
+                          ? "Pickup scheduled"
+                          : shipmentCreated
+                            ? "AWB generated"
+                            : "Setup required"}
                 </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-3">
-                <StepperCard
-                    step={1}
-                    title="Create Forward Order"
-                    description="Push this corporate order to Delhivery and generate the AWB automatically."
-                    state={currentStep >= 1 ? "done" : currentStep === 0 ? "active" : "upcoming"}
-                />
-                <StepperCard
-                    step={2}
-                    title="Add to Pickup"
-                    description="Choose the pickup date and slot, then add this shipment to the warehouse pickup request."
-                    state={currentStep >= 2 ? "done" : currentStep === 1 ? "active" : "upcoming"}
-                />
-                <StepperCard
-                    step={3}
-                    title="Dispatch Tracking"
-                    description="Track the AWB and continue shipment follow-up from the order detail view."
-                    state={shipmentDispatched ? "active" : "upcoming"}
-                />
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Step 1
-                </p>
-                <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-                    <div>
-                        <h4 className="text-base font-semibold text-slate-900">
-                            Create Delhivery Forward Order
-                        </h4>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Delivery details will be picked from this corporate order automatically.
-                        </p>
-                    </div>
-                    <Button
-                        onClick={() => void forwardOrderAction()}
-                        disabled={
-                            createForwardOrder.isPending ||
-                            shipmentCreated ||
-                            !packageSelectionReady ||
-                            !canCreateForwardOrder
-                        }
-                    >
-                        {createForwardOrder.isPending
-                            ? "Creating..."
-                            : shipmentCreated
-                              ? "Forward Order Created"
-                              : "Create Forward Order"}
-                    </Button>
-                </div>
-                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                    <InlineValue
-                        label="Provider"
-                        value={shipment?.provider || "Delhivery"}
-                    />
-                    <InlineValue
-                        label="AWB Number"
-                        value={shipment?.awbNumber || "Will be generated"}
-                    />
-                    <InlineValue
-                        label="Tracking Number"
-                        value={shipment?.trackingNumber || "Will be generated"}
-                    />
-                    <InlineValue
-                        label="Pickup Location"
-                        value={
-                            pickupLocation ||
-                            (isHydratingOrder
-                                ? "Loading assigned pickup location..."
-                                : "Pickup location unavailable")
-                        }
-                    />
-                </div>
-                <div className="mt-4 rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+            <div className="space-y-3 p-3">
+                <div className="rounded-md border border-slate-200 bg-white">
+                    <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50/60 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <p className="text-sm font-semibold text-slate-900">
-                                Package Details for Delhivery
-                            </p>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Start with the saved package options you already have, or switch to a custom box size.
-                            </p>
+                            <h4 className="text-xs font-semibold text-slate-900">
+                                Create shipment
+                            </h4>
                         </div>
-                        <div className="text-sm font-medium text-slate-700">
-                            Volumetric estimate:{" "}
-                            <span className="text-slate-900">
-                                {activeVolumetricWeight > 0
-                                    ? `${activeVolumetricWeight} g`
-                                    : "Select a package first"}
-                            </span>
-                        </div>
+                        <Button
+                            className="h-8 w-auto self-start px-3 text-[11px] sm:self-auto"
+                            onClick={() => void forwardOrderAction()}
+                            disabled={
+                                createForwardOrder.isPending ||
+                                shipmentCreated ||
+                                !packageSelectionReady ||
+                                !canCreateForwardOrder
+                            }
+                        >
+                            {createForwardOrder.isPending
+                                ? "Creating..."
+                                : shipmentCreated
+                                  ? "Shipment created"
+                                  : "Create shipment"}
+                        </Button>
                     </div>
-
-                    <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_280px]">
-                        <div className="space-y-3">
-                            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                                Saved Package Options
-                            </label>
-                            <select
-                                className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
-                                value={packageSource === "preset" ? selectedPackingTypeId : ""}
-                                onChange={(e) => {
-                                    setPackageSource("preset");
-                                    setSelectedPackingTypeId(e.target.value);
-                                }}
-                                disabled={shipmentCreated || createForwardOrder.isPending}
-                            >
-                                <option value="">Select existing package option</option>
-                                {packingTypes.map((packingType) => (
-                                    <option key={packingType.id} value={packingType.id}>
-                                        {packingType.name} ({packingType.baseLength} x{" "}
-                                        {packingType.baseWidth} x {packingType.baseHeight} cm)
-                                    </option>
-                                ))}
-                            </select>
-
-                            <button
-                                type="button"
-                                className={`w-full rounded-xl border px-4 py-3 text-left transition ${
-                                    packageSource === "custom"
-                                        ? "border-sky-200 bg-sky-50"
-                                        : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                                }`}
-                                onClick={() => setPackageSource("custom")}
-                                disabled={shipmentCreated || createForwardOrder.isPending}
-                            >
-                                <span className="block text-sm font-semibold text-slate-900">
-                                    Custom package option
-                                </span>
-                                <span className="mt-1 block text-sm text-slate-500">
-                                    Enter custom L x B x H if none of the saved presets match this shipment.
-                                </span>
-                            </button>
-
-                            {packageSource === "custom" ? (
-                                <div className="grid gap-3 md:grid-cols-3">
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        placeholder="Length (cm)"
-                                        value={customLength}
-                                        onChange={(e) => setCustomLength(e.target.value)}
-                                        disabled={shipmentCreated || createForwardOrder.isPending}
-                                    />
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        placeholder="Breadth (cm)"
-                                        value={customWidth}
-                                        onChange={(e) => setCustomWidth(e.target.value)}
-                                        disabled={shipmentCreated || createForwardOrder.isPending}
-                                    />
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        placeholder="Height (cm)"
-                                        value={customHeight}
-                                        onChange={(e) => setCustomHeight(e.target.value)}
-                                        disabled={shipmentCreated || createForwardOrder.isPending}
-                                    />
-                                </div>
-                            ) : null}
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">
-                                Shipment Weight
-                            </label>
-                            <Input
-                                type="number"
-                                min="1"
-                                placeholder="Enter weight in grams"
-                                value={weightGrams}
-                                onChange={(e) => setWeightGrams(e.target.value)}
-                                disabled={shipmentCreated || createForwardOrder.isPending}
-                            />
-                            <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                                Shipping with{" "}
-                                <span className="font-medium text-slate-900">
-                                    {activeDimensions.length || 0} x {activeDimensions.width || 0} x{" "}
-                                    {activeDimensions.height || 0} cm
-                                </span>
-                                {" · "}
-                                <span className="font-medium text-slate-900">
-                                    {parsedWeightGrams || 0} g
+                    <div className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-4">
+                        <InlineValue
+                            label="Provider"
+                            value={shipment?.provider || "Delhivery"}
+                        />
+                        <InlineValue
+                            label="AWB Number"
+                            value={shipment?.awbNumber || "Will be generated"}
+                        />
+                        <InlineValue
+                            label="Tracking Number"
+                            value={
+                                shipment?.trackingNumber || "Will be generated"
+                            }
+                        />
+                        <InlineValue
+                            label="Pickup Location"
+                            value={
+                                pickupLocation ||
+                                (isHydratingOrder
+                                    ? "Loading..."
+                                    : "Unavailable")
+                            }
+                        />
+                    </div>
+                    <div className="p-3">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                            <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                                Package
+                            </p>
+                            <div className="text-[11px] text-slate-500">
+                                Volumetric:{" "}
+                                <span className="font-medium text-slate-800">
+                                    {activeVolumetricWeight > 0
+                                        ? `${activeVolumetricWeight} g`
+                                        : "—"}
                                 </span>
                             </div>
                         </div>
+
+                        <div className="flex flex-wrap items-end gap-2">
+                            <label className="w-full min-w-[240px] space-y-1 sm:max-w-xl">
+                                <span className="block text-[10px] font-medium text-slate-500">
+                                    Product package
+                                </span>
+                                <select
+                                    className="h-9 w-full rounded-md border border-input bg-background !px-3 !py-0 !text-[11px] !leading-5"
+                                    value={
+                                        packageSource === "preset"
+                                            ? selectedPackingTypeId
+                                            : ""
+                                    }
+                                    onChange={(e) => {
+                                        setPackageSource("preset");
+                                        setSelectedPackingTypeId(
+                                            e.target.value
+                                        );
+                                    }}
+                                    disabled={
+                                        shipmentCreated ||
+                                        createForwardOrder.isPending
+                                    }
+                                >
+                                    <option value="">
+                                        Select product package
+                                    </option>
+                                    {packingTypes.map((packingType) => (
+                                        <option
+                                            key={packingType.id}
+                                            value={packingType.id}
+                                        >
+                                            {packingType.name} (
+                                            {packingType.baseLength} x{" "}
+                                            {packingType.baseWidth} x{" "}
+                                            {packingType.baseHeight} cm)
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+
+                            <button
+                                type="button"
+                                className={`h-9 whitespace-nowrap rounded-md border px-3 text-[11px] font-medium transition ${
+                                    packageSource === "custom"
+                                        ? "border-sky-300 bg-sky-50 text-sky-800"
+                                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                                }`}
+                                onClick={() => setPackageSource("custom")}
+                                disabled={
+                                    shipmentCreated ||
+                                    createForwardOrder.isPending
+                                }
+                            >
+                                Enter custom size
+                            </button>
+
+                            <label className="w-full space-y-1 sm:w-48">
+                                <span className="block text-[10px] font-medium text-slate-500">
+                                    Weight (g)
+                                </span>
+                                <Input
+                                    className="h-9 min-w-0 py-1 text-xs"
+                                    type="number"
+                                    min="1"
+                                    placeholder="Enter weight"
+                                    value={weightGrams}
+                                    onChange={(e) =>
+                                        setWeightGrams(e.target.value)
+                                    }
+                                    disabled={
+                                        shipmentCreated ||
+                                        createForwardOrder.isPending
+                                    }
+                                />
+                            </label>
+                        </div>
+
+                        {packageSource === "custom" ? (
+                            <div className="mt-3 flex flex-wrap items-end gap-2 border-t border-slate-100 pt-3">
+                                <DimensionInput
+                                    label="Length (cm)"
+                                    value={customLength}
+                                    onChange={setCustomLength}
+                                    disabled={
+                                        shipmentCreated ||
+                                        createForwardOrder.isPending
+                                    }
+                                />
+                                <DimensionInput
+                                    label="Breadth (cm)"
+                                    value={customWidth}
+                                    onChange={setCustomWidth}
+                                    disabled={
+                                        shipmentCreated ||
+                                        createForwardOrder.isPending
+                                    }
+                                />
+                                <DimensionInput
+                                    label="Height (cm)"
+                                    value={customHeight}
+                                    onChange={setCustomHeight}
+                                    disabled={
+                                        shipmentCreated ||
+                                        createForwardOrder.isPending
+                                    }
+                                />
+                                <div className="flex h-9 items-center whitespace-nowrap rounded-md border border-slate-200 bg-slate-50 px-3 text-[10px] font-medium text-slate-900">
+                                    {`${activeDimensions.length || 0} × ${activeDimensions.width || 0} × ${activeDimensions.height || 0} cm · ${parsedWeightGrams || 0} g`}
+                                </div>
+                            </div>
+                        ) : null}
                     </div>
-                </div>
-                {shipmentBlockedReason ? (
-                    <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                        {shipmentBlockedReason}
-                    </div>
-                ) : null}
-                {hydrateOrderError ? (
-                    <p className="mt-3 text-sm text-amber-700">
-                        Could not load the assigned pickup location from order details yet.
-                    </p>
-                ) : null}
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-slate-200 bg-[linear-gradient(180deg,#ffffff_0%,#f8fafc_100%)] p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
-                    Step 2
-                </p>
-                <div className="mt-2">
-                    <h4 className="text-base font-semibold text-slate-900">
-                        Add to Pickup
-                    </h4>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Once the forward order is ready, choose the Delhivery pickup date and slot for this warehouse.
-                    </p>
-                </div>
-                <div className="mt-4 grid gap-3 md:grid-cols-[minmax(0,220px)_minmax(0,220px)_auto]">
-                    <Input
-                        type="date"
-                        min={todayIso}
-                        value={pickupDate}
-                        onChange={(e) => setPickupDate(e.target.value)}
-                        disabled={!shipmentCreated || schedulePickup.isPending}
-                    />
-                    <select
-                        className="h-10 rounded-md border border-input bg-background px-3 text-sm"
-                        value={pickupTime}
-                        onChange={(e) => setPickupTime(e.target.value)}
-                        disabled={!shipmentCreated || schedulePickup.isPending}
-                    >
-                        <option value="">Select pickup time</option>
-                        {availablePickupSlots.map((slot) => (
-                            <option key={slot.value} value={slot.value}>
-                                {slot.label}
-                            </option>
-                        ))}
-                    </select>
-                    <Button
-                        variant="outline"
-                        onClick={() => void scheduleDelhiveryPickup()}
-                        disabled={!shipmentCreated || schedulePickup.isPending}
-                    >
-                        {schedulePickup.isPending
-                            ? "Adding..."
-                            : pickupScheduled || shipmentDispatched
-                              ? "Added to Pickup"
-                              : "Add to Pickup"}
-                    </Button>
-                </div>
-                {pickupScheduled ? (
-                    <div className="mt-3 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-900">
-                        Pickup request recorded for {pickupRequest?.pickupDate as string}
-                        {typeof pickupRequest?.pickupTime === "string"
-                            ? ` at ${pickupRequest.pickupTime}`
-                            : ""}
-                        {pickupRequest?.pickupId
-                            ? ` · Request ID ${String(pickupRequest.pickupId)}`
-                            : ""}
-                        . This order has been added to the Delhivery pickup flow. Delhivery can still show <span className="font-medium">Ready to ship</span> until the parcel is physically scanned and picked up.
-                    </div>
-                ) : null}
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-3">
-                {shipment?.trackingUrl ? (
-                    <a
-                        href={shipment.trackingUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:border-slate-300"
-                    >
-                        Open Tracking
-                    </a>
-                ) : null}
-                <Link
-                    href={`/dashboard/general/corporate-orders/${order.id}`}
-                    className="inline-flex h-10 items-center rounded-md border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 hover:border-slate-300"
-                >
-                    Open Full Shipment View
-                </Link>
-            </div>
-
-            {!shipmentCreated ? (
-                <div className="mt-4 rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    Start with <span className="font-medium text-slate-900">Create Forward Order</span>.
-                    After the AWB is generated, the pickup scheduling step will unlock.
-                </div>
-            ) : null}
-
-            {shipmentBlockedReason ? (
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    Shipment cannot be completed from here until this order has an assigned pickup source.
-                    Open the full order view and make sure the order is assigned to the correct brand/warehouse first.
-                </div>
-            ) : null}
-
-            {shipmentCreated ? (
-                <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
-                    Forward order created for{" "}
-                    <span className="font-medium text-slate-900">
-                        {order.publicOrderId}
-                    </span>
-                    {shipment?.awbNumber ? (
-                        <>
-                            {" "}with AWB{" "}
-                            <span className="font-medium text-slate-900">
-                                {shipment.awbNumber}
-                            </span>
-                        </>
+                    {shipmentBlockedReason ? (
+                        <div className="mx-4 mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                            {shipmentBlockedReason}
+                        </div>
                     ) : null}
-                    .
+                    {hydrateOrderError ? (
+                        <p className="mx-4 mb-4 text-xs text-amber-700">
+                            Pickup location could not be loaded.
+                        </p>
+                    ) : null}
                 </div>
-            ) : null}
+                <div className="rounded-md border border-slate-200 bg-white">
+                    <div className="border-b border-slate-200 bg-slate-50/60 px-3 py-2.5">
+                        <h4 className="text-xs font-semibold text-slate-900">
+                            Schedule pickup
+                        </h4>
+                    </div>
+                    <div className="flex flex-wrap items-end gap-2 p-3">
+                        <label className="w-44 space-y-1">
+                            <span className="block text-[10px] font-medium text-slate-500">
+                                Pickup date
+                            </span>
+                            <Input
+                                className="h-9 py-1 text-xs"
+                                type="date"
+                                min={todayIso}
+                                value={pickupDate}
+                                onChange={(e) => setPickupDate(e.target.value)}
+                                disabled={
+                                    !shipmentCreated || schedulePickup.isPending
+                                }
+                            />
+                        </label>
+                        <label className="w-52 space-y-1">
+                            <span className="block text-[10px] font-medium text-slate-500">
+                                Time slot
+                            </span>
+                            <select
+                                className="h-9 w-full rounded-md border border-input bg-background px-2.5 text-xs"
+                                value={pickupTime}
+                                onChange={(e) => setPickupTime(e.target.value)}
+                                disabled={
+                                    !shipmentCreated || schedulePickup.isPending
+                                }
+                            >
+                                <option value="">Select a time slot</option>
+                                {availablePickupSlots.map((slot) => (
+                                    <option key={slot.value} value={slot.value}>
+                                        {slot.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <Button
+                            className="h-9 w-auto px-3 text-[11px]"
+                            variant="outline"
+                            onClick={() => void scheduleDelhiveryPickup()}
+                            disabled={
+                                !shipmentCreated || schedulePickup.isPending
+                            }
+                        >
+                            {schedulePickup.isPending
+                                ? "Adding..."
+                                : pickupScheduled || shipmentDispatched
+                                  ? "Added to Pickup"
+                                  : "Add to Pickup"}
+                        </Button>
+                    </div>
+                    {pickupScheduled ? (
+                        <div className="mx-3 mb-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] text-emerald-800">
+                            Pickup: {pickupRequest?.pickupDate as string}
+                            {typeof pickupRequest?.pickupTime === "string"
+                                ? ` at ${pickupRequest.pickupTime}`
+                                : ""}
+                            {pickupRequest?.pickupId
+                                ? ` · Request ID ${String(pickupRequest.pickupId)}`
+                                : ""}
+                        </div>
+                    ) : null}
+                </div>
+
+                <div className="flex flex-wrap justify-end gap-2 border-t border-slate-200 pt-3">
+                    {shipment?.trackingUrl ? (
+                        <a
+                            href={shipment.trackingUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:border-slate-300"
+                        >
+                            Open Tracking
+                        </a>
+                    ) : null}
+                    <Link
+                        href={`/dashboard/general/corporate-orders/${order.id}`}
+                        className="inline-flex h-8 items-center rounded-md border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:border-slate-300"
+                    >
+                        Order details
+                    </Link>
+                </div>
+
+                {shipmentBlockedReason ? (
+                    <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                        Assign a valid brand pickup location to continue.
+                    </div>
+                ) : null}
+
+                {shipmentCreated ? (
+                    <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                        Shipment created
+                        {shipment?.awbNumber ? (
+                            <>
+                                {" "}
+                                with AWB{" "}
+                                <span className="font-medium text-slate-900">
+                                    {shipment.awbNumber}
+                                </span>
+                            </>
+                        ) : null}
+                    </div>
+                ) : null}
+            </div>
         </div>
     );
 }
 
-function StepperCard({
-    step,
-    title,
-    description,
-    state,
+function DimensionInput({
+    label,
+    value,
+    onChange,
+    disabled,
 }: {
-    step: number;
-    title: string;
-    description: string;
-    state: "done" | "active" | "upcoming";
+    label: string;
+    value: string;
+    onChange: (value: string) => void;
+    disabled: boolean;
 }) {
-    const stateClasses =
-        state === "done"
-            ? "border-emerald-200 bg-emerald-50/70"
-            : state === "active"
-              ? "border-sky-200 bg-sky-50/70"
-              : "border-slate-200 bg-white";
-
     return (
-        <div className={`rounded-2xl border p-4 ${stateClasses}`}>
-            <div className="flex items-center gap-3">
-                <div className="flex size-9 items-center justify-center rounded-full border border-current/10 bg-white text-sm font-semibold text-slate-900">
-                    {step}
-                </div>
-                <div>
-                    <p className="text-sm font-semibold text-slate-900">{title}</p>
-                    <p className="mt-1 text-xs leading-5 text-slate-500">
-                        {description}
-                    </p>
-                </div>
-            </div>
-        </div>
+        <label className="w-28 space-y-1">
+            <span className="block text-[10px] font-medium text-slate-500">
+                {label}
+            </span>
+            <Input
+                className="h-9 py-1 text-xs"
+                type="number"
+                min="1"
+                placeholder="0"
+                value={value}
+                onChange={(event) => onChange(event.target.value)}
+                disabled={disabled}
+            />
+        </label>
     );
 }
 
 function InlineValue({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-xl border border-slate-200 bg-white p-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">
+        <div className="min-w-0 bg-white px-3 py-2.5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-slate-400">
                 {label}
             </p>
-            <p className="mt-2 text-sm font-medium text-slate-900">{value}</p>
+            <p className="mt-1 break-words text-[11px] font-medium leading-4 text-slate-900 [overflow-wrap:anywhere]">
+                {value}
+            </p>
         </div>
     );
 }

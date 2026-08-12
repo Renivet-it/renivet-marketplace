@@ -272,20 +272,6 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.MANAGE_ORDERS,
             },
             {
-                title: "Corporate Orders",
-                url: "/dashboard/general/corporate-orders",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
-                title: "Corporate Hub",
-                url: "/dashboard/general/corporate",
-                permissions:
-                    BitFieldSitePermission.VIEW_ORDERS |
-                    BitFieldSitePermission.MANAGE_ORDERS,
-            },
-            {
                 title: "Order Ops",
                 url: "/dashboard/general/order-ops",
                 permissions:
@@ -302,6 +288,27 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
             {
                 title: "Order Intent",
                 url: "/dashboard/general/order-intent",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+        ],
+    },
+    {
+        title: "Corporate Orders",
+        url: "#",
+        icon: "Briefcase",
+        items: [
+            {
+                title: "Corporate Orders",
+                url: "/dashboard/general/corporate-orders",
+                permissions:
+                    BitFieldSitePermission.VIEW_ORDERS |
+                    BitFieldSitePermission.MANAGE_ORDERS,
+            },
+            {
+                title: "Corporate Hub",
+                url: "/dashboard/general/corporate",
                 permissions:
                     BitFieldSitePermission.VIEW_ORDERS |
                     BitFieldSitePermission.MANAGE_ORDERS,

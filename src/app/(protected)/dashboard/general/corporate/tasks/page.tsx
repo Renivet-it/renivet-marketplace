@@ -1,4 +1,3 @@
-import { AdminPageIntro } from "@/components/corporate-platform/admin-design";
 import { AdminTaskCenter } from "@/components/corporate-platform/admin-task-center";
 import { CorporateTabs } from "@/components/corporate-platform/corporate-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
@@ -9,13 +8,16 @@ export default async function Page() {
 
     return (
         <DashShell>
-            <div className="space-y-6">
+            <div className="space-y-4">
                 <CorporateTabs />
-                <AdminPageIntro
-                    eyebrow="Operational Task Control"
-                    title="Assign, prioritize, and track corporate execution work"
-                    description="Manage due-date driven tasks across requests for quotation, finance, quality control, dispatch, and escalation response from one wide operational queue."
-                />
+                <header className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <h1 className="text-lg font-semibold text-slate-950">
+                        Task Control
+                    </h1>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Assign, prioritize and track operational work
+                    </p>
+                </header>
                 <AdminTaskCenter initialTasks={tasks} />
             </div>
         </DashShell>

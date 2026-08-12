@@ -202,7 +202,7 @@ export const corporateOrderSchema = z.object({
     id: z.string().uuid(),
     sequenceNo: z.number().int().positive(),
     publicOrderId: z.string().min(1),
-    userId: z.string().min(1),
+    userId: z.string().min(1).nullable(),
     quoteId: z.string().uuid().nullable().optional(),
     brandId: z.string().uuid().nullable().optional(),
     status: corporateOrderStatusSchema,

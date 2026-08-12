@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
+import { Eye } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -36,7 +37,13 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
         const query = search.trim().toLowerCase();
         if (!query) return initialTasks;
         return initialTasks.filter((task) =>
-            [task.taskType, task.entityType, task.status, task.priority, task.notes]
+            [
+                task.taskType,
+                task.entityType,
+                task.status,
+                task.priority,
+                task.notes,
+            ]
                 .filter(Boolean)
                 .join(" ")
                 .toLowerCase()
@@ -45,11 +52,11 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
     }, [initialTasks, search]);
 
     return (
-        <div className="space-y-6">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.75fr)]">
+        <div className="space-y-4">
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(340px,0.75fr)]">
                 <AdminPanel
                     title="Operational Task Queue"
-                    description="Search and scan active work across requests for quotation, finance, quality control, dispatch, and escalations."
+                    className="!rounded-2xl !p-4 [&>div+div]:!mt-3 [&_h2]:!text-sm"
                     actions={
                         <div className="w-full md:w-72">
                             <Input
@@ -61,19 +68,26 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                     }
                 >
                     {filteredTasks.length ? (
-                        <div className="space-y-4">
+                        <div className="space-y-2">
                             {filteredTasks.map((task) => (
                                 <div
                                     key={task.id}
-                                    className="rounded-[24px] border border-slate-200 bg-slate-50 p-5"
+                                    className="rounded-xl border border-slate-200 bg-slate-50 p-3"
                                 >
                                     <div className="flex flex-wrap items-center gap-2">
-                                        <StatusBadge tone={task.status === "open" ? "blue" : "slate"}>
+                                        <StatusBadge
+                                            tone={
+                                                task.status === "open"
+                                                    ? "blue"
+                                                    : "slate"
+                                            }
+                                        >
                                             {toLabel(task.status)}
                                         </StatusBadge>
                                         <StatusBadge
                                             tone={
-                                                task.priority === "critical" || task.priority === "high"
+                                                task.priority === "critical" ||
+                                                task.priority === "high"
                                                     ? "amber"
                                                     : "slate"
                                             }
@@ -84,17 +98,25 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                                             {toLabel(task.entityType)}
                                         </StatusBadge>
                                     </div>
-                                    <div className="mt-3 text-lg font-semibold text-slate-900">
+                                    <div className="mt-2 text-sm font-semibold text-slate-900">
                                         {toLabel(task.taskType)}
                                     </div>
-                                    <div className="mt-1 text-sm text-slate-500">
+                                    <div className="mt-1 text-xs text-slate-500">
                                         Entity reference {task.entityId}
-                                        {task.dueDate ? ` • Due ${task.dueDate}` : " • No due date"}
+                                        {task.dueDate
+                                            ? ` • Due ${task.dueDate}`
+                                            : " • No due date"}
                                     </div>
                                     {task.notes ? (
-                                        <div className="mt-3 text-sm leading-6 text-slate-600">
-                                            {task.notes}
-                                        </div>
+                                        <details className="mt-2">
+                                            <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 [&::-webkit-details-marker]:hidden">
+                                                <Eye className="size-3.5" />
+                                                Notes
+                                            </summary>
+                                            <p className="mt-2 border-t border-slate-200 pt-2 text-xs leading-5 text-slate-600">
+                                                {task.notes}
+                                            </p>
+                                        </details>
                                     ) : null}
                                 </div>
                             ))}
@@ -107,10 +129,10 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                     )}
                 </AdminPanel>
 
-                <div className="space-y-6">
+                <div className="space-y-4">
                     <AdminPanel
                         title="Create Operational Task"
-                        description="Create due-date driven tasks for quotation review, finance handoffs, quality control, dispatch, or escalation follow-up."
+                        className="!rounded-2xl !p-4 [&>div+div]:!mt-3 [&_h2]:!text-sm"
                     >
                         <div className="grid gap-3">
                             <LabelledInput
@@ -118,7 +140,10 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                                 placeholder="Task type"
                                 value={draft.taskType}
                                 onChange={(value) =>
-                                    setDraft((current) => ({ ...current, taskType: value }))
+                                    setDraft((current) => ({
+                                        ...current,
+                                        taskType: value,
+                                    }))
                                 }
                             />
                             <LabelledInput
@@ -126,7 +151,10 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                                 placeholder="Entity type"
                                 value={draft.entityType}
                                 onChange={(value) =>
-                                    setDraft((current) => ({ ...current, entityType: value }))
+                                    setDraft((current) => ({
+                                        ...current,
+                                        entityType: value,
+                                    }))
                                 }
                             />
                             <LabelledInput
@@ -134,7 +162,10 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                                 placeholder="Entity reference"
                                 value={draft.entityId}
                                 onChange={(value) =>
-                                    setDraft((current) => ({ ...current, entityId: value }))
+                                    setDraft((current) => ({
+                                        ...current,
+                                        entityId: value,
+                                    }))
                                 }
                             />
                             <LabelledInput
@@ -143,7 +174,10 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                                 type="date"
                                 value={draft.dueDate}
                                 onChange={(value) =>
-                                    setDraft((current) => ({ ...current, dueDate: value }))
+                                    setDraft((current) => ({
+                                        ...current,
+                                        dueDate: value,
+                                    }))
                                 }
                             />
                             <label className="space-y-2">
@@ -151,7 +185,7 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                                     Operational notes
                                 </span>
                                 <textarea
-                                    className="min-h-28 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                                    className="min-h-20 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
                                     placeholder="Explain the required action, owner context, or escalation need"
                                     value={draft.notes}
                                     onChange={(e) =>
@@ -177,20 +211,6 @@ export function AdminTaskCenter({ initialTasks }: { initialTasks: any[] }) {
                             >
                                 Create Operational Task
                             </Button>
-                        </div>
-                    </AdminPanel>
-
-                    <AdminPanel
-                        title="Workflow Emphasis"
-                        description="High-value operational lanes the task system should continue to cover."
-                    >
-                        <div className="grid grid-cols-2 gap-3 text-sm text-slate-600">
-                            <FocusTile label="Quotation Review" />
-                            <FocusTile label="Purchase Order Validation" />
-                            <FocusTile label="Quality Control Review" />
-                            <FocusTile label="Dispatch Readiness" />
-                            <FocusTile label="Refund Follow-Up" />
-                            <FocusTile label="Escalation Response" />
                         </div>
                     </AdminPanel>
                 </div>
@@ -222,14 +242,6 @@ function LabelledInput({
                 onChange={(e) => onChange(e.target.value)}
             />
         </label>
-    );
-}
-
-function FocusTile({ label }: { label: string }) {
-    return (
-        <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-center font-medium text-slate-700">
-            {label}
-        </div>
     );
 }
 

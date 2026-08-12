@@ -1,7 +1,6 @@
 "use client";
 
 import { CorporateOrderPage } from "@/components/corporate-orders/corporate-order-page";
-import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -13,21 +12,16 @@ import { trpc } from "@/lib/trpc/client";
 import { useUploadThing } from "@/lib/uploadthing";
 import { formatINR, handleClientError } from "@/lib/utils";
 import {
-    AlertTriangle,
     ArrowRight,
     ArrowUpRight,
     Building2,
     CheckCircle2,
-    Clock,
     Download,
-    Eye,
     FileText,
     Headphones,
     LockKeyhole,
     ShoppingCart,
-    Upload,
     X,
-    XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
 import Script from "next/script";
@@ -49,8 +43,9 @@ function ensureRazorpaySdk() {
             return;
         }
 
-        const existing = document.querySelector<HTMLScriptElement>(
-            'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+        const existing = Array.from(document.scripts).find(
+            (script) =>
+                script.src === "https://checkout.razorpay.com/v1/checkout.js"
         );
 
         if (existing) {
@@ -187,6 +182,17 @@ export function CustomerCorporateDashboard({
             },
             onError: (error) => handleClientError(error),
         });
+    const createRequestedPaymentOrder =
+        trpc.general.corporateOrders.createRequestedPaymentOrder.useMutation({
+            onError: (error) => handleClientError(error),
+        });
+    const confirmRequestedPayment =
+        trpc.general.corporateOrders.confirmRequestedPayment.useMutation({
+            onSuccess: async () => {
+                await utils.general.corporateOrders.listMyOrders.invalidate();
+            },
+            onError: (error) => handleClientError(error),
+        });
 
     const submitPo = async (quote: any) => {
         try {
@@ -286,6 +292,46 @@ export function CustomerCorporateDashboard({
 
     const payRemainingBalance = async (order: any) => {
         try {
+            if (order.paymentRequest) {
+                const created = await createRequestedPaymentOrder.mutateAsync({
+                    paymentRequestId: order.paymentRequest.id,
+                });
+                await ensureRazorpaySdk();
+                initializeRazorpayPayment({
+                    key: created.key,
+                    amount: created.amount,
+                    currency: created.currency,
+                    name: created.name,
+                    description: created.description,
+                    order_id: created.orderId,
+                    prefill: {
+                        name: order.contactPersonName,
+                        email: order.emailAddress,
+                        contact: order.mobileNumber,
+                    },
+                    theme: { color: "#5B9BD5" },
+                    handler: async (response: {
+                        razorpay_order_id: string;
+                        razorpay_payment_id: string;
+                        razorpay_signature: string;
+                    }) => {
+                        await confirmRequestedPayment.mutateAsync({
+                            paymentRequestId: order.paymentRequest.id,
+                            razorpayOrderId: response.razorpay_order_id,
+                            razorpayPaymentId: response.razorpay_payment_id,
+                            razorpaySignature: response.razorpay_signature,
+                        });
+                        toast.success(
+                            "Requested payment completed successfully"
+                        );
+                        window.location.href = `/profile/corporate-orders?confirmed=${order.id}`;
+                    },
+                    modal: {
+                        ondismiss: () => toast.message("Payment cancelled"),
+                    },
+                } as any);
+                return;
+            }
             const created = await createBalancePaymentOrder.mutateAsync({
                 corporateOrderId: order.id,
             });
@@ -340,7 +386,7 @@ export function CustomerCorporateDashboard({
                 <div>
                     <div className="flex items-start justify-between gap-5">
                         <div>
-                            <p className="text-[13px] font-medium text-[#1d5b47]">
+                            <p className="text-13 font-medium text-[#1d5b47]">
                                 Good afternoon,{" "}
                                 {initialProfile?.contactPerson?.split(" ")[0] ??
                                     "Dark"}{" "}
@@ -451,13 +497,13 @@ export function CustomerCorporateDashboard({
                         }
                     />
                     <div>
-                        <div className="flex items-center gap-2 text-[16px] font-bold text-[#182131]">
+                        <div className="flex items-center gap-2 text-16 font-bold text-[#182131]">
                             <span className="flex size-5 items-center justify-center rounded-full bg-[#1d5b47] text-white">
                                 <CheckCircle2 className="size-3.5" />
                             </span>
                             Next Steps
                         </div>
-                        <p className="mt-2 text-[13px] leading-5 text-[#687487]">
+                        <p className="mt-2 text-13 leading-5 text-[#687487]">
                             Once your quote is approved, you can continue with
                             your order.
                         </p>
@@ -540,38 +586,38 @@ export function CustomerCorporateDashboard({
                     >
                         <TabsTrigger
                             value="overview"
-                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-13 font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Overview
                         </TabsTrigger>
                         <TabsTrigger
                             value="requests"
-                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-13 font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Requests
                         </TabsTrigger>
                         <TabsTrigger
                             value="quotes"
-                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-13 font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Quotes
                         </TabsTrigger>
                         <TabsTrigger
                             value="orders"
-                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-13 font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Orders
                         </TabsTrigger>
                         <TabsTrigger
                             value="company"
-                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
+                            className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-13 font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                         >
                             Company
                         </TabsTrigger>
                         {unlockedQuotes.length ? (
                             <TabsTrigger
                                 value="order-setup"
-                                className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-[13px] font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
+                                className="rounded-none border-b-2 border-transparent bg-transparent py-3 text-13 font-medium text-[#697485] shadow-none data-[state=active]:border-[#1d5b47] data-[state=active]:bg-transparent data-[state=active]:text-[#1d5b47] data-[state=active]:shadow-none"
                             >
                                 Order Setup
                             </TabsTrigger>
@@ -788,7 +834,7 @@ export function CustomerCorporateDashboard({
                                         <div className="overflow-x-auto">
                                             <table className="w-full min-w-[860px] border-collapse text-left">
                                                 <thead className="border-b border-[#dbe3e9] bg-[#eef5f2]">
-                                                    <tr className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#45645a]">
+                                                    <tr className="text-11 font-bold uppercase tracking-[0.16em] text-[#45645a]">
                                                         <th className="whitespace-nowrap px-5 py-4">
                                                             RFQ Number
                                                         </th>
@@ -924,7 +970,7 @@ export function CustomerCorporateDashboard({
                                         <div className="overflow-x-auto">
                                             <table className="w-full min-w-[900px] border-collapse text-left">
                                                 <thead className="border-b border-[#dbe3e9] bg-[#eef5f2]">
-                                                    <tr className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#45645a]">
+                                                    <tr className="text-11 font-bold uppercase tracking-[0.16em] text-[#45645a]">
                                                         <th className="whitespace-nowrap px-5 py-4">
                                                             Quote Number
                                                         </th>
@@ -1162,35 +1208,35 @@ export function CustomerCorporateDashboard({
                     >
                         <SurfacePanel
                             title="Corporate Orders"
-                            description="Review final order status, payment progress, remaining balance, and full order details from one place."
+                            description="Track payment and fulfillment status."
                             className="!rounded-none border-[#dbe3e9]"
                         >
                             {initialOrders.length ? (
                                 <div className="space-y-5">
                                     <div className="overflow-hidden !rounded-none border border-[#dbe3e9] bg-white shadow-[0_8px_24px_rgba(20,45,60,0.06)]">
                                         <div className="overflow-x-auto">
-                                            <table className="w-full min-w-[920px] border-collapse text-left">
+                                            <table className="w-full min-w-[860px] table-fixed border-collapse text-left">
                                                 <thead className="border-b border-[#dbe3e9] bg-[#eef5f2]">
-                                                    <tr className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#45645a]">
-                                                        <th className="whitespace-nowrap px-5 py-4">
+                                                    <tr className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#45645a]">
+                                                        <th className="w-[23%] whitespace-nowrap px-4 py-3">
                                                             Order ID
                                                         </th>
-                                                        <th className="whitespace-nowrap px-5 py-4">
+                                                        <th className="w-[10%] whitespace-nowrap px-4 py-3">
                                                             Value
                                                         </th>
-                                                        <th className="whitespace-nowrap px-5 py-4">
+                                                        <th className="w-[10%] whitespace-nowrap px-4 py-3">
                                                             Paid
                                                         </th>
-                                                        <th className="whitespace-nowrap px-5 py-4">
+                                                        <th className="w-[10%] whitespace-nowrap px-4 py-3">
                                                             Balance
                                                         </th>
-                                                        <th className="whitespace-nowrap px-5 py-4">
+                                                        <th className="w-[18%] whitespace-nowrap px-4 py-3">
                                                             Payment
                                                         </th>
-                                                        <th className="whitespace-nowrap px-5 py-4">
+                                                        <th className="w-[17%] whitespace-nowrap px-4 py-3">
                                                             Fulfillment
                                                         </th>
-                                                        <th className="whitespace-nowrap px-5 py-4 text-right">
+                                                        <th className="w-[12%] whitespace-nowrap px-4 py-3 text-right">
                                                             Action
                                                         </th>
                                                     </tr>
@@ -1216,13 +1262,13 @@ export function CustomerCorporateDashboard({
                                                                             : "bg-white"
                                                                     }`}
                                                                 >
-                                                                    <td className="px-5 py-4">
-                                                                        <div className="text-sm font-bold text-[#182131]">
+                                                                    <td className="px-4 py-3 align-middle">
+                                                                        <div className="truncate text-xs font-bold text-[#182131]">
                                                                             {
                                                                                 order.publicOrderId
                                                                             }
                                                                         </div>
-                                                                        <div className="mt-1 text-xs text-[#637184]">
+                                                                        <div className="mt-0.5 text-[11px] text-[#637184]">
                                                                             {new Date(
                                                                                 order.createdAt
                                                                             ).toLocaleDateString(
@@ -1230,23 +1276,22 @@ export function CustomerCorporateDashboard({
                                                                             )}
                                                                         </div>
                                                                     </td>
-                                                                    <td className="px-5 py-4 text-sm font-semibold text-[#182131]">
+                                                                    <td className="px-4 py-3 align-middle text-xs font-semibold text-[#182131]">
                                                                         {formatINR(
                                                                             order.totalPaise
                                                                         )}
                                                                     </td>
-                                                                    <td className="px-5 py-4 text-sm text-[#344054]">
+                                                                    <td className="px-4 py-3 align-middle text-xs text-[#344054]">
                                                                         {formatINR(
-                                                                            order.totalPaise -
-                                                                                order.balanceDuePaise
+                                                                            order.advancePaidPaise
                                                                         )}
                                                                     </td>
-                                                                    <td className="px-5 py-4 text-sm font-semibold text-[#182131]">
+                                                                    <td className="px-4 py-3 align-middle text-xs font-semibold text-[#182131]">
                                                                         {formatINR(
                                                                             order.balanceDuePaise
                                                                         )}
                                                                     </td>
-                                                                    <td className="px-5 py-4">
+                                                                    <td className="px-4 py-3 align-middle">
                                                                         <StatusChip
                                                                             label={
                                                                                 hasBalance
@@ -1255,14 +1300,14 @@ export function CustomerCorporateDashboard({
                                                                             }
                                                                         />
                                                                     </td>
-                                                                    <td className="px-5 py-4">
+                                                                    <td className="px-4 py-3 align-middle">
                                                                         <StatusChip
                                                                             label={toLabel(
                                                                                 order.status
                                                                             )}
                                                                         />
                                                                     </td>
-                                                                    <td className="px-5 py-4 text-right">
+                                                                    <td className="px-4 py-3 text-right align-middle">
                                                                         <div
                                                                             className="flex flex-wrap items-center justify-end gap-2"
                                                                             onClick={(
@@ -1273,7 +1318,7 @@ export function CustomerCorporateDashboard({
                                                                         >
                                                                             <button
                                                                                 type="button"
-                                                                                className="inline-flex h-10 items-center justify-center rounded border border-[#1d6a50] px-3 text-xs font-semibold text-[#1d6a50] transition-colors hover:bg-[#1d6a50] hover:text-white"
+                                                                                className="inline-flex h-8 items-center justify-center rounded border border-[#1d6a50] px-3 text-[11px] font-semibold text-[#1d6a50] transition-colors hover:bg-[#1d6a50] hover:text-white"
                                                                                 onClick={() => {
                                                                                     setSelectedOrderId(
                                                                                         order.id
@@ -1758,7 +1803,7 @@ function ActionCard({
             <div
                 className={
                     referencePrimary || referenceSecondary
-                        ? "ml-16 mt-[-3rem] min-h-[52px] text-[17px] font-bold leading-6 text-[#1b2536]"
+                        ? "-mt-12 ml-16 min-h-[52px] text-[17px] font-bold leading-6 text-[#1b2536]"
                         : "mt-3 text-2xl font-semibold leading-tight text-slate-900"
                 }
             >
@@ -1767,7 +1812,7 @@ function ActionCard({
             <div
                 className={
                     referencePrimary || referenceSecondary
-                        ? "ml-16 mt-1 min-h-[66px] text-[13px] leading-5 text-[#687487]"
+                        ? "ml-16 mt-1 min-h-[66px] text-13 leading-5 text-[#687487]"
                         : "mt-3 text-sm leading-relaxed text-slate-600"
                 }
             >
@@ -1776,9 +1821,9 @@ function ActionCard({
             <div
                 className={
                     referencePrimary
-                        ? "mt-5 inline-flex items-center gap-2 rounded-md bg-[#1d5b47] px-5 py-2.5 text-[13px] font-semibold text-white transition hover:bg-[#164d3d]"
+                        ? "mt-5 inline-flex items-center gap-2 rounded-md bg-[#1d5b47] px-5 py-2.5 text-13 font-semibold text-white transition hover:bg-[#164d3d]"
                         : referenceSecondary
-                          ? "mt-5 inline-flex items-center gap-2 rounded-md border border-[#e1e5e8] bg-white px-5 py-2.5 text-[13px] font-semibold text-[#182131] shadow-sm transition hover:border-[#cfd7dc]"
+                          ? "mt-5 inline-flex items-center gap-2 rounded-md border border-[#e1e5e8] bg-white px-5 py-2.5 text-13 font-semibold text-[#182131] shadow-sm transition hover:border-[#cfd7dc]"
                           : dark
                             ? "btn-liquid btn-liquid-primary mt-6 inline-flex rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
                             : "btn-liquid btn-liquid-secondary mt-6 inline-flex rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-wider"
@@ -1810,12 +1855,12 @@ function SideInfoCard({
                 <span className="text-[#1d5b47]">{icon}</span>
                 {title}
             </div>
-            <p className="mt-4 rounded-lg border border-dashed border-[#55d1a8] bg-[#f4fbf7] px-3 py-4 text-center text-[12px] leading-5 text-[#687487]">
+            <p className="mt-4 rounded-lg border border-dashed border-[#55d1a8] bg-[#f4fbf7] px-3 py-4 text-center text-12 leading-5 text-[#687487]">
                 {body}
             </p>
             <a
                 href="#"
-                className="mt-3 inline-flex items-center gap-1 text-[12px] font-semibold text-[#1d5b47] hover:underline"
+                className="mt-3 inline-flex items-center gap-1 text-12 font-semibold text-[#1d5b47] hover:underline"
             >
                 {action} <ArrowRight className="size-3.5" />
             </a>
@@ -1834,7 +1879,7 @@ function InfoRow({
 }) {
     return (
         <div
-            className={`flex items-center gap-3 rounded-lg border border-[#e1e5e8] bg-white px-3 py-3 text-[12px] leading-5 shadow-[0_4px_12px_rgba(25,42,56,0.03)] ${muted ? "text-[#687487]" : "text-[#2b4f43]"}`}
+            className={`flex items-center gap-3 rounded-lg border border-[#e1e5e8] bg-white p-3 text-12 leading-5 shadow-[0_4px_12px_rgba(25,42,56,0.03)] ${muted ? "text-[#687487]" : "text-[#2b4f43]"}`}
         >
             {icon}
             <span>{text}</span>
@@ -1872,16 +1917,16 @@ function ActivityCard({
                     {icon}
                 </span>
                 <span>
-                    <span className="block text-[13px] font-bold text-[#1d2738]">
+                    <span className="block text-13 font-bold text-[#1d2738]">
                         {title}
                     </span>
-                    <span className="mt-1 block text-[11px] leading-4 text-[#788293]">
+                    <span className="mt-1 block text-11 leading-4 text-[#788293]">
                         {description}
                     </span>
                 </span>
             </div>
             <span
-                className={`mt-4 flex min-h-[88px] items-center justify-center rounded-lg border border-dashed px-4 text-center text-[12px] leading-5 text-[#697485] ${toneStyles}`}
+                className={`mt-4 flex min-h-[88px] items-center justify-center rounded-lg border border-dashed px-4 text-center text-12 leading-5 text-[#697485] ${toneStyles}`}
             >
                 {empty}
             </span>
@@ -1891,11 +1936,11 @@ function ActivityCard({
 
 function StatusRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="rounded-[20px] border border-slate-200 bg-slate-50/50 p-4 shadow-[0_2px_8px_rgba(0,0,0,0.01)]">
+        <div className="border border-slate-200 bg-slate-50/50 px-3 py-2.5">
             <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                 {label}
             </div>
-            <div className="mt-1.5 text-sm font-semibold leading-relaxed text-slate-900">
+            <div className="mt-1 text-sm font-semibold text-slate-900">
                 {value}
             </div>
         </div>
@@ -2674,8 +2719,8 @@ function CustomerCorporateOrderDetailPanel({
     };
 
     return (
-        <div className="rounded-[26px] border border-[#e8e5db] bg-[linear-gradient(180deg,#ffffff_0%,#faf9f5_100%)] p-6 shadow-[0_12px_36px_rgba(49,58,31,0.06)]">
-            <div className="mb-5 flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-start md:justify-between">
+        <div className="border border-[#dbe3e9] bg-white p-4 shadow-[0_8px_24px_rgba(20,45,60,0.05)] sm:p-5">
+            <div className="mb-4 flex flex-col gap-3 border-b border-slate-100 pb-3 md:flex-row md:items-center md:justify-between">
                 <div>
                     <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#4b7c37]">
                         Selected Order Profile
@@ -2699,7 +2744,7 @@ function CustomerCorporateOrderDetailPanel({
                 </div>
             </div>
 
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                 <StatusRow
                     label="Quantity Ordered"
                     value={`${order.quantity} units`}
@@ -2718,24 +2763,24 @@ function CustomerCorporateOrderDetailPanel({
                 />
             </div>
 
-            <div className="mt-6 flex flex-col gap-4 border-t border-slate-100 pt-5">
-                <div className="w-full rounded-[22px] border border-slate-100 bg-white p-4 text-sm font-medium leading-relaxed text-slate-500">
+            <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4">
+                <div className="w-full border border-slate-100 bg-slate-50/60 px-3 py-2.5 text-xs font-medium leading-5 text-slate-600">
                     {hasBalance
                         ? "This order has a remaining outstanding balance. You can complete the payment via card or bank transfer directly from this dashboard."
                         : "This order is fully paid. Production tracking, quality approvals, and freight updates are displayed live below."}
                 </div>
 
-                <div className="flex w-full flex-wrap items-center justify-start gap-2">
+                <div className="flex w-full flex-wrap items-center gap-2">
                     <a
                         href={`/api/corporate-orders/${order.id}/summary.pdf`}
-                        className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
+                        className="inline-flex h-9 items-center justify-center rounded border border-slate-200 bg-white px-4 text-[10px] font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
                     >
                         <span>Download Summary PDF</span>
                     </a>
                     {order.advancePaidPaise > 0 ? (
                         <a
                             href={`/api/corporate-orders/${order.id}/receipt-voucher.pdf`}
-                            className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
+                            className="inline-flex h-9 items-center justify-center rounded border border-slate-200 bg-white px-4 text-[10px] font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
                         >
                             <Download className="mr-2 size-4" />
                             <span>Receipt Voucher</span>
@@ -2744,7 +2789,7 @@ function CustomerCorporateOrderDetailPanel({
                     {invoice ? (
                         <a
                             href={`/api/corporate-orders/${order.id}/invoice.pdf`}
-                            className="inline-flex h-11 items-center justify-center rounded-full border border-[#07345f] bg-[#07345f] px-6 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-[#0b477f]"
+                            className="inline-flex h-9 items-center justify-center rounded border border-[#07345f] bg-[#07345f] px-4 text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-[#0b477f]"
                         >
                             <Download className="mr-2 size-4" />
                             <span>Download Tax Invoice</span>
@@ -2753,7 +2798,7 @@ function CustomerCorporateOrderDetailPanel({
                     {order.deliveryChallan ? (
                         <a
                             href={`/api/corporate-orders/${order.id}/delivery-challan.pdf`}
-                            className="inline-flex h-11 items-center justify-center rounded-full border border-slate-200 bg-white px-6 text-xs font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
+                            className="inline-flex h-9 items-center justify-center rounded border border-slate-200 bg-white px-4 text-[10px] font-bold uppercase tracking-wider text-slate-700 transition hover:border-slate-400"
                         >
                             <Download className="mr-2 size-4" />
                             <span>Delivery Challan</span>
@@ -2763,36 +2808,40 @@ function CustomerCorporateOrderDetailPanel({
                         <button
                             type="button"
                             onClick={() => onPayRemaining(order)}
-                            className="btn-liquid btn-liquid-primary inline-flex rounded-full px-6 py-3 text-xs font-bold uppercase tracking-wider"
+                            className="btn-liquid btn-liquid-primary inline-flex h-9 items-center rounded px-4 text-[10px] font-bold uppercase tracking-wider"
                         >
-                            <span>Pay Remaining Balance</span>
+                            <span>
+                                {order.paymentRequest
+                                    ? `Pay ${formatINR(order.paymentRequest.amountPaise)}`
+                                    : "Pay Remaining Balance"}
+                            </span>
                         </button>
                     ) : null}
                 </div>
             </div>
 
             {/* Embedded details for active order */}
-            <div className="mt-8">
-                <div className="mb-4 text-sm font-bold uppercase tracking-wider text-slate-900">
+            <div className="mt-6">
+                <div className="mb-2 text-xs font-bold uppercase tracking-wider text-slate-900">
                     Production & Delivery Status
                 </div>
-                <div className="space-y-3 rounded-2xl border border-slate-100 bg-white p-5">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">
-                            Signatory Details:
-                        </span>
-                        <span className="font-semibold text-slate-800">
-                            {order.contactPersonName} ({order.emailAddress})
-                        </span>
+                <div className="overflow-hidden border border-slate-200 bg-white">
+                    <div className="grid border-b border-slate-100 sm:grid-cols-[180px_minmax(0,1fr)]">
+                        <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Contact
+                        </div>
+                        <div className="px-4 py-3 text-xs font-semibold text-slate-800">
+                            {order.contactPersonName} · {order.emailAddress}
+                        </div>
                     </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-slate-400">
-                            Delivery Location:
-                        </span>
-                        <span className="max-w-[400px] text-right font-semibold text-slate-800">
+                    <div className="grid sm:grid-cols-[180px_minmax(0,1fr)]">
+                        <div className="bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                            Delivery location
+                        </div>
+                        <div className="px-4 py-3 text-xs font-semibold leading-5 text-slate-800">
                             {formatCorporateDeliveryAddress(order) ||
                                 "No address specified"}
-                        </span>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -2866,7 +2915,7 @@ function CustomerCorporateOrderDetailPanel({
                             Replacement Notes
                         </label>
                         <textarea
-                            className="min-h-28 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 outline-none transition focus:border-slate-400"
+                            className="min-h-28 w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-700 outline-none transition focus:border-slate-400"
                             placeholder="Tell us what went wrong and which pieces need to be replaced."
                             value={reasonDetails}
                             onChange={(e) => setReasonDetails(e.target.value)}
@@ -2886,7 +2935,7 @@ function CustomerCorporateOrderDetailPanel({
                                     Array.from(e.target.files ?? []).slice(0, 6)
                                 )
                             }
-                            className="block w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 px-3 py-3 text-sm text-slate-600"
+                            className="block w-full rounded-xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-600"
                         />
                         <p className="text-xs text-slate-500">
                             Upload clear issue photos. Maximum 6 images.
@@ -2974,7 +3023,7 @@ function CustomerCorporateOrderDetailPanel({
                                     ) : null}
                                     {request.adminNote ? (
                                         <div className="mt-3 rounded-xl border border-slate-200 bg-white p-3">
-                                            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">
+                                            <div className="text-11 font-bold uppercase tracking-[0.14em] text-slate-400">
                                                 Admin Note
                                             </div>
                                             <p className="mt-2 text-sm text-slate-700">

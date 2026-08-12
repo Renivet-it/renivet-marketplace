@@ -8,6 +8,7 @@ import {
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { handleClientError } from "@/lib/utils";
+import { Eye } from "lucide-react";
 import { toast } from "sonner";
 
 export function AdminReportCenter({ reports }: { reports: any[] }) {
@@ -21,22 +22,23 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
     });
 
     return (
-        <div className="space-y-6">
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.05fr)_minmax(0,0.95fr)]">
+        <div className="space-y-4">
+            <div>
                 <AdminPanel
                     title="Generate Reports"
-                    description="Trigger recurring operational and leadership reports from a clearer reporting center instead of mixing actions into generic cards."
+                    className="!rounded-2xl !p-4 [&>div+div]:!mt-3 [&_h2]:!text-sm"
                 >
-                    <div className="grid gap-4 md:grid-cols-3">
+                    <div className="grid gap-3 md:grid-cols-3">
                         <ReportAction
                             title="Daily Operations Summary"
                             description="Generate the current operations checkpoint across requests, orders, and pending queue actions."
                             action={
                                 <Button
-                                    className="w-full whitespace-normal h-auto py-2.5 min-h-[40px]"
+                                    className="h-auto min-h-[40px] w-full whitespace-normal py-2.5"
                                     onClick={() =>
                                         generate.mutate({
-                                            reportType: "daily_operations_summary",
+                                            reportType:
+                                                "daily_operations_summary",
                                         })
                                     }
                                 >
@@ -50,7 +52,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                             action={
                                 <Button
                                     variant="outline"
-                                    className="w-full whitespace-normal h-auto py-2.5 min-h-[40px]"
+                                    className="h-auto min-h-[40px] w-full whitespace-normal py-2.5"
                                     onClick={() =>
                                         generate.mutate({
                                             reportType: "weekly_sla_compliance",
@@ -67,10 +69,11 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                             action={
                                 <Button
                                     variant="outline"
-                                    className="w-full whitespace-normal h-auto py-2.5 min-h-[40px]"
+                                    className="h-auto min-h-[40px] w-full whitespace-normal py-2.5"
                                     onClick={() =>
                                         generate.mutate({
-                                            reportType: "monthly_corporate_review",
+                                            reportType:
+                                                "monthly_corporate_review",
                                         })
                                     }
                                 >
@@ -80,40 +83,37 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                         />
                     </div>
                 </AdminPanel>
- 
-                <AdminPanel
-                    title="Reporting Coverage"
-                    description="Visible reporting lanes help the team understand what the platform is expected to surface over time."
-                >
-                    <div className="grid grid-cols-2 gap-3 text-sm text-slate-600">
-                        <CoveragePill label="Demand Summary" />
-                        <CoveragePill label="SLA Compliance" />
-                        <CoveragePill label="Dispatch Readiness" />
-                        <CoveragePill label="Collections Health" />
-                        <CoveragePill label="Refund Pressure" />
-                        <CoveragePill label="Settlement Oversight" />
-                    </div>
-                </AdminPanel>
             </div>
- 
+
             <AdminPanel
                 title="Report History"
-                description="Separate report generation from report history so admins can quickly tell what has already been logged."
+                className="!rounded-2xl !p-4 [&>div+div]:!mt-3 [&_h2]:!text-sm"
             >
                 {reports.length ? (
                     <div className="overflow-x-auto">
                         <table className="w-full min-w-[860px] text-left text-sm">
                             <thead className="border-b border-slate-200 text-slate-500">
                                 <tr>
-                                    <th className="px-4 py-3 font-semibold">Report Type</th>
-                                    <th className="px-4 py-3 font-semibold">Generated Date</th>
-                                    <th className="px-4 py-3 font-semibold">File Output</th>
-                                    <th className="px-4 py-3 font-semibold">Status</th>
+                                    <th className="px-4 py-3 font-semibold">
+                                        Report Type
+                                    </th>
+                                    <th className="px-4 py-3 font-semibold">
+                                        Generated Date
+                                    </th>
+                                    <th className="px-4 py-3 font-semibold">
+                                        File Output
+                                    </th>
+                                    <th className="px-4 py-3 font-semibold">
+                                        Status
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
                                 {reports.map((report) => (
-                                    <tr key={report.id} className="border-b border-slate-100">
+                                    <tr
+                                        key={report.id}
+                                        className="border-b border-slate-100"
+                                    >
                                         <td className="px-4 py-4 font-medium text-slate-900">
                                             {report.reportType}
                                         </td>
@@ -124,8 +124,16 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
                                             {report.fileUrl || "Not attached"}
                                         </td>
                                         <td className="px-4 py-4">
-                                            <StatusBadge tone={report.generatedAt ? "green" : "amber"}>
-                                                {report.generatedAt ? "Logged" : "Pending"}
+                                            <StatusBadge
+                                                tone={
+                                                    report.generatedAt
+                                                        ? "green"
+                                                        : "amber"
+                                                }
+                                            >
+                                                {report.generatedAt
+                                                    ? "Logged"
+                                                    : "Pending"}
                                             </StatusBadge>
                                         </td>
                                     </tr>
@@ -143,7 +151,7 @@ export function AdminReportCenter({ reports }: { reports: any[] }) {
         </div>
     );
 }
- 
+
 function ReportAction({
     title,
     description,
@@ -154,18 +162,18 @@ function ReportAction({
     action: React.ReactNode;
 }) {
     return (
-        <div className="flex flex-col h-full rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-            <div className="text-lg font-semibold text-slate-900">{title}</div>
-            <div className="mt-2 text-sm leading-6 text-slate-600">{description}</div>
-            <div className="mt-auto pt-4">{action}</div>
-        </div>
-    );
-}
-
-function CoveragePill({ label }: { label: string }) {
-    return (
-        <div className="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-center font-medium text-slate-700">
-            {label}
+        <div className="flex h-full flex-col rounded-xl border border-slate-200 bg-slate-50 p-3">
+            <div className="text-sm font-semibold text-slate-900">{title}</div>
+            <details className="mt-2">
+                <summary className="inline-flex cursor-pointer list-none items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-slate-900 [&::-webkit-details-marker]:hidden">
+                    <Eye className="size-3.5" />
+                    Details
+                </summary>
+                <p className="mt-2 border-t border-slate-200 pt-2 text-xs leading-5 text-slate-600">
+                    {description}
+                </p>
+            </details>
+            <div className="mt-auto pt-3">{action}</div>
         </div>
     );
 }

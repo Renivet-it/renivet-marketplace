@@ -12,6 +12,7 @@ import {
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
 import { corporateOrderService } from "@/lib/services/corporate-order";
+import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
@@ -31,21 +32,25 @@ function address(parts: Array<string | null | undefined>) {
 }
 
 export async function GET(
-    _request: Request,
+    request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
         const { userId } = await auth();
-        if (!userId) {
+        const { id } = await params;
+        const paymentToken = new URL(request.url).searchParams.get("paymentToken");
+        const guestAuthorized = paymentToken
+            ? await corporatePaymentRequestService.authorizeReceipt(paymentToken, id).catch(() => false)
+            : false;
+        if (!userId && !guestAuthorized) {
             return NextResponse.json(
                 { message: "Unauthorized" },
                 { status: 401 }
             );
         }
 
-        const { id } = await params;
         const order = await corporateOrderService.getOrderById(id);
-        const user = await userCache.get(userId);
+        const user = userId ? await userCache.get(userId) : null;
         const permissions = user
             ? getUserPermissions(user.roles).sitePermissions
             : 0;
@@ -53,7 +58,7 @@ export async function GET(
             BitFieldSitePermission.VIEW_ORDERS,
         ]);
 
-        if (!canViewAdmin && order.userId !== userId) {
+        if (!guestAuthorized && !canViewAdmin && order.userId !== userId) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 });
         }
 

@@ -14,6 +14,7 @@ import {
     corporateActivityTimeline,
     corporateAdminAuditLogs,
     corporateBrandAuditLogs,
+    corporateBrandTaxInvoices,
     corporateDeliveryChallans,
     corporateDocuments,
     corporateEscalations,
@@ -43,8 +44,10 @@ import {
     corporateShipments,
     corporateTasks,
     corporateTaxInvoices,
+    corporateVendorPurchaseOrders,
     packingTypes,
     products,
+    users,
 } from "@/lib/db/schema";
 import { createOrder } from "@/lib/delhivery/orders";
 import { schedulePickup } from "@/lib/delhivery/pickup";
@@ -62,6 +65,7 @@ import {
     gstStateCode,
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
+import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import {
     convertValueToLabel,
     generatePickupLocationCode,
@@ -69,7 +73,14 @@ import {
 } from "@/lib/utils";
 import { CorporateOrderWorkflowStatus } from "@/lib/validations/corporate-order";
 import {
+    corporateAdminBuyerProfileInputSchema,
+    corporateAdminManualQuoteInputSchema,
+    corporateAdminOfflinePaymentInputSchema,
+    corporateAdminPaymentRequestInputSchema,
+    corporateAdminPurchaseOrderInputSchema,
     corporateApprovedQuoteOrderInputSchema,
+    corporateBrandInvoiceUploadInputSchema,
+    corporateBrandTaxInvoiceInputSchema,
     corporateCatalogListInputSchema,
     corporateDashboardSummarySchema,
     corporateForwardOrderInputSchema,
@@ -101,6 +112,7 @@ import {
     inArray,
     like,
     notInArray,
+    sql,
 } from "drizzle-orm";
 
 const corporateReplacementReasonLabels = {
@@ -230,11 +242,10 @@ class CorporatePlatformService {
         const deliveryDateFeasible = purchaseOrder.deliveryDate
             ? new Date(purchaseOrder.deliveryDate) >= today
             : false;
-        const productScopeMatches = !!purchaseOrder.productScopeSummary?.trim();
-        const authorizedSignatoryPresent = !!(
-            purchaseOrder.authorizedSignatoryConfirmed &&
-            purchaseOrder.authorizedSignatoryName?.trim()
-        );
+        // The approved quote is the source of truth for scope. Customer POs do
+        // not require a separate scope declaration or authorized-signatory field.
+        const productScopeMatches = true;
+        const authorizedSignatoryPresent = true;
 
         const issues = [
             companyNameMatches
@@ -246,12 +257,6 @@ class CorporatePlatformService {
             deliveryDateFeasible
                 ? null
                 : "Delivery date is missing or not feasible",
-            productScopeMatches
-                ? null
-                : "Product scope confirmation is missing",
-            authorizedSignatoryPresent
-                ? null
-                : "Authorized signatory details are missing",
             purchaseOrder.uploadedFileUrl
                 ? null
                 : "Purchase order document is missing",
@@ -560,7 +565,7 @@ class CorporatePlatformService {
             advanceAmountPaise: number;
             balanceAmountPaise: number;
             profile?: {
-                userId: string;
+                userId: string | null;
                 companyName: string;
                 contactPerson: string;
                 email: string;
@@ -575,6 +580,29 @@ class CorporatePlatformService {
             productScopeSummary?: string | null;
             customerNotes?: string | null;
             internalNotes?: string | null;
+            orderSetup?: {
+                companyName: string;
+                contactPersonName: string;
+                emailAddress: string;
+                mobileNumber: string;
+                gstNumber?: string | null;
+                deliveryCountry: string;
+                deliveryCity: string;
+                deliveryPincode: string;
+                deliveryAddress: string;
+                brandingNotes?: string | null;
+                productTypeId?: string | null;
+                gsmOptionId?: string | null;
+                fabricCompositionId?: string | null;
+                colorOptionIds?: string[];
+                customColorRequest?: string | null;
+                logoLocationIds?: string[];
+                printMethodId?: string | null;
+                extraChargeRuleIds?: string[];
+                sizeBreakdown: Record<string, number>;
+                artworkFile?: Record<string, unknown> | null;
+                employeeSheetFile?: Record<string, unknown> | null;
+            };
         }
     ) {
         if (!quote.profile) {
@@ -584,7 +612,6 @@ class CorporatePlatformService {
                     "Cannot create enterprise order without a linked buyer profile",
             });
         }
-
         const taxableValue = quote.subtotalPaise + quote.customizationCostPaise;
         const gstRateBps = taxableValue
             ? Math.round((quote.gstAmountPaise / taxableValue) * 10000)
@@ -592,6 +619,53 @@ class CorporatePlatformService {
         const deliveryDetails = fillCorporateDeliveryAddressDefaults(
             extractCorporateDeliveryAddress(quote.profile.shippingAddress)
         );
+        const setup = context.orderSetup;
+        const companyName = setup?.companyName ?? quote.profile.companyName;
+        const contactPersonName =
+            setup?.contactPersonName ?? quote.profile.contactPerson;
+        const emailAddress = setup?.emailAddress ?? quote.profile.email;
+        const mobileNumber = setup?.mobileNumber ?? quote.profile.phone;
+        const gstNumber = setup?.gstNumber ?? quote.profile.gstNumber ?? null;
+        const orderDelivery = setup
+            ? {
+                  deliveryCountry: setup.deliveryCountry,
+                  deliveryCity: setup.deliveryCity,
+                  deliveryPincode: setup.deliveryPincode,
+                  deliveryAddress: setup.deliveryAddress,
+              }
+            : deliveryDetails;
+        const selectedProductTypeId =
+            setup?.productTypeId ?? quote.productTypeId;
+        const selectedGsmOptionId = setup?.gsmOptionId ?? quote.gsmOptionId;
+        const selectedFabricCompositionId =
+            setup?.fabricCompositionId ?? quote.fabricCompositionId;
+        const [selectedProductType, selectedGsmOption, selectedFabric] =
+            await Promise.all([
+                selectedProductTypeId
+                    ? db.query.corporateProductTypes.findFirst({
+                          where: eq(
+                              corporateProductTypes.id,
+                              selectedProductTypeId
+                          ),
+                      })
+                    : null,
+                selectedGsmOptionId
+                    ? db.query.corporateGsmOptions.findFirst({
+                          where: eq(
+                              corporateGsmOptions.id,
+                              selectedGsmOptionId
+                          ),
+                      })
+                    : null,
+                selectedFabricCompositionId
+                    ? db.query.corporateFabricCompositions.findFirst({
+                          where: eq(
+                              corporateFabricCompositions.id,
+                              selectedFabricCompositionId
+                          ),
+                      })
+                    : null,
+            ]);
 
         const createdOrder = await db
             .insert(corporateOrders)
@@ -600,43 +674,46 @@ class CorporatePlatformService {
                 userId: quote.profile.userId,
                 quoteId: quote.id,
                 brandId: quote.brandId,
-                status: "under_review",
+                status: "payment_pending",
                 paymentStatus: "pending",
-                companyName: quote.profile.companyName,
-                contactPersonName: quote.profile.contactPerson,
-                emailAddress: quote.profile.email,
-                mobileNumber: quote.profile.phone,
-                gstNumber: quote.profile.gstNumber ?? null,
-                deliveryCountry: deliveryDetails.deliveryCountry,
-                deliveryCity: deliveryDetails.deliveryCity,
-                deliveryPincode: deliveryDetails.deliveryPincode,
-                deliveryAddress: deliveryDetails.deliveryAddress,
+                companyName,
+                contactPersonName,
+                emailAddress,
+                mobileNumber,
+                gstNumber,
+                deliveryCountry: orderDelivery.deliveryCountry,
+                deliveryCity: orderDelivery.deliveryCity,
+                deliveryPincode: orderDelivery.deliveryPincode,
+                deliveryAddress: orderDelivery.deliveryAddress,
                 numberOfEmployees: quote.quantity,
                 employeeCount: quote.quantity,
                 quantity: quote.quantity,
-                sizeBreakdown: {},
+                sizeBreakdown: setup?.sizeBreakdown ?? {},
                 employeeRows: [],
                 companySnapshot: {
-                    companyName: quote.profile.companyName,
-                    contactPersonName: quote.profile.contactPerson,
-                    emailAddress: quote.profile.email,
-                    mobileNumber: quote.profile.phone,
-                    gstNumber: quote.profile.gstNumber ?? null,
-                    deliveryCountry: deliveryDetails.deliveryCountry,
-                    deliveryCity: deliveryDetails.deliveryCity,
-                    deliveryPincode: deliveryDetails.deliveryPincode,
-                    deliveryAddress: deliveryDetails.deliveryAddress,
+                    companyName,
+                    contactPersonName,
+                    emailAddress,
+                    mobileNumber,
+                    gstNumber,
+                    deliveryCountry: orderDelivery.deliveryCountry,
+                    deliveryCity: orderDelivery.deliveryCity,
+                    deliveryPincode: orderDelivery.deliveryPincode,
+                    deliveryAddress: orderDelivery.deliveryAddress,
                     deliveryAddressFormatted:
-                        formatCorporateDeliveryAddress(deliveryDetails),
+                        formatCorporateDeliveryAddress(orderDelivery),
                     shippingAddress: quote.profile.shippingAddress ?? {},
                     numberOfEmployees: quote.quantity,
                 },
                 productConfigSnapshot: {
                     productId: quote.productId,
                     corporateProductConfigId: quote.corporateProductConfigId,
-                    productTypeId: quote.productTypeId,
-                    gsmOptionId: quote.gsmOptionId,
-                    fabricCompositionId: quote.fabricCompositionId,
+                    productTypeId: selectedProductTypeId,
+                    gsmOptionId: selectedGsmOptionId,
+                    fabricCompositionId: selectedFabricCompositionId,
+                    productType: selectedProductType ?? null,
+                    gsmOption: selectedGsmOption ?? null,
+                    fabricComposition: selectedFabric ?? null,
                     quoteNumber: quote.quoteNumber,
                     quantity: quote.quantity,
                     sourcedFrom: context.sourceType,
@@ -645,6 +722,12 @@ class CorporatePlatformService {
                     poNumber: context.poNumber ?? null,
                     productScopeSummary:
                         context.productScopeSummary ?? "As per approved quote",
+                    adminBrandingNotes: setup?.brandingNotes ?? null,
+                    colorOptionIds: setup?.colorOptionIds ?? [],
+                    customColorRequest: setup?.customColorRequest ?? null,
+                    logoLocationIds: setup?.logoLocationIds ?? [],
+                    printMethodId: setup?.printMethodId ?? null,
+                    extraChargeRuleIds: setup?.extraChargeRuleIds ?? [],
                 },
                 pricingSnapshot: {
                     subtotalPaise: quote.subtotalPaise,
@@ -652,8 +735,8 @@ class CorporatePlatformService {
                     gstAmountPaise: quote.gstAmountPaise,
                     totalAmountPaise: quote.totalAmountPaise,
                 },
-                artworkFile: null,
-                employeeSheetFile: null,
+                artworkFile: setup?.artworkFile ?? null,
+                employeeSheetFile: setup?.employeeSheetFile ?? null,
                 subtotalPaise: quote.subtotalPaise,
                 customizationPaise: quote.customizationCostPaise,
                 gstRateBps,
@@ -666,8 +749,9 @@ class CorporatePlatformService {
                       )
                     : 0,
                 advancePaidPaise: 0,
-                balanceDuePaise:
-                    quote.balanceAmountPaise || quote.totalAmountPaise,
+                // A quote's advance split is a requested payment term, not a
+                // completed collection. New orders start fully outstanding.
+                balanceDuePaise: quote.totalAmountPaise,
                 balancePaymentStatus: "pending",
                 customerNotes:
                     context.customerNotes ??
@@ -1125,10 +1209,33 @@ class CorporatePlatformService {
     }
 
     async getMyProfile(userId: string) {
-        return db.query.corporateProfiles.findFirst({
+        const linkedProfile = await db.query.corporateProfiles.findFirst({
             where: eq(corporateProfiles.userId, userId),
             orderBy: [desc(corporateProfiles.updatedAt)],
         });
+        if (linkedProfile) return linkedProfile;
+
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, userId),
+            columns: { email: true },
+        });
+        if (!user?.email) return null;
+
+        const pendingProfile = await db.query.corporateProfiles.findFirst({
+            where: sql`lower(${corporateProfiles.email}) = ${user.email.trim().toLowerCase()}`,
+            orderBy: [desc(corporateProfiles.updatedAt)],
+        });
+        if (!pendingProfile) return null;
+
+        if (!pendingProfile.userId) {
+            await db
+                .update(corporateProfiles)
+                .set({ userId, updatedAt: new Date() })
+                .where(eq(corporateProfiles.id, pendingProfile.id));
+            pendingProfile.userId = userId;
+        }
+
+        return pendingProfile;
     }
 
     async upsertMyProfile(userId: string, input: unknown) {
@@ -1538,12 +1645,173 @@ class CorporatePlatformService {
         return created;
     }
 
+    async createManualQuote(actorUserId: string, input: unknown) {
+        const parsed = corporateAdminManualQuoteInputSchema.parse(input);
+        const normalizedEmail = parsed.email.toLowerCase();
+        const matchedUser = await db.query.users.findFirst({
+            where: sql`lower(${users.email}) = ${normalizedEmail}`,
+            columns: { id: true },
+        });
+        const existingProfile = await db.query.corporateProfiles.findFirst({
+            where: sql`lower(${corporateProfiles.email}) = ${normalizedEmail}`,
+            orderBy: [desc(corporateProfiles.updatedAt)],
+        });
+
+        const subtotalPaise = parsed.unitPricePaise * parsed.quantity;
+        const taxablePaise = subtotalPaise + parsed.customizationCostPaise;
+        const gstAmountPaise = Math.round(
+            (taxablePaise * parsed.gstPercent) / 100
+        );
+        const totalAmountPaise = taxablePaise + gstAmountPaise;
+        const advanceAmountPaise = Math.round(
+            (totalAmountPaise * parsed.advancePercent) / 100
+        );
+
+        const result = await db.transaction(async (tx) => {
+            const profile = existingProfile
+                ? await tx
+                      .update(corporateProfiles)
+                      .set({
+                          userId:
+                              matchedUser?.id ?? existingProfile.userId ?? null,
+                          companyName: parsed.companyName,
+                          contactPerson: parsed.contactPerson,
+                          email: normalizedEmail,
+                          phone: parsed.phone,
+                          updatedAt: new Date(),
+                      })
+                      .where(eq(corporateProfiles.id, existingProfile.id))
+                      .returning()
+                      .then((rows) => rows[0])
+                : await tx
+                      .insert(corporateProfiles)
+                      .values({
+                          userId: matchedUser?.id ?? null,
+                          companyName: parsed.companyName,
+                          contactPerson: parsed.contactPerson,
+                          email: normalizedEmail,
+                          phone: parsed.phone,
+                          billingAddress: {},
+                          shippingAddress: {},
+                          isDefault: true,
+                      })
+                      .returning()
+                      .then((rows) => rows[0]);
+
+            if (!profile) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "The customer profile could not be created.",
+                });
+            }
+
+            const sequence = await tx
+                .select({ count: count() })
+                .from(corporateQuotes)
+                .then((rows) => (rows[0]?.count ?? 0) + 1);
+            const quote = await tx
+                .insert(corporateQuotes)
+                .values({
+                    quoteNumber: makeNumber("QUO", sequence),
+                    rfqId: null,
+                    corporateProfileId: profile.id,
+                    brandId: parsed.brandId,
+                    productTypeId: parsed.productTypeId ?? null,
+                    gsmOptionId: parsed.gsmOptionId ?? null,
+                    fabricCompositionId: parsed.fabricCompositionId ?? null,
+                    quantity: parsed.quantity,
+                    subtotalPaise,
+                    customizationCostPaise: parsed.customizationCostPaise,
+                    gstAmountPaise,
+                    totalAmountPaise,
+                    advanceAmountPaise,
+                    balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
+                    validUntil: parsed.validUntil ?? null,
+                    status: "sent",
+                })
+                .returning()
+                .then((rows) => rows[0]);
+
+            if (!quote) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "The manual quote could not be created.",
+                });
+            }
+
+            await tx.insert(corporateQuoteRevisions).values({
+                quoteId: quote.id,
+                revisionNumber: 1,
+                subtotalPaise,
+                customizationCostPaise: parsed.customizationCostPaise,
+                gstAmountPaise,
+                totalAmountPaise,
+                comments: parsed.comments ?? null,
+                createdByUserId: actorUserId,
+            });
+
+            return { quote, profile };
+        });
+
+        await Promise.all([
+            this.createEvent(
+                "quote",
+                result.quote.id,
+                "MANUAL_QUOTE_SENT",
+                {
+                    quoteNumber: result.quote.quoteNumber,
+                    recipientEmail: normalizedEmail,
+                    recipientRegistered: Boolean(result.profile.userId),
+                },
+                actorUserId
+            ),
+            this.createAdminAuditLog(
+                actorUserId,
+                "MANUAL_QUOTE_CREATED",
+                "quote",
+                result.quote.id,
+                null,
+                {
+                    quoteNumber: result.quote.quoteNumber,
+                    recipientEmail: normalizedEmail,
+                }
+            ),
+        ]);
+
+        return {
+            ...result.quote,
+            recipientRegistered: Boolean(result.profile.userId),
+        };
+    }
+
     async listMyQuotes(userId: string) {
-        const profile = await this.getMyProfile(userId);
-        if (!profile) return [];
+        await this.getMyProfile(userId);
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, userId),
+            columns: { email: true },
+        });
+        const profiles = await db.query.corporateProfiles.findMany({
+            where: user?.email
+                ? sql`lower(${corporateProfiles.email}) = ${user.email.trim().toLowerCase()}`
+                : eq(corporateProfiles.userId, userId),
+        });
+        if (!profiles.length) return [];
+
+        await db
+            .update(corporateProfiles)
+            .set({ userId, updatedAt: new Date() })
+            .where(
+                inArray(
+                    corporateProfiles.id,
+                    profiles.map((profile) => profile.id)
+                )
+            );
 
         const quotes = await db.query.corporateQuotes.findMany({
-            where: eq(corporateQuotes.corporateProfileId, profile.id),
+            where: inArray(
+                corporateQuotes.corporateProfileId,
+                profiles.map((profile) => profile.id)
+            ),
             with: {
                 revisions: true,
                 brand: true,
@@ -2075,6 +2343,67 @@ class CorporatePlatformService {
         return updated;
     }
 
+    async acceptQuoteAsAdmin(
+        actorUserId: string,
+        input: { quoteId: string; notes?: string | null }
+    ) {
+        const quote = await db.query.corporateQuotes.findFirst({
+            where: eq(corporateQuotes.id, input.quoteId),
+        });
+        if (!quote) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Quote not found",
+            });
+        }
+        if (quote.status === "approved") return quote;
+        if (["rejected", "expired"].includes(quote.status)) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "A rejected or expired quote cannot be accepted",
+            });
+        }
+
+        const decisionNote =
+            input.notes?.trim() ||
+            "Accepted by admin on the customer's behalf following phone or email confirmation";
+        const updated = await db.transaction(async (tx) => {
+            const accepted = await tx
+                .update(corporateQuotes)
+                .set({
+                    status: "approved",
+                    customerDecisionNotes: decisionNote,
+                    updatedAt: new Date(),
+                })
+                .where(eq(corporateQuotes.id, quote.id))
+                .returning()
+                .then((rows) => rows[0]);
+            if (quote.rfqId) {
+                await tx
+                    .update(corporateRfqs)
+                    .set({ status: "quote_accepted", updatedAt: new Date() })
+                    .where(eq(corporateRfqs.id, quote.rfqId));
+            }
+            return accepted;
+        });
+        await this.createEvent(
+            "quote",
+            quote.id,
+            "QUOTE_APPROVED_BY_ADMIN",
+            { quoteNumber: quote.quoteNumber, notes: decisionNote },
+            actorUserId
+        );
+        await this.createAdminAuditLog(
+            actorUserId,
+            "quote_approved_on_customer_behalf",
+            "quote",
+            quote.id,
+            { status: quote.status },
+            { status: "approved", notes: decisionNote }
+        );
+        return updated;
+    }
+
     async addQuoteRevision(actorUserId: string, input: unknown) {
         const parsed = corporateQuoteRevisionInputSchema.parse(input);
         const quote = await db.query.corporateQuotes.findFirst({
@@ -2248,6 +2577,107 @@ class CorporatePlatformService {
         return created;
     }
 
+    async createAdminPurchaseOrder(actorUserId: string, input: unknown) {
+        const parsed = corporateAdminPurchaseOrderInputSchema.parse(input);
+        const quote = await db.query.corporateQuotes.findFirst({
+            where: eq(corporateQuotes.id, parsed.quoteId),
+            with: { profile: true },
+        });
+        if (!quote?.profile) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message:
+                    "The selected quotation or buyer profile was not found",
+            });
+        }
+        if (quote.status !== "approved") {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "Only an approved quotation can be linked to a purchase order",
+            });
+        }
+        const duplicate = await db.query.corporatePurchaseOrders.findFirst({
+            where: eq(corporatePurchaseOrders.poNumber, parsed.poNumber),
+        });
+        if (duplicate) {
+            throw new TRPCError({
+                code: "CONFLICT",
+                message: "This purchase order number already exists",
+            });
+        }
+        const validationSummary = this.buildPurchaseOrderValidationSummary(
+            {
+                companyName: quote.profile.companyName,
+                poValuePaise: parsed.poValuePaise,
+                deliveryDate: parsed.deliveryDate,
+                productScopeSummary: "As per approved quotation",
+                authorizedSignatoryName: null,
+                authorizedSignatoryConfirmed: false,
+                uploadedFileUrl: parsed.uploadedFile.url,
+            },
+            quote
+        );
+        const created = await db.transaction(async (tx) => {
+            const po = await tx
+                .insert(corporatePurchaseOrders)
+                .values({
+                    quoteId: quote.id,
+                    corporateProfileId: quote.corporateProfileId,
+                    companyName: quote.profile.companyName,
+                    poNumber: parsed.poNumber,
+                    poValuePaise: parsed.poValuePaise,
+                    poDate: parsed.poDate ?? null,
+                    deliveryDate: parsed.deliveryDate,
+                    productScopeSummary: "As per approved quotation",
+                    authorizedSignatoryName: null,
+                    authorizedSignatoryConfirmed: false,
+                    uploadedFileUrl: parsed.uploadedFile.url,
+                    validationIssues: validationSummary.issues,
+                    status: "po_review",
+                    reviewNotes:
+                        parsed.reviewNotes ??
+                        "Received by email and uploaded by admin",
+                })
+                .returning()
+                .then((rows) => rows[0]);
+            await tx.insert(corporateDocuments).values({
+                entityType: "purchase_order",
+                entityId: po.id,
+                documentType: "po",
+                fileName: parsed.uploadedFile.name,
+                fileUrl: parsed.uploadedFile.url,
+                fileSizeBytes: parsed.uploadedFile.size,
+                mimeType: parsed.uploadedFile.type,
+                uploadedByUserId: actorUserId,
+                version: 1,
+            });
+            return po;
+        });
+        await this.createEvent(
+            "purchase_order",
+            created.id,
+            "PURCHASE_ORDER_UPLOADED_BY_ADMIN",
+            {
+                quoteId: quote.id,
+                poNumber: created.poNumber,
+                validationIssues: validationSummary.issues,
+            },
+            actorUserId
+        );
+        return { ...created, validationSummary };
+    }
+
+    async createAdminPaymentRequest(actorUserId: string, input: unknown) {
+        corporateAdminPaymentRequestInputSchema.parse(input);
+        return corporatePaymentRequestService.create(actorUserId, input);
+    }
+
+    async recordAdminOfflinePayment(actorUserId: string, input: unknown) {
+        corporateAdminOfflinePaymentInputSchema.parse(input);
+        return corporatePaymentRequestService.recordOffline(actorUserId, input);
+    }
+
     async reviewPurchaseOrder(actorUserId: string, input: unknown) {
         const parsed = corporatePurchaseOrderReviewInputSchema.parse(input);
         const purchaseOrder = await db.query.corporatePurchaseOrders.findFirst({
@@ -2259,7 +2689,6 @@ class CorporatePlatformService {
                 message: "Purchase order not found",
             });
         }
-
         const quote = purchaseOrder.quoteId
             ? await db.query.corporateQuotes.findFirst({
                   where: eq(corporateQuotes.id, purchaseOrder.quoteId),
@@ -2296,8 +2725,6 @@ class CorporatePlatformService {
                 validationSummary.companyNameMatches,
                 validationSummary.orderValueMatches,
                 validationSummary.deliveryDateFeasible,
-                validationSummary.productScopeMatches,
-                validationSummary.authorizedSignatoryPresent,
             ].filter((item) => !item).length;
 
             if (failedChecks > 0) {
@@ -2306,6 +2733,20 @@ class CorporatePlatformService {
                     message:
                         "Purchase order cannot be accepted until all validation checks pass",
                 });
+            }
+
+            if (parsed.orderSetup) {
+                const allocatedQuantity = Object.values(
+                    parsed.orderSetup.sizeBreakdown
+                ).reduce((sum, value) => sum + value, 0);
+                if (!quote || allocatedQuantity !== quote.quantity) {
+                    throw new TRPCError({
+                        code: "BAD_REQUEST",
+                        message: quote
+                            ? `Employee size allocation must total exactly ${quote.quantity} units`
+                            : "A linked quote is required to validate employee sizes",
+                    });
+                }
             }
         }
 
@@ -2331,6 +2772,7 @@ class CorporatePlatformService {
                     customerNotes:
                         "Created from enterprise purchase order approval",
                     internalNotes: `Created from ${purchaseOrder.poNumber} | quote:${quote.id}`,
+                    orderSetup: parsed.orderSetup,
                 }
             );
             createdOrderId = createdOrder.id;
@@ -3318,6 +3760,7 @@ class CorporatePlatformService {
 
         const profileByUserId = new Map<string, (typeof profiles)[number]>();
         for (const profile of profiles) {
+            if (!profile.userId) continue;
             if (!profileByUserId.has(profile.userId)) {
                 profileByUserId.set(profile.userId, profile);
             }
@@ -3398,6 +3841,7 @@ class CorporatePlatformService {
                       where: inArray(corporateQuotes.id, quoteIds),
                       with: {
                           profile: true,
+                          brand: true,
                       },
                   })
                 : Promise.resolve([]),
@@ -3410,6 +3854,78 @@ class CorporatePlatformService {
 
         const quoteById = new Map(poQuotes.map((item) => [item.id, item]));
         const profileById = new Map(poProfiles.map((item) => [item.id, item]));
+
+        const proformaInvoices = quotes.length
+            ? await db.query.corporateProformaInvoices.findMany({
+                  where: inArray(
+                      corporateProformaInvoices.quoteId,
+                      quotes.map((quote) => quote.id)
+                  ),
+                  orderBy: [desc(corporateProformaInvoices.createdAt)],
+              })
+            : [];
+        const proformaByQuote = new Map(
+            proformaInvoices
+                .filter((invoice) => invoice.status === "issued")
+                .map((invoice) => [invoice.quoteId, invoice])
+        );
+        const enrichedQuotes = quotes.map((quote) => ({
+            ...quote,
+            proformaInvoice: proformaByQuote.get(quote.id) ?? null,
+        }));
+        const paymentRequests =
+            await corporatePaymentRequestService.listForOrders(
+                orders.map((order) => order.id)
+            );
+        const receiptVouchers = orders.length
+            ? await db.query.corporateReceiptVouchers.findMany({
+                  where: inArray(
+                      corporateReceiptVouchers.orderId,
+                      orders.map((order) => order.id)
+                  ),
+                  orderBy: [desc(corporateReceiptVouchers.createdAt)],
+              })
+            : [];
+        const latestRequestByOrder = new Map<
+            string,
+            (typeof paymentRequests)[number]
+        >();
+        for (const request of paymentRequests) {
+            if (!latestRequestByOrder.has(request.orderId))
+                latestRequestByOrder.set(request.orderId, request);
+        }
+        const latestReceiptByOrder = new Map<
+            string,
+            (typeof receiptVouchers)[number]
+        >();
+        for (const receipt of receiptVouchers) {
+            if (!latestReceiptByOrder.has(receipt.orderId))
+                latestReceiptByOrder.set(receipt.orderId, receipt);
+        }
+        const collectedByOrder = new Map<string, number>();
+        for (const payment of payments) {
+            if (
+                !["payment_success", "payment_partial"].includes(
+                    payment.paymentStatus
+                )
+            )
+                continue;
+            collectedByOrder.set(
+                payment.orderId,
+                (collectedByOrder.get(payment.orderId) ?? 0) +
+                    payment.amountPaise
+            );
+        }
+        const enrichedOrders = orders.map((order) => {
+            const collectedPaise = collectedByOrder.get(order.id) ?? 0;
+            return {
+                ...order,
+                advancePaidPaise: collectedPaise,
+                balanceDuePaise: Math.max(0, order.totalPaise - collectedPaise),
+                paymentRequest: latestRequestByOrder.get(order.id) ?? null,
+                receiptVoucher: latestReceiptByOrder.get(order.id) ?? null,
+            };
+        });
 
         const enrichedPurchaseOrders = purchaseOrders.map((purchaseOrder) => {
             const quote = purchaseOrder.quoteId
@@ -3447,8 +3963,9 @@ class CorporatePlatformService {
             refunds,
             purchaseOrders: enrichedPurchaseOrders,
             reports,
-            quotes,
-            orders,
+            quotes: enrichedQuotes,
+            orders: enrichedOrders,
+            paymentRequests,
         };
     }
 
@@ -3473,6 +3990,83 @@ class CorporatePlatformService {
             },
             orderBy: [asc(corporateProfiles.companyName)],
         });
+    }
+
+    async createAdminBuyerProfile(actorUserId: string, input: unknown) {
+        const parsed = corporateAdminBuyerProfileInputSchema.parse(input);
+        const rfq = await db.query.corporateRfqs.findFirst({
+            where: eq(corporateRfqs.id, parsed.rfqId),
+        });
+
+        if (!rfq) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "The selected RFQ could not be found.",
+            });
+        }
+
+        const created = await db.transaction(async (tx) => {
+            const profile = await tx
+                .insert(corporateProfiles)
+                .values({
+                    userId: rfq.userId,
+                    companyName: parsed.companyName,
+                    contactPerson: parsed.contactPerson,
+                    email: parsed.email,
+                    phone: parsed.phone,
+                    billingAddress: {},
+                    shippingAddress: {},
+                    isDefault: false,
+                })
+                .returning()
+                .then((rows) => rows[0]);
+
+            if (!profile) {
+                throw new TRPCError({
+                    code: "INTERNAL_SERVER_ERROR",
+                    message: "The buyer company could not be created.",
+                });
+            }
+
+            await tx
+                .update(corporateRfqs)
+                .set({
+                    corporateProfileId: profile.id,
+                    companyName: profile.companyName,
+                    contactPerson: profile.contactPerson,
+                    email: profile.email,
+                    phone: profile.phone,
+                    updatedAt: new Date(),
+                })
+                .where(eq(corporateRfqs.id, rfq.id));
+
+            return profile;
+        });
+
+        await Promise.all([
+            this.createEvent(
+                "corporate_profile",
+                created.id,
+                "CORPORATE_PROFILE_CREATED_BY_ADMIN",
+                { companyName: created.companyName, rfqId: rfq.id },
+                actorUserId
+            ),
+            this.createAdminAuditLog(
+                actorUserId,
+                "BUYER_COMPANY_CREATED",
+                "corporate_profile",
+                created.id,
+                null,
+                { companyName: created.companyName, rfqId: rfq.id }
+            ),
+        ]);
+
+        return {
+            id: created.id,
+            companyName: created.companyName,
+            contactPerson: created.contactPerson,
+            email: created.email,
+        };
     }
 
     async getAdminDashboardSummary() {
@@ -3562,6 +4156,52 @@ class CorporatePlatformService {
                     .filter(Boolean)
             )
         ) as string[];
+
+        const [vendorPurchaseOrders, brandTaxInvoices, documentSettings] =
+            await Promise.all([
+                orderRows.length
+                    ? db.query.corporateVendorPurchaseOrders.findMany({
+                          where: inArray(
+                              corporateVendorPurchaseOrders.orderId,
+                              orderRows.map((order) => order.id)
+                          ),
+                          orderBy: [
+                              desc(corporateVendorPurchaseOrders.createdAt),
+                          ],
+                      })
+                    : Promise.resolve([]),
+                orderRows.length
+                    ? db.query.corporateBrandTaxInvoices.findMany({
+                          where: inArray(
+                              corporateBrandTaxInvoices.orderId,
+                              orderRows.map((order) => order.id)
+                          ),
+                          orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
+                      })
+                    : Promise.resolve([]),
+                getCorporateDocumentSettings(),
+            ]);
+        const vendorPoByOrderId = new Map<
+            string,
+            (typeof vendorPurchaseOrders)[number]
+        >();
+        for (const purchaseOrder of vendorPurchaseOrders) {
+            if (
+                purchaseOrder.status !== "cancelled" &&
+                !vendorPoByOrderId.has(purchaseOrder.orderId)
+            ) {
+                vendorPoByOrderId.set(purchaseOrder.orderId, purchaseOrder);
+            }
+        }
+        const brandInvoiceByOrderId = new Map<
+            string,
+            (typeof brandTaxInvoices)[number]
+        >();
+        for (const invoice of brandTaxInvoices) {
+            if (!brandInvoiceByOrderId.has(invoice.orderId)) {
+                brandInvoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
         const gsmOptionIds = Array.from(
             new Set(
                 orderRows
@@ -3622,6 +4262,35 @@ class CorporatePlatformService {
             sizeBreakdown: order.sizeBreakdown,
             createdAt: order.createdAt,
             updatedAt: order.updatedAt,
+            renivetPurchaseOrder: (() => {
+                const purchaseOrder = vendorPoByOrderId.get(order.id);
+                return purchaseOrder
+                    ? {
+                          id: purchaseOrder.id,
+                          poNumber: purchaseOrder.poNumber,
+                          issueDate: purchaseOrder.issueDate,
+                          expectedDeliveryDate:
+                              purchaseOrder.expectedDeliveryDate,
+                          totalAmountPaise: purchaseOrder.totalAmountPaise,
+                          status: purchaseOrder.status,
+                          downloadUrl: `/api/corporate-orders/${order.id}/vendor-po.pdf`,
+                      }
+                    : null;
+            })(),
+            brandTaxInvoice: (() => {
+                const invoice = brandInvoiceByOrderId.get(order.id);
+                return invoice
+                    ? {
+                          id: invoice.id,
+                          invoiceNumber: invoice.invoiceNumber,
+                          invoiceDate: invoice.invoiceDate,
+                          totalAmountPaise: invoice.totalAmountPaise,
+                          validationStatus: invoice.validationStatus,
+                          gstr2bStatus: invoice.gstr2bStatus,
+                          downloadUrl: `/api/corporate-orders/${order.id}/brand-tax-invoice`,
+                      }
+                    : null;
+            })(),
             selectedGarment: {
                 productType:
                     (order.quote?.productTypeId
@@ -3697,7 +4366,71 @@ class CorporatePlatformService {
         return {
             orders: sanitizedOrders,
             allowedStatuses: this.brandManagedOrderStatuses,
+            recipientGstin: documentSettings.gstin,
         };
+    }
+
+    async recordBrandAssignedTaxInvoice(
+        userId: string,
+        brandId: string,
+        input: unknown
+    ) {
+        await this.requireBrandMembership(userId, brandId);
+        const parsed = corporateBrandInvoiceUploadInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: and(
+                eq(corporateOrders.id, parsed.orderId),
+                eq(corporateOrders.brandId, brandId)
+            ),
+        });
+        if (!order) {
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "This order is not assigned to your brand",
+            });
+        }
+
+        const [purchaseOrder, brandDetails, settings] = await Promise.all([
+            db.query.corporateVendorPurchaseOrders.findFirst({
+                where: and(
+                    eq(
+                        corporateVendorPurchaseOrders.id,
+                        parsed.vendorPurchaseOrderId
+                    ),
+                    eq(corporateVendorPurchaseOrders.orderId, order.id),
+                    eq(corporateVendorPurchaseOrders.brandId, brandId)
+                ),
+            }),
+            db.query.brandConfidentials.findFirst({
+                where: eq(brandConfidentials.id, brandId),
+            }),
+            getCorporateDocumentSettings(),
+        ]);
+        if (!purchaseOrder) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "The Renivet purchase order was not found",
+            });
+        }
+        if (!brandDetails?.gstin || !settings.gstin) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "Supplier or Renivet GST details are incomplete",
+            });
+        }
+
+        return corporateDocumentService.recordBrandTaxInvoice(userId, {
+            ...parsed,
+            invoiceNumber: `${purchaseOrder.poNumber}-${Date.now()}`,
+            supplierGstin: brandDetails.gstin,
+            recipientGstin: settings.gstin,
+            hsnCode: "0000",
+            taxableValuePaise: purchaseOrder.taxableValuePaise,
+            cgstPaise: purchaseOrder.cgstPaise,
+            sgstPaise: purchaseOrder.sgstPaise,
+            igstPaise: purchaseOrder.igstPaise,
+            totalAmountPaise: purchaseOrder.totalAmountPaise,
+        });
     }
 
     async updateBrandAssignedOrderStatus(

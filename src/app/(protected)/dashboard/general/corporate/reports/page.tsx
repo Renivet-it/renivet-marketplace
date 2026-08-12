@@ -1,4 +1,3 @@
-import { AdminPageIntro } from "@/components/corporate-platform/admin-design";
 import { AdminReportCenter } from "@/components/corporate-platform/admin-report-center";
 import { CorporateTabs } from "@/components/corporate-platform/corporate-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
@@ -9,13 +8,16 @@ export default async function Page() {
 
     return (
         <DashShell>
-            <div className="space-y-6">
+            <div className="space-y-4">
                 <CorporateTabs />
-                <AdminPageIntro
-                    eyebrow="Reporting Center"
-                    title="Generate operational and leadership review outputs"
-                    description="Keep recurring operational summaries, SLA reviews, and monthly leadership reporting in one reporting center with clear generation actions and readable job history."
-                />
+                <header className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <h1 className="text-lg font-semibold text-slate-950">
+                        Reports
+                    </h1>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Generate and review corporate reports
+                    </p>
+                </header>
                 <AdminReportCenter reports={finance.reports} />
             </div>
         </DashShell>

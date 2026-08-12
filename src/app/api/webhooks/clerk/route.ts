@@ -1,7 +1,7 @@
 import { env } from "@/../env";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { corporateOrders, corporateProfiles, users } from "@/lib/db/schema";
 import { sendMarketingEmail } from "@/lib/marketing/email";
 import { posthog } from "@/lib/posthog/client";
 import { first100Cache, userCache } from "@/lib/redis/methods";
@@ -12,7 +12,7 @@ import {
     userDeleteWebhookSchema,
     userWebhookSchema,
 } from "@/lib/validations";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { NextRequest } from "next/server";
 import { Webhook } from "svix";
 
@@ -74,6 +74,22 @@ export async function POST(req: NextRequest) {
                     })
                     .returning()
                     .then((res) => res[0]);
+
+                await db
+                    .update(corporateProfiles)
+                    .set({
+                        userId: newUser.id,
+                        updatedAt: new Date(),
+                    })
+                    .where(
+                        sql`lower(${corporateProfiles.email}) = ${newUser.email.trim().toLowerCase()}`
+                    );
+                await db
+                    .update(corporateOrders)
+                    .set({ userId: newUser.id, updatedAt: new Date() })
+                    .where(
+                        sql`lower(${corporateOrders.emailAddress}) = ${newUser.email.trim().toLowerCase()}`
+                    );
 
                 let addCode = false;
 
@@ -141,6 +157,21 @@ export async function POST(req: NextRequest) {
                             updatedAt: webhookUser.updated_at,
                         })
                         .where(eq(users.id, webhookUser.id)),
+                    db
+                        .update(corporateProfiles)
+                        .set({
+                            userId: webhookUser.id,
+                            updatedAt: new Date(),
+                        })
+                        .where(
+                            sql`lower(${corporateProfiles.email}) = ${email.email_address.trim().toLowerCase()}`
+                        ),
+                    db
+                        .update(corporateOrders)
+                        .set({ userId: webhookUser.id, updatedAt: new Date() })
+                        .where(
+                            sql`lower(${corporateOrders.emailAddress}) = ${email.email_address.trim().toLowerCase()}`
+                        ),
                     userCache.remove(webhookUser.id),
                 ]);
                 break;

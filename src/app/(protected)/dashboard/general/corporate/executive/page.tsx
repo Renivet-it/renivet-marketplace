@@ -1,4 +1,3 @@
-import { AdminMetricGrid, AdminPageIntro, AdminPanel } from "@/components/corporate-platform/admin-design";
 import { CorporateTabs } from "@/components/corporate-platform/corporate-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
 import { corporatePlatformService } from "@/lib/services/corporate-platform";
@@ -7,51 +6,111 @@ import { formatINR } from "@/lib/utils";
 export default async function Page() {
     const summary = await corporatePlatformService.getAdminDashboardSummary();
     const metrics = [
-        { label: "Demand Waiting", value: String(summary.rfqsPending), tone: "blue" as const },
-        { label: "Quotes In Flight", value: String(summary.quotesPending), tone: "blue" as const },
-        { label: "Operational Load", value: String(summary.activeOrders), tone: "slate" as const },
-        { label: "SLA Risk", value: String(summary.slaBreaches), tone: "gold" as const },
-        { label: "Refund Pressure", value: String(summary.refundRequests), tone: "slate" as const },
-        { label: "Outstanding Collections", value: formatINR(summary.outstandingBalancePaise), tone: "gold" as const },
+        { label: "Demand waiting", value: String(summary.rfqsPending) },
+        { label: "Quotes in flight", value: String(summary.quotesPending) },
+        { label: "Active orders", value: String(summary.activeOrders) },
+        { label: "SLA risk", value: String(summary.slaBreaches) },
+        { label: "Refund requests", value: String(summary.refundRequests) },
+        {
+            label: "Outstanding",
+            value: formatINR(summary.outstandingBalancePaise),
+        },
     ];
 
     return (
         <DashShell>
-            <div className="space-y-6">
+            <div className="space-y-4">
                 <CorporateTabs />
-                <AdminPageIntro
-                    eyebrow="Executive View"
-                    title="Leadership visibility across demand, operations, and collections"
-                    description="This view groups corporate business health into demand, conversion, operations, finance, and SLA risk so leadership can scan pressure points without reading queue-level detail."
-                />
-                <AdminMetricGrid items={metrics} />
-                <div className="grid gap-6 xl:grid-cols-3">
-                    <AdminPanel title="Demand" description="Pipeline pressure before orders are activated.">
-                        <ExecutiveLine label="Requests awaiting review" value={String(summary.rfqsPending)} />
-                        <ExecutiveLine label="Quotes awaiting decision" value={String(summary.quotesPending)} />
-                    </AdminPanel>
-                    <AdminPanel title="Operations Health" description="Execution workload across production and dispatch.">
-                        <ExecutiveLine label="Active orders" value={String(summary.activeOrders)} />
-                        <ExecutiveLine label="Quality control pending" value={String(summary.qcPending)} />
-                        <ExecutiveLine label="Dispatch pending" value={String(summary.dispatchPending)} />
-                    </AdminPanel>
-                    <AdminPanel title="Finance Health" description="Collection pressure and service risk.">
-                        <ExecutiveLine label="Payments pending" value={String(summary.paymentsPending)} />
-                        <ExecutiveLine label="Refund requests" value={String(summary.refundRequests)} />
-                        <ExecutiveLine label="Open escalations" value={String(summary.slaBreaches)} />
-                    </AdminPanel>
+                <header className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <h1 className="text-lg font-semibold text-slate-950">
+                        Executive View
+                    </h1>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Demand, operations and collection health
+                    </p>
+                </header>
+
+                <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-6">
+                    {metrics.map((metric) => (
+                        <div
+                            key={metric.label}
+                            className="rounded-xl border border-slate-200 bg-white p-3 shadow-sm"
+                        >
+                            <p className="text-[11px] font-medium text-slate-500">
+                                {metric.label}
+                            </p>
+                            <p className="mt-1 text-xl font-semibold leading-none text-slate-950">
+                                {metric.value}
+                            </p>
+                        </div>
+                    ))}
+                </section>
+
+                <div className="grid gap-3 xl:grid-cols-3">
+                    <HealthPanel title="Demand">
+                        <ExecutiveLine
+                            label="Requests awaiting review"
+                            value={String(summary.rfqsPending)}
+                        />
+                        <ExecutiveLine
+                            label="Quotes awaiting decision"
+                            value={String(summary.quotesPending)}
+                        />
+                    </HealthPanel>
+                    <HealthPanel title="Operations">
+                        <ExecutiveLine
+                            label="Active orders"
+                            value={String(summary.activeOrders)}
+                        />
+                        <ExecutiveLine
+                            label="Quality control pending"
+                            value={String(summary.qcPending)}
+                        />
+                        <ExecutiveLine
+                            label="Dispatch pending"
+                            value={String(summary.dispatchPending)}
+                        />
+                    </HealthPanel>
+                    <HealthPanel title="Finance">
+                        <ExecutiveLine
+                            label="Payments pending"
+                            value={String(summary.paymentsPending)}
+                        />
+                        <ExecutiveLine
+                            label="Refund requests"
+                            value={String(summary.refundRequests)}
+                        />
+                        <ExecutiveLine
+                            label="Open escalations"
+                            value={String(summary.slaBreaches)}
+                        />
+                    </HealthPanel>
                 </div>
             </div>
         </DashShell>
     );
 }
 
-function ExecutiveLine({ label, value }: { label: string; value: string }) {
+function HealthPanel({
+    title,
+    children,
+}: {
+    title: string;
+    children: React.ReactNode;
+}) {
     return (
-        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
-            <div className="text-sm font-medium text-slate-600">{label}</div>
-            <div className="text-lg font-semibold text-slate-900">{value}</div>
-        </div>
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+            <div className="mt-3 space-y-2">{children}</div>
+        </section>
     );
 }
 
+function ExecutiveLine({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+            <div className="text-xs font-medium text-slate-600">{label}</div>
+            <div className="text-sm font-semibold text-slate-900">{value}</div>
+        </div>
+    );
+}
