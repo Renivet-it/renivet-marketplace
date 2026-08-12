@@ -2,7 +2,12 @@
 
 // hooks/useGuestWishlist.ts
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+
+type GuestWishlistItem = {
+    productId: string;
+    variantId?: string | null;
+    [key: string]: unknown;
+};
 
 // export function useGuestWishlist() {
 //   const [guestWishlist, setGuestWishlist] = useState<any[]>([]);
@@ -66,41 +71,67 @@ import { toast } from "sonner";
 // }
 
 export function useGuestWishlist() {
-  const [guestWishlist, setGuestWishlist] = useState<any[]>([]);
+    const [guestWishlist, setGuestWishlist] = useState<GuestWishlistItem[]>([]);
 
-  // ✅ Only read and set after mount
-  useEffect(() => {
-    const stored = localStorage.getItem("guest_wishlist");
-    if (stored) setGuestWishlist(JSON.parse(stored));
-  }, []);
+    useEffect(() => {
+        const stored = localStorage.getItem("guest_wishlist");
+        if (stored) setGuestWishlist(JSON.parse(stored));
+    }, []);
 
-  useEffect(() => {
-    const handleWishlistUpdate = () => {
-      const stored = localStorage.getItem("guest_wishlist");
-      setGuestWishlist(stored ? JSON.parse(stored) : []);
+    useEffect(() => {
+        const handleWishlistUpdate = () => {
+            const stored = localStorage.getItem("guest_wishlist");
+            setGuestWishlist(stored ? JSON.parse(stored) : []);
+        };
+
+        window.addEventListener("guestWishlistUpdated", handleWishlistUpdate);
+        window.addEventListener("storage", handleWishlistUpdate);
+
+        return () => {
+            window.removeEventListener(
+                "guestWishlistUpdated",
+                handleWishlistUpdate
+            );
+            window.removeEventListener("storage", handleWishlistUpdate);
+        };
+    }, []);
+
+    const addToGuestWishlist = (item: GuestWishlistItem) => {
+        let current: GuestWishlistItem[] = [];
+        try {
+            current = JSON.parse(
+                localStorage.getItem("guest_wishlist") || "[]"
+            ) as GuestWishlistItem[];
+        } catch {
+            current = [];
+        }
+
+        const exists = current.some(
+            (entry) =>
+                entry.productId === item.productId &&
+                String(entry.variantId ?? "") === String(item.variantId ?? "")
+        );
+        const updated = exists
+            ? current.filter(
+                  (entry) =>
+                      !(
+                          entry.productId === item.productId &&
+                          String(entry.variantId ?? "") ===
+                              String(item.variantId ?? "")
+                      )
+              )
+            : [...current, item];
+
+        localStorage.setItem("guest_wishlist", JSON.stringify(updated));
+        setGuestWishlist(updated);
+        window.dispatchEvent(new Event("guestWishlistUpdated"));
     };
-
-    window.addEventListener("guestWishlistUpdated", handleWishlistUpdate);
-    window.addEventListener("storage", handleWishlistUpdate);
-
-    return () => {
-      window.removeEventListener("guestWishlistUpdated", handleWishlistUpdate);
-      window.removeEventListener("storage", handleWishlistUpdate);
-    };
-  }, []);
-
-  const addToGuestWishlist = (item: any) => {
-    // update localStorage, then *schedule* the event
-    localStorage.setItem("guest_wishlist", JSON.stringify([...guestWishlist, item]));
-    setTimeout(() => {
-      window.dispatchEvent(new Event("guestWishlistUpdated"));
-    }, 0); // 👈 important: defer
-  };
 
     const clearGuestWishlist = () => {
-    localStorage.removeItem("guest_wishlist");
-    window.dispatchEvent(new Event("guestCartUpdated"));
-  };
+        localStorage.removeItem("guest_wishlist");
+        setGuestWishlist([]);
+        window.dispatchEvent(new Event("guestWishlistUpdated"));
+    };
 
-  return { guestWishlist, addToGuestWishlist, clearGuestWishlist };
+    return { guestWishlist, addToGuestWishlist, clearGuestWishlist };
 }

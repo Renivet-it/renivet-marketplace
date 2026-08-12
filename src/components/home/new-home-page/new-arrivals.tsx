@@ -192,14 +192,26 @@ export function ProductGridNewArrivals({
 export function ProductCard({
     product,
     userId,
+    className,
+    showAddToCart = false,
+    imageOnly = false,
+    showDescription = false,
 }: {
     product: Product;
     userId?: string;
+    className?: string;
+    /** Shows a persistent add-to-cart control for editorial collection cards. */
+    showAddToCart?: boolean;
+    /** Keeps only the image and wishlist UI for compact editorial frames. */
+    imageOnly?: boolean;
+    /** Adds a short product description for editorial cards. */
+    showDescription?: boolean;
 }) {
     const { trackAddToCartEvent } = useAddToCartTracking();
     const router = useRouter();
+    const utils = trpc.useUtils();
     const { addToGuestCart } = useGuestCart();
-    const { addToGuestWishlist } = useGuestWishlist();
+    const { guestWishlist, addToGuestWishlist } = useGuestWishlist();
     const [isWishlisted, setIsWishlisted] = useState(false);
     const [quantity, setQuantity] = useState(1);
     const [selectedOptions, setSelectedOptions] = useState<
@@ -209,17 +221,43 @@ export function ProductCard({
     const [isQuickViewOpen, setIsQuickViewOpen] = useState(false);
     const [isShareOpen, setIsShareOpen] = useState(false);
 
+    const { data: userWishlist } =
+        trpc.general.users.wishlist.getWishlist.useQuery(
+            { userId: userId ?? "" },
+            { enabled: !!userId }
+        );
+
     const { mutateAsync: addToCart, isLoading } =
         trpc.general.users.cart.addProductToCart.useMutation({
-            onSuccess: () => {},
+            onSuccess: () => {
+                if (userId) {
+                    void utils.general.users.cart.getCartForUser.invalidate({
+                        userId,
+                    });
+                }
+            },
             onError: (err) =>
                 toast.error(err.message || "Could not add to cart"),
         });
     const { mutateAsync: addToWishlist } =
         trpc.general.users.wishlist.addProductInWishlist.useMutation({
-            onSuccess: () => toast.success("Added to Wishlist!"),
-            onError: (err) =>
-                toast.error(err.message || "Could not add to wishlist"),
+            onSuccess: () => {
+                if (userId) {
+                    void utils.general.users.wishlist.getWishlist.invalidate({
+                        userId,
+                    });
+                }
+            },
+        });
+    const { mutateAsync: removeFromWishlist } =
+        trpc.general.users.wishlist.removeProductInWishlist.useMutation({
+            onSuccess: () => {
+                if (userId) {
+                    void utils.general.users.wishlist.getWishlist.invalidate({
+                        userId,
+                    });
+                }
+            },
         });
 
     const rawPrice = product.variants?.[0]?.price ?? product.price ?? 0;
@@ -273,12 +311,23 @@ export function ProductCard({
         };
     }, [isQuickViewOpen, quickViewImages.length]);
 
+    useEffect(() => {
+        const wishlist = userId ? (userWishlist ?? []) : guestWishlist;
+        setIsWishlisted(
+            wishlist.some((entry) => entry.productId === product.id)
+        );
+    }, [guestWishlist, product.id, userId, userWishlist]);
+
     const handleAddToWishlist = async (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
+        const wasWishlisted = isWishlisted;
+        setIsWishlisted(!wasWishlisted);
         try {
             if (userId) {
-                await addToWishlist({ productId: product.id });
+                const input = { userId, productId: product.id };
+                if (wasWishlisted) await removeFromWishlist(input);
+                else await addToWishlist(input);
             } else {
                 addToGuestWishlist({
                     productId: product.id,
@@ -290,10 +339,12 @@ export function ProductCard({
                     sku: null,
                     fullProduct: product,
                 });
-                toast.success("Added to Wishlist!");
             }
-            setIsWishlisted(true);
+            toast.success(
+                wasWishlisted ? "Removed from Wishlist!" : "Added to Wishlist!"
+            );
         } catch (err: any) {
+            setIsWishlisted(wasWishlisted);
             toast.error(err.message || "Could not add to wishlist");
         }
     };
@@ -303,7 +354,7 @@ export function ProductCard({
         e.stopPropagation();
         handleCartFlyAnimation(e, imageUrl);
         try {
-            await trackAddToCartEvent({
+            void trackAddToCartEvent({
                 productId: product.id,
                 brandId: product.brandId || "",
                 productTitle: product.title,
@@ -372,11 +423,22 @@ export function ProductCard({
         originalPrice && originalPrice > rawPrice
             ? Math.round(Number(convertPaiseToRupees(originalPrice)))
             : null;
+    const descriptionText = product.description
+        ?.replace(/<[^>]*>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/&amp;/gi, "&")
+        .replace(/\s+/g, " ")
+        .trim();
 
     return (
-        <div className="group/card relative flex cursor-pointer flex-col overflow-hidden bg-white">
+        <div
+            className={cn(
+                "group/card relative flex cursor-pointer flex-col overflow-hidden bg-white",
+                className
+            )}
+        >
             <AnimatedProductLink href={productUrl} className="block">
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#F5F5F5]">
+                <div className="product-card-media relative aspect-[3/4] w-full overflow-hidden bg-[#F5F5F5]">
                     <Image
                         src={imageUrl}
                         alt={product.title}
@@ -385,28 +447,13 @@ export function ProductCard({
                         sizes="(max-width: 640px) 33vw, 14vw"
                     />
                     <NewProductRibbon product={product} />
-                    {/* Wishlist — top right */}
-                    <button
-                        onClick={handleAddToWishlist}
-                        className="absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all hover:scale-110 hover:bg-white"
-                    >
-                        <Icons.Heart
-                            className={cn(
-                                "h-3.5 w-3.5 transition-colors",
-                                isWishlisted
-                                    ? "fill-red-500 text-red-500"
-                                    : "text-gray-600 hover:text-red-500"
-                            )}
-                        />
-                    </button>
-
                     {/* Quick View trigger — bottom right on mobile (icon), desktop hover pill */}
                     <Dialog
                         open={isQuickViewOpen}
                         onOpenChange={setIsQuickViewOpen}
                     >
                         <div
-                            className="absolute bottom-2 right-2 z-20 md:hidden"
+                            className="product-card-quick-view-mobile absolute bottom-2 right-2 z-20 md:hidden"
                             onClick={(e) => {
                                 e.preventDefault();
                                 e.stopPropagation();
@@ -769,27 +816,82 @@ export function ProductCard({
                     />
                 </div>
 
-                <div className="pb-1 pt-2">
-                    <h3 className="truncate text-[11px] font-normal leading-tight text-gray-800 sm:text-xs">
-                        {product.title}
-                    </h3>
-                    <div className="mt-1 flex items-baseline gap-1.5">
-                        <span className="text-[12px] font-semibold text-gray-900">
-                            ₹{price}
-                        </span>
-                        {displayOriginal && (
-                            <span className="text-[10px] text-gray-400 line-through">
-                                ₹{displayOriginal}
-                            </span>
-                        )}
-                        {discount && discount > 0 ? (
-                            <span className="whitespace-nowrap text-[10px] font-medium text-[#ff6f61]">
-                                ({discount}% OFF)
-                            </span>
+                {!imageOnly ? (
+                    <div className="product-card-copy pb-1 pt-2">
+                        <h3 className="product-card-title truncate text-[11px] font-normal leading-tight text-gray-800 sm:text-xs">
+                            {product.title}
+                        </h3>
+                        {showDescription && descriptionText ? (
+                            <div className="product-card-description line-clamp-2 text-[10px] leading-tight text-gray-600">
+                                {descriptionText}
+                            </div>
+                        ) : null}
+                        {!showAddToCart ? (
+                            <div className="product-card-price mt-1 flex items-baseline gap-1.5">
+                                <span className="product-card-current-price text-[12px] font-semibold text-gray-900">
+                                    ₹{price}
+                                </span>
+                                {displayOriginal && (
+                                    <span className="product-card-original-price text-[10px] text-gray-400 line-through">
+                                        ₹{displayOriginal}
+                                    </span>
+                                )}
+                                {discount && discount > 0 ? (
+                                    <span className="product-card-discount whitespace-nowrap text-[10px] font-medium text-[#ff6f61]">
+                                        ({discount}% OFF)
+                                    </span>
+                                ) : null}
+                            </div>
                         ) : null}
                     </div>
-                </div>
+                ) : null}
+                {showAddToCart && !imageOnly ? (
+                    <div className="festival-card-footer flex items-center justify-between gap-2">
+                        <div className="product-card-price flex min-w-0 items-baseline gap-1">
+                            <span className="product-card-current-price text-[12px] font-semibold text-gray-900">
+                                ₹{price}
+                            </span>
+                            {displayOriginal && (
+                                <span className="product-card-original-price text-[10px] text-gray-400 line-through">
+                                    ₹{displayOriginal}
+                                </span>
+                            )}
+                            {discount && discount > 0 ? (
+                                <span className="product-card-discount whitespace-nowrap text-[10px] font-medium text-[#ff6f61]">
+                                    ({discount}% OFF)
+                                </span>
+                            ) : null}
+                        </div>
+                        <button
+                            type="button"
+                            onClick={handleQuickAddCart}
+                            disabled={isLoading}
+                            className="festival-add-to-cart flex shrink-0 items-center justify-center gap-1.5 rounded-md bg-[#f36558] px-2 py-2 text-[9px] font-bold uppercase tracking-[0.04em] text-white transition-colors hover:bg-[#df5146] disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            <Icons.ShoppingBag className="size-3" />
+                            {isLoading ? "Adding..." : "Add to cart"}
+                        </button>
+                    </div>
+                ) : null}
             </AnimatedProductLink>
+            <button
+                type="button"
+                onClick={handleAddToWishlist}
+                aria-label={
+                    isWishlisted ? "Remove from wishlist" : "Add to wishlist"
+                }
+                aria-pressed={isWishlisted}
+                className="product-card-wishlist-button absolute right-2 top-2 z-20 flex h-7 w-7 items-center justify-center rounded-full bg-white/90 shadow-sm transition-all hover:scale-110 hover:bg-white"
+            >
+                <Icons.Heart
+                    className={cn(
+                        "h-3.5 w-3.5 transition-colors",
+                        isWishlisted
+                            ? "fill-red-500 text-red-500"
+                            : "text-gray-600 hover:text-red-500"
+                    )}
+                />
+            </button>
         </div>
     );
 }

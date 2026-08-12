@@ -82,10 +82,14 @@ function NavItem({
                 <span>{item.label ?? convertValueToLabel(item.name)}</span>
             </div>
             {item.count !== undefined && item.count > 0 && (
-                <span className={cn(
-                    "flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
-                    compact ? "bg-[#edf7f1] text-[#1d5b47]" : "bg-blue-100 text-blue-600"
-                )}>
+                <span
+                    className={cn(
+                        "flex size-5 items-center justify-center rounded-full text-[10px] font-bold",
+                        compact
+                            ? "bg-[#edf7f1] text-[#1d5b47]"
+                            : "bg-blue-100 text-blue-600"
+                    )}
+                >
                     {item.count}
                 </span>
             )}
@@ -115,16 +119,25 @@ function NavGroup({
     return (
         <div className="mb-6">
             {title && (
-                <h4 className={cn(
-                    "mb-2 px-3 text-xs font-semibold uppercase tracking-wider",
-                    compact ? "text-[9px] tracking-[0.08em] text-[#9aa5b3]" : "text-gray-400"
-                )}>
+                <h4
+                    className={cn(
+                        "mb-2 px-3 text-xs font-semibold uppercase tracking-wider",
+                        compact
+                            ? "text-[9px] tracking-[0.08em] text-[#9aa5b3]"
+                            : "text-gray-400"
+                    )}
+                >
                     {title}
                 </h4>
             )}
             <div className="flex flex-col gap-1">
                 {items.map((item) => (
-                    <NavItem key={item.name} item={item} pathname={pathname} compact={compact} />
+                    <NavItem
+                        key={item.name}
+                        item={item}
+                        pathname={pathname}
+                        compact={compact}
+                    />
                 ))}
             </div>
         </div>
@@ -155,8 +168,8 @@ export function ProfileNav({ className, ...props }: GenericProps) {
         });
 
     // Using store/logic for cart count roughly
-    const cartCount =
-        userCart?.filter(
+    const cartCount = (userCart ?? [])
+        .filter(
             (c) =>
                 c.product.isPublished &&
                 c.product.verificationStatus === "approved" &&
@@ -168,7 +181,11 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                     (c.variant &&
                         !c.variant.isDeleted &&
                         c.variant.quantity > 0))
-        ).length || 0;
+        )
+        .reduce(
+            (total, item) => total + Math.max(0, Number(item.quantity) || 0),
+            0
+        );
 
     const mainNavItems: Item[] = [
         {
@@ -208,7 +225,9 @@ export function ProfileNav({ className, ...props }: GenericProps) {
             icon: "LayoutDashboard",
             name: "impact-dashboard",
             href: "#",
-            label: isCorporateDashboard ? "Sustainability Impact" : "Impact Dashboard",
+            label: isCorporateDashboard
+                ? "Sustainability Impact"
+                : "Impact Dashboard",
         },
     ];
 
@@ -273,7 +292,7 @@ export function ProfileNav({ className, ...props }: GenericProps) {
             <div
                 className={cn(
                     "hidden md:block",
-                    isCorporateDashboard && "md:-ml-8 md:-my-10",
+                    isCorporateDashboard && "md:-my-10 md:-ml-8",
                     className
                 )}
                 style={{
@@ -293,16 +312,22 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                 >
                     {/* User Profile Section */}
                     {user ? (
-                        <div className={cn(
-                            "flex flex-col items-center",
-                            isCorporateDashboard
-                                ? "mb-5 border-b border-[#eef1ef] px-1 pb-5 pt-5"
-                                : "mb-8"
-                        )}>
-                            <div className={cn(
-                                "mb-4 flex items-center justify-center rounded-full bg-gray-100 p-1",
-                                isCorporateDashboard ? "size-14 bg-[#c4512b] p-0 text-white" : "size-20"
-                            )}>
+                        <div
+                            className={cn(
+                                "flex flex-col items-center",
+                                isCorporateDashboard
+                                    ? "mb-5 border-b border-[#eef1ef] px-1 pb-5 pt-5"
+                                    : "mb-8"
+                            )}
+                        >
+                            <div
+                                className={cn(
+                                    "mb-4 flex items-center justify-center rounded-full bg-gray-100 p-1",
+                                    isCorporateDashboard
+                                        ? "size-14 bg-[#c4512b] p-0 text-white"
+                                        : "size-20"
+                                )}
+                            >
                                 <Avatar className="size-full">
                                     <AvatarImage
                                         src={
@@ -317,23 +342,31 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                                 </Avatar>
                             </div>
 
-                            <h3 className={cn(
-                                "font-bold text-gray-900",
-                                isCorporateDashboard ? "text-sm" : "text-lg"
-                            )}>
+                            <h3
+                                className={cn(
+                                    "font-bold text-gray-900",
+                                    isCorporateDashboard ? "text-sm" : "text-lg"
+                                )}
+                            >
                                 {user.firstName} {user.lastName}
                             </h3>
-                            <p className={cn(
-                                "text-gray-500",
-                                isCorporateDashboard ? "text-[11px]" : "text-sm"
-                            )}>
+                            <p
+                                className={cn(
+                                    "text-gray-500",
+                                    isCorporateDashboard
+                                        ? "text-[11px]"
+                                        : "text-sm"
+                                )}
+                            >
                                 {hideEmail(user.email)}
                             </p>
                             <Link
                                 href="/profile"
                                 className={cn(
                                     "mt-2 text-xs font-semibold hover:underline",
-                                    isCorporateDashboard ? "text-[#1d5b47]" : "text-blue-600 hover:text-blue-700"
+                                    isCorporateDashboard
+                                        ? "text-[#1d5b47]"
+                                        : "text-blue-600 hover:text-blue-700"
                                 )}
                             >
                                 Edit Profile
@@ -343,11 +376,18 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                         <div
                             className={cn(
                                 "flex flex-col items-center opacity-0",
-                                isCorporateDashboard ? "mb-5 border-b border-[#eef1ef] pb-5 pt-5" : "mb-8"
+                                isCorporateDashboard
+                                    ? "mb-5 border-b border-[#eef1ef] pb-5 pt-5"
+                                    : "mb-8"
                             )}
                             aria-hidden="true"
                         >
-                            <div className={cn("mb-4 rounded-full", isCorporateDashboard ? "size-14" : "size-20")} />
+                            <div
+                                className={cn(
+                                    "mb-4 rounded-full",
+                                    isCorporateDashboard ? "size-14" : "size-20"
+                                )}
+                            />
                             <div className="h-5 w-32 rounded-full" />
                             <div className="mt-2 h-4 w-40 rounded-full" />
                             <div className="mt-3 h-3 w-20 rounded-full" />

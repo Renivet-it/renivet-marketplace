@@ -157,6 +157,7 @@ export const products = pgTable(
         isAddedInEventProductPage: boolean(
             "is_added_in_event_product_page"
         ).default(false),
+        isFestiveSeason: boolean("is_festive_season").default(false),
         isSummerCollection: boolean("is_summer_collection").default(false),
         isHomeHeroProducts: boolean("is_home_hero_products").default(false),
         isHomeLoveTheseProducts: boolean("is_home_love_these_products").default(
@@ -434,6 +435,19 @@ export const beautyTopPicks = pgTable("beauty_top_picks", {
 });
 
 export const newProductEventPage = pgTable("new_product_event_page", {
+    id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
+    productId: uuid("product_id")
+        .notNull()
+        .references(() => products.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
+    isDeleted: boolean("is_deleted").default(false).notNull(),
+    deletedAt: timestamp("deleted_at"),
+    ...timestamps,
+});
+
+// Dedicated homepage collection. This must remain independent from the legacy
+// Event Exhibition table so each feature has its own product selection/order.
+export const festiveSeasonProducts = pgTable("festive_season_products", {
     id: uuid("id").primaryKey().notNull().unique().defaultRandom(),
     productId: uuid("product_id")
         .notNull()
@@ -749,6 +763,16 @@ export const newProductEventPageRelation = relations(
     ({ one }) => ({
         product: one(products, {
             fields: [newProductEventPage.productId],
+            references: [products.id],
+        }),
+    })
+);
+
+export const festiveSeasonProductsRelation = relations(
+    festiveSeasonProducts,
+    ({ one }) => ({
+        product: one(products, {
+            fields: [festiveSeasonProducts.productId],
             references: [products.id],
         }),
     })
