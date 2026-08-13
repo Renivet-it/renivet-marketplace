@@ -5,6 +5,7 @@ import { productQueries } from "@/lib/db/queries";
 import {
     beautyNewArrivals,
     beautyTopPicks,
+    festiveSeasonProducts,
     homeandlivingNewArrival,
     homeandlivingTopPicks,
     homeNewArrivals,
@@ -24,7 +25,9 @@ import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 function normalizePosition(position?: number) {
-    return typeof position === "number" && Number.isFinite(position) && position > 0
+    return typeof position === "number" &&
+        Number.isFinite(position) &&
+        position > 0
         ? Math.floor(position)
         : undefined;
 }
@@ -1104,7 +1107,6 @@ export async function toggleHomeHeroProduct(
                 existing?.position
             );
 
-
             if (existing) {
                 // Restore if previously soft deleted
                 await db
@@ -1604,9 +1606,10 @@ export async function newEventPageSection(
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
+            revalidatePath("/");
             return {
                 success: true,
-                message: "Product removed from Event Exibition list",
+                message: "Product removed from Festive Season",
             };
         } else {
             // Check if product already exists and is not deleted
@@ -1619,7 +1622,7 @@ export async function newEventPageSection(
             if (existing && !existing.isDeleted) {
                 return {
                     success: false,
-                    error: "Product is already in Event Exibition",
+                    error: "Product is already in Festive Season",
                 };
             }
 
@@ -1654,24 +1657,106 @@ export async function newEventPageSection(
                 .where(eq(products.id, productId));
 
             revalidatePath("/dashboard/general/products");
+            revalidatePath("/");
             return {
                 success: true,
-                message: "Product added to Event Exibition list",
+                message: "Product added to Festive Season",
             };
         }
     } catch (error) {
-        console.error("Error toggling Event Exibition status:", error);
+        console.error("Error toggling Festive Season status:", error);
         return {
             success: false,
-            error: "Failed to update Event Exibition status",
+            error: "Failed to update Festive Season status",
         };
     }
 }
 
-export async function toggleBestSeller(
+export async function toggleFestiveSeasonProduct(
     productId: string,
+    isFeatured: boolean,
     position?: number
 ) {
+    try {
+        const existingProduct = await db
+            .select({ id: products.id })
+            .from(products)
+            .where(eq(products.id, productId))
+            .then((rows) => rows[0]);
+
+        if (!existingProduct) {
+            return { success: false, error: "Product not found" };
+        }
+
+        if (isFeatured) {
+            await db
+                .update(festiveSeasonProducts)
+                .set({ isDeleted: true, deletedAt: new Date() })
+                .where(eq(festiveSeasonProducts.productId, productId));
+            await db
+                .update(products)
+                .set({ isFestiveSeason: false })
+                .where(eq(products.id, productId));
+            revalidatePath("/dashboard/general/products");
+            revalidatePath("/");
+            return {
+                success: true,
+                message: "Product removed from Festive Season",
+            };
+        }
+
+        const existing = await db
+            .select()
+            .from(festiveSeasonProducts)
+            .where(eq(festiveSeasonProducts.productId, productId))
+            .then((rows) => rows[0]);
+
+        if (existing && !existing.isDeleted) {
+            return {
+                success: false,
+                error: "Product is already in Festive Season",
+            };
+        }
+
+        const targetPosition = await resolveSectionPosition(
+            festiveSeasonProducts,
+            position,
+            existing?.position
+        );
+
+        if (existing) {
+            await db
+                .update(festiveSeasonProducts)
+                .set({
+                    isDeleted: false,
+                    deletedAt: null,
+                    position: targetPosition,
+                })
+                .where(eq(festiveSeasonProducts.productId, productId));
+        } else {
+            await db.insert(festiveSeasonProducts).values({
+                productId,
+                position: targetPosition,
+            });
+        }
+
+        await db
+            .update(products)
+            .set({ isFestiveSeason: true })
+            .where(eq(products.id, productId));
+        revalidatePath("/dashboard/general/products");
+        revalidatePath("/");
+        return { success: true, message: "Product added to Festive Season" };
+    } catch (error) {
+        console.error("Error toggling Festive Season status:", error);
+        return {
+            success: false,
+            error: "Failed to update Festive Season status",
+        };
+    }
+}
+
+export async function toggleBestSeller(productId: string, position?: number) {
     try {
         // Check if product exists in products table
         const existingProduct = await db
@@ -1757,7 +1842,8 @@ export async function toggleUnder999(
         const fallbackUnder999Position =
             existingProduct.under999Position > 0
                 ? existingProduct.under999Position
-                : (await db.$count(products, eq(products.isUnder999, true))) + 1;
+                : (await db.$count(products, eq(products.isUnder999, true))) +
+                  1;
 
         await db
             .update(products)
@@ -1768,8 +1854,7 @@ export async function toggleUnder999(
                           isUnder999: true,
                           // Keep existing sequence when present; otherwise append at the end.
                           under999Position:
-                              normalizedPosition ??
-                              fallbackUnder999Position,
+                              normalizedPosition ?? fallbackUnder999Position,
                       }
             )
             .where(eq(products.id, productId));
@@ -1842,6 +1927,7 @@ export type ProductSectionKey =
     | "beautyNewArrivals"
     | "beautyTopPicks"
     | "eventPage"
+    | "festiveSeason"
     | "bestSeller"
     | "under999";
 
@@ -1901,6 +1987,7 @@ export async function getSectionPosition(
             beautyNewArrivals: beautyNewArrivals,
             beautyTopPicks: beautyTopPicks,
             eventPage: newProductEventPage,
+            festiveSeason: festiveSeasonProducts,
         };
 
         const table = sectionTableMap[section];
@@ -1924,7 +2011,11 @@ export async function getSectionPosition(
         return { success: true, position: row.position ?? 0 };
     } catch (error) {
         console.error("Error getting section position:", error);
-        return { success: false, error: "Failed to get section position", position: 0 };
+        return {
+            success: false,
+            error: "Failed to get section position",
+            position: 0,
+        };
     }
 }
 
@@ -1951,6 +2042,7 @@ export async function updateSectionPosition(
             beautyNewArrivals: ["/beauty-personal", "/shop"],
             beautyTopPicks: ["/beauty-personal", "/shop"],
             eventPage: ["/", "/shop"],
+            festiveSeason: ["/", "/festive"],
             bestSeller: ["/", "/shop"],
             under999: ["/", "/shop"],
         };
@@ -1972,6 +2064,7 @@ export async function updateSectionPosition(
             beautyNewArrivals: beautyNewArrivals,
             beautyTopPicks: beautyTopPicks,
             eventPage: newProductEventPage,
+            festiveSeason: festiveSeasonProducts,
         };
 
         if (section === "bestSeller") {
@@ -2018,4 +2111,3 @@ export async function updateSectionPosition(
         return { success: false, error: "Failed to update position" };
     }
 }
-

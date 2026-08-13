@@ -306,8 +306,8 @@ export function NavbarMob({ className, ...props }: GenericProps) {
             enabled: !!user?.id,
         });
 
-    const cartCount =
-        userCart?.filter(
+    const cartCount = (userCart ?? [])
+        .filter(
             (c) =>
                 c.product.isPublished &&
                 c.product.verificationStatus === "approved" &&
@@ -319,7 +319,11 @@ export function NavbarMob({ className, ...props }: GenericProps) {
                     (c.variant &&
                         !c.variant.isDeleted &&
                         c.variant.quantity > 0))
-        ).length || 0;
+        )
+        .reduce(
+            (total, item) => total + Math.max(0, Number(item.quantity) || 0),
+            0
+        );
 
     const wishlistCount = wishlist?.length || 0;
     const ordersCount = orders?.length || 0;

@@ -8,6 +8,7 @@ import {
     toggleBeautyTopPickSection,
     toggleBestSeller,
     toggleFeaturedProduct,
+    toggleFestiveSeasonProduct,
     toggleHomeAndLivingNewArrivalsSection,
     toggleHomeAndLivingTopPicksSection,
     toggleHomeHeroProduct,
@@ -81,6 +82,7 @@ interface PageProps {
         // CORRECTED: This prop now holds the category string or null
         homeNewArrivalCategory?: string | null;
         isAddedInEventProductPage?: boolean;
+        isFestiveSeason?: boolean;
         isHomeHeroProducts?: boolean;
         isHomeLoveTheseProducts?: boolean;
         isHomeYouMayAlsoLikeTheseProducts?: boolean;
@@ -104,6 +106,7 @@ function SectionPositionToggle({
     onUpdatePosition,
     currentPosition,
     extraSuffix,
+    removeLabel,
 }: {
     productId: string;
     label: string;
@@ -118,6 +121,7 @@ function SectionPositionToggle({
     ) => Promise<void>;
     currentPosition?: number;
     extraSuffix?: string;
+    removeLabel?: string;
 }) {
     const [pos, setPos] = useState<number>(
         typeof currentPosition === "number" && currentPosition > 0
@@ -197,7 +201,10 @@ function SectionPositionToggle({
                                 onClick={() => onToggle()}
                                 className="cursor-pointer justify-center text-red-500 focus:text-red-500"
                             >
-                                Remove from section
+                                {removeLabel ? (
+                                    <Icons.Trash className="mr-2 size-4" />
+                                ) : null}
+                                {removeLabel ?? "Remove from section"}
                             </DropdownMenuItem>
                         </div>
                     ) : (
@@ -242,6 +249,13 @@ export function ProductAction({ product }: PageProps) {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [newArrivalsPos, setNewArrivalsPos] = useState<number>(1);
+    const [isFestiveSeasonActive, setIsFestiveSeasonActive] = useState(
+        product.isFestiveSeason ?? false
+    );
+
+    useEffect(() => {
+        setIsFestiveSeasonActive(product.isFestiveSeason ?? false);
+    }, [product.isFestiveSeason]);
 
     const [page] = useQueryState("page", parseAsInteger.withDefault(1));
     const [limit] = useQueryState("limit", parseAsInteger.withDefault(10));
@@ -631,6 +645,27 @@ export function ProductAction({ product }: PageProps) {
             }
         } catch (error) {
             toast.error("Failed to update Style With Substance status");
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    const handleToggleFestiveSeason = async (position?: number) => {
+        setIsLoading(true);
+        try {
+            const result = await toggleFestiveSeasonProduct(
+                product.id,
+                isFestiveSeasonActive,
+                position
+            );
+            if (result.success) {
+                setIsFestiveSeasonActive((current) => !current);
+                refetch();
+                toast.success(result.message);
+            } else {
+                toast.error(result.error);
+            }
+        } catch {
+            toast.error("Failed to update Festive Season");
         } finally {
             setIsLoading(false);
         }
@@ -1029,15 +1064,14 @@ export function ProductAction({ product }: PageProps) {
 
                         <SectionPositionToggle
                             productId={product.id}
-                            label="Event Exibition Page"
+                            label="Festive Season"
                             icon={Icons.Layers}
-                            isActive={
-                                product.isAddedInEventProductPage ?? false
-                            }
+                            isActive={isFestiveSeasonActive}
                             isLoading={isLoading}
-                            sectionKey="eventPage"
-                            onToggle={handlenewEventPageSectionProduct}
+                            sectionKey="festiveSeason"
+                            onToggle={handleToggleFestiveSeason}
                             onUpdatePosition={handleUpdatePosition}
+                            removeLabel="Remove from Festive Season"
                         />
 
                         {product.verificationStatus === "idle" && (

@@ -50,6 +50,7 @@ import {
     homeProductMayAlsoLikeThese,
     homeProductPageList,
     homeProductSection,
+    festiveSeasonProducts,
     kidsFreshCollectionSection,
     menPageFeaturedProducts,
     newProductEventPage,
@@ -4903,8 +4904,10 @@ class ProductQuery {
                 const bMin = getPriceRange(b.product).min;
                 return (filters.sortOrder === "asc" ? 1 : -1) * (aMin - bMin);
             });
-        } else {
-            // default: createdAt
+        } else if (filters.sortBy) {
+            // An explicit catalogue sort may override the manually curated
+            // section position. With no sort requested (as on the homepage),
+            // retain the position order defined in the admin product menu.
             filtered.sort((a: any, b: any) => {
                 const aDate = new Date(
                     a.product.createdAt ?? a.createdAt ?? 0
@@ -4923,6 +4926,68 @@ class ProductQuery {
         const paginated = filtered.slice(start, start + limit);
 
         return paginated;
+    }
+
+    async getFestiveSeasonProducts() {
+        const data = await db.query.festiveSeasonProducts.findMany({
+            where: eq(festiveSeasonProducts.isDeleted, false),
+            orderBy: [asc(festiveSeasonProducts.position)],
+            with: {
+                product: {
+                    with: {
+                        brand: true,
+                        variants: true,
+                        returnExchangePolicy: true,
+                        specifications: true,
+                    },
+                },
+            },
+        });
+
+        const publicData = data.filter(isPublicSectionProductRow);
+        const mediaIds = new Set<string>();
+        for (const { product } of publicData) {
+            product.media?.forEach((media) => mediaIds.add(media.id));
+            product.variants?.forEach((variant) => {
+                if (variant.image) mediaIds.add(variant.image);
+            });
+        }
+
+        const mediaItems = await mediaCache.getByIds(Array.from(mediaIds));
+        const mediaMap = new Map(
+            mediaItems.data.map((item: any) => [item.id, item])
+        );
+
+        return publicData.map(({ product, ...rest }: any) => ({
+            ...rest,
+            product: {
+                ...product,
+                media: (product.media || []).map((media: any) => ({
+                    ...media,
+                    mediaItem: mediaMap.get(media.id),
+                    url: mediaMap.get(media.id)?.url ?? null,
+                })),
+                variants: (product.variants || []).map((variant: any) => ({
+                    ...variant,
+                    mediaItem: variant.image
+                        ? mediaMap.get(variant.image)
+                        : null,
+                    url: variant.image
+                        ? (mediaMap.get(variant.image)?.url ?? null)
+                        : null,
+                })),
+                returnable: product.returnExchangePolicy?.returnable ?? false,
+                returnDescription:
+                    product.returnExchangePolicy?.returnDescription ?? null,
+                exchangeable:
+                    product.returnExchangePolicy?.exchangeable ?? false,
+                exchangeDescription:
+                    product.returnExchangePolicy?.exchangeDescription ?? null,
+                specifications: (product.specifications || []).map(
+                    (spec: any) => ({ key: spec.key, value: spec.value })
+                ),
+            },
+        }));
     }
 
     async trackProductClick(

@@ -1,8 +1,8 @@
 "use client";
 
+import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
-import { trpc } from "@/lib/trpc/client";
 import { Heart, Home, Search, ShoppingBag, Store } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -21,7 +21,13 @@ function useGuestCartCount() {
                 const guestCart = JSON.parse(
                     localStorage.getItem("guest_cart") || "[]"
                 ) as CartItem[];
-                setCount(guestCart.length);
+                setCount(
+                    guestCart.reduce(
+                        (total, item) =>
+                            total + Math.max(0, Number(item.quantity) || 0),
+                        0
+                    )
+                );
             } catch {
                 setCount(0);
             }
@@ -91,7 +97,13 @@ export function MobileBottomNav() {
             href: "/mycart",
             icon: ShoppingBag,
             label: "Bag",
-            count: userId ? userCart?.length ?? 0 : guestCartCount,
+            count: userId
+                ? (userCart ?? []).reduce(
+                      (total, item) =>
+                          total + Math.max(0, Number(item.quantity) || 0),
+                      0
+                  )
+                : guestCartCount,
         },
     ];
 
@@ -109,8 +121,8 @@ export function MobileBottomNav() {
                             item.label === "Search"
                                 ? false
                                 : item.label === "Home"
-                                ? pathname === "/"
-                                : pathname.startsWith(item.href);
+                                  ? pathname === "/"
+                                  : pathname.startsWith(item.href);
 
                         return (
                             <Link
@@ -132,11 +144,13 @@ export function MobileBottomNav() {
                                     )}
                                 >
                                     <item.icon className="size-[20px]" />
-                                    {item.label === "Bag" && item.count && item.count > 0 && (
-                                        <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border-2 border-[#fbf6ec] bg-[#ff5a52] px-1 text-[10px] font-bold text-white shadow-sm">
-                                            {item.count}
-                                        </span>
-                                    )}
+                                    {item.label === "Bag" &&
+                                        item.count &&
+                                        item.count > 0 && (
+                                            <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full border-2 border-[#fbf6ec] bg-[#ff5a52] px-1 text-[10px] font-bold text-white shadow-sm">
+                                                {item.count}
+                                            </span>
+                                        )}
                                 </div>
                                 <span className="truncate leading-none">
                                     {item.label}

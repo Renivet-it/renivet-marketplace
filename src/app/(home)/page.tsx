@@ -75,6 +75,11 @@ const EventSectionTwoBanner = dynamic(() =>
         default: m.EventSectionTwoBanner,
     }))
 );
+const FestiveSeason = dynamic(() =>
+    import("@/components/home/new-home-page/festive-season").then((m) => ({
+        default: m.FestiveSeason,
+    }))
+);
 const LoveThese = dynamic(() =>
     import("@/components/home/new-home-page/love-these").then((m) => ({
         default: m.LoveThese,
@@ -173,6 +178,13 @@ export default async function Page() {
             {/* <Suspense fallback={<div className="h-[200px] md:h-[400px] w-full animate-pulse bg-gray-50" />}>
                 <CuratedBannerFetch />
             </Suspense> */}
+            <Suspense
+                fallback={
+                    <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
+                }
+            >
+                <FestiveSeasonFetch userId={userId ?? undefined} />
+            </Suspense>
             <Suspense
                 fallback={
                     <div className="h-[200px] w-full animate-pulse bg-gray-50 md:h-[400px]" />
@@ -333,6 +345,21 @@ async function ProductNewArrivalsGridFetch() {
     return (
         <ScrollReveal>
             <ProductGridNewArrivals products={products as any} />
+        </ScrollReveal>
+    );
+}
+
+async function FestiveSeasonFetch({ userId }: { userId?: string }) {
+    const selected = await productQueries.getFestiveSeasonProducts();
+    const products = selected
+        .map((entry: any) => entry.product)
+        .filter(Boolean);
+
+    if (!products.length) return null;
+
+    return (
+        <ScrollReveal>
+            <FestiveSeason products={products as any} userId={userId} />
         </ScrollReveal>
     );
 }

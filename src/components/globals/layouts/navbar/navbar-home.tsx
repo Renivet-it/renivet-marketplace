@@ -1,5 +1,6 @@
 ﻿"use client";
 
+import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { Icons } from "@/components/icons";
 import { RenivetFull } from "@/components/svgs";
 import { Button } from "@/components/ui/button-general";
@@ -21,7 +22,6 @@ import {
     NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { ProductSearch } from "@/components/ui/product-search";
-import { UserNotificationMenu } from "@/components/globals/layouts/navbar/user-notification-menu";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -263,7 +263,15 @@ export function NavbarHome({
         return `/shop?categoryId=${categoryId}&subcategoryId=${subcategoryId}&productTypeId=${productTypeId}`;
     };
 
-    const cartCount = user ? (availableCart ?? []).length : guestCart.length;
+    const cartCount = user
+        ? (availableCart ?? []).reduce(
+              (total, item) => total + Math.max(0, Number(item.quantity) || 0),
+              0
+          )
+        : guestCart.reduce(
+              (total, item) => total + Math.max(0, Number(item.quantity) || 0),
+              0
+          );
     const wishlistCount = user
         ? (userWishlist?.length ?? 0)
         : guestWishlist.length;
@@ -1061,14 +1069,18 @@ export function NavbarHome({
                                             size="sm"
                                             asChild
                                         >
-                                            <Link href="/auth/signin">Login</Link>
+                                            <Link href="/auth/signin">
+                                                Login
+                                            </Link>
                                         </Button>
                                         <Button
                                             className="h-8 rounded-full bg-[#2f3720] px-3 text-[11px] font-bold uppercase tracking-[0.08em] text-white transition-all duration-300 hover:bg-[#252c18] sm:px-5"
                                             size="sm"
                                             asChild
                                         >
-                                            <Link href="/auth/signup">Sign Up</Link>
+                                            <Link href="/auth/signup">
+                                                Sign Up
+                                            </Link>
                                         </Button>
                                     </div>
                                 </div>
