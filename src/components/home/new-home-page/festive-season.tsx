@@ -473,11 +473,11 @@ export function FestiveSeason({
                         position: relative;
                         z-index: 2;
                         display: grid;
-                        width: 77%;
-                        margin: 12px auto 0;
+                        width: 92%;
+                        margin: 12px 0 0 auto;
                         grid-template-columns: repeat(2, minmax(0, 1fr));
                         row-gap: 9px;
-                        column-gap: 20px;
+                        column-gap: 16px;
                     }
                     .mobile-frame {
                         overflow: hidden;
