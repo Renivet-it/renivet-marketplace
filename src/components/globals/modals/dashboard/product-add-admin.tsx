@@ -695,6 +695,7 @@ const processFile = async (file: File) => {
                 exchangeable: String(firstRow["Replace (TRUE/FALSE)"] || "").trim().toLowerCase() === "true",
                 returnDescription: getCell(firstRow, "Return Policy Description(IF yes)"),
                 exchangeDescription: getCell(firstRow, "Replace Policy Description(IF yes)"),
+                customizationAvailable: false,
                 specifications,
             };
 
