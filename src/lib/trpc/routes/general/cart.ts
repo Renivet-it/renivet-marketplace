@@ -160,6 +160,9 @@ export const cartRouter = createTRPCRouter({
                         queries.userCarts.updateProductInCart(existingCart.id, {
                             ...existingCart,
                             quantity: existingCart.quantity + quantity,
+                            customizationRequest:
+                                input.customizationRequest ??
+                                existingCart.customizationRequest,
                         }),
                         userCartCache.remove({
                             userId,
@@ -233,6 +236,9 @@ export const cartRouter = createTRPCRouter({
                         queries.userCarts.updateProductInCart(existingCart.id, {
                             ...existingCart,
                             quantity: existingCart.quantity + quantity,
+                            customizationRequest:
+                                input.customizationRequest ??
+                                existingCart.customizationRequest,
                         }),
                         userCartCache.remove({
                             userId,

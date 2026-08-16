@@ -21,6 +21,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea-general";
 import { getColorHex } from "@/lib/color-utils";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
@@ -383,6 +384,7 @@ export function ProductCartAddForm({
             variantId: selectedVariant?.id || null,
             quantity: 1,
             userId: userId ?? "guest",
+            customizationRequest: null,
         },
     });
 
@@ -707,6 +709,8 @@ export function ProductCartAddForm({
                                 productId: product.id,
                                 variantId: selectedVariant?.id,
                                 quantity,
+                                customizationRequest:
+                                    values.customizationRequest?.trim() || null,
                                 price: selectedVariant
                                     ? selectedVariant.price
                                     : product.price,
@@ -957,6 +961,35 @@ export function ProductCartAddForm({
                                 />
                             ))}
                         {/* Delivery â€” hidden in compact/drawer mode */}
+                        {product.customizationAvailable && (
+                            <FormField
+                                control={form.control}
+                                name="customizationRequest"
+                                render={({ field }) => (
+                                    <FormItem className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+                                        <FormLabel className="text-13 font-semibold uppercase tracking-[0.08em] text-amber-900">
+                                            Customization request (optional)
+                                        </FormLabel>
+                                        <FormControl>
+                                            <Textarea
+                                                {...field}
+                                                value={field.value ?? ""}
+                                                onChange={(event) =>
+                                                    field.onChange(event.target.value.slice(0, 500))
+                                                }
+                                                placeholder="E.g. Add initials, preferred color, or special instructions"
+                                                className="mt-2 min-h-20 resize-none border-amber-200 bg-white text-sm"
+                                                maxLength={500}
+                                            />
+                                        </FormControl>
+                                        <p className="text-11 text-amber-800">
+                                            Your request will be included with this order.
+                                        </p>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
                         {!compact && (
                             <DeliveryOption
                                 initialZipCode={initialZipCode}

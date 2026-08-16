@@ -70,6 +70,8 @@ export const createCartSchema = cartSchema.pick({
     productId: true,
     variantId: true,
     quantity: true,
+}).extend({
+    customizationRequest: cartSchema.shape.customizationRequest.optional(),
 });
 
 export const updateCartSchema = createCartSchema
