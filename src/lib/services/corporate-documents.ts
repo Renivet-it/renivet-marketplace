@@ -261,8 +261,7 @@ export const corporateDocumentService = {
                 orderId: order.id,
                 invoiceDate: invoiceDate.toISOString().slice(0, 10),
                 validUntil: validUntil.toISOString().slice(0, 10),
-                subtotalPaise:
-                    order.subtotalPaise + order.customizationPaise,
+                subtotalPaise: order.subtotalPaise + order.customizationPaise,
                 gstAmountPaise: order.gstPaise,
                 totalAmountPaise: order.totalPaise,
                 paymentTerms: settings.defaultPaymentTerms,
@@ -299,15 +298,15 @@ export const corporateDocumentService = {
         if (existing) return existing;
 
         const [settings, brandDetails, receiptVoucher] = await Promise.all([
-                getCorporateDocumentSettings(),
-                db.query.brandConfidentials.findFirst({
-                    where: eq(brandConfidentials.id, order.brandId),
-                }),
-                db.query.corporateReceiptVouchers.findFirst({
-                    where: eq(corporateReceiptVouchers.orderId, order.id),
-                    orderBy: [desc(corporateReceiptVouchers.createdAt)],
-                }),
-            ]);
+            getCorporateDocumentSettings(),
+            db.query.brandConfidentials.findFirst({
+                where: eq(brandConfidentials.id, order.brandId),
+            }),
+            db.query.corporateReceiptVouchers.findFirst({
+                where: eq(corporateReceiptVouchers.orderId, order.id),
+                orderBy: [desc(corporateReceiptVouchers.createdAt)],
+            }),
+        ]);
         if (!receiptVoucher || receiptVoucher.status !== "issued") {
             throw new TRPCError({
                 code: "PRECONDITION_FAILED",
@@ -320,9 +319,7 @@ export const corporateDocumentService = {
         // order was placed. Never accept a different rate from the UI.
         const gstRateBps = order.gstRateBps;
         const taxableValuePaise = parsed.unitBuyPricePaise * order.quantity;
-        const gstPaise = Math.round(
-            (taxableValuePaise * gstRateBps) / 10_000
-        );
+        const gstPaise = Math.round((taxableValuePaise * gstRateBps) / 10_000);
         const renivetStateCode = gstStateCode(settings.gstin);
         const brandStateCode = gstStateCode(brandDetails?.gstin);
         const intraState =
@@ -404,6 +401,17 @@ export const corporateDocumentService = {
         const validationIssues: string[] = [];
         if (!vendorPo)
             validationIssues.push("Renivet purchase order is missing");
+        if (
+            vendorPo &&
+            (vendorPo.orderId !== order.id ||
+                vendorPo.brandId !== order.brandId)
+        ) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "The selected purchase order does not match this order",
+            });
+        }
         if (
             brandDetails?.gstin &&
             parsed.supplierGstin !== brandDetails.gstin.trim().toUpperCase()
@@ -563,16 +571,21 @@ export const corporateDocumentService = {
             customerTaxInvoice,
             deliveryChallan,
         ] = await Promise.all([
-            db.query.corporateProformaInvoices.findFirst({
-                where: eq(corporateProformaInvoices.orderId, order.id),
-                orderBy: [desc(corporateProformaInvoices.createdAt)],
-            }).then(async (orderInvoice) => {
-                if (orderInvoice || !order.quoteId) return orderInvoice;
-                return db.query.corporateProformaInvoices.findFirst({
-                    where: eq(corporateProformaInvoices.quoteId, order.quoteId),
+            db.query.corporateProformaInvoices
+                .findFirst({
+                    where: eq(corporateProformaInvoices.orderId, order.id),
                     orderBy: [desc(corporateProformaInvoices.createdAt)],
-                });
-            }),
+                })
+                .then(async (orderInvoice) => {
+                    if (orderInvoice || !order.quoteId) return orderInvoice;
+                    return db.query.corporateProformaInvoices.findFirst({
+                        where: eq(
+                            corporateProformaInvoices.quoteId,
+                            order.quoteId
+                        ),
+                        orderBy: [desc(corporateProformaInvoices.createdAt)],
+                    });
+                }),
             db.query.corporatePurchaseOrders.findFirst({
                 where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
                 orderBy: [desc(corporatePurchaseOrders.createdAt)],

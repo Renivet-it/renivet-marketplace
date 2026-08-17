@@ -1,11 +1,10 @@
 "use client";
 
+import { BrandTaxInvoiceForm } from "@/components/corporate-platform/brand-tax-invoice-form";
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
-import {
-    convertValueToLabel,
-    handleClientError,
-} from "@/lib/utils";
+import { convertValueToLabel, formatINR, handleClientError } from "@/lib/utils";
+import { Download } from "lucide-react";
 import { useState } from "react";
 
 type OrderDraftState = Record<
@@ -26,14 +25,15 @@ export function BrandCorporateWorkspace({
     const utils = trpc.useUtils();
     const [drafts, setDrafts] = useState<OrderDraftState>({});
     const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
-    const { data } = trpc.general.corporatePlatform.listBrandAssignedOrders.useQuery(
-        {
-            brandId,
-        },
-        {
-            initialData,
-        }
-    );
+    const { data } =
+        trpc.general.corporatePlatform.listBrandAssignedOrders.useQuery(
+            {
+                brandId,
+            },
+            {
+                initialData,
+            }
+        );
 
     const updateStatus =
         trpc.general.corporatePlatform.updateBrandAssignedOrderStatus.useMutation(
@@ -56,6 +56,7 @@ export function BrandCorporateWorkspace({
 
     const orders = data?.orders ?? [];
     const allowedStatuses = data?.allowedStatuses ?? [];
+    const recipientGstin = data?.recipientGstin ?? null;
 
     const selectedOrder =
         orders.find((order: any) => order.id === selectedOrderId) ?? null;
@@ -78,14 +79,19 @@ export function BrandCorporateWorkspace({
     return (
         <div className="space-y-6">
             <section className="grid gap-4 md:grid-cols-3">
-                <MetricCard label="Corporate Orders" value={String(orders.length)} />
+                <MetricCard
+                    label="Corporate Orders"
+                    value={String(orders.length)}
+                />
                 <MetricCard
                     label="Active Production"
                     value={String(
                         orders.filter((order: any) =>
-                            ["approved", "in_production", "quality_check"].includes(
-                                order.status
-                            )
+                            [
+                                "approved",
+                                "in_production",
+                                "quality_check",
+                            ].includes(order.status)
                         ).length
                     )}
                 />
@@ -106,7 +112,8 @@ export function BrandCorporateWorkspace({
                             Corporate Orders
                         </h2>
                         <p className="mt-1 text-sm text-slate-500">
-                            Quote-based and self-service corporate orders assigned to this brand.
+                            Quote-based and self-service corporate orders
+                            assigned to this brand.
                         </p>
                     </div>
                 </div>
@@ -144,28 +151,36 @@ export function BrandCorporateWorkspace({
                                                     : "Quote-based"}
                                             </span>
                                         </td>
-                                        <td className="px-4 py-3">{order.quantity}</td>
+                                        <td className="px-4 py-3">
+                                            {order.quantity}
+                                        </td>
                                         <td className="px-4 py-3">
                                             {convertValueToLabel(order.status)}
                                         </td>
                                         <td className="px-4 py-3">
-                                            {new Date(order.createdAt).toLocaleDateString(
-                                                "en-IN"
-                                            )}
+                                            {new Date(
+                                                order.createdAt
+                                            ).toLocaleDateString("en-IN")}
                                         </td>
                                         <td className="px-4 py-3">
                                             <button
                                                 type="button"
                                                 className="font-semibold text-sky-700 underline-offset-4 hover:underline"
-                                                onClick={() => setSelectedOrderId(order.id)}
+                                                onClick={() =>
+                                                    setSelectedOrderId(order.id)
+                                                }
                                             >
                                                 View details
                                             </button>
-                                            {["ready_for_dispatch", "dispatched", "delivered", "completed"].includes(
-                                                order.status
-                                            ) ? (
+                                            {[
+                                                "ready_for_dispatch",
+                                                "dispatched",
+                                                "delivered",
+                                                "completed",
+                                            ].includes(order.status) ? (
                                                 <div className="mt-2 text-xs font-medium text-slate-500">
-                                                    {order.status === "ready_for_dispatch"
+                                                    {order.status ===
+                                                    "ready_for_dispatch"
                                                         ? "Admin notified"
                                                         : "Dispatch workflow updated"}
                                                 </div>
@@ -173,12 +188,15 @@ export function BrandCorporateWorkspace({
                                                 <button
                                                     type="button"
                                                     className="mt-2 block font-semibold text-emerald-700 underline-offset-4 hover:underline disabled:cursor-not-allowed disabled:opacity-50"
-                                                    disabled={updateStatus.isPending}
+                                                    disabled={
+                                                        updateStatus.isPending
+                                                    }
                                                     onClick={() =>
                                                         updateStatus.mutate({
                                                             brandId,
                                                             orderId: order.id,
-                                                            toStatus: "ready_for_dispatch",
+                                                            toStatus:
+                                                                "ready_for_dispatch",
                                                             note: "Brand marked the order complete and ready for dispatch.",
                                                         })
                                                     }
@@ -197,7 +215,8 @@ export function BrandCorporateWorkspace({
                                         className="px-4 py-8 text-center text-slate-500"
                                         colSpan={6}
                                     >
-                                        No corporate orders have been assigned to this brand yet.
+                                        No corporate orders have been assigned
+                                        to this brand yet.
                                     </td>
                                 </tr>
                             )}
@@ -211,6 +230,7 @@ export function BrandCorporateWorkspace({
                     key={selectedOrder.id}
                     brandId={brandId}
                     order={selectedOrder}
+                    recipientGstin={recipientGstin}
                     allowedStatuses={allowedStatuses}
                     draft={drafts[selectedOrder.id]}
                     onDraftChange={setDraft}
@@ -226,6 +246,7 @@ export function BrandCorporateWorkspace({
 function BrandOrderDetailPanel({
     brandId,
     order,
+    recipientGstin,
     allowedStatuses,
     draft,
     onDraftChange,
@@ -235,6 +256,7 @@ function BrandOrderDetailPanel({
 }: {
     brandId: string;
     order: any;
+    recipientGstin?: string | null;
     allowedStatuses: string[];
     draft?: { status: string; note: string };
     onDraftChange: (
@@ -251,6 +273,7 @@ function BrandOrderDetailPanel({
     }) => void;
     isUpdating: boolean;
 }) {
+    const utils = trpc.useUtils();
     const selectedStatus = draft?.status ?? order.status;
     const note = draft?.note ?? "";
     const statusOptions = allowedStatuses.includes(order.status)
@@ -282,6 +305,85 @@ function BrandOrderDetailPanel({
 
             <div className="mt-5 grid gap-4 lg:grid-cols-[minmax(0,1.35fr)_360px]">
                 <div className="space-y-4">
+                    {order.renivetPurchaseOrder ? (
+                        <div className="rounded-xl border border-slate-200 bg-white p-4">
+                            <div className="flex flex-wrap items-center justify-between gap-4">
+                                <div>
+                                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                        Renivet Purchase Order
+                                    </p>
+                                    <p className="mt-2 text-sm font-semibold text-slate-900">
+                                        {order.renivetPurchaseOrder.poNumber}
+                                    </p>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {formatINR(
+                                            order.renivetPurchaseOrder
+                                                .totalAmountPaise,
+                                            { keepDecimals: true }
+                                        )}
+                                        {order.renivetPurchaseOrder
+                                            .expectedDeliveryDate
+                                            ? ` · Delivery ${new Date(
+                                                  order.renivetPurchaseOrder.expectedDeliveryDate
+                                              ).toLocaleDateString("en-IN")}`
+                                            : ""}
+                                    </p>
+                                </div>
+                                <a
+                                    href={
+                                        order.renivetPurchaseOrder.downloadUrl
+                                    }
+                                    className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                                >
+                                    <Download className="size-4" />
+                                    Download PO
+                                </a>
+                            </div>
+                        </div>
+                    ) : null}
+
+                    {order.renivetPurchaseOrder && !order.brandTaxInvoice ? (
+                        <BrandTaxInvoiceForm
+                            brandId={brandId}
+                            orderId={order.id}
+                            vendorPurchaseOrderId={
+                                order.renivetPurchaseOrder.id
+                            }
+                            expectedTotalPaise={
+                                order.renivetPurchaseOrder.totalAmountPaise
+                            }
+                            recipientGstin={recipientGstin}
+                            onComplete={async () => {
+                                await utils.general.corporatePlatform.listBrandAssignedOrders.invalidate(
+                                    { brandId }
+                                );
+                            }}
+                        />
+                    ) : null}
+
+                    {order.brandTaxInvoice ? (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                            <div>
+                                <p className="text-xs font-semibold text-slate-900">
+                                    Supplier tax invoice
+                                </p>
+                                <p className="mt-1 text-[11px] text-slate-500">
+                                    {order.brandTaxInvoice.invoiceNumber} ·{" "}
+                                    {convertValueToLabel(
+                                        order.brandTaxInvoice.validationStatus
+                                    )}
+                                </p>
+                            </div>
+                            <a
+                                href={order.brandTaxInvoice.downloadUrl}
+                                className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                                <Download className="size-4" />
+                                Download invoice
+                            </a>
+                        </div>
+                    ) : null}
+
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                             Garment Setup
@@ -289,7 +391,10 @@ function BrandOrderDetailPanel({
                         <div className="mt-3 grid gap-3 md:grid-cols-3">
                             <DataCard
                                 label="Product Type"
-                                value={order.selectedGarment?.productType ?? "Pending"}
+                                value={
+                                    order.selectedGarment?.productType ??
+                                    "Pending"
+                                }
                             />
                             <DataCard
                                 label="GSM"
@@ -298,7 +403,8 @@ function BrandOrderDetailPanel({
                             <DataCard
                                 label="Composition"
                                 value={
-                                    order.selectedGarment?.fabricComposition ?? "Pending"
+                                    order.selectedGarment?.fabricComposition ??
+                                    "Pending"
                                 }
                             />
                         </div>
@@ -336,7 +442,9 @@ function BrandOrderDetailPanel({
                             <table className="w-full text-left text-sm">
                                 <thead className="bg-slate-50 text-slate-600">
                                     <tr>
-                                        <th className="px-4 py-3">Employee Code</th>
+                                        <th className="px-4 py-3">
+                                            Employee Code
+                                        </th>
                                         <th className="px-4 py-3">Size</th>
                                     </tr>
                                 </thead>
@@ -361,7 +469,8 @@ function BrandOrderDetailPanel({
                                                 colSpan={2}
                                                 className="px-4 py-6 text-slate-500"
                                             >
-                                                Employee sizing has not been uploaded yet.
+                                                Employee sizing has not been
+                                                uploaded yet.
                                             </td>
                                         </tr>
                                     )}
@@ -414,7 +523,9 @@ function BrandOrderDetailPanel({
                                     })
                                 }
                             >
-                                {isUpdating ? "Saving..." : "Update Order Status"}
+                                {isUpdating
+                                    ? "Saving..."
+                                    : "Update Order Status"}
                             </Button>
                         </div>
                     </div>
@@ -434,9 +545,9 @@ function BrandOrderDetailPanel({
                                             {convertValueToLabel(item.toStatus)}
                                         </p>
                                         <p className="text-xs text-slate-500">
-                                            {new Date(item.createdAt).toLocaleString(
-                                                "en-IN"
-                                            )}
+                                            {new Date(
+                                                item.createdAt
+                                            ).toLocaleString("en-IN")}
                                         </p>
                                         {item.note ? (
                                             <p className="mt-2 text-sm text-slate-600">
@@ -464,7 +575,9 @@ function MetricCard({ label, value }: { label: string; value: string }) {
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
                 {label}
             </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-900">{value}</p>
+            <p className="mt-2 text-2xl font-semibold text-slate-900">
+                {value}
+            </p>
         </div>
     );
 }

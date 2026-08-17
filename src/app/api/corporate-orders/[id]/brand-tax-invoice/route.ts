@@ -1,10 +1,14 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
-import { corporateBrandTaxInvoices } from "@/lib/db/schema";
+import {
+    brandMembers,
+    corporateBrandTaxInvoices,
+    corporateOrders,
+} from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export async function GET(
@@ -18,10 +22,27 @@ export async function GET(
     const permissions = user
         ? getUserPermissions(user.roles).sitePermissions
         : 0;
-    if (!hasPermission(permissions, [BitFieldSitePermission.VIEW_ORDERS])) {
+    const { id } = await params;
+    const canViewAllOrders = hasPermission(permissions, [
+        BitFieldSitePermission.VIEW_ORDERS,
+    ]);
+    const order = await db.query.corporateOrders.findFirst({
+        where: eq(corporateOrders.id, id),
+        columns: { brandId: true },
+    });
+    const brandMembership =
+        !canViewAllOrders && order?.brandId
+            ? await db.query.brandMembers.findFirst({
+                  where: and(
+                      eq(brandMembers.brandId, order.brandId),
+                      eq(brandMembers.memberId, userId)
+                  ),
+                  columns: { id: true },
+              })
+            : null;
+    if (!canViewAllOrders && !brandMembership) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
-    const { id } = await params;
     const invoice = await db.query.corporateBrandTaxInvoices.findFirst({
         where: eq(corporateBrandTaxInvoices.orderId, id),
         orderBy: [desc(corporateBrandTaxInvoices.createdAt)],

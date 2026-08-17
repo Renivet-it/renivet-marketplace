@@ -68,12 +68,13 @@ export async function GET(
               where: eq(corporateOrders.id, invoice.orderId),
           })
         : null;
-    const quote = !order && invoice.quoteId
-        ? await db.query.corporateQuotes.findFirst({
-              where: eq(corporateQuotes.id, invoice.quoteId),
-              with: { profile: true, brand: true },
-          })
-        : null;
+    const quote =
+        !order && invoice.quoteId
+            ? await db.query.corporateQuotes.findFirst({
+                  where: eq(corporateQuotes.id, invoice.quoteId),
+                  with: { profile: true, brand: true },
+              })
+            : null;
 
     if (!order && !quote) {
         return NextResponse.json(
@@ -86,7 +87,13 @@ export async function GET(
     if (order && !canViewAdmin) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
-    if (quote && !canViewAdmin && quote.profile.userId !== userId) {
+    if (
+        quote &&
+        !canViewAdmin &&
+        quote.profile.userId !== userId &&
+        quote.profile.email.trim().toLowerCase() !==
+            user?.email?.trim().toLowerCase()
+    ) {
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
@@ -102,11 +109,8 @@ export async function GET(
     const taxableValuePaise = invoice.subtotalPaise;
     const gstRateBps =
         order?.gstRateBps ??
-        quote?.gstRateBps ??
         (taxableValuePaise > 0
-            ? Math.round(
-                  (invoice.gstAmountPaise / taxableValuePaise) * 10_000
-              )
+            ? Math.round((invoice.gstAmountPaise / taxableValuePaise) * 10_000)
             : 0);
     const orderConfig = (order?.productConfigSnapshot ?? {}) as Record<
         string,
@@ -205,9 +209,10 @@ export async function GET(
         item: order
             ? {
                   description: productType || "Corporate merchandise",
-                  detail: [gsm && `${gsm} GSM`, fabric]
-                      .filter(Boolean)
-                      .join(" | ") ||
+                  detail:
+                      [gsm && `${gsm} GSM`, fabric]
+                          .filter(Boolean)
+                          .join(" | ") ||
                       "Customization and specifications confirmed in the self-service order",
                   hsn,
                   quantity: order.quantity,

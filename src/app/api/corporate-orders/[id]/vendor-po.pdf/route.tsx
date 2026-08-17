@@ -6,6 +6,7 @@ import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
 import {
     brandConfidentials,
+    brandMembers,
     corporatePurchaseOrders,
     corporateVendorPurchaseOrders,
     products,
@@ -18,7 +19,7 @@ import {
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -47,10 +48,6 @@ export async function GET(
     const permissions = user
         ? getUserPermissions(user.roles).sitePermissions
         : 0;
-    if (!hasPermission(permissions, [BitFieldSitePermission.VIEW_ORDERS])) {
-        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
     const order = await db.query.corporateOrders.findFirst({
         where: (table, { eq }) => eq(table.id, id),
@@ -61,6 +58,21 @@ export async function GET(
             { message: "Corporate order or supplier brand not found" },
             { status: 404 }
         );
+
+    const canViewAllOrders = hasPermission(permissions, [
+        BitFieldSitePermission.VIEW_ORDERS,
+    ]);
+    const brandMembership = canViewAllOrders
+        ? null
+        : await db.query.brandMembers.findFirst({
+              where: and(
+                  eq(brandMembers.brandId, order.brand.id),
+                  eq(brandMembers.memberId, userId)
+              ),
+          });
+    if (!canViewAllOrders && !brandMembership) {
+        return NextResponse.json({ message: "Forbidden" }, { status: 403 });
+    }
 
     const vendorPo = await db.query.corporateVendorPurchaseOrders.findFirst({
         where: eq(corporateVendorPurchaseOrders.orderId, order.id),

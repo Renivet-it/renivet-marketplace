@@ -1,11 +1,12 @@
 "use client";
 
+import { BrandTaxInvoiceForm } from "@/components/corporate-platform/brand-tax-invoice-form";
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
 import { trpc } from "@/lib/trpc/client";
-import { useUploadThing } from "@/lib/uploadthing";
-import { formatINR, handleClientError } from "@/lib/utils";
-import { CheckCircle2, Circle, Download, Upload } from "lucide-react";
+import { convertValueToLabel, handleClientError } from "@/lib/utils";
+import { CheckCircle2, Circle, Download } from "lucide-react";
+import type { ReactNode } from "react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -18,7 +19,6 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         );
     const { data: settings } =
         trpc.general.corporatePlatform.getCorporateDocumentSettings.useQuery();
-    const { startUpload } = useUploadThing("corporateDocumentUploader");
     const orderGstRateBps = Number(
         order.gstRateBps ??
             (order.productConfigSnapshot as Record<string, unknown> | undefined)
@@ -27,6 +27,7 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
     );
     const orderGstPercent = (orderGstRateBps / 100).toFixed(2);
     const [unitBuyPrice, setUnitBuyPrice] = useState("");
+    const [gstRatePercent, setGstRatePercent] = useState(orderGstPercent);
     const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
     const [deliveryMode, setDeliveryMode] = useState<
         "renivet_warehouse" | "direct_to_customer"
@@ -35,17 +36,6 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         "As agreed with the supplier brand"
     );
     const [deliveryInstructions, setDeliveryInstructions] = useState("");
-    const [brandInvoiceNumber, setBrandInvoiceNumber] = useState("");
-    const [brandInvoiceDate, setBrandInvoiceDate] = useState("");
-    const [supplierGstin, setSupplierGstin] = useState("");
-    const [recipientGstin, setRecipientGstin] = useState("");
-    const [hsnCode, setHsnCode] = useState("");
-    const [taxableValue, setTaxableValue] = useState("");
-    const [cgst, setCgst] = useState("0");
-    const [sgst, setSgst] = useState("0");
-    const [igst, setIgst] = useState("0");
-    const [invoiceTotal, setInvoiceTotal] = useState("");
-    const [brandInvoiceFile, setBrandInvoiceFile] = useState<File | null>(null);
     const [eWayBillNumber, setEWayBillNumber] = useState("");
 
     const refresh = async () => {
@@ -74,19 +64,6 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             },
             onError: (error) => handleClientError(error),
         });
-    const recordBrandInvoice =
-        trpc.general.corporatePlatform.recordBrandTaxInvoice.useMutation({
-            onSuccess: async (invoice) => {
-                toast.success(
-                    invoice.validationStatus === "validated"
-                        ? "Brand invoice uploaded and validated"
-                        : "Brand invoice uploaded for review"
-                );
-                setBrandInvoiceFile(null);
-                await refresh();
-            },
-            onError: (error) => handleClientError(error),
-        });
     const reviewBrandInvoice =
         trpc.general.corporatePlatform.reviewBrandTaxInvoice.useMutation({
             onSuccess: async () => {
@@ -106,56 +83,24 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
 
     const createVendorPo = () => {
         const pricePaise = toPaise(unitBuyPrice);
-        if (pricePaise <= 0 || !Number.isFinite(orderGstRateBps)) {
+        const gstPercent = Number(gstRatePercent);
+        if (pricePaise <= 0) {
             toast.error("Enter a valid buy price");
+            return;
+        }
+        if (!Number.isFinite(gstPercent) || gstPercent < 0 || gstPercent > 28) {
+            toast.error("Enter a GST rate between 0% and 28%");
             return;
         }
         issueVendorPo.mutate({
             orderId: order.id,
             unitBuyPricePaise: pricePaise,
-            gstRateBps: orderGstRateBps,
+            gstRateBps: Math.round(gstPercent * 100),
             expectedDeliveryDate: expectedDeliveryDate || null,
             deliveryMode,
             paymentTerms,
             deliveryInstructions: deliveryInstructions || null,
         });
-    };
-
-    const uploadBrandInvoice = async () => {
-        if (!brandInvoiceFile) {
-            toast.error("Select the brand tax invoice file");
-            return;
-        }
-        try {
-            const uploaded = await startUpload([brandInvoiceFile]);
-            const file = uploaded?.[0];
-            if (!file) throw new Error("Brand invoice upload failed");
-            recordBrandInvoice.mutate({
-                orderId: order.id,
-                vendorPurchaseOrderId: chain?.vendorPurchaseOrder?.id ?? null,
-                invoiceNumber: brandInvoiceNumber,
-                invoiceDate: brandInvoiceDate,
-                supplierGstin: supplierGstin.trim().toUpperCase(),
-                recipientGstin: (recipientGstin || settings?.gstin || "")
-                    .trim()
-                    .toUpperCase(),
-                hsnCode: hsnCode.trim(),
-                taxableValuePaise: toPaise(taxableValue),
-                cgstPaise: toPaise(cgst),
-                sgstPaise: toPaise(sgst),
-                igstPaise: toPaise(igst),
-                totalAmountPaise: toPaise(invoiceTotal),
-                file: {
-                    name: file.name,
-                    size: file.size,
-                    url: file.url,
-                    key: file.key,
-                    type: file.type || "application/pdf",
-                },
-            });
-        } catch (error) {
-            handleClientError(error);
-        }
     };
 
     const documents = [
@@ -254,7 +199,8 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                         {document.title}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-500">
-                                        {document.optionalNote ?? document.subtitle}
+                                        {document.optionalNote ??
+                                            document.subtitle}
                                     </p>
                                 </div>
                             </div>
@@ -278,7 +224,8 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             Proforma invoice not generated yet
                         </p>
                         <p className="mt-1 text-sm text-slate-600">
-                            Generate it for this existing paid self-service order.
+                            Generate it for this existing paid self-service
+                            order.
                         </p>
                     </div>
                     <Button
@@ -296,189 +243,138 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             ) : null}
 
             {!chain?.vendorPurchaseOrder ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <h3 className="font-semibold text-slate-900">
-                        Issue Renivet purchase order to brand
-                    </h3>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                        <Input
-                            placeholder="Unit buy price (INR)"
-                            value={unitBuyPrice}
-                            onChange={(event) =>
-                                setUnitBuyPrice(event.target.value)
-                            }
-                        />
-                        <Input
-                            aria-label="GST rate from order HSN"
-                            value={orderGstPercent}
-                            readOnly
-                        />
-                        <Input
-                            type="date"
-                            value={expectedDeliveryDate}
-                            onChange={(event) =>
-                                setExpectedDeliveryDate(event.target.value)
-                            }
-                        />
-                        <select
-                            className="h-10 rounded-md border border-input bg-white px-3 text-sm"
-                            value={deliveryMode}
-                            onChange={(event) =>
-                                setDeliveryMode(
-                                    event.target.value as typeof deliveryMode
-                                )
-                            }
-                        >
-                            <option value="renivet_warehouse">
-                                Deliver to Renivet warehouse
-                            </option>
-                            <option value="direct_to_customer">
-                                Ship directly to customer
-                            </option>
-                        </select>
-                        <Input
-                            placeholder="Payment terms"
-                            value={paymentTerms}
-                            onChange={(event) =>
-                                setPaymentTerms(event.target.value)
-                            }
-                        />
-                        <Input
-                            placeholder="Delivery / QC instructions"
-                            value={deliveryInstructions}
-                            onChange={(event) =>
-                                setDeliveryInstructions(event.target.value)
-                            }
-                        />
+                <div className="overflow-hidden rounded-lg border border-slate-200 bg-white">
+                    <div className="flex flex-col gap-1 border-b border-slate-200 bg-slate-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <h3 className="text-xs font-semibold text-slate-900">
+                                Brand purchase order
+                            </h3>
+                            <p className="mt-0.5 text-[10px] text-slate-500">
+                                Create the supplier PO for this order.
+                            </p>
+                        </div>
+                        <div className="text-[10px] font-medium text-slate-500">
+                            Quantity: {order.quantity} units
+                        </div>
                     </div>
-                    <Button
-                        className="mt-3"
-                        onClick={createVendorPo}
-                        disabled={issueVendorPo.isPending}
-                    >
-                        {issueVendorPo.isPending
-                            ? "Issuing..."
-                            : "Issue Renivet PO"}
-                    </Button>
+
+                    <div className="grid gap-x-4 gap-y-3 p-4 md:grid-cols-2 xl:grid-cols-3">
+                        <CompactField label="Unit buy price" suffix="INR">
+                            <Input
+                                inputMode="decimal"
+                                placeholder="0.00"
+                                value={unitBuyPrice}
+                                onChange={(event) =>
+                                    setUnitBuyPrice(event.target.value)
+                                }
+                            />
+                        </CompactField>
+                        <CompactField label="GST rate" suffix="%">
+                            <Input
+                                type="number"
+                                inputMode="decimal"
+                                min="0"
+                                max="28"
+                                step="0.01"
+                                placeholder="0.00"
+                                value={gstRatePercent}
+                                onChange={(event) =>
+                                    setGstRatePercent(event.target.value)
+                                }
+                            />
+                        </CompactField>
+                        <CompactField label="Expected delivery">
+                            <Input
+                                type="date"
+                                value={expectedDeliveryDate}
+                                onChange={(event) =>
+                                    setExpectedDeliveryDate(event.target.value)
+                                }
+                            />
+                        </CompactField>
+                        <CompactField label="Delivery mode">
+                            <select
+                                className="h-9 w-full rounded-md border border-input bg-white px-3 text-xs"
+                                value={deliveryMode}
+                                onChange={(event) =>
+                                    setDeliveryMode(
+                                        event.target
+                                            .value as typeof deliveryMode
+                                    )
+                                }
+                            >
+                                <option value="renivet_warehouse">
+                                    Renivet warehouse
+                                </option>
+                                <option value="direct_to_customer">
+                                    Direct to customer
+                                </option>
+                            </select>
+                        </CompactField>
+                        <CompactField label="Payment terms">
+                            <Input
+                                placeholder="Supplier payment terms"
+                                value={paymentTerms}
+                                onChange={(event) =>
+                                    setPaymentTerms(event.target.value)
+                                }
+                            />
+                        </CompactField>
+                        <CompactField label="Delivery / QC instructions">
+                            <Input
+                                placeholder="Optional instructions"
+                                value={deliveryInstructions}
+                                onChange={(event) =>
+                                    setDeliveryInstructions(event.target.value)
+                                }
+                            />
+                        </CompactField>
+                    </div>
+
+                    <div className="flex items-center justify-end border-t border-slate-200 bg-slate-50/60 px-4 py-3">
+                        <Button
+                            className="h-9 px-4 text-xs"
+                            onClick={createVendorPo}
+                            disabled={issueVendorPo.isPending}
+                        >
+                            {issueVendorPo.isPending
+                                ? "Issuing PO..."
+                                : "Issue purchase order"}
+                        </Button>
+                    </div>
                 </div>
             ) : null}
 
             {chain?.vendorPurchaseOrder && !chain?.brandTaxInvoice ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <h3 className="font-semibold text-slate-900">
-                        Optional: upload supplier brand tax invoice
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-500">
-                        Keep the supplier invoice here when it is available. Expected PO total:{" "}
-                        {formatINR(chain.vendorPurchaseOrder.totalAmountPaise)}
-                    </p>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                        <Input
-                            placeholder="Brand invoice number"
-                            value={brandInvoiceNumber}
-                            onChange={(event) =>
-                                setBrandInvoiceNumber(event.target.value)
-                            }
-                        />
-                        <Input
-                            type="date"
-                            value={brandInvoiceDate}
-                            onChange={(event) =>
-                                setBrandInvoiceDate(event.target.value)
-                            }
-                        />
-                        <Input
-                            placeholder="Supplier GSTIN"
-                            value={supplierGstin}
-                            onChange={(event) =>
-                                setSupplierGstin(event.target.value)
-                            }
-                        />
-                        <Input
-                            placeholder={`Renivet GSTIN${settings?.gstin ? ` (${settings.gstin})` : ""}`}
-                            value={recipientGstin}
-                            onChange={(event) =>
-                                setRecipientGstin(event.target.value)
-                            }
-                        />
-                        <Input
-                            placeholder="HSN code"
-                            value={hsnCode}
-                            onChange={(event) => setHsnCode(event.target.value)}
-                        />
-                        <Input
-                            placeholder="Taxable value (INR)"
-                            value={taxableValue}
-                            onChange={(event) =>
-                                setTaxableValue(event.target.value)
-                            }
-                        />
-                        <Input
-                            placeholder="CGST (INR)"
-                            value={cgst}
-                            onChange={(event) => setCgst(event.target.value)}
-                        />
-                        <Input
-                            placeholder="SGST (INR)"
-                            value={sgst}
-                            onChange={(event) => setSgst(event.target.value)}
-                        />
-                        <Input
-                            placeholder="IGST (INR)"
-                            value={igst}
-                            onChange={(event) => setIgst(event.target.value)}
-                        />
-                        <Input
-                            placeholder="Invoice total (INR)"
-                            value={invoiceTotal}
-                            onChange={(event) =>
-                                setInvoiceTotal(event.target.value)
-                            }
-                        />
-                        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-white px-3 text-sm">
-                            <Upload className="size-4" />
-                            <span className="truncate">
-                                {brandInvoiceFile?.name ||
-                                    "Select invoice PDF/image"}
-                            </span>
-                            <input
-                                className="hidden"
-                                type="file"
-                                accept="application/pdf,image/*"
-                                onChange={(event) =>
-                                    setBrandInvoiceFile(
-                                        event.target.files?.[0] ?? null
-                                    )
-                                }
-                            />
-                        </label>
-                    </div>
-                    <Button
-                        className="mt-3"
-                        onClick={uploadBrandInvoice}
-                        disabled={recordBrandInvoice.isPending}
-                    >
-                        {recordBrandInvoice.isPending
-                            ? "Uploading..."
-                            : "Upload and validate invoice"}
-                    </Button>
-                </div>
+                <BrandTaxInvoiceForm
+                    orderId={order.id}
+                    vendorPurchaseOrderId={chain.vendorPurchaseOrder.id}
+                    expectedTotalPaise={
+                        chain.vendorPurchaseOrder.totalAmountPaise
+                    }
+                    recipientGstin={settings?.gstin}
+                    onComplete={refresh}
+                />
             ) : null}
 
             {chain?.brandTaxInvoice ? (
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="rounded-lg border border-slate-200 bg-white p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
-                            <h3 className="font-semibold text-slate-900">
-                                Brand invoice review
+                            <h3 className="text-xs font-semibold text-slate-900">
+                                Supplier invoice review
                             </h3>
-                            <p className="mt-1 text-sm text-slate-500">
-                                Validation:{" "}
-                                {chain.brandTaxInvoice.validationStatus} |
-                                GSTR-2B: {chain.brandTaxInvoice.gstr2bStatus}
+                            <p className="mt-1 text-[11px] text-slate-500">
+                                {convertValueToLabel(
+                                    chain.brandTaxInvoice.validationStatus
+                                )}
+                                {" · GSTR-2B "}
+                                {convertValueToLabel(
+                                    chain.brandTaxInvoice.gstr2bStatus
+                                )}
                             </p>
                             {chain.brandTaxInvoice.validationIssues?.length ? (
-                                <p className="mt-2 text-sm text-amber-700">
+                                <p className="mt-2 text-xs text-amber-700">
                                     {chain.brandTaxInvoice.validationIssues.join(
                                         "; "
                                     )}
@@ -555,6 +451,32 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                 </div>
             ) : null}
         </div>
+    );
+}
+
+function CompactField({
+    label,
+    suffix,
+    children,
+}: {
+    label: string;
+    suffix?: string;
+    children: ReactNode;
+}) {
+    return (
+        <label className="min-w-0 space-y-1.5">
+            <span className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-[0.1em] text-slate-500">
+                <span>{label}</span>
+                {suffix ? (
+                    <span className="font-medium normal-case tracking-normal text-slate-400">
+                        {suffix}
+                    </span>
+                ) : null}
+            </span>
+            <span className="block [&_input]:h-9 [&_input]:text-xs">
+                {children}
+            </span>
+        </label>
     );
 }
 

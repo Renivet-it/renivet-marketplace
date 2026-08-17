@@ -75,6 +75,43 @@ export const corporateProfileInputSchema = z.object({
     shippingAddress: z.record(z.string(), z.unknown()).default({}),
 });
 
+export const corporateAdminBuyerProfileInputSchema = z.object({
+    rfqId: z.string().uuid(),
+    companyName: z.string().trim().min(2).max(160),
+    contactPerson: z.string().trim().min(2).max(160),
+    email: z.string().trim().email().max(254),
+    phone: z.string().trim().min(8).max(20),
+});
+
+export const corporateAdminManualQuoteInputSchema = z.object({
+    companyName: z.string().trim().min(2).max(160),
+    contactPerson: z.string().trim().min(2).max(160),
+    email: z.string().trim().email().max(254),
+    phone: z.string().trim().min(8).max(20),
+    deliveryAddress: z.string().trim().max(1000).nullable().optional(),
+    deliveryCity: z.string().trim().max(100).nullable().optional(),
+    deliveryState: z.string().trim().max(100).nullable().optional(),
+    deliveryPincode: z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, "Must be a 6-digit PIN code")
+        .nullable()
+        .optional()
+        .or(z.literal("")),
+    deliveryCountry: z.string().trim().max(100).default("India").nullable().optional(),
+    brandId: z.string().uuid(),
+    productTypeId: z.string().uuid().nullable().optional(),
+    gsmOptionId: z.string().uuid().nullable().optional(),
+    fabricCompositionId: z.string().uuid().nullable().optional(),
+    quantity: z.number().int().positive().max(1_000_000),
+    unitPricePaise: z.number().int().positive(),
+    customizationCostPaise: z.number().int().nonnegative().default(0),
+    gstPercent: z.number().min(0).max(100).default(0),
+    advancePercent: z.number().min(0).max(100).default(30),
+    validUntil: z.string().date().nullable().optional(),
+    comments: z.string().trim().max(1000).nullable().optional(),
+});
+
 export const corporateCatalogListInputSchema = z.object({
     search: z.string().trim().optional(),
     brandId: z.string().uuid().optional(),
@@ -191,6 +228,84 @@ export const corporatePurchaseOrderReviewInputSchema = z.object({
             authorizedSignatoryPresent: z.boolean(),
         })
         .optional(),
+    orderSetup: z
+        .object({
+            companyName: z.string().trim().min(2).max(160),
+            contactPersonName: z.string().trim().min(2).max(160),
+            emailAddress: z.string().trim().email().max(254),
+            mobileNumber: z.string().trim().min(8).max(20),
+            gstNumber: z.string().trim().max(32).nullable().optional(),
+            deliveryCountry: z.string().trim().min(2).max(100),
+            deliveryCity: z.string().trim().min(2).max(120),
+            deliveryPincode: z.string().trim().min(3).max(20),
+            deliveryAddress: z.string().trim().min(5).max(1000),
+            brandingNotes: z.string().trim().max(1000).nullable().optional(),
+            productTypeId: z.string().uuid().nullable().optional(),
+            gsmOptionId: z.string().uuid().nullable().optional(),
+            fabricCompositionId: z.string().uuid().nullable().optional(),
+            colorOptionIds: z.array(z.string().uuid()).max(20).default([]),
+            customColorRequest: z
+                .string()
+                .trim()
+                .max(200)
+                .nullable()
+                .optional(),
+            logoLocationIds: z.array(z.string().uuid()).max(20).default([]),
+            printMethodId: z.string().uuid().nullable().optional(),
+            extraChargeRuleIds: z.array(z.string().uuid()).max(20).default([]),
+            sizeBreakdown: z
+                .record(z.string(), z.number().int().nonnegative())
+                .default({}),
+            artworkFile: corporatePlatformFileSchema.nullable().optional(),
+            employeeSheetFile: corporatePlatformFileSchema
+                .nullable()
+                .optional(),
+        })
+        .optional(),
+});
+
+export const corporateAdminPurchaseOrderInputSchema = z.object({
+    quoteId: z.string().uuid(),
+    poNumber: z.string().trim().min(1).max(120),
+    poValuePaise: z.number().int().positive(),
+    poDate: z.string().date().nullable().optional(),
+    deliveryDate: z.string().date(),
+    uploadedFile: corporatePlatformFileSchema,
+    reviewNotes: z.string().trim().max(1000).nullable().optional(),
+});
+
+export const corporateAdminQuoteDecisionInputSchema = z.object({
+    quoteId: z.string().uuid(),
+    notes: z.string().trim().max(1000).nullable().optional(),
+});
+
+export const corporateAdminPaymentRequestInputSchema = z.object({
+    orderId: z.string().uuid(),
+    amountPaise: z.number().int().positive(),
+    paymentType: z.enum(["advance", "balance", "full", "partial"]),
+    expiresInDays: z.number().int().min(1).max(90).default(7),
+    notes: z.string().trim().max(1000).nullable().optional(),
+    sendEmail: z.boolean().default(true),
+});
+
+export const corporateAdminOfflinePaymentInputSchema = z.object({
+    orderId: z.string().uuid(),
+    paymentRequestId: z.string().uuid().nullable().optional(),
+    amountPaise: z.number().int().positive(),
+    paymentType: z.enum(["advance", "balance", "full", "partial"]),
+    paymentMode: z.enum([
+        "upi",
+        "card",
+        "net_banking",
+        "manual",
+        "neft",
+        "rtgs",
+        "bank_transfer",
+    ]),
+    paymentReference: z.string().trim().min(2).max(200),
+    paymentDate: z.string().date(),
+    proofFile: corporatePlatformFileSchema.nullable().optional(),
+    notes: z.string().trim().max(1000).nullable().optional(),
 });
 
 export const corporateTaskInputSchema = z.object({
@@ -224,6 +339,35 @@ export const corporateShipmentInputSchema = z.object({
     provider: z.string().trim().max(80).default("manual"),
 });
 
+export const corporateConsigneeAddressInputSchema = z.object({
+    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
+    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
+    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    deliveryCity: z.string().trim().min(2, "City is required").max(100),
+    deliveryState: z.string().trim().max(100).nullable().optional(),
+    deliveryPincode: z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, "Must be a valid 6-digit Indian PIN code")
+        .refine((pin) => pin !== "000000", "PIN code cannot be 000000"),
+    deliveryCountry: z.string().trim().min(2).max(100).default("India"),
+});
+
+export const corporateUpdateConsigneeAddressInputSchema = z.object({
+    orderId: z.string().uuid(),
+    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
+    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
+    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    deliveryCity: z.string().trim().min(2, "City is required").max(100),
+    deliveryState: z.string().trim().max(100).nullable().optional(),
+    deliveryPincode: z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, "Must be a valid 6-digit Indian PIN code")
+        .refine((pin) => pin !== "000000", "PIN code cannot be 000000"),
+    deliveryCountry: z.string().trim().min(2).max(100).default("India"),
+});
+
 export const corporateForwardOrderInputSchema = z
     .object({
         orderId: z.string().uuid(),
@@ -233,6 +377,7 @@ export const corporateForwardOrderInputSchema = z
         widthCm: z.number().int().positive(),
         heightCm: z.number().int().positive(),
         weightGrams: z.number().int().positive(),
+        consignee: corporateConsigneeAddressInputSchema.optional(),
     })
     .superRefine((value, ctx) => {
         if (value.packageSource === "preset" && !value.selectedPackingTypeId) {
@@ -356,6 +501,13 @@ export const corporateBrandTaxInvoiceInputSchema = z.object({
     sgstPaise: z.number().int().nonnegative().default(0),
     igstPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().positive(),
+    file: corporatePlatformFileSchema,
+});
+
+export const corporateBrandInvoiceUploadInputSchema = z.object({
+    orderId: z.string().uuid(),
+    vendorPurchaseOrderId: z.string().uuid(),
+    invoiceDate: z.string().date(),
     file: corporatePlatformFileSchema,
 });
 

@@ -7,6 +7,7 @@ import {
     jsonb,
     pgTable,
     text,
+    timestamp,
     uniqueIndex,
     uuid,
 } from "drizzle-orm/pg-core";
@@ -120,9 +121,9 @@ export const corporateProfiles = pgTable(
     "corporate_profiles",
     {
         id: uuid("id").primaryKey().notNull().defaultRandom(),
-        userId: text("user_id")
-            .notNull()
-            .references(() => users.id, { onDelete: "cascade" }),
+        userId: text("user_id").references(() => users.id, {
+            onDelete: "cascade",
+        }),
         companyName: text("company_name").notNull(),
         gstNumber: text("gst_number"),
         website: text("website"),
@@ -144,6 +145,7 @@ export const corporateProfiles = pgTable(
     },
     (table) => ({
         userIdx: index("corporate_profiles_user_idx").on(table.userId),
+        emailIdx: index("corporate_profiles_email_idx").on(table.email),
     })
 );
 
@@ -524,6 +526,63 @@ export const corporatePaymentTerms = pgTable("corporate_payment_terms", {
     customTermsText: text("custom_terms_text"),
     ...timestamps,
 });
+
+export const corporatePaymentRequests = pgTable(
+    "corporate_payment_requests",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        recipientEmail: text("recipient_email").notNull(),
+        tokenHash: text("token_hash").notNull(),
+        amountPaise: integer("amount_paise").notNull(),
+        paymentType: text("payment_type", {
+            enum: ["advance", "balance", "full", "partial"],
+        }).notNull(),
+        status: text("status", {
+            enum: [
+                "pending",
+                "initiated",
+                "paid",
+                "expired",
+                "cancelled",
+            ],
+        })
+            .notNull()
+            .default("pending"),
+        razorpayOrderId: text("razorpay_order_id"),
+        razorpayPaymentId: text("razorpay_payment_id"),
+        paymentReference: text("payment_reference"),
+        paymentMode: text("payment_mode"),
+        proofFileUrl: text("proof_file_url"),
+        notes: text("notes"),
+        expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+        sentAt: timestamp("sent_at", { withTimezone: true }),
+        paidAt: timestamp("paid_at", { withTimezone: true }),
+        createdByUserId: text("created_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        ...timestamps,
+    },
+    (table) => ({
+        orderIdx: index("corporate_payment_requests_order_idx").on(
+            table.orderId
+        ),
+        recipientIdx: index("corporate_payment_requests_recipient_idx").on(
+            table.recipientEmail
+        ),
+        statusIdx: index("corporate_payment_requests_status_idx").on(
+            table.status
+        ),
+        razorpayPaymentUnique: uniqueIndex(
+            "corporate_payment_requests_razorpay_payment_unique"
+        ).on(table.razorpayPaymentId),
+        tokenUnique: uniqueIndex("corporate_payment_requests_token_unique").on(
+            table.tokenHash
+        ),
+    })
+);
 
 export const corporatePurchaseOrders = pgTable(
     "corporate_purchase_orders",

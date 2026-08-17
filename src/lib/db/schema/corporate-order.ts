@@ -212,9 +212,9 @@ export const corporateOrders = pgTable(
         id: uuid("id").primaryKey().notNull().defaultRandom(),
         sequenceNo: serial("sequence_no").notNull(),
         publicOrderId: text("public_order_id").notNull(),
-        userId: text("user_id")
-            .notNull()
-            .references(() => users.id, { onDelete: "cascade" }),
+        userId: text("user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
         quoteId: uuid("quote_id").references(() => corporateQuotes.id, {
             onDelete: "set null",
         }),

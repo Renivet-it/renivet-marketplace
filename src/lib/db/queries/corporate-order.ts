@@ -12,9 +12,9 @@ import {
     eq,
     ilike,
     inArray,
-    isNotNull,
     notLike,
     or,
+    sql,
 } from "drizzle-orm";
 import { db } from "..";
 import {
@@ -28,6 +28,8 @@ import {
     corporateOrders,
     corporateOrderSettings,
     corporateOrderStatusHistory,
+    corporatePaymentRequests,
+    corporatePayments,
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
@@ -37,6 +39,7 @@ import {
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
     hsnMaster,
+    users,
 } from "../schema";
 
 const DEFAULT_TIMELINE_TEXT =
@@ -411,17 +414,23 @@ class CorporateOrderQueries {
             vendorPurchaseOrder,
             brandTaxInvoice,
             deliveryChallan,
+            payments,
         ] = await Promise.all([
-            db.query.corporateProformaInvoices.findFirst({
-                where: eq(corporateProformaInvoices.orderId, id),
-                orderBy: [desc(corporateProformaInvoices.createdAt)],
-            }).then(async (orderInvoice) => {
-                if (orderInvoice || !order.quoteId) return orderInvoice;
-                return db.query.corporateProformaInvoices.findFirst({
-                    where: eq(corporateProformaInvoices.quoteId, order.quoteId),
+            db.query.corporateProformaInvoices
+                .findFirst({
+                    where: eq(corporateProformaInvoices.orderId, id),
                     orderBy: [desc(corporateProformaInvoices.createdAt)],
-                });
-            }),
+                })
+                .then(async (orderInvoice) => {
+                    if (orderInvoice || !order.quoteId) return orderInvoice;
+                    return db.query.corporateProformaInvoices.findFirst({
+                        where: eq(
+                            corporateProformaInvoices.quoteId,
+                            order.quoteId
+                        ),
+                        orderBy: [desc(corporateProformaInvoices.createdAt)],
+                    });
+                }),
             db.query.corporatePurchaseOrders.findFirst({
                 where: eq(corporatePurchaseOrders.corporateOrderId, id),
                 orderBy: [desc(corporatePurchaseOrders.createdAt)],
@@ -442,12 +451,136 @@ class CorporateOrderQueries {
                 where: eq(corporateDeliveryChallans.orderId, id),
                 orderBy: [desc(corporateDeliveryChallans.createdAt)],
             }),
+            db.query.corporatePayments.findMany({
+                where: eq(corporatePayments.orderId, id),
+                orderBy: [desc(corporatePayments.createdAt)],
+            }),
         ]);
 
+        const verifiedPayments = payments.filter((payment) =>
+            ["payment_success", "payment_partial"].includes(
+                payment.paymentStatus
+            )
+        );
+        const verifiedPaidPaise = Math.min(
+            order.totalPaise,
+            verifiedPayments.reduce(
+                (sum, payment) => sum + payment.amountPaise,
+                0
+            )
+        );
+        const productSnapshot = (order.productConfigSnapshot ?? {}) as Record<
+            string,
+            unknown
+        >;
+        const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<
+            string,
+            unknown
+        >;
+        const productTypeId = readSnapshotId(productSnapshot.productTypeId);
+        const gsmOptionId = readSnapshotId(productSnapshot.gsmOptionId);
+        const fabricCompositionId = readSnapshotId(
+            productSnapshot.fabricCompositionId
+        );
+        const colorOptionIds = readSnapshotIds(
+            brandingSnapshot.colorOptionIds ?? productSnapshot.colorOptionIds
+        );
+        const logoLocationIds = readSnapshotIds(
+            brandingSnapshot.logoLocationIds
+        );
+        const printMethodId = readSnapshotId(brandingSnapshot.printMethodId);
+        const extraChargeRuleIds = readSnapshotIds(
+            brandingSnapshot.extraChargeRuleIds
+        );
+        const [
+            productType,
+            gsmOption,
+            fabricComposition,
+            colors,
+            logoLocations,
+            printMethod,
+            appliedExtraCharges,
+        ] = await Promise.all([
+            productTypeId
+                ? db.query.corporateProductTypes.findFirst({
+                      where: eq(corporateProductTypes.id, productTypeId),
+                  })
+                : null,
+            gsmOptionId
+                ? db.query.corporateGsmOptions.findFirst({
+                      where: eq(corporateGsmOptions.id, gsmOptionId),
+                  })
+                : null,
+            fabricCompositionId
+                ? db.query.corporateFabricCompositions.findFirst({
+                      where: eq(
+                          corporateFabricCompositions.id,
+                          fabricCompositionId
+                      ),
+                  })
+                : null,
+            colorOptionIds.length
+                ? db.query.corporateColorOptions.findMany({
+                      where: inArray(corporateColorOptions.id, colorOptionIds),
+                  })
+                : [],
+            logoLocationIds.length
+                ? db.query.corporateLogoLocations.findMany({
+                      where: inArray(
+                          corporateLogoLocations.id,
+                          logoLocationIds
+                      ),
+                  })
+                : [],
+            printMethodId
+                ? db.query.corporatePrintMethods.findFirst({
+                      where: eq(corporatePrintMethods.id, printMethodId),
+                  })
+                : null,
+            extraChargeRuleIds.length
+                ? db.query.corporateExtraChargeRules.findMany({
+                      where: inArray(
+                          corporateExtraChargeRules.id,
+                          extraChargeRuleIds
+                      ),
+                  })
+                : [],
+        ]);
+        const resolvedProductSnapshot = {
+            ...productSnapshot,
+            productType: productType ?? productSnapshot.productType ?? null,
+            gsmOption: gsmOption ?? productSnapshot.gsmOption ?? null,
+            fabricComposition:
+                fabricComposition ?? productSnapshot.fabricComposition ?? null,
+            colors: colors.length > 0 ? colors : (productSnapshot.colors ?? []),
+        };
+        const resolvedBrandingSnapshot = {
+            ...brandingSnapshot,
+            logoLocations:
+                logoLocations.length > 0
+                    ? logoLocations
+                    : (brandingSnapshot.logoLocations ?? []),
+            printMethod: printMethod ?? brandingSnapshot.printMethod ?? null,
+            appliedExtraCharges:
+                appliedExtraCharges.length > 0
+                    ? appliedExtraCharges
+                    : (brandingSnapshot.appliedExtraCharges ?? []),
+        };
+
         return {
-            ...this.parseOrder(order),
+            ...this.parseOrder({
+                ...order,
+                productConfigSnapshot: resolvedProductSnapshot,
+                brandingConfigSnapshot: resolvedBrandingSnapshot,
+                advancePaidPaise: verifiedPaidPaise,
+                balanceDuePaise: Math.max(
+                    0,
+                    order.totalPaise - verifiedPaidPaise
+                ),
+            }),
             brand: order.brand,
             shipment: order.shipment,
+            payments,
             taxInvoice: taxInvoice ?? null,
             documentChain: {
                 proformaInvoice,
@@ -497,7 +630,6 @@ class CorporateOrderQueries {
         const showReplacements = input.showReplacements ?? "exclude";
 
         const filters = [
-            isNotNull(corporateOrders.razorpayPaymentId),
             showReplacements === "exclude"
                 ? notLike(corporateOrders.publicOrderId, "REN-CORP-RPL-%")
                 : showReplacements === "only"
@@ -556,6 +688,28 @@ class CorporateOrderQueries {
                   )
                   .orderBy(desc(corporateTaxInvoices.createdAt))
             : [];
+        const paymentRows = rows.length
+            ? await db.query.corporatePayments.findMany({
+                  where: inArray(
+                      corporatePayments.orderId,
+                      rows.map((row) => row.id)
+                  ),
+              })
+            : [];
+        const verifiedPaidByOrder = new Map<string, number>();
+        for (const payment of paymentRows) {
+            if (
+                !["payment_success", "payment_partial"].includes(
+                    payment.paymentStatus
+                )
+            )
+                continue;
+            verifiedPaidByOrder.set(
+                payment.orderId,
+                (verifiedPaidByOrder.get(payment.orderId) ?? 0) +
+                    payment.amountPaise
+            );
+        }
         const invoiceByOrderId = new Map<
             string,
             { orderId: string; invoiceNumber: string }
@@ -568,7 +722,17 @@ class CorporateOrderQueries {
 
         return {
             data: rows.map((row) => ({
-                ...this.parseOrder(row),
+                ...this.parseOrder({
+                    ...row,
+                    advancePaidPaise: Math.min(
+                        row.totalPaise,
+                        verifiedPaidByOrder.get(row.id) ?? 0
+                    ),
+                    balanceDuePaise: Math.max(
+                        0,
+                        row.totalPaise - (verifiedPaidByOrder.get(row.id) ?? 0)
+                    ),
+                }),
                 brand: row.brand,
                 shipment: row.shipment,
                 replacementRequests: row.replacementRequests,
@@ -579,11 +743,20 @@ class CorporateOrderQueries {
     }
 
     async listOrdersByUser(userId: string) {
+        const user = await db.query.users.findFirst({
+            where: eq(users.id, userId),
+            columns: { email: true },
+        });
+        if (user?.email) {
+            await db
+                .update(corporateOrders)
+                .set({ userId, updatedAt: new Date() })
+                .where(
+                    sql`lower(${corporateOrders.emailAddress}) = ${user.email.trim().toLowerCase()}`
+                );
+        }
         const rows = await db.query.corporateOrders.findMany({
-            where: and(
-                eq(corporateOrders.userId, userId),
-                isNotNull(corporateOrders.razorpayPaymentId)
-            ),
+            where: eq(corporateOrders.userId, userId),
             orderBy: [desc(corporateOrders.createdAt)],
         });
 
@@ -624,6 +797,15 @@ class CorporateOrderQueries {
                   )
                   .orderBy(desc(corporateDeliveryChallans.createdAt))
             : [];
+        const receiptRows = rows.length
+            ? await db.query.corporateReceiptVouchers.findMany({
+                  where: inArray(
+                      corporateReceiptVouchers.orderId,
+                      rows.map((row) => row.id)
+                  ),
+                  orderBy: [desc(corporateReceiptVouchers.createdAt)],
+              })
+            : [];
         const invoiceByOrderId = new Map<
             string,
             { orderId: string; invoiceNumber: string }
@@ -636,11 +818,81 @@ class CorporateOrderQueries {
         const deliveryChallanByOrderId = new Map(
             deliveryChallanRows.map((challan) => [challan.orderId, challan])
         );
+        const receiptByOrderId = new Map<
+            string,
+            (typeof receiptRows)[number]
+        >();
+        for (const receipt of receiptRows) {
+            if (!receiptByOrderId.has(receipt.orderId)) {
+                receiptByOrderId.set(receipt.orderId, receipt);
+            }
+        }
+        const paymentRequestRows = rows.length
+            ? await db.query.corporatePaymentRequests.findMany({
+                  where: and(
+                      inArray(
+                          corporatePaymentRequests.orderId,
+                          rows.map((row) => row.id)
+                      ),
+                      inArray(corporatePaymentRequests.status, [
+                          "pending",
+                          "initiated",
+                      ])
+                  ),
+                  orderBy: [desc(corporatePaymentRequests.createdAt)],
+              })
+            : [];
+        const paymentRequestByOrderId = new Map<
+            string,
+            (typeof paymentRequestRows)[number]
+        >();
+        for (const request of paymentRequestRows) {
+            if (!paymentRequestByOrderId.has(request.orderId)) {
+                paymentRequestByOrderId.set(request.orderId, request);
+            }
+        }
+
+        const paymentRows = rows.length
+            ? await db.query.corporatePayments.findMany({
+                  where: inArray(
+                      corporatePayments.orderId,
+                      rows.map((row) => row.id)
+                  ),
+              })
+            : [];
+        const verifiedPaidByOrder = new Map<string, number>();
+        for (const payment of paymentRows) {
+            if (
+                !["payment_success", "payment_partial"].includes(
+                    payment.paymentStatus
+                )
+            ) {
+                continue;
+            }
+
+            verifiedPaidByOrder.set(
+                payment.orderId,
+                (verifiedPaidByOrder.get(payment.orderId) ?? 0) +
+                    payment.amountPaise
+            );
+        }
 
         return rows.map((row) => ({
-            ...this.parseOrder(row),
+            ...this.parseOrder({
+                ...row,
+                advancePaidPaise: Math.min(
+                    row.totalPaise,
+                    verifiedPaidByOrder.get(row.id) ?? 0
+                ),
+                balanceDuePaise: Math.max(
+                    0,
+                    row.totalPaise - (verifiedPaidByOrder.get(row.id) ?? 0)
+                ),
+            }),
             taxInvoice: invoiceByOrderId.get(row.id) ?? null,
             deliveryChallan: deliveryChallanByOrderId.get(row.id) ?? null,
+            paymentRequest: paymentRequestByOrderId.get(row.id) ?? null,
+            receiptVoucher: receiptByOrderId.get(row.id) ?? null,
         }));
     }
 
@@ -918,6 +1170,17 @@ class CorporateOrderQueries {
 
         return this.getFormConfig();
     }
+}
+
+function readSnapshotId(value: unknown) {
+    return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+function readSnapshotIds(value: unknown) {
+    if (!Array.isArray(value)) return [];
+    return value.filter(
+        (item): item is string => typeof item === "string" && item.length > 0
+    );
 }
 
 export const corporateOrderQueries = new CorporateOrderQueries();

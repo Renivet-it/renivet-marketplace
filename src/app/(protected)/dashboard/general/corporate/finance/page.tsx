@@ -1,4 +1,3 @@
-import { AdminPageIntro } from "@/components/corporate-platform/admin-design";
 import { AdminFinanceQueue } from "@/components/corporate-platform/admin-finance-queue";
 import { CorporateTabs } from "@/components/corporate-platform/corporate-tabs";
 import { DashShell } from "@/components/globals/layouts/shells";
@@ -9,13 +8,16 @@ export default async function Page() {
 
     return (
         <DashShell>
-            <div className="space-y-6">
+            <div className="space-y-4">
                 <CorporateTabs />
-                <AdminPageIntro
-                    eyebrow="Finance And Purchase Orders"
-                    title="Finance & purchase order operations"
-                    description="Review what needs a decision, release approved quotes, validate purchase orders, record collections, and issue invoices from one focused workspace."
-                />
+                <header className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                    <h1 className="text-lg font-semibold text-slate-950">
+                        Finance & Purchase Orders
+                    </h1>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                        Review POs, collections and invoices
+                    </p>
+                </header>
                 <AdminFinanceQueue initialData={finance} />
             </div>
         </DashShell>
