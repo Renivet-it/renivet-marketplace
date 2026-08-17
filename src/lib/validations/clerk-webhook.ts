@@ -8,20 +8,21 @@ export const clerkWebhookSchema = z.object({
 
 export const userWebhookSchema = z.object({
     id: z.string(),
-    image_url: z.string(),
-    first_name: z.string(),
-    last_name: z.string(),
+    image_url: z.string().nullable().optional(),
+    first_name: z.string().nullable().optional(),
+    last_name: z.string().nullable().optional(),
     email_addresses: z.array(
         z.object({
             id: z.string(),
-            email_address: z.string().email(),
+            email_address: z.string(),
             verification: z
                 .object({
                     status: z.string(),
                 })
-                .nullable(),
+                .nullable()
+                .optional(),
         })
-    ),
+    ).default([]),
     phone_numbers: z.array(
         z
             .object({
@@ -31,12 +32,13 @@ export const userWebhookSchema = z.object({
                     .object({
                         status: z.string(),
                     })
-                    .nullable(),
+                    .nullable()
+                    .optional(),
             })
             .optional()
-    ),
-    primary_email_address_id: z.string(),
-    primary_phone_number_id: z.string().nullable(),
+    ).default([]),
+    primary_email_address_id: z.string().nullable().optional(),
+    primary_phone_number_id: z.string().nullable().optional(),
     created_at: z.number().transform((val) => new Date(val)),
     updated_at: z.number().transform((val) => new Date(val)),
 });

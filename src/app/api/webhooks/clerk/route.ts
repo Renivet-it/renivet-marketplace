@@ -36,22 +36,38 @@ export async function POST(req: NextRequest) {
             case "user.created": {
                 const webhookUser = userWebhookSchema.parse(data);
 
-                const email = webhookUser.email_addresses.find(
+                const primaryEmail = webhookUser.email_addresses.find(
                     (e) => e.id === webhookUser.primary_email_address_id
-                )!;
-                const phone = webhookUser.phone_numbers.find(
+                );
+                const fallbackEmail = webhookUser.email_addresses[0];
+                const email = primaryEmail ?? fallbackEmail;
+
+                const primaryPhone = webhookUser.phone_numbers.find(
                     (p) => p?.id === webhookUser.primary_phone_number_id
                 );
+                const fallbackPhone = webhookUser.phone_numbers[0];
+                const phone = primaryPhone ?? fallbackPhone;
+
+                const emailAddress =
+                    email?.email_address ??
+                    (phone?.phone_number
+                        ? `${phone.phone_number.replace(/[^0-9]/g, "")}@phone.renivet.com`
+                        : `${webhookUser.id}@renivet.com`);
+
+                const firstName =
+                    webhookUser.first_name ||
+                    (phone?.phone_number ? "User" : "Customer");
+                const lastName = webhookUser.last_name || "";
 
                 posthog.capture({
                     distinctId: webhookUser.id,
                     event: POSTHOG_EVENTS.USER.ACCOUNT.CREATED,
                     properties: {
-                        email: email.email_address,
+                        email: emailAddress,
                         isEmailVerified:
-                            email.verification?.status === "verified",
-                        firstName: webhookUser.first_name,
-                        lastName: webhookUser.last_name,
+                            email?.verification?.status === "verified",
+                        firstName,
+                        lastName,
                         phone: phone?.phone_number ?? null,
                     },
                 });
@@ -60,17 +76,32 @@ export async function POST(req: NextRequest) {
                     .insert(users)
                     .values({
                         id: webhookUser.id,
-                        firstName: webhookUser.first_name,
-                        lastName: webhookUser.last_name,
-                        email: email.email_address,
+                        firstName,
+                        lastName,
+                        email: emailAddress,
                         phone: phone?.phone_number ?? null,
-                        avatarUrl: webhookUser.image_url,
+                        avatarUrl: webhookUser.image_url ?? null,
                         isEmailVerified:
-                            email.verification?.status === "verified",
+                            email?.verification?.status === "verified",
                         isPhoneVerified:
                             phone?.verification?.status === "verified",
                         createdAt: webhookUser.created_at,
                         updatedAt: webhookUser.updated_at,
+                    })
+                    .onConflictDoUpdate({
+                        target: users.id,
+                        set: {
+                            firstName,
+                            lastName,
+                            email: emailAddress,
+                            phone: phone?.phone_number ?? null,
+                            avatarUrl: webhookUser.image_url ?? null,
+                            isEmailVerified:
+                                email?.verification?.status === "verified",
+                            isPhoneVerified:
+                                phone?.verification?.status === "verified",
+                            updatedAt: webhookUser.updated_at,
+                        },
                     })
                     .returning()
                     .then((res) => res[0]);
@@ -83,44 +114,62 @@ export async function POST(req: NextRequest) {
                     addCode = true;
                 }
 
-                await sendMarketingEmail({
-                    email: newUser.email,
-                    firstName: newUser.firstName,
-                    name: `${newUser.firstName} ${newUser.lastName}`.trim(),
-                    subject: "Welcome Aboard the Renivet Express!",
-                    emailContent:
-                        "Welcome to Renivet. Start exploring conscious brands and thoughtful products.",
-                    campaignType: "welcome",
-                    source: "clerk_signup",
-                    respectFrequencyCap: false,
-                    react: AccountCreated({ user: newUser, addCode }),
-                    metadata: {
-                        addCode,
-                        source: "clerk_webhook",
-                    },
-                });
+                if (email?.email_address) {
+                    await sendMarketingEmail({
+                        email: newUser.email,
+                        firstName: newUser.firstName,
+                        name: `${newUser.firstName} ${newUser.lastName}`.trim(),
+                        subject: "Welcome Aboard the Renivet Express!",
+                        emailContent:
+                            "Welcome to Renivet. Start exploring conscious brands and thoughtful products.",
+                        campaignType: "welcome",
+                        source: "clerk_signup",
+                        respectFrequencyCap: false,
+                        react: AccountCreated({ user: newUser, addCode }),
+                        metadata: {
+                            addCode,
+                            source: "clerk_webhook",
+                        },
+                    });
+                }
                 break;
             }
 
             case "user.updated": {
                 const webhookUser = userWebhookSchema.parse(data);
 
-                const email = webhookUser.email_addresses.find(
+                const primaryEmail = webhookUser.email_addresses.find(
                     (e) => e.id === webhookUser.primary_email_address_id
-                )!;
-                const phone = webhookUser.phone_numbers.find(
+                );
+                const fallbackEmail = webhookUser.email_addresses[0];
+                const email = primaryEmail ?? fallbackEmail;
+
+                const primaryPhone = webhookUser.phone_numbers.find(
                     (p) => p?.id === webhookUser.primary_phone_number_id
                 );
+                const fallbackPhone = webhookUser.phone_numbers[0];
+                const phone = primaryPhone ?? fallbackPhone;
+
+                const emailAddress =
+                    email?.email_address ??
+                    (phone?.phone_number
+                        ? `${phone.phone_number.replace(/[^0-9]/g, "")}@phone.renivet.com`
+                        : `${webhookUser.id}@renivet.com`);
+
+                const firstName =
+                    webhookUser.first_name ||
+                    (phone?.phone_number ? "User" : "Customer");
+                const lastName = webhookUser.last_name || "";
 
                 posthog.capture({
                     distinctId: webhookUser.id,
                     event: POSTHOG_EVENTS.USER.ACCOUNT.UPDATED,
                     properties: {
-                        email: email.email_address,
+                        email: emailAddress,
                         isEmailVerified:
-                            email.verification?.status === "verified",
-                        firstName: webhookUser.first_name,
-                        lastName: webhookUser.last_name,
+                            email?.verification?.status === "verified",
+                        firstName,
+                        lastName,
                         phone: phone?.phone_number ?? null,
                     },
                 });
@@ -129,13 +178,13 @@ export async function POST(req: NextRequest) {
                     db
                         .update(users)
                         .set({
-                            firstName: webhookUser.first_name,
-                            lastName: webhookUser.last_name,
-                            email: email.email_address,
+                            firstName,
+                            lastName,
+                            email: emailAddress,
                             phone: phone?.phone_number ?? null,
-                            avatarUrl: webhookUser.image_url,
+                            avatarUrl: webhookUser.image_url ?? null,
                             isEmailVerified:
-                                email.verification?.status === "verified",
+                                email?.verification?.status === "verified",
                             isPhoneVerified:
                                 phone?.verification?.status === "verified",
                             updatedAt: webhookUser.updated_at,
