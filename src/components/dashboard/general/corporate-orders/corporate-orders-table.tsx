@@ -2,6 +2,10 @@
 
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
+import {
+    formatCorporateDeliveryAddress,
+    isCorporateDeliveryAddressValid,
+} from "@/lib/corporate-delivery-address";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertValueToLabel,
@@ -10,7 +14,7 @@ import {
     handleClientError,
 } from "@/lib/utils";
 import Link from "next/link";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 const volumetricWeightGrams = (length: number, width: number, height: number) =>
@@ -305,6 +309,126 @@ function CorporateShipmentInlinePanel({
             page: 1,
             limit: 100,
         });
+
+    const hydratedOrder = hydratedOrderData ?? order;
+    const shipment = hydratedOrder?.shipment ?? order?.shipment;
+    const brand = hydratedOrder?.brand ?? order?.brand;
+
+    const [consigneeName, setConsigneeName] = useState(
+        hydratedOrder?.contactPersonName ?? order?.contactPersonName ?? ""
+    );
+    const [consigneePhone, setConsigneePhone] = useState(
+        hydratedOrder?.mobileNumber ?? order?.mobileNumber ?? ""
+    );
+    const [consigneeAddress, setConsigneeAddress] = useState(
+        (hydratedOrder?.deliveryAddress ?? order?.deliveryAddress ?? "").toLowerCase() ===
+            "address not provided"
+            ? ""
+            : (hydratedOrder?.deliveryAddress ?? order?.deliveryAddress ?? "")
+    );
+    const [consigneeCity, setConsigneeCity] = useState(
+        (hydratedOrder?.deliveryCity ?? order?.deliveryCity ?? "").toLowerCase() ===
+            "unknown"
+            ? ""
+            : (hydratedOrder?.deliveryCity ?? order?.deliveryCity ?? "")
+    );
+    const [consigneeState, setConsigneeState] = useState(
+        ((hydratedOrder?.companySnapshot ?? order?.companySnapshot) as
+            | Record<string, unknown>
+            | undefined)?.deliveryState
+            ? String(
+                  (
+                      (hydratedOrder?.companySnapshot ??
+                          order?.companySnapshot) as Record<string, unknown>
+                  ).deliveryState
+              )
+            : ""
+    );
+    const [consigneePincode, setConsigneePincode] = useState(
+        (hydratedOrder?.deliveryPincode ?? order?.deliveryPincode ?? "") ===
+            "000000"
+            ? ""
+            : (hydratedOrder?.deliveryPincode ?? order?.deliveryPincode ?? "")
+    );
+    const [consigneeCountry, setConsigneeCountry] = useState(
+        hydratedOrder?.deliveryCountry ?? order?.deliveryCountry ?? "India"
+    );
+
+    useEffect(() => {
+        if (hydratedOrderData) {
+            setConsigneeName(hydratedOrderData.contactPersonName || "");
+            setConsigneePhone(hydratedOrderData.mobileNumber || "");
+            setConsigneeAddress(
+                (hydratedOrderData.deliveryAddress || "").toLowerCase() ===
+                    "address not provided"
+                    ? ""
+                    : hydratedOrderData.deliveryAddress || ""
+            );
+            setConsigneeCity(
+                (hydratedOrderData.deliveryCity || "").toLowerCase() ===
+                    "unknown"
+                    ? ""
+                    : hydratedOrderData.deliveryCity || ""
+            );
+            const snapshot = hydratedOrderData.companySnapshot as
+                | Record<string, unknown>
+                | undefined;
+            if (snapshot?.deliveryState) {
+                setConsigneeState(String(snapshot.deliveryState));
+            }
+            setConsigneePincode(
+                hydratedOrderData.deliveryPincode === "000000"
+                    ? ""
+                    : hydratedOrderData.deliveryPincode || ""
+            );
+            setConsigneeCountry(hydratedOrderData.deliveryCountry || "India");
+        }
+    }, [hydratedOrderData]);
+
+    const isExistingAddressValid = isCorporateDeliveryAddressValid({
+        contactPersonName:
+            hydratedOrder?.contactPersonName ?? order?.contactPersonName,
+        mobileNumber: hydratedOrder?.mobileNumber ?? order?.mobileNumber,
+        deliveryAddress:
+            hydratedOrder?.deliveryAddress ?? order?.deliveryAddress,
+        deliveryCity: hydratedOrder?.deliveryCity ?? order?.deliveryCity,
+        deliveryPincode:
+            hydratedOrder?.deliveryPincode ?? order?.deliveryPincode,
+        deliveryCountry:
+            hydratedOrder?.deliveryCountry ?? order?.deliveryCountry,
+    });
+
+    const [isEditingAddress, setIsEditingAddress] = useState(
+        !isExistingAddressValid
+    );
+
+    const isCurrentFormAddressValid = isCorporateDeliveryAddressValid({
+        contactPersonName: consigneeName,
+        mobileNumber: consigneePhone,
+        deliveryAddress: consigneeAddress,
+        deliveryCity: consigneeCity,
+        deliveryPincode: consigneePincode,
+        deliveryCountry: consigneeCountry,
+    });
+
+    const lastDelhiveryError = (() => {
+        if (shipment?.awbNumber) return null;
+        const raw = shipment?.rawPayload as Record<string, unknown> | undefined;
+        if (!raw) return null;
+        const pkgs = raw.packages as
+            | Array<Record<string, unknown>>
+            | undefined;
+        if (
+            Array.isArray(pkgs) &&
+            pkgs.length > 0 &&
+            Array.isArray(pkgs[0]?.remarks)
+        ) {
+            return (pkgs[0].remarks as string[]).join(", ");
+        }
+        if (typeof raw.rmk === "string") return raw.rmk;
+        return null;
+    })();
+
     const [pickupDate, setPickupDate] = useState("");
     const [pickupTime, setPickupTime] = useState("");
     const existingPackageSelection =
@@ -342,6 +466,22 @@ function CorporateShipmentInlinePanel({
             ? String(existingPackageSelection.weightGrams)
             : ""
     );
+
+    const updateConsignee =
+        trpc.general.corporatePlatform.updateConsigneeAddress.useMutation({
+            onSuccess: async () => {
+                await Promise.all([
+                    utils.general.corporateOrders.listOrders.invalidate(),
+                    utils.general.corporateOrders.getOrderById.invalidate({
+                        corporateOrderId: order.id,
+                    }),
+                ]);
+                toast.success("Consignee address saved");
+                setIsEditingAddress(false);
+            },
+            onError: (error) => handleClientError(error),
+        });
+
     const createForwardOrder =
         trpc.general.corporatePlatform.createForwardOrder.useMutation({
             onSuccess: async () => {
@@ -352,6 +492,7 @@ function CorporateShipmentInlinePanel({
                     }),
                 ]);
                 toast.success("Forward order created successfully");
+                setIsEditingAddress(false);
                 onSaved();
             },
             onError: (error) => handleClientError(error),
@@ -375,9 +516,6 @@ function CorporateShipmentInlinePanel({
             onError: (error) => handleClientError(error),
         });
 
-    const hydratedOrder = hydratedOrderData ?? order;
-    const shipment = hydratedOrder?.shipment ?? order?.shipment;
-    const brand = hydratedOrder?.brand ?? order?.brand;
     const packingTypes = packingTypesData?.data ?? [];
     const selectedPackingType =
         packingTypes.find(
@@ -444,6 +582,14 @@ function CorporateShipmentInlinePanel({
             pickupRequest?.pickupDate
     );
     const forwardOrderAction = async () => {
+        if (!isCurrentFormAddressValid) {
+            toast.error(
+                "Please enter a valid consignee name, mobile number, address, city, and 6-digit Indian PIN code."
+            );
+            setIsEditingAddress(true);
+            return;
+        }
+
         if (!packageSelectionReady) {
             toast.error(
                 packageSource === "preset"
@@ -462,6 +608,15 @@ function CorporateShipmentInlinePanel({
             widthCm: activeDimensions.width,
             heightCm: activeDimensions.height,
             weightGrams: parsedWeightGrams,
+            consignee: {
+                contactPersonName: consigneeName.trim(),
+                mobileNumber: consigneePhone.trim(),
+                deliveryAddress: consigneeAddress.trim(),
+                deliveryCity: consigneeCity.trim(),
+                deliveryState: consigneeState.trim() || undefined,
+                deliveryPincode: consigneePincode.trim(),
+                deliveryCountry: consigneeCountry.trim() || "India",
+            },
         });
     };
     const scheduleDelhiveryPickup = async () => {
@@ -505,6 +660,232 @@ function CorporateShipmentInlinePanel({
             </div>
 
             <div className="space-y-3 p-3">
+                {/* Consignee / Delivery Address section */}
+                <div className="rounded-md border border-slate-200 bg-white">
+                    <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50/60 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-2">
+                            <h4 className="text-xs font-semibold text-slate-900">
+                                Consignee / Delivery Address
+                            </h4>
+                            {!isExistingAddressValid ? (
+                                <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                                    Address Required
+                                </span>
+                            ) : (
+                                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                                    Ready
+                                </span>
+                            )}
+                        </div>
+                        {!shipmentCreated ? (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setIsEditingAddress((prev) => !prev)
+                                }
+                                className="text-[11px] font-semibold text-sky-700 hover:underline"
+                            >
+                                {isEditingAddress
+                                    ? "Close edit"
+                                    : "Edit consignee address"}
+                            </button>
+                        ) : null}
+                    </div>
+
+                    {lastDelhiveryError ? (
+                        <div className="mx-3 mt-3 rounded-md border border-rose-200 bg-rose-50 p-2.5 text-xs text-rose-800">
+                            <span className="font-semibold">
+                                Delhivery Error:{" "}
+                            </span>
+                            {lastDelhiveryError}. Please update the consignee
+                            address and PIN code below.
+                        </div>
+                    ) : null}
+
+                    {isEditingAddress && !shipmentCreated ? (
+                        <div className="space-y-3 p-3">
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <label className="space-y-1">
+                                    <span className="block text-[10px] font-medium text-slate-500">
+                                        Contact Person Name *
+                                    </span>
+                                    <Input
+                                        className="h-9 py-1 text-xs"
+                                        placeholder="e.g. Ayan Ganguly"
+                                        value={consigneeName}
+                                        onChange={(e) =>
+                                            setConsigneeName(e.target.value)
+                                        }
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span className="block text-[10px] font-medium text-slate-500">
+                                        Mobile Number *
+                                    </span>
+                                    <Input
+                                        className="h-9 py-1 text-xs"
+                                        placeholder="e.g. 9876543210"
+                                        value={consigneePhone}
+                                        onChange={(e) =>
+                                            setConsigneePhone(e.target.value)
+                                        }
+                                    />
+                                </label>
+                            </div>
+
+                            <label className="block space-y-1">
+                                <span className="block text-[10px] font-medium text-slate-500">
+                                    Delivery Street Address *
+                                </span>
+                                <Input
+                                    className="h-9 py-1 text-xs"
+                                    placeholder="e.g. Unit 402, Block B, Tech Park"
+                                    value={consigneeAddress}
+                                    onChange={(e) =>
+                                        setConsigneeAddress(e.target.value)
+                                    }
+                                />
+                            </label>
+
+                            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                <label className="space-y-1">
+                                    <span className="block text-[10px] font-medium text-slate-500">
+                                        City *
+                                    </span>
+                                    <Input
+                                        className="h-9 py-1 text-xs"
+                                        placeholder="e.g. Kolkata"
+                                        value={consigneeCity}
+                                        onChange={(e) =>
+                                            setConsigneeCity(e.target.value)
+                                        }
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span className="block text-[10px] font-medium text-slate-500">
+                                        State
+                                    </span>
+                                    <Input
+                                        className="h-9 py-1 text-xs"
+                                        placeholder="e.g. West Bengal"
+                                        value={consigneeState}
+                                        onChange={(e) =>
+                                            setConsigneeState(e.target.value)
+                                        }
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span className="block text-[10px] font-medium text-slate-500">
+                                        6-digit PIN Code *
+                                    </span>
+                                    <Input
+                                        className="h-9 py-1 text-xs"
+                                        placeholder="e.g. 700091"
+                                        maxLength={6}
+                                        value={consigneePincode}
+                                        onChange={(e) =>
+                                            setConsigneePincode(e.target.value)
+                                        }
+                                    />
+                                </label>
+                                <label className="space-y-1">
+                                    <span className="block text-[10px] font-medium text-slate-500">
+                                        Country
+                                    </span>
+                                    <Input
+                                        className="h-9 py-1 text-xs"
+                                        value={consigneeCountry}
+                                        onChange={(e) =>
+                                            setConsigneeCountry(e.target.value)
+                                        }
+                                    />
+                                </label>
+                            </div>
+
+                            <div className="flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+                                <p className="text-[11px] text-slate-500">
+                                    {isCurrentFormAddressValid ? (
+                                        <span className="text-emerald-700">
+                                            ✓ Address details are valid for
+                                            Delhivery.
+                                        </span>
+                                    ) : (
+                                        <span className="text-amber-700">
+                                            ⚠ Fill in all required fields
+                                            (valid 6-digit PIN).
+                                        </span>
+                                    )}
+                                </p>
+                                <Button
+                                    variant="outline"
+                                    className="h-8 px-3 text-[11px]"
+                                    disabled={
+                                        updateConsignee.isPending ||
+                                        !isCurrentFormAddressValid
+                                    }
+                                    onClick={() => {
+                                        updateConsignee.mutate({
+                                            orderId: order.id,
+                                            contactPersonName:
+                                                consigneeName.trim(),
+                                            mobileNumber:
+                                                consigneePhone.trim(),
+                                            deliveryAddress:
+                                                consigneeAddress.trim(),
+                                            deliveryCity:
+                                                consigneeCity.trim(),
+                                            deliveryState:
+                                                consigneeState.trim() ||
+                                                undefined,
+                                            deliveryPincode:
+                                                consigneePincode.trim(),
+                                            deliveryCountry:
+                                                consigneeCountry.trim() ||
+                                                "India",
+                                        });
+                                    }}
+                                >
+                                    {updateConsignee.isPending
+                                        ? "Saving..."
+                                        : "Save address"}
+                                </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="grid gap-px bg-slate-200 sm:grid-cols-2 xl:grid-cols-4">
+                            <InlineValue
+                                label="Contact Person"
+                                value={consigneeName || "Not provided"}
+                            />
+                            <InlineValue
+                                label="Mobile Number"
+                                value={consigneePhone || "Not provided"}
+                            />
+                            <InlineValue
+                                label="Delivery Address"
+                                value={
+                                    formatCorporateDeliveryAddress({
+                                        deliveryAddress: consigneeAddress,
+                                        deliveryCity: consigneeCity,
+                                        deliveryState: consigneeState,
+                                        deliveryPincode: consigneePincode,
+                                        deliveryCountry: consigneeCountry,
+                                    }) || "Not provided"
+                                }
+                            />
+                            <InlineValue
+                                label="PIN Code"
+                                value={
+                                    consigneePincode &&
+                                    consigneePincode !== "000000"
+                                        ? consigneePincode
+                                        : "Invalid PIN (000000)"
+                                }
+                            />
+                        </div>
+                    )}
+                </div>
+
                 <div className="rounded-md border border-slate-200 bg-white">
                     <div className="flex flex-col gap-2 border-b border-slate-200 bg-slate-50/60 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
                         <div>

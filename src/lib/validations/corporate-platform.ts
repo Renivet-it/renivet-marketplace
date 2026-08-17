@@ -88,6 +88,17 @@ export const corporateAdminManualQuoteInputSchema = z.object({
     contactPerson: z.string().trim().min(2).max(160),
     email: z.string().trim().email().max(254),
     phone: z.string().trim().min(8).max(20),
+    deliveryAddress: z.string().trim().max(1000).nullable().optional(),
+    deliveryCity: z.string().trim().max(100).nullable().optional(),
+    deliveryState: z.string().trim().max(100).nullable().optional(),
+    deliveryPincode: z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, "Must be a 6-digit PIN code")
+        .nullable()
+        .optional()
+        .or(z.literal("")),
+    deliveryCountry: z.string().trim().max(100).default("India").nullable().optional(),
     brandId: z.string().uuid(),
     productTypeId: z.string().uuid().nullable().optional(),
     gsmOptionId: z.string().uuid().nullable().optional(),
@@ -328,6 +339,35 @@ export const corporateShipmentInputSchema = z.object({
     provider: z.string().trim().max(80).default("manual"),
 });
 
+export const corporateConsigneeAddressInputSchema = z.object({
+    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
+    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
+    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    deliveryCity: z.string().trim().min(2, "City is required").max(100),
+    deliveryState: z.string().trim().max(100).nullable().optional(),
+    deliveryPincode: z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, "Must be a valid 6-digit Indian PIN code")
+        .refine((pin) => pin !== "000000", "PIN code cannot be 000000"),
+    deliveryCountry: z.string().trim().min(2).max(100).default("India"),
+});
+
+export const corporateUpdateConsigneeAddressInputSchema = z.object({
+    orderId: z.string().uuid(),
+    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
+    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
+    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    deliveryCity: z.string().trim().min(2, "City is required").max(100),
+    deliveryState: z.string().trim().max(100).nullable().optional(),
+    deliveryPincode: z
+        .string()
+        .trim()
+        .regex(/^\d{6}$/, "Must be a valid 6-digit Indian PIN code")
+        .refine((pin) => pin !== "000000", "PIN code cannot be 000000"),
+    deliveryCountry: z.string().trim().min(2).max(100).default("India"),
+});
+
 export const corporateForwardOrderInputSchema = z
     .object({
         orderId: z.string().uuid(),
@@ -337,6 +377,7 @@ export const corporateForwardOrderInputSchema = z
         widthCm: z.number().int().positive(),
         heightCm: z.number().int().positive(),
         weightGrams: z.number().int().positive(),
+        consignee: corporateConsigneeAddressInputSchema.optional(),
     })
     .superRefine((value, ctx) => {
         if (value.packageSource === "preset" && !value.selectedPackingTypeId) {

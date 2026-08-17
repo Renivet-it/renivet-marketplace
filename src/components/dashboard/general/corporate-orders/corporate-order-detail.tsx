@@ -3,7 +3,10 @@
 import { CorporateDocumentChainPanel } from "@/components/dashboard/general/corporate-orders/corporate-document-chain-panel";
 import { Button } from "@/components/ui/button-dash";
 import { Input } from "@/components/ui/input-dash";
-import { formatCorporateDeliveryAddress } from "@/lib/corporate-delivery-address";
+import {
+    formatCorporateDeliveryAddress,
+    isCorporateDeliveryAddressValid,
+} from "@/lib/corporate-delivery-address";
 import { trpc } from "@/lib/trpc/client";
 import {
     convertValueToLabel,
@@ -85,6 +88,37 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
     );
     const [pickupDate, setPickupDate] = useState("");
     const [pickupTime, setPickupTime] = useState("");
+    const [consigneeName, setConsigneeName] = useState(
+        initialData.contactPersonName || ""
+    );
+    const [consigneePhone, setConsigneePhone] = useState(
+        initialData.mobileNumber || ""
+    );
+    const [consigneeAddress, setConsigneeAddress] = useState(
+        (initialData.deliveryAddress || "").toLowerCase() ===
+            "address not provided"
+            ? ""
+            : initialData.deliveryAddress || ""
+    );
+    const [consigneeCity, setConsigneeCity] = useState(
+        (initialData.deliveryCity || "").toLowerCase() === "unknown"
+            ? ""
+            : initialData.deliveryCity || ""
+    );
+    const [consigneeState, setConsigneeState] = useState(
+        (companySnapshot.deliveryState as string | undefined) || ""
+    );
+    const [consigneePincode, setConsigneePincode] = useState(
+        initialData.deliveryPincode === "000000"
+            ? ""
+            : initialData.deliveryPincode || ""
+    );
+    const [consigneeCountry, setConsigneeCountry] = useState(
+        initialData.deliveryCountry || "India"
+    );
+    const [isEditingAddress, setIsEditingAddress] = useState(
+        !isCorporateDeliveryAddressValid(initialData)
+    );
     const utils = trpc.useUtils();
     const { data: brandOptions = [] } =
         trpc.general.corporatePlatform.listAdminBrandOptions.useQuery();
@@ -105,6 +139,21 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                   brandName: initialData.brand.name,
               })
             : "";
+    const updateConsignee =
+        trpc.general.corporatePlatform.updateConsigneeAddress.useMutation({
+            onSuccess: async () => {
+                await Promise.all([
+                    utils.general.corporateOrders.getOrderById.invalidate({
+                        corporateOrderId: initialData.id,
+                    }),
+                    utils.general.corporateOrders.listOrders.invalidate(),
+                ]);
+                toast.success("Consignee delivery address updated");
+                setIsEditingAddress(false);
+                router.refresh();
+            },
+            onError: (error) => handleClientError(error),
+        });
     const updateStatus = trpc.general.corporateOrders.updateStatus.useMutation({
         onSuccess: async () => {
             await utils.general.corporateOrders.getOrderById.invalidate({
@@ -305,51 +354,206 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                             <div className="space-y-5">
                                 {activeDetailTab === "overview" ? (
                                     <SnapshotSection title="Company & Delivery">
-                                        <DataTable
-                                            rows={[
-                                                [
-                                                    "Company",
-                                                    initialData.companyName,
-                                                ],
-                                                [
-                                                    "Contact person",
-                                                    initialData.contactPersonName,
-                                                ],
-                                                [
-                                                    "Email",
-                                                    initialData.emailAddress,
-                                                ],
-                                                [
-                                                    "Phone",
-                                                    initialData.mobileNumber,
-                                                ],
-                                                [
-                                                    "GST number",
-                                                    initialData.gstNumber ||
-                                                        "Not provided",
-                                                ],
-                                                [
-                                                    "Supplier brand",
-                                                    initialData.brand?.name ??
-                                                        "Not assigned",
-                                                ],
-                                                [
-                                                    "Employees",
-                                                    String(
-                                                        initialData.numberOfEmployees ??
-                                                            companySnapshot.numberOfEmployees ??
-                                                            "—"
-                                                    ),
-                                                ],
-                                                [
-                                                    "Delivery address",
-                                                    formatCorporateDeliveryAddress(
-                                                        initialData
-                                                    ) ||
-                                                        "No delivery address captured",
-                                                ],
-                                            ]}
-                                        />
+                                        <div className="mb-2 flex items-center justify-between">
+                                            <span className="text-[10px] text-slate-500">
+                                                {isCorporateDeliveryAddressValid(initialData) ? (
+                                                    <span className="font-medium text-emerald-700">✓ Address verified</span>
+                                                ) : (
+                                                    <span className="font-medium text-rose-700">⚠ Incomplete address for Delhivery</span>
+                                                )}
+                                            </span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsEditingAddress((prev) => !prev)}
+                                                className="text-[11px] font-semibold text-sky-700 hover:underline"
+                                            >
+                                                {isEditingAddress ? "Cancel" : "Edit Consignee & Address"}
+                                            </button>
+                                        </div>
+
+                                        {isEditingAddress ? (
+                                            <div className="mb-3 space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3 text-xs">
+                                                <div className="grid gap-3 sm:grid-cols-2">
+                                                    <label className="space-y-1">
+                                                        <span className="block text-[10px] font-medium text-slate-500">
+                                                            Contact Person Name *
+                                                        </span>
+                                                        <Input
+                                                            className="h-9 py-1 text-xs"
+                                                            value={consigneeName}
+                                                            onChange={(e) =>
+                                                                setConsigneeName(e.target.value)
+                                                            }
+                                                        />
+                                                    </label>
+                                                    <label className="space-y-1">
+                                                        <span className="block text-[10px] font-medium text-slate-500">
+                                                            Mobile Number *
+                                                        </span>
+                                                        <Input
+                                                            className="h-9 py-1 text-xs"
+                                                            value={consigneePhone}
+                                                            onChange={(e) =>
+                                                                setConsigneePhone(e.target.value)
+                                                            }
+                                                        />
+                                                    </label>
+                                                </div>
+
+                                                <label className="block space-y-1">
+                                                    <span className="block text-[10px] font-medium text-slate-500">
+                                                        Delivery Street Address *
+                                                    </span>
+                                                    <Input
+                                                        className="h-9 py-1 text-xs"
+                                                        value={consigneeAddress}
+                                                        onChange={(e) =>
+                                                            setConsigneeAddress(e.target.value)
+                                                        }
+                                                    />
+                                                </label>
+
+                                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                                                    <label className="space-y-1">
+                                                        <span className="block text-[10px] font-medium text-slate-500">
+                                                            City *
+                                                        </span>
+                                                        <Input
+                                                            className="h-9 py-1 text-xs"
+                                                            value={consigneeCity}
+                                                            onChange={(e) =>
+                                                                setConsigneeCity(e.target.value)
+                                                            }
+                                                        />
+                                                    </label>
+                                                    <label className="space-y-1">
+                                                        <span className="block text-[10px] font-medium text-slate-500">
+                                                            State
+                                                        </span>
+                                                        <Input
+                                                            className="h-9 py-1 text-xs"
+                                                            placeholder="e.g. West Bengal"
+                                                            value={consigneeState}
+                                                            onChange={(e) =>
+                                                                setConsigneeState(e.target.value)
+                                                            }
+                                                        />
+                                                    </label>
+                                                    <label className="space-y-1">
+                                                        <span className="block text-[10px] font-medium text-slate-500">
+                                                            6-digit PIN Code *
+                                                        </span>
+                                                        <Input
+                                                            className="h-9 py-1 text-xs"
+                                                            maxLength={6}
+                                                            value={consigneePincode}
+                                                            onChange={(e) =>
+                                                                setConsigneePincode(e.target.value)
+                                                            }
+                                                        />
+                                                    </label>
+                                                    <label className="space-y-1">
+                                                        <span className="block text-[10px] font-medium text-slate-500">
+                                                            Country
+                                                        </span>
+                                                        <Input
+                                                            className="h-9 py-1 text-xs"
+                                                            value={consigneeCountry}
+                                                            onChange={(e) =>
+                                                                setConsigneeCountry(e.target.value)
+                                                            }
+                                                        />
+                                                    </label>
+                                                </div>
+
+                                                <div className="flex justify-end gap-2 pt-1">
+                                                    <Button
+                                                        variant="outline"
+                                                        className="h-8 text-[11px]"
+                                                        onClick={() => setIsEditingAddress(false)}
+                                                    >
+                                                        Cancel
+                                                    </Button>
+                                                    <Button
+                                                        className="h-8 text-[11px]"
+                                                        disabled={
+                                                            updateConsignee.isPending ||
+                                                            !isCorporateDeliveryAddressValid({
+                                                                contactPersonName: consigneeName,
+                                                                mobileNumber: consigneePhone,
+                                                                deliveryAddress: consigneeAddress,
+                                                                deliveryCity: consigneeCity,
+                                                                deliveryPincode: consigneePincode,
+                                                                deliveryCountry: consigneeCountry,
+                                                            })
+                                                        }
+                                                        onClick={() => {
+                                                            updateConsignee.mutate({
+                                                                corporateOrderId: initialData.id,
+                                                                orderId: initialData.id,
+                                                                contactPersonName: consigneeName.trim(),
+                                                                mobileNumber: consigneePhone.trim(),
+                                                                deliveryAddress: consigneeAddress.trim(),
+                                                                deliveryCity: consigneeCity.trim(),
+                                                                deliveryState:
+                                                                    consigneeState.trim() || undefined,
+                                                                deliveryPincode: consigneePincode.trim(),
+                                                                deliveryCountry:
+                                                                    consigneeCountry.trim() || "India",
+                                                            } as any);
+                                                        }}
+                                                    >
+                                                        {updateConsignee.isPending ? "Saving..." : "Save Address"}
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <DataTable
+                                                rows={[
+                                                    [
+                                                        "Company",
+                                                        initialData.companyName,
+                                                    ],
+                                                    [
+                                                        "Contact person",
+                                                        initialData.contactPersonName,
+                                                    ],
+                                                    [
+                                                        "Email",
+                                                        initialData.emailAddress,
+                                                    ],
+                                                    [
+                                                        "Phone",
+                                                        initialData.mobileNumber,
+                                                    ],
+                                                    [
+                                                        "GST number",
+                                                        initialData.gstNumber ||
+                                                            "Not provided",
+                                                    ],
+                                                    [
+                                                        "Supplier brand",
+                                                        initialData.brand?.name ??
+                                                            "Not assigned",
+                                                    ],
+                                                    [
+                                                        "Employees",
+                                                        String(
+                                                            initialData.numberOfEmployees ??
+                                                                companySnapshot.numberOfEmployees ??
+                                                                "—"
+                                                        ),
+                                                    ],
+                                                    [
+                                                        "Delivery address",
+                                                        formatCorporateDeliveryAddress(
+                                                            initialData
+                                                        ) ||
+                                                            "No delivery address captured",
+                                                    ],
+                                                ]}
+                                            />
+                                        )}
                                         {!initialData.quoteId ? (
                                             <div className="mt-3 grid gap-2 border-t border-slate-100 pt-3 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
                                                 <select

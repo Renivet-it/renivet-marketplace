@@ -50,6 +50,11 @@ export function AdminRfqQueue({
         contactPerson: "",
         email: "",
         phone: "",
+        deliveryAddress: "",
+        deliveryCity: "",
+        deliveryState: "",
+        deliveryPincode: "",
+        deliveryCountry: "India",
         brandId: "",
         productTypeId: "",
         gsmOptionId: "",
@@ -92,6 +97,11 @@ export function AdminRfqQueue({
                     contactPerson: "",
                     email: "",
                     phone: "",
+                    deliveryAddress: "",
+                    deliveryCity: "",
+                    deliveryState: "",
+                    deliveryPincode: "",
+                    deliveryCountry: "India",
                     brandId: "",
                     productTypeId: "",
                     gsmOptionId: "",
@@ -338,7 +348,9 @@ export function AdminRfqQueue({
         manualQuoteGstPercent <= 100 &&
         Number.isFinite(manualQuoteAdvancePercent) &&
         manualQuoteAdvancePercent >= 0 &&
-        manualQuoteAdvancePercent <= 100;
+        manualQuoteAdvancePercent <= 100 &&
+        (!manualQuote.deliveryPincode.trim() ||
+            /^\d{6}$/.test(manualQuote.deliveryPincode.trim()));
 
     return (
         <div className="space-y-4">
@@ -1252,6 +1264,81 @@ export function AdminRfqQueue({
                         </div>
                     </div>
 
+                    <div className="space-y-2.5 rounded-lg border border-slate-200 bg-slate-50/70 p-3.5">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                            <h4 className="text-xs font-semibold text-slate-900">
+                                Delivery / Consignee Address (Recommended)
+                            </h4>
+                            <span className="text-[10px] text-slate-500">
+                                Stored on customer profile for seamless dispatch
+                            </span>
+                        </div>
+                        <LabelledInput
+                            label="Delivery street address"
+                            placeholder="e.g. Unit 402, Block B, Salt Lake Sector V"
+                            value={manualQuote.deliveryAddress}
+                            onChange={(deliveryAddress) =>
+                                setManualQuote((current) => ({
+                                    ...current,
+                                    deliveryAddress,
+                                }))
+                            }
+                        />
+                        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                            <LabelledInput
+                                label="City"
+                                placeholder="e.g. Kolkata"
+                                value={manualQuote.deliveryCity}
+                                onChange={(deliveryCity) =>
+                                    setManualQuote((current) => ({
+                                        ...current,
+                                        deliveryCity,
+                                    }))
+                                }
+                            />
+                            <LabelledInput
+                                label="State"
+                                placeholder="e.g. West Bengal"
+                                value={manualQuote.deliveryState}
+                                onChange={(deliveryState) =>
+                                    setManualQuote((current) => ({
+                                        ...current,
+                                        deliveryState,
+                                    }))
+                                }
+                            />
+                            <LabelledInput
+                                label="6-digit Indian PIN Code"
+                                placeholder="e.g. 700091"
+                                maxLength={6}
+                                value={manualQuote.deliveryPincode}
+                                onChange={(deliveryPincode) =>
+                                    setManualQuote((current) => ({
+                                        ...current,
+                                        deliveryPincode,
+                                    }))
+                                }
+                            />
+                            <LabelledInput
+                                label="Country"
+                                placeholder="India"
+                                value={manualQuote.deliveryCountry}
+                                onChange={(deliveryCountry) =>
+                                    setManualQuote((current) => ({
+                                        ...current,
+                                        deliveryCountry,
+                                    }))
+                                }
+                            />
+                        </div>
+                        {manualQuote.deliveryPincode &&
+                        !/^\d{6}$/.test(manualQuote.deliveryPincode.trim()) ? (
+                            <p className="text-[11px] text-rose-600">
+                                ⚠ PIN code must be exactly 6 digits.
+                            </p>
+                        ) : null}
+                    </div>
+
                     <div className="grid grid-cols-2 gap-2 rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs sm:grid-cols-4">
                         <ManualQuoteTotal
                             label="Subtotal"
@@ -1295,6 +1382,20 @@ export function AdminRfqQueue({
                                         manualQuote.contactPerson.trim(),
                                     email: manualQuote.email.trim(),
                                     phone: manualQuote.phone.trim(),
+                                    deliveryAddress:
+                                        manualQuote.deliveryAddress.trim() ||
+                                        null,
+                                    deliveryCity:
+                                        manualQuote.deliveryCity.trim() || null,
+                                    deliveryState:
+                                        manualQuote.deliveryState.trim() ||
+                                        null,
+                                    deliveryPincode:
+                                        manualQuote.deliveryPincode.trim() ||
+                                        null,
+                                    deliveryCountry:
+                                        manualQuote.deliveryCountry.trim() ||
+                                        "India",
                                     brandId: manualQuote.brandId,
                                     productTypeId:
                                         manualQuote.productTypeId || null,

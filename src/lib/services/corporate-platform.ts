@@ -4,6 +4,7 @@ import {
     extractCorporateDeliveryAddress,
     fillCorporateDeliveryAddressDefaults,
     formatCorporateDeliveryAddress,
+    isCorporateDeliveryAddressValid,
 } from "@/lib/corporate-delivery-address";
 import { db } from "@/lib/db";
 import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
@@ -101,6 +102,7 @@ import {
     corporateShipmentInputSchema,
     corporateTaskInputSchema,
     corporateTaxInvoiceInputSchema,
+    corporateUpdateConsigneeAddressInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { TRPCError } from "@trpc/server";
 import {
@@ -1667,6 +1669,26 @@ class CorporatePlatformService {
             (totalAmountPaise * parsed.advancePercent) / 100
         );
 
+        const hasDeliveryAddress = Boolean(
+            parsed.deliveryAddress?.trim() ||
+                parsed.deliveryPincode?.trim() ||
+                parsed.deliveryCity?.trim() ||
+                parsed.deliveryState?.trim()
+        );
+        const shippingAddress = hasDeliveryAddress
+            ? {
+                  addressLine1: parsed.deliveryAddress?.trim() || "",
+                  street: parsed.deliveryAddress?.trim() || "",
+                  city: parsed.deliveryCity?.trim() || "",
+                  state: parsed.deliveryState?.trim() || "",
+                  pincode: parsed.deliveryPincode?.trim() || "",
+                  postalCode: parsed.deliveryPincode?.trim() || "",
+                  country: parsed.deliveryCountry?.trim() || "India",
+              }
+            : ((existingProfile?.shippingAddress as
+                  | Record<string, unknown>
+                  | undefined) ?? {});
+
         const result = await db.transaction(async (tx) => {
             const profile = existingProfile
                 ? await tx
@@ -1678,6 +1700,7 @@ class CorporatePlatformService {
                           contactPerson: parsed.contactPerson,
                           email: normalizedEmail,
                           phone: parsed.phone,
+                          ...(hasDeliveryAddress ? { shippingAddress } : {}),
                           updatedAt: new Date(),
                       })
                       .where(eq(corporateProfiles.id, existingProfile.id))
@@ -1692,7 +1715,7 @@ class CorporatePlatformService {
                           email: normalizedEmail,
                           phone: parsed.phone,
                           billingAddress: {},
-                          shippingAddress: {},
+                          shippingAddress,
                           isDefault: true,
                       })
                       .returning()
@@ -3046,6 +3069,63 @@ class CorporatePlatformService {
         return saved;
     }
 
+    async updateConsigneeAddress(actorUserId: string, input: unknown) {
+        const parsed = corporateUpdateConsigneeAddressInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+        });
+
+        if (!order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+
+        const currentCompanySnapshot = (order.companySnapshot ?? {}) as Record<
+            string,
+            unknown
+        >;
+        const deliveryState =
+            parsed.deliveryState !== undefined
+                ? parsed.deliveryState
+                : (currentCompanySnapshot.deliveryState as string | undefined);
+        const updatedCompanySnapshot = {
+            ...currentCompanySnapshot,
+            contactPersonName: parsed.contactPersonName,
+            mobileNumber: parsed.mobileNumber,
+            deliveryAddress: parsed.deliveryAddress,
+            deliveryCity: parsed.deliveryCity,
+            deliveryState,
+            deliveryPincode: parsed.deliveryPincode,
+            deliveryCountry: parsed.deliveryCountry,
+            deliveryAddressFormatted: formatCorporateDeliveryAddress({
+                deliveryAddress: parsed.deliveryAddress,
+                deliveryCity: parsed.deliveryCity,
+                deliveryState: deliveryState ?? undefined,
+                deliveryPincode: parsed.deliveryPincode,
+                deliveryCountry: parsed.deliveryCountry,
+            }),
+        };
+
+        const [updatedOrder] = await db
+            .update(corporateOrders)
+            .set({
+                contactPersonName: parsed.contactPersonName,
+                mobileNumber: parsed.mobileNumber,
+                deliveryAddress: parsed.deliveryAddress,
+                deliveryCity: parsed.deliveryCity,
+                deliveryPincode: parsed.deliveryPincode,
+                deliveryCountry: parsed.deliveryCountry,
+                companySnapshot: updatedCompanySnapshot,
+                updatedAt: new Date(),
+            })
+            .where(eq(corporateOrders.id, order.id))
+            .returning();
+
+        return updatedOrder;
+    }
+
     async createForwardOrder(actorUserId: string, input: unknown) {
         const parsed = corporateForwardOrderInputSchema.parse(input);
         const order = await db.query.corporateOrders.findFirst({
@@ -3067,6 +3147,79 @@ class CorporatePlatformService {
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "Assign a brand before creating a forward order",
+            });
+        }
+
+        let contactPersonName = order.contactPersonName;
+        let mobileNumber = order.mobileNumber;
+        let deliveryAddress = order.deliveryAddress;
+        let deliveryCity = order.deliveryCity;
+        let deliveryPincode = order.deliveryPincode;
+        let deliveryCountry = order.deliveryCountry;
+        let deliveryState =
+            ((order.companySnapshot as Record<string, unknown> | undefined)
+                ?.deliveryState as string | undefined) ?? "";
+
+        if (parsed.consignee) {
+            contactPersonName = parsed.consignee.contactPersonName;
+            mobileNumber = parsed.consignee.mobileNumber;
+            deliveryAddress = parsed.consignee.deliveryAddress;
+            deliveryCity = parsed.consignee.deliveryCity;
+            deliveryState = parsed.consignee.deliveryState || deliveryState;
+            deliveryPincode = parsed.consignee.deliveryPincode;
+            deliveryCountry = parsed.consignee.deliveryCountry;
+
+            const currentCompanySnapshot = (order.companySnapshot ?? {}) as Record<
+                string,
+                unknown
+            >;
+            const updatedCompanySnapshot = {
+                ...currentCompanySnapshot,
+                contactPersonName,
+                mobileNumber,
+                deliveryAddress,
+                deliveryCity,
+                deliveryState,
+                deliveryPincode,
+                deliveryCountry,
+                deliveryAddressFormatted: formatCorporateDeliveryAddress({
+                    deliveryAddress,
+                    deliveryCity,
+                    deliveryState,
+                    deliveryPincode,
+                    deliveryCountry,
+                }),
+            };
+
+            await db
+                .update(corporateOrders)
+                .set({
+                    contactPersonName,
+                    mobileNumber,
+                    deliveryAddress,
+                    deliveryCity,
+                    deliveryPincode,
+                    deliveryCountry,
+                    companySnapshot: updatedCompanySnapshot,
+                    updatedAt: new Date(),
+                })
+                .where(eq(corporateOrders.id, order.id));
+        }
+
+        if (
+            !isCorporateDeliveryAddressValid({
+                contactPersonName,
+                mobileNumber,
+                deliveryAddress,
+                deliveryCity,
+                deliveryPincode,
+                deliveryCountry,
+            })
+        ) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "Please provide a valid consignee address, contact person, phone number, and a 6-digit Indian PIN code before creating a Delhivery shipment.",
             });
         }
 
@@ -3100,12 +3253,13 @@ class CorporatePlatformService {
             },
             shipments: [
                 {
-                    name: order.contactPersonName,
-                    add: order.deliveryAddress,
-                    pin: order.deliveryPincode,
-                    city: order.deliveryCity,
-                    country: order.deliveryCountry,
-                    phone: order.mobileNumber,
+                    name: contactPersonName,
+                    add: deliveryAddress,
+                    pin: deliveryPincode,
+                    city: deliveryCity,
+                    state: deliveryState || undefined,
+                    country: deliveryCountry,
+                    phone: mobileNumber,
                     order: order.publicOrderId,
                     payment_mode: "Prepaid" as const,
                     shipping_mode: "Surface" as const,
@@ -3145,15 +3299,28 @@ class CorporatePlatformService {
                 ? (packageData as Record<string, unknown>)
                 : {};
         const waybill =
-            typeof packageRecord.waybill === "string"
-                ? packageRecord.waybill
-                : typeof packageRecord.awb === "string"
-                  ? packageRecord.awb
-                  : typeof rawData.waybill === "string"
-                    ? rawData.waybill
-                    : typeof rawData.awb === "string"
-                      ? rawData.awb
+            typeof packageRecord.waybill === "string" && packageRecord.waybill.trim()
+                ? packageRecord.waybill.trim()
+                : typeof packageRecord.awb === "string" && packageRecord.awb.trim()
+                  ? packageRecord.awb.trim()
+                  : typeof rawData.waybill === "string" && rawData.waybill.trim()
+                    ? rawData.waybill.trim()
+                    : typeof rawData.awb === "string" && rawData.awb.trim()
+                      ? rawData.awb.trim()
                       : null;
+
+        const packageRemarks = Array.isArray(packageRecord.remarks)
+            ? packageRecord.remarks.join(", ")
+            : typeof packageRecord.remarks === "string"
+              ? packageRecord.remarks
+              : typeof rawData.rmk === "string"
+                ? rawData.rmk
+                : null;
+
+        const isFailed =
+            !waybill ||
+            packageRecord.status === "Fail" ||
+            rawData.success === false;
 
         const existingShipment = await db.query.corporateShipments.findFirst({
             where: eq(corporateShipments.orderId, order.id),
@@ -3167,7 +3334,7 @@ class CorporatePlatformService {
                 : null,
             dispatchDate: null,
             deliveryDate: null,
-            status: "ready" as const,
+            status: (isFailed ? "ready" : "ready") as "ready",
             provider: "delhivery",
             rawPayload: {
                 ...rawData,
@@ -3202,6 +3369,15 @@ class CorporatePlatformService {
                   })
                   .returning()
                   .then((rows) => rows[0]);
+
+        if (isFailed) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: packageRemarks
+                    ? `Delhivery forward order creation failed: ${packageRemarks}`
+                    : "Delhivery could not generate a waybill for this shipment. Please verify the consignee PIN code and package dimensions.",
+            });
+        }
 
         if (order.status !== "ready_for_dispatch") {
             await corporateOrderQueries.updateCorporateOrder(order.id, {
