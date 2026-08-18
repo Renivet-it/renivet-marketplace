@@ -1,6 +1,7 @@
 import { generateId } from "@/lib/utils";
 import { relations } from "drizzle-orm";
 import {
+    bigint,
     boolean,
     index,
     integer,
@@ -64,6 +65,9 @@ export const brands = pgTable(
             .references(() => users.id, { onDelete: "cascade" }),
         bio: text("bio"),
         isActive: boolean("is_active").notNull().default(true),
+        isCorporateEnabled: boolean("is_corporate_enabled")
+            .notNull()
+            .default(false),
         confidentialVerificationStatus: text(
             "confidential_verification_status",
             { enum: ["idle", "pending", "approved", "rejected"] }
@@ -101,6 +105,20 @@ export const brandConfidentials = pgTable(
             .references(() => brands.id, { onDelete: "cascade" }),
         gstin: text("gstin").notNull(),
         pan: text("pan").notNull(),
+        entityType: text("entity_type", {
+            enum: [
+                "company",
+                "llp",
+                "partnership",
+                "proprietorship",
+                "individual",
+                "huf",
+            ],
+        }),
+        aggregateAnnualTurnoverPaise: bigint(
+            "aggregate_annual_turnover_paise",
+            { mode: "number" }
+        ),
         bankName: text("bank_name").notNull(),
         bankAccountHolderName: text("bank_account_holder_name").notNull(),
         bankAccountNumber: text("bank_account_number").notNull(),
@@ -112,8 +130,13 @@ export const brandConfidentials = pgTable(
             "bank_account_verification_document"
         ),
         authorizedSignatoryName: text("authorized_signatory_name").notNull(),
+        authorizedSignatoryImageUrl: text("authorized_signatory_image_url"),
         authorizedSignatoryEmail: text("authorized_signatory_email").notNull(),
         authorizedSignatoryPhone: text("authorized_signatory_phone").notNull(),
+        corporateSlaLeadTimeDays: integer("corporate_sla_lead_time_days"),
+        corporateMonthlyCapacity: integer("corporate_monthly_capacity"),
+        panVerified: boolean("pan_verified").notNull().default(false),
+        panVerifiedAt: timestamp("pan_verified_at"),
         udyamRegistrationCertificate: text("udyam_registration_certificate"),
         iecCertificate: text("iec_certificate"),
         sustainabilityCertificates: jsonb("sustainability_certificates")

@@ -5,7 +5,13 @@ import {
 import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
 import {
+    brandConfidentials,
+    brands,
+    corporateExtraChargeRules,
+    corporateFabricCompositions,
+    corporateGsmOptions,
     corporateOrders,
+    corporateProductTypes,
     corporateProformaInvoices,
     corporateQuotes,
     products,
@@ -18,7 +24,7 @@ import {
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -72,7 +78,9 @@ export async function GET(
         !order && invoice.quoteId
             ? await db.query.corporateQuotes.findFirst({
                   where: eq(corporateQuotes.id, invoice.quoteId),
-                  with: { profile: true, brand: true },
+                  with: {
+                      profile: true,
+                  },
               })
             : null;
 
@@ -97,16 +105,60 @@ export async function GET(
         return NextResponse.json({ message: "Forbidden" }, { status: 403 });
     }
 
-    const [settings, product] = await Promise.all([
+    const brandId = quote?.brandId || order?.brandId || null;
+
+    const [settings, product, brand, brandConfidential, productTypeRecord, gsmOptionRecord, fabricCompositionRecord] = await Promise.all([
         getCorporateDocumentSettings(),
         quote?.productId
             ? db.query.products.findFirst({
                   where: eq(products.id, quote.productId),
               })
             : Promise.resolve(null),
+        brandId
+            ? db.query.brands.findFirst({
+                  where: eq(brands.id, brandId),
+              })
+            : Promise.resolve(null),
+        brandId
+            ? db.query.brandConfidentials.findFirst({
+                  where: eq(brandConfidentials.id, brandId),
+              })
+            : Promise.resolve(null),
+        quote?.productTypeId
+            ? db.query.corporateProductTypes.findFirst({
+                  where: eq(
+                      corporateProductTypes.id,
+                      quote.productTypeId
+                  ),
+                  with: { hsnMaster: true },
+              })
+            : Promise.resolve(null),
+        quote?.gsmOptionId
+            ? db.query.corporateGsmOptions.findFirst({
+                  where: eq(corporateGsmOptions.id, quote.gsmOptionId),
+              })
+            : Promise.resolve(null),
+        quote?.fabricCompositionId
+            ? db.query.corporateFabricCompositions.findFirst({
+                  where: eq(
+                      corporateFabricCompositions.id,
+                      quote.fabricCompositionId
+                  ),
+              })
+            : Promise.resolve(null),
     ]);
 
     const taxableValuePaise = invoice.subtotalPaise;
+    const quantity = order?.quantity ?? quote?.quantity ?? 1;
+    const baseSubtotalPaise =
+        quote?.subtotalPaise ??
+        order?.subtotalPaise ??
+        taxableValuePaise;
+    const customizationPaise =
+        quote?.customizationCostPaise ??
+        order?.customizationPaise ??
+        0;
+
     const gstRateBps =
         order?.gstRateBps ??
         (taxableValuePaise > 0
@@ -116,18 +168,121 @@ export async function GET(
         string,
         unknown
     >;
-    const productType = configText(orderConfig.productType, [
+    const orderProductTypeName = configText(orderConfig.productType, [
         "name",
         "title",
         "label",
     ]);
-    const gsm = configText(orderConfig.gsmOption, ["gsm", "name", "label"]);
-    const fabric = configText(orderConfig.fabricComposition, [
+    const orderGsm = configText(orderConfig.gsmOption, ["gsm", "name", "label"]);
+    const orderFabric = configText(orderConfig.fabricComposition, [
         "name",
         "composition",
         "label",
     ]);
-    const hsn = configText(orderConfig, ["hsnCode"]);
+    const orderHsn = configText(orderConfig, ["hsnCode"]);
+
+    // Supplier Brand Details
+    const supplierName =
+        brandConfidential?.registeredBusinessName ||
+        brand?.name ||
+        "Supplier Brand";
+    const supplierAddress =
+        [
+            brandConfidential?.addressLine1,
+            brandConfidential?.addressLine2,
+            brandConfidential?.city,
+            brandConfidential?.state,
+            brandConfidential?.postalCode,
+        ]
+            .filter(Boolean)
+            .join(", ") || "Address on file";
+    const supplierGstin = brandConfidential?.gstin || "Not provided";
+    const supplierEmail = brandConfidential?.corporateEmail ?? undefined;
+    const supplierPhone = brandConfidential?.corporatePhone ?? undefined;
+
+    // Fetch extra charge rules with amounts if selected
+    let extraChargeDescriptions: string[] = [];
+    if (
+        Array.isArray(quote?.extraChargeRuleIds) &&
+        quote.extraChargeRuleIds.length > 0
+    ) {
+        const extraRules = await db.query.corporateExtraChargeRules.findMany({
+            where: inArray(
+                corporateExtraChargeRules.id,
+                quote.extraChargeRuleIds
+            ),
+        });
+        extraChargeDescriptions = extraRules.map((r) => {
+            const costPaise =
+                r.chargeType === "per_unit"
+                    ? r.amountPaise * quantity
+                    : r.amountPaise;
+            const costStr =
+                costPaise > 0
+                    ? ` (+INR ${(costPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                    : "";
+            return `${r.name}${costStr}`;
+        });
+    }
+
+    // Manual extra with amount
+    const manualExtraPaise = quote?.manualExtraAmountPaise ?? 0;
+    const manualCostStr =
+        manualExtraPaise > 0
+            ? ` (+INR ${(manualExtraPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+            : "";
+    if (quote?.manualExtraDescription) {
+        extraChargeDescriptions.push(
+            `Custom: ${quote.manualExtraDescription}${manualCostStr}`
+        );
+    } else if (manualExtraPaise > 0) {
+        extraChargeDescriptions.push(`Custom charges${manualCostStr}`);
+    }
+
+    const resolvedItemName =
+        product?.title ||
+        productTypeRecord?.name ||
+        orderProductTypeName ||
+        (orderConfig?.productType as any)?.name ||
+        order?.productConfigSnapshot?.productScopeSummary ||
+        "Corporate merchandise";
+
+    const rawGsm = gsmOptionRecord?.label || orderGsm;
+    const formattedGsm = rawGsm
+        ? rawGsm.toLowerCase().endsWith("gsm")
+            ? rawGsm
+            : `${rawGsm} GSM`
+        : null;
+
+    const specsSummary = [
+        formattedGsm,
+        fabricCompositionRecord?.name || orderFabric,
+    ]
+        .filter(Boolean)
+        .join(" | ");
+
+    const extrasSummary = extraChargeDescriptions.join(", ");
+
+    const itemDetail =
+        [
+            specsSummary,
+            extrasSummary
+                ? `Extras: ${extrasSummary}`
+                : customizationPaise > 0
+                  ? `Customization & extras (+INR ${(customizationPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                  : null,
+        ]
+            .filter(Boolean)
+            .join(" | ") ||
+        "Customization and specifications as approved in the corporate quote";
+
+    const resolvedHsn =
+        quote?.hsnCode ||
+        productTypeRecord?.hsnMaster?.hsnCode ||
+        product?.hsCode ||
+        orderHsn ||
+        (orderConfig?.hsnCode as string) ||
+        null;
 
     const billing = (quote?.profile.billingAddress ?? {}) as Record<
         string,
@@ -147,21 +302,96 @@ export async function GET(
         )
         .join(", ");
 
+    // Dynamic advance percentage
+    let advancePercent = 30;
+    if (quote && quote.totalAmountPaise > 0) {
+        advancePercent = Math.round(
+            (quote.advanceAmountPaise * 100) / quote.totalAmountPaise
+        );
+    } else if (order && order.totalPaise > 0) {
+        advancePercent = Math.round(
+            (order.advancePaise * 100) / order.totalPaise
+        );
+    }
+
+    let dynamicAdvanceTerm: string;
+    if (advancePercent >= 100) {
+        dynamicAdvanceTerm =
+            "100% advance on PO confirmation / full payment required.";
+    } else if (advancePercent <= 0) {
+        dynamicAdvanceTerm =
+            "Payment on delivery / balance within 15 days of dispatch.";
+    } else {
+        dynamicAdvanceTerm = `${advancePercent}% advance on PO confirmation; balance within 15 days of dispatch.`;
+    }
+
+    const renivetAddress =
+        corporatePartyAddress(settings) || "Bangalore, India";
+
+    // Strict derivation from exact Quote / Invoice record
+    const totalGstFromDb = quote?.gstAmountPaise ?? invoice.gstAmountPaise;
+    const totalAmountFromDb =
+        quote?.totalAmountPaise ?? invoice.totalAmountPaise;
+
+    const customizationGstRateBps = 1800;
+    const customizationGstAmountPaise =
+        customizationPaise > 0
+            ? Math.round((customizationPaise * customizationGstRateBps) / 10_000)
+            : 0;
+
+    const baseGstAmountPaise =
+        totalGstFromDb > customizationGstAmountPaise
+            ? totalGstFromDb - customizationGstAmountPaise
+            : totalGstFromDb > 0
+              ? totalGstFromDb
+              : Math.round(
+                    (baseSubtotalPaise *
+                        (quote?.gstRateBps ??
+                            order?.gstRateBps ??
+                            1800)) /
+                        10_000
+                );
+
+    const baseGstRateBps =
+        baseSubtotalPaise > 0
+            ? Math.round((baseGstAmountPaise / baseSubtotalPaise) * 10_000)
+            : quote?.gstRateBps ?? order?.gstRateBps ?? 1800;
+
+    const computedTotalGstPaise =
+        totalGstFromDb > 0
+            ? totalGstFromDb
+            : baseGstAmountPaise + customizationGstAmountPaise;
+    const computedTotalAmountPaise =
+        totalAmountFromDb > 0
+            ? totalAmountFromDb
+            : baseSubtotalPaise + customizationPaise + computedTotalGstPaise;
+
+    const rawDate =
+        (invoice as any).issueDate ||
+        invoice.invoiceDate ||
+        (invoice as any).createdAt;
+    const parsedDate = rawDate ? new Date(rawDate) : new Date();
+    const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+
     const data: CorporateCommercialDocumentData = {
-        title: "Proforma Invoice",
+        title: "PROFORMA INVOICE",
         subtitle:
             "Commercial proposal issued before supply. This is not a tax invoice.",
+        documentType: "proforma_invoice",
         documentNumber: invoice.invoiceNumber,
-        documentDate: invoice.invoiceDate ?? invoice.createdAt,
-        validUntil: invoice.validUntil,
-        fromLabel: "From",
+        date: safeDate,
+        validUntil: invoice.validUntil
+            ? new Date(invoice.validUntil)
+            : undefined,
+        fromLabel: "From (Supplier)",
         toLabel: "To",
         from: {
-            name: settings.legalName,
-            address: corporatePartyAddress(settings) || "Not provided",
-            gstin: settings.gstin,
-            email: settings.email,
-            phone: settings.phone,
+            name: supplierName,
+            address: supplierAddress,
+            gstin: supplierGstin,
+            email: supplierEmail,
+            phone: supplierPhone,
+            facilitatedBy: `Facilitated by: ${settings.legalName}, ${renivetAddress} | GSTIN: ${settings.gstin || "N/A"}`,
         },
         to: order
             ? {
@@ -169,6 +399,7 @@ export async function GET(
                   address: [
                       order.deliveryAddress,
                       order.deliveryCity,
+                      order.deliveryState,
                       order.deliveryPincode,
                       order.deliveryCountry,
                   ]
@@ -179,7 +410,10 @@ export async function GET(
                   phone: order.mobileNumber,
               }
             : {
-                  name: quote!.profile.companyName || "Corporate customer",
+                  name:
+                      quote!.profile.companyName ||
+                      quote!.profile.contactPerson ||
+                      "Corporate customer",
                   address: billingAddress || "Not provided",
                   gstin: quote!.profile.gstNumber,
                   email: quote!.profile.email,
@@ -196,7 +430,10 @@ export async function GET(
               ]
             : [
                   { label: "Quote number", value: quote!.quoteNumber },
-                  { label: "Supplier brand", value: quote!.brand.name },
+                  {
+                      label: "Supplier brand",
+                      value: supplierName,
+                  },
                   {
                       label: "Quote validity",
                       value: invoice.validUntil
@@ -206,48 +443,45 @@ export async function GET(
                           : null,
                   },
               ],
-        item: order
-            ? {
-                  description: productType || "Corporate merchandise",
-                  detail:
-                      [gsm && `${gsm} GSM`, fabric]
-                          .filter(Boolean)
-                          .join(" | ") ||
-                      "Customization and specifications confirmed in the self-service order",
-                  hsn,
-                  quantity: order.quantity,
-                  unitRatePaise: Math.round(
-                      taxableValuePaise / Math.max(1, order.quantity)
-                  ),
-                  amountPaise: taxableValuePaise,
-                  gstRateBps,
-                  gstAmountPaise: invoice.gstAmountPaise,
-              }
-            : {
-                  description: product?.title ?? "Corporate merchandise",
-                  detail: "Customization and specifications as approved in the corporate quote",
-                  sku: product?.sku ?? product?.nativeSku,
-                  hsn: product?.hsCode,
-                  quantity: quote!.quantity,
-                  unitRatePaise: Math.round(
-                      taxableValuePaise / Math.max(1, quote!.quantity)
-                  ),
-                  amountPaise: taxableValuePaise,
-                  gstRateBps,
-                  gstAmountPaise: invoice.gstAmountPaise,
-              },
+        item: {
+            description: resolvedItemName,
+            detail: itemDetail,
+            sku: product?.sku ?? product?.nativeSku,
+            hsn: resolvedHsn,
+            quantity,
+            unit: "pcs",
+            unitRatePaise: Math.round(
+                baseSubtotalPaise / Math.max(1, quantity)
+            ),
+            amountPaise: baseSubtotalPaise,
+            gstRateBps: baseGstRateBps,
+            gstAmountPaise: baseGstAmountPaise,
+            totalAmountPaise: baseSubtotalPaise + baseGstAmountPaise,
+        },
         totals: {
+            subtotalPaise:
+                customizationPaise > 0 ? baseSubtotalPaise : undefined,
+            customizationPaise:
+                customizationPaise > 0 ? customizationPaise : undefined,
             taxableValuePaise,
-            gstRateBps,
-            gstAmountPaise: invoice.gstAmountPaise,
-            totalAmountPaise: invoice.totalAmountPaise,
+            baseGstRateBps:
+                customizationPaise > 0 ? baseGstRateBps : undefined,
+            baseGstAmountPaise:
+                customizationPaise > 0 ? baseGstAmountPaise : undefined,
+            customizationGstRateBps:
+                customizationPaise > 0 ? customizationGstRateBps : undefined,
+            customizationGstAmountPaise:
+                customizationPaise > 0 ? customizationGstAmountPaise : undefined,
+            gstRateBps: baseGstRateBps,
+            gstAmountPaise: computedTotalGstPaise,
+            totalAmountPaise: computedTotalAmountPaise,
         },
         notes: [
-            invoice.paymentTerms || settings.defaultPaymentTerms,
+            dynamicAdvanceTerm,
             invoice.deliveryTimeline ||
                 "Delivery timeline will be confirmed upon order review.",
             invoice.termsAndConditions ||
-                "Supply is subject to payment confirmation and order acceptance.",
+                "This proforma invoice is not a tax invoice. Supply is subject to quote acceptance, receipt of the corporate purchase order, and payment confirmation.",
         ],
         bank: {
             bankName: settings.bankName,

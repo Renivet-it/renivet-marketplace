@@ -116,6 +116,50 @@ const STATE_CODE_MAP: Record<string, string> = {
     west_bengal: "19",
 };
 
+const STATE_NAME_BY_CODE: Record<string, string> = {
+    "01": "Jammu and Kashmir",
+    "02": "Himachal Pradesh",
+    "03": "Punjab",
+    "04": "Chandigarh",
+    "05": "Uttarakhand",
+    "06": "Haryana",
+    "07": "Delhi",
+    "08": "Rajasthan",
+    "09": "Uttar Pradesh",
+    "10": "Bihar",
+    "11": "Sikkim",
+    "12": "Arunachal Pradesh",
+    "13": "Nagaland",
+    "14": "Manipur",
+    "15": "Mizoram",
+    "16": "Tripura",
+    "17": "Meghalaya",
+    "18": "Assam",
+    "19": "West Bengal",
+    "20": "Jharkhand",
+    "21": "Odisha",
+    "22": "Chhattisgarh",
+    "23": "Madhya Pradesh",
+    "24": "Gujarat",
+    "26": "Dadra and Nagar Haveli and Daman and Diu",
+    "27": "Maharashtra",
+    "29": "Karnataka",
+    "30": "Goa",
+    "31": "Lakshadweep",
+    "32": "Kerala",
+    "33": "Tamil Nadu",
+    "34": "Puducherry",
+    "35": "Andaman and Nicobar Islands",
+    "36": "Telangana",
+    "37": "Andhra Pradesh",
+    "38": "Ladakh",
+};
+
+function stateFromGstin(gstin?: string | null): string {
+    const code = /^\d{2}/.exec(gstin?.trim() ?? "")?.[0];
+    return (code ? STATE_NAME_BY_CODE[code] : undefined) ?? "Karnataka";
+}
+
 function getMonthRange(monthKey: string) {
     const [year, month] = monthKey.split("-").map(Number);
     const start = new Date(year, month - 1, 1);
@@ -325,7 +369,8 @@ export async function previewGstExport(
             const gstSplit = splitGstByState({
                 taxableValuePaise,
                 gstRateBps,
-                supplierState: "Karnataka",
+                supplierState:
+                    brand?.confidential?.state || stateFromGstin(brandGstin),
                 customerState,
             });
 
@@ -442,7 +487,8 @@ export async function previewGstExport(
         const gstSplit = splitGstByState({
             taxableValuePaise,
             gstRateBps,
-            supplierState: "Karnataka",
+            supplierState:
+                order.brand?.confidential?.state || stateFromGstin(brandGstin),
             customerState,
         });
 
@@ -599,7 +645,8 @@ export async function previewGstExport(
             const gstSplit = splitGstByState({
                 taxableValuePaise: taxableCreditPaise,
                 gstRateBps,
-                supplierState: "Karnataka",
+                supplierState:
+                    brand?.confidential?.state || stateFromGstin(brandGstin),
                 customerState,
             });
 
@@ -652,7 +699,7 @@ export async function previewGstExport(
 
     let totalTcsPaise = 0;
     for (const bucket of tcsBuckets.values()) {
-        const tcsPaise = Math.max(0, Math.round(bucket.taxablePaise * 0.01));
+        const tcsPaise = Math.max(0, Math.round(bucket.taxablePaise * 0.005));
         totalTcsPaise += tcsPaise;
         const row = emptyCsvRow();
         row.section = "TCS";
@@ -660,7 +707,7 @@ export async function previewGstExport(
         row.supplierGstin = bucket.supplierGstin;
         row.supplierName = bucket.supplierName;
         row.taxableValue = formatMoney(bucket.taxablePaise);
-        row.tcsRatePercent = "1.00";
+        row.tcsRatePercent = "0.50";
         row.tcsAmount = formatMoney(tcsPaise);
         row.stateOfSupply = bucket.state;
         row.customerState = bucket.state;

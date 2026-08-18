@@ -30,25 +30,37 @@ export function getFinancialYearForDate(value: Date) {
     return `FY${year}-${shortNextYear}`;
 }
 
+export type BrandEntityType =
+    | "company"
+    | "llp"
+    | "partnership"
+    | "proprietorship"
+    | "individual"
+    | "huf";
+
 export function computeTdsDeduction(params: {
     cumulativeCommissionPaise: number;
     cycleCommissionPaise: number;
     thresholdPaise?: number;
     rateBps?: number;
+    entityType?: BrandEntityType | string | null;
 }): TdsComputation {
-    const thresholdPaise = params.thresholdPaise ?? 3_000_000;
-    const rateBps = params.rateBps ?? 100;
+    const isIndividualOrHuf =
+        params.entityType === "individual" || params.entityType === "huf";
+    const defaultThreshold = isIndividualOrHuf ? 50_000_000 : 0;
+    const thresholdPaise = params.thresholdPaise ?? defaultThreshold;
+    const rateBps = params.rateBps ?? 10;
     const current = params.cumulativeCommissionPaise;
     const cycle = params.cycleCommissionPaise;
     const post = current + cycle;
     const rate = rateBps / 10_000;
 
-    if (current >= thresholdPaise) {
+    if (thresholdPaise === 0 || current >= thresholdPaise) {
         return {
             deductiblePaise: Math.round(cycle * rate),
             postCycleCumulativePaise: post,
             thresholdCrossed: false,
-            note: "TDS (1% u/s 194-O) applied on full cycle commission because the annual threshold is already crossed.",
+            note: `TDS (0.1% u/s 194-O) applied on full cycle commission${thresholdPaise > 0 ? " because the annual threshold is already crossed." : "."}`,
         };
     }
 
@@ -57,7 +69,7 @@ export function computeTdsDeduction(params: {
             deductiblePaise: 0,
             postCycleCumulativePaise: post,
             thresholdCrossed: false,
-            note: `TDS: Nil (cumulative Rs. ${(post / 100).toFixed(2)} below Rs. 30000 threshold).`,
+            note: `TDS: Nil (cumulative Rs. ${(post / 100).toFixed(2)} below Rs. ${(thresholdPaise / 100).toFixed(2)} threshold).`,
         };
     }
 
@@ -66,7 +78,7 @@ export function computeTdsDeduction(params: {
         deductiblePaise: Math.round(eligiblePaise * rate),
         postCycleCumulativePaise: post,
         thresholdCrossed: current < thresholdPaise,
-        note: "Threshold crossed in this cycle; TDS applied only on the commission above Rs. 30000.",
+        note: `Threshold crossed in this cycle; TDS applied only on the commission above Rs. ${(thresholdPaise / 100).toFixed(2)}.`,
     };
 }
 
@@ -109,8 +121,8 @@ export function deriveGstRateBps(params: {
     unitPricePaise: number;
 }) {
     const normalizedHsn = params.hsnCode?.trim() ?? "";
-    if (/^(61|62)/.test(normalizedHsn)) {
-        return params.unitPricePaise <= 100_000 ? 500 : 1200;
+    if (/^(61|62|63)/.test(normalizedHsn)) {
+        return params.unitPricePaise <= 250_000 ? 500 : 1800;
     }
 
     return params.fallbackRateBps ?? 0;

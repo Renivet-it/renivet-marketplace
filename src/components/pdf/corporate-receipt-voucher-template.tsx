@@ -184,12 +184,14 @@ export type CorporateReceiptVoucherData = {
     voucherNumber: string;
     voucherDate: string | Date;
     orderNumber: string;
+    quoteNumber?: string | null;
     poReference?: string | null;
     amountPaise: number;
     paymentMode: string;
     paymentReference?: string | null;
     seller: {
         name: string;
+        onBehalfOfBrand?: string | null;
         address: string;
         gstin?: string | null;
         bankName?: string | null;
@@ -222,13 +224,21 @@ export function CorporateReceiptVoucherTemplate({
                     <View style={styles.headerCopy}>
                         <Text style={styles.title}>Receipt Voucher</Text>
                         <Text style={styles.subtitle}>
-                            Advance received against supply of goods
+                            Mandatory under §31(3)(d) CGST Act — Advance received against supply of goods
                         </Text>
                     </View>
                 </View>
 
                 <View style={styles.grid}>
-                    <Party label="Received by" party={data.seller} />
+                    <Party
+                        label="Received by"
+                        party={{
+                            ...data.seller,
+                            onBehalfOf: data.seller.onBehalfOfBrand
+                                ? `(on behalf of ${data.seller.onBehalfOfBrand})`
+                                : undefined,
+                        }}
+                    />
                     <Party label="Received from" party={data.buyer} right />
                 </View>
 
@@ -244,26 +254,33 @@ export function CorporateReceiptVoucherTemplate({
                 </View>
                 <View style={styles.meta}>
                     <Meta
-                        label="Corporate PO reference"
-                        value={data.poReference || "Not provided"}
+                        label="Against"
+                        value={[
+                            data.poReference ? `PO: ${data.poReference}` : null,
+                            data.quoteNumber
+                                ? `Quote: ${data.quoteNumber}`
+                                : `Order: ${data.orderNumber}`,
+                        ]
+                            .filter(Boolean)
+                            .join(" | ")}
                     />
                     <Meta label="Payment mode" value={data.paymentMode} />
                     <Meta
-                        label="Transaction reference"
+                        label="Transaction ID / Ref"
                         value={data.paymentReference || "Not available"}
                         last
                     />
                 </View>
 
                 <View style={styles.paymentTable}>
-                    <Text style={styles.paymentHead}>PAYMENT DETAILS</Text>
+                    <Text style={styles.paymentHead}>PAYMENT & GST TREATMENT</Text>
                     <PaymentRow
                         label="Nature of receipt"
                         value="Advance against supply of goods"
                     />
                     <PaymentRow
-                        label="GST treatment"
-                        value="GST not payable on advance for goods"
+                        label="GST declaration"
+                        value="GST on advance for supply of goods is exempt per Notification 66/2017-Central Tax. GST will be charged on the Tax Invoice at the time of supply."
                     />
                     <PaymentRow
                         label="Adjustment"
@@ -273,11 +290,11 @@ export function CorporateReceiptVoucherTemplate({
 
                 <View style={styles.lower}>
                     <View style={styles.declaration}>
-                        <Text style={styles.declarationTitle}>DECLARATION</Text>
+                        <Text style={styles.declarationTitle}>STATUTORY GST DECLARATION</Text>
                         <Text style={styles.declarationText}>
-                            Advance received against the referenced corporate
-                            order. It will be adjusted against the final Renivet
-                            tax invoice issued on dispatch.
+                            GST on advance for supply of goods is exempt per
+                            Notification 66/2017-Central Tax. GST will be
+                            charged on the Tax Invoice at the time of supply.
                         </Text>
                         <Text style={styles.generatedNote}>
                             Computer-generated voucher - no signature required.
@@ -338,13 +355,23 @@ function Party({
     right = false,
 }: {
     label: string;
-    party: { name: string; address: string; gstin?: string | null };
+    party: {
+        name: string;
+        onBehalfOf?: string | null;
+        address: string;
+        gstin?: string | null;
+    };
     right?: boolean;
 }) {
     return (
         <View style={[styles.party, ...(right ? [styles.rightCell] : [])]}>
             <Text style={styles.sectionLabel}>{label}</Text>
             <Text style={styles.name}>{party.name}</Text>
+            {party.onBehalfOf ? (
+                <Text style={[styles.body, { color: moss, marginBottom: 2 }]}>
+                    {party.onBehalfOf}
+                </Text>
+            ) : null}
             <Text style={styles.body}>{party.address}</Text>
             <Text style={styles.body}>
                 GSTIN: {party.gstin || "Not provided"}

@@ -290,6 +290,18 @@ export const corporateOrders = pgTable(
         advancePercentBps: integer("advance_percent_bps").notNull(),
         advancePaidPaise: integer("advance_paid_paise").notNull(),
         balanceDuePaise: integer("balance_due_paise").notNull(),
+        commissionAmountPaise: integer("commission_amount_paise")
+            .notNull()
+            .default(0),
+        commissionGstRateBps: integer("commission_gst_rate_bps")
+            .notNull()
+            .default(1800),
+        commissionGstAmountPaise: integer("commission_gst_amount_paise")
+            .notNull()
+            .default(0),
+        commissionTotalPaise: integer("commission_total_paise")
+            .notNull()
+            .default(0),
         razorpayOrderId: text("razorpay_order_id"),
         razorpayPaymentId: text("razorpay_payment_id"),
         razorpaySignature: text("razorpay_signature"),

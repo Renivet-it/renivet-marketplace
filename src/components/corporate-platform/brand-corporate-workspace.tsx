@@ -4,7 +4,7 @@ import { BrandTaxInvoiceForm } from "@/components/corporate-platform/brand-tax-i
 import { Button } from "@/components/ui/button-dash";
 import { trpc } from "@/lib/trpc/client";
 import { convertValueToLabel, formatINR, handleClientError } from "@/lib/utils";
-import { Download } from "lucide-react";
+import { Download, ExternalLink, ImageIcon } from "lucide-react";
 import { useState } from "react";
 
 type OrderDraftState = Record<
@@ -310,10 +310,11 @@ function BrandOrderDetailPanel({
                             <div className="flex flex-wrap items-center justify-between gap-4">
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
-                                        Renivet Purchase Order
+                                        Fulfillment Order (FO)
                                     </p>
                                     <p className="mt-2 text-sm font-semibold text-slate-900">
-                                        {order.renivetPurchaseOrder.poNumber}
+                                        {(order.renivetPurchaseOrder as any).foNumber ||
+                                            order.renivetPurchaseOrder.poNumber}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-500">
                                         {formatINR(
@@ -331,12 +332,12 @@ function BrandOrderDetailPanel({
                                 </div>
                                 <a
                                     href={
-                                        order.renivetPurchaseOrder.downloadUrl
+                                        `/api/corporate-orders/${order.id}/fulfillment-order.pdf`
                                     }
                                     className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                                 >
                                     <Download className="size-4" />
-                                    Download PO
+                                    Download FO
                                 </a>
                             </div>
                         </div>
@@ -383,6 +384,147 @@ function BrandOrderDetailPanel({
                             </a>
                         </div>
                     ) : null}
+
+                    {/* Customer Tax Invoice (Doc 5: Brand -> Corporate Customer) */}
+                    {(order as any).customerTaxInvoice ? (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-xs font-semibold text-slate-900">
+                                        Tax invoice (Customer copy)
+                                    </p>
+                                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                                        B2B Rule 46
+                                    </span>
+                                </div>
+                                <p className="mt-1 text-[11px] text-slate-500">
+                                    {(order as any).customerTaxInvoice.invoiceNumber} ·{" "}
+                                    {formatINR((order as any).customerTaxInvoice.totalAmountPaise, { keepDecimals: true })}
+                                </p>
+                            </div>
+                            <a
+                                href={(order as any).customerTaxInvoice.downloadUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                                <Download className="size-4" />
+                                Download Tax invoice
+                            </a>
+                        </div>
+                    ) : null}
+
+                    {/* Settlement Statement (Doc 7: Renivet -> Brand) */}
+                    {(order as any).settlementStatement ? (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <p className="text-xs font-semibold text-slate-900">
+                                        Settlement statement
+                                    </p>
+                                    <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-800">
+                                        Settlement Waterfall
+                                    </span>
+                                </div>
+                                <p className="mt-1 text-[11px] text-slate-500">
+                                    {(order as any).settlementStatement.statementNumber} · Net Remittance:{" "}
+                                    <span className="font-semibold text-slate-900">
+                                        {formatINR((order as any).settlementStatement.netRemittancePaise, { keepDecimals: true })}
+                                    </span>
+                                </p>
+                            </div>
+                            <a
+                                href={(order as any).settlementStatement.downloadUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                            >
+                                <Download className="size-4" />
+                                Download Settlement
+                            </a>
+                        </div>
+                    ) : null}
+
+                    {/* Customer Logo & Artwork Card */}
+                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+                                    Customer Logo & Artwork
+                                </p>
+                                <p className="mt-0.5 text-xs text-slate-500">
+                                    Artwork files and placement specifications for manufacturing
+                                </p>
+                            </div>
+                            {(order as any).artworkFile?.url ? (
+                                <a
+                                    href={(order as any).artworkFile.url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    download={(order as any).artworkFile.name || "logo-artwork.png"}
+                                    className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white shadow-sm hover:bg-emerald-800"
+                                >
+                                    <Download className="size-4" />
+                                    Download Logo (PNG)
+                                </a>
+                            ) : null}
+                        </div>
+
+                        {(order as any).artworkFile?.url ? (
+                            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+                                <div className="relative flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 p-2">
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img
+                                        src={(order as any).artworkFile.url}
+                                        alt={(order as any).artworkFile.name || "Logo preview"}
+                                        className="max-h-full max-w-full object-contain"
+                                    />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-semibold text-slate-900">
+                                        {(order as any).artworkFile.name || "Customer Logo / Artwork"}
+                                    </p>
+                                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                                        {(order as any).brandingConfig?.printMethod ? (
+                                            <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
+                                                Print Method: {(order as any).brandingConfig.printMethod}
+                                            </span>
+                                        ) : null}
+                                        {(order as any).brandingConfig?.logoLocations?.length ? (
+                                            <span className="rounded bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">
+                                                Placements: {(order as any).brandingConfig.logoLocations.join(", ")}
+                                            </span>
+                                        ) : null}
+                                    </div>
+                                    <div className="mt-2 flex items-center gap-3">
+                                        <a
+                                            href={(order as any).artworkFile.url}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline"
+                                        >
+                                            <ExternalLink className="size-3.5" />
+                                            View original file
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="mt-3 flex items-center gap-3 rounded-lg border border-dashed border-slate-200 bg-slate-50/70 p-3.5">
+                                <div className="flex size-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-slate-400">
+                                    <ImageIcon className="size-5" />
+                                </div>
+                                <div>
+                                    <p className="text-xs font-medium text-slate-700">
+                                        No custom artwork/logo file attached to this order
+                                    </p>
+                                    <p className="text-[11px] text-slate-400">
+                                        Standard merchandise or pending custom upload from platform operations.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
                         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">

@@ -430,6 +430,21 @@ export const corporatePlatformRouter = createTRPCRouter({
                 }
             );
         }),
+    issueSettlementStatement: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(
+            z.object({
+                orderId: z.string().uuid(),
+                commissionPercent: z.number().min(0).max(100),
+                notes: z.string().trim().max(1000).nullish(),
+            })
+        )
+        .mutation(({ ctx, input }) => {
+            return corporateDocumentService.issueSettlementStatement(
+                ctx.user.id,
+                input
+            );
+        }),
     generateReport: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateReportInputSchema)

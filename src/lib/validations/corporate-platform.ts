@@ -62,9 +62,20 @@ export const corporatePaymentLifecycleStatusSchema = z.enum([
     "payment_partial",
 ]);
 
+export const corporateGstinValidation = z
+    .string()
+    .trim()
+    .max(32)
+    .refine(
+        (val) => !val || /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z0-9]$/.test(val),
+        "Invalid GSTIN format (must be 15-character valid Indian GSTIN, e.g. 29ABCDE1234F1Z5)"
+    )
+    .nullable()
+    .optional();
+
 export const corporateProfileInputSchema = z.object({
     companyName: z.string().min(2),
-    gstNumber: z.string().trim().max(32).nullable().optional(),
+    gstNumber: corporateGstinValidation,
     website: z.string().url().nullable().optional(),
     companySize: z.string().trim().max(120).nullable().optional(),
     industry: z.string().trim().max(120).nullable().optional(),
@@ -101,11 +112,17 @@ export const corporateAdminManualQuoteInputSchema = z.object({
     deliveryCountry: z.string().trim().max(100).default("India").nullable().optional(),
     brandId: z.string().uuid(),
     productTypeId: z.string().uuid().nullable().optional(),
+    hsnCode: z.string().trim().max(16).nullable().optional(),
     gsmOptionId: z.string().uuid().nullable().optional(),
     fabricCompositionId: z.string().uuid().nullable().optional(),
+    extraChargeRuleIds: z.array(z.string().uuid()).default([]),
+    manualExtraAmountPaise: z.number().int().nonnegative().default(0),
+    manualExtraDescription: z.string().trim().max(255).nullable().optional(),
     quantity: z.number().int().positive().max(1_000_000),
     unitPricePaise: z.number().int().positive(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    commissionAmountPaise: z.number().int().nonnegative().default(0),
+    commissionGstPercent: z.number().min(0).max(100).default(18),
     gstPercent: z.number().min(0).max(100).default(0),
     advancePercent: z.number().min(0).max(100).default(30),
     validUntil: z.string().date().nullable().optional(),
@@ -234,7 +251,7 @@ export const corporatePurchaseOrderReviewInputSchema = z.object({
             contactPersonName: z.string().trim().min(2).max(160),
             emailAddress: z.string().trim().email().max(254),
             mobileNumber: z.string().trim().min(8).max(20),
-            gstNumber: z.string().trim().max(32).nullable().optional(),
+            gstNumber: corporateGstinValidation,
             deliveryCountry: z.string().trim().min(2).max(100),
             deliveryCity: z.string().trim().min(2).max(120),
             deliveryPincode: z.string().trim().min(3).max(20),

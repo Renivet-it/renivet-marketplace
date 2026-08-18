@@ -77,9 +77,41 @@ const editBrandSchema = z.object({
         .nullable()
         .optional()
         .or(z.literal("")),
+    isCorporateEnabled: z.boolean().default(false),
 });
 
 const editConfidentialSchema = z.object({
+    entityType: z
+        .enum([
+            "company",
+            "llp",
+            "partnership",
+            "proprietorship",
+            "individual",
+            "huf",
+        ])
+        .nullable()
+        .optional(),
+    corporateSlaLeadTimeDays: z
+        .number()
+        .int()
+        .min(1)
+        .max(365)
+        .nullable()
+        .optional(),
+    corporateMonthlyCapacity: z
+        .number()
+        .int()
+        .min(0)
+        .max(10_000_000)
+        .nullable()
+        .optional(),
+    aggregateAnnualTurnoverPaise: z
+        .number()
+        .int()
+        .min(0)
+        .nullable()
+        .optional(),
     gstin: z.string().min(15, "GSTIN must be at least 15 characters"),
     pan: z.string().min(10, "PAN must be at least 10 characters"),
     bankName: z.string().min(1, "Bank name is required"),
@@ -189,6 +221,7 @@ export function BrandAction({ brand }: PageProps) {
         defaultValues: {
             bio: brand.bio ?? "",
             website: brand.website ?? "",
+            isCorporateEnabled: brand.isCorporateEnabled ?? false,
         },
     });
 
@@ -196,6 +229,13 @@ export function BrandAction({ brand }: PageProps) {
         resolver: zodResolver(editConfidentialSchema),
         values: confidentialData
             ? {
+                  entityType: confidentialData.entityType ?? "company",
+                  corporateSlaLeadTimeDays:
+                      confidentialData.corporateSlaLeadTimeDays ?? 15,
+                  corporateMonthlyCapacity:
+                      confidentialData.corporateMonthlyCapacity ?? 5000,
+                  aggregateAnnualTurnoverPaise:
+                      confidentialData.aggregateAnnualTurnoverPaise ?? 0,
                   gstin: confidentialData.gstin,
                   pan: confidentialData.pan,
                   bankName: confidentialData.bankName,
@@ -676,6 +716,34 @@ export function BrandAction({ brand }: PageProps) {
                                     ))}
                                 </SelectContent>
                             </Select>
+                        </div>
+                    </div>
+
+                    {/* Corporate Enablement Toggle */}
+                    <div className="mb-4 grid gap-3 rounded-md border p-3 bg-muted/20">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-medium">
+                                    Corporate Manufacturing Capability
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {brand.isCorporateEnabled
+                                        ? "Brand is enabled for corporate bulk orders & RFQs"
+                                        : "Brand is restricted to retail marketplace"}
+                                </p>
+                            </div>
+                            <Switch
+                                checked={brand.isCorporateEnabled ?? false}
+                                disabled={isUpdatingBrand}
+                                onCheckedChange={(checked) => {
+                                    updateBrand({
+                                        id: brand.id,
+                                        values: {
+                                            isCorporateEnabled: checked,
+                                        },
+                                    });
+                                }}
+                            />
                         </div>
                     </div>
 
@@ -1367,6 +1435,199 @@ export function BrandAction({ brand }: PageProps) {
                                                                 <FormControl>
                                                                     <Input
                                                                         {...field}
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            {/* Corporate Capabilities */}
+                                            <div className="space-y-3 rounded-md border p-3 bg-muted/10">
+                                                <p className="text-sm font-medium">
+                                                    Corporate Capabilities & Compliance
+                                                </p>
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="entityType"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Entity Type (TDS §194-O)
+                                                                </FormLabel>
+                                                                <Select
+                                                                    onValueChange={
+                                                                        field.onChange
+                                                                    }
+                                                                    value={
+                                                                        field.value ??
+                                                                        "company"
+                                                                    }
+                                                                    disabled={
+                                                                        isUpdatingConfidential
+                                                                    }
+                                                                >
+                                                                    <SelectTrigger>
+                                                                        <FormControl>
+                                                                            <SelectValue placeholder="Select entity" />
+                                                                        </FormControl>
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        <SelectItem value="company">
+                                                                            Company (Pvt / Ltd)
+                                                                        </SelectItem>
+                                                                        <SelectItem value="llp">
+                                                                            LLP
+                                                                        </SelectItem>
+                                                                        <SelectItem value="partnership">
+                                                                            Partnership
+                                                                        </SelectItem>
+                                                                        <SelectItem value="proprietorship">
+                                                                            Proprietorship
+                                                                        </SelectItem>
+                                                                        <SelectItem value="individual">
+                                                                            Individual
+                                                                        </SelectItem>
+                                                                        <SelectItem value="huf">
+                                                                            HUF
+                                                                        </SelectItem>
+                                                                    </SelectContent>
+                                                                </Select>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="corporateSlaLeadTimeDays"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    SLA Lead Time (Days)
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        type="number"
+                                                                        {...field}
+                                                                        value={
+                                                                            field.value ??
+                                                                            ""
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
+                                                                            field.onChange(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                                    ? parseInt(
+                                                                                          e
+                                                                                              .target
+                                                                                              .value,
+                                                                                          10
+                                                                                      )
+                                                                                    : undefined
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="corporateMonthlyCapacity"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Monthly Capacity (Units)
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        type="number"
+                                                                        {...field}
+                                                                        value={
+                                                                            field.value ??
+                                                                            ""
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
+                                                                            field.onChange(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                                    ? parseInt(
+                                                                                          e
+                                                                                              .target
+                                                                                              .value,
+                                                                                          10
+                                                                                      )
+                                                                                    : undefined
+                                                                            )
+                                                                        }
+                                                                        disabled={
+                                                                            isUpdatingConfidential
+                                                                        }
+                                                                    />
+                                                                </FormControl>
+                                                                <FormMessage />
+                                                            </FormItem>
+                                                        )}
+                                                    />
+                                                    <FormField
+                                                        control={
+                                                            confidentialForm.control
+                                                        }
+                                                        name="aggregateAnnualTurnoverPaise"
+                                                        render={({ field }) => (
+                                                            <FormItem>
+                                                                <FormLabel>
+                                                                    Annual Turnover (₹)
+                                                                </FormLabel>
+                                                                <FormControl>
+                                                                    <Input
+                                                                        type="number"
+                                                                        value={
+                                                                            field.value
+                                                                                ? field.value /
+                                                                                  100
+                                                                                : ""
+                                                                        }
+                                                                        onChange={(
+                                                                            e
+                                                                        ) =>
+                                                                            field.onChange(
+                                                                                e
+                                                                                    .target
+                                                                                    .value
+                                                                                    ? Math.round(
+                                                                                          parseFloat(
+                                                                                              e
+                                                                                                  .target
+                                                                                                  .value
+                                                                                          ) *
+                                                                                              100
+                                                                                      )
+                                                                                    : 0
+                                                                            )
+                                                                        }
                                                                         disabled={
                                                                             isUpdatingConfidential
                                                                         }
