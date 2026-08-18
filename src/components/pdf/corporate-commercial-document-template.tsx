@@ -1,3 +1,4 @@
+import React from "react";
 import {
     Document,
     Image,
@@ -200,11 +201,31 @@ export type CorporateCommercialParty = {
     gstin?: string | null;
     email?: string | null;
     phone?: string | null;
+    facilitatedBy?: string | null;
+};
+
+export type CorporateCommercialItem = {
+    description: string;
+    detail?: string | null;
+    sku?: string | null;
+    hsn?: string | null;
+    quantity: number;
+    unit?: string;
+    unitRatePaise?: number | null;
+    amountPaise?: number | null;
+    gstRateBps?: number | null;
+    gstAmountPaise?: number | null;
+    totalAmountPaise?: number | null;
 };
 
 export type CorporateCommercialDocumentData = {
-    title: "Proforma Invoice" | "Purchase Order" | "Delivery Challan";
+    title:
+        | "Proforma Invoice"
+        | "Purchase Order"
+        | "Fulfillment Order"
+        | "Delivery Challan";
     subtitle: string;
+    documentType?: string;
     documentNumber: string;
     documentDate: string | Date;
     validUntil?: string | Date | null;
@@ -213,20 +234,16 @@ export type CorporateCommercialDocumentData = {
     from: CorporateCommercialParty;
     to: CorporateCommercialParty;
     references?: Array<{ label: string; value?: string | null }>;
-    item: {
-        description: string;
-        detail?: string | null;
-        sku?: string | null;
-        hsn?: string | null;
-        quantity: number;
-        unit?: string;
-        unitRatePaise?: number | null;
-        amountPaise?: number | null;
-        gstRateBps?: number | null;
-        gstAmountPaise?: number | null;
-    };
+    item?: CorporateCommercialItem;
+    items?: CorporateCommercialItem[];
     totals?: {
+        subtotalPaise?: number;
+        customizationPaise?: number;
         taxableValuePaise: number;
+        baseGstRateBps?: number | null;
+        baseGstAmountPaise?: number | null;
+        customizationGstRateBps?: number | null;
+        customizationGstAmountPaise?: number | null;
         cgstPaise?: number;
         sgstPaise?: number;
         igstPaise?: number;
@@ -264,30 +281,69 @@ export function CorporateCommercialDocumentTemplate({
 }: {
     data: CorporateCommercialDocumentData;
 }) {
-    const isProforma = data.title === "Proforma Invoice";
-    const isPurchaseOrder = data.title === "Purchase Order";
+    const titleNormalized = (data.title || "").trim().toLowerCase();
+    const isProforma =
+        titleNormalized.includes("proforma") ||
+        (data as any).documentType === "proforma_invoice";
+    const isPurchaseOrder =
+        titleNormalized.includes("purchase") ||
+        (data as any).documentType === "purchase_order";
+    const isFulfillmentOrder =
+        titleNormalized.includes("fulfillment") ||
+        (data as any).documentType === "fulfillment_order";
     const showDetailedTax = isProforma || isPurchaseOrder;
-    const showSku = !isProforma && !isPurchaseOrder;
+    const showSku = false;
     const showSignatureBlock = data.showSignatureBlock !== false;
-    const references = [
+
+    const docNumberLabel = isProforma
+        ? "PI number"
+        : isFulfillmentOrder
+          ? "FO number"
+          : "Document number";
+
+    const docDateLabel = isProforma ? "Date" : "Document date";
+
+    const baseReferences = [
         {
-            label: isProforma ? "PI number" : "Document number",
+            label: docNumberLabel,
             value: data.documentNumber,
         },
         {
-            label: isProforma ? "Date" : "Document date",
+            label: docDateLabel,
             value: date(data.documentDate),
         },
         ...(data.validUntil
-            ? [{ label: "Valid until", value: date(data.validUntil) }]
+            ? [
+                  {
+                      label: isFulfillmentOrder
+                          ? "Expected delivery"
+                          : "Valid until",
+                      value: date(data.validUntil),
+                  },
+              ]
             : []),
-        ...(data.references ?? []),
     ];
+
+    const passedReferences = (data.references ?? []).filter(
+        (ref) =>
+            ![
+                "pi number",
+                "document number",
+                "fo number",
+                "date",
+                "document date",
+                "valid until",
+                "expected delivery",
+            ].includes(ref.label.trim().toLowerCase())
+    );
+
+    const references = [...baseReferences, ...passedReferences];
     const hasPricing = Boolean(data.totals);
+    const firstItem = data.items?.[0] ?? data.item;
     const gstRateBps =
-        data.item.gstRateBps ?? data.totals?.gstRateBps ?? null;
+        firstItem?.gstRateBps ?? data.totals?.gstRateBps ?? null;
     const gstAmountPaise =
-        data.item.gstAmountPaise ?? data.totals?.gstAmountPaise ?? null;
+        firstItem?.gstAmountPaise ?? data.totals?.gstAmountPaise ?? null;
 
     return (
         <Document>
@@ -374,7 +430,11 @@ export function CorporateCommercialDocumentTemplate({
                                       : styles.rate,
                             ]}
                         >
-                            {showDetailedTax ? "Unit price excl. GST" : "Rate INR"}
+                            {showDetailedTax
+                                ? "Unit price excl. GST"
+                                : isFulfillmentOrder
+                                  ? "Agreed rate (excl. GST)"
+                                  : "Rate INR"}
                         </Text>
                         {showDetailedTax ? (
                             <>
@@ -421,127 +481,156 @@ export function CorporateCommercialDocumentTemplate({
                                 styles.last,
                             ]}
                         >
-                            {showDetailedTax ? "Total incl. GST" : "Total INR"}
+                            {showDetailedTax
+                                ? "Total incl. GST"
+                                : isFulfillmentOrder
+                                  ? "Total (excl. GST)"
+                                  : "Total INR"}
                         </Text>
                     </View>
-                    <View style={styles.tableRow}>
-                        <Text style={[styles.td, styles.no]}>1</Text>
-                        <View
-                            style={[
-                                styles.td,
-                                isProforma
-                                    ? styles.proformaProduct
-                                    : isPurchaseOrder
-                                      ? styles.purchaseProduct
-                                      : styles.product,
-                            ]}
-                        >
-                            <Text>{data.item.description}</Text>
-                            {data.item.detail ? (
-                                <Text style={styles.itemDetail}>
-                                    {data.item.detail}
-                                </Text>
-                            ) : null}
-                        </View>
-                        {showSku ? (
-                            <Text
-                                style={[styles.td, styles.sku]}
-                            >
-                                {data.item.sku || "-"}
-                            </Text>
-                        ) : null}
-                        <Text
-                            style={[
-                                styles.td,
-                                isProforma
-                                    ? styles.proformaHsn
-                                    : isPurchaseOrder
-                                      ? styles.purchaseHsn
-                                      : styles.hsn,
-                            ]}
-                        >
-                            {data.item.hsn || "-"}
-                        </Text>
-                        <Text
-                            style={[
-                                styles.td,
-                                isProforma
-                                    ? styles.proformaQuantity
-                                    : isPurchaseOrder
-                                      ? styles.purchaseQuantity
-                                      : styles.quantity,
-                            ]}
-                        >
-                            {data.item.quantity} {data.item.unit || "pcs"}
-                        </Text>
-                        <Text
-                            style={[
-                                styles.td,
-                                isProforma
-                                    ? styles.proformaRate
-                                    : isPurchaseOrder
-                                      ? styles.purchaseRate
-                                      : styles.rate,
-                            ]}
-                        >
-                            {hasPricing ? money(data.item.unitRatePaise) : "-"}
-                        </Text>
-                        {showDetailedTax ? (
-                            <>
-                                <Text
-                                    style={[
-                                        styles.td,
-                                        isProforma
-                                            ? styles.proformaTaxable
-                                            : styles.purchaseTaxable,
-                                    ]}
-                                >
-                                    {hasPricing ? money(data.item.amountPaise) : "-"}
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.td,
-                                        isProforma
-                                            ? styles.proformaGstRate
-                                            : styles.purchaseGstRate,
-                                    ]}
-                                >
-                                    {gstRateBps === null
-                                        ? "-"
-                                        : `${(gstRateBps / 100).toFixed(2)}%`}
-                                </Text>
-                                <Text
-                                    style={[
-                                        styles.td,
-                                        isProforma
-                                            ? styles.proformaGstAmount
-                                            : styles.purchaseGstAmount,
-                                    ]}
-                                >
-                                    {hasPricing ? money(gstAmountPaise) : "-"}
-                                </Text>
-                            </>
-                        ) : null}
-                        <Text
-                            style={[
-                                styles.td,
-                                isProforma
-                                    ? styles.proformaTotal
-                                    : isPurchaseOrder
-                                      ? styles.purchaseTotal
-                                      : styles.amount,
-                                styles.last,
-                            ]}
-                        >
-                            {hasPricing
-                                ? money(
-                                      showDetailedTax
-                                          ? data.totals?.totalAmountPaise
-                                          : data.item.amountPaise
+                    {(data.items && data.items.length > 0
+                        ? data.items
+                        : data.item
+                          ? [data.item]
+                          : []
+                    ).map((rowItem, idx) => {
+                        const rowGstRateBps = rowItem.gstRateBps ?? gstRateBps;
+                        const rowGstAmountPaise =
+                            rowItem.gstAmountPaise ??
+                            (rowItem.amountPaise && rowGstRateBps
+                                ? Math.round(
+                                      (rowItem.amountPaise * rowGstRateBps) /
+                                          10_000
                                   )
-                                : "-"}
-                        </Text>
-                    </View>
+                                : 0);
+                        const rowTotalPaise =
+                            rowItem.totalAmountPaise ??
+                            (rowItem.amountPaise || 0) +
+                                (showDetailedTax ? rowGstAmountPaise : 0);
+
+                        return (
+                            <View key={idx} style={styles.tableRow}>
+                                <Text style={[styles.td, styles.no]}>
+                                    {idx + 1}
+                                </Text>
+                                <View
+                                    style={[
+                                        styles.td,
+                                        isProforma
+                                            ? styles.proformaProduct
+                                            : isPurchaseOrder
+                                              ? styles.purchaseProduct
+                                              : styles.product,
+                                    ]}
+                                >
+                                    <Text>{rowItem.description}</Text>
+                                    {rowItem.detail ? (
+                                        <Text style={styles.itemDetail}>
+                                            {rowItem.detail}
+                                        </Text>
+                                    ) : null}
+                                </View>
+                                {showSku ? (
+                                    <Text style={[styles.td, styles.sku]}>
+                                        {rowItem.sku || "-"}
+                                    </Text>
+                                ) : null}
+                                <Text
+                                    style={[
+                                        styles.td,
+                                        isProforma
+                                            ? styles.proformaHsn
+                                            : isPurchaseOrder
+                                              ? styles.purchaseHsn
+                                              : styles.hsn,
+                                    ]}
+                                >
+                                    {rowItem.hsn || "-"}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.td,
+                                        isProforma
+                                            ? styles.proformaQuantity
+                                            : isPurchaseOrder
+                                              ? styles.purchaseQuantity
+                                              : styles.quantity,
+                                    ]}
+                                >
+                                    {rowItem.quantity}{" "}
+                                    {rowItem.unit || "pcs"}
+                                </Text>
+                                <Text
+                                    style={[
+                                        styles.td,
+                                        isProforma
+                                            ? styles.proformaRate
+                                            : isPurchaseOrder
+                                              ? styles.purchaseRate
+                                              : styles.rate,
+                                    ]}
+                                >
+                                    {hasPricing
+                                        ? money(rowItem.unitRatePaise)
+                                        : "-"}
+                                </Text>
+                                {showDetailedTax ? (
+                                    <>
+                                        <Text
+                                            style={[
+                                                styles.td,
+                                                isProforma
+                                                    ? styles.proformaTaxable
+                                                    : styles.purchaseTaxable,
+                                            ]}
+                                        >
+                                            {hasPricing
+                                                ? money(rowItem.amountPaise)
+                                                : "-"}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.td,
+                                                isProforma
+                                                    ? styles.proformaGstRate
+                                                    : styles.purchaseGstRate,
+                                            ]}
+                                        >
+                                            {rowGstRateBps === null ||
+                                            rowGstRateBps === undefined
+                                                ? "-"
+                                                : `${(rowGstRateBps / 100).toFixed(2)}%`}
+                                        </Text>
+                                        <Text
+                                            style={[
+                                                styles.td,
+                                                isProforma
+                                                    ? styles.proformaGstAmount
+                                                    : styles.purchaseGstAmount,
+                                            ]}
+                                        >
+                                            {hasPricing
+                                                ? money(rowGstAmountPaise)
+                                                : "-"}
+                                        </Text>
+                                    </>
+                                ) : null}
+                                <Text
+                                    style={[
+                                        styles.td,
+                                        isProforma
+                                            ? styles.proformaTotal
+                                            : isPurchaseOrder
+                                              ? styles.purchaseTotal
+                                              : styles.amount,
+                                        styles.last,
+                                    ]}
+                                >
+                                    {hasPricing ? money(rowTotalPaise) : "-"}
+                                </Text>
+                            </View>
+                        );
+                    })}
                 </View>
 
                 <View
@@ -596,43 +685,117 @@ export function CorporateCommercialDocumentTemplate({
 
                     {data.totals ? (
                         <View style={styles.totals}>
-                            <Total
-                                label="Taxable value"
-                                value={data.totals.taxableValuePaise}
-                            />
-                            {showDetailedTax ? (
-                                <Total
-                                    label={`GST${
-                                        gstRateBps === null
-                                            ? ""
-                                            : ` (${(gstRateBps / 100).toFixed(2)}%)`
-                                    }`}
-                                    value={gstAmountPaise ?? 0}
-                                />
-                            ) : null}
-                            {!showDetailedTax && data.totals.cgstPaise ? (
-                                <Total
-                                    label="CGST"
-                                    value={data.totals.cgstPaise}
-                                />
-                            ) : null}
-                            {!showDetailedTax && data.totals.sgstPaise ? (
-                                <Total
-                                    label="SGST"
-                                    value={data.totals.sgstPaise}
-                                />
-                            ) : null}
-                            {!showDetailedTax && data.totals.igstPaise ? (
-                                <Total
-                                    label="IGST"
-                                    value={data.totals.igstPaise}
-                                />
-                            ) : null}
+                            {data.totals.customizationPaise &&
+                            data.totals.customizationPaise > 0 ? (
+                                <>
+                                    {data.totals.subtotalPaise ? (
+                                        <Total
+                                            label={
+                                                isFulfillmentOrder
+                                                    ? "Base items subtotal (excl. GST)"
+                                                    : "Base items subtotal"
+                                            }
+                                            value={data.totals.subtotalPaise}
+                                        />
+                                    ) : null}
+                                    <Total
+                                        label={
+                                            isFulfillmentOrder
+                                                ? "Customization / Extras (excl. GST)"
+                                                : "Customization / Extras"
+                                        }
+                                        value={data.totals.customizationPaise}
+                                    />
+                                    {data.totals.baseGstAmountPaise !==
+                                        undefined &&
+                                    data.totals.baseGstAmountPaise !== null ? (
+                                        <Total
+                                            label={`GST on base item (${(
+                                                (data.totals.baseGstRateBps ??
+                                                    data.totals.gstRateBps ??
+                                                    0) / 100
+                                            ).toFixed(2)}%)`}
+                                            value={
+                                                data.totals.baseGstAmountPaise
+                                            }
+                                        />
+                                    ) : null}
+                                    {data.totals.customizationGstAmountPaise !==
+                                        undefined &&
+                                    data.totals.customizationGstAmountPaise !==
+                                        null ? (
+                                        <Total
+                                            label={`GST on customization (${(
+                                                (data.totals
+                                                    .customizationGstRateBps ??
+                                                    1800) /
+                                                100
+                                            ).toFixed(2)}%)`}
+                                            value={
+                                                data.totals
+                                                    .customizationGstAmountPaise
+                                            }
+                                        />
+                                    ) : null}
+                                    {data.totals.baseGstAmountPaise ===
+                                        undefined && showDetailedTax ? (
+                                        <Total
+                                            label={`GST${
+                                                gstRateBps === null
+                                                    ? ""
+                                                    : ` (${(gstRateBps / 100).toFixed(2)}%)`
+                                            }`}
+                                            value={gstAmountPaise ?? 0}
+                                        />
+                                    ) : null}
+                                </>
+                            ) : (
+                                <>
+                                    <Total
+                                        label={
+                                            isFulfillmentOrder
+                                                ? "Taxable value (excl. GST)"
+                                                : "Taxable value"
+                                        }
+                                        value={data.totals.taxableValuePaise}
+                                    />
+                                    {showDetailedTax ? (
+                                        <Total
+                                            label={`GST${
+                                                gstRateBps === null
+                                                    ? ""
+                                                    : ` (${(gstRateBps / 100).toFixed(2)}%)`
+                                            }`}
+                                            value={gstAmountPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {!showDetailedTax && data.totals.cgstPaise ? (
+                                        <Total
+                                            label="CGST"
+                                            value={data.totals.cgstPaise}
+                                        />
+                                    ) : null}
+                                    {!showDetailedTax && data.totals.sgstPaise ? (
+                                        <Total
+                                            label="SGST"
+                                            value={data.totals.sgstPaise}
+                                        />
+                                    ) : null}
+                                    {!showDetailedTax && data.totals.igstPaise ? (
+                                        <Total
+                                            label="IGST"
+                                            value={data.totals.igstPaise}
+                                        />
+                                    ) : null}
+                                </>
+                            )}
                             <Total
                                 label={
                                     showDetailedTax
                                         ? "Grand total incl. GST"
-                                        : "Document total"
+                                        : isFulfillmentOrder
+                                          ? "Document total (excl. GST)"
+                                          : "Document total"
                                 }
                                 value={data.totals.totalAmountPaise}
                                 final
@@ -686,6 +849,11 @@ function Party({
             ) : null}
             {party.phone ? (
                 <Text style={styles.body}>{party.phone}</Text>
+            ) : null}
+            {party.facilitatedBy ? (
+                <Text style={[styles.body, { marginTop: 2, color: moss }]}>
+                    {party.facilitatedBy}
+                </Text>
             ) : null}
         </View>
     );

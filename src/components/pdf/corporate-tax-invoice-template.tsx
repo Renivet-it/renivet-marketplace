@@ -70,6 +70,13 @@ export type CorporateTaxInvoiceData = {
         bankIfscCode?: string | null;
         bankBranch?: string | null;
         authorizedSignatoryName?: string | null;
+        authorizedSignatoryImageUrl?: string | null;
+        isSameAsWarehouseAddress?: boolean | null;
+        warehouseAddressLine1?: string | null;
+        warehouseAddressLine2?: string | null;
+        warehouseCity?: string | null;
+        warehouseState?: string | null;
+        warehousePostalCode?: string | null;
     };
     buyer: {
         companyName: string;
@@ -111,11 +118,21 @@ export function CorporateTaxInvoiceTemplate({
         product?.hsn ??
         (typeof productSnapshot.hsnCode === "string"
             ? productSnapshot.hsnCode
-            : undefined);
-    const description =
-        order.customizationPaise > 0
-            ? `${productName} | Customization included`
-            : productName;
+            : undefined) ??
+        (typeof (order as any).hsnCode === "string"
+            ? (order as any).hsnCode
+            : undefined) ??
+        (typeof (order as any).quote?.hsnCode === "string"
+            ? (order as any).quote.hsnCode
+            : "6109");
+    const extraChargesList =
+        Array.isArray(pricingSnapshot.appliedExtraCharges) &&
+        pricingSnapshot.appliedExtraCharges.length > 0
+            ? ` | Extras: ${pricingSnapshot.appliedExtraCharges.map((e: any) => e.name || e.code).join(", ")}`
+            : order.customizationPaise > 0
+              ? " | Customization & Extras included"
+              : "";
+    const description = `${productName}${extraChargesList}`;
     const quantity = Math.max(1, order.quantity);
     const totalPaise = invoice.totalAmountPaise;
     const balanceDuePaise = Math.min(
@@ -136,13 +153,7 @@ export function CorporateTaxInvoiceTemplate({
         ? new Date(invoice.dueDate)
         : new Date(invoiceDate);
     if (!invoice.dueDate) balanceDueDate.setDate(balanceDueDate.getDate() + 15);
-    const invoiceNumber = invoice.invoiceNumber.startsWith("CINV/")
-        ? invoice.invoiceNumber
-        : corporateDocumentNumber(
-              "CINV",
-              order.sequenceNo,
-              invoice.invoiceDate ?? new Date()
-          );
+    const invoiceNumber = invoice.invoiceNumber;
     const receiptVoucherNumber =
         invoice.receiptVoucherNumber ??
         (paidAmountPaise > 0
@@ -151,6 +162,51 @@ export function CorporateTaxInvoiceTemplate({
                   order.createdAt ?? invoiceDate
               )
             : null);
+
+    const intra = invoice.igstPaise === 0;
+    const customizationPaise = Math.max(
+        0,
+        Number(order.customizationPaise ?? 0)
+    );
+    const hasCustomization = customizationPaise > 0;
+    const baseTaxablePaise = hasCustomization
+        ? Math.max(0, invoice.taxableValuePaise - customizationPaise)
+        : invoice.taxableValuePaise;
+
+    const baseGstRateBps =
+        (order as any).quote?.gstRateBps ??
+        ((order as any).quote?.gstPercent
+            ? Math.round((order as any).quote.gstPercent * 100)
+            : null) ??
+        (hasCustomization && baseTaxablePaise > 0
+            ? Math.round(
+                  ((invoice.cgstPaise +
+                      invoice.sgstPaise +
+                      invoice.igstPaise -
+                      Math.round(customizationPaise * 0.18)) *
+                      10_000) /
+                      baseTaxablePaise
+              )
+            : order.gstRateBps ?? 500);
+
+    const baseGstPaise = Math.round(
+        (baseTaxablePaise * baseGstRateBps) / 10_000
+    );
+    const baseCgstPaise = intra ? Math.round(baseGstPaise / 2) : 0;
+    const baseSgstPaise = intra ? baseGstPaise - baseCgstPaise : 0;
+    const baseIgstPaise = intra ? 0 : baseGstPaise;
+    const baseTotalPaise = baseTaxablePaise + baseGstPaise;
+
+    const customGstPaise = hasCustomization
+        ? invoice.cgstPaise +
+          invoice.sgstPaise +
+          invoice.igstPaise -
+          baseGstPaise
+        : 0;
+    const customCgstPaise = intra ? Math.round(customGstPaise / 2) : 0;
+    const customSgstPaise = intra ? customGstPaise - customCgstPaise : 0;
+    const customIgstPaise = intra ? 0 : customGstPaise;
+    const customTotalPaise = customizationPaise + customGstPaise;
 
     const invoiceOrder: InvoiceOrder = {
         id: order.publicOrderId,
@@ -174,9 +230,9 @@ export function CorporateTaxInvoiceTemplate({
         balanceDueDate: balanceDuePaise > 0 ? balanceDueDate : null,
         eWayBillNumber: invoice.eWayBillNumber ?? order.eWayBillNumber,
         displayUnitPricing: true,
-        taxDisplay: "single_gst",
-        declarationCompanyName: corporateInvoicePayeeName,
-        sellerOfRecord: true,
+        taxDisplay: "standard",
+        declarationCompanyName: seller.name,
+        sellerOfRecord: false,
         paymentSummary: {
             paymentStatus:
                 paidAmountPaise <= 0
@@ -189,36 +245,46 @@ export function CorporateTaxInvoiceTemplate({
             fullPaymentAmountPaise: invoice.totalAmountPaise,
             balanceDuePaise,
         },
+        customizationSummary: hasCustomization
+            ? {
+                  customizationPaise,
+                  customizationGstPaise: customGstPaise,
+                  customizationGstRateBps: 1800,
+                  label: "Customization / Extras",
+              }
+            : null,
         taxSummary: {
-            taxableValuePaise: invoice.taxableValuePaise,
-            cgstPaise: invoice.cgstPaise,
-            sgstPaise: invoice.sgstPaise,
-            igstPaise: invoice.igstPaise,
+            taxableValuePaise: baseTaxablePaise,
+            cgstPaise: baseCgstPaise,
+            sgstPaise: baseSgstPaise,
+            igstPaise: baseIgstPaise,
             totalAmountPaise: invoice.totalAmountPaise,
         },
         items: [
             {
                 quantity,
-                gstRateBps: order.gstRateBps,
-                mrpPaise,
+                gstRateBps: baseGstRateBps,
+                mrpPaise: baseTaxablePaise + discountPaise,
                 discountPaise,
-                taxableValuePaise: invoice.taxableValuePaise,
-                cgstPaise: invoice.cgstPaise,
-                sgstPaise: invoice.sgstPaise,
-                igstPaise: invoice.igstPaise,
-                totalPaise,
+                taxableValuePaise: baseTaxablePaise,
+                cgstPaise: baseCgstPaise,
+                sgstPaise: baseSgstPaise,
+                igstPaise: baseIgstPaise,
+                totalPaise: baseTotalPaise,
                 product: {
-                    title: description,
-                    price: Math.round(totalPaise / quantity),
-                    compareAtPrice: Math.round(mrpPaise / quantity),
+                    title: productName,
+                    price: Math.round(baseTaxablePaise / quantity),
+                    compareAtPrice: Math.round(
+                        (baseTaxablePaise + discountPaise) / quantity
+                    ),
                     hsCode: hsnCode,
                     sku: product?.sku,
                 },
             },
         ],
         brand: {
-            name: RENIVET_CORPORATE_SELLER_NAME,
-            logoUrl: renivetLogoUrl,
+            name: seller.name,
+            logoUrl: seller.logoUrl || renivetLogoUrl,
             confidential: {
                 addressLine1: seller.addressLine1 ?? seller.address,
                 addressLine2: seller.addressLine2 ?? undefined,
@@ -227,15 +293,27 @@ export function CorporateTaxInvoiceTemplate({
                 postalCode: seller.postalCode ?? undefined,
                 gstin: seller.gstin ?? undefined,
                 cin: seller.cin ?? undefined,
-                email: "contact@renivet.com",
+                email: seller.email ?? "contact@renivet.com",
                 phone: seller.phone ?? undefined,
                 bankName: seller.bankName ?? undefined,
-                bankAccountHolderName: corporateInvoicePayeeName,
+                bankAccountHolderName:
+                    seller.bankAccountHolderName ??
+                    "Renivet Marketplace Pvt Ltd",
                 bankAccountNumber: seller.bankAccountNumber ?? undefined,
                 bankAccountType: seller.bankAccountType ?? undefined,
                 bankIfscCode: seller.bankIfscCode ?? undefined,
                 bankBranch: seller.bankBranch ?? undefined,
-                authorizedSignatoryName: RENIVET_CORPORATE_SIGNATORY,
+                authorizedSignatoryName:
+                    seller.authorizedSignatoryName || seller.name,
+                isSameAsWarehouseAddress:
+                    seller.isSameAsWarehouseAddress ?? true,
+                warehouseAddressLine1:
+                    seller.warehouseAddressLine1 ?? undefined,
+                warehouseAddressLine2:
+                    seller.warehouseAddressLine2 ?? undefined,
+                warehouseCity: seller.warehouseCity ?? undefined,
+                warehouseState: seller.warehouseState ?? undefined,
+                warehousePostalCode: seller.warehousePostalCode ?? undefined,
             },
         },
     };

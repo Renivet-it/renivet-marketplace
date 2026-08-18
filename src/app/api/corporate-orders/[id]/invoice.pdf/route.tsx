@@ -9,6 +9,8 @@ import {
 } from "@/lib/corporate-documents";
 import { db } from "@/lib/db";
 import {
+    brandConfidentials,
+    brandMembers,
     corporatePurchaseOrders,
     corporateReceiptVouchers,
     corporateTaxInvoices,
@@ -22,7 +24,7 @@ import {
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 
@@ -140,26 +142,45 @@ export async function GET(
         const canViewAdmin = hasPermission(permissions, [
             BitFieldSitePermission.VIEW_ORDERS,
         ]);
-        if (!canViewAdmin && order.userId !== userId) {
+        const brandMembership = canViewAdmin
+            ? null
+            : order.brand
+              ? await db.query.brandMembers.findFirst({
+                    where: and(
+                        eq(brandMembers.brandId, order.brand.id),
+                        eq(brandMembers.memberId, userId)
+                    ),
+                })
+              : null;
+        const isBrandOwner = order.brand?.ownerId === userId;
+
+        if (!canViewAdmin && !brandMembership && !isBrandOwner && order.userId !== userId) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 });
         }
 
-        const [invoice, purchaseOrder, product, settings] = await Promise.all([
-            db.query.corporateTaxInvoices.findFirst({
-                where: eq(corporateTaxInvoices.orderId, order.id),
-                orderBy: [desc(corporateTaxInvoices.createdAt)],
-            }),
-            db.query.corporatePurchaseOrders.findFirst({
-                where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
-                orderBy: [desc(corporatePurchaseOrders.createdAt)],
-            }),
-            order.quote?.productId
-                ? db.query.products.findFirst({
-                      where: eq(products.id, order.quote.productId),
-                  })
-                : Promise.resolve(null),
-            getCorporateDocumentSettings(),
-        ]);
+        const [invoice, purchaseOrder, product, settings, brandConfidential] =
+            await Promise.all([
+                db.query.corporateTaxInvoices.findFirst({
+                    where: eq(corporateTaxInvoices.orderId, order.id),
+                    orderBy: [desc(corporateTaxInvoices.createdAt)],
+                }),
+                db.query.corporatePurchaseOrders.findFirst({
+                    where: eq(
+                        corporatePurchaseOrders.corporateOrderId,
+                        order.id
+                    ),
+                    orderBy: [desc(corporatePurchaseOrders.createdAt)],
+                }),
+                order.quote?.productId
+                    ? db.query.products.findFirst({
+                          where: eq(products.id, order.quote.productId),
+                      })
+                    : Promise.resolve(null),
+                getCorporateDocumentSettings(),
+                db.query.brandConfidentials.findFirst({
+                    where: eq(brandConfidentials.id, order.brand.id),
+                }),
+            ]);
 
         if (!invoice || invoice.status !== "issued") {
             return NextResponse.json(
@@ -195,13 +216,20 @@ export async function GET(
         ]
             .filter(Boolean)
             .join(", ");
+        const shipFromFallbackState =
+            brandConfidential?.warehouseState ||
+            brandConfidential?.state ||
+            settings.state ||
+            "West Bengal";
+
         const placeOfSupply =
             text(profileBillingAddress.state) ||
             deliveryPlaceOfSupply(
                 order.deliveryAddress,
                 order.deliveryCity,
                 order.deliveryCountry
-            );
+            ) ||
+            shipFromFallbackState;
         const receiptVoucher = invoice.receiptVoucherId
             ? await db.query.corporateReceiptVouchers.findFirst({
                   where: eq(
@@ -210,7 +238,9 @@ export async function GET(
                   ),
               })
             : null;
-        const sellerAddress = corporatePartyAddress(settings);
+        const sellerAddress =
+            corporatePartyAddress(brandConfidential ?? {}) ||
+            corporatePartyAddress(settings);
         const downloadUrl = `${new URL(request.url).origin}/api/corporate-orders/${order.id}/invoice.pdf`;
         const qrCodeDataUrl = await QRCode.toDataURL(downloadUrl, {
             errorCorrectionLevel: "M",
@@ -246,27 +276,57 @@ export async function GET(
                     "Not available",
             },
             seller: {
-                name: RENIVET_CORPORATE_SELLER_NAME,
+                name: order.brand.name,
                 logoUrl:
+                    order.brand.logoUrl ||
                     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqU6nAZGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
-                email: settings.email,
-                phone: settings.phone,
-                gstin: settings.gstin,
+                email: order.brand.email,
+                phone: order.brand.phone,
+                gstin: brandConfidential?.gstin || settings.gstin,
                 cin: settings.cin,
                 address: sellerAddress || "Not provided",
-                addressLine1: settings.addressLine1,
-                addressLine2: settings.addressLine2,
-                city: settings.city,
-                state: settings.state,
-                postalCode: settings.postalCode,
-                country: settings.country,
+                addressLine1:
+                    brandConfidential?.addressLine1 ?? settings.addressLine1,
+                addressLine2:
+                    brandConfidential?.addressLine2 ?? settings.addressLine2,
+                city: brandConfidential?.city ?? settings.city,
+                state: brandConfidential?.state ?? settings.state,
+                postalCode:
+                    brandConfidential?.postalCode ?? settings.postalCode,
+                country: brandConfidential?.country ?? settings.country,
                 bankName: settings.bankName,
                 bankAccountHolderName: settings.bankAccountName,
                 bankAccountNumber: settings.bankAccountNumber,
                 bankAccountType: settings.bankAccountType,
                 bankIfscCode: settings.bankIfscCode,
                 bankBranch: settings.bankBranch,
-                authorizedSignatoryName: settings.authorizedSignatoryName,
+                authorizedSignatoryName:
+                    brandConfidential?.authorizedSignatoryName ||
+                    settings.authorizedSignatoryName,
+                authorizedSignatoryImageUrl:
+                    brandConfidential?.authorizedSignatoryImageUrl,
+                isSameAsWarehouseAddress:
+                    brandConfidential?.isSameAsWarehouseAddress ?? true,
+                warehouseAddressLine1:
+                    brandConfidential?.warehouseAddressLine1 ??
+                    brandConfidential?.addressLine1 ??
+                    settings.addressLine1,
+                warehouseAddressLine2:
+                    brandConfidential?.warehouseAddressLine2 ??
+                    brandConfidential?.addressLine2 ??
+                    settings.addressLine2,
+                warehouseCity:
+                    brandConfidential?.warehouseCity ??
+                    brandConfidential?.city ??
+                    settings.city,
+                warehouseState:
+                    brandConfidential?.warehouseState ??
+                    brandConfidential?.state ??
+                    settings.state,
+                warehousePostalCode:
+                    brandConfidential?.warehousePostalCode ??
+                    brandConfidential?.postalCode ??
+                    settings.postalCode,
             },
             buyer: {
                 companyName: profile?.companyName ?? order.companyName,
@@ -299,13 +359,7 @@ export async function GET(
         for await (const chunk of stream) {
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
         }
-        const displayedInvoiceNumber = invoice.invoiceNumber.startsWith("CINV/")
-            ? invoice.invoiceNumber
-            : corporateDocumentNumber(
-                  "CINV",
-                  order.sequenceNo,
-                  invoice.invoiceDate ?? new Date()
-              );
+        const displayedInvoiceNumber = invoice.invoiceNumber;
         const safeInvoiceNumber = displayedInvoiceNumber.replace(
             /[^a-z0-9_-]+/gi,
             "_"

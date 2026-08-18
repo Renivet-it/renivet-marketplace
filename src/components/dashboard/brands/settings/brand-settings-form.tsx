@@ -12,9 +12,11 @@ import {
     CardTitle,
 } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import {
     Form,
     FormControl,
+    FormDescription,
     FormField,
     FormItem,
     FormLabel,
@@ -85,11 +87,38 @@ const editableConfidentialSchema = z.object({
     warehouseAddressLine2: z.string().nullable().optional(),
     warehouseCity: z.string().nullable().optional(),
     warehouseState: z.string().nullable().optional(),
-    warehousePostalCode: z.string().nullable().optional(),
-    warehouseCountry: z.string().nullable().optional(),
-    bankAccountVerificationDocument: z.string().optional(),
-    udyamRegistrationCertificate: z.string().nullable().optional(),
-    iecCertificate: z.string().nullable().optional(),
+    entityType: z
+        .enum([
+            "company",
+            "llp",
+            "partnership",
+            "proprietorship",
+            "individual",
+            "huf",
+        ])
+        .nullable()
+        .optional(),
+    corporateSlaLeadTimeDays: z
+        .number()
+        .int()
+        .min(1)
+        .max(365)
+        .nullable()
+        .optional(),
+    corporateMonthlyCapacity: z
+        .number()
+        .int()
+        .min(0)
+        .max(10_000_000)
+        .nullable()
+        .optional(),
+    aggregateAnnualTurnoverPaise: z
+        .number()
+        .int()
+        .min(0)
+        .nullable()
+        .optional(),
+    authorizedSignatoryImageUrl: z.string().nullable().optional(),
     hasAcceptedTerms: z.boolean().default(true),
 });
 
@@ -143,6 +172,15 @@ export function BrandSettingsForm({
                 brandConfidential?.authorizedSignatoryEmail ?? "",
             authorizedSignatoryPhone:
                 brandConfidential?.authorizedSignatoryPhone ?? "",
+            entityType: brandConfidential?.entityType ?? "company",
+            corporateSlaLeadTimeDays:
+                brandConfidential?.corporateSlaLeadTimeDays ?? 15,
+            corporateMonthlyCapacity:
+                brandConfidential?.corporateMonthlyCapacity ?? 5000,
+            aggregateAnnualTurnoverPaise:
+                brandConfidential?.aggregateAnnualTurnoverPaise ?? 0,
+            authorizedSignatoryImageUrl:
+                brandConfidential?.authorizedSignatoryImageUrl ?? "",
             addressLine1: brandConfidential?.addressLine1 ?? "",
             addressLine2: brandConfidential?.addressLine2 ?? "",
             city: brandConfidential?.city ?? "",
@@ -1145,6 +1183,151 @@ export function BrandSettingsForm({
                                         />
                                     </div>
                                 )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Corporate & Bulk Manufacturing Capabilities */}
+                        <Card>
+                            <CardHeader>
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <CardTitle>Corporate & Bulk Manufacturing Capabilities</CardTitle>
+                                        <CardDescription>
+                                            Configure your capacity, lead times, and legal structure for B2B corporate bulk manufacturing
+                                        </CardDescription>
+                                    </div>
+                                    {brand.isCorporateEnabled ? (
+                                        <Badge className="bg-emerald-600 text-white hover:bg-emerald-700">
+                                            Corporate Enabled
+                                        </Badge>
+                                    ) : (
+                                        <Badge variant="outline" className="text-muted-foreground">
+                                            Standard Retail
+                                        </Badge>
+                                    )}
+                                </div>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="grid gap-4 md:grid-cols-2">
+                                    <FormField
+                                        control={confidentialForm.control}
+                                        name="entityType"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Entity Structure (for TDS §194-O)</FormLabel>
+                                                <Select
+                                                    onValueChange={field.onChange}
+                                                    value={field.value ?? "company"}
+                                                    disabled={isAnyPending}
+                                                >
+                                                    <SelectTrigger>
+                                                        <FormControl>
+                                                            <SelectValue placeholder="Select entity type" />
+                                                        </FormControl>
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="company">Private Limited / Public Limited Company</SelectItem>
+                                                        <SelectItem value="llp">Limited Liability Partnership (LLP)</SelectItem>
+                                                        <SelectItem value="partnership">Partnership Firm</SelectItem>
+                                                        <SelectItem value="proprietorship">Sole Proprietorship</SelectItem>
+                                                        <SelectItem value="individual">Individual</SelectItem>
+                                                        <SelectItem value="huf">Hindu Undivided Family (HUF)</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <FormDescription>
+                                                    Entity type determines Section 194-O TDS threshold logic
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={confidentialForm.control}
+                                        name="corporateSlaLeadTimeDays"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Standard Corporate SLA Lead Time (Days)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        {...field}
+                                                        value={field.value ?? ""}
+                                                        onChange={(e) =>
+                                                            field.onChange(
+                                                                e.target.value
+                                                                    ? parseInt(e.target.value, 10)
+                                                                    : undefined
+                                                            )
+                                                        }
+                                                        placeholder="e.g. 15"
+                                                        disabled={isAnyPending}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Standard days required from PO acceptance to dispatch
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={confidentialForm.control}
+                                        name="corporateMonthlyCapacity"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Monthly Production Capacity (Units)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        {...field}
+                                                        value={field.value ?? ""}
+                                                        onChange={(e) =>
+                                                            field.onChange(
+                                                                e.target.value
+                                                                    ? parseInt(e.target.value, 10)
+                                                                    : undefined
+                                                            )
+                                                        }
+                                                        placeholder="e.g. 10000"
+                                                        disabled={isAnyPending}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Peak monthly production units for corporate bulk orders
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={confidentialForm.control}
+                                        name="aggregateAnnualTurnoverPaise"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Annual Turnover (₹)</FormLabel>
+                                                <FormControl>
+                                                    <Input
+                                                        type="number"
+                                                        value={field.value ? field.value / 100 : ""}
+                                                        onChange={(e) =>
+                                                            field.onChange(
+                                                                e.target.value
+                                                                    ? Math.round(parseFloat(e.target.value) * 100)
+                                                                    : 0
+                                                            )
+                                                        }
+                                                        placeholder="e.g. 5000000"
+                                                        disabled={isAnyPending}
+                                                    />
+                                                </FormControl>
+                                                <FormDescription>
+                                                    Reported annual aggregate turnover for tax compliance
+                                                </FormDescription>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
                             </CardContent>
                         </Card>
 

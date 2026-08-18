@@ -4,7 +4,11 @@ import {
 } from "@/components/pdf/corporate-receipt-voucher-template";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
-import { corporatePurchaseOrders } from "@/lib/db/schema";
+import {
+    brands,
+    corporatePurchaseOrders,
+    corporateQuotes,
+} from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import {
     corporateDocumentService,
@@ -69,14 +73,28 @@ export async function GET(
             );
         }
 
-        const [settings, purchaseOrder, voucher] = await Promise.all([
-            getCorporateDocumentSettings(),
-            db.query.corporatePurchaseOrders.findFirst({
-                where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
-                orderBy: [desc(corporatePurchaseOrders.createdAt)],
-            }),
-            corporateDocumentService.ensureReceiptVoucher(order.id),
-        ]);
+        const [settings, purchaseOrder, voucher, brand, quote] =
+            await Promise.all([
+                getCorporateDocumentSettings(),
+                db.query.corporatePurchaseOrders.findFirst({
+                    where: eq(
+                        corporatePurchaseOrders.corporateOrderId,
+                        order.id
+                    ),
+                    orderBy: [desc(corporatePurchaseOrders.createdAt)],
+                }),
+                corporateDocumentService.ensureReceiptVoucher(order.id),
+                order.brandId
+                    ? db.query.brands.findFirst({
+                          where: eq(brands.id, order.brandId),
+                      })
+                    : Promise.resolve(null),
+                order.quoteId
+                    ? db.query.corporateQuotes.findFirst({
+                          where: eq(corporateQuotes.id, order.quoteId),
+                      })
+                    : Promise.resolve(null),
+            ]);
 
         if (!voucher) {
             return NextResponse.json(
@@ -88,12 +106,14 @@ export async function GET(
             voucherNumber: voucher.voucherNumber,
             voucherDate: voucher.voucherDate,
             orderNumber: order.publicOrderId,
+            quoteNumber: quote?.quoteNumber ?? null,
             poReference: voucher.poReference ?? purchaseOrder?.poNumber,
             amountPaise: voucher.amountPaise,
             paymentMode: voucher.paymentMode,
             paymentReference: voucher.paymentReference,
             seller: {
                 name: settings.legalName,
+                onBehalfOfBrand: brand?.name ?? null,
                 address: corporatePartyAddress(settings) || "Not provided",
                 gstin: settings.gstin,
                 bankName: settings.bankName,

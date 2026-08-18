@@ -231,6 +231,43 @@ export const brandConfidentialSchema = z.object({
             })
             .nullable()
     ),
+    entityType: z
+        .enum([
+            "company",
+            "llp",
+            "partnership",
+            "proprietorship",
+            "individual",
+            "huf",
+        ])
+        .nullable()
+        .optional(),
+    aggregateAnnualTurnoverPaise: z
+        .number()
+        .int()
+        .nonnegative()
+        .nullable()
+        .optional(),
+    authorizedSignatoryImageUrl: z.string().nullable().optional(),
+    corporateSlaLeadTimeDays: z
+        .number()
+        .int()
+        .min(1)
+        .max(365)
+        .nullable()
+        .optional(),
+    corporateMonthlyCapacity: z
+        .number()
+        .int()
+        .min(0)
+        .max(10_000_000)
+        .nullable()
+        .optional(),
+    panVerified: z.boolean().default(false).optional(),
+    panVerifiedAt: z
+        .union([z.string(), z.date()])
+        .nullable()
+        .optional(),
     verificationStatus: z.enum(["pending", "approved", "rejected"], {
         required_error: "Verification status is required",
         invalid_type_error:

@@ -138,12 +138,23 @@ export const corporateOrderSettingsSchema = z.object({
     updatedAt: z.union([z.string(), z.date()]).transform((v) => new Date(v)),
 });
 
+export const corporateGstinValidation = z
+    .string()
+    .trim()
+    .max(32)
+    .refine(
+        (val) => !val || /^\d{2}[A-Z]{5}\d{4}[A-Z]\d[Z][A-Z0-9]$/.test(val),
+        "Invalid GSTIN format (must be 15-character valid Indian GSTIN, e.g. 29ABCDE1234F1Z5)"
+    )
+    .nullable()
+    .optional();
+
 export const corporateOrderFormInputSchema = z.object({
     companyName: z.string().min(2),
     contactPersonName: z.string().min(2),
     emailAddress: z.string().email(),
     mobileNumber: z.string().min(8).max(20),
-    gstNumber: z.string().trim().max(32).nullable().optional(),
+    gstNumber: corporateGstinValidation,
     deliveryCountry: z.string().trim().min(2),
     deliveryCity: z.string().trim().min(2),
     deliveryPincode: z
@@ -211,7 +222,7 @@ export const corporateOrderSchema = z.object({
     contactPersonName: z.string(),
     emailAddress: z.string().email(),
     mobileNumber: z.string(),
-    gstNumber: z.string().nullable().optional(),
+    gstNumber: corporateGstinValidation,
     deliveryCountry: z.string(),
     deliveryCity: z.string(),
     deliveryPincode: z.string(),
