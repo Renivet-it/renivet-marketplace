@@ -1,13 +1,5 @@
-import { SignUpForm } from "@/components/globals/forms";
+import { PhoneFirstSignUp } from "@/components/auth/phone-first-sign-up";
 import { GeneralShell } from "@/components/globals/layouts";
-import {
-    Card,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "@/components/ui/card";
-import { SignUp } from "@clerk/nextjs";
-
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -22,8 +14,8 @@ export default function Page() {
                 innerWrapper: "max-w-lg xl:max-w-2xl",
             }}
         >
-        <div className="flex items-center justify-center">
-            <SignUp routing="hash" signInUrl="/auth/signin" />
+            <div className="flex items-center justify-center">
+                <PhoneFirstSignUp />
             </div>
         </GeneralShell>
     );
