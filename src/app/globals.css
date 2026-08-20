@@ -2,6 +2,18 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes pdp-gallery-fade {
+    from {
+        opacity: 0;
+        transform: translateY(4px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 /* Corporate ordering pages use a deliberately square, operational UI. */
 .square-corporate-ui,
 .square-corporate-ui * {
