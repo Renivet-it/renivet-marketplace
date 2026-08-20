@@ -1,8 +1,8 @@
 "use client";
 
-import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
-import { useSignUp } from "@clerk/nextjs";
 import { Renivet } from "@/components/svgs";
+import { useSignUp } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -37,7 +37,10 @@ export function PhoneFirstSignUp() {
     const showError = (value: unknown) => {
         if (isClerkAPIResponseError(value))
             setError(value.errors.map((item) => item.message).join(", "));
-        else setError(value instanceof Error ? value.message : "Unable to sign up");
+        else
+            setError(
+                value instanceof Error ? value.message : "Unable to sign up"
+            );
     };
 
     const complete = async (sessionId: string | null) => {
@@ -73,9 +76,13 @@ export function PhoneFirstSignUp() {
                 const attempt =
                     method === "phone"
                         ? await signUp.attemptPhoneNumberVerification({ code })
-                        : await signUp.attemptEmailAddressVerification({ code });
+                        : await signUp.attemptEmailAddressVerification({
+                              code,
+                          });
                 if (attempt.status !== "complete")
-                    throw new Error("The verification code could not be completed");
+                    throw new Error(
+                        "The verification code could not be completed"
+                    );
                 await complete(attempt.createdSessionId);
                 return;
             }
@@ -115,11 +122,26 @@ export function PhoneFirstSignUp() {
     };
 
     return (
-        <div className="w-full max-w-md overflow-hidden rounded-2xl border bg-background shadow-xl shadow-black/5">
-            <div className="border-b bg-gradient-to-b from-primary/5 to-transparent px-8 pb-7 pt-8 text-center">
-                <Renivet className="mx-auto mb-4 size-11" />
-                <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-                <p className="mt-2 text-sm text-muted-foreground">
+        <div className="w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
+            <div className="h-1 bg-primary" />
+            <div className="border-b bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-7 pt-7 sm:px-9 sm:pt-8">
+                <div className="mb-7 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <span className="grid size-11 place-items-center rounded-xl border bg-background shadow-sm">
+                            <Renivet className="size-7" />
+                        </span>
+                        <span className="text-sm font-semibold tracking-[0.18em] text-primary">
+                            RENIVET
+                        </span>
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                        New account
+                    </span>
+                </div>
+                <h1 className="text-3xl font-semibold tracking-tight">
+                    Create your account
+                </h1>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     {step === "verification"
                         ? `We sent a code to your ${method === "phone" ? "phone" : "email"}`
                         : "Join Renivet in just a few steps"}
@@ -127,17 +149,19 @@ export function PhoneFirstSignUp() {
             </div>
 
             {step === "details" && (
-                <div className="px-8 pt-7">
+                <div className="px-6 pt-7 sm:px-9">
                     <button
-                        className="flex h-11 w-full items-center justify-center gap-3 rounded-lg border bg-background font-medium shadow-sm transition hover:bg-muted disabled:opacity-50"
+                        className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={pending}
                         onClick={continueWithGoogle}
                         type="button"
                     >
-                        <span className="text-xl font-bold text-blue-600">G</span>
+                        <span className="grid size-5 place-items-center rounded-full bg-white text-sm font-bold text-blue-600 shadow-sm">
+                            G
+                        </span>
                         Continue with Google
                     </button>
-                    <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
+                    <div className="my-7 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         <span className="h-px flex-1 bg-border" />
                         or
                         <span className="h-px flex-1 bg-border" />
@@ -145,10 +169,15 @@ export function PhoneFirstSignUp() {
                 </div>
             )}
 
-            <form className="space-y-5 px-8 pb-7" onSubmit={submit}>
+            <form
+                className="space-y-5 px-6 pb-7 pt-7 sm:px-9"
+                onSubmit={submit}
+            >
                 {step === "verification" ? (
                     <label className="block space-y-2">
-                        <span className="text-sm font-medium">Verification code</span>
+                        <span className="text-sm font-medium">
+                            Verification code
+                        </span>
                         <input
                             autoComplete="one-time-code"
                             className="h-12 w-full rounded-lg border bg-background px-3 text-center text-lg tracking-[0.35em] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
@@ -163,12 +192,28 @@ export function PhoneFirstSignUp() {
                     <>
                         <div className="grid grid-cols-2 gap-3">
                             <label className="space-y-2">
-                                <span className="text-sm font-medium">First name</span>
-                                <input className="h-11 w-full rounded-lg border px-3" onChange={(event) => setFirstName(event.target.value)} value={firstName} />
+                                <span className="text-sm font-medium">
+                                    First name
+                                </span>
+                                <input
+                                    className="h-11 w-full rounded-lg border px-3"
+                                    onChange={(event) =>
+                                        setFirstName(event.target.value)
+                                    }
+                                    value={firstName}
+                                />
                             </label>
                             <label className="space-y-2">
-                                <span className="text-sm font-medium">Last name</span>
-                                <input className="h-11 w-full rounded-lg border px-3" onChange={(event) => setLastName(event.target.value)} value={lastName} />
+                                <span className="text-sm font-medium">
+                                    Last name
+                                </span>
+                                <input
+                                    className="h-11 w-full rounded-lg border px-3"
+                                    onChange={(event) =>
+                                        setLastName(event.target.value)
+                                    }
+                                    value={lastName}
+                                />
                             </label>
                         </div>
 
@@ -176,43 +221,115 @@ export function PhoneFirstSignUp() {
                             <label className="block space-y-2">
                                 <span className="flex justify-between text-sm font-medium">
                                     Phone number
-                                    <button className="font-normal text-primary underline" onClick={switchMethod} type="button">Use email instead</button>
+                                    <button
+                                        className="font-normal text-primary underline"
+                                        onClick={switchMethod}
+                                        type="button"
+                                    >
+                                        Use email instead
+                                    </button>
                                 </span>
                                 <div className="flex h-12 overflow-hidden rounded-lg border bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                                    <select aria-label="Country" className="w-20 border-r bg-transparent px-3 text-sm outline-none" defaultValue="IN">
+                                    <select
+                                        aria-label="Country"
+                                        className="w-20 border-r bg-transparent px-3 text-sm outline-none"
+                                        defaultValue="IN"
+                                    >
                                         <option value="IN">IN</option>
                                     </select>
-                                    <span className="flex items-center px-3 text-sm font-medium">+91</span>
-                                    <input autoComplete="tel-national" className="min-w-0 flex-1 bg-transparent pr-3 outline-none" inputMode="tel" onChange={(event) => setPhone(event.target.value)} placeholder="Enter your phone number" required value={phone} />
+                                    <span className="flex items-center px-3 text-sm font-medium">
+                                        +91
+                                    </span>
+                                    <input
+                                        autoComplete="tel-national"
+                                        className="min-w-0 flex-1 bg-transparent pr-3 outline-none"
+                                        inputMode="tel"
+                                        onChange={(event) =>
+                                            setPhone(event.target.value)
+                                        }
+                                        placeholder="Enter your phone number"
+                                        required
+                                        value={phone}
+                                    />
                                 </div>
-                                <p className="text-xs text-muted-foreground">We&apos;ll verify this number with an SMS code.</p>
+                                <p className="text-xs text-muted-foreground">
+                                    We&apos;ll verify this number with an SMS
+                                    code.
+                                </p>
                             </label>
                         ) : (
                             <>
                                 <label className="block space-y-2">
                                     <span className="flex justify-between text-sm font-medium">
                                         Email address
-                                        <button className="font-normal text-primary underline" onClick={switchMethod} type="button">Use phone</button>
+                                        <button
+                                            className="font-normal text-primary underline"
+                                            onClick={switchMethod}
+                                            type="button"
+                                        >
+                                            Use phone
+                                        </button>
                                     </span>
-                                    <input autoComplete="email" className="h-12 w-full rounded-lg border px-3" onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required type="email" value={email} />
+                                    <input
+                                        autoComplete="email"
+                                        className="h-12 w-full rounded-lg border px-3"
+                                        onChange={(event) =>
+                                            setEmail(event.target.value)
+                                        }
+                                        placeholder="you@example.com"
+                                        required
+                                        type="email"
+                                        value={email}
+                                    />
                                 </label>
                                 <label className="block space-y-2">
-                                    <span className="text-sm font-medium">Create a password</span>
-                                    <input autoComplete="new-password" className="h-12 w-full rounded-lg border px-3" onChange={(event) => setPassword(event.target.value)} required type="password" value={password} />
+                                    <span className="text-sm font-medium">
+                                        Create a password
+                                    </span>
+                                    <input
+                                        autoComplete="new-password"
+                                        className="h-12 w-full rounded-lg border px-3"
+                                        onChange={(event) =>
+                                            setPassword(event.target.value)
+                                        }
+                                        required
+                                        type="password"
+                                        value={password}
+                                    />
                                 </label>
                             </>
                         )}
                     </>
                 )}
 
-                {error && <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
-                <button className="h-12 w-full rounded-lg bg-primary font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50" disabled={pending} type="submit">
-                    {pending ? "Please wait…" : step === "verification" ? "Verify & create account" : method === "phone" ? "Continue with phone" : "Create account"}
+                {error && (
+                    <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
+                        {error}
+                    </p>
+                )}
+                <button
+                    className="h-12 w-full rounded-lg bg-primary font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    disabled={pending}
+                    type="submit"
+                >
+                    {pending
+                        ? "Please wait…"
+                        : step === "verification"
+                          ? "Verify & create account"
+                          : method === "phone"
+                            ? "Continue with phone"
+                            : "Create account"}
                 </button>
             </form>
 
-            <div className="border-t bg-muted/30 px-8 py-5 text-center text-sm text-muted-foreground">
-                Already have an account? <Link className="font-medium text-primary underline" href="/auth/signin">Sign in</Link>
+            <div className="border-t bg-muted/30 px-6 py-5 text-center text-sm text-muted-foreground sm:px-9">
+                Already have an account?{" "}
+                <Link
+                    className="font-medium text-primary underline"
+                    href="/auth/signin"
+                >
+                    Sign in
+                </Link>
             </div>
         </div>
     );

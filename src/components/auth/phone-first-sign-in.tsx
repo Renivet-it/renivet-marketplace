@@ -1,14 +1,17 @@
 "use client";
 
-import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
-import { useSignIn } from "@clerk/nextjs";
 import { Renivet } from "@/components/svgs";
+import { useSignIn } from "@clerk/nextjs";
+import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 type Method = "phone" | "email";
 type Step = "credentials" | "phone-code";
+
+const fieldClass =
+    "h-14 w-full rounded-xl border bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10";
 
 function normalizeIndianPhone(value: string) {
     const digits = value.replace(/\D/g, "");
@@ -18,6 +21,38 @@ function normalizeIndianPhone(value: string) {
     if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
     if (value.startsWith("+")) return value;
     throw new Error("Enter a valid phone number with its country code");
+}
+
+function BrandHeader({
+    eyebrow,
+    title,
+    description,
+}: {
+    eyebrow: string;
+    title: string;
+    description: string;
+}) {
+    return (
+        <>
+            <div className="mb-7 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <span className="grid size-11 place-items-center rounded-xl border bg-background shadow-sm">
+                        <Renivet className="size-7" />
+                    </span>
+                    <span className="text-sm font-semibold tracking-[0.18em] text-primary">
+                        RENIVET
+                    </span>
+                </div>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                    {eyebrow}
+                </span>
+            </div>
+            <h1 className="text-3xl font-semibold tracking-tight">{title}</h1>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                {description}
+            </p>
+        </>
+    );
 }
 
 export function PhoneFirstSignIn() {
@@ -32,12 +67,14 @@ export function PhoneFirstSignIn() {
     const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
 
-    const showError = (value: unknown) => {
-        if (isClerkAPIResponseError(value))
-            setError(value.errors.map((item) => item.message).join(", "));
-        else setError(value instanceof Error ? value.message : "Unable to sign in");
-    };
-
+    const showError = (value: unknown) =>
+        setError(
+            isClerkAPIResponseError(value)
+                ? value.errors.map((item) => item.message).join(", ")
+                : value instanceof Error
+                  ? value.message
+                  : "Unable to sign in"
+        );
     const complete = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
         await setActive({ session: sessionId });
@@ -63,7 +100,6 @@ export function PhoneFirstSignIn() {
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         if (!isLoaded) return;
-
         setPending(true);
         setError(null);
         try {
@@ -73,22 +109,24 @@ export function PhoneFirstSignIn() {
                     code,
                 });
                 if (attempt.status !== "complete")
-                    throw new Error("The verification code could not be completed");
+                    throw new Error(
+                        "The verification code could not be completed"
+                    );
                 await complete(attempt.createdSessionId);
                 return;
             }
-
             if (method === "email") {
                 const attempt = await signIn.create({
                     identifier: email.trim(),
                     password,
                 });
                 if (attempt.status !== "complete")
-                    throw new Error("Email and password sign-in could not be completed");
+                    throw new Error(
+                        "Email and password sign-in could not be completed"
+                    );
                 await complete(attempt.createdSessionId);
                 return;
             }
-
             const attempt = await signIn.create({
                 identifier: normalizeIndianPhone(phone),
             });
@@ -96,8 +134,9 @@ export function PhoneFirstSignIn() {
                 (factor) => factor.strategy === "phone_code"
             );
             if (!phoneFactor || phoneFactor.strategy !== "phone_code")
-                throw new Error("SMS sign-in is not available for this phone number");
-
+                throw new Error(
+                    "SMS sign-in is not available for this phone number"
+                );
             await signIn.prepareFirstFactor({
                 strategy: "phone_code",
                 phoneNumberId: phoneFactor.phoneNumberId,
@@ -115,142 +154,177 @@ export function PhoneFirstSignIn() {
         setStep("credentials");
         setError(null);
     };
+    const isCode = step === "phone-code";
 
     return (
-        <div className="w-full max-w-md rounded-2xl border bg-background p-8 shadow-sm">
-            <Renivet className="mx-auto mb-4 size-11" />
-            <h1 className="text-center text-2xl font-semibold">Sign in to Renivet</h1>
-            <p className="mt-2 text-center text-sm text-muted-foreground">
-                {step === "phone-code"
-                    ? "Enter the SMS code sent to your phone"
-                    : "Welcome back! Please sign in to continue"}
-            </p>
-
-            {step === "credentials" && (
-                <>
-                    <button
-                        className="mt-7 flex h-11 w-full items-center justify-center gap-3 rounded-lg border bg-background font-medium shadow-sm transition hover:bg-muted disabled:opacity-50"
-                        disabled={pending}
-                        onClick={continueWithGoogle}
-                        type="button"
-                    >
-                        <span className="text-xl font-bold text-blue-600">G</span>
-                        Continue with Google
-                    </button>
-                    <div className="my-6 flex items-center gap-3 text-xs text-muted-foreground">
-                        <span className="h-px flex-1 bg-border" />
-                        or
-                        <span className="h-px flex-1 bg-border" />
-                    </div>
-                </>
-            )}
-
-            <form className={`${step === "credentials" ? "" : "mt-8"} space-y-5`} onSubmit={submit}>
-                {step === "phone-code" ? (
-                    <label className="block space-y-2">
-                        <span className="text-sm font-medium">SMS verification code</span>
-                        <input
-                            autoComplete="one-time-code"
-                            className="h-11 w-full rounded-md border px-3"
-                            inputMode="numeric"
-                            onChange={(event) => setCode(event.target.value)}
-                            placeholder="Enter the code"
-                            required
-                            value={code}
-                        />
-                    </label>
-                ) : method === "phone" ? (
-                    <label className="block space-y-2">
-                        <span className="flex justify-between text-sm font-medium">
-                            Phone number
-                            <button
-                                className="font-normal text-primary underline"
-                                onClick={switchMethod}
-                                type="button"
-                            >
-                                    Use email instead
-                            </button>
-                        </span>
-                        <div className="flex h-12 overflow-hidden rounded-lg border bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
-                            <select
-                                aria-label="Country"
-                                className="w-20 border-r bg-transparent px-3 text-sm outline-none"
-                                defaultValue="IN"
-                            >
-                                <option value="IN">IN</option>
-                            </select>
-                            <span className="flex items-center px-3 text-sm font-medium">+91</span>
-                            <input
-                                autoComplete="tel-national"
-                                className="min-w-0 flex-1 bg-transparent pr-3 outline-none"
-                                inputMode="tel"
-                                onChange={(event) => setPhone(event.target.value)}
-                                placeholder="Enter your phone number"
-                                required
-                                value={phone}
-                            />
-                        </div>
-                    </label>
-                ) : (
+        <div className="w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
+            <div className="h-1 bg-primary" />
+            <div className="border-b bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-7 pt-7 sm:px-9 sm:pt-8">
+                <BrandHeader
+                    eyebrow="Secure access"
+                    title={isCode ? "Check your messages" : "Welcome back"}
+                    description={
+                        isCode
+                            ? "Enter the six-digit code we sent to your phone."
+                            : "Sign in to continue shopping with Renivet."
+                    }
+                />
+            </div>
+            <div className="px-6 pb-7 pt-7 sm:px-9">
+                {!isCode && (
                     <>
+                        <button
+                            className="mt-7 flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={pending}
+                            onClick={continueWithGoogle}
+                            type="button"
+                        >
+                            <span className="grid size-5 place-items-center rounded-full bg-white text-sm font-bold text-blue-600 shadow-sm">
+                                G
+                            </span>{" "}
+                            Continue with Google
+                        </button>
+                        <div className="my-7 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                            <span className="h-px flex-1 bg-border" />
+                            or
+                            <span className="h-px flex-1 bg-border" />
+                        </div>
+                    </>
+                )}
+                <form
+                    className={`${isCode ? "mt-7" : ""} space-y-5`}
+                    onSubmit={submit}
+                >
+                    {isCode ? (
                         <label className="block space-y-2">
-                            <span className="flex justify-between text-sm font-medium">
-                                Email address
+                            <span className="text-sm font-semibold">
+                                SMS verification code
+                            </span>
+                            <input
+                                autoComplete="one-time-code"
+                                className={`${fieldClass} text-center text-lg tracking-[0.35em] placeholder:tracking-normal`}
+                                inputMode="numeric"
+                                onChange={(event) =>
+                                    setCode(event.target.value)
+                                }
+                                placeholder="••••••"
+                                required
+                                value={code}
+                            />
+                        </label>
+                    ) : method === "phone" ? (
+                        <label className="block space-y-2">
+                            <span className="flex justify-between text-sm font-semibold">
+                                Phone number
                                 <button
-                                    className="font-normal text-primary underline"
+                                    className="font-medium text-primary underline-offset-4 hover:underline"
                                     onClick={switchMethod}
                                     type="button"
                                 >
-                                    Use phone
+                                    Use email instead
                                 </button>
                             </span>
-                            <input
-                                autoComplete="email"
-                                className="h-11 w-full rounded-md border px-3"
-                                onChange={(event) => setEmail(event.target.value)}
-                                placeholder="you@example.com"
-                                required
-                                type="email"
-                                value={email}
-                            />
+                            <div className="flex h-14 overflow-hidden rounded-xl border bg-background transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                                <select
+                                    aria-label="Country"
+                                    className="w-[86px] border-r bg-transparent px-4 text-sm font-medium outline-none"
+                                    defaultValue="IN"
+                                >
+                                    <option value="IN">IN</option>
+                                </select>
+                                <span className="flex items-center px-3 text-sm font-semibold text-foreground/80">
+                                    +91
+                                </span>
+                                <input
+                                    autoComplete="tel-national"
+                                    className="min-w-0 flex-1 bg-transparent pr-4 text-sm outline-none placeholder:text-muted-foreground"
+                                    inputMode="tel"
+                                    onChange={(event) =>
+                                        setPhone(event.target.value)
+                                    }
+                                    placeholder="Enter your phone number"
+                                    required
+                                    value={phone}
+                                />
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                We&apos;ll send a one-time SMS code.
+                            </p>
                         </label>
-                        <label className="block space-y-2">
-                            <span className="text-sm font-medium">Password</span>
-                            <input
-                                autoComplete="current-password"
-                                className="h-11 w-full rounded-md border px-3"
-                                onChange={(event) => setPassword(event.target.value)}
-                                required
-                                type="password"
-                                value={password}
-                            />
-                        </label>
-                    </>
-                )}
-
-                {error && <p className="text-sm text-destructive">{error}</p>}
-
-                <button
-                    className="h-11 w-full rounded-md bg-primary font-medium text-primary-foreground disabled:opacity-50"
-                    disabled={pending}
-                    type="submit"
-                >
-                    {pending
-                        ? "Please wait…"
-                        : step === "phone-code"
-                          ? "Verify code"
-                          : method === "phone"
-                            ? "Send SMS code"
-                            : "Sign in"}
-                </button>
-            </form>
-
-            <p className="mt-6 text-center text-sm text-muted-foreground">
-                Don&apos;t have an account?{" "}
-                <Link className="text-primary underline" href="/auth/signup">
-                    Sign up
-                </Link>
-            </p>
+                    ) : (
+                        <>
+                            <label className="block space-y-2">
+                                <span className="flex justify-between text-sm font-semibold">
+                                    Email address
+                                    <button
+                                        className="font-medium text-primary underline-offset-4 hover:underline"
+                                        onClick={switchMethod}
+                                        type="button"
+                                    >
+                                        Use phone
+                                    </button>
+                                </span>
+                                <input
+                                    autoComplete="email"
+                                    className={fieldClass}
+                                    onChange={(event) =>
+                                        setEmail(event.target.value)
+                                    }
+                                    placeholder="you@example.com"
+                                    required
+                                    type="email"
+                                    value={email}
+                                />
+                            </label>
+                            <label className="block space-y-2">
+                                <span className="text-sm font-semibold">
+                                    Password
+                                </span>
+                                <input
+                                    autoComplete="current-password"
+                                    className={fieldClass}
+                                    onChange={(event) =>
+                                        setPassword(event.target.value)
+                                    }
+                                    required
+                                    type="password"
+                                    value={password}
+                                />
+                            </label>
+                        </>
+                    )}
+                    {error && (
+                        <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                            {error}
+                        </p>
+                    )}
+                    <button
+                        className="h-14 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                        disabled={pending}
+                        type="submit"
+                    >
+                        {pending
+                            ? "Please wait..."
+                            : isCode
+                              ? "Verify code"
+                              : method === "phone"
+                                ? "Send SMS code"
+                                : "Sign in"}
+                    </button>
+                </form>
+                <p className="mt-6 text-center text-sm text-muted-foreground">
+                    Don&apos;t have an account?{" "}
+                    <Link
+                        className="font-semibold text-primary underline-offset-4 hover:underline"
+                        href="/auth/signup"
+                    >
+                        Sign up
+                    </Link>
+                </p>
+            </div>
+            <div className="border-t bg-muted/30 px-6 py-4 text-center text-xs text-muted-foreground sm:px-9">
+                Protected by secure Clerk authentication
+            </div>
         </div>
     );
 }
