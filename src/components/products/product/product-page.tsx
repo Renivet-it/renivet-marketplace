@@ -105,9 +105,30 @@ export function ProductPage({
     const isWishlisted =
         wishlist?.some((item) => item.productId === product.id) ?? false;
 
-    const selectedVariant = product.variants.find(
-        (variant) => variant.nativeSku === selectedSku
-    );
+    // Keep the gallery in sync with the option picker. The picker selects the
+    // cheapest in-stock variant when the URL has no `sku`, so the gallery must
+    // use that same fallback instead of reverting to the product-wide media.
+    const selectedVariant = useMemo(() => {
+        const activeVariants = product.variants.filter(
+            (variant) => !variant.isDeleted
+        );
+        const selectableVariants = activeVariants.filter(
+            (variant) => (variant.quantity ?? 0) > 0
+        );
+        const variants =
+            selectableVariants.length > 0 ? selectableVariants : activeVariants;
+
+        if (!variants.length) return undefined;
+
+        return (
+            variants.find((variant) => variant.nativeSku === selectedSku) ??
+            variants.reduce(
+                (lowest, variant) =>
+                    variant.price < lowest.price ? variant : lowest,
+                variants[0]
+            )
+        );
+    }, [product.variants, selectedSku]);
 
     const images = Array.from(
         new Map(
@@ -115,7 +136,12 @@ export function ProductPage({
                 .map((media) => ({
                     url: media?.mediaItem?.url,
                     alt: media?.mediaItem?.alt,
-                    id: media.id,
+                    // `media.id` is a product-media relation in some query
+                    // shapes. Variant.image always stores the media-item ID.
+                    // Preserve both IDs so connected variant media matches in
+                    // either shape.
+                    id: media.mediaItem?.id ?? media.id,
+                    mediaId: media.id,
                     position: media.position,
                 }))
                 .filter(
@@ -125,10 +151,11 @@ export function ProductPage({
                         url: string;
                         alt: string;
                         id: string;
+                        mediaId: string;
                         position: number;
                     } => !!url.url
                 )
-                .map((item) => [item.url, item])
+                .map((item) => [item.id, item])
         ).values()
     );
 
@@ -137,7 +164,9 @@ export function ProductPage({
         const variantMediaItem = selectedVariant?.mediaItem;
         if (!variantMediaItem?.url) return images;
         const variantImageIndex = images.findIndex(
-            (img) => img.id === selectedVariant.image
+            (img) =>
+                img.id === selectedVariant.image ||
+                img.mediaId === selectedVariant.image
         );
         if (variantImageIndex === -1) {
             return [
@@ -145,6 +174,7 @@ export function ProductPage({
                     url: variantMediaItem.url,
                     alt: variantMediaItem.alt ?? `${product.title} variant`,
                     id: selectedVariant.image,
+                    mediaId: selectedVariant.image,
                     position: -1,
                 },
                 ...images,
@@ -166,12 +196,24 @@ export function ProductPage({
             : [
                   {
                       id: "fallback",
+                      mediaId: "fallback",
                       url: FALLBACK_IMAGE_URL,
                       alt: "Default Product Image",
                       position: -1,
                   },
               ];
     const primaryImageUrl = displayImages[0]?.url ?? FALLBACK_IMAGE_URL;
+
+    useEffect(() => {
+        // A variant change must always reveal its connected image first,
+        // including on the mobile carousel where Embla retains its old snap.
+        setActiveImageIndex(0);
+        setSelectedThumbnail(null);
+        setModalImageIndex(0);
+        api?.reInit();
+        api?.scrollTo(0, true);
+        setCurrent(1);
+    }, [api, selectedVariant?.id]);
 
     const openModal = useCallback((index: number) => {
         setModalImageIndex(index);
@@ -325,10 +367,10 @@ export function ProductPage({
                         >
                             {displayImages.map((image, i) => (
                                 <div
-                                    key={image.id}
+                                    key={`${selectedVariant?.id ?? "product"}-${image.id}`}
                                     id={i === 0 ? "pdp-main-image" : undefined}
                                     className={cn(
-                                        "group relative aspect-[3/4] w-full cursor-zoom-in overflow-hidden bg-[#f5f5f0]",
+                                        "group relative aspect-[3/4] w-full cursor-zoom-in overflow-hidden bg-[#f5f5f0] motion-safe:animate-[pdp-gallery-fade_220ms_ease-out]",
                                         displayImages.length === 1 &&
                                             "max-w-[620px]"
                                     )}
@@ -368,7 +410,7 @@ export function ProductPage({
                                 <CarouselContent className="ml-0">
                                     {displayImages.map((image, i) => (
                                         <CarouselItem
-                                            key={image.id}
+                                            key={`${selectedVariant?.id ?? "product"}-${image.id}`}
                                             className="pl-0"
                                             onPointerDown={
                                                 handleMobileImagePointerDown
