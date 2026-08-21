@@ -327,25 +327,23 @@ const styles = StyleSheet.create({
     },
     last: { borderRightWidth: 0 },
     no: { width: "3%" },
-    description: { width: "19%" },
-    hsn: { width: "7%" },
-    qty: { width: "5%" },
-    mrp: { width: "8%" },
-    discount: { width: "8%" },
-    taxable: { width: "10%" },
-    rate: { width: "6%" },
+    description: { width: "24%" },
+    hsn: { width: "8%" },
+    qty: { width: "7%" },
+    mrp: { width: "11%" },
+    taxable: { width: "12%" },
+    rate: { width: "7%" },
     tax: { width: "7%" },
-    total: { width: "13%" },
-    corporateNo: { width: "3%" },
-    corporateDescription: { width: "23%" },
-    corporateHsn: { width: "7%" },
-    corporateQty: { width: "7%" },
-    corporateMrp: { width: "10%" },
-    corporateDiscount: { width: "10%" },
-    corporateTaxable: { width: "13%" },
-    corporateRate: { width: "7%" },
-    corporateTax: { width: "9%" },
-    corporateTotal: { width: "11%" },
+    total: { width: "14%" },
+    corporateNo: { width: "4%" },
+    corporateDescription: { width: "28%" },
+    corporateHsn: { width: "9%" },
+    corporateQty: { width: "8%" },
+    corporateMrp: { width: "12%" },
+    corporateTaxable: { width: "14%" },
+    corporateRate: { width: "8%" },
+    corporateTax: { width: "10%" },
+    corporateTotal: { width: "15%" },
     right: { textAlign: "right" },
     summary: {
         marginTop: 10,
@@ -515,6 +513,12 @@ export type InvoiceOrder = {
     taxDisplay?: "standard" | "single_gst";
     declarationCompanyName?: string;
     sellerOfRecord?: boolean;
+    customizationSummary?: {
+        customizationPaise: number;
+        customizationGstPaise: number;
+        customizationGstRateBps?: number;
+        label?: string;
+    } | null;
     paymentSummary?: {
         paymentStatus: "unpaid" | "partially_paid" | "paid_in_full";
         paymentPercentBps: number;
@@ -706,10 +710,11 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
               ["HSN", styles.corporateHsn],
               ["Qty / Unit", styles.corporateQty],
               [
-                  order.displayUnitPricing ? "Rate\nINR" : "MRP\nINR",
+                  order.displayUnitPricing
+                      ? "Unit price\n(excl. GST)"
+                      : "MRP\nINR",
                   styles.corporateMrp,
               ],
-              ["Discount\nINR", styles.corporateDiscount],
               ["Taxable value\nINR", styles.corporateTaxable],
               ["GST\nrate", styles.corporateRate],
               ["GST\nINR", styles.corporateTax],
@@ -720,8 +725,12 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
               ["Description", styles.description],
               ["HSN", styles.hsn],
               ["Qty / Unit", styles.qty],
-              [order.displayUnitPricing ? "Rate\nINR" : "MRP\nINR", styles.mrp],
-              ["Discount\nINR", styles.discount],
+              [
+                  order.displayUnitPricing
+                      ? "Unit price\n(excl. GST)"
+                      : "MRP\nINR",
+                  styles.mrp,
+              ],
               ["Taxable value\nINR", styles.taxable],
               ["GST\nrate", styles.rate],
               ["CGST\nINR", styles.tax],
@@ -729,13 +738,42 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
               ["IGST\nINR", styles.tax],
               ["Total\nINR", styles.total],
           ];
+    const customizationPaise = Math.max(
+        0,
+        Number(order.customizationSummary?.customizationPaise ?? 0)
+    );
+    const customizationGstPaise = Math.max(
+        0,
+        Number(order.customizationSummary?.customizationGstPaise ?? 0)
+    );
+    const customizationGstRate =
+        order.customizationSummary?.customizationGstRateBps ?? 1800;
+
     const totalsRows = usesSingleGst
         ? [
-              ["Taxable value", money(taxable)],
+              [
+                  customizationPaise > 0
+                      ? "Base items subtotal"
+                      : "Taxable value",
+                  money(taxable),
+              ],
               [
                   `GST (${formatGstRate(Math.max(0, ...lines.map((item) => item.rate)))})`,
                   money(totalGst),
               ],
+              ...(customizationPaise > 0
+                  ? [
+                        [
+                            order.customizationSummary?.label ||
+                                "Customization / Extras",
+                            money(customizationPaise),
+                        ],
+                        [
+                            `GST on Customization (${formatGstRate(customizationGstRate)})`,
+                            money(customizationGstPaise),
+                        ],
+                    ]
+                  : []),
               ["Invoice total", money(invoiceTotal)],
               ...(order.paymentSummary
                   ? [
@@ -764,20 +802,49 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                   : []),
           ]
         : [
-              ["Taxable value", money(taxable)],
-              ["Shipping charges", money(shippingCharge)],
-              ["Shipping discount", `-${money(shippingDiscount)}`],
-              ["Net shipping", money(netShipping)],
               [
-                  `Shipping GST (${formatGstRate(shippingGstRate)})`,
-                  money(shippingGst),
+                  customizationPaise > 0
+                      ? "Base items subtotal"
+                      : "Taxable value",
+                  money(taxable),
               ],
+              ...(customizationPaise > 0
+                  ? [
+                        [
+                            order.customizationSummary?.label ||
+                                "Customization / Extras",
+                            money(customizationPaise),
+                        ],
+                        [
+                            `GST on Customization (${formatGstRate(customizationGstRate)})`,
+                            money(customizationGstPaise),
+                        ],
+                    ]
+                  : []),
+              ...(shippingCharge > 0
+                  ? [
+                        ["Shipping charges", money(shippingCharge)],
+                        ["Shipping discount", `-${money(shippingDiscount)}`],
+                        ["Net shipping", money(netShipping)],
+                        [
+                            `Shipping GST (${formatGstRate(shippingGstRate)})`,
+                            money(shippingGst),
+                        ],
+                    ]
+                  : []),
               [
-                  intra ? "CGST (incl. shipping)" : "IGST (incl. shipping)",
+                  intra
+                      ? `CGST (${formatGstRate(Math.max(0, ...lines.map((item) => item.rate)) / 2)})`
+                      : `IGST (${formatGstRate(Math.max(0, ...lines.map((item) => item.rate)))})`,
                   money(intra ? cgst + shippingCgst : igst + shippingGst),
               ],
               ...(intra
-                  ? [["SGST (incl. shipping)", money(sgst + shippingSgst)]]
+                  ? [
+                        [
+                            `SGST (${formatGstRate(Math.max(0, ...lines.map((item) => item.rate)) / 2)})`,
+                            money(sgst + shippingSgst),
+                        ],
+                    ]
                   : []),
               ["Invoice total", money(invoiceTotal)],
               ...(order.paymentSummary
@@ -814,6 +881,18 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
     const customerType = order.customerGstin?.trim()
         ? "Registered"
         : "Unregistered";
+    const effectiveState =
+        order.state && stateCode(order.state) !== "-"
+            ? order.state
+            : shipFromState ||
+              seller?.state ||
+              seller?.warehouseState ||
+              "West Bengal";
+    const placeOfSupplyText =
+        stateCode(effectiveState) !== "-"
+            ? `${stateName(effectiveState)} (${stateCode(effectiveState)})`
+            : `${effectiveState}`;
+
     const supplyMeta: Array<[string, string]> = usesSingleGst
         ? [
               ["Nature of supply", "Goods"],
@@ -823,7 +902,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
         : [
               [
                   "Place of supply",
-                  `${stateName(order.state)} (${stateCode(order.state)})`,
+                  placeOfSupplyText,
               ],
               ["Nature of supply", "Goods"],
               ["Reverse Charge", "No"],
@@ -1100,23 +1179,8 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                             >
                                 {moneyBare(
                                     order.displayUnitPricing
-                                        ? Math.round(item.mrp / item.qty)
+                                        ? Math.round(item.taxable / item.qty)
                                         : item.mrp
-                                )}
-                            </Text>
-                            <Text
-                                style={[
-                                    styles.td,
-                                    usesSingleGst
-                                        ? styles.corporateDiscount
-                                        : styles.discount,
-                                    styles.right,
-                                ]}
-                            >
-                                {moneyBare(
-                                    order.displayUnitPricing
-                                        ? Math.round(item.discount / item.qty)
-                                        : item.discount
                                 )}
                             </Text>
                             <Text
@@ -1259,22 +1323,52 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                         </Text>
                     </View>
                 </View>
-                {order.taxDisplay === "single_gst" &&
-                (order.poReference || seller?.bankName) ? (
+                {(order.displayUnitPricing ||
+                order.poReference ||
+                seller?.bankName ||
+                (order as any).bank) ? (
                     <View style={styles.corporateDetails}>
                         <View style={styles.corporateColumn}>
-                            <Text style={styles.label}>BANK DETAILS</Text>
+                            <Text style={styles.label}>
+                                COLLECTION BANK DETAILS (RENIVET)
+                            </Text>
                             {[
-                                ["Bank name", seller?.bankName],
+                                [
+                                    "Bank name",
+                                    (order as any).bank?.bankName ??
+                                        seller?.bankName,
+                                ],
                                 [
                                     "Account name",
-                                    seller?.bankAccountHolderName ??
-                                        order.brand.name,
+                                    (order as any).bank?.accountName ??
+                                        (order as any).bank
+                                            ?.bankAccountHolderName ??
+                                        seller?.bankAccountHolderName ??
+                                        "Renivet Marketplace Pvt Ltd",
                                 ],
-                                ["Account number", seller?.bankAccountNumber],
-                                ["Account type", seller?.bankAccountType],
-                                ["IFSC code", seller?.bankIfscCode],
-                                ["Branch", seller?.bankBranch],
+                                [
+                                    "Account number",
+                                    (order as any).bank?.accountNumber ??
+                                        seller?.bankAccountNumber,
+                                ],
+                                [
+                                    "Account type",
+                                    (order as any).bank?.accountType ??
+                                        seller?.bankAccountType ??
+                                        "Current",
+                                ],
+                                [
+                                    "IFSC code",
+                                    (order as any).bank?.ifsc ??
+                                        (order as any).bank?.bankIfscCode ??
+                                        seller?.bankIfscCode,
+                                ],
+                                [
+                                    "Branch",
+                                    (order as any).bank?.branch ??
+                                        (order as any).bank?.bankBranch ??
+                                        seller?.bankBranch,
+                                ],
                             ].map(([label, value]) => (
                                 <View key={label} style={styles.bankRow}>
                                     <Text style={styles.bankLabel}>
@@ -1317,7 +1411,7 @@ export function InvoiceTemplate({ order }: { order: InvoiceOrder }) {
                     <Text>
                         {order.sellerOfRecord
                             ? "* This is a direct B2B sale by Renivet, the seller of record, to the corporate customer."
-                            : `* This transaction is between ${seller?.bankAccountHolderName ?? order.brand.name} and the customer. Renivet facilitates payment collection and logistics on the seller's behalf.`}
+                            : `* This transaction is between ${seller?.bankAccountHolderName ?? order.brand.name} and ${order.customerName}. Renivet acts as a digital marketplace mediator facilitating order processing, payment collection, and logistics on the seller's behalf.`}
                     </Text>
                     <Text>* This is a computer-generated tax invoice.</Text>
                     <Text>* E&amp;OE - Errors and Omissions Excepted.</Text>

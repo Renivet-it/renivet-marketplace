@@ -1,6 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
 import { CorporateCommercialDocumentTemplate } from "@/components/pdf/corporate-commercial-document-template";
+import { CorporateSettlementStatementTemplate } from "@/components/pdf/corporate-settlement-statement-template";
 import { renderToFile } from "@react-pdf/renderer";
 
 const outputDir = path.join(process.cwd(), "output", "pdf");
@@ -157,6 +158,49 @@ async function main() {
                 }}
             />,
             path.join(outputDir, "corporate-delivery-challan-preview.pdf")
+        ),
+        renderToFile(
+            <CorporateSettlementStatementTemplate
+                data={{
+                    statementNumber: "SET/2627/00001",
+                    statementDate: "2026-08-20",
+                    orderNumber: "REN-CORP-PO-1787161038701",
+                    invoiceNumber: "BAM/2627/00001",
+                    grossPaidPaise: 6_300_000,
+                    gstEmbeddedPaise: 300_000,
+                    taxableValuePaise: 6_000_000,
+                    commissionPercent: 20,
+                    commissionAmountPaise: 1_200_000,
+                    commissionGstRatePercent: 18,
+                    commissionGstAmountPaise: 216_000,
+                    tcsPercent: 0.5,
+                    tcsAmountPaise: 30_000,
+                    tdsPercent: 0.1,
+                    tdsAmountPaise: 6_300,
+                    netRemittancePaise: 4_547_700,
+                    brand: {
+                        name: "Test Apparel Brand",
+                        legalName: "Test Apparel Brand Pvt Ltd",
+                        gstin: "19ABCDE9999K1Z1",
+                        pan: "ABCDE9999K",
+                        address: "Supplier Address, Kolkata, West Bengal, India",
+                        bankAccountName: "Test Apparel Brand Pvt Ltd",
+                        bankName: "HDFC Bank",
+                        bankAccountNumber: "50200012345678",
+                        bankIfscCode: "HDFC0001234",
+                        bankBranch: "Park Street Branch",
+                    },
+                    renivet: {
+                        name: "Renivet Marketplace Pvt Ltd",
+                        address: "Renivet HQ, Kolkata, West Bengal - 700135",
+                        gstin: "19AAACR1234F1Z5",
+                        pan: "AAACR1234F",
+                        supportEmail: "support@renivet.com",
+                    },
+                    notes: "Remittance processed against delivery confirmation.",
+                }}
+            />,
+            path.join(outputDir, "corporate-settlement-statement-preview.pdf")
         ),
     ]);
     console.log(`Rendered corporate document previews to ${outputDir}`);

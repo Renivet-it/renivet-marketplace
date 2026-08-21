@@ -7,6 +7,7 @@ import {
 import { db } from "@/lib/db";
 import { corporateOrderQueries } from "@/lib/db/queries/corporate-order";
 import {
+    brandConfidentials,
     brands,
     corporateColorOptions,
     corporateDeliveryChallans,
@@ -18,6 +19,7 @@ import {
     corporatePricingSlabs,
     corporatePrintMethods,
     corporateProductTypes,
+    corporatePurchaseOrders,
     corporateQuotes,
     corporateReceiptVouchers,
     corporateTaxInvoices,
@@ -36,6 +38,7 @@ import {
     corporateDocumentService,
     getCorporateDocumentSettings,
     gstStateCode,
+    nextBrandInvoiceNumber,
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
 import { convertValueToLabel, getAbsoluteURL } from "@/lib/utils";
@@ -208,20 +211,40 @@ class CorporateOrderService {
         });
         if (existingInvoice) return existingInvoice;
 
-        const [documentSettings, receiptVoucher, deliveryChallan] =
-            await Promise.all([
-                getCorporateDocumentSettings(),
-                db.query.corporateReceiptVouchers.findFirst({
-                    where: eq(corporateReceiptVouchers.orderId, order.id),
-                    orderBy: [desc(corporateReceiptVouchers.createdAt)],
-                }),
-                db.query.corporateDeliveryChallans.findFirst({
-                    where: eq(corporateDeliveryChallans.orderId, order.id),
-                    orderBy: [desc(corporateDeliveryChallans.createdAt)],
-                }),
-            ]);
-        const sellerGstin = documentSettings.gstin?.trim() ?? "";
-        assertCorporateLegalIdentity(documentSettings);
+        if (!order.brandId || !order.brand) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "A seller brand must be assigned before issuing the customer tax invoice",
+            });
+        }
+
+        const [
+            documentSettings,
+            brandDetails,
+            receiptVoucher,
+            deliveryChallan,
+            purchaseOrder,
+        ] = await Promise.all([
+            getCorporateDocumentSettings(),
+            db.query.brandConfidentials.findFirst({
+                where: eq(brandConfidentials.id, order.brandId),
+            }),
+            db.query.corporateReceiptVouchers.findFirst({
+                where: eq(corporateReceiptVouchers.orderId, order.id),
+                orderBy: [desc(corporateReceiptVouchers.createdAt)],
+            }),
+            db.query.corporateDeliveryChallans.findFirst({
+                where: eq(corporateDeliveryChallans.orderId, order.id),
+                orderBy: [desc(corporateDeliveryChallans.createdAt)],
+            }),
+            db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
+                orderBy: [desc(corporatePurchaseOrders.createdAt)],
+            }),
+        ]);
+
+        const sellerGstin = brandDetails?.gstin?.trim() ?? "";
         const buyerGstin =
             order.quote?.profile?.gstNumber?.trim() ??
             order.gstNumber?.trim() ??
@@ -231,7 +254,7 @@ class CorporateOrderService {
         const billingAddress = order.quote?.profile?.billingAddress as
             | Record<string, unknown>
             | undefined;
-        const sellerState = documentSettings.state?.trim().toLowerCase();
+        const sellerState = brandDetails?.state?.trim().toLowerCase();
         const buyerState =
             typeof billingAddress?.state === "string"
                 ? billingAddress.state.trim().toLowerCase()
@@ -245,10 +268,12 @@ class CorporateOrderService {
         const gstHalf = Math.round(order.gstPaise / 2);
 
         const invoiceDate = new Date();
-        const invoiceNumber = await nextCorporateDocumentNumber(
-            "CINV",
-            invoiceDate
-        );
+        const invoiceNumber = await nextBrandInvoiceNumber({
+            brandId: order.brandId,
+            brandName: order.brand.name,
+            invoiceCode: order.brand.invoiceCode,
+            date: invoiceDate,
+        });
         const dueDate = new Date(invoiceDate);
         dueDate.setDate(dueDate.getDate() + documentSettings.balanceDueDays);
 
@@ -257,6 +282,9 @@ class CorporateOrderService {
             .values({
                 invoiceNumber,
                 orderId: order.id,
+                brandId: order.brandId,
+                buyerGstin: buyerGstin || null,
+                poReference: purchaseOrder?.poNumber ?? null,
                 receiptVoucherId: receiptVoucher?.id ?? null,
                 invoiceDate: invoiceDate.toISOString().slice(0, 10),
                 dueDate: dueDate.toISOString().slice(0, 10),
@@ -266,6 +294,18 @@ class CorporateOrderService {
                 sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
                 igstPaise: isIntraState ? 0 : order.gstPaise,
                 totalAmountPaise: order.totalPaise,
+                advanceAdjustmentPaise: order.advancePaidPaise,
+                paymentTerms: "Net 15",
+                bankDetailsSnapshot: documentSettings
+                    ? {
+                          bankName: documentSettings.bankName,
+                          bankAccountName: documentSettings.bankAccountName,
+                          bankAccountNumber:
+                              documentSettings.bankAccountNumber,
+                          bankIfscCode: documentSettings.bankIfscCode,
+                          bankBranch: documentSettings.bankBranch,
+                      }
+                    : null,
                 eWayBillNumber: deliveryChallan?.eWayBillNumber ?? null,
                 status: "issued",
             })
@@ -1095,7 +1135,7 @@ class CorporateOrderService {
                 throw new TRPCError({
                     code: "PRECONDITION_FAILED",
                     message:
-                        "Issue the Renivet purchase order to the supplier brand first",
+                        "Issue the Fulfillment Order to the supplier brand first",
                 });
             }
             if (
@@ -1107,6 +1147,24 @@ class CorporateOrderService {
                     code: "PRECONDITION_FAILED",
                     message:
                         "Issue the delivery challan before direct dispatch",
+                });
+            }
+        }
+
+        if (input.toStatus === "dispatched" && order.totalPaise >= 5_000_000) {
+            const chain = order.documentChain;
+            const deliveryChallan = chain?.deliveryChallan;
+            const eWayBill =
+                deliveryChallan?.eWayBillNumber?.trim() ||
+                (order.shipment?.rawPayload as Record<string, unknown> | null)
+                    ?.eWayBillNumber ||
+                (order.shipment?.rawPayload as Record<string, unknown> | null)
+                    ?.ewayBillNumber;
+            if (!eWayBill) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message:
+                        "E-way bill number is mandatory for corporate consignments exceeding Rs. 50,000 before dispatch.",
                 });
             }
         }

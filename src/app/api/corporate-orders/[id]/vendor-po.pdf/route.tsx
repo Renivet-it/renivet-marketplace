@@ -7,6 +7,7 @@ import { db } from "@/lib/db";
 import {
     brandConfidentials,
     brandMembers,
+    corporateExtraChargeRules,
     corporatePurchaseOrders,
     corporateVendorPurchaseOrders,
     products,
@@ -19,7 +20,7 @@ import {
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
@@ -110,24 +111,109 @@ export async function GET(
         "title",
         "label",
     ]);
-    const gsm = configText(productConfig.gsmOption, ["gsm", "name", "label"]);
+    const rawGsm = configText(productConfig.gsmOption, [
+        "gsm",
+        "name",
+        "label",
+    ]);
+    const formattedGsm = rawGsm
+        ? rawGsm.toLowerCase().endsWith("gsm")
+            ? rawGsm
+            : `${rawGsm} GSM`
+        : null;
+
     const fabric = configText(productConfig.fabricComposition, [
         "name",
         "composition",
         "label",
     ]);
-    const hsn = product?.hsCode ?? configText(productConfig, ["hsnCode"]);
-    const gstAmountPaise =
-        vendorPo.cgstPaise + vendorPo.sgstPaise + vendorPo.igstPaise;
+
+    // Robust HSN Code Resolution
+    const hsn =
+        order.quote?.hsnCode ||
+        (order as any).hsnCode ||
+        product?.hsCode ||
+        configText(productConfig, ["hsnCode"]) ||
+        null;
+
+    const docNumber =
+        (vendorPo as any).foNumber ||
+        (vendorPo as any).poNumber ||
+        "FO/2627/00001";
+    const unitPricePaise =
+        (vendorPo as any).unitSellPricePaise ||
+        (vendorPo as any).unitBuyPricePaise ||
+        (order.quote?.unitPricePaise ??
+            (order.unitPricePaise ?? Math.round(order.subtotalPaise / Math.max(1, order.quantity))));
+
+    const baseSubtotalPaise = unitPricePaise * vendorPo.quantity;
+
+    // Fetch extra charge rules with amounts if selected
+    let extraChargeDescriptions: string[] = [];
+    if (
+        Array.isArray(order.quote?.extraChargeRuleIds) &&
+        order.quote.extraChargeRuleIds.length > 0
+    ) {
+        const extraRules = await db.query.corporateExtraChargeRules.findMany({
+            where: inArray(
+                corporateExtraChargeRules.id,
+                order.quote.extraChargeRuleIds
+            ),
+        });
+        extraChargeDescriptions = extraRules.map((r) => {
+            const costPaise =
+                r.chargeType === "per_unit"
+                    ? r.amountPaise * vendorPo.quantity
+                    : r.amountPaise;
+            const costStr =
+                costPaise > 0
+                    ? ` (+INR ${(costPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+                    : "";
+            return `${r.name}${costStr}`;
+        });
+    }
+
+    const manualExtraPaise = order.quote?.manualExtraAmountPaise ?? 0;
+    const manualCostStr =
+        manualExtraPaise > 0
+            ? ` (+INR ${(manualExtraPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
+            : "";
+    if (order.quote?.manualExtraDescription) {
+        extraChargeDescriptions.push(
+            `Custom: ${order.quote.manualExtraDescription}${manualCostStr}`
+        );
+    } else if (manualExtraPaise > 0) {
+        extraChargeDescriptions.push(`Custom charges${manualCostStr}`);
+    }
+
+    const extrasSummary = extraChargeDescriptions.join(" | ");
+    const customizationPaise =
+        order.quote?.customizationCostPaise ??
+        order.quote?.manualExtraAmountPaise ??
+        order.customizationPaise ??
+        0;
+
+    const totalTaxablePaise = baseSubtotalPaise + customizationPaise;
+
+    const specsSummary = [formattedGsm, fabric].filter(Boolean).join(" | ");
+    const itemDetail = [
+        specsSummary,
+        extrasSummary ? `Extras: ${extrasSummary}` : null,
+    ]
+        .filter(Boolean)
+        .join(" | ") ||
+        "Manufacture and fulfil as per approved corporate specifications.";
 
     const data: CorporateCommercialDocumentData = {
-        title: "Purchase Order",
-        subtitle: "",
-        documentNumber: vendorPo.poNumber,
-        documentDate: vendorPo.issueDate,
+        title: "Fulfillment Order",
+        subtitle:
+            "Operational instruction — NOT a purchase order. Renivet is not buying from the brand.",
+        documentType: "fulfillment_order",
+        documentNumber: docNumber,
+        documentDate: vendorPo.issueDate || new Date(),
         validUntil: vendorPo.expectedDeliveryDate,
-        fromLabel: "Buyer",
-        toLabel: "Supplier",
+        fromLabel: "Issued By (Platform)",
+        toLabel: "Fulfillment Brand (Supplier)",
         from: {
             name: settings.legalName,
             address: corporatePartyAddress(settings) || "Not provided",
@@ -144,50 +230,78 @@ export async function GET(
             phone: order.brand.phone,
         },
         references: [
-            { label: "Corporate order", value: order.publicOrderId },
-            { label: "Customer PO", value: customerPo?.poNumber },
+            { label: "FO number", value: docNumber },
             {
-                label: "Delivery mode",
-                value:
-                    vendorPo.deliveryMode === "direct_to_customer"
-                        ? "Direct to customer"
-                        : "Renivet warehouse",
+                label: "Document date",
+                value: vendorPo.issueDate
+                    ? new Date(vendorPo.issueDate).toLocaleDateString("en-IN")
+                    : new Date().toLocaleDateString("en-IN"),
             },
-            { label: "Deliver to", value: vendorPo.deliveryAddress },
             {
                 label: "Expected delivery",
                 value: vendorPo.expectedDeliveryDate
                     ? new Date(
                           vendorPo.expectedDeliveryDate
                       ).toLocaleDateString("en-IN")
-                    : null,
+                    : "As per agreed timeline",
+            },
+            { label: "Corporate order", value: order.publicOrderId },
+            {
+                label: "Corporate buyer",
+                value: `${order.companyName}${order.gstNumber ? ` (GSTIN: ${order.gstNumber})` : ""}`,
+            },
+            {
+                label: "Delivery mode",
+                value:
+                    vendorPo.deliveryMode === "direct_to_customer"
+                        ? "Direct to corporate buyer"
+                        : "Renivet warehouse",
+            },
+            {
+                label: "Deliver to address",
+                value:
+                    vendorPo.deliveryAddress ||
+                    order.deliveryAddress ||
+                    "As specified in delivery instructions",
+            },
+            {
+                label: "Packaging & QC",
+                value:
+                    vendorPo.deliveryInstructions ||
+                    "Standard protective packaging with corporate packing slip",
+            },
+            {
+                label: "Marketplace billing",
+                value: "Renivet issues Tax Invoice on brand behalf",
             },
         ],
         item: {
             description:
                 product?.title ?? productType ?? "Corporate merchandise",
-            detail:
-                [gsm && `${gsm} GSM`, fabric].filter(Boolean).join(" | ") ||
-                "Manufacture and fulfil as per the approved corporate specification and QC requirements.",
+            detail: itemDetail,
             sku: product?.sku ?? product?.nativeSku,
             hsn,
             quantity: vendorPo.quantity,
-            unitRatePaise: vendorPo.unitBuyPricePaise,
-            amountPaise: vendorPo.taxableValuePaise,
-            gstRateBps: vendorPo.gstRateBps,
-            gstAmountPaise,
+            unitRatePaise: unitPricePaise,
+            amountPaise: baseSubtotalPaise,
         },
         totals: {
-            taxableValuePaise: vendorPo.taxableValuePaise,
-            gstRateBps: vendorPo.gstRateBps,
-            gstAmountPaise,
-            totalAmountPaise: vendorPo.totalAmountPaise,
+            subtotalPaise:
+                customizationPaise > 0 ? baseSubtotalPaise : undefined,
+            customizationPaise:
+                customizationPaise > 0 ? customizationPaise : undefined,
+            taxableValuePaise: totalTaxablePaise,
+            totalAmountPaise: totalTaxablePaise,
         },
-        notes: [
-            vendorPo.paymentTerms,
-            vendorPo.deliveryInstructions ||
-                "Brand tax invoice must name Renivet as the recipient and match this purchase order.",
-        ],
+        notes: Array.from(
+            new Set([
+                "Operational instruction — NOT a purchase order. Renivet is NOT buying from the brand.",
+                "Renivet will generate the Tax Invoice on your behalf per our marketplace agreement.",
+                vendorPo.deliveryInstructions
+                    ? `Packaging & Shipping: ${vendorPo.deliveryInstructions}`
+                    : "Packaging & Shipping: Ship to corporate address per the delivery instructions above.",
+            ])
+        ),
         signatoryName: settings.authorizedSignatoryName,
         declarationCompanyName: settings.legalName,
         showSignatureBlock: false,
@@ -199,11 +313,11 @@ export async function GET(
     const chunks: Buffer[] = [];
     for await (const chunk of stream)
         chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    const safeNumber = vendorPo.poNumber.replace(/[^a-z0-9_-]+/gi, "_");
+    const safeNumber = docNumber.replace(/[^a-z0-9_-]+/gi, "_");
     return new NextResponse(Buffer.concat(chunks), {
         headers: {
             "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename="renivet-purchase-order_${safeNumber}.pdf"`,
+            "Content-Disposition": `attachment; filename="fulfillment-order_${safeNumber}.pdf"`,
             "Cache-Control": "private, no-store",
         },
     });

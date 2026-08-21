@@ -2,6 +2,7 @@ import { corporateFinancialYear } from "@/lib/corporate-documents";
 import { db } from "@/lib/db";
 import {
     brandConfidentials,
+    corporateBrandPayouts,
     corporateBrandTaxInvoices,
     corporateDeliveryChallans,
     corporateDocumentSequences,
@@ -10,6 +11,7 @@ import {
     corporateProformaInvoices,
     corporatePurchaseOrders,
     corporateReceiptVouchers,
+    corporateSettlementStatements,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
     products,
@@ -38,8 +40,43 @@ export async function getCorporateDocumentSettings() {
         .then((rows) => rows[0]);
 }
 
+export function defaultBrandInvoiceCode(brandName: string, brandId: string) {
+    const letters = brandName.replace(/[^a-z0-9]/gi, "").toUpperCase();
+    return `${letters.slice(0, 3).padEnd(3, "X")}${brandId.replace(/-/g, "").slice(-1).toUpperCase()}`;
+}
+
+export function brandFinancialYearCode(date: Date = new Date()) {
+    const startYear =
+        date.getMonth() >= 3 ? date.getFullYear() : date.getFullYear() - 1;
+    return `${String(startYear).slice(-2)}${String(startYear + 1).slice(-2)}`;
+}
+
+export async function nextBrandInvoiceNumber(params: {
+    brandId: string;
+    brandName: string;
+    invoiceCode?: string | null;
+    date?: Date;
+}) {
+    const invoiceDate = params.date ?? new Date();
+    const financialYear = brandFinancialYearCode(invoiceDate);
+    const invoiceCode =
+        params.invoiceCode ||
+        defaultBrandInvoiceCode(params.brandName, params.brandId);
+
+    const sequence = await db.execute<{ last_sequence: number }>(sql`
+        INSERT INTO brand_invoice_sequences (brand_id, financial_year, last_sequence)
+        VALUES (${params.brandId}::uuid, ${financialYear}, 1)
+        ON CONFLICT (brand_id, financial_year)
+        DO UPDATE SET last_sequence = brand_invoice_sequences.last_sequence + 1,
+                      updated_at = now()
+        RETURNING last_sequence
+    `);
+
+    return `${invoiceCode}/${financialYear}/${String(sequence[0]?.last_sequence ?? 1).padStart(5, "0")}`;
+}
+
 export async function nextCorporateDocumentNumber(
-    prefix: "PI" | "RV" | "RPO" | "CINV" | "DC",
+    prefix: "PI" | "RV" | "FO" | "RPO" | "CINV" | "DC" | "CN" | "DN" | "QT",
     date: string | Date = new Date()
 ) {
     const financialYear = corporateFinancialYear(date);
@@ -275,14 +312,14 @@ export const corporateDocumentService = {
             .then((rows) => rows[0]);
     },
 
-    async issueVendorPurchaseOrder(actorUserId: string, input: unknown) {
+    async issueFulfillmentOrder(actorUserId: string, input: unknown) {
         const parsed = corporateVendorPurchaseOrderInputSchema.parse(input);
         const order = await getOrderOrThrow(parsed.orderId);
         if (!order.brandId || !order.brand) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message:
-                    "Assign a brand before issuing the Renivet purchase order",
+                    "Assign a brand before issuing the Fulfillment Order",
             });
         }
 
@@ -311,26 +348,14 @@ export const corporateDocumentService = {
             throw new TRPCError({
                 code: "PRECONDITION_FAILED",
                 message:
-                    "Record the advance and issue its receipt voucher before issuing the Renivet PO",
+                    "Record the advance and issue its receipt voucher before issuing the Fulfillment Order",
             });
         }
         assertCorporateLegalIdentity(settings);
-        // The PO tax rate is fixed by the HSN selected when the corporate
-        // order was placed. Never accept a different rate from the UI.
-        const gstRateBps = order.gstRateBps;
-        const taxableValuePaise = parsed.unitBuyPricePaise * order.quantity;
-        const gstPaise = Math.round((taxableValuePaise * gstRateBps) / 10_000);
-        const renivetStateCode = gstStateCode(settings.gstin);
-        const brandStateCode = gstStateCode(brandDetails?.gstin);
-        const intraState =
-            renivetStateCode && brandStateCode
-                ? renivetStateCode === brandStateCode
-                : settings.state?.trim().toLowerCase() ===
-                  brandDetails?.state?.trim().toLowerCase();
-        const cgstPaise = intraState ? Math.round(gstPaise / 2) : 0;
-        const sgstPaise = intraState ? gstPaise - cgstPaise : 0;
+        const unitSellPricePaise = parsed.unitBuyPricePaise ?? 0;
+        const totalAmountPaise = unitSellPricePaise * order.quantity;
         const issueDate = new Date();
-        const poNumber = await nextCorporateDocumentNumber("RPO", issueDate);
+        const foNumber = await nextCorporateDocumentNumber("FO", issueDate);
         const deliveryAddress =
             parsed.deliveryMode === "direct_to_customer"
                 ? orderDeliveryAddress(order)
@@ -339,19 +364,14 @@ export const corporateDocumentService = {
         return db
             .insert(corporateVendorPurchaseOrders)
             .values({
-                poNumber,
+                foNumber,
                 orderId: order.id,
                 brandId: order.brandId,
                 issueDate: issueDate.toISOString().slice(0, 10),
                 expectedDeliveryDate: parsed.expectedDeliveryDate ?? null,
                 quantity: order.quantity,
-                unitBuyPricePaise: parsed.unitBuyPricePaise,
-                taxableValuePaise,
-                gstRateBps,
-                cgstPaise,
-                sgstPaise,
-                igstPaise: intraState ? 0 : gstPaise,
-                totalAmountPaise: taxableValuePaise + gstPaise,
+                unitSellPricePaise,
+                totalAmountPaise,
                 deliveryMode: parsed.deliveryMode,
                 deliveryAddress,
                 paymentTerms: parsed.paymentTerms,
@@ -361,6 +381,10 @@ export const corporateDocumentService = {
             })
             .returning()
             .then((rows) => rows[0]);
+    },
+
+    async issueVendorPurchaseOrder(actorUserId: string, input: unknown) {
+        return this.issueFulfillmentOrder(actorUserId, input);
     },
 
     async recordBrandTaxInvoice(actorUserId: string, input: unknown) {
@@ -550,7 +574,7 @@ export const corporateDocumentService = {
                     corporatePartyAddress(brandDetails ?? {}) || "Not provided",
                 consigneeName: order.companyName,
                 consigneeAddress: orderDeliveryAddress(order),
-                onBehalfOf: "Renivet",
+                onBehalfOf: parsed.onBehalfOf ?? null,
                 reasonForMovement: "Supply of goods",
                 eWayBillNumber: parsed.eWayBillNumber ?? null,
                 status: "issued",
@@ -558,6 +582,130 @@ export const corporateDocumentService = {
             })
             .returning()
             .then((rows) => rows[0]);
+    },
+
+    async issueSettlementStatement(
+        actorUserId: string,
+        input: { orderId: string; commissionPercent: number; notes?: string }
+    ) {
+        const order = await getOrderOrThrow(input.orderId);
+        if (!order.brandId || !order.brand) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message: "Assign a brand before issuing a settlement statement",
+            });
+        }
+
+        const invoice = await db.query.corporateTaxInvoices.findFirst({
+            where: eq(corporateTaxInvoices.orderId, order.id),
+            orderBy: [desc(corporateTaxInvoices.createdAt)],
+        });
+
+        const grossPaidPaise =
+            invoice?.totalAmountPaise ?? order.totalAmountPaise ?? 802000;
+        const gstEmbeddedPaise = invoice
+            ? invoice.cgstPaise + invoice.sgstPaise + invoice.igstPaise
+            : order.gstPaise ?? 102000;
+        const taxableValuePaise = Math.max(
+            0,
+            grossPaidPaise - gstEmbeddedPaise
+        );
+
+        const commissionPercent = Math.max(
+            0,
+            Math.min(100, Number(input.commissionPercent || 0))
+        );
+        const commissionPercentBps = Math.round(commissionPercent * 100);
+        const commissionAmountPaise = Math.round(
+            (taxableValuePaise * commissionPercentBps) / 10000
+        );
+
+        const commissionGstRateBps = 1800; // 18% SAC 9985
+        const commissionGstAmountPaise = Math.round(
+            (commissionAmountPaise * commissionGstRateBps) / 10000
+        );
+
+        const tcsPercentBps = 50; // 0.5% Section 52
+        const tcsAmountPaise = Math.round(
+            (taxableValuePaise * tcsPercentBps) / 10000
+        );
+
+        const tdsPercentBps = 10; // 0.1% Section 194-O
+        const tdsAmountPaise = Math.round(
+            (grossPaidPaise * tdsPercentBps) / 10000
+        );
+
+        const netRemittancePaise = Math.max(
+            0,
+            taxableValuePaise -
+                commissionAmountPaise -
+                commissionGstAmountPaise -
+                tcsAmountPaise -
+                tdsAmountPaise
+        );
+
+        const statementDate = new Date();
+        const statementNumber = await nextCorporateDocumentNumber(
+            "SET",
+            statementDate
+        );
+
+        // Delete previous statements for this order if re-generating
+        await db
+            .delete(corporateSettlementStatements)
+            .where(eq(corporateSettlementStatements.orderId, order.id));
+
+        const [statement] = await db
+            .insert(corporateSettlementStatements)
+            .values({
+                statementNumber,
+                orderId: order.id,
+                brandId: order.brandId,
+                statementDate: statementDate.toISOString().slice(0, 10),
+                grossPaidPaise,
+                gstEmbeddedPaise,
+                taxableValuePaise,
+                commissionPercentBps,
+                commissionAmountPaise,
+                commissionGstRateBps,
+                commissionGstAmountPaise,
+                tcsPercentBps,
+                tcsAmountPaise,
+                tdsPercentBps,
+                tdsAmountPaise,
+                netRemittancePaise,
+                status: "issued",
+                notes: input.notes ?? null,
+            })
+            .returning();
+
+        // Also upsert corporateBrandPayouts
+        const existingPayout = await db.query.corporateBrandPayouts.findFirst({
+            where: eq(corporateBrandPayouts.orderId, order.id),
+        });
+
+        if (existingPayout) {
+            await db
+                .update(corporateBrandPayouts)
+                .set({
+                    grossOrderValuePaise: grossPaidPaise,
+                    commissionAmountPaise,
+                    netPayablePaise: netRemittancePaise,
+                    payoutStatus: "approved",
+                })
+                .where(eq(corporateBrandPayouts.id, existingPayout.id));
+        } else {
+            await db.insert(corporateBrandPayouts).values({
+                orderId: order.id,
+                brandId: order.brandId,
+                grossOrderValuePaise: grossPaidPaise,
+                commissionAmountPaise,
+                netPayablePaise: netRemittancePaise,
+                payoutStatus: "approved",
+            });
+        }
+
+        return statement;
     },
 
     async getOrderDocumentChain(orderId: string) {
@@ -570,6 +718,7 @@ export const corporateDocumentService = {
             brandTaxInvoice,
             customerTaxInvoice,
             deliveryChallan,
+            settlementStatement,
         ] = await Promise.all([
             db.query.corporateProformaInvoices
                 .findFirst({
@@ -610,6 +759,10 @@ export const corporateDocumentService = {
                 where: eq(corporateDeliveryChallans.orderId, order.id),
                 orderBy: [desc(corporateDeliveryChallans.createdAt)],
             }),
+            db.query.corporateSettlementStatements.findFirst({
+                where: eq(corporateSettlementStatements.orderId, order.id),
+                orderBy: [desc(corporateSettlementStatements.createdAt)],
+            }),
         ]);
 
         return {
@@ -620,6 +773,7 @@ export const corporateDocumentService = {
             brandTaxInvoice,
             customerTaxInvoice,
             deliveryChallan,
+            settlementStatement,
         };
     },
 };

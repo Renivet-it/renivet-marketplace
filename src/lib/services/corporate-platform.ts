@@ -42,6 +42,7 @@ import {
     corporateRfqDocuments,
     corporateRfqs,
     corporateRtoShipments,
+    corporateSettlementStatements,
     corporateShipments,
     corporateTasks,
     corporateTaxInvoices,
@@ -64,6 +65,7 @@ import {
     corporateDocumentService,
     getCorporateDocumentSettings,
     gstStateCode,
+    nextBrandInvoiceNumber,
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
 import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
@@ -1660,14 +1662,31 @@ class CorporatePlatformService {
         });
 
         const subtotalPaise = parsed.unitPricePaise * parsed.quantity;
-        const taxablePaise = subtotalPaise + parsed.customizationCostPaise;
-        const gstAmountPaise = Math.round(
-            (taxablePaise * parsed.gstPercent) / 100
+        const customizationCostPaise = parsed.customizationCostPaise ?? 0;
+        const baseGstRateBps = Math.round(parsed.gstPercent * 100);
+        const customizationGstRateBps = 1800; // 18% standard GST on customization/services
+        const baseGstAmountPaise = Math.round(
+            (subtotalPaise * baseGstRateBps) / 10000
         );
+        const customizationGstAmountPaise = Math.round(
+            (customizationCostPaise * customizationGstRateBps) / 10000
+        );
+        const gstAmountPaise = baseGstAmountPaise + customizationGstAmountPaise;
+        const taxablePaise = subtotalPaise + customizationCostPaise;
         const totalAmountPaise = taxablePaise + gstAmountPaise;
         const advanceAmountPaise = Math.round(
             (totalAmountPaise * parsed.advancePercent) / 100
         );
+
+        const commissionAmountPaise = parsed.commissionAmountPaise ?? 0;
+        const commissionGstRateBps = Math.round(
+            (parsed.commissionGstPercent ?? 18) * 100
+        );
+        const commissionGstAmountPaise = Math.round(
+            (commissionAmountPaise * commissionGstRateBps) / 10000
+        );
+        const commissionTotalPaise =
+            commissionAmountPaise + commissionGstAmountPaise;
 
         const hasDeliveryAddress = Boolean(
             parsed.deliveryAddress?.trim() ||
@@ -1740,8 +1759,13 @@ class CorporatePlatformService {
                     corporateProfileId: profile.id,
                     brandId: parsed.brandId,
                     productTypeId: parsed.productTypeId ?? null,
+                    hsnCode: parsed.hsnCode ?? null,
                     gsmOptionId: parsed.gsmOptionId ?? null,
                     fabricCompositionId: parsed.fabricCompositionId ?? null,
+                    extraChargeRuleIds: parsed.extraChargeRuleIds ?? [],
+                    manualExtraAmountPaise: parsed.manualExtraAmountPaise ?? 0,
+                    manualExtraDescription:
+                        parsed.manualExtraDescription ?? null,
                     quantity: parsed.quantity,
                     subtotalPaise,
                     customizationCostPaise: parsed.customizationCostPaise,
@@ -1749,6 +1773,10 @@ class CorporatePlatformService {
                     totalAmountPaise,
                     advanceAmountPaise,
                     balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
+                    commissionAmountPaise,
+                    commissionGstRateBps,
+                    commissionGstAmountPaise,
+                    commissionTotalPaise,
                     validUntil: parsed.validUntil ?? null,
                     status: "sent",
                 })
@@ -3762,7 +3790,8 @@ class CorporatePlatformService {
                 customerId: quote.corporateProfileId,
                 invoiceDate: invoiceDate.toISOString().slice(0, 10),
                 validUntil: validUntil.toISOString().slice(0, 10),
-                subtotalPaise: quote.subtotalPaise,
+                subtotalPaise:
+                    quote.subtotalPaise + quote.customizationCostPaise,
                 gstAmountPaise: quote.gstAmountPaise,
                 totalAmountPaise: quote.totalAmountPaise,
                 paymentTerms: settings.defaultPaymentTerms,
@@ -3833,8 +3862,21 @@ class CorporatePlatformService {
         });
         if (existingInvoice) return existingInvoice;
 
-        const [settings, receiptVoucher, deliveryChallan] = await Promise.all([
+        const [
+            settings,
+            brandDetails,
+            brandRecord,
+            receiptVoucher,
+            deliveryChallan,
+            purchaseOrder,
+        ] = await Promise.all([
             getCorporateDocumentSettings(),
+            db.query.brandConfidentials.findFirst({
+                where: eq(brandConfidentials.id, order.brandId),
+            }),
+            db.query.brands.findFirst({
+                where: eq(brands.id, order.brandId),
+            }),
             db.query.corporateReceiptVouchers.findFirst({
                 where: eq(corporateReceiptVouchers.orderId, order.id),
                 orderBy: [desc(corporateReceiptVouchers.createdAt)],
@@ -3843,9 +3885,12 @@ class CorporatePlatformService {
                 where: eq(corporateDeliveryChallans.orderId, order.id),
                 orderBy: [desc(corporateDeliveryChallans.createdAt)],
             }),
+            db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
+                orderBy: [desc(corporatePurchaseOrders.createdAt)],
+            }),
         ]);
-        const sellerGstin = settings.gstin?.trim() ?? "";
-        assertCorporateLegalIdentity(settings);
+        const sellerGstin = brandDetails?.gstin?.trim() ?? "";
         const buyerGstin =
             order.quote?.profile?.gstNumber?.trim() ??
             order.gstNumber?.trim() ??
@@ -3855,7 +3900,7 @@ class CorporatePlatformService {
         const billingAddress = order.quote?.profile?.billingAddress as
             | Record<string, unknown>
             | undefined;
-        const sellerState = settings.state?.trim().toLowerCase();
+        const sellerState = brandDetails?.state?.trim().toLowerCase();
         const buyerState =
             typeof billingAddress?.state === "string"
                 ? billingAddress.state.trim().toLowerCase()
@@ -3870,10 +3915,12 @@ class CorporatePlatformService {
                   : true;
         const gstHalf = Math.round(order.gstPaise / 2);
         const invoiceDate = new Date();
-        const invoiceNumber = await nextCorporateDocumentNumber(
-            "CINV",
-            invoiceDate
-        );
+        const invoiceNumber = await nextBrandInvoiceNumber({
+            brandId: order.brandId,
+            brandName: brandRecord?.name ?? order.brand?.name ?? "Brand",
+            invoiceCode: brandRecord?.invoiceCode ?? order.brand?.invoiceCode,
+            date: invoiceDate,
+        });
         const dueDate = new Date(invoiceDate);
         dueDate.setDate(dueDate.getDate() + settings.balanceDueDays);
         const created = await db
@@ -3881,6 +3928,9 @@ class CorporatePlatformService {
             .values({
                 invoiceNumber,
                 orderId: order.id,
+                brandId: order.brandId,
+                buyerGstin: buyerGstin || null,
+                poReference: purchaseOrder?.poNumber ?? null,
                 receiptVoucherId: receiptVoucher?.id ?? null,
                 invoiceDate: invoiceDate.toISOString().slice(0, 10),
                 dueDate: dueDate.toISOString().slice(0, 10),
@@ -3890,6 +3940,17 @@ class CorporatePlatformService {
                 sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
                 igstPaise: isIntraState ? 0 : order.gstPaise,
                 totalAmountPaise: order.totalPaise,
+                advanceAdjustmentPaise: order.advancePaidPaise,
+                paymentTerms: "Net 15",
+                bankDetailsSnapshot: settings
+                    ? {
+                          bankName: settings.bankName,
+                          bankAccountName: settings.bankAccountName,
+                          bankAccountNumber: settings.bankAccountNumber,
+                          bankIfscCode: settings.bankIfscCode,
+                          bankBranch: settings.bankBranch,
+                      }
+                    : null,
                 eWayBillNumber: deliveryChallan?.eWayBillNumber ?? null,
                 status: "issued",
             })
@@ -4333,8 +4394,13 @@ class CorporatePlatformService {
             )
         ) as string[];
 
-        const [vendorPurchaseOrders, brandTaxInvoices, documentSettings] =
-            await Promise.all([
+        const [
+            vendorPurchaseOrders,
+            brandTaxInvoices,
+            customerTaxInvoices,
+            settlementStatements,
+            documentSettings,
+        ] = await Promise.all([
                 orderRows.length
                     ? db.query.corporateVendorPurchaseOrders.findMany({
                           where: inArray(
@@ -4353,6 +4419,26 @@ class CorporatePlatformService {
                               orderRows.map((order) => order.id)
                           ),
                           orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
+                      })
+                    : Promise.resolve([]),
+                orderRows.length
+                    ? db.query.corporateTaxInvoices.findMany({
+                          where: inArray(
+                              corporateTaxInvoices.orderId,
+                              orderRows.map((order) => order.id)
+                          ),
+                          orderBy: [desc(corporateTaxInvoices.createdAt)],
+                      })
+                    : Promise.resolve([]),
+                orderRows.length
+                    ? db.query.corporateSettlementStatements.findMany({
+                          where: inArray(
+                              corporateSettlementStatements.orderId,
+                              orderRows.map((order) => order.id)
+                          ),
+                          orderBy: [
+                              desc(corporateSettlementStatements.createdAt),
+                          ],
                       })
                     : Promise.resolve([]),
                 getCorporateDocumentSettings(),
@@ -4376,6 +4462,24 @@ class CorporatePlatformService {
         for (const invoice of brandTaxInvoices) {
             if (!brandInvoiceByOrderId.has(invoice.orderId)) {
                 brandInvoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
+        const customerInvoiceByOrderId = new Map<
+            string,
+            (typeof customerTaxInvoices)[number]
+        >();
+        for (const invoice of customerTaxInvoices) {
+            if (!customerInvoiceByOrderId.has(invoice.orderId)) {
+                customerInvoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
+        const settlementByOrderId = new Map<
+            string,
+            (typeof settlementStatements)[number]
+        >();
+        for (const statement of settlementStatements) {
+            if (!settlementByOrderId.has(statement.orderId)) {
+                settlementByOrderId.set(statement.orderId, statement);
             }
         }
         const gsmOptionIds = Array.from(
@@ -4428,45 +4532,122 @@ class CorporatePlatformService {
             fabricCompositions.map((item) => [item.id, item])
         );
 
-        const sanitizedOrders = orderRows.map((order) => ({
-            id: order.id,
-            publicOrderId: order.publicOrderId,
-            source: order.quote ? "quote" : "self_service",
-            status: order.status,
-            quantity: order.quantity,
-            employeeCount: order.employeeCount,
-            sizeBreakdown: order.sizeBreakdown,
-            createdAt: order.createdAt,
-            updatedAt: order.updatedAt,
-            renivetPurchaseOrder: (() => {
-                const purchaseOrder = vendorPoByOrderId.get(order.id);
-                return purchaseOrder
-                    ? {
-                          id: purchaseOrder.id,
-                          poNumber: purchaseOrder.poNumber,
-                          issueDate: purchaseOrder.issueDate,
-                          expectedDeliveryDate:
-                              purchaseOrder.expectedDeliveryDate,
-                          totalAmountPaise: purchaseOrder.totalAmountPaise,
-                          status: purchaseOrder.status,
-                          downloadUrl: `/api/corporate-orders/${order.id}/vendor-po.pdf`,
-                      }
-                    : null;
-            })(),
-            brandTaxInvoice: (() => {
-                const invoice = brandInvoiceByOrderId.get(order.id);
-                return invoice
-                    ? {
-                          id: invoice.id,
-                          invoiceNumber: invoice.invoiceNumber,
-                          invoiceDate: invoice.invoiceDate,
-                          totalAmountPaise: invoice.totalAmountPaise,
-                          validationStatus: invoice.validationStatus,
-                          gstr2bStatus: invoice.gstr2bStatus,
-                          downloadUrl: `/api/corporate-orders/${order.id}/brand-tax-invoice`,
-                      }
-                    : null;
-            })(),
+        const sanitizedOrders = orderRows.map((order) => {
+            const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<string, unknown>;
+            const companySnapshot = (order.companySnapshot ?? {}) as Record<string, unknown>;
+            const rawArtwork =
+                (order.artworkFile as Record<string, unknown> | null) ||
+                (brandingSnapshot.artworkFile as Record<string, unknown> | null) ||
+                (brandingSnapshot.logoFile as Record<string, unknown> | null) ||
+                (companySnapshot.logoFile as Record<string, unknown> | null);
+
+            let artworkFile: { url: string; name: string; size: number | null } | null = null;
+            if (rawArtwork) {
+                const url =
+                    (rawArtwork.url as string) ||
+                    (rawArtwork.fileUrl as string) ||
+                    (typeof rawArtwork === "string" ? rawArtwork : "");
+                if (url) {
+                    artworkFile = {
+                        url,
+                        name:
+                            (rawArtwork.name as string) ||
+                            (rawArtwork.fileName as string) ||
+                            (rawArtwork.originalName as string) ||
+                            "artwork-logo.png",
+                        size: typeof rawArtwork.size === "number" ? rawArtwork.size : null,
+                    };
+                }
+            }
+
+            const logoLocations = Array.isArray(brandingSnapshot.logoLocations)
+                ? (brandingSnapshot.logoLocations as Array<{ name?: string }>)
+                      .map((l) => (typeof l === "string" ? l : l?.name))
+                      .filter(Boolean) as string[]
+                : [];
+
+            const printMethod =
+                typeof brandingSnapshot.printMethod === "object" && brandingSnapshot.printMethod !== null
+                    ? (brandingSnapshot.printMethod as { name?: string }).name
+                    : typeof brandingSnapshot.printMethod === "string"
+                      ? brandingSnapshot.printMethod
+                      : null;
+
+            return {
+                id: order.id,
+                publicOrderId: order.publicOrderId,
+                companyName: order.companyName,
+                source: order.quote ? "quote" : "self_service",
+                status: order.status,
+                quantity: order.quantity,
+                employeeCount: order.employeeCount,
+                sizeBreakdown: order.sizeBreakdown,
+                artworkFile,
+                brandingConfig: {
+                    logoLocations,
+                    printMethod,
+                },
+                createdAt: order.createdAt,
+                updatedAt: order.updatedAt,
+                renivetPurchaseOrder: (() => {
+                    const purchaseOrder = vendorPoByOrderId.get(order.id);
+                    return purchaseOrder
+                        ? {
+                              id: purchaseOrder.id,
+                              poNumber: purchaseOrder.poNumber,
+                              foNumber: (purchaseOrder as any).foNumber || purchaseOrder.poNumber,
+                              issueDate: purchaseOrder.issueDate,
+                              expectedDeliveryDate:
+                                  purchaseOrder.expectedDeliveryDate,
+                              totalAmountPaise: purchaseOrder.totalAmountPaise,
+                              status: purchaseOrder.status,
+                              downloadUrl: `/api/corporate-orders/${order.id}/fulfillment-order.pdf`,
+                          }
+                        : null;
+                })(),
+                brandTaxInvoice: (() => {
+                    const invoice = brandInvoiceByOrderId.get(order.id);
+                    return invoice
+                        ? {
+                              id: invoice.id,
+                              invoiceNumber: invoice.invoiceNumber,
+                              invoiceDate: invoice.invoiceDate,
+                              totalAmountPaise: invoice.totalAmountPaise,
+                              validationStatus: invoice.validationStatus,
+                              gstr2bStatus: invoice.gstr2bStatus,
+                              downloadUrl: `/api/corporate-orders/${order.id}/brand-tax-invoice`,
+                          }
+                        : null;
+                })(),
+                customerTaxInvoice: (() => {
+                    const invoice = customerInvoiceByOrderId.get(order.id);
+                    return {
+                        id: invoice?.id ?? null,
+                        invoiceNumber:
+                            invoice?.invoiceNumber ||
+                            `BAM/2627/${String(order.sequenceNo ?? 1).padStart(5, "0")}`,
+                        invoiceDate: invoice?.invoiceDate ?? order.createdAt,
+                        totalAmountPaise:
+                            invoice?.totalAmountPaise ?? order.totalAmountPaise,
+                        status: invoice?.status ?? "issued",
+                        downloadUrl: `/api/corporate-orders/${order.id}/invoice.pdf`,
+                    };
+                })(),
+                settlementStatement: (() => {
+                    const statement = settlementByOrderId.get(order.id);
+                    return statement
+                        ? {
+                              id: statement.id,
+                              statementNumber: statement.statementNumber,
+                              statementDate: statement.statementDate,
+                              netRemittancePaise: statement.netRemittancePaise,
+                              commissionPercent:
+                                  statement.commissionPercentBps / 100,
+                              status: statement.status,
+                              downloadUrl: `/api/corporate-orders/${order.id}/settlement-statement.pdf`,
+                          }
+                        : null;
+                })(),
             selectedGarment: {
                 productType:
                     (order.quote?.productTypeId
@@ -4526,7 +4707,8 @@ class CorporatePlatformService {
                 note: item.note,
                 createdAt: item.createdAt,
             })),
-        }));
+        };
+    });
 
         await db.insert(corporateBrandAuditLogs).values({
             brandId,
@@ -4595,17 +4777,37 @@ class CorporatePlatformService {
             });
         }
 
+        const taxableValuePaise =
+            (purchaseOrder as any).taxableValuePaise ??
+            purchaseOrder.totalAmountPaise ??
+            (purchaseOrder.unitSellPricePaise * purchaseOrder.quantity) ??
+            0;
+
+        const totalAmountPaise =
+            purchaseOrder.totalAmountPaise ??
+            taxableValuePaise;
+
+        const foNumber =
+            (purchaseOrder as any).foNumber ||
+            (purchaseOrder as any).poNumber ||
+            "FO-0001";
+
+        const resolvedHsn =
+            (order.quote as any)?.hsnCode ||
+            (order as any).hsnCode ||
+            "6109";
+
         return corporateDocumentService.recordBrandTaxInvoice(userId, {
             ...parsed,
-            invoiceNumber: `${purchaseOrder.poNumber}-${Date.now()}`,
+            invoiceNumber: `INV-${foNumber.replace(/[^a-zA-Z0-9]/g, "")}-${Date.now().toString().slice(-4)}`,
             supplierGstin: brandDetails.gstin,
             recipientGstin: settings.gstin,
-            hsnCode: "0000",
-            taxableValuePaise: purchaseOrder.taxableValuePaise,
-            cgstPaise: purchaseOrder.cgstPaise,
-            sgstPaise: purchaseOrder.sgstPaise,
-            igstPaise: purchaseOrder.igstPaise,
-            totalAmountPaise: purchaseOrder.totalAmountPaise,
+            hsnCode: resolvedHsn.length >= 4 ? resolvedHsn.slice(0, 8) : "6109",
+            taxableValuePaise,
+            cgstPaise: 0,
+            sgstPaise: 0,
+            igstPaise: 0,
+            totalAmountPaise,
         });
     }
 

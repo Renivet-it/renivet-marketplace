@@ -103,6 +103,11 @@ export const brandSchema = z.object({
             invalid_type_error: "Active status must be a boolean",
         })
         .default(true),
+    isCorporateEnabled: z
+        .boolean({
+            invalid_type_error: "Corporate enabled status must be a boolean",
+        })
+        .default(false),
     confidentialVerificationStatus: z.enum(
         ["idle", "pending", "approved", "rejected"],
         {
@@ -171,6 +176,7 @@ export const updateBrandSchema = brandSchema
         bio: true,
         coverUrl: true,
         isActive: true,
+        isCorporateEnabled: true,
         logoUrl: true,
         statusReasonCode: true,
         tierPreviousSnapshot: true,
