@@ -1,7 +1,7 @@
 "use client";
 
 import { Google, RenivetFull } from "@/components/svgs";
-import { useSignIn } from "@clerk/nextjs";
+import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Image from "next/image";
 import Link from "next/link";
@@ -10,6 +10,7 @@ import { FormEvent, useState } from "react";
 
 type Method = "phone" | "email";
 type Step = "credentials" | "phone-code";
+type PhoneAttempt = "sign-in" | "sign-up";
 
 const fieldClass =
     "h-10 w-full rounded-xl border bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10";
@@ -51,9 +52,12 @@ function BrandHeader({
 
 export function PhoneFirstSignIn() {
     const { isLoaded, signIn, setActive } = useSignIn();
+    const { signUp, setActive: setSignUpActive } = useSignUp();
     const router = useRouter();
-    const [method, setMethod] = useState<Method>("email");
+    const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("credentials");
+    const [phoneAttempt, setPhoneAttempt] =
+        useState<PhoneAttempt>("sign-in");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -74,6 +78,14 @@ export function PhoneFirstSignIn() {
         await setActive({ session: sessionId });
         router.push("/");
     };
+
+    const isUnknownPhoneNumber = (value: unknown) =>
+        isClerkAPIResponseError(value) &&
+        value.errors.some((error) =>
+            ["form_identifier_not_found", "identifier_not_found"].includes(
+                error.code
+            )
+        );
 
     const continueWithGoogle = async () => {
         if (!isLoaded) return;
@@ -98,6 +110,21 @@ export function PhoneFirstSignIn() {
         setError(null);
         try {
             if (step === "phone-code") {
+                if (phoneAttempt === "sign-up") {
+                    const attempt = await signUp.attemptPhoneNumberVerification({
+                        code,
+                    });
+                    if (attempt.status !== "complete")
+                        throw new Error(
+                            "The verification code could not be completed"
+                        );
+                    if (!attempt.createdSessionId)
+                        throw new Error("A session could not be created");
+                    await setSignUpActive({ session: attempt.createdSessionId });
+                    router.push("/");
+                    return;
+                }
+
                 const attempt = await signIn.attemptFirstFactor({
                     strategy: "phone_code",
                     code,
@@ -121,21 +148,37 @@ export function PhoneFirstSignIn() {
                 await complete(attempt.createdSessionId);
                 return;
             }
-            const attempt = await signIn.create({
-                identifier: normalizeIndianPhone(phone),
-            });
-            const phoneFactor = attempt.supportedFirstFactors?.find(
-                (factor) => factor.strategy === "phone_code"
-            );
-            if (!phoneFactor || phoneFactor.strategy !== "phone_code")
-                throw new Error(
-                    "SMS sign-in is not available for this phone number"
+            const normalizedPhone = normalizeIndianPhone(phone);
+            try {
+                const attempt = await signIn.create({
+                    identifier: normalizedPhone,
+                });
+                const phoneFactor = attempt.supportedFirstFactors?.find(
+                    (factor) => factor.strategy === "phone_code"
                 );
-            await signIn.prepareFirstFactor({
-                strategy: "phone_code",
-                phoneNumberId: phoneFactor.phoneNumberId,
-            });
-            setStep("phone-code");
+                if (!phoneFactor || phoneFactor.strategy !== "phone_code")
+                    throw new Error(
+                        "SMS sign-in is not available for this phone number"
+                    );
+                await signIn.prepareFirstFactor({
+                    strategy: "phone_code",
+                    phoneNumberId: phoneFactor.phoneNumberId,
+                });
+                setPhoneAttempt("sign-in");
+                setStep("phone-code");
+            } catch (value) {
+                if (!isUnknownPhoneNumber(value)) throw value;
+
+                await signUp.create({
+                    phoneNumber: normalizedPhone,
+                    legalAccepted: true,
+                });
+                await signUp.preparePhoneNumberVerification({
+                    strategy: "phone_code",
+                });
+                setPhoneAttempt("sign-up");
+                setStep("phone-code");
+            }
         } catch (value) {
             showError(value);
         } finally {
@@ -146,6 +189,7 @@ export function PhoneFirstSignIn() {
     const switchMethod = () => {
         setMethod((current) => (current === "phone" ? "email" : "phone"));
         setStep("credentials");
+        setPhoneAttempt("sign-in");
         setError(null);
     };
     const isCode = step === "phone-code";
@@ -255,7 +299,8 @@ export function PhoneFirstSignIn() {
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                We&apos;ll send a one-time password (OTP).
+                                We&apos;ll send a one-time password (OTP). New
+                                numbers create an account after verification.
                             </p>
                         </label>
                     ) : (
@@ -319,6 +364,19 @@ export function PhoneFirstSignIn() {
                                 : "Login with email"}
                     </button>
                 </form>
+                {!isCode && method === "phone" && (
+                    <p className="mt-3 text-center text-[11px] leading-4 text-muted-foreground">
+                        By continuing, you agree to our {" "}
+                        <Link className="underline underline-offset-2" href="/terms">
+                            Terms
+                        </Link>{" "}
+                        and {" "}
+                        <Link className="underline underline-offset-2" href="/privacy">
+                            Privacy Policy
+                        </Link>
+                        .
+                    </p>
+                )}
                 <p className="mt-6 text-center text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
                     <Link
