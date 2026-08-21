@@ -745,9 +745,9 @@ class CorporateOrderQueries {
     async listOrdersByUser(userId: string) {
         const user = await db.query.users.findFirst({
             where: eq(users.id, userId),
-            columns: { email: true },
+            columns: { email: true, isEmailVerified: true },
         });
-        if (user?.email) {
+        if (user?.email && user.isEmailVerified) {
             await db
                 .update(corporateOrders)
                 .set({ userId, updatedAt: new Date() })

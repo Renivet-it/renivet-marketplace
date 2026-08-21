@@ -53,6 +53,11 @@ export async function POST(req: NextRequest) {
                     (phone?.phone_number
                         ? `${phone.phone_number.replace(/[^0-9]/g, "")}@phone.renivet.com`
                         : `${webhookUser.id}@renivet.com`);
+                const verifiedEmailAddress =
+                    email?.verification?.status === "verified" &&
+                    email.email_address
+                        ? email.email_address.trim().toLowerCase()
+                        : null;
 
                 const firstName =
                     webhookUser.first_name ||
@@ -106,21 +111,28 @@ export async function POST(req: NextRequest) {
                     .returning()
                     .then((res) => res[0]);
 
-                await db
-                    .update(corporateProfiles)
-                    .set({
-                        userId: newUser.id,
-                        updatedAt: new Date(),
-                    })
-                    .where(
-                        sql`lower(${corporateProfiles.email}) = ${newUser.email.trim().toLowerCase()}`
-                    );
-                await db
-                    .update(corporateOrders)
-                    .set({ userId: newUser.id, updatedAt: new Date() })
-                    .where(
-                        sql`lower(${corporateOrders.emailAddress}) = ${newUser.email.trim().toLowerCase()}`
-                    );
+                if (verifiedEmailAddress) {
+                    await Promise.all([
+                        db
+                            .update(corporateProfiles)
+                            .set({
+                                userId: newUser.id,
+                                updatedAt: new Date(),
+                            })
+                            .where(
+                                sql`lower(${corporateProfiles.email}) = ${verifiedEmailAddress}`
+                            ),
+                        db
+                            .update(corporateOrders)
+                            .set({
+                                userId: newUser.id,
+                                updatedAt: new Date(),
+                            })
+                            .where(
+                                sql`lower(${corporateOrders.emailAddress}) = ${verifiedEmailAddress}`
+                            ),
+                    ]);
+                }
 
                 let addCode = false;
 
@@ -171,6 +183,11 @@ export async function POST(req: NextRequest) {
                     (phone?.phone_number
                         ? `${phone.phone_number.replace(/[^0-9]/g, "")}@phone.renivet.com`
                         : `${webhookUser.id}@renivet.com`);
+                const verifiedEmailAddress =
+                    email?.verification?.status === "verified" &&
+                    email.email_address
+                        ? email.email_address.trim().toLowerCase()
+                        : null;
 
                 const firstName =
                     webhookUser.first_name ||
@@ -190,39 +207,46 @@ export async function POST(req: NextRequest) {
                     },
                 });
 
-                await Promise.all([
-                    db
-                        .update(users)
-                        .set({
-                            firstName,
-                            lastName,
-                            email: emailAddress,
-                            phone: phone?.phone_number ?? null,
-                            avatarUrl: webhookUser.image_url ?? null,
-                            isEmailVerified:
-                                email?.verification?.status === "verified",
-                            isPhoneVerified:
-                                phone?.verification?.status === "verified",
-                            updatedAt: webhookUser.updated_at,
-                        })
-                        .where(eq(users.id, webhookUser.id)),
-                    db
-                        .update(corporateProfiles)
-                        .set({
-                            userId: webhookUser.id,
-                            updatedAt: new Date(),
-                        })
-                        .where(
-                            sql`lower(${corporateProfiles.email}) = ${email.email_address.trim().toLowerCase()}`
-                        ),
-                    db
-                        .update(corporateOrders)
-                        .set({ userId: webhookUser.id, updatedAt: new Date() })
-                        .where(
-                            sql`lower(${corporateOrders.emailAddress}) = ${email.email_address.trim().toLowerCase()}`
-                        ),
-                    userCache.remove(webhookUser.id),
-                ]);
+                await db
+                    .update(users)
+                    .set({
+                        firstName,
+                        lastName,
+                        email: emailAddress,
+                        phone: phone?.phone_number ?? null,
+                        avatarUrl: webhookUser.image_url ?? null,
+                        isEmailVerified:
+                            email?.verification?.status === "verified",
+                        isPhoneVerified:
+                            phone?.verification?.status === "verified",
+                        updatedAt: webhookUser.updated_at,
+                    })
+                    .where(eq(users.id, webhookUser.id));
+
+                if (verifiedEmailAddress) {
+                    await Promise.all([
+                        db
+                            .update(corporateProfiles)
+                            .set({
+                                userId: webhookUser.id,
+                                updatedAt: new Date(),
+                            })
+                            .where(
+                                sql`lower(${corporateProfiles.email}) = ${verifiedEmailAddress}`
+                            ),
+                        db
+                            .update(corporateOrders)
+                            .set({
+                                userId: webhookUser.id,
+                                updatedAt: new Date(),
+                            })
+                            .where(
+                                sql`lower(${corporateOrders.emailAddress}) = ${verifiedEmailAddress}`
+                            ),
+                    ]);
+                }
+
+                await userCache.remove(webhookUser.id);
                 break;
             }
 
