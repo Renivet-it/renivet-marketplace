@@ -5,7 +5,6 @@ import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 type Method = "phone" | "email";
@@ -53,7 +52,6 @@ function BrandHeader({
 export function PhoneFirstSignIn() {
     const { isLoaded, signIn, setActive } = useSignIn();
     const { signUp, setActive: setSignUpActive } = useSignUp();
-    const router = useRouter();
     const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("credentials");
     const [phoneAttempt, setPhoneAttempt] =
@@ -88,7 +86,19 @@ export function PhoneFirstSignIn() {
     const complete = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
         await setActive({ session: sessionId });
-        router.push("/");
+        await fetch("/api/account/sync", { method: "POST" }).catch(
+            () => undefined
+        );
+        window.location.assign("/");
+    };
+
+    const completePhoneSignUp = async (sessionId: string | null) => {
+        if (!sessionId) throw new Error("A session could not be created");
+        await setSignUpActive({ session: sessionId });
+        await fetch("/api/account/sync", { method: "POST" }).catch(
+            () => undefined
+        );
+        window.location.assign("/");
     };
 
     const isUnknownPhoneNumber = (value: unknown) =>
@@ -161,10 +171,7 @@ export function PhoneFirstSignIn() {
                         throw new Error(
                             "The verification code could not be completed"
                         );
-                    if (!attempt.createdSessionId)
-                        throw new Error("A session could not be created");
-                    await setSignUpActive({ session: attempt.createdSessionId });
-                    router.push("/");
+                    await completePhoneSignUp(attempt.createdSessionId);
                     return;
                 }
 
