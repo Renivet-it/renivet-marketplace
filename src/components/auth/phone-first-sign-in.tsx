@@ -1,17 +1,18 @@
 "use client";
 
-import { Renivet } from "@/components/svgs";
-import { useSignIn } from "@clerk/nextjs";
+import { Google, RenivetFull } from "@/components/svgs";
+import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
+import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 
 type Method = "phone" | "email";
 type Step = "credentials" | "phone-code";
+type PhoneAttempt = "sign-in" | "sign-up";
 
 const fieldClass =
-    "h-14 w-full rounded-xl border bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10";
+    "h-10 w-full rounded-xl border bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10";
 
 function normalizeIndianPhone(value: string) {
     const digits = value.replace(/\D/g, "");
@@ -21,6 +22,10 @@ function normalizeIndianPhone(value: string) {
     if (digits.length === 12 && digits.startsWith("91")) return `+${digits}`;
     if (value.startsWith("+")) return value;
     throw new Error("Enter a valid phone number with its country code");
+}
+
+function phoneSignupPlaceholderLastName() {
+    return `Customer ${Math.floor(10000 + Math.random() * 90000)}`;
 }
 
 function BrandHeader({
@@ -35,14 +40,7 @@ function BrandHeader({
     return (
         <>
             <div className="mb-7 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <span className="grid size-11 place-items-center rounded-xl border bg-background shadow-sm">
-                        <Renivet className="size-7" />
-                    </span>
-                    <span className="text-sm font-semibold tracking-[0.18em] text-primary">
-                        RENIVET
-                    </span>
-                </div>
+                <RenivetFull height={36} width={120} />
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
                     {eyebrow}
                 </span>
@@ -57,17 +55,30 @@ function BrandHeader({
 
 export function PhoneFirstSignIn() {
     const { isLoaded, signIn, setActive } = useSignIn();
-    const router = useRouter();
+    const { signUp, setActive: setSignUpActive } = useSignUp();
     const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("credentials");
+    const [phoneAttempt, setPhoneAttempt] =
+        useState<PhoneAttempt>("sign-in");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [code, setCode] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
 
-    const showError = (value: unknown) =>
+    const showError = (value: unknown) => {
+        if (
+            isClerkAPIResponseError(value) &&
+            value.errors.some((item) => item.code === "form_code_incorrect")
+        ) {
+            setError(
+                "Incorrect OTP. Please check the latest code sent to your phone and try again."
+            );
+            return;
+        }
+
         setError(
             isClerkAPIResponseError(value)
                 ? value.errors.map((item) => item.message).join(", ")
@@ -75,11 +86,32 @@ export function PhoneFirstSignIn() {
                   ? value.message
                   : "Unable to sign in"
         );
+    };
     const complete = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
         await setActive({ session: sessionId });
-        router.push("/");
+        await fetch("/api/account/sync", { method: "POST" }).catch(
+            () => undefined
+        );
+        window.location.assign("/");
     };
+
+    const completePhoneSignUp = async (sessionId: string | null) => {
+        if (!sessionId) throw new Error("A session could not be created");
+        await setSignUpActive({ session: sessionId });
+        await fetch("/api/account/sync", { method: "POST" }).catch(
+            () => undefined
+        );
+        window.location.assign("/");
+    };
+
+    const isUnknownPhoneNumber = (value: unknown) =>
+        isClerkAPIResponseError(value) &&
+        value.errors.some((error) =>
+            ["form_identifier_not_found", "identifier_not_found"].includes(
+                error.code
+            )
+        );
 
     const continueWithGoogle = async () => {
         if (!isLoaded) return;
@@ -97,13 +129,56 @@ export function PhoneFirstSignIn() {
         }
     };
 
+    const resendOtp = async () => {
+        if (!isLoaded) return;
+        setPending(true);
+        setError(null);
+        setNotice(null);
+        try {
+            if (phoneAttempt === "sign-up") {
+                await signUp.preparePhoneNumberVerification({
+                    strategy: "phone_code",
+                });
+            } else {
+                const phoneFactor = signIn.supportedFirstFactors?.find(
+                    (factor) => factor.strategy === "phone_code"
+                );
+                if (!phoneFactor || phoneFactor.strategy !== "phone_code")
+                    throw new Error("SMS sign-in is not available for this phone number");
+                await signIn.prepareFirstFactor({
+                    strategy: "phone_code",
+                    phoneNumberId: phoneFactor.phoneNumberId,
+                });
+            }
+            setCode("");
+            setNotice("A new OTP has been sent to your phone.");
+        } catch (value) {
+            showError(value);
+        } finally {
+            setPending(false);
+        }
+    };
+
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         if (!isLoaded) return;
         setPending(true);
         setError(null);
+        setNotice(null);
         try {
             if (step === "phone-code") {
+                if (phoneAttempt === "sign-up") {
+                    const attempt = await signUp.attemptPhoneNumberVerification({
+                        code,
+                    });
+                    if (attempt.status !== "complete")
+                        throw new Error(
+                            "The verification code could not be completed"
+                        );
+                    await completePhoneSignUp(attempt.createdSessionId);
+                    return;
+                }
+
                 const attempt = await signIn.attemptFirstFactor({
                     strategy: "phone_code",
                     code,
@@ -127,21 +202,45 @@ export function PhoneFirstSignIn() {
                 await complete(attempt.createdSessionId);
                 return;
             }
-            const attempt = await signIn.create({
-                identifier: normalizeIndianPhone(phone),
-            });
-            const phoneFactor = attempt.supportedFirstFactors?.find(
-                (factor) => factor.strategy === "phone_code"
-            );
-            if (!phoneFactor || phoneFactor.strategy !== "phone_code")
-                throw new Error(
-                    "SMS sign-in is not available for this phone number"
+            const normalizedPhone = normalizeIndianPhone(phone);
+            try {
+                const attempt = await signIn.create({
+                    identifier: normalizedPhone,
+                });
+                const phoneFactor = attempt.supportedFirstFactors?.find(
+                    (factor) => factor.strategy === "phone_code"
                 );
-            await signIn.prepareFirstFactor({
-                strategy: "phone_code",
-                phoneNumberId: phoneFactor.phoneNumberId,
-            });
-            setStep("phone-code");
+                if (!phoneFactor || phoneFactor.strategy !== "phone_code")
+                    throw new Error(
+                        "SMS sign-in is not available for this phone number"
+                    );
+                await signIn.prepareFirstFactor({
+                    strategy: "phone_code",
+                    phoneNumberId: phoneFactor.phoneNumberId,
+                });
+                setPhoneAttempt("sign-in");
+                setStep("phone-code");
+            } catch (value) {
+                if (!isUnknownPhoneNumber(value)) throw value;
+
+                await signUp.create({
+                    phoneNumber: normalizedPhone,
+                    // Phone-only sign-up must satisfy Clerk instances that
+                    // require names, while the homepage asks the customer to
+                    // replace these placeholders after the first login.
+                    firstName: "Renivet",
+                    lastName: phoneSignupPlaceholderLastName(),
+                    legalAccepted: true,
+                    unsafeMetadata: {
+                        profileCompletionRequired: true,
+                    },
+                });
+                await signUp.preparePhoneNumberVerification({
+                    strategy: "phone_code",
+                });
+                setPhoneAttempt("sign-up");
+                setStep("phone-code");
+            }
         } catch (value) {
             showError(value);
         } finally {
@@ -152,14 +251,31 @@ export function PhoneFirstSignIn() {
     const switchMethod = () => {
         setMethod((current) => (current === "phone" ? "email" : "phone"));
         setStep("credentials");
+        setPhoneAttempt("sign-in");
         setError(null);
+        setNotice(null);
     };
     const isCode = step === "phone-code";
 
     return (
-        <div className="w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
-            <div className="h-1 bg-primary" />
-            <div className="border-b bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-7 pt-7 sm:px-9 sm:pt-8">
+        <div className="relative w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
+            <Image
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-10 -top-8 w-72"
+                height={288}
+                src="/images/auth/botanical-branch.png"
+                width={288}
+            />
+            <Image
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-10 -left-7 w-48 opacity-60"
+                height={192}
+                src="/images/auth/bottom-leaf-sprig.png"
+                width={192}
+            />
+            <div className="relative bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-5 pt-7 sm:px-9 sm:pt-8">
                 <BrandHeader
                     eyebrow="Secure access"
                     title={isCode ? "Check your messages" : "Welcome back"}
@@ -170,21 +286,19 @@ export function PhoneFirstSignIn() {
                     }
                 />
             </div>
-            <div className="px-6 pb-7 pt-7 sm:px-9">
+            <div className="px-6 pb-7 pt-5 sm:px-9">
                 {!isCode && (
                     <>
                         <button
-                            className="mt-7 flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
                             disabled={pending}
                             onClick={continueWithGoogle}
                             type="button"
                         >
-                            <span className="grid size-5 place-items-center rounded-full bg-white text-sm font-bold text-blue-600 shadow-sm">
-                                G
-                            </span>{" "}
+                            <Google className="size-5" />
                             Continue with Google
                         </button>
-                        <div className="my-7 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        <div className="my-5 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                             <span className="h-px flex-1 bg-border" />
                             or
                             <span className="h-px flex-1 bg-border" />
@@ -192,13 +306,13 @@ export function PhoneFirstSignIn() {
                     </>
                 )}
                 <form
-                    className={`${isCode ? "mt-7" : ""} space-y-5`}
+                    className={`${isCode ? "mt-5" : ""} space-y-5`}
                     onSubmit={submit}
                 >
                     {isCode ? (
                         <label className="block space-y-2">
                             <span className="text-sm font-semibold">
-                                SMS verification code
+                                OTP verification code
                             </span>
                             <input
                                 autoComplete="one-time-code"
@@ -221,10 +335,10 @@ export function PhoneFirstSignIn() {
                                     onClick={switchMethod}
                                     type="button"
                                 >
-                                    Use email instead
+                                    Login with email
                                 </button>
                             </span>
-                            <div className="flex h-14 overflow-hidden rounded-xl border bg-background transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                            <div className="flex h-10 overflow-hidden rounded-xl border bg-background transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
                                 <select
                                     aria-label="Country"
                                     className="w-[86px] border-r bg-transparent px-4 text-sm font-medium outline-none"
@@ -248,7 +362,8 @@ export function PhoneFirstSignIn() {
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                We&apos;ll send a one-time SMS code.
+                                We&apos;ll send a one-time password (OTP). New
+                                numbers create an account after verification.
                             </p>
                         </label>
                     ) : (
@@ -261,7 +376,7 @@ export function PhoneFirstSignIn() {
                                         onClick={switchMethod}
                                         type="button"
                                     >
-                                        Use phone
+                                    Login with phone
                                     </button>
                                 </span>
                                 <input
@@ -298,8 +413,23 @@ export function PhoneFirstSignIn() {
                             {error}
                         </p>
                     )}
+                    {notice && (
+                        <p className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-sm text-primary">
+                            {notice}
+                        </p>
+                    )}
+                    {isCode && (
+                        <button
+                            className="w-full text-center text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
+                            disabled={pending}
+                            onClick={resendOtp}
+                            type="button"
+                        >
+                            Didn&apos;t receive it? Resend OTP
+                        </button>
+                    )}
                     <button
-                        className="h-14 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-11 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={pending}
                         type="submit"
                     >
@@ -308,10 +438,23 @@ export function PhoneFirstSignIn() {
                             : isCode
                               ? "Verify code"
                               : method === "phone"
-                                ? "Send SMS code"
-                                : "Sign in"}
+                                ? "Login with OTP"
+                                : "Login with email"}
                     </button>
                 </form>
+                {!isCode && method === "phone" && (
+                    <p className="mt-3 text-center text-[11px] leading-4 text-muted-foreground">
+                        By continuing, you agree to our {" "}
+                        <Link className="underline underline-offset-2" href="/terms">
+                            Terms
+                        </Link>{" "}
+                        and {" "}
+                        <Link className="underline underline-offset-2" href="/privacy">
+                            Privacy Policy
+                        </Link>
+                        .
+                    </p>
+                )}
                 <p className="mt-6 text-center text-sm text-muted-foreground">
                     Don&apos;t have an account?{" "}
                     <Link
@@ -321,9 +464,6 @@ export function PhoneFirstSignIn() {
                         Sign up
                     </Link>
                 </p>
-            </div>
-            <div className="border-t bg-muted/30 px-6 py-4 text-center text-xs text-muted-foreground sm:px-9">
-                Protected by secure Clerk authentication
             </div>
         </div>
     );

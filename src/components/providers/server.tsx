@@ -5,7 +5,11 @@ import { extractRouterConfig } from "uploadthing/server";
 
 export function ServerProvider({ children }: LayoutProps) {
     return (
-        <ClerkProvider dynamic>
+        <ClerkProvider
+            dynamic
+            signInFallbackRedirectUrl="/"
+            signUpFallbackRedirectUrl="/"
+        >
             <NextSSRPlugin routerConfig={extractRouterConfig(uploadRouter)} />
             {children}
         </ClerkProvider>

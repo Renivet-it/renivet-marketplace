@@ -1,14 +1,22 @@
 import { relations } from "drizzle-orm";
-import { boolean, index, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import {
+    boolean,
+    index,
+    integer,
+    pgTable,
+    text,
+    timestamp,
+    uuid,
+} from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
 import { blogs } from "./blog";
 import { bannedBrandMembers, brandMembers, brands } from "./brand";
 import { carts } from "./cart";
 import { categoryRequests } from "./category";
+import { reviews } from "./review";
 import { roles } from "./role";
 import { wishlists } from "./wishlist";
-import { reviews } from "./review";
 
 export const users = pgTable("users", {
     id: text("id").primaryKey().notNull().unique(),
@@ -24,6 +32,36 @@ export const users = pgTable("users", {
         .default(false),
     ...timestamps,
 });
+
+export const accountMergeIntents = pgTable(
+    "account_merge_intents",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        sourceUserId: text("source_user_id").notNull(),
+        targetUserId: text("target_user_id").notNull(),
+        targetEmail: text("target_email").notNull(),
+        verificationCodeHash: text("verification_code_hash").notNull(),
+        attempts: integer("attempts").notNull().default(0),
+        status: text("status").notNull().default("awaiting_consent"),
+        expiresAt: timestamp("expires_at").notNull(),
+        consentedAt: timestamp("consented_at"),
+        lastCodeSentAt: timestamp("last_code_sent_at"),
+        processingStartedAt: timestamp("processing_started_at"),
+        sourceDeletedAt: timestamp("source_deleted_at"),
+        completedAt: timestamp("completed_at"),
+        error: text("error"),
+        ...timestamps,
+    },
+    (table) => ({
+        sourceUserIdx: index("account_merge_intents_source_user_idx").on(
+            table.sourceUserId
+        ),
+        targetUserIdx: index("account_merge_intents_target_user_idx").on(
+            table.targetUserId
+        ),
+        statusIdx: index("account_merge_intents_status_idx").on(table.status),
+    })
+);
 
 export const userRoles = pgTable(
     "user_roles",
