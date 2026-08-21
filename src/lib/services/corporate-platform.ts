@@ -1219,9 +1219,9 @@ class CorporatePlatformService {
 
         const user = await db.query.users.findFirst({
             where: eq(users.id, userId),
-            columns: { email: true },
+            columns: { email: true, isEmailVerified: true },
         });
-        if (!user?.email) return null;
+        if (!user?.email || !user.isEmailVerified) return null;
 
         const pendingProfile = await db.query.corporateProfiles.findFirst({
             where: sql`lower(${corporateProfiles.email}) = ${user.email.trim().toLowerCase()}`,
@@ -1651,7 +1651,10 @@ class CorporatePlatformService {
         const parsed = corporateAdminManualQuoteInputSchema.parse(input);
         const normalizedEmail = parsed.email.toLowerCase();
         const matchedUser = await db.query.users.findFirst({
-            where: sql`lower(${users.email}) = ${normalizedEmail}`,
+            where: and(
+                sql`lower(${users.email}) = ${normalizedEmail}`,
+                eq(users.isEmailVerified, true)
+            ),
             columns: { id: true },
         });
         const existingProfile = await db.query.corporateProfiles.findFirst({
@@ -1811,11 +1814,15 @@ class CorporatePlatformService {
         await this.getMyProfile(userId);
         const user = await db.query.users.findFirst({
             where: eq(users.id, userId),
-            columns: { email: true },
+            columns: { email: true, isEmailVerified: true },
         });
+        const verifiedEmail =
+            user?.isEmailVerified && user.email
+                ? user.email.trim().toLowerCase()
+                : null;
         const profiles = await db.query.corporateProfiles.findMany({
-            where: user?.email
-                ? sql`lower(${corporateProfiles.email}) = ${user.email.trim().toLowerCase()}`
+            where: verifiedEmail
+                ? sql`lower(${corporateProfiles.email}) = ${verifiedEmail}`
                 : eq(corporateProfiles.userId, userId),
         });
         if (!profiles.length) return [];
