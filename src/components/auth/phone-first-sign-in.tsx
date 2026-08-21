@@ -24,6 +24,10 @@ function normalizeIndianPhone(value: string) {
     throw new Error("Enter a valid phone number with its country code");
 }
 
+function phoneSignupPlaceholderLastName() {
+    return `Customer ${Math.floor(10000 + Math.random() * 90000)}`;
+}
+
 function BrandHeader({
     eyebrow,
     title,
@@ -221,7 +225,15 @@ export function PhoneFirstSignIn() {
 
                 await signUp.create({
                     phoneNumber: normalizedPhone,
+                    // Phone-only sign-up must satisfy Clerk instances that
+                    // require names, while the homepage asks the customer to
+                    // replace these placeholders after the first login.
+                    firstName: "Renivet",
+                    lastName: phoneSignupPlaceholderLastName(),
                     legalAccepted: true,
+                    unsafeMetadata: {
+                        profileCompletionRequired: true,
+                    },
                 });
                 await signUp.preparePhoneNumberVerification({
                     strategy: "phone_code",
