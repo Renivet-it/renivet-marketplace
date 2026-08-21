@@ -63,9 +63,20 @@ export function PhoneFirstSignIn() {
     const [password, setPassword] = useState("");
     const [code, setCode] = useState("");
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
 
-    const showError = (value: unknown) =>
+    const showError = (value: unknown) => {
+        if (
+            isClerkAPIResponseError(value) &&
+            value.errors.some((item) => item.code === "form_code_incorrect")
+        ) {
+            setError(
+                "Incorrect OTP. Please check the latest code sent to your phone and try again."
+            );
+            return;
+        }
+
         setError(
             isClerkAPIResponseError(value)
                 ? value.errors.map((item) => item.message).join(", ")
@@ -73,6 +84,7 @@ export function PhoneFirstSignIn() {
                   ? value.message
                   : "Unable to sign in"
         );
+    };
     const complete = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
         await setActive({ session: sessionId });
@@ -103,11 +115,42 @@ export function PhoneFirstSignIn() {
         }
     };
 
+    const resendOtp = async () => {
+        if (!isLoaded) return;
+        setPending(true);
+        setError(null);
+        setNotice(null);
+        try {
+            if (phoneAttempt === "sign-up") {
+                await signUp.preparePhoneNumberVerification({
+                    strategy: "phone_code",
+                });
+            } else {
+                const phoneFactor = signIn.supportedFirstFactors?.find(
+                    (factor) => factor.strategy === "phone_code"
+                );
+                if (!phoneFactor || phoneFactor.strategy !== "phone_code")
+                    throw new Error("SMS sign-in is not available for this phone number");
+                await signIn.prepareFirstFactor({
+                    strategy: "phone_code",
+                    phoneNumberId: phoneFactor.phoneNumberId,
+                });
+            }
+            setCode("");
+            setNotice("A new OTP has been sent to your phone.");
+        } catch (value) {
+            showError(value);
+        } finally {
+            setPending(false);
+        }
+    };
+
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         if (!isLoaded) return;
         setPending(true);
         setError(null);
+        setNotice(null);
         try {
             if (step === "phone-code") {
                 if (phoneAttempt === "sign-up") {
@@ -191,6 +234,7 @@ export function PhoneFirstSignIn() {
         setStep("credentials");
         setPhoneAttempt("sign-in");
         setError(null);
+        setNotice(null);
     };
     const isCode = step === "phone-code";
 
@@ -349,6 +393,21 @@ export function PhoneFirstSignIn() {
                         <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
                             {error}
                         </p>
+                    )}
+                    {notice && (
+                        <p className="rounded-xl border border-primary/20 bg-primary/10 px-3 py-2.5 text-sm text-primary">
+                            {notice}
+                        </p>
+                    )}
+                    {isCode && (
+                        <button
+                            className="w-full text-center text-sm font-medium text-primary underline-offset-4 hover:underline disabled:opacity-50"
+                            disabled={pending}
+                            onClick={resendOtp}
+                            type="button"
+                        >
+                            Didn&apos;t receive it? Resend OTP
+                        </button>
                     )}
                     <button
                         className="h-11 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
