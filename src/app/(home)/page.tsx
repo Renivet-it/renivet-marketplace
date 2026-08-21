@@ -1,4 +1,5 @@
 import { FloatingLoginButton } from "@/components/home/floating-login-button";
+import { EmailCompletionCard } from "@/components/auth/email-completion-card";
 import { DiscoverPrompt } from "@/components/home/new-home-page/discover-prompt";
 import { Landing } from "@/components/home/landing";
 import { siteConfig } from "@/config/site";
@@ -154,6 +155,7 @@ export default async function Page() {
 
     return (
         <>
+            <EmailCompletionCard />
             <Suspense
                 fallback={
                     <div className="h-[calc(100vh-20vh)] w-full bg-white" />

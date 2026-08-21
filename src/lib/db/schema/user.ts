@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { boolean, index, pgTable, text, uuid } from "drizzle-orm/pg-core";
+import { boolean, index, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { timestamps } from "../helper";
 import { addresses } from "./address";
 import { blogs } from "./blog";
@@ -24,6 +24,27 @@ export const users = pgTable("users", {
         .default(false),
     ...timestamps,
 });
+
+export const accountMergeIntents = pgTable(
+    "account_merge_intents",
+    {
+        id: uuid("id").primaryKey().defaultRandom(),
+        sourceUserId: text("source_user_id").notNull(),
+        targetUserId: text("target_user_id").notNull(),
+        targetEmail: text("target_email").notNull(),
+        verificationCodeHash: text("verification_code_hash").notNull(),
+        attempts: text("attempts").notNull().default("0"),
+        status: text("status").notNull().default("pending"),
+        expiresAt: timestamp("expires_at").notNull(),
+        completedAt: timestamp("completed_at"),
+        error: text("error"),
+        ...timestamps,
+    },
+    (table) => ({
+        sourceUserIdx: index("account_merge_intents_source_user_idx").on(table.sourceUserId),
+        targetUserIdx: index("account_merge_intents_target_user_idx").on(table.targetUserId),
+    })
+);
 
 export const userRoles = pgTable(
     "user_roles",
