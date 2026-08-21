@@ -1,8 +1,9 @@
 "use client";
 
-import { Renivet } from "@/components/svgs";
+import { Google, RenivetFull } from "@/components/svgs";
 import { useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -31,6 +32,7 @@ export function PhoneFirstSignUp() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [code, setCode] = useState("");
+    const [legalAccepted, setLegalAccepted] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
 
@@ -51,11 +53,16 @@ export function PhoneFirstSignUp() {
 
     const continueWithGoogle = async () => {
         if (!isLoaded) return;
+        if (!legalAccepted) {
+            setError("Please accept the Terms of Service and Privacy Policy.");
+            return;
+        }
         setPending(true);
         setError(null);
         try {
             await signUp.authenticateWithRedirect({
                 strategy: "oauth_google",
+                legalAccepted: true,
                 redirectUrl: "/auth/sso-callback",
                 redirectUrlComplete: "/",
             });
@@ -68,6 +75,10 @@ export function PhoneFirstSignUp() {
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         if (!isLoaded) return;
+        if (step === "details" && !legalAccepted) {
+            setError("Please accept the Terms of Service and Privacy Policy.");
+            return;
+        }
 
         setPending(true);
         setError(null);
@@ -90,6 +101,7 @@ export function PhoneFirstSignUp() {
             if (method === "phone") {
                 await signUp.create({
                     firstName: firstName.trim() || undefined,
+                    legalAccepted: true,
                     lastName: lastName.trim() || undefined,
                     phoneNumber: normalizeIndianPhone(phone),
                 });
@@ -100,6 +112,7 @@ export function PhoneFirstSignUp() {
                 await signUp.create({
                     emailAddress: email.trim(),
                     firstName: firstName.trim() || undefined,
+                    legalAccepted: true,
                     lastName: lastName.trim() || undefined,
                     password,
                 });
@@ -122,18 +135,26 @@ export function PhoneFirstSignUp() {
     };
 
     return (
-        <div className="w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
-            <div className="h-1 bg-primary" />
-            <div className="border-b bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-7 pt-7 sm:px-9 sm:pt-8">
+        <div className="relative w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
+            <Image
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-10 -top-8 w-72"
+                height={288}
+                src="/images/auth/botanical-branch.png"
+                width={288}
+            />
+            <Image
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-10 -left-7 w-48 opacity-60"
+                height={192}
+                src="/images/auth/bottom-leaf-sprig.png"
+                width={192}
+            />
+            <div className="relative bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-5 pt-7 sm:px-9 sm:pt-8">
                 <div className="mb-7 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <span className="grid size-11 place-items-center rounded-xl border bg-background shadow-sm">
-                            <Renivet className="size-7" />
-                        </span>
-                        <span className="text-sm font-semibold tracking-[0.18em] text-primary">
-                            RENIVET
-                        </span>
-                    </div>
+                    <RenivetFull height={36} width={120} />
                     <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
                         New account
                     </span>
@@ -149,19 +170,17 @@ export function PhoneFirstSignUp() {
             </div>
 
             {step === "details" && (
-                <div className="px-6 pt-7 sm:px-9">
+                <div className="px-6 pt-5 sm:px-9">
                     <button
-                        className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="flex h-10 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={pending}
                         onClick={continueWithGoogle}
                         type="button"
                     >
-                        <span className="grid size-5 place-items-center rounded-full bg-white text-sm font-bold text-blue-600 shadow-sm">
-                            G
-                        </span>
+                        <Google className="size-5" />
                         Continue with Google
                     </button>
-                    <div className="my-7 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                    <div className="my-5 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                         <span className="h-px flex-1 bg-border" />
                         or
                         <span className="h-px flex-1 bg-border" />
@@ -170,7 +189,7 @@ export function PhoneFirstSignUp() {
             )}
 
             <form
-                className="space-y-5 px-6 pb-7 pt-7 sm:px-9"
+                className="space-y-5 px-6 pb-7 sm:px-9"
                 onSubmit={submit}
             >
                 {step === "verification" ? (
@@ -180,7 +199,7 @@ export function PhoneFirstSignUp() {
                         </span>
                         <input
                             autoComplete="one-time-code"
-                            className="h-12 w-full rounded-lg border bg-background px-3 text-center text-lg tracking-[0.35em] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
+                            className="h-10 w-full rounded-lg border bg-background px-3 text-center text-lg tracking-[0.35em] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
                             inputMode="numeric"
                             onChange={(event) => setCode(event.target.value)}
                             placeholder="••••••"
@@ -196,7 +215,7 @@ export function PhoneFirstSignUp() {
                                     First name
                                 </span>
                                 <input
-                                    className="h-11 w-full rounded-lg border px-3"
+                                    className="h-10 w-full rounded-lg border px-3"
                                     onChange={(event) =>
                                         setFirstName(event.target.value)
                                     }
@@ -208,7 +227,7 @@ export function PhoneFirstSignUp() {
                                     Last name
                                 </span>
                                 <input
-                                    className="h-11 w-full rounded-lg border px-3"
+                                    className="h-10 w-full rounded-lg border px-3"
                                     onChange={(event) =>
                                         setLastName(event.target.value)
                                     }
@@ -226,10 +245,10 @@ export function PhoneFirstSignUp() {
                                         onClick={switchMethod}
                                         type="button"
                                     >
-                                        Use email instead
+                                        Sign up with email
                                     </button>
                                 </span>
-                                <div className="flex h-12 overflow-hidden rounded-lg border bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
+                                <div className="flex h-10 overflow-hidden rounded-lg border bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/20">
                                     <select
                                         aria-label="Country"
                                         className="w-20 border-r bg-transparent px-3 text-sm outline-none"
@@ -267,12 +286,12 @@ export function PhoneFirstSignUp() {
                                             onClick={switchMethod}
                                             type="button"
                                         >
-                                            Use phone
+                                            Sign up with phone
                                         </button>
                                     </span>
                                     <input
                                         autoComplete="email"
-                                        className="h-12 w-full rounded-lg border px-3"
+                                        className="h-10 w-full rounded-lg border px-3"
                                         onChange={(event) =>
                                             setEmail(event.target.value)
                                         }
@@ -288,7 +307,7 @@ export function PhoneFirstSignUp() {
                                     </span>
                                     <input
                                         autoComplete="new-password"
-                                        className="h-12 w-full rounded-lg border px-3"
+                                        className="h-10 w-full rounded-lg border px-3"
                                         onChange={(event) =>
                                             setPassword(event.target.value)
                                         }
@@ -302,13 +321,46 @@ export function PhoneFirstSignUp() {
                     </>
                 )}
 
+                {step === "details" && (
+                    <label className="flex cursor-pointer items-start gap-3 rounded-lg bg-muted/45 px-3 py-2.5 text-xs leading-5 text-muted-foreground">
+                        <input
+                            checked={legalAccepted}
+                            className="mt-0.5 size-4 shrink-0 accent-primary"
+                            onChange={(event) =>
+                                setLegalAccepted(event.target.checked)
+                            }
+                            required
+                            type="checkbox"
+                        />
+                        <span>
+                            I agree to the{" "}
+                            <Link
+                                className="font-medium text-primary underline underline-offset-2"
+                                href="/terms"
+                                target="_blank"
+                            >
+                                Terms of Service
+                            </Link>{" "}
+                            and{" "}
+                            <Link
+                                className="font-medium text-primary underline underline-offset-2"
+                                href="/privacy"
+                                target="_blank"
+                            >
+                                Privacy Policy
+                            </Link>
+                            .
+                        </span>
+                    </label>
+                )}
+
                 {error && (
                     <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
                         {error}
                     </p>
                 )}
                 <button
-                    className="h-12 w-full rounded-lg bg-primary font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
+                    className="h-10 w-full rounded-lg bg-primary font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
                     disabled={pending}
                     type="submit"
                 >
@@ -322,7 +374,7 @@ export function PhoneFirstSignUp() {
                 </button>
             </form>
 
-            <div className="border-t bg-muted/30 px-6 py-5 text-center text-sm text-muted-foreground sm:px-9">
+            <div className="bg-muted/30 px-6 py-5 text-center text-sm text-muted-foreground sm:px-9">
                 Already have an account?{" "}
                 <Link
                     className="font-medium text-primary underline"

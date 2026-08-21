@@ -1,8 +1,9 @@
 "use client";
 
-import { Renivet } from "@/components/svgs";
+import { Google, RenivetFull } from "@/components/svgs";
 import { useSignIn } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
@@ -11,7 +12,7 @@ type Method = "phone" | "email";
 type Step = "credentials" | "phone-code";
 
 const fieldClass =
-    "h-14 w-full rounded-xl border bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10";
+    "h-10 w-full rounded-xl border bg-background px-4 text-sm outline-none transition placeholder:text-muted-foreground focus:border-primary focus:ring-4 focus:ring-primary/10";
 
 function normalizeIndianPhone(value: string) {
     const digits = value.replace(/\D/g, "");
@@ -35,14 +36,7 @@ function BrandHeader({
     return (
         <>
             <div className="mb-7 flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                    <span className="grid size-11 place-items-center rounded-xl border bg-background shadow-sm">
-                        <Renivet className="size-7" />
-                    </span>
-                    <span className="text-sm font-semibold tracking-[0.18em] text-primary">
-                        RENIVET
-                    </span>
-                </div>
+                <RenivetFull height={36} width={120} />
                 <span className="rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
                     {eyebrow}
                 </span>
@@ -58,7 +52,7 @@ function BrandHeader({
 export function PhoneFirstSignIn() {
     const { isLoaded, signIn, setActive } = useSignIn();
     const router = useRouter();
-    const [method, setMethod] = useState<Method>("phone");
+    const [method, setMethod] = useState<Method>("email");
     const [step, setStep] = useState<Step>("credentials");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
@@ -157,9 +151,24 @@ export function PhoneFirstSignIn() {
     const isCode = step === "phone-code";
 
     return (
-        <div className="w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
-            <div className="h-1 bg-primary" />
-            <div className="border-b bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-7 pt-7 sm:px-9 sm:pt-8">
+        <div className="relative w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
+            <Image
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute -right-10 -top-8 w-72"
+                height={288}
+                src="/images/auth/botanical-branch.png"
+                width={288}
+            />
+            <Image
+                alt=""
+                aria-hidden="true"
+                className="pointer-events-none absolute -bottom-10 -left-7 w-48 opacity-60"
+                height={192}
+                src="/images/auth/bottom-leaf-sprig.png"
+                width={192}
+            />
+            <div className="relative bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-5 pt-7 sm:px-9 sm:pt-8">
                 <BrandHeader
                     eyebrow="Secure access"
                     title={isCode ? "Check your messages" : "Welcome back"}
@@ -170,21 +179,19 @@ export function PhoneFirstSignIn() {
                     }
                 />
             </div>
-            <div className="px-6 pb-7 pt-7 sm:px-9">
+            <div className="px-6 pb-7 pt-5 sm:px-9">
                 {!isCode && (
                     <>
                         <button
-                            className="mt-7 flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
+                            className="flex h-12 w-full items-center justify-center gap-3 rounded-xl border bg-background font-medium shadow-sm transition hover:border-primary/35 hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-50"
                             disabled={pending}
                             onClick={continueWithGoogle}
                             type="button"
                         >
-                            <span className="grid size-5 place-items-center rounded-full bg-white text-sm font-bold text-blue-600 shadow-sm">
-                                G
-                            </span>{" "}
+                            <Google className="size-5" />
                             Continue with Google
                         </button>
-                        <div className="my-7 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        <div className="my-5 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
                             <span className="h-px flex-1 bg-border" />
                             or
                             <span className="h-px flex-1 bg-border" />
@@ -192,13 +199,13 @@ export function PhoneFirstSignIn() {
                     </>
                 )}
                 <form
-                    className={`${isCode ? "mt-7" : ""} space-y-5`}
+                    className={`${isCode ? "mt-5" : ""} space-y-5`}
                     onSubmit={submit}
                 >
                     {isCode ? (
                         <label className="block space-y-2">
                             <span className="text-sm font-semibold">
-                                SMS verification code
+                                OTP verification code
                             </span>
                             <input
                                 autoComplete="one-time-code"
@@ -221,10 +228,10 @@ export function PhoneFirstSignIn() {
                                     onClick={switchMethod}
                                     type="button"
                                 >
-                                    Use email instead
+                                    Login with email
                                 </button>
                             </span>
-                            <div className="flex h-14 overflow-hidden rounded-xl border bg-background transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
+                            <div className="flex h-10 overflow-hidden rounded-xl border bg-background transition focus-within:border-primary focus-within:ring-4 focus-within:ring-primary/10">
                                 <select
                                     aria-label="Country"
                                     className="w-[86px] border-r bg-transparent px-4 text-sm font-medium outline-none"
@@ -248,7 +255,7 @@ export function PhoneFirstSignIn() {
                                 />
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                We&apos;ll send a one-time SMS code.
+                                We&apos;ll send a one-time password (OTP).
                             </p>
                         </label>
                     ) : (
@@ -261,7 +268,7 @@ export function PhoneFirstSignIn() {
                                         onClick={switchMethod}
                                         type="button"
                                     >
-                                        Use phone
+                                    Login with phone
                                     </button>
                                 </span>
                                 <input
@@ -299,7 +306,7 @@ export function PhoneFirstSignIn() {
                         </p>
                     )}
                     <button
-                        className="h-14 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="h-11 w-full rounded-xl bg-primary font-semibold text-primary-foreground shadow-lg shadow-primary/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
                         disabled={pending}
                         type="submit"
                     >
@@ -308,8 +315,8 @@ export function PhoneFirstSignIn() {
                             : isCode
                               ? "Verify code"
                               : method === "phone"
-                                ? "Send SMS code"
-                                : "Sign in"}
+                                ? "Login with OTP"
+                                : "Login with email"}
                     </button>
                 </form>
                 <p className="mt-6 text-center text-sm text-muted-foreground">
@@ -321,9 +328,6 @@ export function PhoneFirstSignIn() {
                         Sign up
                     </Link>
                 </p>
-            </div>
-            <div className="border-t bg-muted/30 px-6 py-4 text-center text-xs text-muted-foreground sm:px-9">
-                Protected by secure Clerk authentication
             </div>
         </div>
     );
