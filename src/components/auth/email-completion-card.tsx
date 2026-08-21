@@ -17,8 +17,12 @@ export function EmailCompletionCard() {
     const [dismissed, setDismissed] = useState(false);
     const [step, setStep] = useState<Step>("email");
     const [email, setEmail] = useState("");
-    const [firstName, setFirstName] = useState(user?.firstName ?? "");
-    const [lastName, setLastName] = useState(user?.lastName ?? "");
+    const [firstName, setFirstName] = useState(
+        user?.firstName === "Renivet" ? "" : user?.firstName ?? ""
+    );
+    const [lastName, setLastName] = useState(
+        user?.lastName?.startsWith("Customer ") ? "" : user?.lastName ?? ""
+    );
     const [code, setCode] = useState("");
     const [emailAddress, setEmailAddress] =
         useState<EmailAddressResource | null>(null);
@@ -29,8 +33,11 @@ export function EmailCompletionCard() {
     const hasVerifiedEmail = user?.emailAddresses.some(
         (address) => address.verification.status === "verified"
     );
-    const needsFirstName = !user?.firstName?.trim();
-    const needsLastName = !user?.lastName?.trim();
+    const profileCompletionRequired =
+        user?.unsafeMetadata?.profileCompletionRequired === true;
+    const needsFirstName =
+        profileCompletionRequired || !user?.firstName?.trim();
+    const needsLastName = profileCompletionRequired || !user?.lastName?.trim();
 
     if (!isLoaded || !isSignedIn || !user || hasVerifiedEmail || dismissed)
         return null;
@@ -49,14 +56,14 @@ export function EmailCompletionCard() {
         setPending(true);
         setError(null);
         try {
-            if (needsFirstName && !firstName.trim())
-                throw new Error("Please enter your first name");
-            if (needsLastName && !lastName.trim())
-                throw new Error("Please enter your last name");
             if (needsFirstName || needsLastName) {
                 await user.update({
-                    firstName: firstName.trim() || undefined,
-                    lastName: lastName.trim() || undefined,
+                    firstName: firstName.trim() || user.firstName || "Renivet",
+                    lastName: lastName.trim() || user.lastName || "Customer",
+                    unsafeMetadata: {
+                        ...user.unsafeMetadata,
+                        profileCompletionRequired: false,
+                    },
                 });
             }
             const controller = new AbortController();
@@ -249,7 +256,6 @@ export function EmailCompletionCard() {
                                             setFirstName(event.target.value)
                                         }
                                         placeholder="First name"
-                                        required
                                         value={firstName}
                                     />
                                 )}
@@ -261,7 +267,6 @@ export function EmailCompletionCard() {
                                             setLastName(event.target.value)
                                         }
                                         placeholder="Last name"
-                                        required
                                         value={lastName}
                                     />
                                 )}

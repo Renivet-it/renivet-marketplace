@@ -10,7 +10,11 @@ export default clerkMiddleware(async (auth, req) => {
     const res = NextResponse.next();
     const supportQueue = url.searchParams.get("queue");
 
-    if (url.pathname === "/api/webhooks/clerk") return NextResponse.next();
+    if (
+        url.pathname === "/api/webhooks/clerk" ||
+        url.pathname === "/api/permission"
+    )
+        return NextResponse.next();
 
     if (url.pathname === "/support")
         return NextResponse.redirect(new URL("https://dsc.gg/drvgo"), {
@@ -40,7 +44,13 @@ export default clerkMiddleware(async (auth, req) => {
                 url
             ).toString()
         );
-        if (res.error) return NextResponse.redirect(new URL("/", url));
+        // Do not redirect the homepage back to itself when a newly-created
+        // Clerk user is still being synchronized to the local database.
+        // That otherwise creates an infinite / -> / redirect loop.
+        if (res.error) {
+            if (url.pathname === "/") return NextResponse.next();
+            return NextResponse.redirect(new URL("/", url));
+        }
 
         if (url.pathname.startsWith("/dashboard")) {
             const existingUser = res.data!.data!;
