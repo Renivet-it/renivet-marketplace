@@ -1,5 +1,6 @@
 "use client";
 
+import { resolveEmailPasswordSignIn } from "@/components/auth/email-password-sign-in";
 import { Google, RenivetFull } from "@/components/svgs";
 import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -8,7 +9,7 @@ import Link from "next/link";
 import { FormEvent, useState } from "react";
 
 type Method = "phone" | "email";
-type Step = "credentials" | "phone-code";
+type Step = "credentials" | "phone-code" | "email-second-factor";
 type PhoneAttempt = "sign-in" | "sign-up";
 
 const fieldClass =
@@ -58,12 +59,14 @@ export function PhoneFirstSignIn() {
     const { signUp, setActive: setSignUpActive } = useSignUp();
     const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("credentials");
-    const [phoneAttempt, setPhoneAttempt] =
-        useState<PhoneAttempt>("sign-in");
+    const [phoneAttempt, setPhoneAttempt] = useState<PhoneAttempt>("sign-in");
     const [phone, setPhone] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [code, setCode] = useState("");
+    const [emailSecondFactorId, setEmailSecondFactorId] = useState<
+        string | null
+    >(null);
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [pending, setPending] = useState(false);
@@ -74,7 +77,7 @@ export function PhoneFirstSignIn() {
             value.errors.some((item) => item.code === "form_code_incorrect")
         ) {
             setError(
-                "Incorrect OTP. Please check the latest code sent to your phone and try again."
+                `Incorrect code. Please check the latest code sent to your ${step === "email-second-factor" ? "email" : "phone"} and try again.`
             );
             return;
         }
@@ -89,6 +92,7 @@ export function PhoneFirstSignIn() {
     };
     const complete = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
+        if (!setActive) throw new Error("Sign-in is still loading");
         await setActive({ session: sessionId });
         await fetch("/api/account/sync", { method: "POST" }).catch(
             () => undefined
@@ -98,6 +102,7 @@ export function PhoneFirstSignIn() {
 
     const completePhoneSignUp = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
+        if (!setSignUpActive) throw new Error("Sign-up is still loading");
         await setSignUpActive({ session: sessionId });
         await fetch("/api/account/sync", { method: "POST" }).catch(
             () => undefined
@@ -135,7 +140,17 @@ export function PhoneFirstSignIn() {
         setError(null);
         setNotice(null);
         try {
-            if (phoneAttempt === "sign-up") {
+            if (step === "email-second-factor") {
+                if (!emailSecondFactorId)
+                    throw new Error(
+                        "Email verification is no longer available. Please sign in again."
+                    );
+                await signIn.prepareSecondFactor({
+                    strategy: "email_code",
+                    emailAddressId: emailSecondFactorId,
+                } as never);
+            } else if (phoneAttempt === "sign-up") {
+                if (!signUp) throw new Error("Sign-up is still loading");
                 await signUp.preparePhoneNumberVerification({
                     strategy: "phone_code",
                 });
@@ -144,14 +159,18 @@ export function PhoneFirstSignIn() {
                     (factor) => factor.strategy === "phone_code"
                 );
                 if (!phoneFactor || phoneFactor.strategy !== "phone_code")
-                    throw new Error("SMS sign-in is not available for this phone number");
+                    throw new Error(
+                        "SMS sign-in is not available for this phone number"
+                    );
                 await signIn.prepareFirstFactor({
                     strategy: "phone_code",
                     phoneNumberId: phoneFactor.phoneNumberId,
                 });
             }
             setCode("");
-            setNotice("A new OTP has been sent to your phone.");
+            setNotice(
+                `A new verification code has been sent to your ${step === "email-second-factor" ? "email" : "phone"}.`
+            );
         } catch (value) {
             showError(value);
         } finally {
@@ -166,11 +185,26 @@ export function PhoneFirstSignIn() {
         setError(null);
         setNotice(null);
         try {
+            if (step === "email-second-factor") {
+                const attempt = await signIn.attemptSecondFactor({
+                    strategy: "email_code",
+                    code,
+                } as never);
+                if (attempt.status !== "complete")
+                    throw new Error(
+                        "Email verification could not be completed. Please request a new code and try again."
+                    );
+                await complete(attempt.createdSessionId);
+                return;
+            }
             if (step === "phone-code") {
                 if (phoneAttempt === "sign-up") {
-                    const attempt = await signUp.attemptPhoneNumberVerification({
-                        code,
-                    });
+                    if (!signUp) throw new Error("Sign-up is still loading");
+                    const attempt = await signUp.attemptPhoneNumberVerification(
+                        {
+                            code,
+                        }
+                    );
                     if (attempt.status !== "complete")
                         throw new Error(
                             "The verification code could not be completed"
@@ -195,12 +229,31 @@ export function PhoneFirstSignIn() {
                     identifier: email.trim(),
                     password,
                 });
-                if (attempt.status !== "complete")
-                    throw new Error(
-                        "Email and password sign-in could not be completed"
+                const resolution = resolveEmailPasswordSignIn(attempt);
+                if (resolution.type === "complete") {
+                    await complete(resolution.sessionId);
+                    return;
+                }
+                if (resolution.type === "verify-email") {
+                    await signIn.prepareSecondFactor({
+                        strategy: "email_code",
+                        emailAddressId: resolution.emailAddressId,
+                    } as never);
+                    setEmailSecondFactorId(resolution.emailAddressId);
+                    setCode("");
+                    setStep("email-second-factor");
+                    setNotice(
+                        "For your security, we sent a verification code to your email."
                     );
-                await complete(attempt.createdSessionId);
-                return;
+                    return;
+                }
+                if (resolution.status === "needs_new_password")
+                    throw new Error(
+                        "Your password needs to be reset before you can sign in. Use Forgot password to continue."
+                    );
+                throw new Error(
+                    "This sign-in requires a verification method that is not available. Try Google sign-in or reset your password."
+                );
             }
             const normalizedPhone = normalizeIndianPhone(phone);
             try {
@@ -222,6 +275,7 @@ export function PhoneFirstSignIn() {
                 setStep("phone-code");
             } catch (value) {
                 if (!isUnknownPhoneNumber(value)) throw value;
+                if (!signUp) throw new Error("Sign-up is still loading");
 
                 await signUp.create({
                     phoneNumber: normalizedPhone,
@@ -252,10 +306,13 @@ export function PhoneFirstSignIn() {
         setMethod((current) => (current === "phone" ? "email" : "phone"));
         setStep("credentials");
         setPhoneAttempt("sign-in");
+        setEmailSecondFactorId(null);
+        setCode("");
         setError(null);
         setNotice(null);
     };
-    const isCode = step === "phone-code";
+    const isCode = step !== "credentials";
+    const isEmailCode = step === "email-second-factor";
 
     return (
         <div className="relative w-full max-w-[440px] overflow-hidden rounded-[28px] border border-border/80 bg-background shadow-[0_24px_70px_-28px_rgba(24,30,17,0.35)]">
@@ -278,11 +335,19 @@ export function PhoneFirstSignIn() {
             <div className="relative bg-gradient-to-b from-primary/[0.07] to-transparent px-6 pb-5 pt-7 sm:px-9 sm:pt-8">
                 <BrandHeader
                     eyebrow="Secure access"
-                    title={isCode ? "Check your messages" : "Welcome back"}
+                    title={
+                        isEmailCode
+                            ? "Verify your email"
+                            : isCode
+                              ? "Check your messages"
+                              : "Welcome back"
+                    }
                     description={
-                        isCode
-                            ? "Enter the six-digit code we sent to your phone."
-                            : "Sign in to continue shopping with Renivet."
+                        isEmailCode
+                            ? "Enter the six-digit code we sent to your email."
+                            : isCode
+                              ? "Enter the six-digit code we sent to your phone."
+                              : "Sign in to continue shopping with Renivet."
                     }
                 />
             </div>
@@ -298,7 +363,7 @@ export function PhoneFirstSignIn() {
                             <Google className="size-5" />
                             Continue with Google
                         </button>
-                        <div className="my-5 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+                        <div className="my-5 flex items-center gap-3 text-11 font-medium uppercase tracking-[0.14em] text-muted-foreground">
                             <span className="h-px flex-1 bg-border" />
                             or
                             <span className="h-px flex-1 bg-border" />
@@ -312,14 +377,21 @@ export function PhoneFirstSignIn() {
                     {isCode ? (
                         <label className="block space-y-2">
                             <span className="text-sm font-semibold">
-                                OTP verification code
+                                {isEmailCode
+                                    ? "Email verification code"
+                                    : "OTP verification code"}
                             </span>
                             <input
                                 autoComplete="one-time-code"
                                 className={`${fieldClass} text-center text-lg tracking-[0.35em] placeholder:tracking-normal`}
                                 inputMode="numeric"
+                                maxLength={6}
                                 onChange={(event) =>
-                                    setCode(event.target.value)
+                                    setCode(
+                                        event.target.value
+                                            .replace(/\D/g, "")
+                                            .slice(0, 6)
+                                    )
                                 }
                                 placeholder="••••••"
                                 required
@@ -376,7 +448,7 @@ export function PhoneFirstSignIn() {
                                         onClick={switchMethod}
                                         type="button"
                                     >
-                                    Login with phone
+                                        Login with phone
                                     </button>
                                 </span>
                                 <input
@@ -425,7 +497,7 @@ export function PhoneFirstSignIn() {
                             onClick={resendOtp}
                             type="button"
                         >
-                            Didn&apos;t receive it? Resend OTP
+                            Didn&apos;t receive it? Resend code
                         </button>
                     )}
                     <button
@@ -435,21 +507,29 @@ export function PhoneFirstSignIn() {
                     >
                         {pending
                             ? "Please wait..."
-                            : isCode
-                              ? "Verify code"
-                              : method === "phone"
-                                ? "Login with OTP"
-                                : "Login with email"}
+                            : isEmailCode
+                              ? "Verify email"
+                              : isCode
+                                ? "Verify code"
+                                : method === "phone"
+                                  ? "Login with OTP"
+                                  : "Login with email"}
                     </button>
                 </form>
                 {!isCode && method === "phone" && (
-                    <p className="mt-3 text-center text-[11px] leading-4 text-muted-foreground">
-                        By continuing, you agree to our {" "}
-                        <Link className="underline underline-offset-2" href="/terms">
+                    <p className="mt-3 text-center text-11 leading-4 text-muted-foreground">
+                        By continuing, you agree to our{" "}
+                        <Link
+                            className="underline underline-offset-2"
+                            href="/terms"
+                        >
                             Terms
                         </Link>{" "}
-                        and {" "}
-                        <Link className="underline underline-offset-2" href="/privacy">
+                        and{" "}
+                        <Link
+                            className="underline underline-offset-2"
+                            href="/privacy"
+                        >
                             Privacy Policy
                         </Link>
                         .
