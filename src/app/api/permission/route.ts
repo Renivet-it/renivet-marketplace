@@ -1,4 +1,6 @@
 import { BitFieldSitePermission } from "@/config/permissions";
+import { db } from "@/lib/db";
+import { users } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import {
     AppError,
@@ -7,6 +9,7 @@ import {
     handleError,
     hasPermission,
 } from "@/lib/utils";
+import { clerkClient } from "@clerk/nextjs/server";
 import { NextRequest } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -19,7 +22,40 @@ export async function GET(req: NextRequest) {
         if (!uId || !path)
             throw new AppError("Invalid parameters", "BAD_REQUEST");
 
-        const existingUser = await userCache.get(uId);
+        let existingUser = await userCache.get(uId);
+
+        // A Clerk session can become active a moment before the user.created
+        // webhook writes the local profile. Create the minimal local profile
+        // here as a safe fallback so a newly signed-in customer is not bounced.
+        if (!existingUser) {
+            const clerkUser = await (await clerkClient()).users.getUser(uId);
+            const email =
+                clerkUser.primaryEmailAddress ?? clerkUser.emailAddresses[0];
+            const phone =
+                clerkUser.primaryPhoneNumber ?? clerkUser.phoneNumbers[0];
+            const emailAddress =
+                email?.emailAddress ??
+                (phone?.phoneNumber
+                    ? `${phone.phoneNumber.replace(/[^0-9]/g, "")}@phone.renivet.com`
+                    : `${clerkUser.id}@renivet.com`);
+
+            await db
+                .insert(users)
+                .values({
+                    id: clerkUser.id,
+                    firstName: clerkUser.firstName || (phone ? "User" : "Customer"),
+                    lastName: clerkUser.lastName || "",
+                    email: emailAddress,
+                    phone: phone?.phoneNumber ?? null,
+                    avatarUrl: clerkUser.imageUrl ?? null,
+                    isEmailVerified: email?.verification?.status === "verified",
+                    isPhoneVerified: phone?.verification?.status === "verified",
+                    createdAt: new Date(clerkUser.createdAt),
+                    updatedAt: new Date(clerkUser.updatedAt),
+                })
+                .onConflictDoNothing();
+            existingUser = await userCache.get(uId);
+        }
         if (!existingUser) throw new AppError("User not found", "NOT_FOUND");
 
         const { sitePermissions } = getUserPermissions(existingUser.roles);
