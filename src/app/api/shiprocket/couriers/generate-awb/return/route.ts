@@ -1,8 +1,11 @@
 import { courierService } from "@/actions/shiprocket/couriers";
+import { requireLogisticsStaff } from "@/lib/auth/logistics-access";
 import { AWB } from "@/lib/shiprocket/validations/request";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
+    const denied = await requireLogisticsStaff();
+    if (denied) return denied;
     const body: AWB = await req.json();
 
     try {

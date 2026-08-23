@@ -1,3 +1,4 @@
+import { requireLogisticsStaff } from "@/lib/auth/logistics-access";
 import { createOrder } from "@/lib/delhivery/orders";
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -28,6 +29,9 @@ const forwardOrderSchema = z.object({
 
 export async function POST(req: Request) {
     try {
+        const denied = await requireLogisticsStaff();
+        if (denied) return denied;
+
         const body = await req.json();
         const parsed = forwardOrderSchema.parse(body);
         const result = await createOrder({

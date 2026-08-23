@@ -1,5 +1,4 @@
 "use client";
-import { Spinner } from "@/components/ui/spinner";
 
 import {
     ApiResponse,
@@ -20,6 +19,7 @@ import {
     SheetHeader,
     SheetTitle,
 } from "@/components/ui/sheet";
+import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc/client";
 import { cn, generatePickupLocationCode } from "@/lib/utils";
 import { format } from "date-fns";
@@ -103,6 +103,7 @@ export default function OrderShipment({
             /* ---------- DELHIVERY FLOW ---------- */
             if (isDelhivery) {
                 const body = {
+                    orderId: order.id,
                     pickup_location: pickupLocation,
                     pickup_date: format(selectedDate, "yyyy-MM-dd"),
                     pickup_time: selectedTime,

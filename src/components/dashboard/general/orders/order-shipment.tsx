@@ -285,6 +285,7 @@ export default function OrderShipment({
                 const dateStr = format(selectedDate, "yyyy-MM-dd");
 
                 const delhiveryPayload = {
+                    orderId: order.id,
                     // ====== USE the generated pickupLocation here ======
                     pickup_location: pickupLocation,
                     // ==================================================

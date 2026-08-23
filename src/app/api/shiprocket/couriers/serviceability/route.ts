@@ -1,8 +1,11 @@
 import { courierService } from "@/actions/shiprocket/couriers";
+import { requireLogisticsStaff } from "@/lib/auth/logistics-access";
 import { parseCourierParams } from "@/lib/shiprocket/helper";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
+    const denied = await requireLogisticsStaff();
+    if (denied) return denied;
     const { searchParams } = new URL(req.url);
     const params = parseCourierParams(searchParams);
     try {
