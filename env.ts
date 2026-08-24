@@ -31,6 +31,12 @@ export const env = createEnv({
             .string({ required_error: "GOOGLE_ANALYTICS_ID is required" })
             .min(1, "GOOGLE_ANALYTICS_ID is required"),
 
+        FACEBOOK_CAPI_ACCESS_TOKEN: z
+            .string({
+                required_error: "FACEBOOK_CAPI_ACCESS_TOKEN is required",
+            })
+            .min(1, "FACEBOOK_CAPI_ACCESS_TOKEN is required"),
+
         RESEND_API_KEY: z
             .string({ required_error: "RESEND_API_KEY is required" })
             .min(1, "RESEND_API_KEY is required"),
@@ -143,6 +149,7 @@ export const env = createEnv({
         JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
         RESEND_API_KEY: process.env.RESEND_API_KEY,
         GOOGLE_ANALYTICS_ID: process.env.GOOGLE_ANALYTICS_ID,
+        FACEBOOK_CAPI_ACCESS_TOKEN: process.env.FACEBOOK_CAPI_ACCESS_TOKEN,
         RAZOR_PAY_KEY_ID: process.env.RAZOR_PAY_KEY_ID,
         RAZOR_PAY_SECRET_KEY: process.env.RAZOR_PAY_SECRET_KEY,
         RAZOR_PAY_WEBHOOK_SECRET: process.env.RAZOR_PAY_WEBHOOK_SECRET,
