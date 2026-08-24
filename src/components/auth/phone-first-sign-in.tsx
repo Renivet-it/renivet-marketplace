@@ -1,6 +1,7 @@
 "use client";
 
 import { resolveEmailPasswordSignIn } from "@/components/auth/email-password-sign-in";
+import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { Google, RenivetFull } from "@/components/svgs";
 import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -371,7 +372,7 @@ export function PhoneFirstSignIn() {
                     </>
                 )}
                 <form
-                    className={`${isCode ? "mt-5" : ""} space-y-5`}
+                    className={`${isCode ? "mt-2" : ""} space-y-5`}
                     onSubmit={submit}
                 >
                     {isCode ? (
@@ -381,22 +382,7 @@ export function PhoneFirstSignIn() {
                                     ? "Email verification code"
                                     : "OTP verification code"}
                             </span>
-                            <input
-                                autoComplete="one-time-code"
-                                className={`${fieldClass} text-center text-lg tracking-[0.35em] placeholder:tracking-normal`}
-                                inputMode="numeric"
-                                maxLength={6}
-                                onChange={(event) =>
-                                    setCode(
-                                        event.target.value
-                                            .replace(/\D/g, "")
-                                            .slice(0, 6)
-                                    )
-                                }
-                                placeholder="••••••"
-                                required
-                                value={code}
-                            />
+                            <OTPCodeInput value={code} onChange={setCode} />
                         </label>
                     ) : method === "phone" ? (
                         <label className="block space-y-2">

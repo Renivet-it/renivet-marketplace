@@ -1,5 +1,6 @@
 "use client";
 
+import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { Google, RenivetFull } from "@/components/svgs";
 import { useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -188,23 +189,16 @@ export function PhoneFirstSignUp() {
                 </div>
             )}
 
-            <form
-                className="space-y-5 px-6 pb-7 sm:px-9"
-                onSubmit={submit}
-            >
+            <form className="space-y-5 px-6 pb-7 sm:px-9" onSubmit={submit}>
                 {step === "verification" ? (
                     <label className="block space-y-2">
                         <span className="text-sm font-medium">
                             Verification code
                         </span>
-                        <input
-                            autoComplete="one-time-code"
-                            className="h-10 w-full rounded-lg border bg-background px-3 text-center text-lg tracking-[0.35em] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/20"
-                            inputMode="numeric"
-                            onChange={(event) => setCode(event.target.value)}
-                            placeholder="••••••"
-                            required
+                        <OTPCodeInput
                             value={code}
+                            onChange={setCode}
+                            disabled={pending}
                         />
                     </label>
                 ) : (

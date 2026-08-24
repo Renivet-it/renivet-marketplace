@@ -65,12 +65,18 @@ export const cartSchema = z.object({
         .transform((v) => new Date(v)),
 });
 
-export const createCartSchema = cartSchema.pick({
-    userId: true,
-    productId: true,
-    variantId: true,
-    quantity: true,
-});
+export const createCartSchema = cartSchema
+    .pick({
+        userId: true,
+        productId: true,
+        variantId: true,
+        quantity: true,
+    })
+    .extend({
+        customizationRequest: cartSchema.shape.customizationRequest
+            .optional()
+            .default(null),
+    });
 
 export const updateCartSchema = createCartSchema
     .omit({

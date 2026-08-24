@@ -3,6 +3,7 @@ import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-em
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { db } from "@/lib/db";
 import { productQueries, refundQueries } from "@/lib/db/queries";
 import { orderShipments } from "@/lib/db/schema/order-shipment";
@@ -288,10 +289,11 @@ export const ordersRouter = createTRPCRouter({
                     message:
                         "You are not allowed to create an order for another user",
                 });
-            if (user.brand !== null)
+            if (!canPlaceCustomerOrder(user))
                 throw new TRPCError({
                     code: "FORBIDDEN",
-                    message: DEFAULT_MESSAGES.ERRORS.USER_NOT_CUSTOMER,
+                    message:
+                        "Only customer accounts can place orders. Please use a customer account.",
                 });
 
             return next();

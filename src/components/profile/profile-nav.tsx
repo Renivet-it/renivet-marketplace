@@ -1,6 +1,7 @@
 "use client";
 
 import { DEFAULT_AVATAR_URL } from "@/config/const";
+import { displayCustomerEmail } from "@/lib/email-display";
 import { trpc } from "@/lib/trpc/client";
 import { cn, convertValueToLabel, hideEmail } from "@/lib/utils";
 import Link from "next/link";
@@ -358,7 +359,9 @@ export function ProfileNav({ className, ...props }: GenericProps) {
                                         : "text-sm"
                                 )}
                             >
-                                {hideEmail(user.email)}
+                                {displayCustomerEmail(user.email) === "N/A"
+                                    ? "N/A"
+                                    : hideEmail(user.email)}
                             </p>
                             <Link
                                 href="/profile"

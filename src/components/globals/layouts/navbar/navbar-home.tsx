@@ -33,7 +33,6 @@ import {
     handleClientError,
     hasPermission,
     hideEmail,
-    wait,
 } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -296,8 +295,6 @@ export function NavbarHome({
             posthog.capture(POSTHOG_EVENTS.AUTH.SIGNED_OUT, {
                 userId: user?.id,
             });
-            await wait(1000);
-            window.location.reload();
         },
         onError: (err, _, ctx) => {
             return isClerkAPIResponseError(err)

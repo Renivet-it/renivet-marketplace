@@ -11,6 +11,7 @@ import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 // import { orderQueries } from "@/lib/db/queries"; // No longer needed directly for client-side intent creation
 import { fbEvent } from "@/lib/fbpixel";
 import {
@@ -65,6 +66,7 @@ export function OrderPage({
         "online" | "cod"
     >("online");
     const posthog = usePostHog();
+    const isAdmin = !canPlaceCustomerOrder(user);
 
     const swapRewardStatusQuery =
         trpc.general.swapRewards.getSwapRewardStatus.useQuery();
@@ -700,6 +702,12 @@ export function OrderPage({
     };
 
     const handlePlaceOrder = () => {
+        if (isAdmin) {
+            toast.error(
+                "Only customer accounts can place orders. Please sign in with a customer account."
+            );
+            return;
+        }
         if (!userCart || !selectedShippingAddress) {
             toast.error("Cart or address missing");
             return;
@@ -931,6 +939,12 @@ export function OrderPage({
                         </p>
                     </div>
 
+                    {isAdmin && (
+                        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-900">
+                            Only customer accounts can place orders. Please sign in
+                            with a customer account to buy.
+                        </p>
+                    )}
                     <Button
                         size="lg"
                         className="group w-full rounded-xl bg-[#95b6da] text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#82a3c7] hover:shadow-md"
@@ -942,7 +956,8 @@ export function OrderPage({
                             order?.paymentStatus === "paid" ||
                             order?.status !== "pending" ||
                             !selectedShippingAddress ||
-                            allAvailableItems.length === 0
+                            allAvailableItems.length === 0 ||
+                            isAdmin
                         }
                         variant={
                             allAvailableItems.length === 0

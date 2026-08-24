@@ -1,5 +1,6 @@
 "use client";
 
+import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { useSignIn, useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { EmailAddressResource } from "@clerk/types";
@@ -325,18 +326,10 @@ export function EmailCompletionCard() {
                 {step === "code" && (
                     <form className="mt-4" onSubmit={verifyCode}>
                         <div className="flex gap-2">
-                            <input
-                                autoComplete="one-time-code"
-                                className="h-10 min-w-0 flex-1 rounded-xl border bg-background px-3 text-center text-sm tracking-[0.2em] outline-none transition placeholder:tracking-normal focus:border-primary focus:ring-4 focus:ring-primary/10"
-                                inputMode="numeric"
-                                maxLength={6}
-                                onChange={(event) =>
-                                    updateCode(event.target.value)
-                                }
-                                pattern="[0-9]{6}"
-                                placeholder="••••••"
-                                required
+                            <OTPCodeInput
                                 value={code}
+                                onChange={updateCode}
+                                disabled={pending}
                             />
                             <button
                                 className="h-10 shrink-0 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:opacity-50"
@@ -391,18 +384,10 @@ export function EmailCompletionCard() {
                             account email.
                         </p>
                         <div className="flex gap-2">
-                            <input
-                                autoComplete="one-time-code"
-                                className="h-10 min-w-0 flex-1 rounded-xl border bg-background px-3 text-center text-sm tracking-[0.2em] outline-none"
-                                inputMode="numeric"
-                                maxLength={6}
-                                onChange={(event) =>
-                                    updateCode(event.target.value)
-                                }
-                                pattern="[0-9]{6}"
-                                placeholder="••••••"
-                                required
+                            <OTPCodeInput
                                 value={code}
+                                onChange={updateCode}
+                                disabled={pending}
                             />
                             <button
                                 className="h-10 shrink-0 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"

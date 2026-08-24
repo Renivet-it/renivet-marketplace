@@ -7,7 +7,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { DEFAULT_AVATAR_URL } from "@/config/const";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { trpc } from "@/lib/trpc/client";
-import { cn, handleClientError, hideEmail, wait } from "@/lib/utils";
+import { cn, handleClientError, hideEmail } from "@/lib/utils";
 import { useAuth } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
@@ -36,8 +36,6 @@ export function NavUser() {
             posthog.capture(POSTHOG_EVENTS.AUTH.SIGNED_OUT, {
                 userId: user?.id,
             });
-            await wait(1000);
-            window.location.reload();
         },
         onError: (err, _, ctx) => {
             return isClerkAPIResponseError(err)
@@ -69,7 +67,9 @@ export function NavUser() {
                                     alt={user?.firstName ?? "User"}
                                 />
                                 <AvatarFallback>
-                                    {(user?.firstName?.[0] ?? "U").toUpperCase()}
+                                    {(
+                                        user?.firstName?.[0] ?? "U"
+                                    ).toUpperCase()}
                                 </AvatarFallback>
                             </Avatar>
 
