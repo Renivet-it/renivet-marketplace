@@ -22,10 +22,16 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { RichTextViewer } from "@/components/ui/rich-text-viewer";
 import { Spinner } from "@/components/ui/spinner";
 import { getColorHex } from "@/lib/color-utils";
+import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
-import { cn, convertPaiseToRupees, formatINR, formatPriceTag } from "@/lib/utils";
+import {
+    cn,
+    convertPaiseToRupees,
+    formatINR,
+    formatPriceTag,
+} from "@/lib/utils";
 import { handleCartFlyAnimation } from "@/lib/utils/cartAnimation";
 import {
     CachedCart,
@@ -282,6 +288,11 @@ export function ProductCartAddForm({
             { userId: userId! },
             { enabled: !!userId, initialData: initialCart }
         );
+    const { data: currentUser } = trpc.general.users.currentUser.useQuery(
+        undefined,
+        { enabled: !!userId }
+    );
+    const isAdmin = Boolean(currentUser && !canPlaceCustomerOrder(currentUser));
 
     // Selected variant
     const selectedVariant = useMemo(() => {
@@ -383,6 +394,7 @@ export function ProductCartAddForm({
             variantId: selectedVariant?.id || null,
             quantity: 1,
             userId: userId ?? "guest",
+            customizationRequest: null,
         },
     });
 
@@ -661,6 +673,11 @@ export function ProductCartAddForm({
             <Form {...form}>
                 <form
                     onSubmit={form.handleSubmit((values, e) => {
+                        if ((isBuyNowRef.current || isBuyNow) && isAdmin) {
+                            return toast.error(
+                                "Only customer accounts can place orders. Please sign in with a customer account."
+                            );
+                        }
                         if (
                             !product.isAvailable ||
                             !product.isActive ||
@@ -707,6 +724,8 @@ export function ProductCartAddForm({
                                 productId: product.id,
                                 variantId: selectedVariant?.id,
                                 quantity,
+                                customizationRequest:
+                                    values.customizationRequest ?? null,
                                 price: selectedVariant
                                     ? selectedVariant.price
                                     : product.price,
@@ -969,6 +988,13 @@ export function ProductCartAddForm({
 
                         {/* Inline buttons — Patagonia-style pill buttons */}
                         <div ref={buttonsRef} className="flex flex-col gap-3">
+                            {isAdmin && (
+                                <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-900">
+                                    Only customer accounts can place orders.
+                                    Please sign in with a customer account to
+                                    buy.
+                                </p>
+                            )}
                             {isProductLevelOutOfStock ? (
                                 <Button
                                     type="button"
@@ -986,7 +1012,9 @@ export function ProductCartAddForm({
                                         size="lg"
                                         className="h-14 w-full rounded-full bg-neutral-900 text-[15px] font-semibold tracking-wide text-white transition-all hover:bg-black active:scale-[0.98] disabled:opacity-50"
                                         disabled={
-                                            isSelectedUnavailable || isPending
+                                            isSelectedUnavailable ||
+                                            isPending ||
+                                            isAdmin
                                         }
                                         onClick={(e) => {
                                             if (isAddedToCart) {
@@ -1023,7 +1051,9 @@ export function ProductCartAddForm({
                                         size="lg"
                                         className="h-14 w-full rounded-full border-2 border-neutral-900 bg-transparent text-[15px] font-semibold tracking-wide text-neutral-900 transition-all hover:bg-neutral-100 active:scale-[0.98] disabled:opacity-50"
                                         disabled={
-                                            isSelectedUnavailable || isPending
+                                            isSelectedUnavailable ||
+                                            isPending ||
+                                            isAdmin
                                         }
                                         onClick={(e) => {
                                             if (isAddedToCart) {
@@ -1145,7 +1175,8 @@ export function ProductCartAddForm({
                                         })}
                                     </p>
                                     <p className="mt-1 truncate text-[11px] text-neutral-500">
-                                        {selectedSummary ?? "Select size or color"}
+                                        {selectedSummary ??
+                                            "Select size or color"}
                                     </p>
                                 </div>
                                 <div className="shrink-0">
@@ -1166,7 +1197,8 @@ export function ProductCartAddForm({
                                                 className="h-12 min-w-[126px] rounded-full bg-neutral-900 px-5 text-[14px] font-semibold text-white hover:bg-black disabled:opacity-50"
                                                 disabled={
                                                     isSelectedUnavailable ||
-                                                    isPending
+                                                    isPending ||
+                                                    isAdmin
                                                 }
                                                 onClick={(e) => {
                                                     if (isAddedToCart) {
@@ -1200,12 +1232,15 @@ export function ProductCartAddForm({
                                                 className="h-11 min-w-[126px] rounded-full border-neutral-900 px-5 text-[13px] font-semibold text-neutral-900 hover:bg-neutral-100 disabled:opacity-50"
                                                 disabled={
                                                     isSelectedUnavailable ||
-                                                    isPending
+                                                    isPending ||
+                                                    isAdmin
                                                 }
                                                 onClick={(e) => {
                                                     if (isAddedToCart) {
                                                         e.preventDefault();
-                                                        router.push("/checkout");
+                                                        router.push(
+                                                            "/checkout"
+                                                        );
                                                         return;
                                                     }
                                                     setIsBuyNow(true);

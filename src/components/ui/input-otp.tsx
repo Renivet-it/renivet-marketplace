@@ -8,9 +8,10 @@ import * as React from "react";
 const InputOTP = React.forwardRef<
     React.ElementRef<typeof OTPInput>,
     React.ComponentPropsWithoutRef<typeof OTPInput>
->(({ className, containerClassName, ...props }, ref) => (
+>(({ className, containerClassName, autoFocus = true, ...props }, ref) => (
     <OTPInput
         ref={ref}
+        autoFocus={autoFocus}
         containerClassName={cn(
             "flex items-center gap-2 has-[:disabled]:opacity-50",
             containerClassName

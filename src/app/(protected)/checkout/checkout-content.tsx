@@ -12,7 +12,9 @@ import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
+import { Textarea } from "@/components/ui/textarea-general";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { fbEvent } from "@/lib/fbpixel";
 import {
     createRazorpayPaymentOptions,
@@ -81,6 +83,9 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<
         "online" | "cod"
     >("online");
+    const [customizationRequests, setCustomizationRequests] = useState<
+        Record<string, string>
+    >({});
 
     const swapRewardStatusQuery =
         trpc.general.swapRewards.getSwapRewardStatus.useQuery(undefined, {
@@ -124,6 +129,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     );
 
     const { data: user } = trpc.general.users.currentUser.useQuery();
+    const isAdmin = Boolean(user && !canPlaceCustomerOrder(user));
 
     const rewardCheckoutQuery =
         trpc.general.swapRewards.getRewardCheckoutItem.useQuery(
@@ -636,6 +642,14 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         variantId: item.variantId,
                         sku: item.variant?.nativeSku ?? item.product.nativeSku,
                         quantity: item.quantity,
+                        customizationRequest: item.product
+                            .customizationAvailable
+                            ? (
+                                  customizationRequests[item.id] ??
+                                  item.customizationRequest ??
+                                  ""
+                              ).trim() || null
+                            : null,
                         categoryId: item.product.categoryId,
                         isSwapRewardItem: !!item.isSwapRewardItem,
                         swapRewardRedemptionId:
@@ -951,6 +965,10 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     };
 
     const handlePlaceOrder = () => {
+        if (isAdmin)
+            return toast.error(
+                "Only customer accounts can place orders. Please sign in with a customer account."
+            );
         if ((!userCart && !isSwapReward) || !selectedShippingAddress)
             return toast.error("Cart or address missing");
         if (!user) return toast.error("User missing");
@@ -1105,6 +1123,48 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                 : undefined
                         }
                     />
+                    {availableItems
+                        .filter(
+                            (item: any) =>
+                                item.product.customizationAvailable &&
+                                !item.isSwapRewardItem
+                        )
+                        .map((item: any) => (
+                            <div
+                                key={`customization-${item.id}`}
+                                className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3"
+                            >
+                                <label
+                                    htmlFor={`customization-${item.id}`}
+                                    className="mb-1.5 block text-sm font-semibold text-amber-900"
+                                >
+                                    Customization request
+                                </label>
+                                <Textarea
+                                    id={`customization-${item.id}`}
+                                    value={
+                                        customizationRequests[item.id] ??
+                                        item.customizationRequest ??
+                                        ""
+                                    }
+                                    onChange={(event) =>
+                                        setCustomizationRequests((current) => ({
+                                            ...current,
+                                            [item.id]: event.target.value.slice(
+                                                0,
+                                                500
+                                            ),
+                                        }))
+                                    }
+                                    placeholder="E.g. Add initials, preferred color, or special instructions"
+                                    maxLength={500}
+                                    className="min-h-20 resize-none border-amber-200 bg-white"
+                                />
+                                <p className="mt-1 text-xs text-amber-800">
+                                    Optional. Maximum 500 characters.
+                                </p>
+                            </div>
+                        ))}
                 </div>
 
                 {/* Delivery Details */}
@@ -1524,6 +1584,12 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                         </div>
                     )}
 
+                    {isAdmin && (
+                        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-900">
+                            Only customer accounts can place orders. Please sign
+                            in with a customer account to buy.
+                        </p>
+                    )}
                     <Button
                         size="lg"
                         className="h-12 w-full rounded-xl bg-[#84abd6] text-lg font-bold text-white shadow-none hover:bg-[#6d96c2]"
@@ -1537,7 +1603,8 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                             !selectedShippingAddress ||
                             rewardCheckoutQuery.isLoading ||
                             activeRewardCartItemQuery.isLoading ||
-                            availableItems.length === 0
+                            availableItems.length === 0 ||
+                            isAdmin
                         }
                     >
                         {isProcessing || isPaymentInitializing

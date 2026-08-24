@@ -357,6 +357,8 @@ export function getUserPermissions(
 }
 
 export function hideEmail(email: string) {
+    if (email.toLowerCase().endsWith("@phone.renivet.com")) return "N/A";
+
     const [username, domain] = email.split("@");
     const hiddenUsername = `${username.slice(0, 3)}${"*".repeat(5)}`;
     return `${hiddenUsername}@${domain}`;

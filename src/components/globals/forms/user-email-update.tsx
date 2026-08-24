@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input-general";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { displayCustomerEmail } from "@/lib/email-display";
 import { handleClientError } from "@/lib/utils";
 import {
     UpdateUserEmail,
@@ -38,7 +39,7 @@ export function UserEmailUpdateForm({ user }: PageProps) {
     const form = useForm<UpdateUserEmail>({
         resolver: zodResolver(updateUserEmailSchema),
         defaultValues: {
-            email: user.email,
+            email: displayCustomerEmail(user.email),
         },
     });
 

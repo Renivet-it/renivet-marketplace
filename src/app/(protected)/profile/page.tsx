@@ -1,6 +1,7 @@
 "use client";
 
 import { SwapRewardCard } from "@/components/profile/swap-reward-card";
+import { displayCustomerEmail } from "@/lib/email-display";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import {
@@ -193,7 +194,7 @@ export default function OverviewPage() {
                                 {user?.firstName} {user?.lastName}
                             </h2>
                             <p className="text-xs text-gray-500">
-                                {user?.email}
+                                {displayCustomerEmail(user?.email)}
                             </p>
                         </div>
                     </div>

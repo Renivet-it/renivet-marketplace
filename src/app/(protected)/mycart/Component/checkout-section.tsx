@@ -1,12 +1,12 @@
 "use client";
 
 // src/app/(protected)/mycart/Component/checkout-section.tsx
-
 import { Button } from "@/components/ui/button-general";
 import { Input } from "@/components/ui/input-general";
 import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { DEFAULT_MESSAGES } from "@/config/const";
+import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -52,6 +52,7 @@ export default function CheckoutSection({ userId }: PageProps) {
     });
     const { data: user, isPending: isUserFetching } =
         trpc.general.users.currentUser.useQuery();
+    const isAdmin = Boolean(user && !canPlaceCustomerOrder(user));
 
     const { data: activeRewardCartItem } =
         trpc.general.swapRewards.getActiveRewardCartItem.useQuery();
@@ -87,7 +88,9 @@ export default function CheckoutSection({ userId }: PageProps) {
     );
 
     const selectedItemsCount = useMemo(
-        () => selectedItems.reduce((acc, item) => acc + item.quantity, 0) + (hasRewardCartItem ? 1 : 0),
+        () =>
+            selectedItems.reduce((acc, item) => acc + item.quantity, 0) +
+            (hasRewardCartItem ? 1 : 0),
         [selectedItems, hasRewardCartItem]
     );
 
@@ -284,15 +287,23 @@ export default function CheckoutSection({ userId }: PageProps) {
                     <div className="flex items-center gap-3 rounded-lg border border-[#e0d2b9] bg-[#fffaf2] p-3">
                         <div className="relative size-16 shrink-0 overflow-hidden rounded-lg">
                             <Image
-                                src={activeRewardCartItem.selection.product.media?.[0]?.mediaItem?.url ?? "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"}
-                                alt={activeRewardCartItem.selection.product.title}
+                                src={
+                                    activeRewardCartItem.selection.product
+                                        .media?.[0]?.mediaItem?.url ??
+                                    "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1"
+                                }
+                                alt={
+                                    activeRewardCartItem.selection.product.title
+                                }
                                 width={100}
                                 height={100}
                                 className="size-full object-cover"
                             />
                         </div>
                         <div className="flex-1">
-                            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#9b7a46]">Reward Item</span>
+                            <span className="text-[9px] font-semibold uppercase tracking-wider text-[#9b7a46]">
+                                Reward Item
+                            </span>
                             <h4 className="line-clamp-2 text-xs font-semibold text-gray-900">
                                 {activeRewardCartItem.selection.product.title}
                             </h4>
@@ -300,7 +311,9 @@ export default function CheckoutSection({ userId }: PageProps) {
                                 {formatINR(0)}
                             </p>
                         </div>
-                        <span className="text-xs text-gray-500 font-medium px-2">Qty: 1</span>
+                        <span className="px-2 text-xs font-medium text-gray-500">
+                            Qty: 1
+                        </span>
                     </div>
                 )}
                 {selectedItems.map((item) => {
@@ -709,13 +722,21 @@ export default function CheckoutSection({ userId }: PageProps) {
 
                 {/* Proceed to checkout button */}
                 <div className="mt-5">
+                    {isAdmin && (
+                        <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-900">
+                            Only customer accounts can place orders. Please sign
+                            in with a customer account to buy.
+                        </p>
+                    )}
                     <Button
                         size="sm"
                         className="w-full rounded-lg bg-[#95b6da] text-sm font-semibold text-white hover:bg-[#82a3c7]"
                         disabled={
                             isUserFetching ||
                             isValidating ||
-                            (!userCart?.some((item) => item.status) && !hasRewardCartItem)
+                            isAdmin ||
+                            (!userCart?.some((item) => item.status) &&
+                                !hasRewardCartItem)
                         }
                         onClick={() => {
                             if (!user)

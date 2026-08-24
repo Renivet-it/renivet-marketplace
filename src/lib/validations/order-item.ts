@@ -41,11 +41,14 @@ export const orderItemSchema = z.object({
         })
         .int("Quantity must be an integer")
         .positive("Quantity must be positive"),
-    customizationRequest: z
-        .string()
-        .trim()
-        .max(500, "Customization request must be 500 characters or less")
-        .nullable(),
+    customizationRequest: z.preprocess(
+        (value) => (value === undefined ? null : value),
+        z
+            .string()
+            .trim()
+            .max(500, "Customization request must be 500 characters or less")
+            .nullable()
+    ),
     createdAt: z
         .union([z.string(), z.date()], {
             required_error: "Created at is required",

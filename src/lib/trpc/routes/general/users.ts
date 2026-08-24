@@ -1,7 +1,10 @@
 import { BitFieldSitePermission } from "@/config/permissions";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import {
+    auditEntityChange,
+    createOperationalAlert,
+} from "@/lib/monitoring-sla/audit";
 import { posthog } from "@/lib/posthog/client";
-import { auditEntityChange, createOperationalAlert } from "@/lib/monitoring-sla/audit";
 import { userCache } from "@/lib/redis/methods";
 import {
     createTRPCRouter,
@@ -473,7 +476,10 @@ export const usersRouter = createTRPCRouter({
                 message: "User not found",
             });
 
-        return cachedUser;
+        return {
+            ...cachedUser,
+            ...getUserPermissions(cachedUser.roles),
+        };
     }),
     addresses: userAddressesRouter,
     roles: userRolesRouter,
