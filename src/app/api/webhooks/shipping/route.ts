@@ -1,5 +1,6 @@
 import { env } from "@/../env";
 import { BRAND_EVENTS } from "@/config/brand";
+import { isTimingSafeSecretMatch } from "@/lib/auth/secret-comparison";
 import { db } from "@/lib/db";
 import { orderQueries } from "@/lib/db/queries";
 import { orderShipments, returnShipments } from "@/lib/db/schema";
@@ -79,7 +80,12 @@ function resolveWebhookType(orderId: string): string {
 export async function POST(req: NextRequest) {
     try {
         const reqApiKey = req.headers.get("x-api-key");
-        if (reqApiKey !== env.SHIPROCKET_WEBHOOK_API_KEY)
+        if (
+            !isTimingSafeSecretMatch(
+                reqApiKey,
+                env.SHIPROCKET_WEBHOOK_API_KEY
+            )
+        )
             throw new AppError("Unauthorized", "UNAUTHORIZED");
 
         const body = await req.json();
