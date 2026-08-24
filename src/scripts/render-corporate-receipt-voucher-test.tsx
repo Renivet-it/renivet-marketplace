@@ -23,8 +23,8 @@ async function main() {
             gstin: "10AANCR5687A1ZG",
             bankName: "IDFC First Bank",
             bankAccountName: "Renivet Solutions Pvt Ltd",
-            bankAccountNumber: "73564993505",
-            bankIfscCode: "IDFB0080174",
+            bankAccountNumber: "000000000000",
+            bankIfscCode: "TEST0000000",
             signatoryName: "Renivet",
             logoUrl:
                 "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqU6nAZGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",

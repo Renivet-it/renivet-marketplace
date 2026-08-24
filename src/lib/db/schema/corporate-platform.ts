@@ -76,10 +76,10 @@ export const corporateDocumentSettings = pgTable(
         bankAccountName: text("bank_account_name")
             .notNull()
             .default("Renivet Solutions Pvt Ltd"),
-        bankAccountNumber: text("bank_account_number").default("73564993505"),
+        bankAccountNumber: text("bank_account_number"),
         bankAccountType: text("bank_account_type").default("Business"),
-        bankIfscCode: text("bank_ifsc_code").default("IDFB0080174"),
-        bankBranch: text("bank_branch").default("Thubarahallii Branch"),
+        bankIfscCode: text("bank_ifsc_code"),
+        bankBranch: text("bank_branch"),
         authorizedSignatoryName: text("authorized_signatory_name")
             .notNull()
             .default("Renivet"),

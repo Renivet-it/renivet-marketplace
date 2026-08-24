@@ -50,10 +50,10 @@ const emptyDraft: Draft = {
     phone: "",
     bankName: "IDFC First Bank",
     bankAccountName: "Renivet Solutions Pvt Ltd",
-    bankAccountNumber: "73564993505",
+    bankAccountNumber: "",
     bankAccountType: "Business",
-    bankIfscCode: "IDFB0080174",
-    bankBranch: "Thubarahallii Branch",
+    bankIfscCode: "",
+    bankBranch: "",
     authorizedSignatoryName: "Renivet",
     defaultPaymentTerms:
         "30% advance on PO confirmation; balance within 15 days of dispatch.",
