@@ -48,6 +48,11 @@ const sections = [
         description: "Finance-specific access grants layered on top of existing role permissions.",
     },
     {
+        title: "External Side Effects",
+        href: "/dashboard/general/settings/external-side-effects",
+        description: "Control real integrations in staging and development without affecting production.",
+    },
+    {
         title: "Audit Log",
         href: "/dashboard/general/finance/audit-log",
         description: "Structured finance audit evidence with typed actors, JSON diffs, proof links, and CSV export.",

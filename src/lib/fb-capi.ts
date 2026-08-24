@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { capiLogs } from "@/lib/db/schema";
+import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { sanitizeFbUserData } from "@/lib/fbpixel";
 import { env } from "../../env";
 import {
@@ -56,6 +57,11 @@ export const sendCapiEvent = async (
     eventId: string,
     eventSourceUrl: string
 ) => {
+    if (!(await shouldRunExternalSideEffects())) {
+        console.info(`Skipping CAPI event '${eventName}': external side effects are disabled.`);
+        return { skipped: true, reason: "external_side_effects_disabled" };
+    }
+
     if (!ACCESS_TOKEN) {
         console.warn("FACEBOOK_ACCESS_TOKEN not found, skipping CAPI event.");
         return;

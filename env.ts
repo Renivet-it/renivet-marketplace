@@ -106,6 +106,10 @@ export const env = createEnv({
         GOOGLE_ADS_LOGIN_CUSTOMER_ID: z.string().optional(),
         ANALYTICS_CRON_SECRET: z.string().optional(),
 
+        // Required on Vercel because both the staging and production projects
+        // can be deployed with VERCEL_ENV=production.
+        APP_ENV: z.enum(["development", "staging", "production"]).optional(),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -175,6 +179,7 @@ export const env = createEnv({
         GOOGLE_ADS_CLIENT_SECRET: process.env.GOOGLE_ADS_CLIENT_SECRET,
         GOOGLE_ADS_LOGIN_CUSTOMER_ID: process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID,
         ANALYTICS_CRON_SECRET: process.env.ANALYTICS_CRON_SECRET,
+        APP_ENV: process.env.APP_ENV,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

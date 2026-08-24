@@ -6,6 +6,7 @@ import { trackPurchaseCapi } from "@/actions/analytics";
 import { processOrderAfterPayment } from "@/actions/process-order-after-payment";
 import { updatePaymentStatusAction } from "@/actions/update-payment-status";
 import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
+import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { siteConfig } from "@/config/site";
 import { orderQueries, productQueries } from "@/lib/db/queries";
 // Assuming needed for value formatting if not available
@@ -226,26 +227,30 @@ export function createRazorpayPaymentOptions({
                 }
 
                 // Step 4: Send WhatsApp notification
-                console.log("Sending WhatsApp notification...");
-                try {
-                    const formattedPhone = deliveryAddress.phone.startsWith("+")
-                        ? deliveryAddress.phone
-                        : `+91${deliveryAddress.phone}`;
-                    await sendWhatsAppNotification({
-                        phone: formattedPhone,
-                        template: "order_confirmation",
-                        parameters: [user.firstName, orderId],
-                    });
-                    console.log("WhatsApp notification sent successfully");
-                } catch (error) {
-                    console.error("Failed to send WhatsApp notification:", {
-                        error:
-                            error instanceof Error
-                                ? error.message
-                                : "Unknown error",
-                        stack: error instanceof Error ? error.stack : undefined,
-                    });
-                    // Continue even if notification fails
+                if (await shouldRunExternalSideEffects()) {
+                    console.log("Sending WhatsApp notification...");
+                    try {
+                        const formattedPhone = deliveryAddress.phone.startsWith("+")
+                            ? deliveryAddress.phone
+                            : `+91${deliveryAddress.phone}`;
+                        await sendWhatsAppNotification({
+                            phone: formattedPhone,
+                            template: "order_confirmation",
+                            parameters: [user.firstName, orderId],
+                        });
+                        console.log("WhatsApp notification sent successfully");
+                    } catch (error) {
+                        console.error("Failed to send WhatsApp notification:", {
+                            error:
+                                error instanceof Error
+                                    ? error.message
+                                    : "Unknown error",
+                            stack: error instanceof Error ? error.stack : undefined,
+                        });
+                        // Continue even if notification fails
+                    }
+                } else {
+                    console.info("Skipping WhatsApp notification: external side effects are disabled.");
                 }
 
                 // Step 5: Clear cart
