@@ -1,5 +1,6 @@
 import { sendDailyOrderSummary } from "@/actions/send-daily-order-summary";
-import { NextResponse } from "next/server";
+import { requireCronSecret } from "@/lib/auth/cron-access";
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * Daily Order Summary Cron Job
@@ -9,7 +10,10 @@ import { NextResponse } from "next/server";
  * Schedule: 0 22 * * * (10 PM IST daily)
  * Converts to UTC: 0 16 30 * * * (4:30 PM UTC, which is 10 PM IST)
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
+
     try {
         console.log("🔔 Daily Order Summary Cron Job Started");
         console.log(

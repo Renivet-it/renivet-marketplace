@@ -1,4 +1,5 @@
 import { couponQueries } from "@/lib/db/queries";
+import { requireCronSecret } from "@/lib/auth/cron-access";
 import { db } from "@/lib/db";
 import {
     carts,
@@ -14,7 +15,7 @@ import {
 import AbandonedCartEmail from "@/lib/resend/emails/abandoned-cart-email";
 import { generateId } from "@/lib/utils";
 import { and, eq, getTableColumns, gte } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import React from "react";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +38,10 @@ function buildCartSignature(
         .join("|");
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
+
     const activeCarts = await db
         .select({
             ...getTableColumns(carts),

@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireCronSecret } from "@/lib/auth/cron-access";
 import {
     marketingAutomationRuns,
     orders,
@@ -12,12 +13,15 @@ import {
 } from "@/lib/marketing/email";
 import PostPurchaseReviewEmail from "@/lib/resend/emails/post-purchase-review";
 import { and, eq, lte } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import React from "react";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
+
     const threshold = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
     const rows = await db
         .select({

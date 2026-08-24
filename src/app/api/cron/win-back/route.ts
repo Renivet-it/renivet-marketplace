@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { requireCronSecret } from "@/lib/auth/cron-access";
 import { marketingAutomationRuns, orders, users } from "@/lib/db/schema";
 import {
     buildUnsubscribeUrl,
@@ -7,12 +8,15 @@ import {
 } from "@/lib/marketing/email";
 import WinBackEmail from "@/lib/resend/emails/win-back";
 import { desc, eq, sql } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import React from "react";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
+
     const cutoff = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
     const monthKey = new Date().toISOString().slice(0, 7);
 

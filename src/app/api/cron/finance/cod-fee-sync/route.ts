@@ -1,13 +1,17 @@
 import { syncCarrierFeeSchedule } from "@/lib/finance/cod";
-import { NextResponse } from "next/server";
+import { requireCronSecret } from "@/lib/auth/cron-access";
+import { NextRequest, NextResponse } from "next/server";
 
 /**
  * COD Fee Sync Cron Job
- * Trigger this via your scheduler without a secret, same pattern as daily order summary.
+ * Trigger this via your scheduler with the configured CRON_SECRET.
  *
  * Suggested schedule: every Monday at 9:00 AM IST
  */
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
+
     try {
         console.log("COD Fee Sync Cron Job Started");
         console.log(
