@@ -1,0 +1,48 @@
+name: Governance validation
+
+on:
+    pull_request:
+
+permissions:
+    contents: read
+
+jobs:
+    validate-governance:
+        name: Validate governance contracts
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Check out repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Set up Bun
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: 1.2.14
+
+            - name: Install dependencies
+              run: bun install --frozen-lockfile
+
+            - name: Test deterministic validator
+              run: bun test scripts/governance/validate-work-item.test.ts
+
+            - name: Validate changed work items
+              shell: bash
+              run: |
+                  mapfile -d '' work_items < <(
+                    git diff --name-only --diff-filter=ACMR -z \
+                      "${{ github.event.pull_request.base.sha }}" \
+                      "${{ github.event.pull_request.head.sha }}" \
+                      -- 'docs/.work-items/*/work-item.yaml'
+                  )
+
+                  if (( ${#work_items[@]} == 0 )); then
+                    echo "No changed governance work items."
+                    exit 0
+                  fi
+
+                  for work_item in "${work_items[@]}"; do
+                    bun run governance:validate -- "$work_item"
+                  done

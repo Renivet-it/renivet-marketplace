@@ -1,0 +1,7 @@
+interface:
+    display_name: "Renivet SPEC"
+    short_description: "Turn Linear work into governed engineering specs"
+    default_prompt: "Use $renivet-spec with a Linear issue ID to prepare the engineering contract before development."
+
+policy:
+    allow_implicit_invocation: true
