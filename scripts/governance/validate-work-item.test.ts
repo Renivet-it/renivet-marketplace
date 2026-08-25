@@ -1,4 +1,10 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import {
+    mkdtempSync,
+    rmSync,
+    symlinkSync,
+    writeFileSync,
+} from "node:fs";
+import { mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
@@ -11,6 +17,28 @@ const fixture = (name: string) =>
 async function loadValidFixture() {
     return parse(await Bun.file(fixture("valid-l2")).text());
 }
+
+function supportsFileSymlinks() {
+    const directory = mkdtempSync(join(tmpdir(), "renivet-symlink-probe-"));
+    try {
+        writeFileSync(join(directory, "target"), "target");
+        symlinkSync("target", join(directory, "link"), "file");
+        return true;
+    } catch (error) {
+        if (
+            error instanceof Error &&
+            "code" in error &&
+            ["EACCES", "EPERM", "UNKNOWN"].includes(String(error.code))
+        ) {
+            return false;
+        }
+        throw error;
+    } finally {
+        rmSync(directory, { recursive: true, force: true });
+    }
+}
+
+const symlinkTest = supportsFileSymlinks() ? test : test.skip;
 
 describe("governance work-item validation", () => {
     test("accepts a complete READY_FOR_DEV L2 contract", async () => {
@@ -222,6 +250,47 @@ describe("governance work-item validation", () => {
         );
     });
 
+    test("allows unavailable commits only for a blocked review", async () => {
+        const item = await loadValidFixture();
+        item.implementation_review.result = "REVIEW_BLOCKED";
+        item.implementation_review.base_commit = null;
+        item.implementation_review.head_commit = null;
+        item.implementation_review.evidence = [
+            "Comparison commits were unavailable, so implementation reconciliation was blocked.",
+        ];
+
+        const result = validateWorkItem(item);
+        expect(result).toEqual({ valid: true, errors: [] });
+    });
+
+    for (const completedResult of [
+        "REVIEW_PASSED",
+        "REVIEW_PASSED_WITH_FINDINGS",
+        "REVIEW_FAILED",
+    ]) {
+        test(`requires SHA40 commits for ${completedResult}`, async () => {
+            const item = await loadValidFixture();
+            item.task.status = "IN_REVIEW";
+            item.implementation_review.result = completedResult;
+            item.implementation_review.base_commit = null;
+            item.implementation_review.head_commit = null;
+
+            const result = validateWorkItem(item);
+            expect(result.errors).toEqual(
+                expect.arrayContaining([
+                    expect.objectContaining({
+                        code: "GOV-REVIEW-001",
+                        path: "implementation_review.base_commit",
+                    }),
+                    expect.objectContaining({
+                        code: "GOV-REVIEW-001",
+                        path: "implementation_review.head_commit",
+                    }),
+                ])
+            );
+        });
+    }
+
     test("requires implementation review reconciliation", async () => {
         const item = await loadValidFixture();
         delete item.implementation_review.reconciliation;
@@ -249,6 +318,70 @@ describe("governance work-item validation", () => {
         const result = validateWorkItem(item);
         expect(result.errors.map((error) => error.code)).toContain(
             "GOV-REVIEW-001"
+        );
+    });
+
+    for (const reconciliationResult of ["FAIL", "PARTIAL"]) {
+        test(`rejects a passed review with a ${reconciliationResult} reconciliation result`, async () => {
+            const item = await loadValidFixture();
+            item.implementation_review.reconciliation.security =
+                reconciliationResult;
+
+            const result = validateWorkItem(item);
+            expect(result.errors).toContainEqual(
+                expect.objectContaining({
+                    code: "GOV-REVIEW-001",
+                    path: "implementation_review.reconciliation",
+                })
+            );
+        });
+    }
+
+    test("rejects material drift for a review passed with findings", async () => {
+        const item = await loadValidFixture();
+        item.task.status = "IN_REVIEW";
+        item.implementation_review.result = "REVIEW_PASSED_WITH_FINDINGS";
+        item.implementation_review.material_drift = "MATERIAL_DRIFT";
+        item.implementation_review.governance_reentry_required = true;
+
+        const result = validateWorkItem(item);
+        expect(result.errors).toContainEqual(
+            expect.objectContaining({
+                code: "GOV-REVIEW-001",
+                path: "implementation_review.result",
+            })
+        );
+    });
+
+    test("requires a failed review result for material drift", async () => {
+        const item = await loadValidFixture();
+        item.task.status = "IN_REVIEW";
+        item.implementation_review.result = "REVIEW_BLOCKED";
+        item.implementation_review.material_drift = "MATERIAL_DRIFT";
+        item.implementation_review.governance_reentry_required = true;
+
+        const result = validateWorkItem(item);
+        expect(result.errors).toContainEqual(
+            expect.objectContaining({
+                code: "GOV-DRIFT-001",
+                path: "implementation_review.result",
+            })
+        );
+    });
+
+    test("rejects governance re-entry for non-material drift", async () => {
+        const item = await loadValidFixture();
+        item.task.status = "IN_REVIEW";
+        item.implementation_review.result = "REVIEW_PASSED_WITH_FINDINGS";
+        item.implementation_review.material_drift = "MINOR_DRIFT";
+        item.implementation_review.governance_reentry_required = true;
+
+        const result = validateWorkItem(item);
+        expect(result.errors).toContainEqual(
+            expect.objectContaining({
+                code: "GOV-DRIFT-001",
+                path: "implementation_review.governance_reentry_required",
+            })
         );
     });
 
@@ -344,6 +477,40 @@ describe("governance work-item validation", () => {
             const result = await validateWorkItemFile(directory);
             expect(result.errors.map((error) => error.code)).toContain(
                 "GOV-REVIEW-001"
+            );
+        } finally {
+            await rm(directory, { recursive: true, force: true });
+        }
+    });
+
+    symlinkTest("rejects a task-local review artifact symlink", async () => {
+        const directory = await mkdtemp(join(tmpdir(), "renivet-review-"));
+        const item = await loadValidFixture();
+
+        try {
+            await Bun.write(join(directory, "work-item.yaml"), stringify(item));
+            await Bun.write(
+                join(directory, "CRITIQUE.md"),
+                await Bun.file(
+                    `${import.meta.dir}/fixtures/valid-l2/CRITIQUE.md`
+                ).text()
+            );
+            await Bun.write(
+                join(directory, "REVIEW_TARGET.md"),
+                "# Review outside the declared artifact entry\n"
+            );
+            await symlink(
+                "REVIEW_TARGET.md",
+                join(directory, "REVIEW.md"),
+                "file"
+            );
+
+            const result = await validateWorkItemFile(directory);
+            expect(result.errors).toContainEqual(
+                expect.objectContaining({
+                    code: "GOV-REVIEW-001",
+                    path: "implementation_review.artifact",
+                })
             );
         } finally {
             await rm(directory, { recursive: true, force: true });

@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { lstat, stat } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { parse } from "yaml";
 import {
@@ -630,9 +630,13 @@ export function validateWorkItem(
             errors
         );
         for (const field of ["base_commit", "head_commit"]) {
+            const commitUnavailable =
+                implementationReview.result === "REVIEW_BLOCKED" &&
+                implementationReview[field] === null;
             if (
-                typeof implementationReview[field] !== "string" ||
-                !/^[0-9a-f]{40}$/i.test(implementationReview[field])
+                !commitUnavailable &&
+                (typeof implementationReview[field] !== "string" ||
+                    !/^[0-9a-f]{40}$/i.test(implementationReview[field]))
             ) {
                 add(
                     errors,
@@ -668,7 +672,7 @@ export function validateWorkItem(
         const reconciliation = isRecord(implementationReview.reconciliation)
             ? implementationReview.reconciliation
             : undefined;
-        for (const field of [
+        const reconciliationFields = [
             "requirements",
             "scenarios",
             "invariants",
@@ -676,7 +680,8 @@ export function validateWorkItem(
             "security",
             "test_coverage",
             "scope",
-        ]) {
+        ];
+        for (const field of reconciliationFields) {
             if (
                 !reconciliation ||
                 !RECONCILIATION_RESULTS.includes(reconciliation[field] as never)
@@ -709,6 +714,23 @@ export function validateWorkItem(
         const blockers = asStrings(implementationReview.blocking_findings);
         const actions = asStrings(implementationReview.required_actions);
         const passed = implementationReview.result === "REVIEW_PASSED";
+        const passedWithFindings =
+            implementationReview.result === "REVIEW_PASSED_WITH_FINDINGS";
+        if (
+            passed &&
+            reconciliationFields.some(
+                (field) =>
+                    reconciliation?.[field] !== "PASS" &&
+                    reconciliation?.[field] !== "NOT_APPLICABLE"
+            )
+        ) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.reconciliation",
+                "A passed review requires PASS or NOT_APPLICABLE reconciliation results."
+            );
+        }
         if (
             passed &&
             (implementationReview.material_drift !== "NO_DRIFT" ||
@@ -720,6 +742,28 @@ export function validateWorkItem(
                 "GOV-REVIEW-001",
                 "implementation_review",
                 "A passed review cannot contain drift, blockers, or required actions."
+            );
+        }
+        if (
+            passedWithFindings &&
+            implementationReview.material_drift === "MATERIAL_DRIFT"
+        ) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.result",
+                "A review passed with findings cannot contain material drift."
+            );
+        }
+        if (
+            implementationReview.material_drift === "MATERIAL_DRIFT" &&
+            implementationReview.result !== "REVIEW_FAILED"
+        ) {
+            add(
+                errors,
+                "GOV-DRIFT-001",
+                "implementation_review.result",
+                "Material drift requires a failed review result."
             );
         }
         if (
@@ -742,6 +786,20 @@ export function validateWorkItem(
                 "GOV-DRIFT-001",
                 "implementation_review",
                 "Material drift cannot remain READY_FOR_DEV."
+            );
+        }
+        if (
+            IMPLEMENTATION_DRIFT_LEVELS.includes(
+                implementationReview.material_drift as never
+            ) &&
+            implementationReview.material_drift !== "MATERIAL_DRIFT" &&
+            implementationReview.governance_reentry_required !== false
+        ) {
+            add(
+                errors,
+                "GOV-DRIFT-001",
+                "implementation_review.governance_reentry_required",
+                "Non-material drift must not require governance re-entry."
             );
         }
     }
@@ -857,8 +915,14 @@ export async function validateWorkItemFile(
                 implementationReview.artifact
             );
             try {
-                if (!(await stat(artifactPath)).isFile()) {
-                    throw new Error("Review artifact must be a file.");
+                const artifactStats = await lstat(artifactPath);
+                if (artifactStats.isSymbolicLink()) {
+                    throw new Error(
+                        "Review artifact must not be a symbolic link."
+                    );
+                }
+                if (!artifactStats.isFile()) {
+                    throw new Error("Review artifact must be a regular file.");
                 }
             } catch (error) {
                 add(
