@@ -32,7 +32,7 @@ jobs:
               shell: bash
               run: |
                   mapfile -d '' work_item_dirs < <(
-                    git diff --name-only --diff-filter=ACMR -z \
+                    git diff --name-only --diff-filter=ACMRD -z \
                       "${{ github.event.pull_request.base.sha }}" \
                       "${{ github.event.pull_request.head.sha }}" \
                       -- 'docs/.work-items/*/work-item.yaml' 'docs/.work-items/*/REVIEW.md' |
@@ -48,5 +48,11 @@ jobs:
                   fi
 
                   for work_item_dir in "${work_item_dirs[@]}"; do
-                    bun run governance:validate -- "${work_item_dir}/work-item.yaml"
+                    work_item="${work_item_dir}/work-item.yaml"
+                    if [[ ! -e "$work_item" ]]; then
+                      echo "Skipping removed governance work item: $work_item_dir"
+                      continue
+                    fi
+
+                    bun run governance:validate -- "$work_item"
                   done
