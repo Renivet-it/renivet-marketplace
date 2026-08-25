@@ -37,10 +37,12 @@ import {
     SheetTrigger,
 } from "../ui/sheet";
 import { Slider } from "../ui/slider";
+import { CatalogLoadingOverlay } from "./catalog-loading-overlay";
 import {
     SHOP_PRICE_FILTER_MAX,
     SHOP_PRICE_FILTER_STEP,
 } from "./price-filter-config";
+import { getSortLoadingDetail } from "./shop-loading";
 
 // --- HELPER FUNCTIONS (Unchanged) ---
 
@@ -1795,6 +1797,9 @@ export function ShopSortByWithDefault({
 } = {}) {
     const isMobile = useMediaQuery("(max-width: 768px)");
     const [isSortOpen, setIsSortOpen] = useState(false);
+    const [loadingSortDetail, setLoadingSortDetail] = useState<string | null>(
+        null
+    );
     const [sortState, setSortState] = useQueryStates({
         sortBy: parseAsStringLiteral([
             "price",
@@ -1808,21 +1813,53 @@ export function ShopSortByWithDefault({
         shopPage: parseAsInteger.withDefault(1),
     });
 
+    const currentValue = `${sortState.sortBy}:${sortState.sortOrder}`;
+
+    useEffect(() => {
+        const handleResultsReady = () => setLoadingSortDetail(null);
+        window.addEventListener(
+            "renivet:shop-search-results-ready",
+            handleResultsReady
+        );
+        return () =>
+            window.removeEventListener(
+                "renivet:shop-search-results-ready",
+                handleResultsReady
+            );
+    }, []);
+
     const handleSort = async (value: string) => {
+        const selectedLabel =
+            sortByWithOrderTypes.find((option) => option.value === value)
+                ?.label ?? "Sorting";
+        const loadingDetail = getSortLoadingDetail(
+            currentValue,
+            value,
+            selectedLabel
+        );
+        if (!loadingDetail) {
+            setIsSortOpen(false);
+            return;
+        }
+
+        setLoadingSortDetail(loadingDetail);
         const [sort, order] = value.split(":");
-        await setSortState({
-            sortBy: sort as
-                | "price"
-                | "createdAt"
-                | "recommended"
-                | "best-sellers",
-            sortOrder: order as "asc" | "desc",
-            shopPage: 1,
-        });
+        try {
+            await setSortState({
+                sortBy: sort as
+                    | "price"
+                    | "createdAt"
+                    | "recommended"
+                    | "best-sellers",
+                sortOrder: order as "asc" | "desc",
+                shopPage: 1,
+            });
+        } catch {
+            setLoadingSortDetail(null);
+        }
         setIsSortOpen(false);
     };
 
-    const currentValue = `${sortState.sortBy}:${sortState.sortOrder}`;
     const availableSortOptions = hideRecommendationSorts
         ? sortByWithOrderTypes.filter(
               (option) =>
@@ -1836,6 +1873,14 @@ export function ShopSortByWithDefault({
             (o) => o.value === `${defaultSortBy}:${defaultSortOrder}`
         )?.label ??
         "Newest First";
+
+    const sortLoadingOverlay = (
+        <CatalogLoadingOverlay
+            open={!!loadingSortDetail}
+            eyebrow="Sorting"
+            detail={loadingSortDetail ?? undefined}
+        />
+    );
 
     // --- Desktop View (Dropdown) ---
     if (!isMobile) {
@@ -1853,63 +1898,67 @@ export function ShopSortByWithDefault({
                     ))}
                 </select>
                 <Icons.ChevronDown className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
+                {sortLoadingOverlay}
             </div>
         );
     }
 
     // --- Mobile View (Bottom Sheet) ---
     return (
-        <Sheet open={isSortOpen} onOpenChange={setIsSortOpen}>
-            <SheetTrigger asChild>
-                <Button
-                    variant="outline"
-                    className={cn(
-                        "flex items-center gap-2 rounded-lg border-gray-200 text-sm font-medium shadow-sm",
-                        className
-                    )}
-                >
-                    <Icons.ArrowUpDown className="text-current/70 size-4" />
-                    <span className="truncate text-current">
-                        {currentLabel}
-                    </span>
-                </Button>
-            </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-xl p-0">
-                <SheetHeader className="border-b border-gray-100 p-4">
-                    <SheetTitle className="text-start text-sm font-semibold uppercase tracking-wider text-gray-500">
-                        Sort By
-                    </SheetTitle>
-                </SheetHeader>
-                <div className="p-2">
-                    <RadioGroup
-                        value={currentValue}
-                        onValueChange={(value) => void handleSort(value)}
+        <>
+            <Sheet open={isSortOpen} onOpenChange={setIsSortOpen}>
+                <SheetTrigger asChild>
+                    <Button
+                        variant="outline"
+                        className={cn(
+                            "flex items-center gap-2 rounded-lg border-gray-200 text-sm font-medium shadow-sm",
+                            className
+                        )}
                     >
-                        {availableSortOptions.map((option) => (
-                            <Label
-                                key={option.value}
-                                htmlFor={option.value}
-                                className={cn(
-                                    "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3.5 text-sm transition-colors",
-                                    currentValue === option.value
-                                        ? "bg-gray-50 font-semibold text-gray-900"
-                                        : "text-gray-600 hover:bg-gray-50"
-                                )}
-                            >
-                                <RadioGroupItem
-                                    value={option.value}
-                                    id={option.value}
+                        <Icons.ArrowUpDown className="text-current/70 size-4" />
+                        <span className="truncate text-current">
+                            {currentLabel}
+                        </span>
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="rounded-t-xl p-0">
+                    <SheetHeader className="border-b border-gray-100 p-4">
+                        <SheetTitle className="text-start text-sm font-semibold uppercase tracking-wider text-gray-500">
+                            Sort By
+                        </SheetTitle>
+                    </SheetHeader>
+                    <div className="p-2">
+                        <RadioGroup
+                            value={currentValue}
+                            onValueChange={(value) => void handleSort(value)}
+                        >
+                            {availableSortOptions.map((option) => (
+                                <Label
+                                    key={option.value}
+                                    htmlFor={option.value}
                                     className={cn(
-                                        currentValue === option.value &&
-                                            "border-gray-900 text-gray-900"
+                                        "flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3.5 text-sm transition-colors",
+                                        currentValue === option.value
+                                            ? "bg-gray-50 font-semibold text-gray-900"
+                                            : "text-gray-600 hover:bg-gray-50"
                                     )}
-                                />
-                                <span>{option.label}</span>
-                            </Label>
-                        ))}
-                    </RadioGroup>
-                </div>
-            </SheetContent>
-        </Sheet>
+                                >
+                                    <RadioGroupItem
+                                        value={option.value}
+                                        id={option.value}
+                                        className={cn(
+                                            currentValue === option.value &&
+                                                "border-gray-900 text-gray-900"
+                                        )}
+                                    />
+                                    <span>{option.label}</span>
+                                </Label>
+                            ))}
+                        </RadioGroup>
+                    </div>
+                </SheetContent>
+            </Sheet>
+            {sortLoadingOverlay}
+        </>
     );
 }

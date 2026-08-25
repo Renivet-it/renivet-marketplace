@@ -5,6 +5,7 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from "@/components/ui/input-otp";
+import { emailVerificationCodeLayout } from "./email-completion-layout";
 
 interface OTPCodeInputProps {
     value: string;
@@ -29,13 +30,14 @@ export function OTPCodeInput({
             disabled={disabled}
             inputMode="numeric"
             pattern="[0-9]*"
+            containerClassName={emailVerificationCodeLayout.otp}
         >
-            <InputOTPGroup className="gap-2">
+            <InputOTPGroup className={emailVerificationCodeLayout.otpGroup}>
                 {[0, 1, 2, 3, 4, 5].map((index) => (
                     <InputOTPSlot
                         key={index}
                         index={index}
-                        className="size-10 rounded-xl border text-base"
+                        className={emailVerificationCodeLayout.otpSlot}
                     />
                 ))}
             </InputOTPGroup>

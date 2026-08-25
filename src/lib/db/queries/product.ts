@@ -72,6 +72,7 @@ import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
 import { productTypeQueries } from "./product-type";
 import { subCategoryQueries } from "./sub-category";
+import { shouldApplySearchRelevanceOrdering } from "./product-ordering";
 
 type EventFilters = {
     page?: number;
@@ -1057,7 +1058,7 @@ class ProductQuery {
         verificationStatus,
         qcStatus,
         catalogIssue,
-        sortBy = "createdAt",
+        sortBy,
         sortOrder = "desc",
         productImage,
         productVisiblity,
@@ -1475,7 +1476,13 @@ class ProductQuery {
         }
 
         // 🟩 Step 2: semantic relevance (using Advanced RAG order)
-        if (isRagSearchActive && ragProductIds.length > 0) {
+        if (
+            shouldApplySearchRelevanceOrdering({
+                isRagSearchActive,
+                hasRagResults: ragProductIds.length > 0,
+                sortBy,
+            })
+        ) {
             // Sort exactly by the relevance order determined by the AI engine
             const cases = ragProductIds
                 .map(
