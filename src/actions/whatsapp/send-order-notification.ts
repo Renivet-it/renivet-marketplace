@@ -27,6 +27,7 @@
 
 "use server";
 
+import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
 
 export async function sendWhatsAppNotification({
@@ -40,6 +41,13 @@ export async function sendWhatsAppNotification({
   lang?: string;
   parameters?: any;
 }) {
+  if (!(await shouldRunExternalSideEffects())) {
+    console.info(
+      "Skipping WhatsApp notification: external side effects are disabled."
+    );
+    return { skipped: true, reason: "external_side_effects_disabled" };
+  }
+
   try {
     const result = await sendWhatsAppMessage({
       recipientPhoneNumber: phone,
