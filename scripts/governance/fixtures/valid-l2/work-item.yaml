@@ -1,0 +1,118 @@
+schema_version: "1.0"
+task:
+    id: REN-TEST
+    title: Valid governance fixture
+    source: linear
+    branch: feature/ren-test
+    status: READY_FOR_DEV
+risk:
+    initial_risk: L2
+    path_rule_risk: L1
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Cross-module behavior requires structured design.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - src/example.ts
+    excluded_areas:
+        - area: src/unrelated
+          reason: No dependency path found.
+    dependencies:
+        - DEP-001
+    integrations: []
+    security_boundaries:
+        - SEC-001
+    state_transitions:
+        - DRAFT -> ACTIVE
+    related_tests:
+        - src/example.test.ts
+    uncertainties: []
+requirements:
+    - id: REQ-001
+      description: Preserve the existing access boundary.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      requirement_ids:
+          - REQ-001
+      description: An authorized actor completes the operation.
+invariants:
+    - id: INV-001
+      description: Unauthorized actors cannot perform the operation.
+flows:
+    - id: FLOW-001
+      description: Validate access before changing state.
+      state_transitions:
+          - from: DRAFT
+            to: ACTIVE
+dependencies:
+    - id: DEP-001
+      description: Existing authorization service.
+      status: resolved
+integrations: []
+personas:
+    - id: PER-001
+      role: authorized_user
+      applicability: Primary actor.
+security_boundaries:
+    - id: SEC-001
+      description: Server authorization boundary.
+business_rules:
+    - id: BR-001
+      description: Only authorized users may activate the resource.
+decisions:
+    - id: DEC-001
+      question: Reuse the existing authorization service?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Reuse the existing service.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Authorization logic has a focused unit boundary.
+    - id: TEXP-002
+      category: security
+      classification: REQUIRED
+      reason: The requirement protects an authorization boundary.
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids:
+              - SCN-001
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids:
+              - INV-001
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids:
+              - TEXP-001
+              - TEXP-002
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent_codex_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Governance fixture

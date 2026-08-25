@@ -1,0 +1,63 @@
+schema_version: "1.0"
+task:
+    id: REN-BAD-TRACE
+    title: Invalid traceability fixture
+    source: linear
+    branch: feature/ren-bad-trace
+    status: BLOCKED
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons: []
+    escalation_history: []
+investigation:
+    depth: targeted
+    investigated_areas: []
+    excluded_areas: []
+    dependencies: []
+    integrations: []
+    security_boundaries: []
+    state_transitions: []
+    related_tests: []
+    uncertainties: []
+requirements:
+    - id: REQ-001
+      description: A real requirement.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      requirement_ids:
+          - REQ-MISSING
+      description: A broken reference.
+invariants: []
+flows: []
+dependencies: []
+integrations: []
+personas: []
+security_boundaries: []
+business_rules: []
+decisions: []
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Required for fixture coverage.
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids:
+              - SCN-MISSING
+    scenario_to_invariants: []
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids:
+              - TEXP-001
+critic:
+    required: false
+    completed: false
+    findings: []
+approval:
+    state: BLOCKED
+    design_blockers: []

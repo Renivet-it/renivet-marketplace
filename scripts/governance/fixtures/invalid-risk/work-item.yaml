@@ -1,0 +1,46 @@
+schema_version: "1.0"
+task:
+    id: REN-BAD-RISK
+    title: Invalid risk fixture
+    source: linear
+    branch: feature/ren-bad-risk
+    status: DRAFT
+risk:
+    initial_risk: L2
+    path_rule_risk: L1
+    semantic_risk: L3
+    final_risk: L1
+    reasons: []
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas: []
+    excluded_areas: []
+    dependencies: []
+    integrations: []
+    security_boundaries: []
+    state_transitions: []
+    related_tests: []
+    uncertainties: []
+requirements: []
+scenarios: []
+invariants: []
+flows: []
+dependencies: []
+integrations: []
+personas: []
+security_boundaries: []
+business_rules: []
+decisions: []
+test_expectations: []
+traceability:
+    requirement_to_scenarios: []
+    scenario_to_invariants: []
+    scenario_to_test_expectations: []
+critic:
+    required: true
+    completed: false
+    findings: []
+approval:
+    state: PENDING
+    design_blockers: []
