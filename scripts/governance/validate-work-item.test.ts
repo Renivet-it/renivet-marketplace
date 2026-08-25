@@ -124,6 +124,16 @@ describe("governance work-item validation", () => {
         );
     });
 
+    test("rejects a Critic artifact path that escapes the work-item folder", async () => {
+        const item = await loadValidFixture();
+        item.critic.artifact = "../README.md";
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-CRITIC-001"
+        );
+    });
+
     test("does not impose an L2/L3 Critic on an L1 work item", async () => {
         const item = await loadValidFixture();
         item.risk = {

@@ -1,5 +1,5 @@
 import { stat } from "node:fs/promises";
-import { dirname, resolve } from "node:path";
+import { dirname, isAbsolute, resolve } from "node:path";
 import { parse } from "yaml";
 import {
     RISK_LEVELS,
@@ -106,6 +106,20 @@ function requireArray(
     if (!Array.isArray(value)) {
         add(errors, code, path, "An array is required.");
     }
+}
+
+function isSafeWorkItemArtifact(value: unknown): value is string {
+    if (typeof value !== "string" || !value.trim() || isAbsolute(value)) {
+        return false;
+    }
+
+    if (/^[a-zA-Z]:/.test(value)) {
+        return false;
+    }
+
+    return value
+        .split(/[\\/]+/)
+        .every((segment) => segment && segment !== "." && segment !== "..");
 }
 
 function validateRecordContent(item: UnknownRecord, errors: ValidationError[]) {
@@ -527,6 +541,14 @@ export function validateWorkItem(
                 `Critic must cover: ${missingCategories.join(", ")}.`
             );
         }
+        if (!isSafeWorkItemArtifact(critic.artifact)) {
+            add(
+                errors,
+                "GOV-CRITIC-001",
+                "critic.artifact",
+                "Critic artifact must be a non-empty relative path contained in the work-item folder."
+            );
+        }
     }
 
     const implementationReview = isRecord(value.implementation_review)
@@ -648,8 +670,7 @@ export async function validateWorkItemFile(
 
         if (
             riskIndex(item.risk.final_risk) >= 2 &&
-            typeof item.critic.artifact === "string" &&
-            item.critic.artifact.trim()
+            isSafeWorkItemArtifact(item.critic.artifact)
         ) {
             const artifactPath = resolve(dirname(target), item.critic.artifact);
             try {

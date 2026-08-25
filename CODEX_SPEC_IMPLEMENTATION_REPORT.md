@@ -125,7 +125,7 @@ Task-specific artifacts live only in `docs/.work-items/<LINEAR-ID>/` on the feat
 | SPEC-023 | PASS   | The same test sets confidence to high and still fails because consequence is high.                                           |
 | SPEC-024 | PASS   | Validator consumes `work-item.yaml` directly; valid fixture and REN-95 validate independently of Markdown.                   |
 
-Local pilot verification evidence (not part of this PR): `bun test` passed 35 tests across 11 files with 0 failures; the focused governance suite passed 14 tests; REN-95 and the valid L2 fixture exited 0; the risk and traceability fixtures each exited 1 with `GOV-RISK-001` and `GOV-TRACE-001`; Prettier and skill-package validation exited 0; and the Git scope check found no changes under `src/`, `qa/`, `drizzle/`, or `migrations/`.
+Local pilot verification evidence (not part of this PR): `bun test` passed 35 tests across 11 files with 0 failures; the focused governance suite ultimately passed 15 tests; REN-95 and the valid L2 fixture exited 0; the risk and traceability fixtures each exited 1 with `GOV-RISK-001` and `GOV-TRACE-001`; Prettier and skill-package validation exited 0; and the Git scope check found no changes under `src/`, `qa/`, `drizzle/`, or `migrations/`.
 
 ## 19. Pilot results
 
