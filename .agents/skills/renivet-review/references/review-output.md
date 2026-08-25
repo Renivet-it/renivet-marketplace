@@ -70,7 +70,7 @@ implementation_review:
         invariants: PASS
         architecture: PASS
         security: NOT_APPLICABLE
-        test_coverage: PARTIAL
+        test_coverage: PASS
         scope: PASS
     blocking_findings: []
     required_actions: []
