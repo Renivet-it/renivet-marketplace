@@ -50,6 +50,15 @@ jobs:
                   for work_item_dir in "${work_item_dirs[@]}"; do
                     work_item="${work_item_dir}/work-item.yaml"
                     if [[ ! -e "$work_item" ]]; then
+                      mapfile -d '' tracked_files < <(
+                        git ls-tree -r --name-only -z HEAD -- "$work_item_dir/*"
+                      )
+                      if (( ${#tracked_files[@]} > 0 )); then
+                        echo "::error file=$work_item::Missing work-item.yaml while tracked files remain in $work_item_dir."
+                        printf 'Tracked file remains: %s\n' "${tracked_files[@]}"
+                        exit 1
+                      fi
+
                       echo "Skipping removed governance work item: $work_item_dir"
                       continue
                     fi
