@@ -591,6 +591,17 @@ export function validateWorkItem(
     const implementationReview = isRecord(value.implementation_review)
         ? value.implementation_review
         : undefined;
+    if (
+        Object.prototype.hasOwnProperty.call(value, "implementation_review") &&
+        !implementationReview
+    ) {
+        add(
+            errors,
+            "GOV-REVIEW-001",
+            "implementation_review",
+            "Implementation review must be an object."
+        );
+    }
     if (implementationReview) {
         requireReviewString(
             implementationReview.artifact,
@@ -846,7 +857,7 @@ export async function validateWorkItemFile(
                 implementationReview.artifact
             );
             try {
-                if ((await stat(artifactPath)).isDirectory()) {
+                if (!(await stat(artifactPath)).isFile()) {
                     throw new Error("Review artifact must be a file.");
                 }
             } catch (error) {

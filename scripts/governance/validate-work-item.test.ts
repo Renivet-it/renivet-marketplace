@@ -187,6 +187,21 @@ describe("governance work-item validation", () => {
         );
     });
 
+    test("rejects a present non-object implementation review", async () => {
+        for (const implementationReview of [null, "invalid", []]) {
+            const item = await loadValidFixture();
+            item.implementation_review = implementationReview;
+
+            const result = validateWorkItem(item);
+            expect(result.errors).toContainEqual(
+                expect.objectContaining({
+                    code: "GOV-REVIEW-001",
+                    path: "implementation_review",
+                })
+            );
+        }
+    });
+
     test("requires an implementation review base commit", async () => {
         const item = await loadValidFixture();
         delete item.implementation_review.base_commit;
