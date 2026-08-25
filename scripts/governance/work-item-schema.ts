@@ -30,6 +30,26 @@ export const TEST_CLASSIFICATIONS = [
     "NOT_APPLICABLE",
 ] as const;
 
+export const REVIEW_RESULTS = [
+    "REVIEW_PASSED",
+    "REVIEW_PASSED_WITH_FINDINGS",
+    "REVIEW_FAILED",
+    "REVIEW_BLOCKED",
+] as const;
+
+export const RECONCILIATION_RESULTS = [
+    "PASS",
+    "PARTIAL",
+    "FAIL",
+    "NOT_APPLICABLE",
+] as const;
+
+export const IMPLEMENTATION_DRIFT_LEVELS = [
+    "NO_DRIFT",
+    "MINOR_DRIFT",
+    "MATERIAL_DRIFT",
+] as const;
+
 export interface ValidationError {
     code: string;
     path: string;

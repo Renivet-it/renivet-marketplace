@@ -10,6 +10,8 @@
 - Risk can escalate from L0/L1 to L2/L3. Never lower the final risk below any applicable risk input.
 - L2/L3 specifications require an independent Critic review and a fail-closed approval gate before `READY_FOR_DEV`.
 - Deterministic governance rules are implemented by `bun run governance:validate`; do not duplicate them in prose or GitHub Actions.
+- Use `$renivet-review <LINEAR-ID>` after implementation to reconcile the Git/PR diff against the approved `READY_FOR_DEV` contract.
+- While `renivet-review` is active, treat application code, tests, Linear, and PR state as read-only. It may update only the task-local `REVIEW.md` and `work-item.yaml` governance result, and it must not fix code, run application test suites, change Linear, or merge.
 
 ## Verification
 
