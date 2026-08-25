@@ -1,0 +1,7 @@
+interface:
+    display_name: "Renivet REVIEW"
+    short_description: "Review implementation against an approved SPEC"
+    default_prompt: "Use $renivet-review with a Linear issue ID to review its implementation against the approved contract."
+
+policy:
+    allow_implicit_invocation: true
