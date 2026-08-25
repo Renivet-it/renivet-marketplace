@@ -1,1 +1,3 @@
-export { GET, runtime } from "../vendor-po.pdf/route";
+export { GET } from "../vendor-po.pdf/route";
+
+export const runtime = "nodejs";
