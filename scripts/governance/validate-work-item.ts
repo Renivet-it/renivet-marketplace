@@ -1,5 +1,5 @@
-import { lstat, stat } from "node:fs/promises";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { lstat, realpath, stat } from "node:fs/promises";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { parse } from "yaml";
 import {
     IMPLEMENTATION_DRIFT_LEVELS,
@@ -713,9 +713,18 @@ export function validateWorkItem(
 
         const blockers = asStrings(implementationReview.blocking_findings);
         const actions = asStrings(implementationReview.required_actions);
+        const evidence = asStrings(implementationReview.evidence);
+        const reconciliationResults = reconciliationFields.map(
+            (field) => reconciliation?.[field]
+        );
+        const hasPartialReconciliation =
+            reconciliationResults.includes("PARTIAL");
+        const hasFailedReconciliation = reconciliationResults.includes("FAIL");
         const passed = implementationReview.result === "REVIEW_PASSED";
         const passedWithFindings =
             implementationReview.result === "REVIEW_PASSED_WITH_FINDINGS";
+        const failed = implementationReview.result === "REVIEW_FAILED";
+        const blocked = implementationReview.result === "REVIEW_BLOCKED";
         if (
             passed &&
             reconciliationFields.some(
@@ -753,6 +762,87 @@ export function validateWorkItem(
                 "GOV-REVIEW-001",
                 "implementation_review.result",
                 "A review passed with findings cannot contain material drift."
+            );
+        }
+        if (
+            passedWithFindings &&
+            actions.length === 0 &&
+            !hasPartialReconciliation &&
+            implementationReview.material_drift !== "MINOR_DRIFT"
+        ) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.result",
+                "A review passed with findings requires a non-blocking action, partial reconciliation, or minor drift."
+            );
+        }
+        if (passedWithFindings && hasFailedReconciliation) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.reconciliation",
+                "A review passed with findings cannot contain failed reconciliation."
+            );
+        }
+        if (passedWithFindings && blockers.length > 0) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.blocking_findings",
+                "A review passed with findings cannot contain blocking findings."
+            );
+        }
+        if (
+            failed &&
+            !hasFailedReconciliation &&
+            blockers.length === 0 &&
+            implementationReview.material_drift !== "MATERIAL_DRIFT"
+        ) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.result",
+                "A failed review requires failed reconciliation, a blocking finding, or material drift."
+            );
+        }
+        if (blocked && !hasPartialReconciliation) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.reconciliation",
+                "A blocked review requires at least one partial reconciliation result."
+            );
+        }
+        if (blocked && hasFailedReconciliation) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.reconciliation",
+                "A blocked review cannot contain failed reconciliation."
+            );
+        }
+        if (blocked && blockers.length === 0 && actions.length === 0) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review",
+                "A blocked review requires a blocking finding or required action."
+            );
+        }
+        if (
+            blocked &&
+            (implementationReview.base_commit === null ||
+                implementationReview.head_commit === null) &&
+            !evidence.some((entry) =>
+                entry.startsWith("Comparison input unavailable:")
+            )
+        ) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.evidence",
+                'Null blocked-review commits require evidence beginning "Comparison input unavailable:".'
             );
         }
         if (
@@ -919,6 +1009,21 @@ export async function validateWorkItemFile(
                 if (artifactStats.isSymbolicLink()) {
                     throw new Error(
                         "Review artifact must not be a symbolic link."
+                    );
+                }
+                const workItemDirectory = await realpath(dirname(target));
+                const resolvedArtifactPath = await realpath(artifactPath);
+                const relativeArtifactPath = relative(
+                    workItemDirectory,
+                    resolvedArtifactPath
+                );
+                if (
+                    relativeArtifactPath === ".." ||
+                    relativeArtifactPath.startsWith(`..${sep}`) ||
+                    isAbsolute(relativeArtifactPath)
+                ) {
+                    throw new Error(
+                        "Review artifact must resolve within the work-item folder."
                     );
                 }
                 if (!artifactStats.isFile()) {
