@@ -1,20 +1,16 @@
 "use client";
 
 import { env } from "@/../env";
-import { verifyPayment } from "@/actions";
-import { trackPurchaseCapi } from "@/actions/analytics";
+import { verifyPayment } from "@/actions/get-shiprocket-balance";
 import { processOrderAfterPayment } from "@/actions/process-order-after-payment";
-import { updatePaymentStatusAction } from "@/actions/update-payment-status";
 import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 import { siteConfig } from "@/config/site";
-import { orderQueries, productQueries } from "@/lib/db/queries";
 // Assuming needed for value formatting if not available
 // crypto is usually available globally in Node but for client side... wait.
 // payment.ts is a utility file. Is it client or server?
 // It imports "trpc/client". It is likely client-side or shared.
 // If client-side, crypto.randomUUID() is available in modern browsers.
 // If not, I might need a polyfill or just use globalThis.crypto.
-import { CapiUserData } from "@/lib/fb-capi";
 import { fbEvent } from "@/lib/fbpixel";
 import {
     convertPaiseToRupees,
@@ -236,7 +232,7 @@ export function createRazorpayPaymentOptions({
                         template: "order_confirmation",
                         parameters: [user.firstName, orderId],
                     });
-                    console.log("WhatsApp notification sent successfully");
+                    console.log("WhatsApp notification handled successfully");
                 } catch (error) {
                     console.error("Failed to send WhatsApp notification:", {
                         error:

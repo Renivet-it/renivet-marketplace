@@ -60,9 +60,9 @@ async function main() {
                     bank: {
                         bankName: "IDFC First Bank",
                         accountName: "Renivet Solutions Pvt Ltd",
-                        accountNumber: "73564993505",
-                        ifsc: "IDFB0080174",
-                        branch: "Thubarahallii Branch",
+                        accountNumber: "000000000000",
+                        ifsc: "TEST0000000",
+                        branch: "Test Branch",
                     },
                     signatoryName: "Renivet",
                     declarationCompanyName: "Renivet",

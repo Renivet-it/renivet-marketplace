@@ -1,4 +1,5 @@
 import { InvoiceTemplate } from "@/components/pdf/invoice-template";
+import { requireShipmentLogisticsAccess } from "@/lib/auth/logistics-access";
 import { db } from "@/lib/db";
 import { brands, hsnMaster, orders } from "@/lib/db/schema";
 import { createInvoiceDownloadToken } from "@/lib/invoice-download";
@@ -78,6 +79,11 @@ async function issueInvoiceNumber(params: {
 export async function POST(req: Request) {
     try {
         const { order } = await req.json();
+        const denied = await requireShipmentLogisticsAccess(
+            typeof order?.id === "string" ? { orderId: order.id } : undefined
+        );
+        if (denied) return denied;
+
         const complianceError = validateHighValueB2cInvoice({
             totalAmountPaise: Number(order.totalAmount ?? order.amount ?? 0),
             customerGstin: order.customerGstin,

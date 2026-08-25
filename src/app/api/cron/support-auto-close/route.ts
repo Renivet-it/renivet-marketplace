@@ -1,7 +1,8 @@
 import { db } from "@/lib/db";
+import { requireCronSecret } from "@/lib/auth/cron-access";
 import { userSupportMessages, userSupportTickets } from "@/lib/db/schema";
 import { and, eq, inArray, lt } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const ACTIVE_STATUSES = [
     "new",
@@ -14,9 +15,10 @@ const ACTIVE_STATUSES = [
     "escalated",
 ] as const;
 
-// Intentionally public at the administrator's request. Configure a scheduler
-// to invoke this endpoint once per day.
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
+
     const inactiveSince = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000);
     const tickets = await db.query.userSupportTickets.findMany({
         where: and(

@@ -14,9 +14,9 @@ CREATE TABLE IF NOT EXISTS "corporate_document_settings" (
     "phone" text,
     "bank_name" text DEFAULT 'IDFC',
     "bank_account_name" text DEFAULT 'Renivet' NOT NULL,
-    "bank_account_number" text DEFAULT '73564993505',
+    "bank_account_number" text,
     "bank_account_type" text,
-    "bank_ifsc_code" text DEFAULT 'IDFB0090174',
+    "bank_ifsc_code" text,
     "bank_branch" text,
     "authorized_signatory_name" text DEFAULT 'Renivet' NOT NULL,
     "default_payment_terms" text DEFAULT '30% advance on PO confirmation; balance within 15 days of dispatch.' NOT NULL,
@@ -32,13 +32,13 @@ CREATE INDEX IF NOT EXISTS "corporate_document_settings_active_idx" ON "corporat
 INSERT INTO "corporate_document_settings" (
     "legal_name", "trade_name", "gstin", "address_line_1", "address_line_2",
     "city", "state", "postal_code", "country", "email", "phone",
-    "bank_name", "bank_account_name", "bank_account_number", "bank_ifsc_code",
+    "bank_name", "bank_account_name",
     "authorized_signatory_name"
 )
 SELECT
     'Renivet', 'Renivet', '10AANCR5687A1ZG', 'Dasta Concerto', 'Yamare Village',
     'Bangalore', 'Karnataka', '562125', 'India', 'contact@renivet.com',
-    '+917356499350', 'IDFC', 'Renivet', '73564993505', 'IDFB0090174', 'Renivet'
+    '+917356499350', 'IDFC', 'Renivet', 'Renivet'
 WHERE NOT EXISTS (SELECT 1 FROM "corporate_document_settings");
 --> statement-breakpoint
 UPDATE "corporate_document_settings"
@@ -57,8 +57,6 @@ SET
     "phone" = COALESCE("phone", '+917356499350'),
     "bank_name" = COALESCE("bank_name", 'IDFC'),
     "bank_account_name" = COALESCE("bank_account_name", 'Renivet'),
-    "bank_account_number" = COALESCE("bank_account_number", '73564993505'),
-    "bank_ifsc_code" = COALESCE("bank_ifsc_code", 'IDFB0090174'),
     "authorized_signatory_name" = 'Renivet',
     "updated_at" = now()
 WHERE "is_active" = true;

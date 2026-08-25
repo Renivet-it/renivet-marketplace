@@ -1,5 +1,6 @@
 import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
 import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
+import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
@@ -643,31 +644,35 @@ export const ordersRouter = createTRPCRouter({
                     // Clear user cart (do this once after all orders are created to avoid multiple calls)
                     // Moved outside the loop
 
-                    try {
-                        await sendBrandOrderNotificationEmail({
-                            orderId: newOrder.id,
-                            brand: {
-                                id: brand.id,
-                                email: brand.email,
-                                name: brand.name,
-                                street: existingAddress.street,
-                                city: existingAddress.city,
-                                state: existingAddress.state,
-                                zip: existingAddress.zip,
-                                country: "India",
-                                customerName:
-                                    existingAddress.fullName.split(" ")[0],
-                            },
-                        });
-                        console.log(
-                            `Order confirmation email sent for order ${newOrder.id}`
-                        );
-                    } catch (emailError) {
-                        console.error(
-                            `Failed to send order confirmation email for order ${newOrder.id}:`,
-                            emailError
-                        );
-                        // Log the error but don't fail the mutation
+                    if (await shouldRunExternalSideEffects()) {
+                        try {
+                            await sendBrandOrderNotificationEmail({
+                                orderId: newOrder.id,
+                                brand: {
+                                    id: brand.id,
+                                    email: brand.email,
+                                    name: brand.name,
+                                    street: existingAddress.street,
+                                    city: existingAddress.city,
+                                    state: existingAddress.state,
+                                    zip: existingAddress.zip,
+                                    country: "India",
+                                    customerName:
+                                        existingAddress.fullName.split(" ")[0],
+                                },
+                            });
+                            console.log(
+                                `Order confirmation email sent for order ${newOrder.id}`
+                            );
+                        } catch (emailError) {
+                            console.error(
+                                `Failed to send order confirmation email for order ${newOrder.id}:`,
+                                emailError
+                            );
+                            // Log the error but don't fail the mutation
+                        }
+                    } else {
+                        console.info(`Skipping brand order email for ${newOrder.id}: external side effects are disabled.`);
                     }
                     // const sr = await shiprocket();
 
@@ -955,8 +960,14 @@ export const ordersRouter = createTRPCRouter({
                         //     `Shiprocket order creation response for brand ${brand.name}:`,
                         //     srOrder
                         // );
-                        const srOrder =
-                            await createDelhiveryOrder(delhiveryPayload);
+                        const externalSideEffectsEnabled =
+                            await shouldRunExternalSideEffects();
+                        const srOrder = externalSideEffectsEnabled
+                            ? await createDelhiveryOrder(delhiveryPayload)
+                            : null;
+                        if (!externalSideEffectsEnabled) {
+                            console.info(`Skipping Delhivery shipment creation for ${newOrder.id}: external side effects are disabled.`);
+                        }
                         console.log("✅ Delhivery Response:", srOrder);
                         let finalLength = baseLength;
                         let finalWidth = baseWidth;
@@ -1362,25 +1373,29 @@ export const ordersRouter = createTRPCRouter({
                     });
 
                     // NEW: Send order confirmation email for this order
-                    try {
-                        await sendOrderConfirmationEmail({
-                            orderId: newOrder.id,
-                            user: {
-                                id: user.id,
-                                email: user.email,
-                                firstName: user.firstName,
-                                lastName: "",
-                            },
-                        });
-                        console.log(
-                            `Order confirmation email sent for order ${newOrder.id}`
-                        );
-                    } catch (emailError) {
-                        console.error(
-                            `Failed to send order confirmation email for order ${newOrder.id}:`,
-                            emailError
-                        );
-                        // Log the error but don't fail the mutation
+                    if (await shouldRunExternalSideEffects()) {
+                        try {
+                            await sendOrderConfirmationEmail({
+                                orderId: newOrder.id,
+                                user: {
+                                    id: user.id,
+                                    email: user.email,
+                                    firstName: user.firstName,
+                                    lastName: "",
+                                },
+                            });
+                            console.log(
+                                `Order confirmation email sent for order ${newOrder.id}`
+                            );
+                        } catch (emailError) {
+                            console.error(
+                                `Failed to send order confirmation email for order ${newOrder.id}:`,
+                                emailError
+                            );
+                            // Log the error but don't fail the mutation
+                        }
+                    } else {
+                        console.info(`Skipping customer order email for ${newOrder.id}: external side effects are disabled.`);
                     }
 
                     if (isRewardOrder && itemRewardRedemptionId) {

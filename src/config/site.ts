@@ -533,6 +533,13 @@ export const generalSidebarConfig: GeneralSidebarConfig[] = [
                     BitFieldSitePermission.ADMINISTRATOR,
             },
             {
+                title: "External Side Effects",
+                url: "/dashboard/general/settings/external-side-effects",
+                permissions:
+                    BitFieldSitePermission.MANAGE_SETTINGS |
+                    BitFieldSitePermission.ADMINISTRATOR,
+            },
+            {
                 title: "Legal & Compliance",
                 url: "/dashboard/general/finance/legal-compliance",
                 permissions:

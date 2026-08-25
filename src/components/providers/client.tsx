@@ -12,7 +12,7 @@ import posthog from "posthog-js";
 import { PostHogProvider } from "posthog-js/react";
 import { Suspense, useEffect, useState } from "react";
 import superjson from "superjson";
-import { PostHogPageView } from "../globals/posthog";
+import { PostHogIdentifyBridge, PostHogPageView } from "../globals/posthog";
 
 function getTrpcUrl() {
     if (typeof window !== "undefined") return "/api/trpc";
@@ -58,6 +58,7 @@ export function ClientProvider({ children }: LayoutProps) {
         <PostHogProvider client={posthog}>
             <Suspense>
                 <PostHogPageView />
+                <PostHogIdentifyBridge />
             </Suspense>
 
             <trpc.Provider client={trpcClient} queryClient={queryClient}>

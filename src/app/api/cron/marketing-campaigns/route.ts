@@ -1,10 +1,14 @@
 import { marketingQueries } from "@/lib/db/queries";
+import { requireCronSecret } from "@/lib/auth/cron-access";
 import { sendDigestCampaign } from "@/lib/marketing/email";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+    const denied = requireCronSecret(req);
+    if (denied) return denied;
+
     const dueCampaigns = await marketingQueries.getScheduledCampaignsDue();
 
     let processed = 0;

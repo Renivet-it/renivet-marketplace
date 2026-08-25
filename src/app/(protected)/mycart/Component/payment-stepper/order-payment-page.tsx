@@ -1,6 +1,6 @@
 "use client";
 
-import { getShiprocketBalance } from "@/actions";
+import { getShiprocketBalance } from "@/actions/get-shiprocket-balance";
 import {
     trackInitiateCheckoutCapi,
     trackPurchaseCapi,

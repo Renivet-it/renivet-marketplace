@@ -62,7 +62,7 @@ export const corporatePaymentLifecycleStatusSchema = z.enum([
     "payment_partial",
 ]);
 
-export const corporateGstinValidation = z
+export const corporatePlatformGstinValidation = z
     .string()
     .trim()
     .max(32)
@@ -75,7 +75,7 @@ export const corporateGstinValidation = z
 
 export const corporateProfileInputSchema = z.object({
     companyName: z.string().min(2),
-    gstNumber: corporateGstinValidation,
+    gstNumber: corporatePlatformGstinValidation,
     website: z.string().url().nullable().optional(),
     companySize: z.string().trim().max(120).nullable().optional(),
     industry: z.string().trim().max(120).nullable().optional(),
@@ -251,7 +251,7 @@ export const corporatePurchaseOrderReviewInputSchema = z.object({
             contactPersonName: z.string().trim().min(2).max(160),
             emailAddress: z.string().trim().email().max(254),
             mobileNumber: z.string().trim().min(8).max(20),
-            gstNumber: corporateGstinValidation,
+            gstNumber: corporatePlatformGstinValidation,
             deliveryCountry: z.string().trim().min(2).max(100),
             deliveryCity: z.string().trim().min(2).max(120),
             deliveryPincode: z.string().trim().min(3).max(20),

@@ -30,7 +30,7 @@ export function FloatingLoginButton() {
                         aria-label="Join Renivet"
                     >
                         {/* Shine effect */}
-                        <div className="duration-[1200ms] absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform ease-out group-hover:translate-x-full" />
+                        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent duration-[1.2s] transition-transform ease-out group-hover:translate-x-full" />
 
                         {/* Icon Container */}
                         <div className="relative flex size-9 shrink-0 items-center justify-center rounded-full bg-white/20 shadow-inner ring-1 ring-white/30 backdrop-blur-md transition-all duration-500 group-hover:scale-110 group-hover:bg-white/30 sm:size-[42px]">

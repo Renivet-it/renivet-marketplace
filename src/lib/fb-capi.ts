@@ -1,6 +1,8 @@
 import { db } from "@/lib/db";
 import { capiLogs } from "@/lib/db/schema";
+import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { sanitizeFbUserData } from "@/lib/fbpixel";
+import { env } from "../../env";
 import {
     CustomData,
     EventRequest,
@@ -9,8 +11,7 @@ import {
     UserData,
 } from "facebook-nodejs-business-sdk";
 
-const ACCESS_TOKEN =
-    "EAAPw9alHhHkBPYBbt8Kx8aAZC89lcb3f4pcZBMpn1ZAP15RBbngINvEI9rLiL6qcjxD6cjUxhyZAtd8isifpCEE0bHCjZCFveZCsEySokIA69IEDN8rVO5hdif9ATly3xllA5GV79yOkdekTdyLoHZBI2pPwsW6EqW3wLRvboZCvYVxDLkqvlB740Sel14ZAZCuwZDZD";
+const ACCESS_TOKEN = env.FACEBOOK_CAPI_ACCESS_TOKEN;
 const PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || "618442627790500";
 
 FacebookAdsApi.init(ACCESS_TOKEN ?? "");
@@ -56,6 +57,11 @@ export const sendCapiEvent = async (
     eventId: string,
     eventSourceUrl: string
 ) => {
+    if (!(await shouldRunExternalSideEffects())) {
+        console.info(`Skipping CAPI event '${eventName}': external side effects are disabled.`);
+        return { skipped: true, reason: "external_side_effects_disabled" };
+    }
+
     if (!ACCESS_TOKEN) {
         console.warn("FACEBOOK_ACCESS_TOKEN not found, skipping CAPI event.");
         return;

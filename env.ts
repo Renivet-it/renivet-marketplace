@@ -31,6 +31,12 @@ export const env = createEnv({
             .string({ required_error: "GOOGLE_ANALYTICS_ID is required" })
             .min(1, "GOOGLE_ANALYTICS_ID is required"),
 
+        FACEBOOK_CAPI_ACCESS_TOKEN: z
+            .string({
+                required_error: "FACEBOOK_CAPI_ACCESS_TOKEN is required",
+            })
+            .min(1, "FACEBOOK_CAPI_ACCESS_TOKEN is required"),
+
         RESEND_API_KEY: z
             .string({ required_error: "RESEND_API_KEY is required" })
             .min(1, "RESEND_API_KEY is required"),
@@ -100,6 +106,10 @@ export const env = createEnv({
         GOOGLE_ADS_LOGIN_CUSTOMER_ID: z.string().optional(),
         ANALYTICS_CRON_SECRET: z.string().optional(),
 
+        // Required on Vercel because both the staging and production projects
+        // can be deployed with VERCEL_ENV=production.
+        APP_ENV: z.enum(["development", "staging", "production"]).optional(),
+
         NODE_ENV: z
             .enum(["development", "production", "test"])
             .default("development"),
@@ -143,6 +153,7 @@ export const env = createEnv({
         JWT_SECRET_KEY: process.env.JWT_SECRET_KEY,
         RESEND_API_KEY: process.env.RESEND_API_KEY,
         GOOGLE_ANALYTICS_ID: process.env.GOOGLE_ANALYTICS_ID,
+        FACEBOOK_CAPI_ACCESS_TOKEN: process.env.FACEBOOK_CAPI_ACCESS_TOKEN,
         RAZOR_PAY_KEY_ID: process.env.RAZOR_PAY_KEY_ID,
         RAZOR_PAY_SECRET_KEY: process.env.RAZOR_PAY_SECRET_KEY,
         RAZOR_PAY_WEBHOOK_SECRET: process.env.RAZOR_PAY_WEBHOOK_SECRET,
@@ -168,6 +179,7 @@ export const env = createEnv({
         GOOGLE_ADS_CLIENT_SECRET: process.env.GOOGLE_ADS_CLIENT_SECRET,
         GOOGLE_ADS_LOGIN_CUSTOMER_ID: process.env.GOOGLE_ADS_LOGIN_CUSTOMER_ID,
         ANALYTICS_CRON_SECRET: process.env.ANALYTICS_CRON_SECRET,
+        APP_ENV: process.env.APP_ENV,
         NODE_ENV: process.env.NODE_ENV,
 
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:

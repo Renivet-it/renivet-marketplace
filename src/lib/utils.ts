@@ -8,7 +8,6 @@ import {
     BitFieldSitePermission,
 } from "@/config/permissions";
 import { init } from "@paralleldrive/cuid2";
-import { AxiosError } from "axios";
 import { clsx, type ClassValue } from "clsx";
 import { format, subDays } from "date-fns";
 import { NextResponse } from "next/server";
@@ -24,6 +23,19 @@ import {
     ResponseMessages,
     Role,
 } from "./validations";
+
+type AxiosLikeError = Error & {
+    isAxiosError?: boolean;
+    response?: { data?: { message?: string } };
+};
+
+function isAxiosLikeError(error: unknown): error is AxiosLikeError {
+    return (
+        typeof error === "object" &&
+        error !== null &&
+        (error as { isAxiosError?: unknown }).isAxiosError === true
+    );
+}
 
 export function wait(ms: number) {
     return new Promise((resolve) => setTimeout(resolve, ms));
@@ -53,7 +65,7 @@ export class AppError extends Error {
 
 export function sanitizeError(error: unknown): string {
     if (error instanceof AppError) return error.message;
-    else if (error instanceof AxiosError)
+    else if (isAxiosLikeError(error))
         return error.response?.data?.message ?? error.message;
     else if (error instanceof ZodError)
         return error.issues.map((x) => x.message).join(", ");
@@ -69,7 +81,7 @@ export function handleError(error: unknown) {
             message: error.status,
             longMessage: sanitizeError(error),
         });
-    else if (error instanceof AxiosError)
+    else if (isAxiosLikeError(error))
         return CResponse({
             message: "INTERNAL_SERVER_ERROR",
             longMessage: sanitizeError(error),
