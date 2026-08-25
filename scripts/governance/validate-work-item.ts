@@ -2,6 +2,9 @@ import { stat } from "node:fs/promises";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { parse } from "yaml";
 import {
+    IMPLEMENTATION_DRIFT_LEVELS,
+    RECONCILIATION_RESULTS,
+    REVIEW_RESULTS,
     RISK_LEVELS,
     TEST_CATEGORIES,
     TEST_CLASSIFICATIONS,
@@ -105,6 +108,40 @@ function requireArray(
 ) {
     if (!Array.isArray(value)) {
         add(errors, code, path, "An array is required.");
+    }
+}
+
+function requireReviewString(
+    value: unknown,
+    path: string,
+    errors: ValidationError[]
+) {
+    if (typeof value !== "string" || !value.trim()) {
+        add(errors, "GOV-REVIEW-001", path, "A non-empty string is required.");
+    }
+}
+
+function requireReviewStringArray(
+    value: unknown,
+    path: string,
+    errors: ValidationError[],
+    nonEmpty = false
+) {
+    if (
+        !Array.isArray(value) ||
+        (nonEmpty && value.length === 0) ||
+        value.some(
+            (entry) => typeof entry !== "string" || !entry.trim()
+        )
+    ) {
+        add(
+            errors,
+            "GOV-REVIEW-001",
+            path,
+            nonEmpty
+                ? "A non-empty array of non-empty strings is required."
+                : "An array of non-empty strings is required."
+        );
     }
 }
 
@@ -555,37 +592,145 @@ export function validateWorkItem(
         ? value.implementation_review
         : undefined;
     if (implementationReview) {
-        const classification = implementationReview.classification;
+        requireReviewString(
+            implementationReview.artifact,
+            "implementation_review.artifact",
+            errors
+        );
+        if (!isSafeWorkItemArtifact(implementationReview.artifact)) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.artifact",
+                "Review artifact must be a non-empty relative path contained in the work-item folder."
+            );
+        }
+        if (!REVIEW_RESULTS.includes(implementationReview.result as never)) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.result",
+                "Implementation review result is invalid."
+            );
+        }
+        requireReviewString(
+            implementationReview.base_branch,
+            "implementation_review.base_branch",
+            errors
+        );
+        for (const field of ["base_commit", "head_commit"]) {
+            if (
+                typeof implementationReview[field] !== "string" ||
+                !/^[0-9a-f]{40}$/i.test(implementationReview[field])
+            ) {
+                add(
+                    errors,
+                    "GOV-REVIEW-001",
+                    `implementation_review.${field}`,
+                    "A 40-character hexadecimal commit is required."
+                );
+            }
+        }
         if (
-            !["NO_DRIFT", "MINOR_DRIFT", "MATERIAL_DRIFT"].includes(
-                classification as string
+            implementationReview.pr_url !== null &&
+            typeof implementationReview.pr_url !== "string"
+        ) {
+            add(
+                errors,
+                "GOV-REVIEW-001",
+                "implementation_review.pr_url",
+                "A string or null is required."
+            );
+        }
+        if (
+            !IMPLEMENTATION_DRIFT_LEVELS.includes(
+                implementationReview.material_drift as never
             )
         ) {
             add(
                 errors,
-                "GOV-DRIFT-001",
-                "implementation_review.classification",
-                "Implementation drift must be NO_DRIFT, MINOR_DRIFT, or MATERIAL_DRIFT."
+                "GOV-REVIEW-001",
+                "implementation_review.material_drift",
+                "Implementation review drift level is invalid."
             );
         }
-        if (asStrings(implementationReview.evidence).length === 0) {
+        const reconciliation = isRecord(implementationReview.reconciliation)
+            ? implementationReview.reconciliation
+            : undefined;
+        for (const field of [
+            "requirements",
+            "scenarios",
+            "invariants",
+            "architecture",
+            "security",
+            "test_coverage",
+            "scope",
+        ]) {
+            if (
+                !reconciliation ||
+                !RECONCILIATION_RESULTS.includes(reconciliation[field] as never)
+            ) {
+                add(
+                    errors,
+                    "GOV-REVIEW-001",
+                    `implementation_review.reconciliation.${field}`,
+                    "A valid reconciliation result is required."
+                );
+            }
+        }
+        requireReviewStringArray(
+            implementationReview.blocking_findings,
+            "implementation_review.blocking_findings",
+            errors
+        );
+        requireReviewStringArray(
+            implementationReview.required_actions,
+            "implementation_review.required_actions",
+            errors
+        );
+        requireReviewStringArray(
+            implementationReview.evidence,
+            "implementation_review.evidence",
+            errors,
+            true
+        );
+
+        const blockers = asStrings(implementationReview.blocking_findings);
+        const actions = asStrings(implementationReview.required_actions);
+        const passed = implementationReview.result === "REVIEW_PASSED";
+        if (
+            passed &&
+            (implementationReview.material_drift !== "NO_DRIFT" ||
+                blockers.length > 0 ||
+                actions.length > 0)
+        ) {
             add(
                 errors,
-                "GOV-DRIFT-001",
-                "implementation_review.evidence",
-                "Implementation review requires diff-based evidence."
+                "GOV-REVIEW-001",
+                "implementation_review",
+                "A passed review cannot contain drift, blockers, or required actions."
             );
         }
         if (
-            classification === "MATERIAL_DRIFT" &&
-            (implementationReview.governance_reentry_required !== true ||
-                task.status === "READY_FOR_DEV")
+            implementationReview.material_drift === "MATERIAL_DRIFT" &&
+            implementationReview.governance_reentry_required !== true
+        ) {
+            add(
+                errors,
+                "GOV-DRIFT-001",
+                "implementation_review.governance_reentry_required",
+                "Material drift requires governance re-entry."
+            );
+        }
+        if (
+            implementationReview.material_drift === "MATERIAL_DRIFT" &&
+            task.status === "READY_FOR_DEV"
         ) {
             add(
                 errors,
                 "GOV-DRIFT-001",
                 "implementation_review",
-                "Material drift requires governance re-entry and cannot remain READY_FOR_DEV."
+                "Material drift cannot remain READY_FOR_DEV."
             );
         }
     }
@@ -664,11 +809,13 @@ export async function validateWorkItemFile(
         const contents = await Bun.file(target).text();
         const item = parse(contents);
         const result = validateWorkItem(item, context);
-        if (!isRecord(item) || !isRecord(item.risk) || !isRecord(item.critic)) {
+        if (!isRecord(item)) {
             return result;
         }
 
         if (
+            isRecord(item.risk) &&
+            isRecord(item.critic) &&
             riskIndex(item.risk.final_risk) >= 2 &&
             isSafeWorkItemArtifact(item.critic.artifact)
         ) {
@@ -685,6 +832,31 @@ export async function validateWorkItemFile(
                     error instanceof Error
                         ? `Critic artifact is unavailable: ${error.message}`
                         : "Critic artifact is unavailable."
+                );
+                result.valid = false;
+            }
+        }
+
+        const implementationReview = isRecord(item.implementation_review)
+            ? item.implementation_review
+            : undefined;
+        if (implementationReview && isSafeWorkItemArtifact(implementationReview.artifact)) {
+            const artifactPath = resolve(
+                dirname(target),
+                implementationReview.artifact
+            );
+            try {
+                if ((await stat(artifactPath)).isDirectory()) {
+                    throw new Error("Review artifact must be a file.");
+                }
+            } catch (error) {
+                add(
+                    result.errors,
+                    "GOV-REVIEW-001",
+                    "implementation_review.artifact",
+                    error instanceof Error
+                        ? `Review artifact is unavailable: ${error.message}`
+                        : "Review artifact is unavailable."
                 );
                 result.valid = false;
             }
