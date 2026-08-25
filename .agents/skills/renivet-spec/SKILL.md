@@ -23,9 +23,9 @@ Accept one Linear identifier such as `REN-95`. If it is missing, request it. Ret
 8. Validate `work-item.yaml` with `bun run governance:validate -- <path>`.
 9. Apply the approval gate. Output `READY_FOR_DEV` only when all required conditions pass; otherwise output `BLOCKED` with exact reasons.
 
-## Implementation review mode
+## Post-implementation review
 
-After implementation, compare the approved contract with the Git diff, changed files, APIs, dependencies, security boundaries, external behavior, and state transitions. Record `implementation_review.classification` as `NO_DRIFT`, `MINOR_DRIFT`, or `MATERIAL_DRIFT` with concrete evidence. Material drift sets `governance_reentry_required: true`, returns the work item to a non-ready state, and triggers the governance sequence again; never rewrite the approved specification silently.
+After implementation, invoke `$renivet-review <LINEAR-ID>`. REVIEW owns diff reconciliation, the task-local `REVIEW.md`, the normalized `implementation_review` result, and any governance re-entry decision; SPEC must not produce an implementation-review result.
 
 ## Contract
 

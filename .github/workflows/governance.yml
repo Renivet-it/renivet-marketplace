@@ -31,18 +31,22 @@ jobs:
             - name: Validate changed work items
               shell: bash
               run: |
-                  mapfile -d '' work_items < <(
+                  mapfile -d '' work_item_dirs < <(
                     git diff --name-only --diff-filter=ACMR -z \
                       "${{ github.event.pull_request.base.sha }}" \
                       "${{ github.event.pull_request.head.sha }}" \
-                      -- 'docs/.work-items/*/work-item.yaml'
+                      -- 'docs/.work-items/*/work-item.yaml' 'docs/.work-items/*/REVIEW.md' |
+                      while IFS= read -r -d '' path; do
+                        printf '%s\0' "${path%/*}"
+                      done |
+                      sort -zu
                   )
 
-                  if (( ${#work_items[@]} == 0 )); then
+                  if (( ${#work_item_dirs[@]} == 0 )); then
                     echo "No changed governance work items."
                     exit 0
                   fi
 
-                  for work_item in "${work_items[@]}"; do
-                    bun run governance:validate -- "$work_item"
+                  for work_item_dir in "${work_item_dirs[@]}"; do
+                    bun run governance:validate -- "${work_item_dir}/work-item.yaml"
                   done

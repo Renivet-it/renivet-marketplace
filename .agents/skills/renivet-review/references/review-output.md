@@ -83,12 +83,43 @@ Rules:
 
 - `artifact` is the safe task-local relative path `REVIEW.md`, and that regular file must exist before validation.
 - `result` is `REVIEW_PASSED`, `REVIEW_PASSED_WITH_FINDINGS`, `REVIEW_FAILED`, or `REVIEW_BLOCKED`.
-- `base_branch` is non-empty; commits are exact 40-character hexadecimal SHAs; `pr_url` is a string or `null`.
+- `base_branch` is non-empty; `pr_url` is a string or `null`. Completed results (`REVIEW_PASSED`, `REVIEW_PASSED_WITH_FINDINGS`, and `REVIEW_FAILED`) require exact 40-character hexadecimal base/head SHAs. `REVIEW_BLOCKED` requires both commits to be `null`.
 - `material_drift` is `NO_DRIFT`, `MINOR_DRIFT`, or `MATERIAL_DRIFT`.
 - Every reconciliation field is `PASS`, `PARTIAL`, `FAIL`, or `NOT_APPLICABLE`. Do not add an integration reconciliation key; document it in REVIEW.md and aggregate it into architecture/security.
 - Findings and actions are arrays, including when empty. Evidence is a non-empty string array.
-- `REVIEW_PASSED` is consistent only with `NO_DRIFT`, empty blockers/actions, all applicable reconciliation fields `PASS`, evidenced non-applicable fields, and no findings. Use `REVIEW_PASSED_WITH_FINDINGS` for non-blocking findings, partials, actions, or minor drift.
-- `MATERIAL_DRIFT` requires `governance_reentry_required: true`, `REVIEW_FAILED`, and local `task.status` changed from `READY_FOR_DEV` to `IN_REVIEW` or `BLOCKED`. Use `false` for non-material results.
+- `REVIEW_PASSED` is consistent only with `NO_DRIFT`, empty blockers/actions, all applicable reconciliation fields `PASS`, evidenced non-applicable fields, and no findings.
+- `REVIEW_PASSED_WITH_FINDINGS` permits no failed reconciliation, blocking finding, or material drift and requires at least one non-blocking action, `PARTIAL` reconciliation value, or `MINOR_DRIFT`.
+- `REVIEW_FAILED` requires at least one failed reconciliation value, blocking finding, or `MATERIAL_DRIFT`.
+- `REVIEW_BLOCKED` requires at least one `PARTIAL` reconciliation value and no `FAIL`, at least one blocking finding or required action, and evidence beginning `Comparison input unavailable:`. It records unavailable inputs, not a completed comparison, and must not invent commit SHAs.
+- `MATERIAL_DRIFT` requires `governance_reentry_required: true`, `REVIEW_FAILED`, and local `task.status` changed from `READY_FOR_DEV` to `IN_REVIEW` or `BLOCKED`. Use `false` for every non-material result.
+
+For example, when comparison commits cannot be established, write a blocked result with the same normalized fields:
+
+```yaml
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_BLOCKED
+    base_branch: main
+    base_commit: null
+    head_commit: null
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PARTIAL
+        security: PARTIAL
+        test_coverage: PARTIAL
+        scope: PARTIAL
+    blocking_findings:
+        - "REV-001: Required comparison commits are unavailable."
+    required_actions:
+        - Resolve the comparison base and rerun REVIEW.
+    evidence:
+        - "Comparison input unavailable: base and head commits could not be established."
+    governance_reentry_required: false
+```
 
 ## Lifecycle
 

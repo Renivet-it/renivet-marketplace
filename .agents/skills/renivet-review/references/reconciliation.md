@@ -58,11 +58,13 @@ High confidence never reduces a high-consequence decision class.
 
 ## Result selection
 
-| Result                        | Use when                                                                                                                                                                         |
-| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `REVIEW_PASSED`               | All applicable categories pass, others have evidenced non-applicability, drift is `NO_DRIFT`, and findings/actions/blockers are empty.                                           |
-| `REVIEW_PASSED_WITH_FINDINGS` | Review is complete with only non-blocking findings, `PARTIAL` coverage, or `MINOR_DRIFT`; no material drift or unresolved Class C decision exists.                               |
-| `REVIEW_FAILED`               | Evidence shows a failed contract item, blocking finding, or material drift.                                                                                                      |
-| `REVIEW_BLOCKED`              | The approved contract exists, but the diff base, implementation evidence, or another required review input cannot be established. Record the blocker without inventing evidence. |
+| Result                        | Use when                                                                                                                                                                                              |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `REVIEW_PASSED`               | All applicable categories pass, others have evidenced non-applicability, drift is `NO_DRIFT`, and findings/actions/blockers are empty.                                                                |
+| `REVIEW_PASSED_WITH_FINDINGS` | Review is complete with only non-blocking findings, `PARTIAL` coverage, or `MINOR_DRIFT`; no material drift or unresolved Class C decision exists.                                                    |
+| `REVIEW_FAILED`               | Evidence shows a failed contract item, blocking finding, or material drift.                                                                                                                           |
+| `REVIEW_BLOCKED`              | The approved contract exists, but the diff base, implementation evidence, or another required review input cannot be established. Use null commits and record the blocker without inventing evidence. |
 
 `SPEC_CONTRACT_MISSING` is a pre-review stop, not a review result.
+
+Completed results (`REVIEW_PASSED`, `REVIEW_PASSED_WITH_FINDINGS`, and `REVIEW_FAILED`) require exact SHA40 base/head commits. A blocked review instead requires both commits to be `null`, at least one `PARTIAL` reconciliation value and no `FAIL`, at least one blocking finding or required action, and evidence beginning `Comparison input unavailable:`. Material drift is never blocked: it requires `REVIEW_FAILED`, governance re-entry, and a non-ready task state. Every non-material result keeps governance re-entry false.

@@ -10,7 +10,7 @@
 - `critic`: required/completed state, artifact, reviewer/fresh-context/read-only attestation, category coverage, and structured findings
 - `approval`: approval state, explicit design blockers, and approver identity
 - `traceability`: requirement-to-scenarios, scenario-to-invariants, and scenario-to-test-expectations
-- optional `implementation_review`: drift classification, diff-based evidence, and governance re-entry flag
+- optional `implementation_review`: the normalized result written by `$renivet-review <LINEAR-ID>` after implementation
 
 IDs are unique within each array. Every referenced ID must exist. Every requirement needs at least one scenario; every scenario needs at least one requirement and test expectation. Applicable invariants must be connected to scenarios.
 
@@ -18,7 +18,7 @@ Each test expectation has a category (`unit`, `component`, `api`, `integration`,
 
 For `READY_FOR_DEV`, non-L0 contracts require requirements, scenarios, and test expectations. L2/L3 contracts additionally require invariants, flows, and an independent Critic attestation: non-empty artifact and reviewer, `fresh_context: true`, `read_only: true`, all required review categories, and a findings array (which may be empty). READY approval requires an explicit `design_blockers` array and a non-empty `approved_by` value.
 
-After implementation, classify the actual Git diff against the approved contract as `NO_DRIFT`, `MINOR_DRIFT`, or `MATERIAL_DRIFT`. Material drift requires `governance_reentry_required: true` and a non-ready task state.
+SPEC does not populate `implementation_review`. After implementation, invoke `$renivet-review <LINEAR-ID>` to reconcile the actual Git diff against this approved contract.
 
 Allowed lifecycle states are `DRAFT`, `IN_REVIEW`, `BLOCKED`, and `READY_FOR_DEV`. A Class C decision uses `human_confirmation_required: true` and cannot remain unresolved in `READY_FOR_DEV`.
 
@@ -50,9 +50,13 @@ implementation_review:
     governance_reentry_required: false
 ```
 
-The result is `REVIEW_PASSED`, `REVIEW_PASSED_WITH_FINDINGS`, `REVIEW_FAILED`, or `REVIEW_BLOCKED`. Each reconciliation field is `PASS`, `PARTIAL`, `FAIL`, or `NOT_APPLICABLE`. `base_branch` and evidence are non-empty, base/head commits are 40-character hexadecimal SHAs, `pr_url` is a string or `null`, and findings/actions are arrays even when empty. The artifact must be a safe task-local relative path to an existing regular file.
+The result is `REVIEW_PASSED`, `REVIEW_PASSED_WITH_FINDINGS`, `REVIEW_FAILED`, or `REVIEW_BLOCKED`. Each reconciliation field is `PASS`, `PARTIAL`, `FAIL`, or `NOT_APPLICABLE`. `base_branch` and evidence are non-empty, `pr_url` is a string or `null`, and findings/actions are arrays even when empty. The artifact must be a safe task-local relative path to an existing regular file.
 
-`REVIEW_PASSED` requires `NO_DRIFT` with empty blocking findings and required actions; use it only when every applicable reconciliation category passes and all other categories have evidenced non-applicability. Use `REVIEW_PASSED_WITH_FINDINGS` for non-blocking findings, partial reconciliation, required follow-up, or minor drift. Material drift requires `governance_reentry_required: true`, a non-ready task status, governance re-entry, and a non-passing review result. Use `governance_reentry_required: false` otherwise.
+Completed results (`REVIEW_PASSED`, `REVIEW_PASSED_WITH_FINDINGS`, and `REVIEW_FAILED`) require exact 40-character hexadecimal base/head SHAs. `REVIEW_PASSED` requires `NO_DRIFT`, empty blocking findings and required actions, and only `PASS` or evidenced `NOT_APPLICABLE` reconciliation. `REVIEW_PASSED_WITH_FINDINGS` permits no `FAIL`, blocking finding, or material drift and requires at least one non-blocking action, `PARTIAL` reconciliation, or `MINOR_DRIFT`. `REVIEW_FAILED` requires at least one `FAIL`, blocking finding, or `MATERIAL_DRIFT` condition.
+
+Use `REVIEW_BLOCKED` only when a required comparison input is unavailable. Both commits must be `null`; at least one reconciliation value must be `PARTIAL` and none may be `FAIL`; record at least one blocking finding or required action; and include evidence beginning `Comparison input unavailable:`. A blocked review is incomplete and must not invent a SHA.
+
+`MATERIAL_DRIFT` requires `governance_reentry_required: true`, `REVIEW_FAILED`, and a non-ready task status. Use `governance_reentry_required: false` for every non-material result.
 
 ## REVIEW.md lifecycle
 
