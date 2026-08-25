@@ -630,11 +630,18 @@ export function validateWorkItem(
             errors
         );
         for (const field of ["base_commit", "head_commit"]) {
-            const commitUnavailable =
-                implementationReview.result === "REVIEW_BLOCKED" &&
-                implementationReview[field] === null;
             if (
-                !commitUnavailable &&
+                implementationReview.result === "REVIEW_BLOCKED" &&
+                implementationReview[field] !== null
+            ) {
+                add(
+                    errors,
+                    "GOV-REVIEW-001",
+                    `implementation_review.${field}`,
+                    "A blocked review requires a null commit because comparison input is unavailable."
+                );
+            } else if (
+                implementationReview.result !== "REVIEW_BLOCKED" &&
                 (typeof implementationReview[field] !== "string" ||
                     !/^[0-9a-f]{40}$/i.test(implementationReview[field]))
             ) {

@@ -284,6 +284,32 @@ describe("governance work-item validation", () => {
         expect(result).toEqual({ valid: true, errors: [] });
     });
 
+    test("rejects SHA commits for a blocked review", async () => {
+        const item = await loadValidFixture();
+        item.implementation_review.result = "REVIEW_BLOCKED";
+        item.implementation_review.reconciliation.scope = "PARTIAL";
+        item.implementation_review.blocking_findings = [
+            "The comparison input is unavailable.",
+        ];
+        item.implementation_review.evidence = [
+            "Comparison input unavailable: the required comparison could not be completed.",
+        ];
+
+        const result = validateWorkItem(item);
+        expect(result.errors).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    code: "GOV-REVIEW-001",
+                    path: "implementation_review.base_commit",
+                }),
+                expect.objectContaining({
+                    code: "GOV-REVIEW-001",
+                    path: "implementation_review.head_commit",
+                }),
+            ])
+        );
+    });
+
     for (const completedResult of [
         "REVIEW_PASSED",
         "REVIEW_PASSED_WITH_FINDINGS",
