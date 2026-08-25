@@ -177,11 +177,38 @@ describe("governance work-item validation", () => {
         );
     });
 
-    test("requires complete implementation review result, commit, and reconciliation fields", async () => {
+    test("requires an implementation review result", async () => {
         const item = await loadValidFixture();
         delete item.implementation_review.result;
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("requires an implementation review base commit", async () => {
+        const item = await loadValidFixture();
         delete item.implementation_review.base_commit;
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("requires an implementation review head commit", async () => {
+        const item = await loadValidFixture();
         delete item.implementation_review.head_commit;
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("requires implementation review reconciliation", async () => {
+        const item = await loadValidFixture();
         delete item.implementation_review.reconciliation;
 
         const result = validateWorkItem(item);
@@ -190,9 +217,18 @@ describe("governance work-item validation", () => {
         );
     });
 
-    test("rejects unknown implementation review and reconciliation results", async () => {
+    test("rejects an unknown implementation review result", async () => {
         const item = await loadValidFixture();
         item.implementation_review.result = "REVIEW_UNKNOWN";
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("rejects an unknown implementation review reconciliation result", async () => {
+        const item = await loadValidFixture();
         item.implementation_review.reconciliation.security = "UNKNOWN";
 
         const result = validateWorkItem(item);
@@ -201,14 +237,32 @@ describe("governance work-item validation", () => {
         );
     });
 
-    test("rejects a passed review with blockers, required actions, or material drift", async () => {
+    test("rejects a passed review with blocking findings", async () => {
         const item = await loadValidFixture();
         item.implementation_review.blocking_findings = [
             "Authorization behavior changed.",
         ];
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("rejects a passed review with required actions", async () => {
+        const item = await loadValidFixture();
         item.implementation_review.required_actions = [
             "Restore the approved authorization boundary.",
         ];
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("rejects a passed review with material drift", async () => {
+        const item = await loadValidFixture();
         item.implementation_review.material_drift = "MATERIAL_DRIFT";
 
         const result = validateWorkItem(item);
@@ -217,14 +271,34 @@ describe("governance work-item validation", () => {
         );
     });
 
-    test("requires governance re-entry and a non-ready state for material drift", async () => {
+    test("requires governance re-entry for material drift when the task is non-ready", async () => {
         const item = await loadValidFixture();
+        item.task.status = "IN_REVIEW";
+        item.implementation_review.classification = "NO_DRIFT";
         item.implementation_review.material_drift = "MATERIAL_DRIFT";
         item.implementation_review.governance_reentry_required = false;
 
         const result = validateWorkItem(item);
-        expect(result.errors.map((error) => error.code)).toContain(
-            "GOV-DRIFT-001"
+        expect(result.errors).toContainEqual(
+            expect.objectContaining({
+                code: "GOV-DRIFT-001",
+                path: "implementation_review.governance_reentry_required",
+            })
+        );
+    });
+
+    test("requires a non-ready task state for material drift after governance re-entry", async () => {
+        const item = await loadValidFixture();
+        item.implementation_review.classification = "NO_DRIFT";
+        item.implementation_review.material_drift = "MATERIAL_DRIFT";
+        item.implementation_review.governance_reentry_required = true;
+
+        const result = validateWorkItem(item);
+        expect(result.errors).toContainEqual(
+            expect.objectContaining({
+                code: "GOV-DRIFT-001",
+                path: "implementation_review",
+            })
         );
     });
 
