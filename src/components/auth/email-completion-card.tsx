@@ -1,5 +1,6 @@
 "use client";
 
+import { emailVerificationCodeLayout } from "@/components/auth/email-completion-layout";
 import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { useSignIn, useUser } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
@@ -325,14 +326,14 @@ export function EmailCompletionCard() {
 
                 {step === "code" && (
                     <form className="mt-4" onSubmit={verifyCode}>
-                        <div className="flex gap-2">
+                        <div className={emailVerificationCodeLayout.row}>
                             <OTPCodeInput
                                 value={code}
                                 onChange={updateCode}
                                 disabled={pending}
                             />
                             <button
-                                className="h-10 shrink-0 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:opacity-50"
+                                className={`${emailVerificationCodeLayout.button} rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground transition hover:brightness-95 disabled:opacity-50`}
                                 disabled={pending || code.length !== 6}
                                 type="submit"
                             >
@@ -383,14 +384,14 @@ export function EmailCompletionCard() {
                             Enter the six-digit code sent to the existing
                             account email.
                         </p>
-                        <div className="flex gap-2">
+                        <div className={emailVerificationCodeLayout.row}>
                             <OTPCodeInput
                                 value={code}
                                 onChange={updateCode}
                                 disabled={pending}
                             />
                             <button
-                                className="h-10 shrink-0 rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50"
+                                className={`${emailVerificationCodeLayout.button} rounded-xl bg-primary px-3 text-sm font-semibold text-primary-foreground disabled:opacity-50`}
                                 disabled={pending || code.length !== 6}
                                 type="submit"
                             >
