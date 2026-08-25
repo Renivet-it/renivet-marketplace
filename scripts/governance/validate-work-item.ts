@@ -130,9 +130,7 @@ function requireReviewStringArray(
     if (
         !Array.isArray(value) ||
         (nonEmpty && value.length === 0) ||
-        value.some(
-            (entry) => typeof entry !== "string" || !entry.trim()
-        )
+        value.some((entry) => typeof entry !== "string" || !entry.trim())
     ) {
         add(
             errors,
@@ -1006,7 +1004,10 @@ export async function validateWorkItemFile(
         const implementationReview = isRecord(item.implementation_review)
             ? item.implementation_review
             : undefined;
-        if (implementationReview && isSafeWorkItemArtifact(implementationReview.artifact)) {
+        if (
+            implementationReview &&
+            isSafeWorkItemArtifact(implementationReview.artifact)
+        ) {
             const artifactPath = resolve(
                 dirname(target),
                 implementationReview.artifact

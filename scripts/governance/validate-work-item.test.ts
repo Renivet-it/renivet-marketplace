@@ -1,9 +1,4 @@
-import {
-    mkdtempSync,
-    rmSync,
-    symlinkSync,
-    writeFileSync,
-} from "node:fs";
+import { mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { mkdtemp, rm, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -571,9 +566,7 @@ describe("governance work-item validation", () => {
         item.implementation_review.blocking_findings = [
             "The comparison base commit is unavailable.",
         ];
-        item.implementation_review.evidence = [
-            "Review could not proceed.",
-        ];
+        item.implementation_review.evidence = ["Review could not proceed."];
 
         const result = validateWorkItem(item);
         expect(result.errors).toContainEqual(
