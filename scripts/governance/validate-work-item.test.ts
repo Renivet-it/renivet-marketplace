@@ -1,5 +1,8 @@
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { describe, expect, test } from "bun:test";
-import { parse } from "yaml";
+import { parse, stringify } from "yaml";
 import { validateWorkItem, validateWorkItemFile } from "./validate-work-item";
 
 const fixture = (name: string) =>
@@ -174,17 +177,87 @@ describe("governance work-item validation", () => {
         );
     });
 
-    test("forces governance re-entry for material implementation drift", async () => {
+    test("requires complete implementation review result, commit, and reconciliation fields", async () => {
         const item = await loadValidFixture();
-        item.implementation_review = {
-            classification: "MATERIAL_DRIFT",
-            governance_reentry_required: true,
-            evidence: ["Changed authentication boundary"],
-        };
+        delete item.implementation_review.result;
+        delete item.implementation_review.base_commit;
+        delete item.implementation_review.head_commit;
+        delete item.implementation_review.reconciliation;
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("rejects unknown implementation review and reconciliation results", async () => {
+        const item = await loadValidFixture();
+        item.implementation_review.result = "REVIEW_UNKNOWN";
+        item.implementation_review.reconciliation.security = "UNKNOWN";
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("rejects a passed review with blockers, required actions, or material drift", async () => {
+        const item = await loadValidFixture();
+        item.implementation_review.blocking_findings = [
+            "Authorization behavior changed.",
+        ];
+        item.implementation_review.required_actions = [
+            "Restore the approved authorization boundary.",
+        ];
+        item.implementation_review.material_drift = "MATERIAL_DRIFT";
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("requires governance re-entry and a non-ready state for material drift", async () => {
+        const item = await loadValidFixture();
+        item.implementation_review.material_drift = "MATERIAL_DRIFT";
+        item.implementation_review.governance_reentry_required = false;
 
         const result = validateWorkItem(item);
         expect(result.errors.map((error) => error.code)).toContain(
             "GOV-DRIFT-001"
         );
+    });
+
+    test("requires a safe task-local REVIEW.md artifact", async () => {
+        const item = await loadValidFixture();
+        item.implementation_review.artifact = "../REVIEW.md";
+
+        const result = validateWorkItem(item);
+        expect(result.errors.map((error) => error.code)).toContain(
+            "GOV-REVIEW-001"
+        );
+    });
+
+    test("requires the REVIEW.md artifact to exist as a task-local file", async () => {
+        const directory = await mkdtemp(join(tmpdir(), "renivet-review-"));
+        const item = await loadValidFixture();
+        item.implementation_review.artifact = "MISSING.md";
+
+        try {
+            await Bun.write(join(directory, "work-item.yaml"), stringify(item));
+            await Bun.write(
+                join(directory, "CRITIQUE.md"),
+                await Bun.file(
+                    `${import.meta.dir}/fixtures/valid-l2/CRITIQUE.md`
+                ).text()
+            );
+
+            const result = await validateWorkItemFile(directory);
+            expect(result.errors.map((error) => error.code)).toContain(
+                "GOV-REVIEW-001"
+            );
+        } finally {
+            await rm(directory, { recursive: true, force: true });
+        }
     });
 });

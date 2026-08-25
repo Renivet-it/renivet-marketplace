@@ -112,6 +112,27 @@ critic:
         - observability_testability
         - assumptions_dependencies
     findings: []
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED
+    base_branch: main
+    base_commit: "0000000000000000000000000000000000000000"
+    head_commit: "1111111111111111111111111111111111111111"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PASS
+        scope: PASS
+    blocking_findings: []
+    required_actions: []
+    evidence:
+        - Reviewed approved contract against implementation diff.
+    governance_reentry_required: false
 approval:
     state: APPROVED
     design_blockers: []
