@@ -898,7 +898,7 @@ trackShipment: protectedProcedure
   .input(z.object({ awb: z.string() }))
   .query(async ({ input }) => {
     const resp = await fetch(
-      `https://track.delhivery.com/api/v1/packages/json/?waybill=${input.awb}`,
+      `${resolveDelhiveryUrl(process.env.DELHIVERY_BASE_URL, "/api/v1/packages/json/")}?waybill=${encodeURIComponent(input.awb)}`,
       {
         headers: {
           Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,

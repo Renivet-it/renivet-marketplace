@@ -1,11 +1,13 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { orders, orderShipments } from "@/lib/db/schema";
 import { sendOrderShipmentStatusWhatsApp } from "@/lib/whatsapp/order-status";
 import { and, eq, ne, isNotNull, or } from "drizzle-orm";
 import { swapRewardService } from "@/lib/services/swap-reward";
+import { requireCronSecret } from "@/lib/auth/cron-access";
+import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
+import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
 
-const DELHIVERY_BASE_URL = process.env.DELHIVERY_BASE_URL!;
 const DELHIVERY_TOKEN = process.env.DELHIVERY_TOKEN!;
 
 /** MAP DELHIVERY → INTERNAL STATUS */
@@ -55,8 +57,13 @@ function getLatestDelhiveryScan(data: any) {
     return normalized[normalized.length - 1].status;
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const authFailure = requireCronSecret(req);
+        if (authFailure) return authFailure;
+        if (!(await shouldRunExternalSideEffects())) {
+            return NextResponse.json({ ok: true, skipped: true, reason: "external_side_effects_disabled" });
+        }
         console.log("🔄 POLLING STARTED");
 
         // Fetch only Delhivery active shipments
@@ -89,10 +96,12 @@ export async function GET() {
 
             if (!ship.awbNumber) continue;
 
-            const url = `${DELHIVERY_BASE_URL}/api/v1/packages/json?waybill=${ship.awbNumber}&token=${DELHIVERY_TOKEN}`;
+            const url = resolveDelhiveryUrl(process.env.DELHIVERY_BASE_URL, "/api/v1/packages/json");
             console.log("🌐 URL:", url);
 
-            const response = await fetch(url);
+            const response = await fetch(`${url}?waybill=${encodeURIComponent(ship.awbNumber)}`, {
+                headers: { Authorization: `Token ${DELHIVERY_TOKEN}` },
+            });
             const raw = await response.text();
 
             // Print raw response for debugging

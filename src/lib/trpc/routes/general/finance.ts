@@ -10,6 +10,7 @@ import {
     splitGstByState,
 } from "@/lib/finance/calculations";
 import { writeFinanceAuditEvent } from "@/lib/finance/audit";
+import { isProductionEnvironment } from "@/lib/env-context";
 import {
     categorizeCodReconciliation,
     resolveCodDiscrepancy,
@@ -806,6 +807,16 @@ export const financeComplianceRouter = createTRPCRouter({
         )
         .mutation(async ({ ctx, input }) => {
             await assertFinanceAccess(ctx, "compliance_admin", "manage");
+            if (
+                input.key === "external_side_effects" &&
+                isProductionEnvironment() &&
+                input.value.enabled === false
+            ) {
+                throw new TRPCError({
+                    code: "FORBIDDEN",
+                    message: "External side effects cannot be disabled in production",
+                });
+            }
             const previous = await ctx.queries.financeCompliance.getPlatformSetting(input.key);
             const row = await ctx.queries.financeCompliance.upsertPlatformSetting({
                 key: input.key,
