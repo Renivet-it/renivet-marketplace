@@ -8,8 +8,10 @@ const SETTING_KEY = "external_side_effects";
 
 export function ExternalSideEffectsWorkspace({
     canManage,
+    isProduction,
 }: {
     canManage: boolean;
+    isProduction: boolean;
 }) {
     const settingsQuery =
         trpc.general.financeCompliance.listPlatformSettings.useQuery(
@@ -75,6 +77,7 @@ export function ExternalSideEffectsWorkspace({
                             checked={enabled}
                             onCheckedChange={updateEnabled}
                             disabled={
+                                isProduction ||
                                 !canManage ||
                                 settingsQuery.isLoading ||
                                 updateSetting.isPending
@@ -85,6 +88,11 @@ export function ExternalSideEffectsWorkspace({
                         <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
                             You can view this setting, but need configuration
                             management permission to change it.
+                        </p>
+                    ) : null}
+                    {isProduction ? (
+                        <p className="mt-4 rounded-md border border-blue-200 bg-blue-50 px-3 py-2 text-sm text-blue-800">
+                            Production is permanently enabled. This control is read-only.
                         </p>
                     ) : null}
                 </section>

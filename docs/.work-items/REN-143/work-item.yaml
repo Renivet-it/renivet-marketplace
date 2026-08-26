@@ -1,0 +1,759 @@
+schema_version: "1.0"
+task:
+    id: REN-143
+    title: Staging Hardening + Build-Trigger Optimization
+    source: linear
+    branch: ayanganguly333/ren-143-staging-hardening-build-trigger-optimization
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-143/staging-hardening-build-trigger-optimization
+        generated_branch: ayanganguly333/ren-143-staging-hardening-build-trigger-optimization
+        priority: High
+        labels:
+            - staging-readiness
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Automated Testing Rollout
+        milestone: Staging Readiness
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - External calls can create billed shipments, customer communications, payment/refund effects, and live analytics events.
+        - Environment identity, shared data stores, webhooks, cron, secrets, and deployment topology cross security and integration boundaries.
+        - Phase B changes production/staging delivery behavior and depends on live Phase A evidence.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-143 and related REN-113/114/115/116/137
+        - Current repository baseline HEAD 6b9b3f0731c5e0efe179515b75b4e253436e64dd, including merged REN-115 and its Delhivery URL helper
+        - src/lib/env-context.ts and tests
+        - src/lib/external-side-effects.ts and tests
+        - src/lib/trpc/routes/general/orders.ts
+        - src/lib/trpc/routes/general/returnReplace.ts
+        - src/lib/razorpay/payment.ts and server WhatsApp actions
+        - src/lib/fb-capi.ts and callers
+        - src/lib/delhivery and direct Delhivery call sites
+        - src/lib/support cancellation and replacement flows
+        - src/lib/db/schema/order-shipment.ts and shipment-dependent order queries
+        - src/app/api/webhooks/shipping/route.ts and cron authorization
+        - platform setting schema, queries, permission checks, UI, and audit events
+        - env.ts plus Linear REN-113/114/115/116/137 descriptions and their referenced-but-absent staging-readiness documents
+        - Official Vercel Git, environment, project-setting, and deployment configuration documentation
+    excluded_areas:
+        - area: REN-138, REN-139, REN-140, REN-136, and REN-141 implementation scope
+          reason: Explicitly out of scope and no required implementation dependency found.
+        - area: General product notification and analytics redesign
+          reason: Only provider-boundary safety and staging-journey behavior are required.
+        - area: Branch protection and Vercel plan changes
+          reason: Explicitly out of scope and require separate human policy decisions.
+    dependencies:
+        - DEP-001
+        - DEP-002
+        - DEP-003
+        - DEP-004
+        - DEP-005
+        - DEP-006
+        - DEP-007
+    integrations:
+        - INT-001
+        - INT-002
+        - INT-003
+        - INT-004
+        - INT-005
+        - INT-006
+        - INT-007
+        - INT-008
+        - INT-009
+    security_boundaries:
+        - SEC-001
+        - SEC-002
+        - SEC-003
+        - SEC-004
+        - SEC-005
+        - SEC-006
+        - SEC-007
+        - SEC-008
+        - SEC-009
+    state_transitions:
+        - Unknown or non-production environment -> external effect denied
+        - Production plus disabled or invalid policy -> external effect denied
+        - Production plus enabled policy -> provider attempt -> executed or failed
+        - Internal order created -> shipment skipped, executed, or failed
+        - Provider denied -> pre-provider business state preserved with no provider row or identifier
+        - Cron or webhook request -> rejected or environment-owned processing before any provider/data mutation
+        - Phase A implemented -> staging deployed -> live safety validated -> Phase B eligible
+        - Phase B configured -> trigger matrix validated -> retained or rolled back
+    related_tests:
+        - src/lib/env-context.test.ts
+        - src/lib/external-side-effects.test.ts
+        - src/lib/fb-capi.test.ts
+    uncertainties:
+        - APP_ENV values on staging and production are not repository-verifiable.
+        - Database, Redis, payment, shipping, messaging, webhook, cron, analytics, and Clerk test-identity isolation are not repository-verifiable.
+        - The referenced infrastructure-audit bundle is absent from inspected Git refs.
+        - The Vercel Option-A control still requires a live staging demonstration and one rollback; acceptance measures build count/Build CPU only and makes no deployment-count claim.
+        - Reliance on staging feature-branch builds has not been confirmed by a human owner.
+requirements:
+    - id: REQ-001
+      description: Ambiguous or non-production runtime identity must never authorize real external effects.
+      type: explicit
+    - id: REQ-002
+      description: Production effects require explicit production identity and an explicit enabled operational policy; missing, invalid, or unreadable inputs deny.
+      type: inferred
+    - id: REQ-003
+      description: Order email, WhatsApp, Delhivery, Meta CAPI, and every mutable provider operation in the authoritative staging-journey inventory is controlled at a server boundary with no browser import of database policy.
+      type: inferred
+    - id: REQ-004
+      description: All active Delhivery paths in the staging journey graph use one controlled adapter with no direct production endpoint bypass.
+      type: explicit
+    - id: REQ-005
+      description: Suppressed calls preserve pre-provider business/adjudication state without persisting provider-like identifiers or overloading business status with transport state.
+      type: inferred
+    - id: REQ-006
+      description: Policy decisions are observable without raw PII, secrets, tokens, or provider payloads in logs.
+      type: explicit
+    - id: REQ-007
+      description: Staging data, payment, shipping, webhook, cron, messaging, Meta Pixel/CAPI, GA4/PostHog, and Clerk test-identity boundaries are verified isolated or made safe before Phase A sign-off.
+      type: explicit
+    - id: REQ-008
+      description: REN-113, REN-114, REN-115, and code-side REN-116 are individually reconciled and verifiable.
+      type: explicit
+    - id: REQ-009
+      description: Phase B cannot start until deployed Phase A live evidence passes every required safety criterion.
+      type: explicit
+    - id: REQ-010
+      description: Phase B preserves production previews and production deployment while limiting staging builds to main.
+      type: explicit
+    - id: REQ-011
+      description: Phase A and Phase B use separate review, change, and rollback records.
+      type: explicit
+    - id: REQ-012
+      description: Phase B reports measured build count and Build CPU outcomes without claiming deployment-count or currency savings that the selected control cannot prove.
+      type: explicit
+    - id: REQ-013
+      description: A shared database must not allow a staging actor or runtime to mutate the production operational-policy row, and production policy must remain permanently enabled through a locked UI and server-side rejection of disable attempts.
+      type: inferred
+    - id: REQ-014
+      description: An authoritative inventory covers every external mutation reachable from required staging journeys, including Razorpay refunds, legacy Shiprocket cancellation, Delhivery cron/provider calls, Meta Pixel, and Clerk OTP behavior; unrelated bulk marketing operations are explicitly excluded. Cron authentication accepts only the Authorization header (Bearer secret) and rejects URL query-string secrets.
+      type: inferred
+    - id: REQ-015
+      description: Production-denial recovery follows a human-approved operation-specific strategy; no generic ledger/replay system or intentionally lossy policy is introduced without approval.
+      type: inferred
+    - id: REQ-016
+      description: Production denial creates an owned deduplicated alert and Phase A produces an auditable immutable-deployment evidence manifest.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-002]
+      description: Missing or unknown APP_ENV and any policy value deny all controlled provider calls.
+    - id: SCN-002
+      requirement_ids: [REQ-001, REQ-002]
+      description: Staging remains denied even when a shared database exposes an enabled production setting.
+    - id: SCN-003
+      requirement_ids: [REQ-002, REQ-006]
+      description: Missing, malformed, or unreadable policy denies safely and emits a redacted operational event.
+    - id: SCN-004
+      requirement_ids: [REQ-002, REQ-008]
+      description: Explicit production identity and enabled policy preserve legitimate production provider behavior.
+    - id: SCN-005
+      requirement_ids: [REQ-003, REQ-006]
+      description: COD order creation in staging skips brand email, buyer email, WhatsApp, Delhivery, and Meta CAPI at server boundaries.
+    - id: SCN-006
+      requirement_ids: [REQ-004, REQ-005]
+      description: Delhivery create, return, replacement, cancel, pickup, edit, tracking, and rate paths cannot reach production from staging.
+    - id: SCN-007
+      requirement_ids: [REQ-005]
+      description: A skipped shipment continues through a documented local state and never persists a replayable fake provider identifier.
+    - id: SCN-008
+      requirement_ids: [REQ-002, REQ-005]
+      description: Retries and concurrent policy changes do not create duplicate effects or corrupt internal state.
+    - id: SCN-009
+      requirement_ids: [REQ-007]
+      description: Staging webhooks and cron cannot mutate production data or trigger production notifications.
+    - id: SCN-010
+      requirement_ids: [REQ-007]
+      description: Staging payment, Meta Pixel/CAPI, GA4/PostHog, and Clerk signup journeys use safe identities/destinations/recipients or stop before real authorization.
+    - id: SCN-011
+      requirement_ids: [REQ-008]
+      description: Each related Linear issue is checked against its own original acceptance criteria and ownership boundary.
+    - id: SCN-012
+      requirement_ids: [REQ-009, REQ-011]
+      description: Phase B attempt before live Phase A evidence is rejected by the delivery gate.
+    - id: SCN-013
+      requirement_ids: [REQ-010]
+      description: A feature branch retains its production-project preview and produces no accepted staging build under the chosen build/CPU metric; skipped deployment records are not treated as eliminated.
+    - id: SCN-014
+      requirement_ids: [REQ-010]
+      description: Main deploys staging and master deploys production with no cross-project regression.
+    - id: SCN-015
+      requirement_ids: [REQ-011]
+      description: Either phase can be rolled back independently without restoring unsafe side effects or changing the other project.
+    - id: SCN-016
+      requirement_ids: [REQ-012]
+      description: Before/after evidence uses the same sampling method and measures staging build count and Build CPU, explicitly avoiding unsupported deployment-count or currency claims.
+    - id: SCN-017
+      requirement_ids: [REQ-013]
+      description: A staging compliance admin using a shared database cannot mutate the production policy row; production renders the enabled policy switch locked and rejects direct disable attempts server-side; the settings UI reports the correct read-only/locked state accessibly.
+    - id: SCN-018
+      requirement_ids: [REQ-014]
+      description: Delhivery cron with absent, wrong, shared, or query-string credentials is rejected before provider/state mutation; only the Authorization header is accepted and logs contain no credential-bearing URL.
+    - id: SCN-019
+      requirement_ids: [REQ-014, REQ-015]
+      description: Required cancellation/return journeys cannot reach live Razorpay or Shiprocket through unsafe credentials/data, and a production denial follows the approved recovery policy.
+    - id: SCN-020
+      requirement_ids: [REQ-016]
+      description: Production denial alerts the named owner and the immutable Phase A evidence manifest is the only Phase B eligibility input.
+invariants:
+    - id: INV-001
+      description: Unknown identity is never equivalent to production.
+    - id: INV-002
+      description: No single shared database flag can authorize staging against production providers.
+    - id: INV-003
+      description: Browser bundles contain neither database policy access nor provider secrets.
+    - id: INV-004
+      description: Every controlled provider attempt passes a server-side authorization boundary immediately before I/O.
+    - id: INV-005
+      description: Only executed provider responses may create persisted real provider identifiers.
+    - id: INV-006
+      description: Logs never contain raw recipient PII, credentials, tokens, or full sensitive payloads.
+    - id: INV-007
+      description: Phase B cannot become eligible from code review or unit tests alone.
+    - id: INV-008
+      description: Production-project preview behavior and production deployment behavior remain unchanged by Phase B.
+    - id: INV-009
+      description: Phase A and Phase B have independent rollback paths.
+    - id: INV-010
+      description: Unsupported savings claims are never presented as measured fact.
+    - id: INV-011
+      description: Staging cannot write the production operational-policy row, even when both environments share a database.
+    - id: INV-012
+      description: Staging cron and webhook entry points cannot process production schedules/events or mutate production-scoped data/providers.
+    - id: INV-013
+      description: Every in-scope staging-journey operation has an explicit safe boundary and every production denial follows an approved recovery policy.
+    - id: INV-014
+      description: Phase B eligibility is tied to immutable Phase A deployments and a named approver.
+flows:
+    - id: FLOW-001
+      description: Resolve runtime identity and policy into a typed server-side authorization decision before provider I/O.
+      state_transitions:
+          - from: decision_pending
+            to: denied_or_authorized
+    - id: FLOW-002
+      description: Execute provider attempt only when authorized and return executed, skipped, or failed to the caller.
+      state_transitions:
+          - from: authorized_or_denied
+            to: executed_or_skipped_or_failed
+    - id: FLOW-003
+      description: Convert Delhivery journey operations to controlled adapter calls and persist identifiers only on executed results.
+      state_transitions:
+          - from: local_order_or_return
+            to: local_safe_state_or_provider_linked_state
+    - id: FLOW-004
+      description: Inventory and verify environment boundaries, deploy Phase A to staging, execute live matrix, then validate production behavior.
+      state_transitions:
+          - from: phase_a_implemented
+            to: phase_a_live_validated
+    - id: FLOW-005
+      description: Require Phase A evidence and human workflow confirmation before selecting and applying a project-specific Phase B control.
+      state_transitions:
+          - from: phase_b_blocked
+            to: phase_b_eligible
+    - id: FLOW-006
+      description: Apply, measure, and either retain or independently roll back the staging trigger control.
+      state_transitions:
+          - from: phase_b_eligible
+            to: phase_b_validated_or_rolled_back
+    - id: FLOW-007
+      description: Inventory required staging journeys, prove each external operation isolated or route it through fail-closed authorization, then execute only the approved provider behavior.
+      state_transitions:
+          - from: external_operation_discovered
+            to: isolated_or_denied_or_approved_execution
+    - id: FLOW-008
+      description: Authenticate and environment-scope cron/webhook entry points before any data/provider work; emit redacted evidence for denial.
+      state_transitions:
+          - from: scheduled_or_inbound_request
+            to: rejected_or_environment_owned_processing
+dependencies:
+    - id: DEP-001
+      description: Explicit APP_ENV values and operational policy seed/runbook for staging and production.
+      status: resolved
+      note: Developer confirmed APP_ENV=staging for staging and APP_ENV=production for production; production external_side_effects.enabled=true and the production control is locked/server-protected.
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEP-002
+      description: Non-secret proof of database and Redis isolation or shared-resource safety.
+      status: resolved
+      note: Developer confirmed staging uses separate database and Redis resources; non-secret fingerprints remain required in Phase A evidence.
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEP-003
+      description: Non-secret proof of Razorpay, Resend, Twilio, Delhivery, Shiprocket, Meta Pixel/CAPI, GA4, PostHog, and Clerk test identities.
+      status: resolved
+      note: Developer confirmed staging uses Razorpay test keys, a separate Delhivery test account/token, separate Clerk test identities, disabled analytics, test messaging values, and Shiprocket is unused; non-secret fingerprints remain required in Phase A evidence.
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEP-004
+      description: Webhook registration/secret and cron schedule/secret isolation inventory.
+      status: resolved
+      note: "Developer is configuring staging-owned webhook and cron destinations with environment-specific secrets; cron uses Authorization: Bearer header-only authentication and rejects query-string secrets."
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEP-005
+      description: Phase A uses a separate implementation branch and PR from then-current main; Phase B uses another branch and PR only after live Phase A approval.
+      status: resolved
+    - id: DEP-006
+      description: Live Phase A acceptance evidence and named approver.
+      status: pending_phase_a_evidence
+    - id: DEP-007
+      description: Demonstrated Vercel project-specific trigger control plus human confirmation of no feature-branch staging dependency.
+      status: resolved
+      note: Staging tracks main only; Vercel Ignored Build Step is configured as Only build production. Phase B reports measured build count/Build CPU outcomes and does not claim deployment-count reduction.
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+integrations:
+    - id: INT-001
+      system: Vercel
+      purpose: Projects, environment variables, domains, and Git deployment controls.
+    - id: INT-002
+      system: Delhivery
+      purpose: Shipping, tracking, return, pickup, and cancellation APIs.
+    - id: INT-003
+      system: Resend
+      purpose: Transactional email delivery.
+    - id: INT-004
+      system: Twilio
+      purpose: WhatsApp message delivery.
+    - id: INT-005
+      system: Meta Pixel/CAPI, GA4, and PostHog
+      purpose: Browser and server analytics destinations with no live non-production fallback.
+    - id: INT-006
+      system: Razorpay
+      purpose: Payments, refunds, and webhooks.
+    - id: INT-007
+      system: Neon/Postgres, Redis/Upstash, webhooks, and cron
+      purpose: Runtime state, cache, inbound event, and scheduled execution isolation.
+    - id: INT-008
+      system: Shiprocket
+      purpose: Legacy cancellation mutations reachable from required staging cancellation journeys.
+    - id: INT-009
+      system: Clerk
+      purpose: Synthetic signup identity and bounded OTP verification behavior.
+personas:
+    - id: PER-001
+      role: customer_or_brand
+      applicability: Must never receive or be affected by non-production side effects.
+    - id: PER-002
+      role: developer_or_qa
+      applicability: Runs staging journeys and needs deterministic safe results.
+    - id: PER-003
+      role: compliance_admin
+      applicability: Manages the audited operational kill switch.
+    - id: PER-004
+      role: release_operator
+      applicability: Verifies environment config, deploys, measures, and rolls back phases.
+    - id: PER-005
+      role: external_provider
+      applicability: Receives authorized production requests only.
+security_boundaries:
+    - id: SEC-001
+      description: Explicit Vercel application identity separates staging and production.
+    - id: SEC-002
+      description: Server-only policy separates browser code from database and secret access.
+    - id: SEC-003
+      description: compliance_admin permission and finance audit events protect policy mutation.
+    - id: SEC-004
+      description: Provider façades protect production endpoints and credentials.
+    - id: SEC-005
+      description: Webhook secrets and data ownership prevent cross-environment mutation.
+    - id: SEC-006
+      description: Redacted structured logging protects customer and provider data.
+    - id: SEC-007
+      description: Live Phase A evidence protects the Phase B deployment transition.
+    - id: SEC-008
+      description: Production-only policy mutation prevents staging from changing shared production authorization.
+    - id: SEC-009
+      description: Authenticated, environment-owned cron and webhook entry points prevent staging from processing production events or schedules.
+business_rules:
+    - id: BR-001
+      description: Safety denial takes precedence over provider execution when identity or policy is ambiguous.
+    - id: BR-002
+      description: Phase A intentionally has no generic non-production real-provider override.
+    - id: BR-003
+      description: Real production order behavior must be preserved after explicit rollout preconditions pass.
+    - id: BR-004
+      description: Phase B is a separate gated change and cannot rely on code-review-only Phase A evidence.
+    - id: BR-005
+      description: Deployment count and Build CPU are reported as separate metrics.
+    - id: BR-006
+      description: Suppression creates no provider row/identifier and does not overwrite existing order-return adjudication/workflow status; no schema/status migration is authorized.
+    - id: BR-007
+      description: Staging is read-only for the production operational-policy setting.
+    - id: BR-008
+      description: A generic provider ledger, webhook inbox/outbox, or intentionally lossy production-denial policy requires governance re-entry and human approval.
+decisions:
+    - id: DEC-001
+      question: Correct the merged PR #580 design in place or replace it?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Retain useful merged call-site evidence while replacing fallback identity and fail-open boolean policy with a typed fail-closed server policy on a dedicated Phase A branch from current main.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-002
+      question: Where should safety enforcement live?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Enforce at server-side provider façades and keep caller handling for business state only.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-003
+      question: How should skipped shipment creation be represented?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Use a typed skipped result and local state without a provider-like AWB.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-004
+      question: Should Phase A permit non-production real-provider opt-in?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: No; provider-specific sandbox enablement requires a later governed change.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-005
+      question: What are the approved APP_ENV and production policy rollout values and owners?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Production uses APP_ENV=production with external_side_effects enabled and protected; staging uses APP_ENV=staging.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEC-006
+      question: Are staging data, payment, shipping, webhook, cron, messaging, Meta Pixel/CAPI, GA4/PostHog, and Clerk test resources isolated or otherwise safe?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Staging uses separate database, Redis, Razorpay test keys, Delhivery test account/token, separate Clerk users, disabled analytics, test messaging values, and safe webhook/cron configuration; Shiprocket is unused.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEC-007
+      question: Does any real workflow rely on staging feature-branch builds?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Confirm no dependency before Phase B; otherwise preserve an explicit allowlist and revise the acceptance matrix.
+      confidence: medium
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEC-008
+      question: Which Vercel control meets the Phase B build/CPU contract without affecting production previews?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: The staging Vercel project tracks main as its Production branch and uses Ignored Build Step = Only build production. Acceptance measures actual build count and Build CPU; skipped deployment records are not claimed as eliminated. Production project previews remain unchanged.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+    - id: DEC-009
+      question: How is denied shipment state represented?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Create no provider shipment row/identifier; preserve existing return/replacement adjudication status and return/log suppression separately. Add no schema/status migration.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-010
+      question: How is a shared global policy row protected from staging writes?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Reject policy mutation unless APP_ENV is production, in addition to existing permission and audit controls; staging is read-only, and production cannot disable the policy because the UI is locked and the server rejects false values.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-011
+      question: How must production denial recover for pre-state-mutation workflows and post-commit notification/analytics effects?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: For order, shipment, and refund operations, fail before important local mutation where possible and never mark success or create provider-like identifiers. For email and WhatsApp after an order commit, preserve valid order state, record the skipped notification, alert an operator, and allow authorized manual retry. For analytics, safely drop blocked events without changing business state. Do not introduce automatic retry or a generic ledger/outbox by default.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Exhaustive identity and policy truth tables must prove missing, malformed, non-production, read-error, and production cases fail closed.
+    - id: TEXP-002
+      category: component
+      classification: REQUIRED
+      reason: Server provider façades must prove no browser/database boundary leak and typed skipped/failed/executed behavior.
+    - id: TEXP-003
+      category: integration
+      classification: REQUIRED
+      reason: Order and return state must remain consistent when each provider call is skipped, fails, succeeds, or is retried.
+    - id: TEXP-004
+      category: external_integration
+      classification: REQUIRED
+      reason: Live provider dashboards or sandbox spies must prove no real staging email, WhatsApp, shipment, refund, or CAPI effect.
+    - id: TEXP-005
+      category: security
+      classification: REQUIRED
+      reason: Direct Delhivery bypass, client secret access, webhook/cron cross-environment mutation, and log PII must be rejected.
+    - id: TEXP-006
+      category: api
+      classification: REQUIRED
+      reason: Controlled Delhivery operations and shipping/payment webhooks require endpoint-level denial and response-contract tests.
+    - id: TEXP-007
+      category: e2e
+      classification: REQUIRED
+      reason: Staging COD, cancellation, return/replacement, tracking, webhook, cron, analytics, and payment-stop journeys require live proof.
+    - id: TEXP-008
+      category: regression
+      classification: REQUIRED
+      reason: A controlled production order must retain existing notification, shipment, and analytics behavior after rollout.
+    - id: TEXP-009
+      category: business_uat
+      classification: REQUIRED
+      reason: Named engineering/release owners must sign off resource isolation and Phase A live evidence before Phase B.
+    - id: TEXP-010
+      category: performance
+      classification: OPTIONAL
+      reason: Policy lookup overhead should be measured but cannot weaken fail-closed semantics.
+    - id: TEXP-011
+      category: external_integration
+      classification: REQUIRED
+      reason: Phase B requires a feature/main/master Vercel matrix across both projects and rollback proof.
+    - id: TEXP-012
+      category: regression
+      classification: REQUIRED
+      reason: Production-project previews, production deployment, domains, build settings, and application behavior must remain unchanged.
+    - id: TEXP-013
+      category: accessibility
+      classification: REQUIRED
+      reason: Revised kill-switch UI must retain accessible switch label, state, permission feedback, and fail-closed copy.
+    - id: TEXP-014
+      category: ui_ux
+      classification: REQUIRED
+      reason: Admin UI must display disabled/unknown states accurately and never imply missing configuration is enabled.
+    - id: TEXP-015
+      category: integration
+      classification: REQUIRED
+      reason: Forward/support shipment skips create no provider row/identifier; return/replacement skips preserve adjudication state; schema remains unchanged and rollback retains fail-closed safety.
+    - id: TEXP-016
+      category: security
+      classification: REQUIRED
+      reason: Staging policy writes must be rejected with a shared database while production authorized writes remain audited.
+    - id: TEXP-017
+      category: api
+      classification: REQUIRED
+      reason: "Delhivery cron must accept only an Authorization: Bearer header, reject absent/wrong/shared/query-string secrets before work, remain disabled or isolated in staging, use controlled provider boundaries, and never log credential-bearing URLs."
+    - id: TEXP-018
+      category: integration
+      classification: REQUIRED
+      reason: The authoritative journey inventory must prove Razorpay refund, legacy Shiprocket cancellation, Meta Pixel, Clerk OTP, and all listed provider operations isolated or fail-closed; production denial must follow the approved recovery policy.
+    - id: TEXP-019
+      category: business_uat
+      classification: REQUIRED
+      reason: Production-denial alert acknowledgement and the immutable Phase A evidence manifest must be exercised by named release owners.
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids: [SCN-001, SCN-002]
+        - requirement_id: REQ-002
+          scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-004, SCN-008]
+        - requirement_id: REQ-003
+          scenario_ids: [SCN-005]
+        - requirement_id: REQ-004
+          scenario_ids: [SCN-006]
+        - requirement_id: REQ-005
+          scenario_ids: [SCN-006, SCN-007, SCN-008]
+        - requirement_id: REQ-006
+          scenario_ids: [SCN-003, SCN-005]
+        - requirement_id: REQ-007
+          scenario_ids: [SCN-009, SCN-010]
+        - requirement_id: REQ-008
+          scenario_ids: [SCN-004, SCN-011]
+        - requirement_id: REQ-009
+          scenario_ids: [SCN-012]
+        - requirement_id: REQ-010
+          scenario_ids: [SCN-013, SCN-014]
+        - requirement_id: REQ-011
+          scenario_ids: [SCN-012, SCN-015]
+        - requirement_id: REQ-012
+          scenario_ids: [SCN-016]
+        - requirement_id: REQ-013
+          scenario_ids: [SCN-017]
+        - requirement_id: REQ-014
+          scenario_ids: [SCN-018, SCN-019]
+        - requirement_id: REQ-015
+          scenario_ids: [SCN-019]
+        - requirement_id: REQ-016
+          scenario_ids: [SCN-020]
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids: [INV-001, INV-004]
+        - scenario_id: SCN-002
+          invariant_ids: [INV-001, INV-002, INV-004]
+        - scenario_id: SCN-003
+          invariant_ids: [INV-004, INV-006]
+        - scenario_id: SCN-004
+          invariant_ids: [INV-004]
+        - scenario_id: SCN-005
+          invariant_ids: [INV-003, INV-004, INV-006]
+        - scenario_id: SCN-006
+          invariant_ids: [INV-004, INV-005]
+        - scenario_id: SCN-007
+          invariant_ids: [INV-005]
+        - scenario_id: SCN-008
+          invariant_ids: [INV-004, INV-005]
+        - scenario_id: SCN-009
+          invariant_ids: [INV-004]
+        - scenario_id: SCN-010
+          invariant_ids: [INV-004]
+        - scenario_id: SCN-011
+          invariant_ids: [INV-004]
+        - scenario_id: SCN-012
+          invariant_ids: [INV-007, INV-009]
+        - scenario_id: SCN-013
+          invariant_ids: [INV-008]
+        - scenario_id: SCN-014
+          invariant_ids: [INV-008]
+        - scenario_id: SCN-015
+          invariant_ids: [INV-009]
+        - scenario_id: SCN-016
+          invariant_ids: [INV-010]
+        - scenario_id: SCN-017
+          invariant_ids: [INV-002, INV-011]
+        - scenario_id: SCN-018
+          invariant_ids: [INV-012]
+        - scenario_id: SCN-019
+          invariant_ids: [INV-005, INV-013]
+        - scenario_id: SCN-020
+          invariant_ids: [INV-007, INV-014]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids: [TEXP-001, TEXP-005]
+        - scenario_id: SCN-002
+          test_expectation_ids: [TEXP-001, TEXP-003]
+        - scenario_id: SCN-003
+          test_expectation_ids: [TEXP-001, TEXP-005]
+        - scenario_id: SCN-004
+          test_expectation_ids: [TEXP-008]
+        - scenario_id: SCN-005
+          test_expectation_ids: [TEXP-002, TEXP-004, TEXP-007]
+        - scenario_id: SCN-006
+          test_expectation_ids: [TEXP-003, TEXP-005, TEXP-006]
+        - scenario_id: SCN-007
+          test_expectation_ids: [TEXP-003, TEXP-007, TEXP-015]
+        - scenario_id: SCN-008
+          test_expectation_ids: [TEXP-001, TEXP-003]
+        - scenario_id: SCN-009
+          test_expectation_ids: [TEXP-005, TEXP-006, TEXP-007]
+        - scenario_id: SCN-010
+          test_expectation_ids: [TEXP-004, TEXP-007, TEXP-009]
+        - scenario_id: SCN-011
+          test_expectation_ids: [TEXP-009]
+        - scenario_id: SCN-012
+          test_expectation_ids: [TEXP-009]
+        - scenario_id: SCN-013
+          test_expectation_ids: [TEXP-011, TEXP-012]
+        - scenario_id: SCN-014
+          test_expectation_ids: [TEXP-011, TEXP-012]
+        - scenario_id: SCN-015
+          test_expectation_ids: [TEXP-007, TEXP-011]
+        - scenario_id: SCN-016
+          test_expectation_ids: [TEXP-011]
+        - scenario_id: SCN-017
+          test_expectation_ids: [TEXP-013, TEXP-014, TEXP-016]
+        - scenario_id: SCN-018
+          test_expectation_ids: [TEXP-017]
+        - scenario_id: SCN-019
+          test_expectation_ids: [TEXP-018]
+        - scenario_id: SCN-020
+          test_expectation_ids: [TEXP-019]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren143_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    findings:
+        - id: CRIT-001
+          severity: DESIGN_BLOCKER
+          summary: External-effect scope omitted staging-reachable Razorpay and Shiprocket mutations and was otherwise unbounded.
+          status: resolved_in_contract
+          disposition: Added an authoritative required-journey operation inventory, explicit provider coverage, and a bulk-marketing exclusion.
+        - id: CRIT-002
+          severity: DESIGN_BLOCKER
+          summary: Delhivery cron lacked authentication, environment isolation, provider gating, and credential-safe logging.
+          status: resolved_in_contract
+          disposition: Added timing-safe cron authentication, staging disable/isolation, provider-boundary, and redacted-log requirements/tests.
+        - id: CRIT-003
+          severity: DESIGN_BLOCKER
+          summary: The proposed external_suppressed return status corrupted adjudication state.
+          status: resolved_in_contract
+          disposition: Removed the new status/schema design; skips preserve business state and create no provider row or identifier.
+        - id: CRIT-004
+          severity: DESIGN_BLOCKER
+          summary: Meta Pixel live fallback and Clerk OTP behavior were absent from analytics/authentication acceptance.
+          status: resolved_in_contract
+          disposition: Added Meta Pixel and Clerk integrations, safe behavior, evidence, and tests.
+        - id: CRIT-005
+          severity: DESIGN_BLOCKER
+          summary: Environment/resource/workflow/Vercel facts remain externally unresolved.
+          status: resolved_in_contract
+          disposition: Recorded owner confirmations for APP_ENV, resource isolation, staging branch/build behavior, and Option-A build/CPU measurement; DEP-006 remains pending live Phase-A evidence.
+        - id: CRIT-006
+          severity: DESIGN_BLOCKER
+          summary: A generic provider ledger and webhook inbox/outbox were a major architecture trade-off misclassified as an automatic recommendation.
+          status: resolved_in_contract
+          disposition: Removed the generic architecture, bounded webhook scope to environment safety, and made production-denial recovery DEC-011 HUMAN_CONFIRMATION.
+        - id: CRIT-007
+          severity: MAJOR
+          summary: Migration, mixed-version, and rollback compatibility were underspecified.
+          status: resolved_in_contract
+          disposition: Current contract authorizes no schema/status migration; rollback retains the narrowest fail-closed revision, and schema need triggers governance re-entry.
+        - id: CRIT-008
+          severity: MAJOR
+          summary: Generic provider-operation idempotency was not implementable as drafted.
+          status: resolved_in_contract
+          disposition: Removed the generic ledger/idempotency redesign; operation-specific production recovery remains DEC-011.
+        - id: CRIT-009
+          severity: MAJOR
+          summary: A monotonic webhook transition map was asserted without an implementable transition table.
+          status: resolved_in_contract
+          disposition: Removed the webhook behavior redesign from REN-143; retained environment ownership, secret isolation, and outbound gating only.
+        - id: CRIT-010
+          severity: MAJOR
+          summary: Production-denial alerting depended on the failing database and recovery was incomplete.
+          status: resolved_in_contract
+          disposition: Added independent structured-log fallback and lazy provider initialization plus concrete operation-local recovery/manual-retry rules approved in DEC-011.
+        - id: CRIT-011
+          severity: MINOR
+          summary: Settings UI accessibility and copy tests lacked scenario traceability.
+          status: resolved_in_contract
+          disposition: Mapped TEXP-013 and TEXP-014 to the settings policy-write/read-only scenario SCN-017.
+        - id: CRIT-012
+          severity: MINOR
+          summary: The browser payment-module evidence claim was stale.
+          status: resolved_in_contract
+          disposition: Corrected the evidence to the server action wrapper and lowest server-side WhatsApp boundary.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Ayan Ganguly (owner confirmation; live evidence gate remains)"

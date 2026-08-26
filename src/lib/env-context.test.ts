@@ -18,8 +18,8 @@ test("uses APP_ENV to distinguish separately deployed production and staging app
     ).toBe(false);
 });
 
-test("falls back to Vercel and Node production signals when APP_ENV is absent", () => {
-    expect(isProductionEnvironment({ VERCEL_ENV: "production" })).toBe(true);
-    expect(isProductionEnvironment({ NODE_ENV: "production" })).toBe(true);
+test("fails closed when APP_ENV is absent or unexpected", () => {
+    expect(isProductionEnvironment({ VERCEL_ENV: "production" })).toBe(false);
+    expect(isProductionEnvironment({ NODE_ENV: "production" })).toBe(false);
     expect(isProductionEnvironment({ NODE_ENV: "development" })).toBe(false);
 });
