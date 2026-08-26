@@ -1,6 +1,7 @@
 import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
 import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
 import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
+import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
@@ -2090,7 +2091,7 @@ export const ordersRouter = createTRPCRouter({
             };
             console.log(payload, "payloadpayloadpayload");
             const resp = await axios.post(
-                "https://track.delhivery.com/api/p/edit",
+                resolveDelhiveryUrl(process.env.DELHIVERY_BASE_URL, "/api/p/edit"),
                 payload,
                 {
                     headers: {

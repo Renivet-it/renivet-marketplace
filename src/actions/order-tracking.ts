@@ -1,5 +1,6 @@
 "use server";
 
+import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
 import { orderQueries } from "@/lib/db/queries";
 
 export type TrackingScan = {
@@ -18,7 +19,10 @@ export async function getLiveTrackingByAwb(awb: string): Promise<TrackingScan[]>
 
     try {
         const resp = await fetch(
-            `https://track.delhivery.com/api/v1/packages/json/?waybill=${awb}`,
+            resolveDelhiveryUrl(
+                process.env.DELHIVERY_BASE_URL,
+                `/api/v1/packages/json/?waybill=${awb}`
+            ),
             {
                 headers: {
                     Authorization: `Token ${process.env.DELHIVERY_TOKEN}`,
