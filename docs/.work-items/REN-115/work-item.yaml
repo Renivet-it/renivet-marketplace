@@ -209,7 +209,7 @@ implementation_review:
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: main
     base_commit: "26914e7c0f5b04b60b4e457b45f0100a9367f7e7"
-    head_commit: "26914e7c0f5b04b60b4e457b45f0100a9367f7e7"
+    head_commit: "5477f21587e4d90385765b384fdc901a3de1f2fa"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
