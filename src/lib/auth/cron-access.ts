@@ -3,17 +3,14 @@ import { isTimingSafeSecretMatch } from "./secret-comparison";
 
 export function isCronSecretAuthorized(
     authorizationHeader: string | null,
-    querySecret: string | null,
+    _querySecret: string | null,
     expectedSecret: string | undefined
 ): boolean {
     const bearerSecret = authorizationHeader?.startsWith("Bearer ")
         ? authorizationHeader.slice("Bearer ".length)
         : null;
 
-    return (
-        isTimingSafeSecretMatch(bearerSecret, expectedSecret) ||
-        isTimingSafeSecretMatch(querySecret, expectedSecret)
-    );
+    return isTimingSafeSecretMatch(bearerSecret, expectedSecret);
 }
 
 export function requireCronSecret(req: NextRequest) {
@@ -28,7 +25,7 @@ export function requireCronSecret(req: NextRequest) {
     if (
         !isCronSecretAuthorized(
             req.headers.get("authorization"),
-            req.nextUrl.searchParams.get("secret"),
+            null,
             secret
         )
     ) {

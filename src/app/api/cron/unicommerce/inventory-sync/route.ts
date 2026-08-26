@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 function isAuthorized(request: NextRequest) {
     const secret = env.UNICOMMERCE_CRON_SECRET;
-    if (!secret) return true;
+    if (!secret) return false;
 
     const headerSecret = request.headers.get("x-cron-secret");
     return headerSecret === secret;

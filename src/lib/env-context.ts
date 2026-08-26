@@ -7,7 +7,5 @@ type EnvironmentVariables = {
 export function isProductionEnvironment(
     environment: EnvironmentVariables = process.env
 ): boolean {
-    if (environment.APP_ENV) return environment.APP_ENV === "production";
-    if (environment.VERCEL_ENV) return environment.VERCEL_ENV === "production";
-    return environment.NODE_ENV === "production";
+    return environment.APP_ENV === "production";
 }
