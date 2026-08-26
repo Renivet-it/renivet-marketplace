@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
 import { eq, and, like, sql } from "drizzle-orm";
 import { financeComplianceQueries } from "@/lib/db/queries/finance-compliance";
 import { sendWhatsAppMessage } from "@/lib/whatsapp/index";
@@ -692,7 +693,7 @@ createRTOShipment: protectedProcedure
     formData.append("data", JSON.stringify(dataPayload));
 
     // 🔥 Send to Delhivery RVP API
-    const resp = await fetch("https://track.delhivery.com/api/cmu/create.json", {
+    const resp = await fetch(resolveDelhiveryUrl(process.env.DELHIVERY_BASE_URL, "/api/cmu/create.json"), {
       method: "POST",
       headers: {
         Authorization: "Token " + process.env.DELHIVERY_TOKEN!,
@@ -839,7 +840,7 @@ const newVariantSize = newVariant?.sku || "Default Size";
     // -----------------------------------------------------------
     // SEND TO DELHIVERY
     // -----------------------------------------------------------
-    const resp = await fetch("https://track.delhivery.com/api/cmu/create.json", {
+    const resp = await fetch(resolveDelhiveryUrl(process.env.DELHIVERY_BASE_URL, "/api/cmu/create.json"), {
       method: "POST",
       headers: {
         Authorization: "Token " + process.env.DELHIVERY_TOKEN!,

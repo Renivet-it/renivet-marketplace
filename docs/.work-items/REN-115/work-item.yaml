@@ -1,0 +1,229 @@
+schema_version: "1.0"
+task:
+    id: REN-115
+    title: Fix 4 hardcoded Delhivery production-URL bypass sites
+    source: linear
+    branch: ayanganguly333/ren-115-fix-4-hardcoded-delhivery-production-url-bypass-sites
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-115/fix-4-hardcoded-delhivery-production-url-bypass-sites
+        priority: High
+        labels: [staging-readiness]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Automated Testing Rollout
+        milestone: Staging Readiness
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - These calls cross the Delhivery external-provider boundary and can affect real shipment data.
+        - A URL misconfiguration could route staging traffic to production.
+        - Production fallback must remain behaviorally compatible.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Four Linear-named Delhivery call sites and their callers
+        - DELHIVERY_BASE_URL and current Delhivery client behavior
+        - Production request methods, paths, headers, payloads, parsing, and state writes
+        - Existing tests and source-scan coverage
+    excluded_areas:
+        - Kill-switch policy changes, owned by separate staging-hardening work
+        - Razorpay refund behavior, schemas, migrations, retries, and unrelated Delhivery paths
+        - Delhivery account provisioning or sandbox setup
+    dependencies: []
+    integrations: [INT-001]
+    security_boundaries: [SEC-001, SEC-002, SEC-003]
+    state_transitions:
+        - configured_url -> unchanged_provider_request
+        - missing_base_url -> explicit_production_fallback
+    related_tests:
+        - src/lib/delhivery/url.test.ts
+        - src/lib/delhivery/request-routing.test.ts
+    uncertainties:
+        - No focused tests currently cover all four call sites; they must be added.
+requirements:
+    - id: REQ-001
+      description: The four named call sites resolve Delhivery requests through one server-only URL resolver and do not directly embed a production URL in the request expression.
+      type: explicit
+    - id: REQ-002
+      description: The resolver accepts a trusted operator-controlled absolute HTTP(S) DELHIVERY_BASE_URL, trims whitespace and trailing slashes, rejects malformed non-empty values before network I/O, and keeps the explicit https://track.delhivery.com fallback only inside the resolver when the value is absent or blank.
+      type: explicit
+    - id: REQ-003
+      description: Production behavior remains unchanged, including HTTP methods, endpoint paths, authentication headers, payloads, response parsing, caller results, and state writes.
+      type: inferred
+    - id: REQ-004
+      description: REN-115 changes only the four named call sites and focused tests/helpers; it does not change the kill switch, refunds, schemas, migrations, retries, or unrelated Delhivery paths. The developer explicitly superseded the kill-switch portion of the Linear description on 2026-08-26; REN-143 retains ownership of non-production no-op behavior.
+      type: explicit
+    - id: REQ-005
+      description: The change introduces no new token, payload, customer-destination, or credential-bearing URL logging or browser exposure.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-002]
+      description: Each of the four call sites uses the shared resolver with a custom normalized DELHIVERY_BASE_URL and does not directly construct a production URL when the custom value is configured.
+    - id: SCN-002
+      requirement_ids: [REQ-002, REQ-003]
+      description: Each of the four call sites preserves the production fallback from the shared resolver when DELHIVERY_BASE_URL is missing or blank.
+    - id: SCN-003
+      requirement_ids: [REQ-003]
+      description: A parameterized production regression matrix proves each existing method, path, headers, payload, parsing, caller result, and state write is unchanged; fetch, Axios, and Razorpay are all mocked and no live credentials or network are used.
+    - id: SCN-004
+      requirement_ids: [REQ-004, REQ-005]
+      description: Source and diff review prove only the four named URLs plus focused tests/helpers changed, with no new sensitive logging or browser exposure.
+invariants:
+    - id: INV-001
+      description: No named request expression directly embeds a production URL; the fallback literal exists only inside the shared resolver.
+    - id: INV-002
+      description: Production fallback and explicit configured base URL produce the same endpoint suffix and request contract as before.
+    - id: INV-003
+      description: The implementation diff cannot expand beyond the four named call sites and focused verification.
+    - id: INV-004
+      description: Credentials and sensitive payloads remain server-only and are not newly logged.
+flows:
+    - id: FLOW-001
+      description: Normalize DELHIVERY_BASE_URL, apply the explicit production fallback when blank, and append the existing endpoint path.
+      state_transitions: [configured_or_fallback_url -> unchanged_request]
+dependencies: []
+integrations:
+    - id: INT-001
+      system: Delhivery
+      purpose: Tracking, dimension edit, return/RTO creation, and replacement shipment creation.
+personas:
+    - id: PER-001
+      role: production_operator
+      applicability: Production shipment behavior must remain unchanged.
+    - id: PER-002
+      role: release_reviewer
+      applicability: Verifies four-site scope and request-spy evidence.
+security_boundaries:
+    - id: SEC-001
+      description: DELHIVERY_BASE_URL is trusted, operator-controlled server configuration and may receive the Delhivery credential; the resolver validates absolute HTTP(S) syntax.
+    - id: SEC-002
+      description: DELHIVERY_TOKEN remains server-only.
+    - id: SEC-003
+      description: No new sensitive values are exposed through logs or browser responses.
+business_rules:
+    - id: BR-001
+      description: Explicit configuration overrides the production fallback after normalization.
+    - id: BR-002
+      description: Existing production provider behavior must remain unchanged.
+decisions:
+    - id: DEC-001
+      question: Should REN-115 change the kill switch or refund behavior?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: No. This issue is URL-only; those behaviors remain out of scope.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: true
+      confirmation_source: Developer confirmation recorded in this work-item review on 2026-08-26.
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Verify whitespace and trailing-slash normalization plus blank fallback.
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Request spies verify all four configured URLs and endpoint suffixes.
+    - id: TEXP-003
+      category: regression
+      classification: REQUIRED
+      reason: Verify all four production methods, paths, headers, payloads, parsing, caller results, and state writes with fetch, Axios, and Razorpay mocked; no live credentials or network are allowed.
+    - id: TEXP-004
+      category: security
+      classification: REQUIRED
+      reason: Source scan rejects direct full request URLs at the four named sites; the resolver fallback is allowed, and the diff adds no sensitive logging or browser exposure.
+    - id: TEXP-005
+      category: regression
+      classification: REQUIRED
+      reason: Diff review proves no kill-switch, refund, schema, retry, or unrelated Delhivery changes.
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids: [SCN-001]
+        - requirement_id: REQ-002
+          scenario_ids: [SCN-001, SCN-002]
+        - requirement_id: REQ-003
+          scenario_ids: [SCN-002, SCN-003]
+        - requirement_id: REQ-004
+          scenario_ids: [SCN-004]
+        - requirement_id: REQ-005
+          scenario_ids: [SCN-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids: [INV-001, INV-002]
+        - scenario_id: SCN-002
+          invariant_ids: [INV-002]
+        - scenario_id: SCN-003
+          invariant_ids: [INV-002]
+        - scenario_id: SCN-004
+          invariant_ids: [INV-003, INV-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids: [TEXP-001, TEXP-002]
+        - scenario_id: SCN-002
+          test_expectation_ids: [TEXP-001, TEXP-003]
+        - scenario_id: SCN-003
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-004
+          test_expectation_ids: [TEXP-004, TEXP-005]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent_codex_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-R2-001
+          severity: DESIGN_BLOCKER
+          status: resolved_in_contract
+          disposition: The production fallback literal is allowed only inside the shared resolver; named request expressions must not embed it.
+        - id: CRIT-R2-002
+          severity: MAJOR
+          status: resolved_in_contract
+          disposition: The developer URL-only scope override and REN-143 ownership are recorded.
+        - id: CRIT-R2-003
+          severity: MAJOR
+          status: resolved_in_contract
+          disposition: Trusted operator configuration, absolute HTTP(S) validation, normalization, and malformed-value rejection are specified.
+        - id: CRIT-R2-004
+          severity: MAJOR
+          status: resolved_in_contract
+          disposition: Automated tests must mock fetch, Axios, and Razorpay and use no live network or credentials.
+        - id: CRIT-R2-005
+          severity: MINOR
+          status: resolved_in_contract
+          disposition: Metadata and test references were cleaned up.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Ayan Ganguly (URL-only scope confirmation) and independent_codex_critic"
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: main
+    base_commit: "26914e7c0f5b04b60b4e457b45f0100a9367f7e7"
+    head_commit: "26914e7c0f5b04b60b4e457b45f0100a9367f7e7"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Add four-path request-spy and production regression coverage before merge if practical."
+    evidence:
+        - "Compared the approved URL-only contract with the base-to-HEAD Git state and included unstaged/untracked implementation changes."
+        - "The four active request sites use resolveDelhiveryUrl; resolver unit tests pass, while the required four-path integration matrix is not yet present."
+    governance_reentry_required: false
