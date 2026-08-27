@@ -27,11 +27,17 @@ export function getCapiLogDisplay(
         response && typeof response === "object"
             ? (response as CapiLogResponse)
             : undefined;
-    if (typedResponse?.version === 1 && typeof typedResponse.outcome === "string") {
-        return typedLabels[typedResponse.outcome] ?? {
-            label: status === "success" ? "Legacy success" : "Legacy failed",
-            variant: status === "success" ? "default" : "destructive",
-        };
+    if (
+        typedResponse?.version === 1 &&
+        typeof typedResponse.outcome === "string"
+    ) {
+        return (
+            typedLabels[typedResponse.outcome] ?? {
+                label:
+                    status === "success" ? "Legacy success" : "Legacy failed",
+                variant: status === "success" ? "default" : "destructive",
+            }
+        );
     }
 
     return status === "success"

@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
+import { expect, test } from "bun:test";
 
 Object.assign(process.env, {
     CLERK_SECRET_KEY: "test",
@@ -224,13 +224,17 @@ test("product page captures request data before scheduling after-response CAPI",
         new URL("./analytics.ts", import.meta.url),
         "utf8"
     );
-    expect(analyticsSource.indexOf("requestData = await captureRequestData()"))
-        .toBeLessThan(analyticsSource.indexOf("scheduleAfterResponse("));
-    expect(pageSource).toContain("import { after } from \"next/server\";");
+    expect(
+        analyticsSource.indexOf("requestData = await captureRequestData()")
+    ).toBeLessThan(analyticsSource.indexOf("scheduleAfterResponse("));
+    expect(pageSource).toContain('import { after } from "next/server";');
 });
 
 test("public ViewContent wrapper keeps captured request fields in its payload", async () => {
-    const source = await readFile(new URL("./analytics.ts", import.meta.url), "utf8");
+    const source = await readFile(
+        new URL("./analytics.ts", import.meta.url),
+        "utf8"
+    );
     expect(source).toContain("export async function trackViewContentCapi(");
     expect(source).toContain(
         "await sendViewContentCapi(eventId, userData, customData, url, requestData);"

@@ -11,11 +11,11 @@ import {
 } from "@/components/ui/pagination-dash";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
-import { getCapiLogDisplay } from "./status";
 import { format } from "date-fns";
 import { Copy, Download, Filter } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getCapiLogDisplay } from "./status";
 
 const EVENT_NAMES = [
     "ViewContent",
@@ -139,7 +139,7 @@ export default function CapiLogsPage() {
             const csvContent = [headers, ...rows]
                 .map((row) =>
                     row
-                        .map((c) => `"${String(c).replace(/"/g, "\"\"")}"`)
+                        .map((c) => `"${String(c).replace(/"/g, '""')}"`)
                         .join(",")
                 )
                 .join("\n");
@@ -433,9 +433,7 @@ export default function CapiLogsPage() {
 
                                         {/* Status */}
                                         <td className="whitespace-nowrap px-4 py-3">
-                                            <Badge
-                                                variant={display.variant}
-                                            >
+                                            <Badge variant={display.variant}>
                                                 {display.label}
                                             </Badge>
                                         </td>

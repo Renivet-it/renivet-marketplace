@@ -1,9 +1,8 @@
-import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { capiLogs } from "@/lib/db/schema";
 import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { sanitizeFbUserData } from "@/lib/fbpixel";
-import { env } from "../../env";
+import { eq } from "drizzle-orm";
 import {
     CustomData,
     EventRequest,
@@ -11,6 +10,7 @@ import {
     ServerEvent,
     UserData,
 } from "facebook-nodejs-business-sdk";
+import { env } from "../../env";
 
 const ACCESS_TOKEN = env.FACEBOOK_CAPI_ACCESS_TOKEN;
 const PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || "618442627790500";
@@ -126,39 +126,56 @@ class CapiAttemptError extends Error {
 
 const defaultTimers: CapiTimerApi = {
     setTimeout: (callback, timeoutMs) => setTimeout(callback, timeoutMs),
-    clearTimeout: (timer) => clearTimeout(timer as ReturnType<typeof setTimeout>),
+    clearTimeout: (timer) =>
+        clearTimeout(timer as ReturnType<typeof setTimeout>),
 };
 
 function safeScalar(value: unknown): string | undefined {
-    if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+    if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+    ) {
         return String(value);
     }
 }
 
-function redact(value: string | undefined, accessToken?: string): string | undefined {
+function redact(
+    value: string | undefined,
+    accessToken?: string
+): string | undefined {
     if (!value) return undefined;
     return accessToken ? value.split(accessToken).join("[REDACTED]") : value;
 }
 
 function errorDetails(error: unknown, accessToken?: string) {
-    const source = error && typeof error === "object" ? (error as Record<string, unknown>) : {};
-    const nested = source.error && typeof source.error === "object"
-        ? (source.error as Record<string, unknown>)
-        : {};
+    const source =
+        error && typeof error === "object"
+            ? (error as Record<string, unknown>)
+            : {};
+    const nested =
+        source.error && typeof source.error === "object"
+            ? (source.error as Record<string, unknown>)
+            : {};
     return {
         code: safeScalar(source.code) ?? safeScalar(nested.code),
         message: redact(
-            safeScalar(source.message) ?? safeScalar(nested.message) ?? safeScalar(error),
+            safeScalar(source.message) ??
+                safeScalar(nested.message) ??
+                safeScalar(error),
             accessToken
         ),
     };
 }
 
-function isAcceptedMetaResponse(body: unknown): body is { events_received: number } {
+function isAcceptedMetaResponse(
+    body: unknown
+): body is { events_received: number } {
     return Boolean(
         body &&
-        typeof body === "object" &&
-        typeof (body as Record<string, unknown>).events_received === "number"
+            typeof body === "object" &&
+            typeof (body as Record<string, unknown>).events_received ===
+                "number"
     );
 }
 
@@ -168,8 +185,10 @@ function toCapiResponse(error: unknown, accessToken?: string): CapiResponse {
         return {
             version: 1,
             outcome: error.outcome,
-            ...(error.httpStatus === undefined ? {} : { httpStatus: error.httpStatus }),
-            ...(error.code ?? code ? { code: error.code ?? code } : {}),
+            ...(error.httpStatus === undefined
+                ? {}
+                : { httpStatus: error.httpStatus }),
+            ...((error.code ?? code) ? { code: error.code ?? code } : {}),
             ...(message ? { message } : {}),
         };
     }
@@ -184,15 +203,19 @@ function toCapiResponse(error: unknown, accessToken?: string): CapiResponse {
 }
 
 function toPublicCapiFailure(error: unknown): unknown {
-    const source = error && typeof error === "object"
-        ? (error as { response?: unknown; message?: unknown })
-        : {};
+    const source =
+        error && typeof error === "object"
+            ? (error as { response?: unknown; message?: unknown })
+            : {};
     return source.response || { message: source.message };
 }
 
 function reportDatabaseProblem(operation: "insert" | "update", error: unknown) {
     const { message } = errorDetails(error, ACCESS_TOKEN);
-    console.error("CAPI log database operation did not settle", { operation, message });
+    console.error("CAPI log database operation did not settle", {
+        operation,
+        message,
+    });
 }
 
 export function createCapiHttpService({
@@ -232,7 +255,12 @@ export function createCapiHttpService({
             try {
                 const response = await request;
                 if (deadlineReached) {
-                    throw new CapiAttemptError("timed_out", undefined, undefined, "Meta request timed out");
+                    throw new CapiAttemptError(
+                        "timed_out",
+                        undefined,
+                        undefined,
+                        "Meta request timed out"
+                    );
                 }
 
                 if (!response.ok) {
@@ -240,7 +268,12 @@ export function createCapiHttpService({
                     try {
                         body = await response.json();
                     } catch {
-                        throw new CapiAttemptError("provider_rejected", response.status, undefined, "Meta rejected the event");
+                        throw new CapiAttemptError(
+                            "provider_rejected",
+                            response.status,
+                            undefined,
+                            "Meta rejected the event"
+                        );
                     }
                     const details = errorDetails(body);
                     throw new CapiAttemptError(
@@ -256,21 +289,41 @@ export function createCapiHttpService({
                 try {
                     body = await response.json();
                 } catch {
-                    throw new CapiAttemptError("invalid_response", response.status, undefined, "Meta response was not JSON");
+                    throw new CapiAttemptError(
+                        "invalid_response",
+                        response.status,
+                        undefined,
+                        "Meta response was not JSON"
+                    );
                 }
 
                 if (!isAcceptedMetaResponse(body)) {
-                    throw new CapiAttemptError("invalid_response", response.status, undefined, "Meta response was malformed");
+                    throw new CapiAttemptError(
+                        "invalid_response",
+                        response.status,
+                        undefined,
+                        "Meta response was malformed"
+                    );
                 }
 
                 return body;
             } catch (error) {
                 if (error instanceof CapiAttemptError) throw error;
                 if (deadlineReached) {
-                    throw new CapiAttemptError("timed_out", undefined, undefined, "Meta request timed out");
+                    throw new CapiAttemptError(
+                        "timed_out",
+                        undefined,
+                        undefined,
+                        "Meta request timed out"
+                    );
                 }
                 const details = errorDetails(error);
-                throw new CapiAttemptError("transport_error", undefined, details.code, details.message);
+                throw new CapiAttemptError(
+                    "transport_error",
+                    undefined,
+                    details.code,
+                    details.message
+                );
             } finally {
                 timers.clearTimeout(deadline);
             }
@@ -337,7 +390,10 @@ function buildDefaultLogWriter(): CapiLogWriter {
                 })
                 .returning({ id: capiLogs.id })
                 .toSQL();
-            return db.$client.unsafe(statement.sql, statement.params) as unknown as CancellableQuery<Array<{ id: string }>>;
+            return db.$client.unsafe(
+                statement.sql,
+                statement.params
+            ) as unknown as CancellableQuery<Array<{ id: string }>>;
         },
         updateTerminal(id, values) {
             const statement = db
@@ -345,7 +401,10 @@ function buildDefaultLogWriter(): CapiLogWriter {
                 .set(values)
                 .where(eq(capiLogs.id, id))
                 .toSQL();
-            return db.$client.unsafe(statement.sql, statement.params) as unknown as CancellableQuery<unknown>;
+            return db.$client.unsafe(
+                statement.sql,
+                statement.params
+            ) as unknown as CancellableQuery<unknown>;
         },
     };
 }
@@ -371,24 +430,31 @@ function createServerEvent(
     if (userData.country) user.setCountry(userData.country);
     if (userData.external_id) user.setExternalId(userData.external_id);
     if (userData.fb_login_id) user.setFbLoginId(userData.fb_login_id);
-    if (userData.client_ip_address) user.setClientIpAddress(userData.client_ip_address);
-    if (userData.client_user_agent) user.setClientUserAgent(userData.client_user_agent);
+    if (userData.client_ip_address)
+        user.setClientIpAddress(userData.client_ip_address);
+    if (userData.client_user_agent)
+        user.setClientUserAgent(userData.client_user_agent);
     if (userData.fbp) user.setFbp(userData.fbp);
     if (userData.fbc) user.setFbc(userData.fbc);
 
     const custom = new CustomData();
     if (customData.content_name) custom.setContentName(customData.content_name);
-    if (customData.content_category) custom.setContentCategory(customData.content_category);
+    if (customData.content_category)
+        custom.setContentCategory(customData.content_category);
     if (customData.content_ids) custom.setContentIds(customData.content_ids);
     if (customData.content_type) custom.setContentType(customData.content_type);
     if (customData.value !== undefined) custom.setValue(customData.value);
     if (customData.currency) custom.setCurrency(customData.currency);
     if (customData.order_id) custom.setOrderId(customData.order_id);
-    if (customData.predicted_ltv !== undefined) custom.setPredictedLtv(customData.predicted_ltv);
-    if (customData.num_items !== undefined) custom.setNumItems(customData.num_items);
-    if (customData.search_string) custom.setSearchString(customData.search_string);
+    if (customData.predicted_ltv !== undefined)
+        custom.setPredictedLtv(customData.predicted_ltv);
+    if (customData.num_items !== undefined)
+        custom.setNumItems(customData.num_items);
+    if (customData.search_string)
+        custom.setSearchString(customData.search_string);
     if (customData.status) custom.setStatus(customData.status);
-    if (customData.delivery_category) custom.setDeliveryCategory(customData.delivery_category);
+    if (customData.delivery_category)
+        custom.setDeliveryCategory(customData.delivery_category);
 
     return new ServerEvent()
         .setEventName(eventName)
@@ -407,7 +473,8 @@ function runLogOperation<T>(
 ) {
     try {
         return runCapiLogQuery(start(), timers).then((outcome) => {
-            if (outcome.state === "rejected") reportDatabaseProblem(operation, outcome.error);
+            if (outcome.state === "rejected")
+                reportDatabaseProblem(operation, outcome.error);
             if (outcome.state === "timed_out" && outcome.cancelError) {
                 reportDatabaseProblem(operation, outcome.cancelError);
             }
@@ -415,7 +482,10 @@ function runLogOperation<T>(
         });
     } catch (error) {
         reportDatabaseProblem(operation, error);
-        return Promise.resolve({ state: "rejected", error } as CapiLogQueryOutcome<T>);
+        return Promise.resolve({
+            state: "rejected",
+            error,
+        } as CapiLogQueryOutcome<T>);
     }
 }
 
@@ -428,16 +498,21 @@ export function createCapiEventSender(dependencies: CapiSenderDependencies) {
         eventSourceUrl: string
     ) => {
         if (!(await dependencies.shouldRunExternalSideEffects())) {
-            console.info(`Skipping CAPI event '${eventName}': external side effects are disabled.`);
+            console.info(
+                `Skipping CAPI event '${eventName}': external side effects are disabled.`
+            );
             return { skipped: true, reason: "external_side_effects_disabled" };
         }
 
         if (!dependencies.accessToken) {
-            console.warn("FACEBOOK_ACCESS_TOKEN not found, skipping CAPI event.");
+            console.warn(
+                "FACEBOOK_ACCESS_TOKEN not found, skipping CAPI event."
+            );
             return;
         }
 
-        const safeUserData = dependencies.sanitizeUserData?.(userData) ?? userData;
+        const safeUserData =
+            dependencies.sanitizeUserData?.(userData) ?? userData;
         const serverEvent = createServerEvent(
             eventName,
             safeUserData,
@@ -446,11 +521,15 @@ export function createCapiEventSender(dependencies: CapiSenderDependencies) {
             eventSourceUrl,
             Math.floor(dependencies.now() / 1_000)
         );
-        const eventRequest = new EventRequest(dependencies.accessToken, dependencies.pixelId)
+        const eventRequest = new EventRequest(
+            dependencies.accessToken,
+            dependencies.pixelId
+        )
             .setEvents([serverEvent])
             .setHttpService(createCapiHttpService(dependencies));
 
-        const metaPromise = eventRequest.execute()
+        const metaPromise = eventRequest
+            .execute()
             .then((providerResponse) => ({
                 providerResponse,
                 response: { version: 1, outcome: "accepted" } as CapiResponse,
@@ -461,36 +540,51 @@ export function createCapiEventSender(dependencies: CapiSenderDependencies) {
             }));
         const pendingPromise = runLogOperation(
             "insert",
-            () => dependencies.logWriter.insertPending({
-                eventName,
-                eventId,
-                userData,
-                customData,
-                status: "pending",
-                response: { version: 1, outcome: "pending" },
-            }),
+            () =>
+                dependencies.logWriter.insertPending({
+                    eventName,
+                    eventId,
+                    userData,
+                    customData,
+                    status: "pending",
+                    response: { version: 1, outcome: "pending" },
+                }),
             dependencies.timers
         );
 
-        const [metaResult, pendingResult] = await Promise.allSettled([metaPromise, pendingPromise]);
-        const metaAttempt = metaResult.status === "fulfilled"
-            ? metaResult.value
-            : {
-                providerResponse: toPublicCapiFailure(metaResult.reason),
-                response: toCapiResponse(metaResult.reason, dependencies.accessToken),
-            };
+        const [metaResult, pendingResult] = await Promise.allSettled([
+            metaPromise,
+            pendingPromise,
+        ]);
+        const metaAttempt =
+            metaResult.status === "fulfilled"
+                ? metaResult.value
+                : {
+                      providerResponse: toPublicCapiFailure(metaResult.reason),
+                      response: toCapiResponse(
+                          metaResult.reason,
+                          dependencies.accessToken
+                      ),
+                  };
         const { providerResponse, response } = metaAttempt;
-        const pendingOutcome = pendingResult.status === "fulfilled" ? pendingResult.value : undefined;
+        const pendingOutcome =
+            pendingResult.status === "fulfilled"
+                ? pendingResult.value
+                : undefined;
 
         if (pendingOutcome?.state === "fulfilled") {
             const id = pendingOutcome.value[0]?.id;
             if (id) {
                 await runLogOperation(
                     "update",
-                    () => dependencies.logWriter.updateTerminal(id, {
-                        status: response.outcome === "accepted" ? "success" : "failed",
-                        response,
-                    }),
+                    () =>
+                        dependencies.logWriter.updateTerminal(id, {
+                            status:
+                                response.outcome === "accepted"
+                                    ? "success"
+                                    : "failed",
+                            response,
+                        }),
                     dependencies.timers
                 );
             }
@@ -508,5 +602,6 @@ export const sendCapiEvent = createCapiEventSender({
     now: () => Date.now(),
     timers: defaultTimers,
     shouldRunExternalSideEffects,
-    sanitizeUserData: (userData) => sanitizeFbUserData(userData) as CapiUserData,
+    sanitizeUserData: (userData) =>
+        sanitizeFbUserData(userData) as CapiUserData,
 });

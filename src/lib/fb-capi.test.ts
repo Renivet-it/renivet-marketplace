@@ -1,5 +1,5 @@
-import { expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
+import { expect, test } from "bun:test";
 
 type CancellableQuery<T> = PromiseLike<T> & { cancel: () => void };
 type CapiTimerApi = {
@@ -7,13 +7,25 @@ type CapiTimerApi = {
     clearTimeout: (timer: unknown) => void;
 };
 type CapiLogWriter = {
-    insertPending: (values: Record<string, unknown>) => CancellableQuery<Array<{ id: string }>>;
-    updateTerminal: (id: string, values: Record<string, unknown>) => CancellableQuery<unknown>;
+    insertPending: (
+        values: Record<string, unknown>
+    ) => CancellableQuery<Array<{ id: string }>>;
+    updateTerminal: (
+        id: string,
+        values: Record<string, unknown>
+    ) => CancellableQuery<unknown>;
 };
 type CapiModule = {
-    createCapiEventSender?: (dependencies: Record<string, unknown>) => (...args: typeof event) => Promise<unknown>;
-    createCapiHttpService?: (dependencies: Record<string, unknown>) => { executeRequest: (...args: any[]) => Promise<unknown> };
-    runCapiLogQuery?: (query: CancellableQuery<unknown>, timers: CapiTimerApi) => Promise<unknown>;
+    createCapiEventSender?: (
+        dependencies: Record<string, unknown>
+    ) => (...args: typeof event) => Promise<unknown>;
+    createCapiHttpService?: (dependencies: Record<string, unknown>) => {
+        executeRequest: (...args: any[]) => Promise<unknown>;
+    };
+    runCapiLogQuery?: (
+        query: CancellableQuery<unknown>,
+        timers: CapiTimerApi
+    ) => Promise<unknown>;
 };
 
 Object.assign(process.env, {
@@ -43,7 +55,9 @@ Object.assign(process.env, {
 });
 const capi = (await import("./fb-capi")) as CapiModule;
 const implementationAvailable = Boolean(
-    capi.createCapiEventSender && capi.createCapiHttpService && capi.runCapiLogQuery
+    capi.createCapiEventSender &&
+        capi.createCapiHttpService &&
+        capi.runCapiLogQuery
 );
 const behaviorTest = implementationAvailable ? test : test.skip;
 
@@ -71,7 +85,10 @@ function deferred<T>(): Deferred<T> {
     return { promise, resolve, reject };
 }
 
-function createTimers(): CapiTimerApi & { callbacks: (() => void)[]; cleared: unknown[] } {
+function createTimers(): CapiTimerApi & {
+    callbacks: (() => void)[];
+    cleared: unknown[];
+} {
     const callbacks: (() => void)[] = [];
     const cleared: unknown[] = [];
     return {
@@ -92,7 +109,10 @@ function resolvedQuery<T>(value: T) {
 }
 
 function createWriter(overrides: Partial<CapiLogWriter> = {}) {
-    const writes: Array<{ kind: "pending" | "terminal"; values: Record<string, unknown> }> = [];
+    const writes: Array<{
+        kind: "pending" | "terminal";
+        values: Record<string, unknown>;
+    }> = [];
     const writer: CapiLogWriter = {
         insertPending(values) {
             writes.push({ kind: "pending", values });
@@ -126,7 +146,9 @@ function createSender(
     };
 }
 
-function acceptedResponse(body: Record<string, unknown> = { events_received: 1 }) {
+function acceptedResponse(
+    body: Record<string, unknown> = { events_received: 1 }
+) {
     return {
         ok: true,
         status: 200,
@@ -152,86 +174,129 @@ test("provides the bounded CAPI transport and logging seams", () => {
     expect(implementationAvailable).toBe(true);
 });
 
-behaviorTest("sends SDK-generated URL, headers, and params through the custom HTTP service", async () => {
-    const calls: Array<{ url: string; init?: RequestInit }> = [];
-    const { writer, writes } = createWriter();
-    const providerResponse = { events_received: 1, trace_id: "meta-trace-1" };
-    const { send, timers } = createSender(async (url, init) => {
-        calls.push({ url: String(url), init });
-        return acceptedResponse(providerResponse);
-    }, writer);
+behaviorTest(
+    "sends SDK-generated URL, headers, and params through the custom HTTP service",
+    async () => {
+        const calls: Array<{ url: string; init?: RequestInit }> = [];
+        const { writer, writes } = createWriter();
+        const providerResponse = {
+            events_received: 1,
+            trace_id: "meta-trace-1",
+        };
+        const { send, timers } = createSender(async (url, init) => {
+            calls.push({ url: String(url), init });
+            return acceptedResponse(providerResponse);
+        }, writer);
 
-    const result = await send(...event);
+        const result = await send(...event);
 
-    expect(result).toEqual(providerResponse);
-    expect(calls).toHaveLength(1);
-    expect(calls[0].url).toContain("/pixel-123/events");
-    expect(calls[0].init?.method).toBe("POST");
-    expect(calls[0].init?.headers).toMatchObject({
-        "Content-Type": "application/json",
-        Accept: "application/json",
-    });
-    expect(JSON.parse(String(calls[0].init?.body))).toMatchObject({
-        access_token: "test-access-token",
-        data: [{ event_name: "Purchase", event_id: "event-1" }],
-    });
-    expect(writes.map((write) => write.kind)).toEqual(["pending", "terminal"]);
-    expect(writes[1]).toMatchObject({
-        kind: "terminal",
-        values: { status: "success", response: { version: 1, outcome: "accepted" } },
-    });
-    expect(timers.cleared).toHaveLength(3);
-});
+        expect(result).toEqual(providerResponse);
+        expect(calls).toHaveLength(1);
+        expect(calls[0].url).toContain("/pixel-123/events");
+        expect(calls[0].init?.method).toBe("POST");
+        expect(calls[0].init?.headers).toMatchObject({
+            "Content-Type": "application/json",
+            Accept: "application/json",
+        });
+        expect(JSON.parse(String(calls[0].init?.body))).toMatchObject({
+            access_token: "test-access-token",
+            data: [{ event_name: "Purchase", event_id: "event-1" }],
+        });
+        expect(writes.map((write) => write.kind)).toEqual([
+            "pending",
+            "terminal",
+        ]);
+        expect(writes[1]).toMatchObject({
+            kind: "terminal",
+            values: {
+                status: "success",
+                response: { version: 1, outcome: "accepted" },
+            },
+        });
+        expect(timers.cleared).toHaveLength(3);
+    }
+);
 
-behaviorTest("aborts the underlying Meta fetch when the transport deadline fires", async () => {
-    const timers = createTimers();
-    const aborts: string[] = [];
-    const service = capi.createCapiHttpService!({
-        fetch: (_url, init) =>
-            new Promise((_resolve, reject) => {
-                init?.signal?.addEventListener("abort", () => {
-                    aborts.push("aborted");
-                    reject(new DOMException("deadline", "AbortError"));
-                });
-            }),
-        timers,
-    });
+behaviorTest(
+    "aborts the underlying Meta fetch when the transport deadline fires",
+    async () => {
+        const timers = createTimers();
+        const aborts: string[] = [];
+        const service = capi.createCapiHttpService!({
+            fetch: (_url, init) =>
+                new Promise((_resolve, reject) => {
+                    init?.signal?.addEventListener("abort", () => {
+                        aborts.push("aborted");
+                        reject(new DOMException("deadline", "AbortError"));
+                    });
+                }),
+            timers,
+        });
 
-    const attempt = service.executeRequest("https://graph.example/events", "POST", {}, {});
-    timers.callbacks[0]!();
+        const attempt = service.executeRequest(
+            "https://graph.example/events",
+            "POST",
+            {},
+            {}
+        );
+        timers.callbacks[0]!();
 
-    await expect(attempt).rejects.toMatchObject({ outcome: "timed_out" });
-    expect(aborts).toEqual(["aborted"]);
-});
+        await expect(attempt).rejects.toMatchObject({ outcome: "timed_out" });
+        expect(aborts).toEqual(["aborted"]);
+    }
+);
 
 behaviorTest("maps a non-2xx Meta response to provider_rejected", async () => {
     const { writer, writes } = createWriter();
     const providerError = { error: { code: 100, message: "bad event" } };
     const { send } = createSender(
-        async () => ({ ok: false, status: 400, json: async () => providerError }) as Response,
+        async () =>
+            ({
+                ok: false,
+                status: 400,
+                json: async () => providerError,
+            }) as Response,
         writer
     );
 
     expect(await send(...event)).toEqual(providerError);
     expect(writes[1]).toMatchObject({
         kind: "terminal",
-        values: { status: "failed", response: { version: 1, outcome: "provider_rejected" } },
+        values: {
+            status: "failed",
+            response: { version: 1, outcome: "provider_rejected" },
+        },
     });
 });
 
-behaviorTest("maps a non-JSON non-2xx Meta response to provider_rejected", async () => {
-    const { writer, writes } = createWriter();
-    const { send } = createSender(
-        async () => ({ ok: false, status: 502, json: async () => { throw new Error("not JSON"); } }) as Response,
-        writer
-    );
+behaviorTest(
+    "maps a non-JSON non-2xx Meta response to provider_rejected",
+    async () => {
+        const { writer, writes } = createWriter();
+        const { send } = createSender(
+            async () =>
+                ({
+                    ok: false,
+                    status: 502,
+                    json: async () => {
+                        throw new Error("not JSON");
+                    },
+                }) as Response,
+            writer
+        );
 
-    expect(await send(...event)).toEqual({ message: "Meta rejected the event" });
-    expect(writes[1]).toMatchObject({
-        kind: "terminal",
-        values: { status: "failed", response: { version: 1, outcome: "provider_rejected" } },
-    });
-});
+        expect(await send(...event)).toEqual({
+            message: "Meta rejected the event",
+        });
+        expect(writes[1]).toMatchObject({
+            kind: "terminal",
+            values: {
+                status: "failed",
+                response: { version: 1, outcome: "provider_rejected" },
+            },
+        });
+    }
+);
 
 behaviorTest("maps a Meta network failure to transport_error", async () => {
     const { writer, writes } = createWriter();
@@ -242,192 +307,249 @@ behaviorTest("maps a Meta network failure to transport_error", async () => {
     expect(await send(...event)).toEqual({ message: "socket reset" });
     expect(writes[1]).toMatchObject({
         kind: "terminal",
-        values: { status: "failed", response: { version: 1, outcome: "transport_error" } },
-    });
-});
-
-behaviorTest("maps a malformed successful Meta response to invalid_response", async () => {
-    const { writer, writes } = createWriter();
-    const { send } = createSender(
-        async () => ({ ok: true, status: 200, json: async () => ({ received: true }) }) as Response,
-        writer
-    );
-
-    expect(await send(...event)).toEqual({ message: "Meta response was malformed" });
-    expect(writes[1]).toMatchObject({
-        kind: "terminal",
-        values: { status: "failed", response: { version: 1, outcome: "invalid_response" } },
-    });
-});
-
-behaviorTest("starts the Meta request and pending insert before awaiting either", async () => {
-    const meta = deferred<Response>();
-    const insert = deferred<Array<{ id: string }>>();
-    const started: string[] = [];
-    const { writer } = createWriter({
-        insertPending() {
-            started.push("insert");
-            return Object.assign(insert.promise, { cancel() {} });
+        values: {
+            status: "failed",
+            response: { version: 1, outcome: "transport_error" },
         },
     });
-    const { send } = createSender(async () => {
-        started.push("meta");
-        return meta.promise;
-    }, writer);
-
-    const attempt = send(...event);
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(started).toEqual(["meta", "insert"]);
-    meta.resolve(acceptedResponse());
-    insert.resolve([{ id: "inserted-row" }]);
-    await attempt;
 });
 
-behaviorTest("continues the Meta attempt when the pending insert fails", async () => {
-    const insertFailure = new Error("database unavailable");
-    const { writer, writes } = createWriter({
-        insertPending() {
-            return Object.assign(Promise.reject(insertFailure), { cancel() {} });
-        },
-    });
-    const { send } = createSender(async () => acceptedResponse(), writer);
+behaviorTest(
+    "maps a malformed successful Meta response to invalid_response",
+    async () => {
+        const { writer, writes } = createWriter();
+        const { send } = createSender(
+            async () =>
+                ({
+                    ok: true,
+                    status: 200,
+                    json: async () => ({ received: true }),
+                }) as Response,
+            writer
+        );
 
-    const originalConsoleError = console.error;
-    console.error = () => {};
-    try {
-        expect(await send(...event)).toEqual({ events_received: 1 });
-        expect(writes).toEqual([]);
-    } finally {
-        console.error = originalConsoleError;
+        expect(await send(...event)).toEqual({
+            message: "Meta response was malformed",
+        });
+        expect(writes[1]).toMatchObject({
+            kind: "terminal",
+            values: {
+                status: "failed",
+                response: { version: 1, outcome: "invalid_response" },
+            },
+        });
     }
-});
+);
 
-behaviorTest("updates the inserted pending row by its returned ID after Meta settles", async () => {
-    const { writer, writes } = createWriter({
-        insertPending(values) {
-            writes.push({ kind: "pending", values });
-            return resolvedQuery([{ id: "row-from-insert" }]);
-        },
-    });
-    const { send } = createSender(async () => acceptedResponse(), writer);
+behaviorTest(
+    "starts the Meta request and pending insert before awaiting either",
+    async () => {
+        const meta = deferred<Response>();
+        const insert = deferred<Array<{ id: string }>>();
+        const started: string[] = [];
+        const { writer } = createWriter({
+            insertPending() {
+                started.push("insert");
+                return Object.assign(insert.promise, { cancel() {} });
+            },
+        });
+        const { send } = createSender(async () => {
+            started.push("meta");
+            return meta.promise;
+        }, writer);
 
-    await send(...event);
+        const attempt = send(...event);
+        await Promise.resolve();
+        await Promise.resolve();
 
-    expect(writes[1]).toMatchObject({
-        kind: "terminal",
-        values: { id: "row-from-insert", status: "success", response: { version: 1, outcome: "accepted" } },
-    });
-});
+        expect(started).toEqual(["meta", "insert"]);
+        meta.resolve(acceptedResponse());
+        insert.resolve([{ id: "inserted-row" }]);
+        await attempt;
+    }
+);
 
-behaviorTest("cancels a pending Postgres query synchronously and observes its eventual rejection", async () => {
-    const timers = createTimers();
-    const query = deferred<unknown>();
-    let cancelCalls = 0;
-    let rejectionObserved = false;
-    const cancellableQuery = {
-        then<TResult1 = unknown, TResult2 = never>(
-            onfulfilled?: ((value: unknown) => TResult1 | PromiseLike<TResult1>) | null,
-            onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null
-        ) {
-            rejectionObserved = true;
-            return query.promise.then(onfulfilled, onrejected);
-        },
-        cancel() {
-            cancelCalls += 1;
-        },
-    };
-
-    const outcome = capi.runCapiLogQuery!(cancellableQuery, timers);
-    timers.callbacks[0]!();
-
-    expect(await outcome).toMatchObject({ state: "timed_out" });
-    expect(cancelCalls).toBe(1);
-    expect(rejectionObserved).toBe(true);
-    query.reject(new Error("cancelled by postgres"));
-    await Promise.resolve();
-});
-
-behaviorTest("does not register a deadline after a query settles synchronously", async () => {
-    const timers = createTimers();
-    const query = {
-        then(onfulfilled?: (value: unknown) => unknown) {
-            onfulfilled?.("written");
-            return Promise.resolve();
-        },
-        cancel() {},
-    } as CancellableQuery<unknown>;
-
-    await expect(capi.runCapiLogQuery!(query, timers)).resolves.toMatchObject({
-        state: "fulfilled",
-        value: "written",
-    });
-    expect(timers.callbacks).toHaveLength(0);
-    expect(timers.cleared).toHaveLength(0);
-});
-
-behaviorTest("labels a synchronous insert cancellation error and observes a late rejection", async () => {
-    const timers = createTimers();
-    const insert = deferred<Array<{ id: string }>>();
-    const reports: unknown[][] = [];
-    const originalConsoleError = console.error;
-    console.error = (...args: unknown[]) => {
-        reports.push(args);
-    };
-
-    try {
+behaviorTest(
+    "continues the Meta attempt when the pending insert fails",
+    async () => {
+        const insertFailure = new Error("database unavailable");
         const { writer, writes } = createWriter({
-            insertPending(values) {
-                writes.push({ kind: "pending", values });
-                return Object.assign(insert.promise, {
-                    cancel() {
-                        throw new Error("cancelled synchronously");
-                    },
+            insertPending() {
+                return Object.assign(Promise.reject(insertFailure), {
+                    cancel() {},
                 });
             },
         });
-        const { send } = createSender(async () => acceptedResponse(), writer, timers);
+        const { send } = createSender(async () => acceptedResponse(), writer);
+
+        const originalConsoleError = console.error;
+        console.error = () => {};
+        try {
+            expect(await send(...event)).toEqual({ events_received: 1 });
+            expect(writes).toEqual([]);
+        } finally {
+            console.error = originalConsoleError;
+        }
+    }
+);
+
+behaviorTest(
+    "updates the inserted pending row by its returned ID after Meta settles",
+    async () => {
+        const { writer, writes } = createWriter({
+            insertPending(values) {
+                writes.push({ kind: "pending", values });
+                return resolvedQuery([{ id: "row-from-insert" }]);
+            },
+        });
+        const { send } = createSender(async () => acceptedResponse(), writer);
+
+        await send(...event);
+
+        expect(writes[1]).toMatchObject({
+            kind: "terminal",
+            values: {
+                id: "row-from-insert",
+                status: "success",
+                response: { version: 1, outcome: "accepted" },
+            },
+        });
+    }
+);
+
+behaviorTest(
+    "cancels a pending Postgres query synchronously and observes its eventual rejection",
+    async () => {
+        const timers = createTimers();
+        const query = deferred<unknown>();
+        let cancelCalls = 0;
+        let rejectionObserved = false;
+        const cancellableQuery = {
+            then<TResult1 = unknown, TResult2 = never>(
+                onfulfilled?:
+                    | ((value: unknown) => TResult1 | PromiseLike<TResult1>)
+                    | null,
+                onrejected?:
+                    | ((reason: unknown) => TResult2 | PromiseLike<TResult2>)
+                    | null
+            ) {
+                rejectionObserved = true;
+                return query.promise.then(onfulfilled, onrejected);
+            },
+            cancel() {
+                cancelCalls += 1;
+            },
+        };
+
+        const outcome = capi.runCapiLogQuery!(cancellableQuery, timers);
+        timers.callbacks[0]!();
+
+        expect(await outcome).toMatchObject({ state: "timed_out" });
+        expect(cancelCalls).toBe(1);
+        expect(rejectionObserved).toBe(true);
+        query.reject(new Error("cancelled by postgres"));
+        await Promise.resolve();
+    }
+);
+
+behaviorTest(
+    "does not register a deadline after a query settles synchronously",
+    async () => {
+        const timers = createTimers();
+        const query = {
+            then(onfulfilled?: (value: unknown) => unknown) {
+                onfulfilled?.("written");
+                return Promise.resolve();
+            },
+            cancel() {},
+        } as CancellableQuery<unknown>;
+
+        await expect(
+            capi.runCapiLogQuery!(query, timers)
+        ).resolves.toMatchObject({
+            state: "fulfilled",
+            value: "written",
+        });
+        expect(timers.callbacks).toHaveLength(0);
+        expect(timers.cleared).toHaveLength(0);
+    }
+);
+
+behaviorTest(
+    "labels a synchronous insert cancellation error and observes a late rejection",
+    async () => {
+        const timers = createTimers();
+        const insert = deferred<Array<{ id: string }>>();
+        const reports: unknown[][] = [];
+        const originalConsoleError = console.error;
+        console.error = (...args: unknown[]) => {
+            reports.push(args);
+        };
+
+        try {
+            const { writer, writes } = createWriter({
+                insertPending(values) {
+                    writes.push({ kind: "pending", values });
+                    return Object.assign(insert.promise, {
+                        cancel() {
+                            throw new Error("cancelled synchronously");
+                        },
+                    });
+                },
+            });
+            const { send } = createSender(
+                async () => acceptedResponse(),
+                writer,
+                timers
+            );
+            const attempt = send(...event);
+            await Promise.resolve();
+            await Promise.resolve();
+
+            timers.callbacks.at(-1)!();
+            await expect(attempt).resolves.toEqual({ events_received: 1 });
+            insert.reject(new Error("cancelled by postgres"));
+            await Promise.resolve();
+
+            expect(reports).toEqual([
+                [
+                    "CAPI log database operation did not settle",
+                    { operation: "insert", message: "cancelled synchronously" },
+                ],
+            ]);
+        } finally {
+            console.error = originalConsoleError;
+        }
+    }
+);
+
+behaviorTest(
+    "leaves an unconfirmed log write pending without retrying it",
+    async () => {
+        const timers = createTimers();
+        const pendingInsert = deferred<Array<{ id: string }>>();
+        const { writer, writes } = createWriter({
+            insertPending(values) {
+                writes.push({ kind: "pending", values });
+                return Object.assign(pendingInsert.promise, { cancel() {} });
+            },
+        });
+        const { send } = createSender(
+            async () => acceptedResponse(),
+            writer,
+            timers
+        );
         const attempt = send(...event);
         await Promise.resolve();
         await Promise.resolve();
 
         timers.callbacks.at(-1)!();
-        await expect(attempt).resolves.toEqual({ events_received: 1 });
-        insert.reject(new Error("cancelled by postgres"));
-        await Promise.resolve();
+        await attempt;
 
-        expect(reports).toEqual([
-            [
-                "CAPI log database operation did not settle",
-                { operation: "insert", message: "cancelled synchronously" },
-            ],
-        ]);
-    } finally {
-        console.error = originalConsoleError;
+        expect(writes).toHaveLength(1);
+        expect(writes[0]?.values).toMatchObject({
+            status: "pending",
+            response: { version: 1, outcome: "pending" },
+        });
     }
-});
-
-behaviorTest("leaves an unconfirmed log write pending without retrying it", async () => {
-    const timers = createTimers();
-    const pendingInsert = deferred<Array<{ id: string }>>();
-    const { writer, writes } = createWriter({
-        insertPending(values) {
-            writes.push({ kind: "pending", values });
-            return Object.assign(pendingInsert.promise, { cancel() {} });
-        },
-    });
-    const { send } = createSender(async () => acceptedResponse(), writer, timers);
-    const attempt = send(...event);
-    await Promise.resolve();
-    await Promise.resolve();
-
-    timers.callbacks.at(-1)!();
-    await attempt;
-
-    expect(writes).toHaveLength(1);
-    expect(writes[0]?.values).toMatchObject({
-        status: "pending",
-        response: { version: 1, outcome: "pending" },
-    });
-});
+);
