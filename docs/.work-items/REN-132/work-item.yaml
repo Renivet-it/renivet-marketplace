@@ -4,7 +4,7 @@ task:
     title: Reconcile add_to_cart vs cart_added (4.3x discrepancy)
     source: linear
     branch: ayanganguly333/ren-129-130-131-132
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-132/reconcile-add-to-cart-vs-cart-added-43x-discrepancy
         priority: Medium
@@ -123,9 +123,9 @@ decisions:
     - id: DEC-132-001
       question: Should `add_to_cart` be removed, re-scoped to intent/UX analysis, or retained as a separate external Meta event while `cart_added` becomes the reporting source of truth?
       class: HUMAN_CONFIRMATION
-      status: unresolved
-      recommendation: Use server-confirmed `cart_added` for business reporting; retain or re-scope client `add_to_cart` only after the complete dashboard/Meta consumer inventory is confirmed, and do not delete historical data.
-      basis: The issue recommends server confirmation, while the client event also drives Meta Pixel/CAPI.
+      status: resolved
+      recommendation: Use server-confirmed `cart_added` as the canonical PostHog reporting event; retain client `add_to_cart` for Meta Pixel/CAPI and/or re-scope it as intent, with no historical deletion or rewrite.
+      basis: Owner confirmed the recommended reporting and external-consumer boundary.
       confidence: high
       consequence: high
       human_confirmation_required: true
@@ -193,6 +193,6 @@ critic:
           references: [TEXP-132-003]
           description: Use a fixed-window before/after comparison and document no historical rewrite.
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-132-001]
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner confirmation)

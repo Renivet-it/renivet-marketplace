@@ -9,5 +9,6 @@ Findings:
 - `DESIGN_BLOCKER` CRIT-132-003 — REQ-132-003/DEC-132-001: deleting historical events or changing Meta Pixel/CAPI behavior is not authorized by the issue and requires a separate decision.
 - `MINOR` CRIT-132-004 — TEXP-132-003: validation should compare a fixed historical window before/after and document that historical data is not retroactively rewritten.
 
-Category coverage: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies. No authorization boundary is changed; customer identity is only used as an analytics dimension already present in the existing flow.
+Resolution: The owner selected server-confirmed `cart_added` as the canonical PostHog reporting event, while preserving client `add_to_cart` for Meta/intent use and leaving historical data unchanged.
 
+Category coverage: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies. No authorization boundary is changed; customer identity is only used as an analytics dimension already present in the existing flow.

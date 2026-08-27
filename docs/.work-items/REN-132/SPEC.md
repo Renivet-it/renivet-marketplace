@@ -19,3 +19,6 @@ Reconcile duplicate add-to-cart analytics by selecting one canonical business ev
 - Existing cart state and Meta tracking behavior remain unchanged unless explicitly included in the approved design.
 - Tests and a dashboard/query inventory demonstrate that reports no longer mix the two semantics.
 
+## Approved decision
+
+Use server-confirmed `cart_added` as the canonical event for PostHog dashboards and reports. Preserve client-side `add_to_cart` for Meta Pixel/CAPI and/or clearly re-scope it as add-to-cart intent; do not delete or rewrite historical events, and do not change Meta behavior without separate approval.
