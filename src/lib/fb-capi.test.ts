@@ -11,7 +11,7 @@ type CapiLogWriter = {
     updateTerminal: (id: string, values: Record<string, unknown>) => CancellableQuery<unknown>;
 };
 type CapiModule = {
-    createCapiEventSender?: (dependencies: Record<string, unknown>) => (...args: typeof event) => Promise<{ outcome: string }>;
+    createCapiEventSender?: (dependencies: Record<string, unknown>) => (...args: typeof event) => Promise<unknown>;
     createCapiHttpService?: (dependencies: Record<string, unknown>) => { executeRequest: (...args: any[]) => Promise<unknown> };
     runCapiLogQuery?: (query: CancellableQuery<unknown>, timers: CapiTimerApi) => Promise<unknown>;
 };
@@ -126,11 +126,11 @@ function createSender(
     };
 }
 
-function acceptedResponse() {
+function acceptedResponse(body: Record<string, unknown> = { events_received: 1 }) {
     return {
         ok: true,
         status: 200,
-        json: async () => ({ events_received: 1 }),
+        json: async () => body,
     } as Response;
 }
 
@@ -155,14 +155,15 @@ test("provides the bounded CAPI transport and logging seams", () => {
 behaviorTest("sends SDK-generated URL, headers, and params through the custom HTTP service", async () => {
     const calls: Array<{ url: string; init?: RequestInit }> = [];
     const { writer, writes } = createWriter();
+    const providerResponse = { events_received: 1, trace_id: "meta-trace-1" };
     const { send, timers } = createSender(async (url, init) => {
         calls.push({ url: String(url), init });
-        return acceptedResponse();
+        return acceptedResponse(providerResponse);
     }, writer);
 
     const result = await send(...event);
 
-    expect(result.outcome).toBe("accepted");
+    expect(result).toEqual(providerResponse);
     expect(calls).toHaveLength(1);
     expect(calls[0].url).toContain("/pixel-123/events");
     expect(calls[0].init?.method).toBe("POST");
@@ -175,6 +176,10 @@ behaviorTest("sends SDK-generated URL, headers, and params through the custom HT
         data: [{ event_name: "Purchase", event_id: "event-1" }],
     });
     expect(writes.map((write) => write.kind)).toEqual(["pending", "terminal"]);
+    expect(writes[1]).toMatchObject({
+        kind: "terminal",
+        values: { status: "success", response: { version: 1, outcome: "accepted" } },
+    });
     expect(timers.cleared).toHaveLength(3);
 });
 
@@ -200,42 +205,59 @@ behaviorTest("aborts the underlying Meta fetch when the transport deadline fires
 });
 
 behaviorTest("maps a non-2xx Meta response to provider_rejected", async () => {
-    const { writer } = createWriter();
+    const { writer, writes } = createWriter();
+    const providerError = { error: { code: 100, message: "bad event" } };
     const { send } = createSender(
-        async () => ({ ok: false, status: 400, json: async () => ({ error: { code: 100, message: "bad event" } }) }) as Response,
+        async () => ({ ok: false, status: 400, json: async () => providerError }) as Response,
         writer
     );
 
-    expect((await send(...event)).outcome).toBe("provider_rejected");
+    expect(await send(...event)).toEqual(providerError);
+    expect(writes[1]).toMatchObject({
+        kind: "terminal",
+        values: { status: "failed", response: { version: 1, outcome: "provider_rejected" } },
+    });
 });
 
 behaviorTest("maps a non-JSON non-2xx Meta response to provider_rejected", async () => {
-    const { writer } = createWriter();
+    const { writer, writes } = createWriter();
     const { send } = createSender(
         async () => ({ ok: false, status: 502, json: async () => { throw new Error("not JSON"); } }) as Response,
         writer
     );
 
-    expect((await send(...event)).outcome).toBe("provider_rejected");
+    expect(await send(...event)).toEqual({ message: "Meta rejected the event" });
+    expect(writes[1]).toMatchObject({
+        kind: "terminal",
+        values: { status: "failed", response: { version: 1, outcome: "provider_rejected" } },
+    });
 });
 
 behaviorTest("maps a Meta network failure to transport_error", async () => {
-    const { writer } = createWriter();
+    const { writer, writes } = createWriter();
     const { send } = createSender(async () => {
         throw new Error("socket reset");
     }, writer);
 
-    expect((await send(...event)).outcome).toBe("transport_error");
+    expect(await send(...event)).toEqual({ message: "socket reset" });
+    expect(writes[1]).toMatchObject({
+        kind: "terminal",
+        values: { status: "failed", response: { version: 1, outcome: "transport_error" } },
+    });
 });
 
 behaviorTest("maps a malformed successful Meta response to invalid_response", async () => {
-    const { writer } = createWriter();
+    const { writer, writes } = createWriter();
     const { send } = createSender(
         async () => ({ ok: true, status: 200, json: async () => ({ received: true }) }) as Response,
         writer
     );
 
-    expect((await send(...event)).outcome).toBe("invalid_response");
+    expect(await send(...event)).toEqual({ message: "Meta response was malformed" });
+    expect(writes[1]).toMatchObject({
+        kind: "terminal",
+        values: { status: "failed", response: { version: 1, outcome: "invalid_response" } },
+    });
 });
 
 behaviorTest("starts the Meta request and pending insert before awaiting either", async () => {
@@ -275,7 +297,7 @@ behaviorTest("continues the Meta attempt when the pending insert fails", async (
     const originalConsoleError = console.error;
     console.error = () => {};
     try {
-        expect((await send(...event)).outcome).toBe("accepted");
+        expect(await send(...event)).toEqual({ events_received: 1 });
         expect(writes).toEqual([]);
     } finally {
         console.error = originalConsoleError;
@@ -371,7 +393,7 @@ behaviorTest("labels a synchronous insert cancellation error and observes a late
         await Promise.resolve();
 
         timers.callbacks.at(-1)!();
-        await expect(attempt).resolves.toMatchObject({ outcome: "accepted" });
+        await expect(attempt).resolves.toEqual({ events_received: 1 });
         insert.reject(new Error("cancelled by postgres"));
         await Promise.resolve();
 

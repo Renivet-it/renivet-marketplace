@@ -117,7 +117,8 @@ class CapiAttemptError extends Error {
         readonly outcome: Exclude<CapiOutcome, "accepted" | "pending">,
         readonly httpStatus?: number,
         readonly code?: string,
-        message?: string
+        message?: string,
+        readonly response?: unknown
     ) {
         super(message);
     }
@@ -182,6 +183,13 @@ function toCapiResponse(error: unknown, accessToken?: string): CapiResponse {
     };
 }
 
+function toPublicCapiFailure(error: unknown): unknown {
+    const source = error && typeof error === "object"
+        ? (error as { response?: unknown; message?: unknown })
+        : {};
+    return source.response || { message: source.message };
+}
+
 function reportDatabaseProblem(operation: "insert" | "update", error: unknown) {
     const { message } = errorDetails(error, ACCESS_TOKEN);
     console.error("CAPI log database operation did not settle", { operation, message });
@@ -239,7 +247,8 @@ export function createCapiHttpService({
                         "provider_rejected",
                         response.status,
                         details.code,
-                        details.message ?? "Meta rejected the event"
+                        details.message ?? "Meta rejected the event",
+                        body
                     );
                 }
 
@@ -442,8 +451,14 @@ export function createCapiEventSender(dependencies: CapiSenderDependencies) {
             .setHttpService(createCapiHttpService(dependencies));
 
         const metaPromise = eventRequest.execute()
-            .then((): CapiResponse => ({ version: 1, outcome: "accepted" }))
-            .catch((error): CapiResponse => toCapiResponse(error, dependencies.accessToken));
+            .then((providerResponse) => ({
+                providerResponse,
+                response: { version: 1, outcome: "accepted" } as CapiResponse,
+            }))
+            .catch((error) => ({
+                providerResponse: toPublicCapiFailure(error),
+                response: toCapiResponse(error, dependencies.accessToken),
+            }));
         const pendingPromise = runLogOperation(
             "insert",
             () => dependencies.logWriter.insertPending({
@@ -458,9 +473,13 @@ export function createCapiEventSender(dependencies: CapiSenderDependencies) {
         );
 
         const [metaResult, pendingResult] = await Promise.allSettled([metaPromise, pendingPromise]);
-        const response = metaResult.status === "fulfilled"
+        const metaAttempt = metaResult.status === "fulfilled"
             ? metaResult.value
-            : toCapiResponse(metaResult.reason, dependencies.accessToken);
+            : {
+                providerResponse: toPublicCapiFailure(metaResult.reason),
+                response: toCapiResponse(metaResult.reason, dependencies.accessToken),
+            };
+        const { providerResponse, response } = metaAttempt;
         const pendingOutcome = pendingResult.status === "fulfilled" ? pendingResult.value : undefined;
 
         if (pendingOutcome?.state === "fulfilled") {
@@ -477,7 +496,7 @@ export function createCapiEventSender(dependencies: CapiSenderDependencies) {
             }
         }
 
-        return response;
+        return providerResponse;
     };
 }
 
