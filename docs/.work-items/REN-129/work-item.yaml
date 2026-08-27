@@ -1,0 +1,203 @@
+schema_version: "1.0"
+task:
+    id: REN-129
+    title: Reassess the 5-second delayed PostHog init
+    source: linear
+    branch: ayanganguly333/ren-129-130-131-132
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-129/reassess-the-5-second-delayed-posthog-init
+        priority: High
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Customer Tracking & Analytics Instrumentation
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Changes browser analytics timing and external telemetry behavior across mobile and in-app-browser traffic.
+        - Initialization timing can affect performance budgets, privacy/session-recording exposure, and event completeness.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, status, project, relations, and comments
+        - Client provider initialization, pageview capture, and identity bridge
+        - Existing PostHog event configuration and test inventory
+        - Performance, early-exit, privacy, cleanup, and external-failure implications
+    excluded_areas:
+        - Production PageSpeed and PostHog dashboards; not available in repository context
+        - Changing event taxonomy, server-side capture, or session-recording policy beyond the approved timing experiment
+        - Application source and tests; SPEC boundary is read-only
+    dependencies: [DEP-129-001]
+    integrations: [INT-129-001]
+    security_boundaries: [SEC-129-001]
+    state_transitions:
+        - page_loaded -> initialization_pending -> initialized_or_timed_out
+        - initialized -> capture_available
+    related_tests: [TEXP-129-001, TEXP-129-002, TEXP-129-003]
+    uncertainties:
+        - Original PageSpeed target and acceptable performance regression are unknown.
+        - PostHog client queue behavior before initialization is assumed but must be verified against the installed SDK.
+requirements:
+    - id: REQ-129-001
+      description: Select and document a measured PostHog initialization timing/configuration policy.
+      type: explicit
+    - id: REQ-129-002
+      description: Preserve capture, identify/reset, host/key, and session-recording privacy semantics under the selected policy.
+      type: inferred
+    - id: REQ-129-003
+      description: Add deterministic and field-level performance/capture verification for short visits and normal visits.
+      type: explicit
+scenarios:
+    - id: SCN-129-001
+      requirement_ids: [REQ-129-001]
+      description: A normal visit initializes PostHog within the approved timing budget and makes pageview capture available.
+    - id: SCN-129-002
+      requirement_ids: [REQ-129-002]
+      description: A visitor who exits before the historical five-second window does not lose all eligible core capture solely because initialization was delayed; session recording remains within policy.
+    - id: SCN-129-003
+      requirement_ids: [REQ-129-003]
+      description: Initialization cleanup, repeated route changes, failed SDK initialization, and signed-in identify/reset transitions remain safe.
+invariants:
+    - id: INV-129-001
+      description: Initialization uses at most one active timer/client lifecycle per mounted provider.
+    - id: INV-129-002
+      description: No analytics timing change enables session recording or exposes identity data outside the existing consent/configuration boundary.
+    - id: INV-129-003
+      description: A PostHog failure cannot block application rendering or authentication state transitions.
+flows:
+    - id: FLOW-129-001
+      description: Mount provider, schedule or perform initialization, then expose capture and pageview behavior.
+      state_transitions: [page_loaded, initialization_pending, initialized_or_timed_out, capture_available]
+    - id: FLOW-129-002
+      description: Handle unmount, route changes, SDK failure, and identify/reset without leaking timers or blocking UI.
+      state_transitions: [initialized, route_or_identity_change, cleanup_or_reset]
+dependencies:
+    - id: DEP-129-001
+      name: posthog-js and PostHog project configuration
+      purpose: Browser event capture and identity lifecycle.
+      owner: Application analytics maintainers and PostHog administrators
+      required_state: Supported SDK initialization and documented project privacy settings.
+      description: The provider currently uses the installed browser SDK with a delayed init.
+      status: resolved
+integrations:
+    - id: INT-129-001
+      system: PostHog browser SDK
+      purpose: Pageview, autocapture, funnel events, and identity reset.
+      failure_mode: SDK load/init failure, blocked network, fast exit, or timer cleanup.
+      retry_idempotency: SDK queueing/capture must not duplicate pageviews or identify calls.
+personas:
+    - id: PER-129-001
+      role: storefront_visitor
+      applicability: All browser visitors, especially mobile and in-app-browser sessions.
+    - id: PER-129-002
+      role: authenticated_customer
+      applicability: Signed-in users crossing the identify/reset bridge.
+security_boundaries:
+    - id: SEC-129-001
+      description: PostHog identity and session-recording settings remain bounded by existing client configuration and privacy policy.
+business_rules:
+    - id: BR-129-001
+      description: Analytics completeness must improve without making performance or privacy behavior worse than the approved budget/policy.
+decisions:
+    - id: DEC-129-001
+      question: Which initialization timing and session-recording configuration should ship?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Reduce the delay to approximately 1–2 seconds while preserving the existing session-recording configuration; measure mobile and short-session performance/capture before considering immediate initialization.
+      basis: Owner selected the smaller, safer, reversible timing change.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-129-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies timer/configuration selection, cleanup, and failure-safe initialization.
+      scenarios: [SCN-129-001, SCN-129-003]
+    - id: TEXP-129-002
+      category: integration
+      classification: REQUIRED
+      reason: Verifies PostHog capture, pageview, identify, reset, and no duplicate lifecycle calls.
+      scenarios: [SCN-129-001, SCN-129-002, SCN-129-003]
+    - id: TEXP-129-003
+      category: performance
+      classification: REQUIRED
+      reason: Compares current and candidate timing under normal, mobile-like, and short-exit sessions against the approved budget.
+      scenarios: [SCN-129-002]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-129-001
+          scenario_ids: [SCN-129-001]
+        - requirement_id: REQ-129-002
+          scenario_ids: [SCN-129-002, SCN-129-003]
+        - requirement_id: REQ-129-003
+          scenario_ids: [SCN-129-003]
+    scenario_to_invariants:
+        - scenario_id: SCN-129-001
+          invariant_ids: [INV-129-001, INV-129-003]
+        - scenario_id: SCN-129-002
+          invariant_ids: [INV-129-002]
+        - scenario_id: SCN-129-003
+          invariant_ids: [INV-129-001, INV-129-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-129-001
+          test_expectation_ids: [TEXP-129-001, TEXP-129-002]
+        - scenario_id: SCN-129-002
+          test_expectation_ids: [TEXP-129-002, TEXP-129-003]
+        - scenario_id: SCN-129-003
+          test_expectation_ids: [TEXP-129-001, TEXP-129-002]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-129-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-129-001, DEC-129-001]
+          description: Original performance budget and the selected timing policy require owner confirmation.
+        - id: CRIT-129-002
+          severity: MAJOR
+          references: [REQ-129-002, SCN-129-002]
+          description: Session recording must remain separately bounded from core event capture.
+        - id: CRIT-129-003
+          severity: MINOR
+          references: [TEXP-129-003]
+          description: Short mobile/in-app-browser sessions must be included in measurement.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner confirmation)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "b9f0a8c17b691884cc78f9f6f10ebcd5eab82055"
+    head_commit: "0211b1b87f8e15f1574fdc90d09e69a5ba2fb70f"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-129-001: Run and attach mobile/short-session PostHog capture and performance measurements after deployment."
+    evidence:
+        - "Compared the approved REN-129 contract with the base-to-head diff from b9f0a8c17b691884cc78f9f6f10ebcd5eab82055 to 0211b1b87f8e15f1574fdc90d09e69a5ba2fb70f."
+        - "The provider uses the centralized 1500 ms policy value and preserves existing PostHog configuration and cleanup."
+        - "Static test inspection found the focused delay-bound regression test; runtime performance evidence remains outstanding."
+    governance_reentry_required: false
