@@ -1,12 +1,9 @@
 import { randomUUID } from "crypto";
-import {
-    getCapiRequestData,
-    scheduleViewContentCapiAfterResponse,
-} from "@/actions/analytics";
+import { captureAndScheduleViewContentCapiAfterResponse } from "@/actions/analytics";
 import { GeneralShell } from "@/components/globals/layouts";
 import {
-    StorefrontBreadcrumbs,
     buildBreadcrumbJsonLd,
+    StorefrontBreadcrumbs,
 } from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
 import { ProductPage } from "@/components/products/product";
 import { TrackViewContent } from "@/components/shop/facebook-pixel-events"; // Import the new component
@@ -239,9 +236,7 @@ async function ProductFetch({ params }: PageProps) {
         )?.externalId,
     };
 
-    const requestData = await getCapiRequestData();
-
-    scheduleViewContentCapiAfterResponse(
+    await captureAndScheduleViewContentCapiAfterResponse(
         after,
         eventId,
         userData,
@@ -255,8 +250,7 @@ async function ProductFetch({ params }: PageProps) {
             value: parseFloat(priceInRupees),
             currency: "INR",
         },
-        getAbsoluteURL(`/products/${slug}`),
-        requestData
+        getAbsoluteURL(`/products/${slug}`)
     );
 
     const jsonLd = {

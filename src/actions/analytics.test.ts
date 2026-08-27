@@ -38,7 +38,12 @@ const requestData = {
 };
 const userData = { em: "buyer@example.com", external_id: "user-1" };
 const customData = { content_ids: ["product-1"], value: 42, currency: "INR" };
-const eventArguments = ["event-1", userData, customData, "https://renivet.example/products/product-1"] as const;
+const eventArguments = [
+    "event-1",
+    userData,
+    customData,
+    "https://renivet.example/products/product-1",
+] as const;
 
 test("request-free ViewContent sender forwards captured request data", async () => {
     const sentEvents: unknown[][] = [];
@@ -75,11 +80,81 @@ test("all public analytics wrappers retain four arguments", () => {
     expect(analytics.trackViewContentCapi.length).toBe(4);
 });
 
+test("product lifecycle captures request data before after registration", async () => {
+    const lifecycle: string[] = [];
+    let afterCallback: (() => void) | undefined;
+    const schedule =
+        analytics.createViewContentCapiAfterResponseCaptureScheduler(
+            async () => {
+                lifecycle.push("capture");
+                return requestData;
+            },
+            (registerAfter, ...args) => {
+                lifecycle.push("register");
+                expect(args).toEqual([...eventArguments, requestData]);
+                registerAfter(() => {
+                    lifecycle.push("after callback");
+                });
+            }
+        );
+
+    await schedule(
+        (callback) => {
+            afterCallback = callback;
+        },
+        ...eventArguments
+    );
+
+    expect(lifecycle).toEqual(["capture", "register"]);
+    afterCallback!();
+    expect(lifecycle).toEqual(["capture", "register", "after callback"]);
+});
+
+test("product lifecycle contains request-data capture failures without scheduling", async () => {
+    const reports: unknown[][] = [];
+    const originalConsoleError = console.error;
+    const secret = "sensitive-request-data";
+    let registered = false;
+    console.error = (...args: unknown[]) => reports.push(args);
+    const schedule =
+        analytics.createViewContentCapiAfterResponseCaptureScheduler(
+            async () => {
+                throw new Error(secret);
+            },
+            () => {
+                registered = true;
+            }
+        );
+
+    try {
+        await expect(
+            schedule(
+                () => {
+                    registered = true;
+                },
+                ...eventArguments
+            )
+        ).resolves.toBeUndefined();
+        expect(registered).toBe(false);
+        expect(reports).toEqual([
+            [
+                "Failed to capture ViewContent CAPI request data:",
+                { errorName: "Error" },
+            ],
+        ]);
+        expect(JSON.stringify(reports)).not.toContain(secret);
+    } finally {
+        console.error = originalConsoleError;
+    }
+});
+
 test("post-response ViewContent registration contains synchronous registration failures", () => {
     const reports: unknown[][] = [];
     const originalConsoleError = console.error;
     console.error = (...args: unknown[]) => reports.push(args);
-    const schedule = analytics.createViewContentCapiAfterResponseScheduler(async () => {});
+    const schedule = analytics.createViewContentCapiAfterResponseScheduler(
+        async () => {}
+    );
 
     try {
         expect(() =>
@@ -107,12 +182,18 @@ test("post-response ViewContent callback contains sender rejection", async () =>
     const reports: unknown[][] = [];
     const originalConsoleError = console.error;
     console.error = (...args: unknown[]) => reports.push(args);
-    const schedule = analytics.createViewContentCapiAfterResponseScheduler(async () => {
-        throw new Error("Meta is unavailable");
-    });
+    const schedule = analytics.createViewContentCapiAfterResponseScheduler(
+        async () => {
+            throw new Error("Meta is unavailable");
+        }
+    );
 
     try {
-        schedule((callback) => callbacks.push(callback), ...eventArguments, requestData);
+        schedule(
+            (callback) => callbacks.push(callback),
+            ...eventArguments,
+            requestData
+        );
         callbacks[0]!();
         await Promise.resolve();
         await Promise.resolve();

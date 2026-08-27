@@ -186,7 +186,18 @@ type ViewContentCapiSender = (
     requestData: CapiRequestData
 ) => Promise<unknown>;
 
-export function createViewContentCapiSender(send: CapiEventSender): ViewContentCapiSender {
+type ViewContentCapiAfterResponseScheduler = (
+    registerAfter: (callback: () => void) => void,
+    eventId: string,
+    userData: CapiUserData,
+    customData: CapiCustomData,
+    url: string,
+    requestData: CapiRequestData
+) => void;
+
+export function createViewContentCapiSender(
+    send: CapiEventSender
+): ViewContentCapiSender {
     return async (eventId, userData, customData, url, requestData) => {
         await send(
             "ViewContent",
@@ -212,7 +223,7 @@ export async function trackViewContentCapi(
     eventId: string,
     userData: CapiUserData,
     customData: CapiCustomData,
-    url: string,
+    url: string
 ) {
     const requestData = await getCapiRequestData();
     await sendViewContentCapi(eventId, userData, customData, url, requestData);
@@ -220,7 +231,7 @@ export async function trackViewContentCapi(
 
 export function createViewContentCapiAfterResponseScheduler(
     send: ViewContentCapiSender
-) {
+): ViewContentCapiAfterResponseScheduler {
     return (
         registerAfter: (callback: () => void) => void,
         eventId: string,
@@ -231,8 +242,14 @@ export function createViewContentCapiAfterResponseScheduler(
     ) => {
         try {
             registerAfter(() => {
-                void send(eventId, userData, customData, url, requestData).catch(
-                    (error) => console.error("Failed to send ViewContent CAPI:", error)
+                void send(
+                    eventId,
+                    userData,
+                    customData,
+                    url,
+                    requestData
+                ).catch((error) =>
+                    console.error("Failed to send ViewContent CAPI:", error)
                 );
             });
         } catch (error) {
@@ -243,6 +260,45 @@ export function createViewContentCapiAfterResponseScheduler(
 
 export const scheduleViewContentCapiAfterResponse =
     createViewContentCapiAfterResponseScheduler(sendViewContentCapi);
+
+export function createViewContentCapiAfterResponseCaptureScheduler(
+    captureRequestData: () => Promise<CapiRequestData>,
+    scheduleAfterResponse: ViewContentCapiAfterResponseScheduler
+) {
+    return async (
+        registerAfter: (callback: () => void) => void,
+        eventId: string,
+        userData: CapiUserData,
+        customData: CapiCustomData,
+        url: string
+    ) => {
+        let requestData: CapiRequestData;
+
+        try {
+            requestData = await captureRequestData();
+        } catch (error) {
+            console.error("Failed to capture ViewContent CAPI request data:", {
+                errorName: error instanceof Error ? error.name : "UnknownError",
+            });
+            return;
+        }
+
+        scheduleAfterResponse(
+            registerAfter,
+            eventId,
+            userData,
+            customData,
+            url,
+            requestData
+        );
+    };
+}
+
+export const captureAndScheduleViewContentCapiAfterResponse =
+    createViewContentCapiAfterResponseCaptureScheduler(
+        getCapiRequestData,
+        scheduleViewContentCapiAfterResponse
+    );
 
 export async function getOverviewMetrics(dateRange: string = "30d") {
     try {
