@@ -1,5 +1,5 @@
 import { getDate } from "@/lib/utils";
-import { redis } from "..";
+import { criticalRedis as redis } from "..";
 
 export interface RevenueData {
     amount: number;

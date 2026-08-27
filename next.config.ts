@@ -48,6 +48,8 @@ const nextConfig: NextConfig = {
         ],
         // Optimize image loading (reduces build time)
         formats: ["image/avif", "image/webp"],
+        // Keep every explicit quality used by the app supported by Next Image.
+        qualities: [75, 80, 85, 90, 100],
         minimumCacheTTL: 60,
     },
     compress: true,
