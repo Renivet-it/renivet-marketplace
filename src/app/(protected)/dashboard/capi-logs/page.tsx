@@ -15,6 +15,7 @@ import { format } from "date-fns";
 import { Copy, Download, Filter } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { getCapiLogDisplay } from "./status";
 
 const EVENT_NAMES = [
     "ViewContent",
@@ -122,7 +123,7 @@ export default function CapiLogsPage() {
                     log.id,
                     log.eventName,
                     log.eventId,
-                    log.status,
+                    getCapiLogDisplay(log.status, log.response).label,
                     log.createdAt
                         ? format(
                               new Date(log.createdAt),
@@ -138,7 +139,7 @@ export default function CapiLogsPage() {
             const csvContent = [headers, ...rows]
                 .map((row) =>
                     row
-                        .map((c) => `"${String(c).replace(/"/g, "\"\"")}"`)
+                        .map((c) => `"${String(c).replace(/"/g, '""')}"`)
                         .join(",")
                 )
                 .join("\n");
@@ -381,6 +382,10 @@ export default function CapiLogsPage() {
                                         string,
                                         unknown
                                     >) ?? {};
+                                const display = getCapiLogDisplay(
+                                    log.status,
+                                    log.response
+                                );
 
                                 return (
                                     <tr
@@ -428,16 +433,8 @@ export default function CapiLogsPage() {
 
                                         {/* Status */}
                                         <td className="whitespace-nowrap px-4 py-3">
-                                            <Badge
-                                                variant={
-                                                    log.status === "success"
-                                                        ? "default"
-                                                        : "destructive"
-                                                }
-                                            >
-                                                {log.status === "success"
-                                                    ? "Success"
-                                                    : "Failed"}
+                                            <Badge variant={display.variant}>
+                                                {display.label}
                                             </Badge>
                                         </td>
 

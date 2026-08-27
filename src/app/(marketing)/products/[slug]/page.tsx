@@ -1,9 +1,9 @@
 import { randomUUID } from "crypto";
-import { trackViewContentCapi } from "@/actions/analytics";
+import { captureAndScheduleViewContentCapiAfterResponse } from "@/actions/analytics";
 import { GeneralShell } from "@/components/globals/layouts";
 import {
-    StorefrontBreadcrumbs,
     buildBreadcrumbJsonLd,
+    StorefrontBreadcrumbs,
 } from "@/components/globals/layouts/shop/StorefrontBreadcrumbs";
 import { ProductPage } from "@/components/products/product";
 import { TrackViewContent } from "@/components/shop/facebook-pixel-events"; // Import the new component
@@ -22,6 +22,7 @@ import { cn, getAbsoluteURL } from "@/lib/utils";
 import { currentUser } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -235,7 +236,8 @@ async function ProductFetch({ params }: PageProps) {
         )?.externalId,
     };
 
-    trackViewContentCapi(
+    await captureAndScheduleViewContentCapiAfterResponse(
+        after,
         eventId,
         userData,
         {
@@ -249,7 +251,7 @@ async function ProductFetch({ params }: PageProps) {
             currency: "INR",
         },
         getAbsoluteURL(`/products/${slug}`)
-    ).catch((err) => console.error("Failed to send ViewContent CAPI:", err));
+    );
 
     const jsonLd = {
         "@context": "https://schema.org",
