@@ -1,13 +1,19 @@
 // app/actions/analytics.ts
 "use server";
 
+import {
+    createViewContentCapiAfterResponseCaptureScheduler,
+    createViewContentCapiAfterResponseScheduler,
+    createViewContentCapiSender,
+    type CapiRequestData,
+} from "@/lib/capi-view-content";
 import { productQueries } from "@/lib/db/queries";
 import { userQueries } from "@/lib/db/queries/user";
 import { CapiCustomData, CapiUserData, sendCapiEvent } from "@/lib/fb-capi";
 import { currentUser } from "@clerk/nextjs/server";
 import { cookies, headers } from "next/headers";
 
-const getRequestData = async () => {
+export async function getCapiRequestData(): Promise<CapiRequestData> {
     const headersList = await headers();
     const cookieStore = await cookies();
     const userAgent = headersList.get("user-agent") || "";
@@ -28,7 +34,7 @@ const getRequestData = async () => {
         undefined;
 
     return { userAgent, ip, referer, fbp, fbc, country };
-};
+}
 
 export async function trackAddToCartCapi(
     eventId: string,
@@ -36,7 +42,7 @@ export async function trackAddToCartCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
+    const { userAgent, ip, fbp, fbc, country } = await getCapiRequestData();
     let enrichedUserData = { ...userData };
 
     if (userData.external_id) {
@@ -89,7 +95,7 @@ export async function trackInitiateCheckoutCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
+    const { userAgent, ip, fbp, fbc, country } = await getCapiRequestData();
     let enrichedUserData = { ...userData };
 
     if (userData.external_id) {
@@ -142,7 +148,7 @@ export async function trackPurchaseCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
+    const { userAgent, ip, fbp, fbc, country } = await getCapiRequestData();
 
     await sendCapiEvent(
         "Purchase",
@@ -161,27 +167,39 @@ export async function trackPurchaseCapi(
     );
 }
 
+const sendViewContentCapi = createViewContentCapiSender(sendCapiEvent);
+
 export async function trackViewContentCapi(
     eventId: string,
     userData: CapiUserData,
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc, country } = await getRequestData();
+    const requestData = await getCapiRequestData();
+    await sendViewContentCapi(eventId, userData, customData, url, requestData);
+}
 
-    await sendCapiEvent(
-        "ViewContent",
-        {
-            ...userData,
-            client_user_agent: userAgent,
-            client_ip_address: ip,
-            fbp,
-            fbc,
-            fb_login_id: userData.external_id,
-            country: userData.country || country,
-        },
-        customData,
+const scheduleViewContentCapiAfterResponse =
+    createViewContentCapiAfterResponseScheduler(sendViewContentCapi);
+
+const captureAndScheduleViewContentCapiAfterResponseInternal =
+    createViewContentCapiAfterResponseCaptureScheduler(
+        getCapiRequestData,
+        scheduleViewContentCapiAfterResponse
+    );
+
+export async function captureAndScheduleViewContentCapiAfterResponse(
+    registerAfter: (callback: () => void) => void,
+    eventId: string,
+    userData: CapiUserData,
+    customData: CapiCustomData,
+    url: string
+) {
+    await captureAndScheduleViewContentCapiAfterResponseInternal(
+        registerAfter,
         eventId,
+        userData,
+        customData,
         url
     );
 }

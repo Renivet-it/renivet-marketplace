@@ -2,7 +2,7 @@ import { db } from "@/lib/db";
 import { capiLogs } from "@/lib/db/schema";
 import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { sanitizeFbUserData } from "@/lib/fbpixel";
-import { env } from "../../env";
+import { eq } from "drizzle-orm";
 import {
     CustomData,
     EventRequest,
@@ -10,9 +10,13 @@ import {
     ServerEvent,
     UserData,
 } from "facebook-nodejs-business-sdk";
+import { env } from "../../env";
 
 const ACCESS_TOKEN = env.FACEBOOK_CAPI_ACCESS_TOKEN;
 const PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || "618442627790500";
+
+export const CAPI_META_TIMEOUT_MS = 3_000;
+export const CAPI_LOG_TIMEOUT_MS = 1_000;
 
 FacebookAdsApi.init(ACCESS_TOKEN ?? "");
 
@@ -50,54 +54,388 @@ export type CapiCustomData = {
     delivery_category?: string;
 };
 
-export const sendCapiEvent = async (
+export type CapiOutcome =
+    | "accepted"
+    | "provider_rejected"
+    | "timed_out"
+    | "transport_error"
+    | "invalid_response"
+    | "pending";
+
+export type CapiResponse = {
+    version: 1;
+    outcome: CapiOutcome;
+    httpStatus?: number;
+    code?: string;
+    message?: string;
+};
+
+export type CapiTimerApi = {
+    setTimeout: (callback: () => void, timeoutMs: number) => unknown;
+    clearTimeout: (timer: unknown) => void;
+};
+
+export type CancellableQuery<T> = PromiseLike<T> & { cancel: () => void };
+
+export type CapiLogWriter = {
+    insertPending: (values: {
+        eventName: string;
+        eventId: string;
+        userData: CapiUserData;
+        customData: CapiCustomData;
+        status: "pending";
+        response: CapiResponse;
+    }) => CancellableQuery<Array<{ id: string }>>;
+    updateTerminal: (
+        id: string,
+        values: { status: "success" | "failed"; response: CapiResponse }
+    ) => CancellableQuery<unknown>;
+};
+
+type CapiLogQueryOutcome<T> =
+    | { state: "fulfilled"; value: T }
+    | { state: "rejected"; error: unknown }
+    | { state: "timed_out"; cancelError?: unknown };
+
+type CapiHttpServiceDependencies = {
+    fetch: typeof fetch;
+    timers: CapiTimerApi;
+    timeoutMs?: number;
+};
+
+type CapiSenderDependencies = CapiHttpServiceDependencies & {
+    accessToken?: string;
+    pixelId: string;
+    logWriter: CapiLogWriter;
+    now: () => number;
+    shouldRunExternalSideEffects: () => Promise<boolean>;
+    sanitizeUserData?: (userData: CapiUserData) => CapiUserData;
+};
+
+class CapiAttemptError extends Error {
+    constructor(
+        readonly outcome: Exclude<CapiOutcome, "accepted" | "pending">,
+        readonly httpStatus?: number,
+        readonly code?: string,
+        message?: string,
+        readonly response?: unknown
+    ) {
+        super(message);
+    }
+}
+
+const defaultTimers: CapiTimerApi = {
+    setTimeout: (callback, timeoutMs) => setTimeout(callback, timeoutMs),
+    clearTimeout: (timer) =>
+        clearTimeout(timer as ReturnType<typeof setTimeout>),
+};
+
+function safeScalar(value: unknown): string | undefined {
+    if (
+        typeof value === "string" ||
+        typeof value === "number" ||
+        typeof value === "boolean"
+    ) {
+        return String(value);
+    }
+}
+
+function redact(
+    value: string | undefined,
+    accessToken?: string
+): string | undefined {
+    if (!value) return undefined;
+    return accessToken ? value.split(accessToken).join("[REDACTED]") : value;
+}
+
+function errorDetails(error: unknown, accessToken?: string) {
+    const source =
+        error && typeof error === "object"
+            ? (error as Record<string, unknown>)
+            : {};
+    const nested =
+        source.error && typeof source.error === "object"
+            ? (source.error as Record<string, unknown>)
+            : {};
+    return {
+        code: safeScalar(source.code) ?? safeScalar(nested.code),
+        message: redact(
+            safeScalar(source.message) ??
+                safeScalar(nested.message) ??
+                safeScalar(error),
+            accessToken
+        ),
+    };
+}
+
+function isAcceptedMetaResponse(
+    body: unknown
+): body is { events_received: number } {
+    return Boolean(
+        body &&
+            typeof body === "object" &&
+            typeof (body as Record<string, unknown>).events_received ===
+                "number"
+    );
+}
+
+function toCapiResponse(error: unknown, accessToken?: string): CapiResponse {
+    if (error instanceof CapiAttemptError) {
+        const { code, message } = errorDetails(error, accessToken);
+        return {
+            version: 1,
+            outcome: error.outcome,
+            ...(error.httpStatus === undefined
+                ? {}
+                : { httpStatus: error.httpStatus }),
+            ...((error.code ?? code) ? { code: error.code ?? code } : {}),
+            ...(message ? { message } : {}),
+        };
+    }
+
+    const { code, message } = errorDetails(error, accessToken);
+    return {
+        version: 1,
+        outcome: "transport_error",
+        ...(code ? { code } : {}),
+        ...(message ? { message } : {}),
+    };
+}
+
+function toPublicCapiFailure(error: unknown): unknown {
+    const source =
+        error && typeof error === "object"
+            ? (error as { response?: unknown; message?: unknown })
+            : {};
+    return source.response || { message: source.message };
+}
+
+function reportDatabaseProblem(operation: "insert" | "update", error: unknown) {
+    const { message } = errorDetails(error, ACCESS_TOKEN);
+    console.error("CAPI log database operation did not settle", {
+        operation,
+        message,
+    });
+}
+
+export function createCapiHttpService({
+    fetch: fetchImpl,
+    timers,
+    timeoutMs = CAPI_META_TIMEOUT_MS,
+}: CapiHttpServiceDependencies) {
+    return {
+        executeRequest: async (
+            url: string,
+            method: string,
+            headers: Record<string, string>,
+            params: Record<string, unknown>
+        ) => {
+            const controller = new AbortController();
+            let deadlineReached = false;
+            let request: Promise<Response>;
+
+            try {
+                request = Promise.resolve(
+                    fetchImpl(url, {
+                        method,
+                        headers,
+                        body: JSON.stringify(params),
+                        signal: controller.signal,
+                    })
+                );
+            } catch (error) {
+                request = Promise.reject(error);
+            }
+
+            const deadline = timers.setTimeout(() => {
+                deadlineReached = true;
+                controller.abort();
+            }, timeoutMs);
+
+            try {
+                const response = await request;
+                if (deadlineReached) {
+                    throw new CapiAttemptError(
+                        "timed_out",
+                        undefined,
+                        undefined,
+                        "Meta request timed out"
+                    );
+                }
+
+                if (!response.ok) {
+                    let body: unknown;
+                    try {
+                        body = await response.json();
+                    } catch {
+                        throw new CapiAttemptError(
+                            "provider_rejected",
+                            response.status,
+                            undefined,
+                            "Meta rejected the event"
+                        );
+                    }
+                    const details = errorDetails(body);
+                    throw new CapiAttemptError(
+                        "provider_rejected",
+                        response.status,
+                        details.code,
+                        details.message ?? "Meta rejected the event",
+                        body
+                    );
+                }
+
+                let body: unknown;
+                try {
+                    body = await response.json();
+                } catch {
+                    throw new CapiAttemptError(
+                        "invalid_response",
+                        response.status,
+                        undefined,
+                        "Meta response was not JSON"
+                    );
+                }
+
+                if (!isAcceptedMetaResponse(body)) {
+                    throw new CapiAttemptError(
+                        "invalid_response",
+                        response.status,
+                        undefined,
+                        "Meta response was malformed"
+                    );
+                }
+
+                return body;
+            } catch (error) {
+                if (error instanceof CapiAttemptError) throw error;
+                if (deadlineReached) {
+                    throw new CapiAttemptError(
+                        "timed_out",
+                        undefined,
+                        undefined,
+                        "Meta request timed out"
+                    );
+                }
+                const details = errorDetails(error);
+                throw new CapiAttemptError(
+                    "transport_error",
+                    undefined,
+                    details.code,
+                    details.message
+                );
+            } finally {
+                timers.clearTimeout(deadline);
+            }
+        },
+    };
+}
+
+export function runCapiLogQuery<T>(
+    query: CancellableQuery<T>,
+    timers: CapiTimerApi = defaultTimers,
+    timeoutMs = CAPI_LOG_TIMEOUT_MS
+): Promise<CapiLogQueryOutcome<T>> {
+    return new Promise((resolve) => {
+        let settled = false;
+        let deadline: unknown;
+        let deadlineRegistered = false;
+
+        const finish = (outcome: CapiLogQueryOutcome<T>) => {
+            if (settled) return;
+            settled = true;
+            if (deadlineRegistered) timers.clearTimeout(deadline);
+            resolve(outcome);
+        };
+
+        try {
+            query.then(
+                (value) => finish({ state: "fulfilled", value }),
+                (error) => finish({ state: "rejected", error })
+            );
+        } catch (error) {
+            finish({ state: "rejected", error });
+            return;
+        }
+
+        if (settled) return;
+
+        deadline = timers.setTimeout(() => {
+            if (settled) return;
+            try {
+                query.cancel();
+                finish({ state: "timed_out" });
+            } catch (cancelError) {
+                finish({ state: "timed_out", cancelError });
+            }
+        }, timeoutMs);
+        deadlineRegistered = true;
+
+        if (settled) timers.clearTimeout(deadline);
+    });
+}
+
+function buildDefaultLogWriter(): CapiLogWriter {
+    return {
+        insertPending(values) {
+            const statement = db
+                .insert(capiLogs)
+                .values({
+                    eventName: values.eventName,
+                    eventId: values.eventId,
+                    userData: values.userData,
+                    customData: values.customData,
+                    status: values.status,
+                    response: values.response,
+                })
+                .returning({ id: capiLogs.id })
+                .toSQL();
+            return db.$client.unsafe(
+                statement.sql,
+                statement.params
+            ) as unknown as CancellableQuery<Array<{ id: string }>>;
+        },
+        updateTerminal(id, values) {
+            const statement = db
+                .update(capiLogs)
+                .set(values)
+                .where(eq(capiLogs.id, id))
+                .toSQL();
+            return db.$client.unsafe(
+                statement.sql,
+                statement.params
+            ) as unknown as CancellableQuery<unknown>;
+        },
+    };
+}
+
+function createServerEvent(
     eventName: string,
     userData: CapiUserData,
     customData: CapiCustomData,
     eventId: string,
-    eventSourceUrl: string
-) => {
-    if (!(await shouldRunExternalSideEffects())) {
-        console.info(`Skipping CAPI event '${eventName}': external side effects are disabled.`);
-        return { skipped: true, reason: "external_side_effects_disabled" };
-    }
-
-    if (!ACCESS_TOKEN) {
-        console.warn("FACEBOOK_ACCESS_TOKEN not found, skipping CAPI event.");
-        return;
-    }
-
-    const current_timestamp = Math.floor(new Date().getTime() / 1000);
-
-    const safeUserData = sanitizeFbUserData(userData) as CapiUserData;
-
+    eventSourceUrl: string,
+    timestamp: number
+) {
     const user = new UserData();
-    if (safeUserData.em) user.setEmail(safeUserData.em);
-    if (safeUserData.ph) user.setPhone(safeUserData.ph);
-    if (safeUserData.fn) user.setFirstName(safeUserData.fn);
-    if (safeUserData.ln) user.setLastName(safeUserData.ln);
-    if (safeUserData.db) user.setDateOfBirth(safeUserData.db);
-    if (safeUserData.ge) user.setGender(safeUserData.ge);
-    if (safeUserData.ct) user.setCity(safeUserData.ct);
-    if (safeUserData.st) user.setState(safeUserData.st);
-    if (safeUserData.zp) user.setZip(safeUserData.zp);
-    if (safeUserData.country) user.setCountry(safeUserData.country);
-    if (safeUserData.external_id) user.setExternalId(safeUserData.external_id);
-    if (safeUserData.fb_login_id) user.setFbLoginId(safeUserData.fb_login_id);
-    if (safeUserData.client_ip_address)
-        user.setClientIpAddress(safeUserData.client_ip_address);
-    if (safeUserData.client_user_agent)
-        user.setClientUserAgent(safeUserData.client_user_agent);
-    if (safeUserData.fbp) user.setFbp(safeUserData.fbp);
-    
-    console.log(`\n--- CAPI EVENT: ${eventName} ---`);
-    console.log("Original fbc value:", userData.fbc || "MISSING / UNDEFINED");
-    console.log("Sanitized fbc value:", safeUserData.fbc || "MISSING / UNDEFINED");
-    console.log("-----------------------\n");
-
-    if (safeUserData.fbc) {
-        user.setFbc(safeUserData.fbc);
-    }
+    if (userData.em) user.setEmail(userData.em);
+    if (userData.ph) user.setPhone(userData.ph);
+    if (userData.fn) user.setFirstName(userData.fn);
+    if (userData.ln) user.setLastName(userData.ln);
+    if (userData.db) user.setDateOfBirth(userData.db);
+    if (userData.ge) user.setGender(userData.ge);
+    if (userData.ct) user.setCity(userData.ct);
+    if (userData.st) user.setState(userData.st);
+    if (userData.zp) user.setZip(userData.zp);
+    if (userData.country) user.setCountry(userData.country);
+    if (userData.external_id) user.setExternalId(userData.external_id);
+    if (userData.fb_login_id) user.setFbLoginId(userData.fb_login_id);
+    if (userData.client_ip_address)
+        user.setClientIpAddress(userData.client_ip_address);
+    if (userData.client_user_agent)
+        user.setClientUserAgent(userData.client_user_agent);
+    if (userData.fbp) user.setFbp(userData.fbp);
+    if (userData.fbc) user.setFbc(userData.fbc);
 
     const custom = new CustomData();
     if (customData.content_name) custom.setContentName(customData.content_name);
@@ -118,48 +456,152 @@ export const sendCapiEvent = async (
     if (customData.delivery_category)
         custom.setDeliveryCategory(customData.delivery_category);
 
-    const serverEvent = new ServerEvent()
+    return new ServerEvent()
         .setEventName(eventName)
-        .setEventTime(current_timestamp)
+        .setEventTime(timestamp)
         .setUserData(user)
         .setCustomData(custom)
         .setEventSourceUrl(eventSourceUrl)
         .setActionSource("website")
         .setEventId(eventId);
+}
 
-    const eventsData = [serverEvent];
-    const eventRequest = new EventRequest(ACCESS_TOKEN, PIXEL_ID).setEvents(
-        eventsData
-    );
-
-    let responseData;
-    let status = "success";
-
+function runLogOperation<T>(
+    operation: "insert" | "update",
+    start: () => CancellableQuery<T>,
+    timers: CapiTimerApi
+) {
     try {
-        const response = await eventRequest.execute();
-        console.log(
-            `CAPI Event '${eventName}' sent successfully. Event ID: ${eventId}`
-        );
-        responseData = response;
-    } catch (error: any) {
-        console.error(`Failed to send CAPI Event '${eventName}':`, error);
-        status = "failed";
-        responseData = error?.response || { message: error.message };
-    }
-
-    // Attempt to log regardless of success or failure
-    try {
-        await db.insert(capiLogs).values({
-            eventName,
-            eventId,
-            userData: userData as any,
-            customData: customData as any,
-            status,
-            response: responseData,
+        return runCapiLogQuery(start(), timers).then((outcome) => {
+            if (outcome.state === "rejected")
+                reportDatabaseProblem(operation, outcome.error);
+            if (outcome.state === "timed_out" && outcome.cancelError) {
+                reportDatabaseProblem(operation, outcome.cancelError);
+            }
+            return outcome;
         });
-    } catch (dbError) {
-        console.error("Failed to log CAPI event to database:", dbError);
+    } catch (error) {
+        reportDatabaseProblem(operation, error);
+        return Promise.resolve({
+            state: "rejected",
+            error,
+        } as CapiLogQueryOutcome<T>);
     }
+}
 
-    return responseData;
-};
+export function createCapiEventSender(dependencies: CapiSenderDependencies) {
+    return async (
+        eventName: string,
+        userData: CapiUserData,
+        customData: CapiCustomData,
+        eventId: string,
+        eventSourceUrl: string
+    ) => {
+        if (!(await dependencies.shouldRunExternalSideEffects())) {
+            console.info(
+                `Skipping CAPI event '${eventName}': external side effects are disabled.`
+            );
+            return { skipped: true, reason: "external_side_effects_disabled" };
+        }
+
+        if (!dependencies.accessToken) {
+            console.warn(
+                "FACEBOOK_ACCESS_TOKEN not found, skipping CAPI event."
+            );
+            return;
+        }
+
+        const safeUserData =
+            dependencies.sanitizeUserData?.(userData) ?? userData;
+        const serverEvent = createServerEvent(
+            eventName,
+            safeUserData,
+            customData,
+            eventId,
+            eventSourceUrl,
+            Math.floor(dependencies.now() / 1_000)
+        );
+        const eventRequest = new EventRequest(
+            dependencies.accessToken,
+            dependencies.pixelId
+        )
+            .setEvents([serverEvent])
+            .setHttpService(createCapiHttpService(dependencies));
+
+        const metaPromise = eventRequest
+            .execute()
+            .then((providerResponse) => ({
+                providerResponse,
+                response: { version: 1, outcome: "accepted" } as CapiResponse,
+            }))
+            .catch((error) => ({
+                providerResponse: toPublicCapiFailure(error),
+                response: toCapiResponse(error, dependencies.accessToken),
+            }));
+        const pendingPromise = runLogOperation(
+            "insert",
+            () =>
+                dependencies.logWriter.insertPending({
+                    eventName,
+                    eventId,
+                    userData,
+                    customData,
+                    status: "pending",
+                    response: { version: 1, outcome: "pending" },
+                }),
+            dependencies.timers
+        );
+
+        const [metaResult, pendingResult] = await Promise.allSettled([
+            metaPromise,
+            pendingPromise,
+        ]);
+        const metaAttempt =
+            metaResult.status === "fulfilled"
+                ? metaResult.value
+                : {
+                      providerResponse: toPublicCapiFailure(metaResult.reason),
+                      response: toCapiResponse(
+                          metaResult.reason,
+                          dependencies.accessToken
+                      ),
+                  };
+        const { providerResponse, response } = metaAttempt;
+        const pendingOutcome =
+            pendingResult.status === "fulfilled"
+                ? pendingResult.value
+                : undefined;
+
+        if (pendingOutcome?.state === "fulfilled") {
+            const id = pendingOutcome.value[0]?.id;
+            if (id) {
+                await runLogOperation(
+                    "update",
+                    () =>
+                        dependencies.logWriter.updateTerminal(id, {
+                            status:
+                                response.outcome === "accepted"
+                                    ? "success"
+                                    : "failed",
+                            response,
+                        }),
+                    dependencies.timers
+                );
+            }
+        }
+
+        return providerResponse;
+    };
+}
+
+export const sendCapiEvent = createCapiEventSender({
+    accessToken: ACCESS_TOKEN,
+    pixelId: PIXEL_ID,
+    fetch: globalThis.fetch,
+    logWriter: buildDefaultLogWriter(),
+    now: () => Date.now(),
+    timers: defaultTimers,
+    shouldRunExternalSideEffects,
+    sanitizeUserData: (userData) =>
+        sanitizeFbUserData(userData) as CapiUserData,
+});
