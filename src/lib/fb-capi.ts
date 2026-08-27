@@ -95,7 +95,7 @@ export type CapiLogWriter = {
 type CapiLogQueryOutcome<T> =
     | { state: "fulfilled"; value: T }
     | { state: "rejected"; error: unknown }
-    | { state: "timed_out" };
+    | { state: "timed_out"; cancelError?: unknown };
 
 type CapiHttpServiceDependencies = {
     fetch: typeof fetch;
@@ -277,11 +277,12 @@ export function runCapiLogQuery<T>(
     return new Promise((resolve) => {
         let settled = false;
         let deadline: unknown;
+        let deadlineRegistered = false;
 
         const finish = (outcome: CapiLogQueryOutcome<T>) => {
             if (settled) return;
             settled = true;
-            timers.clearTimeout(deadline);
+            if (deadlineRegistered) timers.clearTimeout(deadline);
             resolve(outcome);
         };
 
@@ -295,15 +296,20 @@ export function runCapiLogQuery<T>(
             return;
         }
 
+        if (settled) return;
+
         deadline = timers.setTimeout(() => {
             if (settled) return;
             try {
                 query.cancel();
-            } catch (error) {
-                reportDatabaseProblem("update", error);
+                finish({ state: "timed_out" });
+            } catch (cancelError) {
+                finish({ state: "timed_out", cancelError });
             }
-            finish({ state: "timed_out" });
         }, timeoutMs);
+        deadlineRegistered = true;
+
+        if (settled) timers.clearTimeout(deadline);
     });
 }
 
@@ -393,6 +399,9 @@ function runLogOperation<T>(
     try {
         return runCapiLogQuery(start(), timers).then((outcome) => {
             if (outcome.state === "rejected") reportDatabaseProblem(operation, outcome.error);
+            if (outcome.state === "timed_out" && outcome.cancelError) {
+                reportDatabaseProblem(operation, outcome.cancelError);
+            }
             return outcome;
         });
     } catch (error) {

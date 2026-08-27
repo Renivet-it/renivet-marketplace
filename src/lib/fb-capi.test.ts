@@ -272,8 +272,14 @@ behaviorTest("continues the Meta attempt when the pending insert fails", async (
     });
     const { send } = createSender(async () => acceptedResponse(), writer);
 
-    expect((await send(...event)).outcome).toBe("accepted");
-    expect(writes).toEqual([]);
+    const originalConsoleError = console.error;
+    console.error = () => {};
+    try {
+        expect((await send(...event)).outcome).toBe("accepted");
+        expect(writes).toEqual([]);
+    } finally {
+        console.error = originalConsoleError;
+    }
 });
 
 behaviorTest("updates the inserted pending row by its returned ID after Meta settles", async () => {
@@ -319,6 +325,65 @@ behaviorTest("cancels a pending Postgres query synchronously and observes its ev
     expect(rejectionObserved).toBe(true);
     query.reject(new Error("cancelled by postgres"));
     await Promise.resolve();
+});
+
+behaviorTest("does not register a deadline after a query settles synchronously", async () => {
+    const timers = createTimers();
+    const query = {
+        then(onfulfilled?: (value: unknown) => unknown) {
+            onfulfilled?.("written");
+            return Promise.resolve();
+        },
+        cancel() {},
+    } as CancellableQuery<unknown>;
+
+    await expect(capi.runCapiLogQuery!(query, timers)).resolves.toMatchObject({
+        state: "fulfilled",
+        value: "written",
+    });
+    expect(timers.callbacks).toHaveLength(0);
+    expect(timers.cleared).toHaveLength(0);
+});
+
+behaviorTest("labels a synchronous insert cancellation error and observes a late rejection", async () => {
+    const timers = createTimers();
+    const insert = deferred<Array<{ id: string }>>();
+    const reports: unknown[][] = [];
+    const originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+        reports.push(args);
+    };
+
+    try {
+        const { writer, writes } = createWriter({
+            insertPending(values) {
+                writes.push({ kind: "pending", values });
+                return Object.assign(insert.promise, {
+                    cancel() {
+                        throw new Error("cancelled synchronously");
+                    },
+                });
+            },
+        });
+        const { send } = createSender(async () => acceptedResponse(), writer, timers);
+        const attempt = send(...event);
+        await Promise.resolve();
+        await Promise.resolve();
+
+        timers.callbacks.at(-1)!();
+        await expect(attempt).resolves.toMatchObject({ outcome: "accepted" });
+        insert.reject(new Error("cancelled by postgres"));
+        await Promise.resolve();
+
+        expect(reports).toEqual([
+            [
+                "CAPI log database operation did not settle",
+                { operation: "insert", message: "cancelled synchronously" },
+            ],
+        ]);
+    } finally {
+        console.error = originalConsoleError;
+    }
 });
 
 behaviorTest("leaves an unconfirmed log write pending without retrying it", async () => {
