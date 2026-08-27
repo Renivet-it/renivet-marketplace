@@ -382,6 +382,10 @@ export default function CapiLogsPage() {
                                         string,
                                         unknown
                                     >) ?? {};
+                                const display = getCapiLogDisplay(
+                                    log.status,
+                                    log.response
+                                );
 
                                 return (
                                     <tr
@@ -430,19 +434,9 @@ export default function CapiLogsPage() {
                                         {/* Status */}
                                         <td className="whitespace-nowrap px-4 py-3">
                                             <Badge
-                                                variant={
-                                                    getCapiLogDisplay(
-                                                        log.status,
-                                                        log.response
-                                                    ).variant
-                                                }
+                                                variant={display.variant}
                                             >
-                                                {
-                                                    getCapiLogDisplay(
-                                                        log.status,
-                                                        log.response
-                                                    ).label
-                                                }
+                                                {display.label}
                                             </Badge>
                                         </td>
 
