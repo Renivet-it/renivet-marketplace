@@ -9,5 +9,6 @@ Findings:
 - `MAJOR` CRIT-131-003 — REQ-131-003: purchase properties must not include addresses, payment credentials, phone/email, or full order payloads unless explicitly approved.
 - `MINOR` CRIT-131-004 — TEXP-131-003: the test plan should cover reward/zero-value and multi-brand flows.
 
-Category coverage: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies. Payment state is preserved and no payment provider API is changed.
+Resolution: The owner selected one event per complete checkout. The implementation must therefore establish the stable checkout/order-group identity and deduplication behavior before emitting the event.
 
+Category coverage: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies. Payment state is preserved and no payment provider API is changed.

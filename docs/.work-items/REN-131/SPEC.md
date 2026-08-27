@@ -19,3 +19,6 @@ Add a server-side PostHog `purchase_completed` capture to the order-creation flo
 - PostHog failure is observed and does not roll back or falsely fail a successful order.
 - Tests verify ordering, failure isolation, idempotency strategy, and sensitive-data exclusion.
 
+## Approved decision
+
+Emit one server-side `purchase_completed` event per complete checkout, not one event per brand-split order. Use a stable checkout/order-group identifier for deduplication; the implementation must identify the existing checkout intent/order-group field or stop for a follow-up decision if none is available. Preserve existing client capture and avoid changing payment or order state.

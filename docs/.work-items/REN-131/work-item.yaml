@@ -4,7 +4,7 @@ task:
     title: Add server-side purchase_completed capture (no PostHog fallback today)
     source: linear
     branch: ayanganguly333/ren-129-130-131-132
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-131/add-server-side-purchase-completed-capture-no-posthog-fallback-today
         priority: High
@@ -128,12 +128,12 @@ decisions:
     - id: DEC-131-001
       question: Should a multi-brand checkout emit one purchase event, one event per persisted brand order, or another deduplicated business unit?
       class: HUMAN_CONFIRMATION
-      status: unresolved
-      recommendation: Prefer one event per business checkout with a stable checkout/order-group identifier if available; otherwise defer implementation until the order-group identity and dashboard aggregation rule are confirmed.
-      basis: The route splits one checkout into multiple persisted orders, while client capture already exists in multiple locations.
-      confidence: medium
+      status: resolved
+      recommendation: Emit one `purchase_completed` event per complete checkout using a stable checkout/order-group identifier for deduplication, rather than one event per brand-split order.
+      basis: Owner selected one event per complete checkout.
+      confidence: high
       consequence: high
-      human_confirmation_required: true
+      human_confirmation_required: false
 test_expectations:
     - id: TEXP-131-001
       category: integration
@@ -209,6 +209,6 @@ critic:
           references: [TEXP-131-003]
           description: Reward and split-order cases need business-level verification.
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-131-001]
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner confirmation)
