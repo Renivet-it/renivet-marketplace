@@ -1,12 +1,18 @@
 "use client";
 
+import {
+    captureAuthEvent,
+    getAuthEventProperties,
+} from "@/components/auth/auth-analytics";
 import { resolveEmailPasswordSignIn } from "@/components/auth/email-password-sign-in";
 import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { Google, RenivetFull } from "@/components/svgs";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Image from "next/image";
 import Link from "next/link";
+import { usePostHog } from "posthog-js/react";
 import { FormEvent, useState } from "react";
 
 type Method = "phone" | "email";
@@ -58,6 +64,7 @@ function BrandHeader({
 export function PhoneFirstSignIn() {
     const { isLoaded, signIn, setActive } = useSignIn();
     const { signUp, setActive: setSignUpActive } = useSignUp();
+    const posthog = usePostHog();
     const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("credentials");
     const [phoneAttempt, setPhoneAttempt] = useState<PhoneAttempt>("sign-in");
@@ -91,10 +98,18 @@ export function PhoneFirstSignIn() {
                   : "Unable to sign in"
         );
     };
-    const complete = async (sessionId: string | null) => {
+    const complete = async (
+        sessionId: string | null,
+        flow: "sign-in" | "sign-up" = "sign-in"
+    ) => {
         if (!sessionId) throw new Error("A session could not be created");
         if (!setActive) throw new Error("Sign-in is still loading");
         await setActive({ session: sessionId });
+        captureAuthEvent(
+            posthog,
+            POSTHOG_EVENTS.AUTH.SIGNED_IN,
+            getAuthEventProperties(flow, method)
+        );
         await fetch("/api/account/sync", { method: "POST" }).catch(
             () => undefined
         );
@@ -105,6 +120,11 @@ export function PhoneFirstSignIn() {
         if (!sessionId) throw new Error("A session could not be created");
         if (!setSignUpActive) throw new Error("Sign-up is still loading");
         await setSignUpActive({ session: sessionId });
+        captureAuthEvent(
+            posthog,
+            POSTHOG_EVENTS.AUTH.SIGNED_IN,
+            getAuthEventProperties("sign-up", "phone")
+        );
         await fetch("/api/account/sync", { method: "POST" }).catch(
             () => undefined
         );
@@ -121,6 +141,11 @@ export function PhoneFirstSignIn() {
 
     const continueWithGoogle = async () => {
         if (!isLoaded) return;
+        captureAuthEvent(
+            posthog,
+            POSTHOG_EVENTS.AUTH.SIGNIN_INITIATED,
+            getAuthEventProperties("sign-in", "google")
+        );
         setPending(true);
         setError(null);
         try {
@@ -137,6 +162,13 @@ export function PhoneFirstSignIn() {
 
     const resendOtp = async () => {
         if (!isLoaded) return;
+        if (step === "credentials") {
+            captureAuthEvent(
+                posthog,
+                POSTHOG_EVENTS.AUTH.SIGNIN_INITIATED,
+                getAuthEventProperties("sign-in", method)
+            );
+        }
         setPending(true);
         setError(null);
         setNotice(null);

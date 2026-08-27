@@ -1,12 +1,18 @@
 "use client";
 
+import {
+    captureAuthEvent,
+    getAuthEventProperties,
+} from "@/components/auth/auth-analytics";
 import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { Google, RenivetFull } from "@/components/svgs";
+import { POSTHOG_EVENTS } from "@/config/posthog";
 import { useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { usePostHog } from "posthog-js/react";
 import { FormEvent, useState } from "react";
 
 type Method = "phone" | "email";
@@ -24,6 +30,7 @@ function normalizeIndianPhone(value: string) {
 
 export function PhoneFirstSignUp() {
     const { isLoaded, setActive, signUp } = useSignUp();
+    const posthog = usePostHog();
     const router = useRouter();
     const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("details");
@@ -49,6 +56,11 @@ export function PhoneFirstSignUp() {
     const complete = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
         await setActive({ session: sessionId });
+        captureAuthEvent(
+            posthog,
+            POSTHOG_EVENTS.AUTH.SIGNED_IN,
+            getAuthEventProperties("sign-up", method)
+        );
         router.push("/");
     };
 
@@ -58,6 +70,11 @@ export function PhoneFirstSignUp() {
             setError("Please accept the Terms of Service and Privacy Policy.");
             return;
         }
+        captureAuthEvent(
+            posthog,
+            POSTHOG_EVENTS.AUTH.SIGNIN_INITIATED,
+            getAuthEventProperties("sign-up", "google")
+        );
         setPending(true);
         setError(null);
         try {
@@ -79,6 +96,14 @@ export function PhoneFirstSignUp() {
         if (step === "details" && !legalAccepted) {
             setError("Please accept the Terms of Service and Privacy Policy.");
             return;
+        }
+
+        if (step === "details") {
+            captureAuthEvent(
+                posthog,
+                POSTHOG_EVENTS.AUTH.SIGNIN_INITIATED,
+                getAuthEventProperties("sign-up", method)
+            );
         }
 
         setPending(true);
