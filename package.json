@@ -113,7 +113,6 @@
         "postgres": "^3.4.5",
         "posthog-js": "^1.215.6",
         "posthog-node": "^4.5.0",
-        "puppeteer": "^24.30.0",
         "qrcode": "^1.5.4",
         "razorpay": "^2.9.5",
         "react": "19.0.0",
