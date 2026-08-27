@@ -26,7 +26,7 @@ type ViewContentCapiSender = (
 ) => Promise<unknown>;
 
 export type ViewContentCapiAfterResponseScheduler = (
-    registerAfter: (callback: () => void) => void,
+    registerAfter: (callback: () => void | Promise<void>) => void,
     eventId: string,
     userData: CapiUserData,
     customData: CapiCustomData,
@@ -62,7 +62,7 @@ export function createViewContentCapiAfterResponseScheduler(
     return (registerAfter, eventId, userData, customData, url, requestData) => {
         try {
             registerAfter(() => {
-                void send(
+                return send(
                     eventId,
                     userData,
                     customData,
@@ -83,7 +83,7 @@ export function createViewContentCapiAfterResponseCaptureScheduler(
     scheduleAfterResponse: ViewContentCapiAfterResponseScheduler
 ) {
     return async (
-        registerAfter: (callback: () => void) => void,
+        registerAfter: (callback: () => void | Promise<void>) => void,
         eventId: string,
         userData: CapiUserData,
         customData: CapiCustomData,

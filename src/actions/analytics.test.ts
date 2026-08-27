@@ -104,7 +104,7 @@ test("server action module does not export synchronous helper factories", async 
 
 test("product lifecycle captures request data before after registration", async () => {
     const lifecycle: string[] = [];
-    let afterCallback: (() => void) | undefined;
+    let afterCallback: (() => void | Promise<void>) | undefined;
     const schedule =
         viewContent.createViewContentCapiAfterResponseCaptureScheduler(
             async () => {
@@ -229,6 +229,35 @@ test("post-response ViewContent callback contains sender rejection", async () =>
     } finally {
         console.error = originalConsoleError;
     }
+});
+
+test("post-response ViewContent callback returns the sender promise", async () => {
+    let releaseSender!: () => void;
+    let senderFinished = false;
+    let callback: (() => void | Promise<void>) | undefined;
+    const schedule = viewContent.createViewContentCapiAfterResponseScheduler(
+        async () => {
+            await new Promise<void>((resolve) => {
+                releaseSender = resolve;
+            });
+            senderFinished = true;
+        }
+    );
+
+    schedule(
+        (registeredCallback) => {
+            callback = registeredCallback;
+        },
+        ...eventArguments,
+        requestData
+    );
+
+    const senderPromise = callback!();
+    expect(senderPromise).toBeInstanceOf(Promise);
+    expect(senderFinished).toBe(false);
+    releaseSender();
+    await senderPromise;
+    expect(senderFinished).toBe(true);
 });
 
 test("product page captures request data before scheduling after-response CAPI", async () => {

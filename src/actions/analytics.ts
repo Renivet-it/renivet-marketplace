@@ -189,7 +189,7 @@ const captureAndScheduleViewContentCapiAfterResponseInternal =
     );
 
 export async function captureAndScheduleViewContentCapiAfterResponse(
-    registerAfter: (callback: () => void) => void,
+    registerAfter: (callback: () => void | Promise<void>) => void,
     eventId: string,
     userData: CapiUserData,
     customData: CapiCustomData,
