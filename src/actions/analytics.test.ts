@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { readFile } from "node:fs/promises";
 
 Object.assign(process.env, {
     CLERK_SECRET_KEY: "test",
@@ -207,4 +208,34 @@ test("post-response ViewContent callback contains sender rejection", async () =>
     } finally {
         console.error = originalConsoleError;
     }
+});
+
+test("product page captures request data before scheduling after-response CAPI", async () => {
+    const pageSource = await readFile(
+        new URL("../app/(marketing)/products/[slug]/page.tsx", import.meta.url),
+        "utf8"
+    );
+    const captureCall = pageSource.indexOf(
+        "await captureAndScheduleViewContentCapiAfterResponse("
+    );
+    expect(captureCall).toBeGreaterThan(-1);
+    expect(pageSource).toContain("        after,\n");
+    const analyticsSource = await readFile(
+        new URL("./analytics.ts", import.meta.url),
+        "utf8"
+    );
+    expect(analyticsSource.indexOf("requestData = await captureRequestData()"))
+        .toBeLessThan(analyticsSource.indexOf("scheduleAfterResponse("));
+    expect(pageSource).toContain("import { after } from \"next/server\";");
+});
+
+test("public ViewContent wrapper keeps captured request fields in its payload", async () => {
+    const source = await readFile(new URL("./analytics.ts", import.meta.url), "utf8");
+    expect(source).toContain("export async function trackViewContentCapi(");
+    expect(source).toContain(
+        "await sendViewContentCapi(eventId, userData, customData, url, requestData);"
+    );
+    expect(source).toContain("client_user_agent: requestData.userAgent");
+    expect(source).toContain("client_ip_address: requestData.ip");
+    expect(source).toContain("fb_login_id: userData.external_id");
 });
