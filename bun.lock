@@ -156,6 +156,7 @@
     },
   },
   "overrides": {
+    "@react-pdf/image": "3.1.2",
     "react-is": "^19.0.0-rc-69d4b800-20241021",
   },
   "packages": {
@@ -659,7 +660,7 @@
 
     "@react-pdf/font": ["@react-pdf/font@4.0.4", "", { "dependencies": { "@react-pdf/pdfkit": "^4.1.0", "@react-pdf/types": "^2.9.2", "fontkit": "^2.0.2", "is-url": "^1.2.4" } }, "sha512-8YtgGtL511txIEc9AjiilpZ7yjid8uCd8OGUl6jaL3LIHnrToUupSN4IzsMQpVTCMYiDLFnDNQzpZsOYtRS/Pg=="],
 
-    "@react-pdf/image": ["@react-pdf/image@3.0.4", "", { "dependencies": { "@react-pdf/png-js": "^3.0.0", "jay-peg": "^1.1.1" } }, "sha512-z0ogVQE0bKqgXQ5smgzIU857rLV7bMgVdrYsu3UfXDDLSzI7QPvzf6MFTFllX6Dx2rcsF13E01dqKPtJEM799g=="],
+    "@react-pdf/image": ["@react-pdf/image@3.1.2", "", { "dependencies": { "@react-pdf/svg": "^1.1.1", "jay-peg": "^1.1.1", "png-js": "^2.0.0" } }, "sha512-89vlvZCCv1hPunFtyeS2rJTRL8h2yYmTI97AM4ppibS79zGsPFbqz/YrAunndcHB9uwGdn5S3+5k18mj0L2vkg=="],
 
     "@react-pdf/layout": ["@react-pdf/layout@4.4.2", "", { "dependencies": { "@react-pdf/fns": "3.1.2", "@react-pdf/image": "^3.0.4", "@react-pdf/primitives": "^4.1.1", "@react-pdf/stylesheet": "^6.1.2", "@react-pdf/textkit": "^6.1.0", "@react-pdf/types": "^2.9.2", "emoji-regex-xs": "^1.0.0", "queue": "^6.0.1", "yoga-layout": "^3.2.1" } }, "sha512-gNu2oh8MiGR+NJZYTJ4c4q0nWCESBI6rKFiodVhE7OeVAjtzZzd6l65wsN7HXdWJqOZD3ttD97iE+tf5SOd/Yg=="],
 
@@ -676,6 +677,8 @@
     "@react-pdf/renderer": ["@react-pdf/renderer@4.3.2", "", { "dependencies": { "@babel/runtime": "^7.20.13", "@react-pdf/fns": "3.1.2", "@react-pdf/font": "^4.0.4", "@react-pdf/layout": "^4.4.2", "@react-pdf/pdfkit": "^4.1.0", "@react-pdf/primitives": "^4.1.1", "@react-pdf/reconciler": "^2.0.0", "@react-pdf/render": "^4.3.2", "@react-pdf/types": "^2.9.2", "events": "^3.3.0", "object-assign": "^4.1.1", "prop-types": "^15.6.2", "queue": "^6.0.1" }, "peerDependencies": { "react": "^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-EhPkj35gO9rXIyyx29W3j3axemvVY5RigMmlK4/6Ku0pXB8z9PEE/sz4ZBOShu2uot6V4xiCR3aG+t9IjJJlBQ=="],
 
     "@react-pdf/stylesheet": ["@react-pdf/stylesheet@6.1.2", "", { "dependencies": { "@react-pdf/fns": "3.1.2", "@react-pdf/types": "^2.9.2", "color-string": "^1.9.1", "hsl-to-hex": "^1.0.0", "media-engine": "^1.0.3", "postcss-value-parser": "^4.1.0" } }, "sha512-E3ftGRYUQGKiN3JOgtGsLDo0hGekA6dmkmi/MYACytmPTKxQRBSO3126MebmCq+t1rgU9uRlREIEawJ+8nzSbw=="],
+
+    "@react-pdf/svg": ["@react-pdf/svg@1.1.1", "", { "dependencies": { "@react-pdf/primitives": "^4.4.0" } }, "sha512-m1GmGxV2wg/3VpoQ0aCJ598fBedCCfN+HtxKx1lq5kdwUWEaTbfXI1DGFAUedprFDd/i24okKFaUhV/KVZIqIQ=="],
 
     "@react-pdf/textkit": ["@react-pdf/textkit@6.1.0", "", { "dependencies": { "@react-pdf/fns": "3.1.2", "bidi-js": "^1.0.2", "hyphen": "^1.6.4", "unicode-properties": "^1.4.1" } }, "sha512-sFlzDC9CDFrJsnL3B/+NHrk9+Advqk7iJZIStiYQDdskbow8GF/AGYrpIk+vWSnh35YxaGbHkqXq53XOxnyrjQ=="],
 
@@ -2753,11 +2756,15 @@
 
     "@puppeteer/browsers/semver": ["semver@7.7.3", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q=="],
 
+    "@react-pdf/image/png-js": ["png-js@2.0.0", "", { "dependencies": { "fflate": "^0.8.2" } }, "sha512-GdzJuUMc6ZSpxFJWVxtOH1bzYHym+TOnveqUjb+VJIbZWbZzyiRGFiKhbiielfpYbgMlhHVhsJ0FTazfuRFkMA=="],
+
     "@react-pdf/reconciler/scheduler": ["scheduler@0.25.0-rc-603e6108-20241029", "", {}, "sha512-pFwF6H1XrSdYYNLfOcGlM28/j8CGLu8IvdrxqhjWULe2bPcKiKW4CV+OWqR/9fT52mywx65l7ysNkjLKBda7eA=="],
 
     "@react-pdf/render/color-string": ["color-string@1.9.1", "", { "dependencies": { "color-name": "^1.0.0", "simple-swizzle": "^0.2.2" } }, "sha512-shrVawQFojnZv6xM40anx4CkoDP+fZsw/ZerEMsW/pyzsRbElpsL/DBVW7q3ExxwusdNXI3lXpuhEZkzs8p5Eg=="],
 
     "@react-pdf/stylesheet/color-string": ["color-string@1.9.1", "", { "dependencies": { "color-name": "^1.0.0", "simple-swizzle": "^0.2.2" } }, "sha512-shrVawQFojnZv6xM40anx4CkoDP+fZsw/ZerEMsW/pyzsRbElpsL/DBVW7q3ExxwusdNXI3lXpuhEZkzs8p5Eg=="],
+
+    "@react-pdf/svg/@react-pdf/primitives": ["@react-pdf/primitives@4.4.0", "", {}, "sha512-BFpuhNH6ffSFjTTMnpdUoZxWoXdhPmFDdrSVBl0i/zMR4yDTEfYOW3AcfjjmNIOpm9+LnIXbgELLklQJ+nD3oA=="],
 
     "@smithy/abort-controller/tslib": ["tslib@2.8.0", "", {}, "sha512-jWVzBLplnCmoaTr13V9dYbiQ99wvZRd0vNWaDRg+aVYRcjDF3nDksxFDE/+fkXnKhpnUUkmx5pK/v8mCtLVqZA=="],
 
