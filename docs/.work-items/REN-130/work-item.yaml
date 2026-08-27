@@ -75,7 +75,8 @@ flows:
       state_transitions: [auth_form, initiation_event, verification_or_redirect]
     - id: FLOW-130-002
       description: Complete verification/OAuth, emit completion once, and preserve existing session activation and redirect.
-      state_transitions: [verification_or_oauth, completed_event, authenticated_redirect]
+      state_transitions:
+          [verification_or_oauth, completed_event, authenticated_redirect]
 dependencies:
     - id: DEP-130-001
       name: Clerk auth state and PostHog event constants
@@ -160,7 +161,17 @@ critic:
     reviewer: Codex (fresh-context independent critic)
     fresh_context: true
     read_only: true
-    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
     findings:
         - id: CRIT-130-001
           severity: MAJOR
@@ -178,27 +189,3 @@ approval:
     state: APPROVED
     design_blockers: []
     approved_by: Codex (spec owner)
-implementation_review:
-    artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: origin/master
-    base_commit: "b9f0a8c17b691884cc78f9f6f10ebcd5eab82055"
-    head_commit: "17ab9b188b4c9e7e871b0b22051efbd00d30f0b1"
-    pr_url: null
-    material_drift: NO_DRIFT
-    reconciliation:
-        requirements: PASS
-        scenarios: PARTIAL
-        invariants: PASS
-        architecture: PASS
-        security: PASS
-        test_coverage: PARTIAL
-        scope: PASS
-    blocking_findings: []
-    required_actions:
-        - "REV-130-001: Add component-level coverage or complete the documented manual auth matrix for phone/email/password, verification, Google callback, retry, error, and PostHog-unavailable paths."
-    evidence:
-        - "Compared the approved REN-130 contract with the base-to-head diff from b9f0a8c17b691884cc78f9f6f10ebcd5eab82055 to 17ab9b188b4c9e7e871b0b22051efbd00d30f0b1."
-        - "Live phone-first forms emit approved initiation/completion events and the SSO callback records Google completion with a once-per-mount guard."
-        - "The shared helper limits properties to flow/method and catches PostHog capture failures; component matrix coverage remains partial."
-    governance_reentry_required: false

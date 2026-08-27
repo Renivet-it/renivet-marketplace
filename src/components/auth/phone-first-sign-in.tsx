@@ -2,6 +2,7 @@
 
 import {
     captureAuthEvent,
+    captureAuthInitiation,
     getAuthEventProperties,
 } from "@/components/auth/auth-analytics";
 import { resolveEmailPasswordSignIn } from "@/components/auth/email-password-sign-in";
@@ -162,13 +163,6 @@ export function PhoneFirstSignIn() {
 
     const resendOtp = async () => {
         if (!isLoaded) return;
-        if (step === "credentials") {
-            captureAuthEvent(
-                posthog,
-                POSTHOG_EVENTS.AUTH.SIGNIN_INITIATED,
-                getAuthEventProperties("sign-in", method)
-            );
-        }
         setPending(true);
         setError(null);
         setNotice(null);
@@ -214,6 +208,9 @@ export function PhoneFirstSignIn() {
     const submit = async (event: FormEvent) => {
         event.preventDefault();
         if (!isLoaded) return;
+        if (step === "credentials") {
+            captureAuthInitiation(posthog, "sign-in", method);
+        }
         setPending(true);
         setError(null);
         setNotice(null);

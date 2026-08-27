@@ -1,3 +1,5 @@
+import { POSTHOG_EVENTS } from "@/config/posthog";
+
 type AuthMethod = "email" | "google" | "phone";
 type AuthFlow = "sign-in" | "sign-up";
 
@@ -26,4 +28,16 @@ export function captureAuthEvent(
     } catch (error) {
         console.error("Failed to capture auth analytics event:", error);
     }
+}
+
+export function captureAuthInitiation(
+    posthog: PostHogCaptureClient | null | undefined,
+    flow: AuthFlow,
+    method: AuthMethod
+) {
+    captureAuthEvent(
+        posthog,
+        POSTHOG_EVENTS.AUTH.SIGNIN_INITIATED,
+        getAuthEventProperties(flow, method)
+    );
 }

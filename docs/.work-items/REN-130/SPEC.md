@@ -17,3 +17,8 @@ Restore PostHog visibility for the live phone-first sign-in and sign-up funnel b
 - Event properties contain only approved, non-sensitive funnel metadata; phone numbers, passwords, verification codes, and tokens are never sent.
 - Auth success and redirect behavior remain unchanged if PostHog is unavailable.
 
+## Governance re-entry — 2026-08-28
+
+The implementation review identified an implementation-placement defect, not a gap or decision in this contract. `SIGNIN_INITIATED` for phone/email sign-in was placed in the resend-code handler behind a credentials-state condition that cannot be reached from that handler. The approved requirements, scenarios, invariants, architecture, security boundary, integration behavior, and event taxonomy remain unchanged.
+
+Re-entry is approved for the narrow remediation: put the existing safe initiation event on the live credential-submit transition, remove the unreachable placement, and add regression coverage that fails when phone/email sign-in initiation is absent from that transition. The existing L2 Critic findings and approval remain applicable because no contract or boundary changed.
