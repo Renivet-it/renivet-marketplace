@@ -8,7 +8,7 @@
 
 - Linear issue: REN-138; approved contract: `docs/.work-items/REN-138/work-item.yaml`.
 - Base branch and commit: `main`, `52cd5704491e20c3daefacdf81ef20833c4eeb7b`.
-- Head commit: `d90a21694720f00d10ae1e1d60cc3cdbde49fcd0`.
+- Head commit: `aadbe657c7a29d0bc889ca3b2bfdab3861cd7411`.
 - PR: none. The review includes the implementation commits and task-local governance artifacts.
 - Changed implementation areas: `src/lib/fb-capi.ts`, `src/actions/analytics.ts`, the product page, the CAPI dashboard projection, and focused tests.
 
@@ -38,6 +38,8 @@
 - `TEXP-009` and `TEXP-010`: PARTIAL — the implementation seams are tested deterministically, but a runtime-level Next/Vercel `after()` integration test and deployment latency proof remain operational follow-ups.
 - `TEXP-012` and `TEXP-013`: FOLLOW-UP — compare Vercel duration/error signatures and verify deployed abort behavior after release.
 - `TEXP-014`: PASS — diagnostics and persisted typed responses are redacted and do not add token exposure.
+
+The follow-up build failure reported by Vercel was fixed in `aadbe657`: synchronous ViewContent helper factories were moved out of the `"use server"` module, leaving its exported actions async as required by Next.js.
 
 ## Findings
 
