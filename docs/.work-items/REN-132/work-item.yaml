@@ -1,0 +1,198 @@
+schema_version: "1.0"
+task:
+    id: REN-132
+    title: Reconcile add_to_cart vs cart_added (4.3x discrepancy)
+    source: linear
+    branch: ayanganguly333/ren-129-130-131-132
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-132/reconcile-add-to-cart-vs-cart-added-43x-discrepancy
+        priority: Medium
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Customer Tracking & Analytics Instrumentation
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Changes the source of truth for a core commerce funnel metric used in dashboards and reports.
+        - Existing client tracking also drives Meta Pixel/CAPI, so an apparently simple rename/removal can change an external advertising integration.
+        - Historical analytics cannot be safely rewritten without an explicit data policy.
+    escalation_history:
+        - L2_to_L3: Event deletion/re-scoping and external Meta behavior require explicit boundary decisions.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, project, status, relations, and comments
+        - Client add-to-cart hook, server cart route, event constants, and Meta side effects
+        - Existing dashboard/report references found by repository search
+        - Retry, optimistic failure, eventual consistency, identity, privacy, and historical data implications
+    excluded_areas:
+        - PostHog/Meta historical data mutation and dashboard production settings; external access unavailable
+        - Cart database behavior, inventory, checkout, and payment state changes
+        - Application source/tests; read-only SPEC boundary
+    dependencies: [DEP-132-001, DEP-132-002]
+    integrations: [INT-132-001, INT-132-002]
+    security_boundaries: [SEC-132-001]
+    state_transitions:
+        - cart_click -> optimistic_event_or_pending
+        - persistence_success -> canonical_cart_added
+        - persistence_failure -> no_canonical_event
+    related_tests: [TEXP-132-001, TEXP-132-002, TEXP-132-003]
+    uncertainties:
+        - Complete production inventory of PostHog dashboards and Meta consumers is unavailable.
+        - The desired treatment of historical `add_to_cart` data is unspecified.
+requirements:
+    - id: REQ-132-001
+      description: Select and document one canonical add-to-cart event for business reporting.
+      type: explicit
+    - id: REQ-132-002
+      description: Define optimistic, server-confirmed, retry, failure, guest, and eventual-consistency semantics for canonical counts.
+      type: inferred
+    - id: REQ-132-003
+      description: Preserve cart persistence and external Meta behavior unless separately approved, and do not mutate historical analytics without an explicit decision.
+      type: inferred
+scenarios:
+    - id: SCN-132-001
+      requirement_ids: [REQ-132-001]
+      description: A successfully persisted cart addition contributes exactly to the canonical reporting event.
+    - id: SCN-132-002
+      requirement_ids: [REQ-132-002]
+      description: Repeated clicks, optimistic client failure, server retry, guest capture, and delayed confirmation do not ambiguously inflate canonical counts.
+    - id: SCN-132-003
+      requirement_ids: [REQ-132-003]
+      description: Cart state, inventory, checkout, Meta Pixel/CAPI behavior, identity privacy, and historical records remain unchanged outside the approved scope.
+invariants:
+    - id: INV-132-001
+      description: The canonical event represents the approved business definition consistently across all reports.
+    - id: INV-132-002
+      description: A failed persistence operation cannot be counted as a server-confirmed canonical add.
+    - id: INV-132-003
+      description: Event reconciliation cannot delete or rewrite historical data or alter Meta behavior without explicit approval.
+flows:
+    - id: FLOW-132-001
+      description: Observe add-to-cart intent, persist cart state, and emit or map the canonical event according to the selected policy.
+      state_transitions: [cart_click, optimistic_event_or_pending, persistence_success, canonical_cart_added]
+    - id: FLOW-132-002
+      description: Inventory event consumers, dashboards, reports, and external Meta consumers; re-scope only the approved consumers.
+      state_transitions: [event_produced, consumer_inventory, consumer_migrated_or_unchanged]
+dependencies:
+    - id: DEP-132-001
+      name: cart persistence and server cart route
+      purpose: Source of confirmed cart state.
+      owner: Cart-domain maintainers
+      required_state: Stable success/failure result and retry behavior.
+      description: The server route emits `cart_added` after cart operations.
+      status: resolved
+    - id: DEP-132-002
+      name: analytics dashboards and Meta consumers
+      purpose: Downstream event semantics and external advertising tracking.
+      owner: Analytics/marketing maintainers
+      required_state: Consumer inventory and approved migration plan.
+      description: Client `add_to_cart` also feeds FB Pixel/CAPI in the existing hook.
+      status: unresolved
+integrations:
+    - id: INT-132-001
+      system: PostHog
+      purpose: Add-to-cart reporting.
+      failure_mode: Event delivery failure, duplicate capture, or mixed taxonomy.
+      retry_idempotency: Canonical event needs stable semantics under client/server retries.
+    - id: INT-132-002
+      system: Meta Pixel/CAPI
+      purpose: Advertising conversion tracking.
+      failure_mode: Removing/re-scoping client capture can alter external campaign signals.
+      retry_idempotency: Existing event ID/CAPI behavior must remain unchanged unless approved.
+personas:
+    - id: PER-132-001
+      role: storefront_customer
+      applicability: Users adding products as guests or authenticated users.
+    - id: PER-132-002
+      role: analytics_and_marketing_operator
+      applicability: Users relying on PostHog or Meta funnel metrics.
+security_boundaries:
+    - id: SEC-132-001
+      description: Reconciliation must not broaden customer identity or personal data sent to analytics/advertising systems.
+business_rules:
+    - id: BR-132-001
+      description: The reported add-to-cart rate must have one stable, documented denominator and event definition.
+decisions:
+    - id: DEC-132-001
+      question: Should `add_to_cart` be removed, re-scoped to intent/UX analysis, or retained as a separate external Meta event while `cart_added` becomes the reporting source of truth?
+      class: HUMAN_CONFIRMATION
+      status: unresolved
+      recommendation: Use server-confirmed `cart_added` for business reporting; retain or re-scope client `add_to_cart` only after the complete dashboard/Meta consumer inventory is confirmed, and do not delete historical data.
+      basis: The issue recommends server confirmation, while the client event also drives Meta Pixel/CAPI.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-132-001
+      category: integration
+      classification: REQUIRED
+      reason: Verifies canonical event behavior after persisted success and absence after persistence failure.
+      scenarios: [SCN-132-001, SCN-132-002]
+    - id: TEXP-132-002
+      category: regression
+      classification: REQUIRED
+      reason: Protects cart persistence, guest/auth behavior, retries, and existing Meta Pixel/CAPI behavior.
+      scenarios: [SCN-132-002, SCN-132-003]
+    - id: TEXP-132-003
+      category: business_uat
+      classification: REQUIRED
+      reason: Audits dashboard/report consumers and compares a fixed historical window without rewriting old events.
+      scenarios: [SCN-132-001, SCN-132-003]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-132-001
+          scenario_ids: [SCN-132-001]
+        - requirement_id: REQ-132-002
+          scenario_ids: [SCN-132-002]
+        - requirement_id: REQ-132-003
+          scenario_ids: [SCN-132-003]
+    scenario_to_invariants:
+        - scenario_id: SCN-132-001
+          invariant_ids: [INV-132-001, INV-132-002]
+        - scenario_id: SCN-132-002
+          invariant_ids: [INV-132-001, INV-132-002]
+        - scenario_id: SCN-132-003
+          invariant_ids: [INV-132-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-132-001
+          test_expectation_ids: [TEXP-132-001, TEXP-132-003]
+        - scenario_id: SCN-132-002
+          test_expectation_ids: [TEXP-132-001, TEXP-132-002]
+        - scenario_id: SCN-132-003
+          test_expectation_ids: [TEXP-132-002, TEXP-132-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-132-001
+          severity: MAJOR
+          references: [REQ-132-001, FLOW-132-002]
+          description: Consumer inventory is required before changing event names or reporting sources.
+        - id: CRIT-132-002
+          severity: MAJOR
+          references: [REQ-132-002, INV-132-002]
+          description: Delayed confirmation and retries need explicit canonical-count semantics.
+        - id: CRIT-132-003
+          severity: DESIGN_BLOCKER
+          references: [REQ-132-003, DEC-132-001]
+          description: Historical deletion and Meta behavior boundaries require human confirmation.
+        - id: CRIT-132-004
+          severity: MINOR
+          references: [TEXP-132-003]
+          description: Use a fixed-window before/after comparison and document no historical rewrite.
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-132-001]
+    approved_by: null
