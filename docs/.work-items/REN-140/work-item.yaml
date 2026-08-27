@@ -1,0 +1,226 @@
+schema_version: "1.0"
+task:
+    id: REN-140
+    title: Redis Connection Reliability
+    source: linear
+    branch: ayanganguly333/ren-140-141-reliability-cleanup
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-140/redis-connection-reliability
+        priority: Medium
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Shared external Redis integration affects many public, authenticated, webhook, cron, finance, and reporting paths.
+        - Timeout and retry changes alter request latency and failure behavior.
+        - User-context hydration and revenue/analytics writes have different consistency consequences.
+    escalation_history:
+        - L1_to_L2: Shared Redis integration and direct awaited calls were confirmed during repository investigation.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, relations, status, branch context, and comments
+        - Shared ioredis constructor and environment validation
+        - Redis method layer and representative cache, context, analytics, revenue, and Shiprocket paths
+        - Repository-wide Redis imports and test inventory
+        - Retry, timeout, failure, recovery, consistency, authorization, and observability implications
+    excluded_areas:
+        - Production Vercel logs, because no log connector was available in this session
+        - Upstash documentation and exact recommended numeric values, to be confirmed during implementation design
+        - Application source, tests, schemas, migrations, configuration, and production data; read-only governance boundary
+    dependencies: [DEP-001]
+    integrations: [INT-001]
+    security_boundaries: [SEC-001]
+    state_transitions:
+        - redis_unavailable -> bounded_retry -> success_or_policy_defined_failure
+        - cache_miss -> database_fallback -> cache_repopulation_or_policy_defined_failure
+    related_tests:
+        - TEXP-001
+        - TEXP-002
+        - TEXP-003
+    uncertainties:
+        - The approved policy treats analytics and revenue failures as visible caller failures; no silent data loss is introduced by client configuration.
+        - Whether runtime error queries can be run is dependent on access to Vercel observability.
+requirements:
+    - id: REQ-001
+      description: Configure the shared ioredis client with explicit bounded connection and command retry behavior suitable for serverless execution.
+      type: explicit
+    - id: REQ-002
+      description: Preserve the approved failure semantics for each Redis operation class when the timeout or retry budget is exhausted.
+      type: inferred
+    - id: REQ-003
+      description: Preserve Redis key formats, TTLs, data formats, authorization behavior, payment/order behavior, and external provider contracts.
+      type: inferred
+    - id: REQ-004
+      description: Provide deterministic regression coverage and production observability checks for the connection failure signatures.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001]
+      description: A Redis connection attempt to an unavailable endpoint stops within the configured connection and retry budget.
+    - id: SCN-002
+      requirement_ids: [REQ-002]
+      description: Each operation class follows its human-approved behavior after Redis exhaustion, including authenticated context hydration and analytics/revenue writes.
+    - id: SCN-003
+      requirement_ids: [REQ-003]
+      description: Normal Redis success, cache miss fallback, user authorization, and existing data operations remain behaviorally compatible.
+    - id: SCN-004
+      requirement_ids: [REQ-004]
+      description: Focused tests and post-deployment log/latency checks detect regressions in timeout, retries, TLS disconnects, and request impact.
+invariants:
+    - id: INV-001
+      description: Redis retry behavior is finite and cannot create an unbounded request-lifetime retry loop.
+    - id: INV-002
+      description: Redis availability never grants authorization or changes authenticated identity; cache failure cannot bypass the database/auth boundary.
+    - id: INV-003
+      description: A Redis failure cannot silently change financial or order state semantics without the approved operation-class policy.
+flows:
+    - id: FLOW-001
+      description: Create the shared client, attempt connection, apply bounded retries, and reach success or policy-defined failure.
+      state_transitions: [redis_unavailable, bounded_retry, success_or_policy_defined_failure]
+    - id: FLOW-002
+      description: Execute representative cache/context/analytics/revenue operations and verify their approved fallback or failure behavior.
+      state_transitions: [operation_started, redis_success_or_failure, caller_continues_or_fails_by_policy]
+dependencies:
+    - id: DEP-001
+      name: ioredis and Upstash-compatible Redis endpoint
+      purpose: Shared Redis client and external cache/data service.
+      owner: Application/platform maintainers and Redis provider
+      required_state: Current supported client behavior and provider guidance for bounded serverless connection retries.
+      description: The client currently uses ioredis defaults against REDIS_URL.
+      status: resolved
+integrations:
+    - id: INT-001
+      system: Redis/Upstash
+      purpose: Cache, authenticated user hydration, Shiprocket token cache, analytics, and revenue tracking.
+      failure_mode: Connection timeout, reconnect, TLS disconnect, or command exhaustion.
+      retry_idempotency: Reads and cache writes are generally repeatable; analytics/revenue writes require explicit duplicate/loss policy.
+personas:
+    - id: PER-001
+      role: storefront_user
+      applicability: Public and authenticated requests may transit Redis-backed reads.
+    - id: PER-002
+      role: operations_and_finance_user
+      applicability: Dashboards and reporting consume analytics/revenue paths.
+security_boundaries:
+    - id: SEC-001
+      description: Authentication context remains established by Clerk/database logic; Redis is not an authorization source of truth.
+business_rules:
+    - id: BR-001
+      description: Financial, order, and authorization semantics must not be weakened by a cache reliability change.
+decisions:
+    - id: DEC-001
+      question: What failure behavior applies to cache reads, cache writes, context hydration, analytics, revenue tracking, and Shiprocket token caching after bounded retries are exhausted?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Cache reads fall back, cache writes are best-effort, auth context falls back to the database without bypassing authorization, Shiprocket cache misses fetch a fresh token, and analytics/revenue failures remain visible.
+      basis: Repository evidence shows direct awaits across operation classes with different consistency and security consequences.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies explicit timeout/retry settings and finite retry behavior without a live provider.
+      scenarios: [SCN-001]
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Verifies success, unavailable Redis, recovery, and operation-class failure policy.
+      scenarios: [SCN-002, SCN-003]
+    - id: TEXP-003
+      category: regression
+      classification: REQUIRED
+      reason: Protects existing cache keys, TTLs, auth context, payment/order paths, and analytics/revenue behavior.
+      scenarios: [SCN-003]
+    - id: TEXP-004
+      category: exploratory
+      classification: REQUIRED
+      reason: Requires post-deployment ETIMEDOUT/TLS log queries and latency comparison.
+      scenarios: [SCN-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids: [SCN-001]
+        - requirement_id: REQ-002
+          scenario_ids: [SCN-002]
+        - requirement_id: REQ-003
+          scenario_ids: [SCN-003]
+        - requirement_id: REQ-004
+          scenario_ids: [SCN-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids: [INV-001]
+        - scenario_id: SCN-002
+          invariant_ids: [INV-002, INV-003]
+        - scenario_id: SCN-003
+          invariant_ids: [INV-002, INV-003]
+        - scenario_id: SCN-004
+          invariant_ids: [INV-001]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids: [TEXP-001]
+        - scenario_id: SCN-002
+          test_expectation_ids: [TEXP-002]
+        - scenario_id: SCN-003
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-004
+          test_expectation_ids: [TEXP-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-002, SCN-002]
+          description: Operation-class failure semantics are not confirmed and cannot be inferred safely from the constructor-only issue.
+        - id: CRIT-002
+          severity: MAJOR
+          references: [REQ-001, SCN-003]
+          description: Numeric timeout and retry bounds are not yet specified.
+        - id: CRIT-003
+          severity: MINOR
+          references: [REQ-004, SCN-004]
+          description: Redis-focused deterministic tests are absent from the repository.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner confirmation)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: ayanganguly333/ren-169-replace-url-parse-react-pdf-image
+    base_commit: "a68132340376b8841d26b88e2991f7c7f851014b"
+    head_commit: "a68132340376b8841d26b88e2991f7c7f851014b"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Rerun bun run build in a clean checkout or CI environment and query Vercel runtime errors and latency after deployment."
+    evidence:
+        - "Compared the approved REN-140 contract with the uncommitted Redis implementation diff from HEAD a68132340376b8841d26b88e2991f7c7f851014b."
+        - "The focused Redis regression test and full bun test suite completed with 118 passing tests, 1 skipped test, and 0 failures."
+        - "bun run build timed out after five minutes in the occupied checkout; Vercel runtime verification was unavailable."
+    governance_reentry_required: false

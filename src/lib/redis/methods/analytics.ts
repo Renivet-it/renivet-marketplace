@@ -1,6 +1,6 @@
 import { getDate } from "@/lib/utils";
 import { parse } from "date-fns";
-import { redis } from "..";
+import { criticalRedis as redis } from "..";
 
 class Analytics {
     async track({
