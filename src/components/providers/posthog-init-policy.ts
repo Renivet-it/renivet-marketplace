@@ -1,0 +1,1 @@
+export const POSTHOG_INIT_DELAY_MS = 1500;
