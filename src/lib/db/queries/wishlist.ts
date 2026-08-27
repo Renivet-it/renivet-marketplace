@@ -1,5 +1,9 @@
 import { mediaCache } from "@/lib/redis/methods";
-import { cachedWishlistSchema, CreateWishlist } from "@/lib/validations";
+import {
+    cachedWishlistSchema,
+    CreateWishlist,
+} from "@/lib/validations";
+import { sanitizeWishlistQuantities } from "@/lib/validations/wishlist-quantities";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "..";
 import { products, wishlists } from "../schema";
@@ -83,7 +87,9 @@ class UserWishlistQuery {
             product: enhancedProducts.find((p) => p.id === d.productId)!,
         }));
 
-        const parsed = cachedWishlistSchema.array().parse(enhancedData);
+        const parsed = cachedWishlistSchema.array().parse(
+            enhancedData.map(sanitizeWishlistQuantities)
+        );
         return parsed;
     }
 
@@ -143,7 +149,9 @@ class UserWishlistQuery {
             product: enhancedProduct,
         };
 
-        const parsed = cachedWishlistSchema.optional().parse(enhancedData);
+        const parsed = cachedWishlistSchema.optional().parse(
+            sanitizeWishlistQuantities(enhancedData)
+        );
         return parsed;
     }
 
