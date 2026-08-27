@@ -8,5 +8,6 @@ Findings:
 - `MAJOR` CRIT-129-002 — SCN-129-002: the design must distinguish pageview/event capture from session recording; disabling recording does not by itself prove the chosen PostHog initialization path is performant or privacy-safe.
 - `MINOR` CRIT-129-003 — TEXP-129-003: measurement should include fast exits and in-app-browser-like short sessions, not only a normal desktop visit.
 
-Category coverage: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies. Authentication and authorization are not changed; this is explicitly excluded from the task boundary.
+Resolution: The owner selected a reversible 1–2 second delay. The remaining findings are implementation and verification requirements; the original PageSpeed baseline should still be recorded during validation.
 
+Category coverage: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, and assumptions/dependencies. Authentication and authorization are not changed; this is explicitly excluded from the task boundary.

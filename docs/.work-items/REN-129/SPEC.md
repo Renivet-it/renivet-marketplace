@@ -19,7 +19,6 @@ Reassess the five-second delayed PostHog browser initialization and select a mea
 - Existing PostHog host/key configuration, identity reset behavior, and event names remain compatible.
 - Tests cover initialization timing, cleanup, capture availability, and failure-safe behavior.
 
-## Decision gate
+## Approved decision
 
-The original PageSpeed target and acceptable regression budget are unavailable. A developer must confirm the performance budget or approve a staged experiment before choosing immediate initialization versus a shorter delay.
-
+Reduce the five-second delay to approximately 1–2 seconds. This is the smaller, reversible change: it narrows the early-visit capture gap while preserving the existing PostHog/session-recording configuration. Measure the resulting mobile and short-session capture/performance behavior after implementation before considering immediate initialization.
