@@ -1,5 +1,8 @@
 import { randomUUID } from "crypto";
-import { trackViewContentCapi } from "@/actions/analytics";
+import {
+    getCapiRequestData,
+    scheduleViewContentCapiAfterResponse,
+} from "@/actions/analytics";
 import { GeneralShell } from "@/components/globals/layouts";
 import {
     StorefrontBreadcrumbs,
@@ -22,6 +25,7 @@ import { cn, getAbsoluteURL } from "@/lib/utils";
 import { currentUser } from "@clerk/nextjs/server";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { Suspense } from "react";
 
 interface PageProps {
@@ -235,7 +239,10 @@ async function ProductFetch({ params }: PageProps) {
         )?.externalId,
     };
 
-    trackViewContentCapi(
+    const requestData = await getCapiRequestData();
+
+    scheduleViewContentCapiAfterResponse(
+        after,
         eventId,
         userData,
         {
@@ -248,8 +255,9 @@ async function ProductFetch({ params }: PageProps) {
             value: parseFloat(priceInRupees),
             currency: "INR",
         },
-        getAbsoluteURL(`/products/${slug}`)
-    ).catch((err) => console.error("Failed to send ViewContent CAPI:", err));
+        getAbsoluteURL(`/products/${slug}`),
+        requestData
+    );
 
     const jsonLd = {
         "@context": "https://schema.org",
