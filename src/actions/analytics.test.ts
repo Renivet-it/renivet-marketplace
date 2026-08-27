@@ -28,6 +28,7 @@ Object.assign(process.env, {
 });
 
 const analytics = await import("./analytics");
+const viewContent = await import("../lib/capi-view-content");
 
 const requestData = {
     userAgent: "Mozilla/5.0",
@@ -51,7 +52,7 @@ test("request-free ViewContent sender forwards captured request data", async () 
     const send = async (...args: unknown[]) => {
         sentEvents.push(args);
     };
-    const sendViewContent = analytics.createViewContentCapiSender(send);
+    const sendViewContent = viewContent.createViewContentCapiSender(send);
 
     await sendViewContent(...eventArguments, requestData);
 
@@ -81,11 +82,31 @@ test("all public analytics wrappers retain four arguments", () => {
     expect(analytics.trackViewContentCapi.length).toBe(4);
 });
 
+test("server action module does not export synchronous helper factories", async () => {
+    const source = await readFile(
+        new URL("./analytics.ts", import.meta.url),
+        "utf8"
+    );
+
+    expect(source).not.toContain(
+        "export function createViewContentCapiSender("
+    );
+    expect(source).not.toContain(
+        "export function createViewContentCapiAfterResponseScheduler("
+    );
+    expect(source).not.toContain(
+        "export function createViewContentCapiAfterResponseCaptureScheduler("
+    );
+    expect(source).not.toContain(
+        "export const scheduleViewContentCapiAfterResponse ="
+    );
+});
+
 test("product lifecycle captures request data before after registration", async () => {
     const lifecycle: string[] = [];
     let afterCallback: (() => void) | undefined;
     const schedule =
-        analytics.createViewContentCapiAfterResponseCaptureScheduler(
+        viewContent.createViewContentCapiAfterResponseCaptureScheduler(
             async () => {
                 lifecycle.push("capture");
                 return requestData;
@@ -118,7 +139,7 @@ test("product lifecycle contains request-data capture failures without schedulin
     let registered = false;
     console.error = (...args: unknown[]) => reports.push(args);
     const schedule =
-        analytics.createViewContentCapiAfterResponseCaptureScheduler(
+        viewContent.createViewContentCapiAfterResponseCaptureScheduler(
             async () => {
                 throw new Error(secret);
             },
@@ -153,7 +174,7 @@ test("post-response ViewContent registration contains synchronous registration f
     const reports: unknown[][] = [];
     const originalConsoleError = console.error;
     console.error = (...args: unknown[]) => reports.push(args);
-    const schedule = analytics.createViewContentCapiAfterResponseScheduler(
+    const schedule = viewContent.createViewContentCapiAfterResponseScheduler(
         async () => {}
     );
 
@@ -183,7 +204,7 @@ test("post-response ViewContent callback contains sender rejection", async () =>
     const reports: unknown[][] = [];
     const originalConsoleError = console.error;
     console.error = (...args: unknown[]) => reports.push(args);
-    const schedule = analytics.createViewContentCapiAfterResponseScheduler(
+    const schedule = viewContent.createViewContentCapiAfterResponseScheduler(
         async () => {
             throw new Error("Meta is unavailable");
         }
@@ -219,26 +240,27 @@ test("product page captures request data before scheduling after-response CAPI",
         "await captureAndScheduleViewContentCapiAfterResponse("
     );
     expect(captureCall).toBeGreaterThan(-1);
-    expect(pageSource).toContain("        after,\n");
+    expect(pageSource.replace(/\r\n/g, "\n")).toContain("        after,\n");
     const analyticsSource = await readFile(
         new URL("./analytics.ts", import.meta.url),
         "utf8"
     );
+    const viewContentSource = await readFile(
+        new URL("../lib/capi-view-content.ts", import.meta.url),
+        "utf8"
+    );
     expect(
-        analyticsSource.indexOf("requestData = await captureRequestData()")
-    ).toBeLessThan(analyticsSource.indexOf("scheduleAfterResponse("));
+        viewContentSource.indexOf("requestData = await captureRequestData()")
+    ).toBeLessThan(viewContentSource.indexOf("scheduleAfterResponse("));
     expect(pageSource).toContain('import { after } from "next/server";');
 });
 
 test("public ViewContent wrapper keeps captured request fields in its payload", async () => {
     const source = await readFile(
-        new URL("./analytics.ts", import.meta.url),
+        new URL("../lib/capi-view-content.ts", import.meta.url),
         "utf8"
     );
-    expect(source).toContain("export async function trackViewContentCapi(");
-    expect(source).toContain(
-        "await sendViewContentCapi(eventId, userData, customData, url, requestData);"
-    );
+    expect(source).toContain('"ViewContent",');
     expect(source).toContain("client_user_agent: requestData.userAgent");
     expect(source).toContain("client_ip_address: requestData.ip");
     expect(source).toContain("fb_login_id: userData.external_id");
