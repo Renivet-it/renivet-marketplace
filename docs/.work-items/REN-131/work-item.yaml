@@ -133,7 +133,7 @@ decisions:
       basis: Owner selected one event per complete checkout.
       confidence: high
       consequence: high
-      human_confirmation_required: false
+      human_confirmation_required: true
 test_expectations:
     - id: TEXP-131-001
       category: integration
