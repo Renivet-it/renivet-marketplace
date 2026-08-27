@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { captureAuthEvent, getAuthEventProperties } from "./auth-analytics";
+import {
+    captureAuthEvent,
+    getAuthEventProperties,
+    getAuthFlowFromRedirect,
+} from "./auth-analytics";
 
 describe("auth analytics", () => {
     test("builds safe funnel properties without credentials or contact values", () => {
@@ -22,5 +26,11 @@ describe("auth analytics", () => {
                 method: "email",
             })
         ).not.toThrow();
+    });
+
+    test("maps the SSO callback marker to the auth flow", () => {
+        expect(getAuthFlowFromRedirect("sign-up")).toBe("sign-up");
+        expect(getAuthFlowFromRedirect("sign-in")).toBe("sign-in");
+        expect(getAuthFlowFromRedirect(null)).toBe("sign-in");
     });
 });

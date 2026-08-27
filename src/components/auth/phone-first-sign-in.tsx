@@ -151,7 +151,7 @@ export function PhoneFirstSignIn() {
         try {
             await signIn.authenticateWithRedirect({
                 strategy: "oauth_google",
-                redirectUrl: "/auth/sso-callback",
+                redirectUrl: "/auth/sso-callback?flow=sign-in",
                 redirectUrlComplete: "/",
             });
         } catch (value) {

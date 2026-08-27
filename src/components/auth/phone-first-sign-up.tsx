@@ -81,7 +81,7 @@ export function PhoneFirstSignUp() {
             await signUp.authenticateWithRedirect({
                 strategy: "oauth_google",
                 legalAccepted: true,
-                redirectUrl: "/auth/sso-callback",
+                redirectUrl: "/auth/sso-callback?flow=sign-up",
                 redirectUrlComplete: "/",
             });
         } catch (value) {

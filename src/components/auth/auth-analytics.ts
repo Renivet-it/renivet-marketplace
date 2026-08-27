@@ -12,6 +12,10 @@ export function getAuthEventProperties(
     return { flow, method };
 }
 
+export function getAuthFlowFromRedirect(value: string | null): AuthFlow {
+    return value === "sign-up" ? "sign-up" : "sign-in";
+}
+
 export function captureAuthEvent(
     posthog: PostHogCaptureClient | null | undefined,
     event: string,
