@@ -92,9 +92,9 @@ dependencies:
       name: analytics dashboards and Meta consumers
       purpose: Downstream event semantics and external advertising tracking.
       owner: Analytics/marketing maintainers
-      required_state: Consumer inventory and approved migration plan.
+      required_state: Consumer inventory is checked during implementation; approved migration boundary is PostHog reporting only, with Meta behavior preserved.
       description: Client `add_to_cart` also feeds FB Pixel/CAPI in the existing hook.
-      status: unresolved
+      status: resolved
 integrations:
     - id: INT-132-001
       system: PostHog
