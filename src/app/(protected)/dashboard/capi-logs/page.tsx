@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/pagination-dash";
 import { Skeleton } from "@/components/ui/skeleton";
 import { trpc } from "@/lib/trpc/client";
+import { getCapiLogDisplay } from "./status";
 import { format } from "date-fns";
 import { Copy, Download, Filter } from "lucide-react";
 import { useState } from "react";
@@ -122,7 +123,7 @@ export default function CapiLogsPage() {
                     log.id,
                     log.eventName,
                     log.eventId,
-                    log.status,
+                    getCapiLogDisplay(log.status, log.response).label,
                     log.createdAt
                         ? format(
                               new Date(log.createdAt),
@@ -430,14 +431,18 @@ export default function CapiLogsPage() {
                                         <td className="whitespace-nowrap px-4 py-3">
                                             <Badge
                                                 variant={
-                                                    log.status === "success"
-                                                        ? "default"
-                                                        : "destructive"
+                                                    getCapiLogDisplay(
+                                                        log.status,
+                                                        log.response
+                                                    ).variant
                                                 }
                                             >
-                                                {log.status === "success"
-                                                    ? "Success"
-                                                    : "Failed"}
+                                                {
+                                                    getCapiLogDisplay(
+                                                        log.status,
+                                                        log.response
+                                                    ).label
+                                                }
                                             </Badge>
                                         </td>
 
