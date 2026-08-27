@@ -1,0 +1,148 @@
+schema_version: "1.0"
+task:
+    id: REN-169
+    title: Replace legacy url.parse usage from @react-pdf/image
+    source: linear
+    branch: ayanganguly333/ren-169-replace-url-parse-react-pdf-image
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-169/replace-legacy-urlparse-usage-from-react-pdfimage
+        priority: High
+        labels: [security]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - The change updates a transitive runtime dependency used by PDF/image rendering.
+        - No authentication, payment, database, customer data, or provider contract is changed.
+        - The dependency change is reversible through the lockfile and package manifest.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Node warning text and Node 24 runtime context
+        - Repository-wide application source for direct url.parse usage
+        - Installed @react-pdf/image implementation and package versions
+        - React PDF package relationship and existing test/build scripts
+    excluded_areas:
+        - Application route, API, database, authentication, and provider logic
+        - Production secrets and external service configuration
+        - Broad dependency upgrades unrelated to the warning
+    dependencies: [DEP-001]
+    integrations: []
+    security_boundaries: []
+    state_transitions:
+        - legacy_dependency -> updated_dependency
+    related_tests:
+        - src/lib/react-pdf/image-dependency.test.ts
+    uncertainties:
+        - The exact upstream release may be selected by the resolver; the regression test must validate the installed artifact rather than assume a version string.
+requirements:
+    - id: REQ-001
+      description: The installed React PDF image runtime must not execute or contain the legacy url.parse() call responsible for DEP0169.
+      type: explicit
+    - id: REQ-002
+      description: PDF/image rendering behavior and application imports remain compatible with the existing React PDF renderer.
+      type: explicit
+    - id: REQ-003
+      description: The change is limited to dependency metadata/lockfile and focused regression coverage; no unrelated application behavior changes are introduced.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001]
+      description: The installed @react-pdf/image package is scanned and the deprecated url.parse() implementation is absent after dependency resolution.
+    - id: SCN-002
+      requirement_ids: [REQ-002]
+      description: Existing React PDF/image tests and the production build complete successfully with the updated dependency graph.
+    - id: SCN-003
+      requirement_ids: [REQ-003]
+      description: Diff review confirms only package metadata/lockfile and the focused regression test changed.
+invariants:
+    - id: INV-001
+      description: No runtime dependency used by the application may reintroduce the known @react-pdf/image url.parse() call.
+    - id: INV-002
+      description: The dependency update must not alter application route, data, credential, or provider behavior.
+flows:
+    - id: FLOW-001
+      description: Resolve the React PDF dependency graph, load local image code under Node 24, and confirm no DEP0169 source remains.
+      state_transitions: [legacy_dependency -> updated_dependency]
+dependencies:
+    - id: DEP-001
+      name: React PDF image package
+      purpose: Image parsing and local/remote image loading for generated PDF documents.
+      owner: React PDF maintainers
+      required_state: A release compatible with @react-pdf/renderer and free of the legacy url.parse() call.
+      description: The installed transitive package currently contains the deprecated url.parse() call and must resolve to a fixed release.
+      status: resolved
+integrations: []
+personas:
+    - id: PER-001
+      role: release_engineer
+      applicability: Needs a warning-free Node 24 production build.
+security_boundaries: []
+business_rules: []
+decisions:
+    - id: DEC-001
+      question: Should the fix replace the dependency or add an application-level shim?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Upgrade the compatible dependency release; avoid patching Node internals or changing application behavior.
+      basis: The warning originates in third-party code and the upstream package publishes a newer compatible release.
+      confidence: high
+      consequence: low
+test_expectations:
+    - id: TEXP-001
+      category: regression
+      classification: REQUIRED
+      reason: Prevents reintroduction of the exact deprecated call in the resolved dependency.
+      scenarios: [SCN-001]
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Confirms React PDF rendering remains compatible after the dependency update.
+      scenarios: [SCN-002]
+    - id: TEXP-003
+      category: security
+      classification: REQUIRED
+      reason: Confirms the remediation removes a Node deprecation with security implications without broadening scope.
+      scenarios: [SCN-003]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids: [SCN-001]
+        - requirement_id: REQ-002
+          scenario_ids: [SCN-002]
+        - requirement_id: REQ-003
+          scenario_ids: [SCN-003]
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids: [INV-001]
+        - scenario_id: SCN-002
+          invariant_ids: [INV-002]
+        - scenario_id: SCN-003
+          invariant_ids: [INV-002]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids: [TEXP-001]
+        - scenario_id: SCN-002
+          test_expectation_ids: [TEXP-002]
+        - scenario_id: SCN-003
+          test_expectation_ids: [TEXP-003]
+critic:
+    required: false
+    completed: false
+    artifact: null
+    reviewer: null
+    fresh_context: false
+    read_only: true
+    required_categories: []
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner confirmation)
