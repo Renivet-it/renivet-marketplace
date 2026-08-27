@@ -1,6 +1,10 @@
 import { userWishlistQueries } from "@/lib/db/queries";
 import { parseToJSON } from "@/lib/utils";
-import { CachedWishlist, cachedWishlistSchema } from "@/lib/validations";
+import {
+    CachedWishlist,
+    cachedWishlistSchema,
+} from "@/lib/validations";
+import { sanitizeWishlistQuantities } from "@/lib/validations/wishlist-quantities";
 import { redis } from "..";
 
 class UserWishlistCache {
@@ -19,7 +23,7 @@ class UserWishlistCache {
 
             const cachedWishlists = cachedWishlistSchema
                 .array()
-                .parse(dbWishlists)
+                .parse(dbWishlists.map(sanitizeWishlistQuantities))
                 .sort(
                     (a, b) =>
                         new Date(b.createdAt).getTime() -
@@ -36,6 +40,7 @@ class UserWishlistCache {
             cachedWishlists
                 .map((sub) => parseToJSON<CachedWishlist>(sub))
                 .filter((sub): sub is CachedWishlist => sub !== null)
+                .map(sanitizeWishlistQuantities)
                 .sort(
                     (a, b) =>
                         new Date(b.createdAt).getTime() -
@@ -56,13 +61,17 @@ class UserWishlistCache {
             );
             if (!dbWishlist) return null;
 
-            const cachedWishlist = cachedWishlistSchema.parse(dbWishlist);
+            const cachedWishlist = cachedWishlistSchema.parse(
+                sanitizeWishlistQuantities(dbWishlist)
+            );
 
             await this.add(cachedWishlist);
             return dbWishlist;
         }
 
-        return cachedWishlistSchema.parse(parseToJSON(cachedWishlist));
+        return cachedWishlistSchema.parse(
+            sanitizeWishlistQuantities(parseToJSON(cachedWishlist))
+        );
     }
 
     async add(wishlist: CachedWishlist) {
