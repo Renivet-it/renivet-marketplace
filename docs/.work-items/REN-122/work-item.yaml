@@ -3,7 +3,7 @@ task:
   id: REN-122
   title: Network-level request blocking spike for agent-browser runs
   source: linear
-  branch: ayanganguly333/ren-122-network-level-request-blocking-spike-for-agent-browser-runs
+  branch: ayanganguly333/ren-131-132-purchase-cart-analytics
   status: READY_FOR_DEV
   linear:
     url: https://linear.app/renivet/issue/REN-122/network-level-request-blocking-spike-for-agent-browser-runs
