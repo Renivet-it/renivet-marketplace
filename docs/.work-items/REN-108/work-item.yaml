@@ -1,0 +1,270 @@
+schema_version: "1.0"
+task:
+    id: REN-108
+    title: Guest wishlist page missing header/footer entirely
+    source: linear
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-108/guest-wishlist-page-missing-headerfooter-entirely
+        priority: Medium
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Guest Journey QA Findings
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The change composes shared responsive navigation and legal-footer components into a guest route.
+        - Layout changes can affect navigation, hydration, async legal data, and mobile usability.
+        - Guest wishlist state is client-local and must not be coupled to authentication or persistence changes.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue and reported guest journey behavior
+        - Guest wishlist page state and existing content states
+        - GeneralShell, NavbarHome, NavbarMob, and FooterWithLegal composition
+        - Existing cart page as the storefront shell precedent
+        - Guest wishlist localStorage and authentication boundaries
+    excluded_areas:
+        - Wishlist data model, merge-on-login, and product-card business logic
+        - Application source and tests during specification phase
+    dependencies: [DEP-108-001, DEP-108-002, DEP-108-003, DEP-108-004]
+    integrations: [INT-108-001, INT-108-002]
+    security_boundaries: [SEC-108-001]
+    state_transitions: [route_request -> shell_rendered -> wishlist_loading -> empty_or_populated_state -> navigation_or_auth_action]
+    related_tests: [TEXP-108-001, TEXP-108-002, TEXP-108-003, TEXP-108-004]
+    uncertainties:
+        - The referenced journey evidence file is not present in the current checkout; the Linear issue and current route source are the available evidence.
+requirements:
+    - id: REQ-108-001
+      description: Render the standard storefront header/navigation/search/cart affordances and legal footer on /guestWishlist from a server shell boundary.
+      type: explicit
+    - id: REQ-108-002
+      description: Render responsive mobile navigation and preserve usable layout across desktop and mobile viewports.
+      type: explicit
+    - id: REQ-108-003
+      description: Preserve all existing guest wishlist loading, empty, populated, sign-in, removal, and product-link behavior.
+      type: inferred
+    - id: REQ-108-004
+      description: Keep guest wishlist state client-local and do not introduce an authentication requirement or unintended persistence behavior.
+      type: inferred
+    - id: REQ-108-005
+      description: Normalize supported existing guest wishlist storage shapes in the client boundary without changing item identity or destination URLs.
+      type: inferred
+    - id: REQ-108-006
+      description: Preserve wishlist content if legal footer data services fail by using a static legal fallback or documented route error boundary.
+      type: inferred
+scenarios:
+    - id: SCN-108-001
+      requirement_ids: [REQ-108-001, REQ-108-003]
+      description: A desktop guest visiting /guestWishlist sees the shared storefront shell and existing wishlist content.
+    - id: SCN-108-002
+      requirement_ids: [REQ-108-002, REQ-108-003]
+      description: A mobile guest can use the responsive navigation and wishlist content without clipping or horizontal overflow.
+    - id: SCN-108-003
+      requirement_ids: [REQ-108-003, REQ-108-004]
+      description: Empty and populated localStorage states retain their current CTAs, product links, and removal behavior without login.
+    - id: SCN-108-004
+      requirement_ids: [REQ-108-001, REQ-108-003]
+      description: Header search, cart/wishlist navigation, sign-in, and footer links remain navigable from the guest wishlist route.
+    - id: SCN-108-005
+      requirement_ids: [REQ-108-005, REQ-108-006]
+      description: Existing productId/variantId and current id/title/fullProduct storage fixtures render consistently, while a legal-data failure leaves wishlist content usable with the defined fallback.
+invariants:
+    - id: INV-108-001
+      description: The guest wishlist route always provides the standard storefront navigation and legal footer around its content.
+    - id: INV-108-002
+      description: Shell composition does not alter the guest_wishlist localStorage contract or require an authenticated user.
+    - id: INV-108-003
+      description: Existing wishlist item identity, removal, and destination URLs remain unchanged.
+    - id: INV-108-004
+      description: The route has no avoidable horizontal overflow at supported responsive breakpoints.
+    - id: INV-108-005
+      description: Server-only legal data access does not cross into the client wishlist module.
+    - id: INV-108-006
+      description: Supported stored wishlist shapes map to stable product identity and links without duplicate or dropped items.
+flows:
+    - id: FLOW-108-001
+      description: Render shared desktop/mobile shell, then render the existing client wishlist loading and content state inside GeneralShell.
+      state_transitions: [route_request, shell_rendered, wishlist_loading, empty_or_populated_state]
+    - id: FLOW-108-002
+      description: User navigates from header/mobile/footer or wishlist CTA while preserving current guest state and route behavior.
+      state_transitions: [empty_or_populated_state, navigation_or_auth_action]
+dependencies:
+    - id: DEP-108-001
+      name: storefront desktop navbar
+      purpose: Provides logo, primary navigation, search, cart, and guest actions.
+      owner: Storefront maintainers
+      required_state: NavbarHome remains safe to render on a guest route.
+      description: Existing cart page uses NavbarHome as its desktop shell header.
+      status: resolved
+    - id: DEP-108-002
+      name: storefront mobile navbar
+      purpose: Provides responsive mobile navigation.
+      owner: Storefront maintainers
+      required_state: NavbarMob remains compatible with guest auth state.
+      description: Existing cart page includes NavbarMob alongside NavbarHome.
+      status: resolved
+    - id: DEP-108-003
+      name: legal footer and general shell
+      purpose: Provides consistent content width and legal navigation.
+      owner: Storefront maintainers
+      required_state: FooterWithLegal can resolve its existing legal data dependencies.
+      description: Existing layout exports GeneralShell and FooterWithLegal.
+      status: resolved
+    - id: DEP-108-004
+      name: guest wishlist client adapter
+      purpose: Owns localStorage loading, normalization, and existing wishlist interaction after server shell extraction.
+      owner: Storefront maintainers
+      required_state: Supported stored shapes and current item identity/link semantics are explicitly covered by fixtures.
+      description: The current page is client-only and must be split at the server/client boundary.
+      status: resolved
+integrations:
+    - id: INT-108-001
+      system: browser localStorage
+      purpose: Reads guest_wishlist for the existing client state.
+      failure_mode: Missing, malformed, or unavailable storage must retain current loading/empty safeguards.
+      retry_idempotency: Shell render must not write or duplicate wishlist entries.
+    - id: INT-108-002
+      system: Clerk guest/auth navigation
+      purpose: Supports existing sign-in and optional guest header actions.
+      failure_mode: Unauthenticated rendering must remain valid and navigation must not expose protected data.
+      retry_idempotency: Navigation remains side-effect free except existing auth/merge behavior.
+    - id: INT-108-003
+      system: legal data services
+      purpose: Supplies FooterWithLegal content.
+      failure_mode: Redis/database error must use the defined static fallback or route error boundary without hiding wishlist content.
+      retry_idempotency: Footer retry/fallback must not write wishlist state.
+personas:
+    - id: PER-108-001
+      role: guest_shopper
+      applicability: Anonymous users viewing saved wishlist items.
+    - id: PER-108-002
+      role: mobile_shopper
+      applicability: Guests using a phone-sized viewport.
+security_boundaries:
+    - id: SEC-108-001
+      description: Keep guest wishlist data in its existing client-local boundary; do not expose authenticated wishlist data or add server writes as part of layout composition.
+business_rules:
+    - id: BR-108-001
+      description: Every customer-facing storefront route should provide consistent navigation and legal access.
+decisions:
+    - id: DEC-108-001
+      question: Which shell should guest wishlist use?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Keep the shell server-side, extract a client wishlist child, and match /mycart with NavbarHome, GeneralShell, FooterWithLegal plus a documented fallback, and NavbarMob.
+      basis: FooterWithLegal is async/server-backed while the current wishlist page is client-only; the cart route provides the composition convention.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-108-001
+      category: integration
+      classification: REQUIRED
+      reason: Verifies desktop guest wishlist renders logo/header/navigation/search/cart affordances and legal footer.
+      scenarios: [SCN-108-001, SCN-108-004]
+    - id: TEXP-108-002
+      category: accessibility
+      classification: REQUIRED
+      reason: Verifies mobile navigation and shell landmarks are present and the page has no avoidable horizontal overflow.
+      scenarios: [SCN-108-002]
+    - id: TEXP-108-003
+      category: regression
+      classification: REQUIRED
+      reason: Verifies loading, empty, populated, sign-in, removal, and product-link behavior remains unchanged for guest localStorage state.
+      scenarios: [SCN-108-003, SCN-108-004]
+    - id: TEXP-108-004
+      category: integration
+      classification: REQUIRED
+      reason: Verifies supported storage-shape normalization and that legal data failure uses the fallback/error boundary without blanking wishlist content.
+      scenarios: [SCN-108-005]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-108-001
+          scenario_ids: [SCN-108-001, SCN-108-004]
+        - requirement_id: REQ-108-002
+          scenario_ids: [SCN-108-002]
+        - requirement_id: REQ-108-003
+          scenario_ids: [SCN-108-001, SCN-108-002, SCN-108-003, SCN-108-004]
+        - requirement_id: REQ-108-004
+          scenario_ids: [SCN-108-003]
+        - requirement_id: REQ-108-005
+          scenario_ids: [SCN-108-005]
+        - requirement_id: REQ-108-006
+          scenario_ids: [SCN-108-005]
+    scenario_to_invariants:
+        - scenario_id: SCN-108-001
+          invariant_ids: [INV-108-001, INV-108-003]
+        - scenario_id: SCN-108-002
+          invariant_ids: [INV-108-001, INV-108-004]
+        - scenario_id: SCN-108-003
+          invariant_ids: [INV-108-002, INV-108-003]
+        - scenario_id: SCN-108-004
+          invariant_ids: [INV-108-001, INV-108-002]
+        - scenario_id: SCN-108-005
+          invariant_ids: [INV-108-005, INV-108-006]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-108-001
+          test_expectation_ids: [TEXP-108-001]
+        - scenario_id: SCN-108-002
+          test_expectation_ids: [TEXP-108-002]
+        - scenario_id: SCN-108-003
+          test_expectation_ids: [TEXP-108-003]
+        - scenario_id: SCN-108-004
+          test_expectation_ids: [TEXP-108-001, TEXP-108-003]
+        - scenario_id: SCN-108-005
+          test_expectation_ids: [TEXP-108-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-108-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-108-001, DEP-108-003, DEC-108-001]
+          description: The async legal footer must remain in a server boundary while wishlist state is extracted to a client child.
+        - id: CRIT-108-002
+          severity: MAJOR
+          references: [REQ-108-005, INV-108-006, TEXP-108-004]
+          description: Supported guest wishlist storage shapes and normalization are explicit.
+        - id: CRIT-108-003
+          severity: MAJOR
+          references: [REQ-108-006, INT-108-003, TEXP-108-004]
+          description: Legal-service failure behavior requires a fallback or documented route error boundary.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Codex specification gate (critic findings resolved)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/main
+    base_commit: "467e28c8b437630b2d9aaf62fa666d07f3ff3fdf"
+    head_commit: "1fce19a99a736686d147478d2d8a37fea993cc2d"
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-108-001: Add desktop/mobile shell and legal-service failure browser coverage when the browser test harness is available."
+    evidence:
+        - Compared the approved REN-108 contract with the server shell, client adapter, fallback, and static normalization regression diff.
+        - Unrelated pre-existing REN-131/132 worktree changes were excluded from task attribution.
+    governance_reentry_required: false

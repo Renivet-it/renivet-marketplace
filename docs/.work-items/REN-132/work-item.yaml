@@ -4,7 +4,7 @@ task:
     title: Reconcile add_to_cart vs cart_added (4.3x discrepancy)
     source: linear
     branch: ayanganguly333/ren-129-130-131-132
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-132/reconcile-add-to-cart-vs-cart-added-43x-discrepancy
         priority: Medium
@@ -48,10 +48,10 @@ investigation:
         - The desired treatment of historical `add_to_cart` data is unspecified.
 requirements:
     - id: REQ-132-001
-      description: Select and document one canonical add-to-cart event for business reporting.
+      description: Use authenticated server-confirmed cart_added as canonical persisted-cart reporting and separate client/guest add_to_cart_intent analysis.
       type: explicit
     - id: REQ-132-002
-      description: Define optimistic, server-confirmed, retry, failure, guest, and eventual-consistency semantics for canonical counts.
+      description: Provide stable canonical-event deduplication and failure isolation while preserving separately named guest/client intent visibility.
       type: inferred
     - id: REQ-132-003
       description: Preserve cart persistence and external Meta behavior unless separately approved, and do not mutate historical analytics without an explicit decision.
@@ -59,10 +59,10 @@ requirements:
 scenarios:
     - id: SCN-132-001
       requirement_ids: [REQ-132-001]
-      description: A successfully persisted cart addition contributes exactly to the canonical reporting event.
+      description: A successfully persisted authenticated cart addition contributes exactly once to canonical cart_added.
     - id: SCN-132-002
       requirement_ids: [REQ-132-002]
-      description: Repeated clicks, optimistic client failure, server retry, guest capture, and delayed confirmation do not ambiguously inflate canonical counts.
+      description: Repeated clicks and transport retries use stable event identity; guest/client activity emits add_to_cart_intent and never inflates canonical counts.
     - id: SCN-132-003
       requirement_ids: [REQ-132-003]
       description: Cart state, inventory, checkout, Meta Pixel/CAPI behavior, identity privacy, and historical records remain unchanged outside the approved scope.
@@ -75,7 +75,7 @@ invariants:
       description: Event reconciliation cannot delete or rewrite historical data or alter Meta behavior without explicit approval.
 flows:
     - id: FLOW-132-001
-      description: Observe add-to-cart intent, persist cart state, and emit or map the canonical event according to the selected policy.
+      description: Emit add_to_cart_intent for client/guest analysis; after authenticated persistence, emit failure-isolated canonical cart_added with stable event identity.
       state_transitions: [cart_click, optimistic_event_or_pending, persistence_success, canonical_cart_added]
     - id: FLOW-132-002
       description: Inventory event consumers, dashboards, reports, and external Meta consumers; re-scope only the approved consumers.
@@ -125,7 +125,7 @@ decisions:
       class: HUMAN_CONFIRMATION
       status: resolved
       recommendation: Use server-confirmed `cart_added` as the canonical PostHog reporting event; retain client `add_to_cart` for Meta Pixel/CAPI and/or re-scope it as intent, with no historical deletion or rewrite.
-      basis: Owner confirmed the recommended reporting and external-consumer boundary.
+      basis: Owner confirmed authenticated persisted cart_added as canonical, add_to_cart_intent as the separate guest/client event, and unchanged Meta behavior.
       confidence: high
       consequence: high
       human_confirmation_required: true
@@ -133,12 +133,12 @@ test_expectations:
     - id: TEXP-132-001
       category: integration
       classification: REQUIRED
-      reason: Verifies canonical event behavior after persisted success and absence after persistence failure.
+      reason: Verifies canonical event behavior after persisted success, stable retry deduplication, failure isolation, and absence after persistence failure.
       scenarios: [SCN-132-001, SCN-132-002]
     - id: TEXP-132-002
       category: regression
       classification: REQUIRED
-      reason: Protects cart persistence, guest/auth behavior, retries, and existing Meta Pixel/CAPI behavior.
+      reason: Protects cart persistence, separately named guest/auth semantics, retries, and existing Meta Pixel/CAPI behavior.
       scenarios: [SCN-132-002, SCN-132-003]
     - id: TEXP-132-003
       category: business_uat
@@ -195,28 +195,4 @@ critic:
 approval:
     state: APPROVED
     design_blockers: []
-    approved_by: Ayan Ganguly (owner confirmation)
-implementation_review:
-    artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: master
-    base_commit: "4943c40a46901692fb7f77c3bf1259530303798a"
-    head_commit: "8a5c8a4aa89c33d20f16ac88e4e6285de94a1a9f"
-    pr_url: null
-    material_drift: NO_DRIFT
-    reconciliation:
-        requirements: PASS
-        scenarios: PARTIAL
-        invariants: PASS
-        architecture: PARTIAL
-        security: PASS
-        test_coverage: PARTIAL
-        scope: PASS
-    blocking_findings: []
-    required_actions:
-        - "REV-132-001: Audit PostHog reports and record a fixed-window before/after comparison without historical rewriting."
-    evidence:
-        - "Compared approved REN-132 contract with the base-to-head Git diff from 4943c40a46901692fb7f77c3bf1259530303798a to 8a5c8a4aa89c33d20f16ac88e4e6285de94a1a9f."
-        - "The client add-to-cart hook retains Meta Pixel/CAPI calls while removing only the PostHog add_to_cart capture."
-        - "The cart route retains cart_added capture after successful persistence in both variant and non-variant branches."
-    governance_reentry_required: false
+    approved_by: Ayan Ganguly (owner confirmation of corrected design)

@@ -2,57 +2,60 @@
 
 ## Executive Result
 
-`REVIEW_PASSED_WITH_FINDINGS`; `NO_DRIFT`; governance re-entry is not required. The server emits one failure-isolated PostHog purchase event after the complete checkout order-creation loop, and the two browser PostHog purchase emitters were removed. Base: `4943c40a46901692fb7f77c3bf1259530303798a`; head: `8a5c8a4aa89c33d20f16ac88e4e6285de94a1a9f`.
+`REVIEW_FAILED`; `MATERIAL_DRIFT`; governance re-entry is required. Base commit: `4943c40a46901692fb7f77c3bf1259530303798a`. Reviewed head commit: `1fce19a99a736686d147478d2d8a37fea993cc2d`.
+
+The implementation does not satisfy the approved one-event-per-complete-checkout decision. The storefront splits one checkout into one `createOrder` mutation per brand, while the server capture executes once at the end of each mutation.
 
 ## Review Scope and Git Evidence
 
-- Compared `origin/master` merge-base `4943c40a46901692fb7f77c3bf1259530303798a` to `HEAD` `8a5c8a4aa89c33d20f16ac88e4e6285de94a1a9f`.
-- The worktree was clean at review time; no PR URL was available.
-- Changed implementation paths are the order route, purchase-event helper/test, add-to-cart hook, and the two checkout components.
+- Compared the `origin/master` merge base to the current feature-branch head; the worktree was clean before this review update and no PR URL was available.
+- Reviewed `ordersRouter.createOrder`, both checkout callers, `createRazorpayPaymentOptions`, the purchase helper, and its test.
+- `buildOrderDetailsByBrand` returns one request payload per brand in both checkout components.
+- Online checkout iterates `orderDetailsByBrand` in `createRazorpayPaymentOptions`; COD and reward checkout also iterate the array directly.
 
 ## Requirement Reconciliation
 
-- REQ-131-001: PASS. `ordersRouter.createOrder` invokes `capturePurchaseCompleted` after the full per-item persistence loop.
-- REQ-131-002: PASS. The helper emits once per checkout and catches PostHog failures without throwing into the mutation.
-- REQ-131-003: PASS. `purchase-events.ts` allowlists checkout/order/product/brand/value/currency/item/payment-method fields and excludes addresses, payment identifiers, and credentials.
-- REQ-131-004: PARTIAL. Focused regression tests cover split aggregation, allowlisting, failure isolation, and client overlap statically; route-level normal/failure/reward integration coverage remains a follow-up.
+- REQ-131-001: FAIL. Capture occurs after one brand request persists, not after the complete multi-brand checkout persists.
+- REQ-131-002: FAIL. Online brand requests reuse the same intent `$insert_id`, potentially retaining only one partial event; COD/reward requests can use different fallback IDs and emit multiple events. Client retry can repeat server capture.
+- REQ-131-003: PASS. The helper uses an allowlisted payload and excludes payment credentials, addresses, and contact PII.
+- REQ-131-004: FAIL. The test constructs a synthetic multi-order helper input but does not exercise the actual per-brand request orchestration that contradicts the approved policy.
 
 ## Scenario Reconciliation
 
-- SCN-131-001: PASS. Capture is placed after persisted orders are collected.
-- SCN-131-002: PASS. `orderIds`, product IDs, brand IDs, and totals are aggregated into one event.
-- SCN-131-003: PASS for the helper boundary; PARTIAL for live route retry/transaction behavior because no route integration harness was added.
-- SCN-131-004: PASS for zero-value support and minimal properties; identity is the authenticated user ID.
+- SCN-131-001: PARTIAL. A single-brand request emits after its local persistence loop.
+- SCN-131-002: FAIL. A multi-brand checkout is multiple mutations and therefore is not aggregated by the server helper.
+- SCN-131-003: FAIL. Mutation retry can reattempt capture, and identical online `$insert_id` values can deduplicate distinct partial payloads rather than a complete checkout payload.
+- SCN-131-004: PARTIAL. Zero-value payloads are representable, but reward flows do not consistently carry a shared checkout intent.
 
 ## Invariant Reconciliation
 
-- INV-131-001: PASS. No capture occurs before the order loop has produced persisted orders.
-- INV-131-002: PASS. Capture exceptions are caught and reduced to a non-sensitive error name.
-- INV-131-003: PASS. The payload contains no payment credentials, address data, or contact PII.
+- INV-131-001: FAIL. A brand-level event can be emitted before later brand orders in the same checkout are attempted.
+- INV-131-002: FAIL. Synchronous SDK errors are contained, but retry and multi-request behavior can duplicate or undercount the business purchase.
+- INV-131-003: PASS. Sensitive payment/address fields are excluded.
 
 ## Flow and Architecture Review
 
-- FLOW-131-001: PASS. The order route persists orders, then calls the shared server PostHog client through the failure-isolated helper.
-- FLOW-131-002: PASS. `input.intentId` is used as checkout identity; the persisted order IDs provide a deterministic fallback when no intent is available.
-- The client purchase PostHog calls were removed from `checkout-content.tsx` and `order-payment-page.tsx`, while the separate Meta calls remain.
+- FLOW-131-001: PARTIAL. The helper is correctly placed after persistence inside one mutation but the mutation is not the complete checkout boundary.
+- FLOW-131-002: FAIL. The approved business unit is checkout; the implementation aggregates only the items passed to one brand request.
+- DEP-131-001: FAIL. The caller’s per-brand request architecture was not incorporated into the event design.
+- DEP-131-002: PARTIAL. The shared PostHog client is used, but `$insert_id` semantics are applied to incomplete payloads.
 
 ## Security and Integration Review
 
-- SEC-131-001: PASS. The event uses `user.id` and minimal commerce metadata only.
-- INT-131-001: PASS at the SDK boundary. The shared `posthog-node` client is used and SDK failures are contained; cross-request delivery/flush behavior remains provider-managed.
-- INT-131-002: PASS. Order and payment code remains unchanged apart from the non-blocking analytics call.
-- DEP-131-001 and DEP-131-002: PASS based on the route placement and existing shared client.
+- SEC-131-001: PASS. The payload contains authenticated user ID and minimal commerce metadata.
+- INT-131-001: FAIL for idempotency and aggregation; capture failures are synchronously contained.
+- INT-131-002: FAIL. The order-intent identifier spans online brand requests, but the event payload does not span those requests; COD/reward do not consistently pass that identifier.
 
 ## Scope and Drift Review
 
-`NO_DRIFT`. The changes stay within approved server capture, client overlap removal, safe properties, and regression coverage. No schema, migration, dependency, payment, address, or historical analytics changes were introduced.
+`MATERIAL_DRIFT`. DEC-131-001 and BR-131-001 require one complete-checkout event. The implementation instead produces brand-request events with inconsistent deduplication behavior. Task status must return to `IN_REVIEW`.
 
 ## Test Expectation Review
 
-- TEXP-131-001: PARTIAL. Static tests cover the capture helper and failure isolation; route-level persistence ordering is evidenced by placement but not exercised through an integration harness.
-- TEXP-131-002: PASS for preserved client Meta behavior and unchanged order side effects by diff inspection.
-- TEXP-131-003: PASS for split and zero-value-compatible payload construction; live business UAT remains manual.
-- TEXP-131-004: PASS for the allowlisted payload and absence of sensitive fields in the helper contract.
+- TEXP-131-001: FAIL. No integration test exercises the real checkout-to-multiple-mutations path.
+- TEXP-131-002: PARTIAL. Client Meta calls are preserved, but retry behavior is not protected.
+- TEXP-131-003: FAIL. The synthetic split test passes multiple order IDs directly to the helper and therefore does not detect the actual brand split above the route.
+- TEXP-131-004: PASS. The helper payload is allowlisted.
 
 ## Findings
 
@@ -60,15 +63,24 @@
 
 - Severity: LOW
 - Category: test
-- Description: Route-level integration coverage for normal, failed, retry, and reward order flows is not present in the repository test suite.
-- Evidence: TEXP-131-001 and TEXP-131-002; `src/lib/analytics/purchase-events.test.ts` covers the helper and source boundary, while `ordersRouter.createOrder` is not integration-tested.
-- Impact: A future change to route placement could regress the persistence ordering without a focused test detecting it.
-- Recommendation: Add a route integration seam or test fixture covering persisted split/reward orders and PostHog failure isolation.
+- Description: Route-level integration coverage for normal, failed, retry, and reward order flows is absent.
+- Evidence: TEXP-131-001 and `src/lib/analytics/purchase-events.test.ts`.
+- Impact: Request-boundary regressions are not detected.
+- Recommendation: Add checkout-orchestration coverage spanning multiple brand requests.
+
+### REV-131-002
+
+- Severity: BLOCKER
+- Category: requirement
+- Description: The server emits per brand request instead of once per complete checkout.
+- Evidence: DEC-131-001, BR-131-001, FLOW-131-002; `buildOrderDetailsByBrand` in both checkout components; the loops in `createRazorpayPaymentOptions` and COD/reward handlers; `capturePurchaseCompleted` in `ordersRouter.createOrder`.
+- Impact: Online analytics can retain one incomplete brand payload under a shared `$insert_id`; COD/reward can emit multiple purchase events and overstate purchases/revenue.
+- Recommendation: Move aggregation/capture to a true checkout-completion boundary or persist a checkout-level outbox/idempotency record that emits exactly once after every brand order succeeds.
 
 ## Decisions Requiring Attention
 
-None.
+None. The required business decision was already resolved by DEC-131-001; the implementation contradicts it.
 
 ## Final Recommendation
 
-Accept the implementation with the low-severity test follow-up above. No governance re-entry is required; complete live PostHog dashboard/UAT comparison separately before relying on the new event as the production reporting baseline.
+Do not merge REN-131 in its current form. Re-enter implementation governance, correct the checkout-level boundary and idempotency behavior, add orchestration coverage, then rerun review.

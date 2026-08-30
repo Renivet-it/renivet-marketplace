@@ -1,0 +1,266 @@
+schema_version: "1.0"
+task:
+    id: REN-104
+    title: No App Router error/loading boundaries anywhere
+    source: linear
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-104/no-app-router-errorloading-boundaries-anywhere
+        priority: Medium
+        labels: [security]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Security & Compliance Audit
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Boundaries affect critical checkout, payment, order, and global failure paths.
+        - Incorrect recovery can hide payment/order state or imply a successful purchase after a failure.
+        - Error UIs cross server exception, telemetry, and customer-facing privacy boundaries.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, security label, and requested starting scope
+        - Existing app layouts and absence of error/loading/global-error boundaries
+        - Checkout server/client composition and payment flow
+        - Mycart payment components and protected orders segment
+        - Existing not-found and error/logging conventions
+    excluded_areas:
+        - API/webhook try/catch redesign and provider retry contracts
+        - Payment/order transaction semantics or database changes
+        - Application source and tests during specification phase
+    dependencies: [DEP-104-001, DEP-104-002, DEP-104-003]
+    integrations: [INT-104-001]
+    security_boundaries: [SEC-104-001, SEC-104-002]
+    state_transitions: [route_request -> loading_boundary -> content_rendered -> render_failure -> recovery_or_navigation]
+    related_tests: [TEXP-104-001, TEXP-104-002, TEXP-104-003, TEXP-104-004, TEXP-104-005]
+    uncertainties:
+        - API/webhook route failures remain outside this first UI-boundary slice and require a separate handler-level design.
+        - Segment layout failures are not caught by that segment's error.tsx and remain covered only by a parent/root boundary.
+requirements:
+    - id: REQ-104-001
+      description: Add global error recovery for root application render failures with safe copy and a reset/reload action.
+      type: explicit
+    - id: REQ-104-002
+      description: Add loading and error boundaries to checkout, mycart/payment, and orders route segments.
+      type: explicit
+    - id: REQ-104-003
+      description: Preserve storefront shell, payment/order state semantics, and navigation while boundaries are active.
+      type: inferred
+    - id: REQ-104-004
+      description: Prevent sensitive exception details from reaching customer-facing boundary output and log only a stable marker, route segment, and Next error digest through the existing console.error convention.
+      type: inferred
+    - id: REQ-104-005
+      description: Keep API and webhook error handling out of this UI-boundary change unless separately approved.
+      type: inferred
+    - id: REQ-104-006
+      description: Do not automatically retry or duplicate an in-flight payment/order mutation when a boundary reset is invoked; existing authoritative server state remains the source of truth.
+      type: inferred
+scenarios:
+    - id: SCN-104-001
+      requirement_ids: [REQ-104-001, REQ-104-004]
+      description: A root render failure shows safe global recovery UI and does not display exception details.
+    - id: SCN-104-002
+      requirement_ids: [REQ-104-002, REQ-104-003]
+      description: Checkout, cart/payment, and orders initial loads show appropriate loading UI without false success state.
+    - id: SCN-104-003
+      requirement_ids: [REQ-104-002, REQ-104-003]
+      description: A segment render failure shows a recoverable error UI and reset invokes the App Router reset path.
+    - id: SCN-104-004
+      requirement_ids: [REQ-104-004, REQ-104-005, REQ-104-006]
+      description: Payment/order failures remain isolated from UI recovery, reset does not auto-repeat a mutation, and API/webhook behavior is unchanged.
+    - id: SCN-104-005
+      requirement_ids: [REQ-104-002, REQ-104-004]
+      description: Failures in the root layout and named segment layouts follow the documented parent/root coverage matrix and render safe fallback output.
+invariants:
+    - id: INV-104-001
+      description: Boundary fallback UI never claims an order or payment succeeded without authoritative success state.
+    - id: INV-104-002
+      description: Customer-visible errors contain no stack traces, payment credentials, addresses, tokens, or raw provider payloads.
+    - id: INV-104-003
+      description: Reset and navigation actions do not mutate payment, cart, order, or inventory state.
+    - id: INV-104-004
+      description: API and webhook handlers remain outside the UI-boundary diff.
+    - id: INV-104-005
+      description: Boundary logging contains only the marker, route segment, and error digest; raw exceptions and sensitive request data are excluded.
+flows:
+    - id: FLOW-104-001
+      description: Route request enters loading boundary, renders content, and on render failure enters safe error boundary with reset/navigation recovery.
+      state_transitions: [route_request, loading_boundary, content_rendered, render_failure, recovery_or_navigation]
+    - id: FLOW-104-002
+      description: Root-level failure uses global recovery while page/content failures remain localized to checkout, cart/payment, or orders; segment-layout failures use the nearest parent/root boundary.
+      state_transitions: [content_rendered, segment_failure, localized_recovery]
+dependencies:
+    - id: DEP-104-001
+      name: Next App Router boundary contract
+      purpose: Defines error.tsx, loading.tsx, and global-error.tsx behavior.
+      owner: Storefront maintainers
+      required_state: Boundaries use the framework reset and client-component requirements correctly.
+      description: No current route boundaries exist beyond not-found.tsx.
+      status: resolved
+    - id: DEP-104-002
+      name: checkout and payment routes
+      purpose: Critical customer purchase flow requiring localized recovery.
+      owner: Checkout maintainers
+      required_state: Existing payment/order state remains authoritative.
+      description: Checkout content is client interactive and payment operations have side effects.
+      status: resolved
+    - id: DEP-104-003
+      name: protected orders and cart layouts
+      purpose: Route-segment placement for loading/error boundaries.
+      owner: Storefront maintainers
+      required_state: Existing layouts and navigation remain compatible.
+      description: Orders has a layout; mycart contains payment steps and its own shell.
+      status: resolved
+integrations:
+    - id: INT-104-001
+      system: existing application observability
+      purpose: Uses the existing console.error convention with a stable marker, route segment, and Next error digest; no raw exception payload.
+      failure_mode: Logging failure must not prevent safe fallback rendering.
+      retry_idempotency: Reset may retry rendering but must not repeat payment/order mutations.
+personas:
+    - id: PER-104-001
+      role: shopper
+      applicability: Customers loading or recovering from checkout, payment, cart, or order failures.
+    - id: PER-104-002
+      role: support_operator
+      applicability: Operators diagnosing boundary failures through existing observability.
+security_boundaries:
+    - id: SEC-104-001
+      description: Raw exceptions and provider payloads stay in server-side observability; customer UI receives safe generic copy.
+    - id: SEC-104-002
+      description: Recovery actions cannot bypass authentication, payment authorization, order persistence, or authorization checks.
+business_rules:
+    - id: BR-104-001
+      description: A recoverable UI error must never be presented as a successful purchase or order completion.
+decisions:
+    - id: DEC-104-001
+      question: Which boundary scope should be implemented first?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Implement root global recovery plus checkout, mycart/payment, and orders segment boundaries; handle API/webhook errors in a separate task.
+      basis: Owner confirmed the scoped customer-facing boundary slice and accepted keeping API/webhook handling separate.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-104-001
+      category: component
+      classification: REQUIRED
+      reason: tests/ren-104-boundaries.test.ts verifies each named boundary renders safe copy and reset controls, including global-error html/body requirements.
+      scenarios: [SCN-104-001, SCN-104-002, SCN-104-003, SCN-104-005]
+    - id: TEXP-104-002
+      category: e2e
+      classification: REQUIRED
+      reason: Browser journey coverage exercises checkout, cart/payment, and orders loading/error recovery without false success state or automatic mutation retry.
+      scenarios: [SCN-104-002, SCN-104-003, SCN-104-004]
+    - id: TEXP-104-003
+      category: security
+      classification: REQUIRED
+      reason: Captures console.error and asserts only marker/segment/digest are logged and sensitive exception/provider payloads are not rendered.
+      scenarios: [SCN-104-001, SCN-104-004, SCN-104-005]
+    - id: TEXP-104-004
+      category: regression
+      classification: REQUIRED
+      reason: Confirms API/webhook handlers, payment state, authentication, and navigation behavior are unchanged; reset does not repeat mutations.
+      scenarios: [SCN-104-003, SCN-104-004]
+    - id: TEXP-104-005
+      category: e2e
+      classification: REQUIRED
+      reason: Injects render failures in named boundaries and verifies the coverage matrix, explicit reset behavior, and no auto-retry of in-flight payment/order actions.
+      scenarios: [SCN-104-003, SCN-104-004, SCN-104-005]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-104-001
+          scenario_ids: [SCN-104-001]
+        - requirement_id: REQ-104-002
+          scenario_ids: [SCN-104-002, SCN-104-003]
+        - requirement_id: REQ-104-003
+          scenario_ids: [SCN-104-002, SCN-104-003]
+        - requirement_id: REQ-104-004
+          scenario_ids: [SCN-104-001, SCN-104-004]
+        - requirement_id: REQ-104-005
+          scenario_ids: [SCN-104-004]
+        - requirement_id: REQ-104-006
+          scenario_ids: [SCN-104-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-104-001
+          invariant_ids: [INV-104-001, INV-104-002]
+        - scenario_id: SCN-104-002
+          invariant_ids: [INV-104-001, INV-104-003]
+        - scenario_id: SCN-104-003
+          invariant_ids: [INV-104-001, INV-104-003]
+        - scenario_id: SCN-104-004
+          invariant_ids: [INV-104-002, INV-104-004]
+        - scenario_id: SCN-104-005
+          invariant_ids: [INV-104-001, INV-104-002, INV-104-005]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-104-001
+          test_expectation_ids: [TEXP-104-001, TEXP-104-003]
+        - scenario_id: SCN-104-002
+          test_expectation_ids: [TEXP-104-001, TEXP-104-002]
+        - scenario_id: SCN-104-003
+          test_expectation_ids: [TEXP-104-001, TEXP-104-002, TEXP-104-004]
+        - scenario_id: SCN-104-004
+          test_expectation_ids: [TEXP-104-003, TEXP-104-004]
+        - scenario_id: SCN-104-005
+          test_expectation_ids: [TEXP-104-001, TEXP-104-003, TEXP-104-005]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-104-001
+          severity: DESIGN_BLOCKER
+          references: [INT-104-001, REQ-104-004]
+          description: "Logging convention and redaction are explicit; console.error contains marker/segment/digest only and logging failure cannot block fallback."
+        - id: CRIT-104-002
+          severity: DESIGN_BLOCKER
+          references: [DEP-104-001, FLOW-104-002]
+          description: "Exact boundary files and layout coverage limitations are documented."
+        - id: CRIT-104-003
+          severity: MAJOR
+          references: [INV-104-001, INV-104-003, REQ-104-006]
+          description: "Reset is explicit and non-automatic; authoritative payment/order state remains unchanged."
+        - id: CRIT-104-004
+          severity: MAJOR
+          references: [TEXP-104-001, TEXP-104-002, TEXP-104-003, TEXP-104-004]
+          description: "Test locations, failure injection, logging assertions, and API scope are concrete."
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner confirmation of scoped boundary implementation)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/main
+    base_commit: "467e28c8b437630b2d9aaf62fa666d07f3ff3fdf"
+    head_commit: "1fce19a99a736686d147478d2d8a37fea993cc2d"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-104-001: Add browser failure-injection and reset-journey coverage."
+        - "REV-104-002: Complete the production build in CI or with a longer allowance before deployment."
+    evidence:
+        - Compared the approved REN-104 contract with the uncommitted route-boundary implementation and focused test coverage.
+        - The full Bun test suite passed; the production build timed out after 124 seconds.
+        - Unrelated pre-existing worktree changes were excluded from task attribution.
+    governance_reentry_required: false

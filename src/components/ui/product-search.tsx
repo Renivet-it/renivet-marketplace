@@ -5,6 +5,7 @@ import {
     Sheet,
     SheetClose,
     SheetContent,
+    SheetDescription,
     SheetHeader,
     SheetTitle,
     SheetTrigger,
@@ -689,6 +690,9 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                     >
                         <SheetHeader className="sr-only">
                             <SheetTitle>Search products</SheetTitle>
+                            <SheetDescription>
+                                Search Renivet products, brands, and categories.
+                            </SheetDescription>
                         </SheetHeader>
 
                         {/* Premium Search Input Area */}

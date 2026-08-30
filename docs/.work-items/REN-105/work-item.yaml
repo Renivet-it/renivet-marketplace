@@ -1,0 +1,233 @@
+schema_version: "1.0"
+task:
+    id: REN-105
+    title: Client/Server Component boundary not pushed to leaves
+    source: linear
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-105/clientserver-component-boundary-not-pushed-to-leaves
+        priority: Medium
+        labels: [security]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Security & Compliance Audit
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - The issue spans a large component graph and server/client boundaries affect rendering and bundle behavior.
+        - Incorrect removal can break hooks, browser APIs, event handlers, or third-party client-only primitives.
+        - The first pilot is intentionally limited to two stateless leaf wrappers, but architecture-wide follow-up remains high risk.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue and reported client-directive counts
+        - Representative UI leaf components and their local behavior
+        - Existing App Router layouts and server/client composition
+        - Candidate consumer imports and compatibility constraints
+    excluded_areas:
+        - Feature subtree refactors and broad automated directive removal
+        - Components with hooks, browser APIs, event handlers, context, or client-only logic
+        - Application source and tests during specification phase
+    dependencies: [DEP-105-001, DEP-105-002]
+    integrations: [INT-105-001]
+    security_boundaries: [SEC-105-001]
+    state_transitions: [module_imported -> server_or_client_boundary_resolved -> component_rendered]
+    related_tests: [TEXP-105-001, TEXP-105-002, TEXP-105-003]
+    uncertainties:
+        - The global percentage requires periodic inventory refresh; this pilot does not promise a target percentage for the entire repository.
+requirements:
+    - id: REQ-105-001
+      description: Remove unnecessary client directives from the selected stateless leaf components separator.tsx and label.tsx.
+      type: explicit
+    - id: REQ-105-002
+      description: Preserve serializable server props, rendered semantics, styling, and Radix behavior for selected leaves; preserve the existing ref/event contract for client consumers.
+      type: inferred
+    - id: REQ-105-003
+      description: Do not remove client directives from components with local client-only behavior or refactor feature subtrees in this pilot.
+      type: inferred
+    - id: REQ-105-004
+      description: Verify client and server consumers remain compatible after the pilot.
+      type: inferred
+    - id: REQ-105-005
+      description: Verify the installed Radix separator 1.1.2 and label 2.1.2 package entries remain compatible with the pilot's server/client composition.
+      type: inferred
+scenarios:
+    - id: SCN-105-001
+      requirement_ids: [REQ-105-001, REQ-105-002]
+      description: Selected leaf components render with their existing props, refs, classes, and semantics after directive removal.
+    - id: SCN-105-002
+      requirement_ids: [REQ-105-003]
+      description: Components requiring hooks, browser APIs, handlers, or context remain client components.
+    - id: SCN-105-003
+      requirement_ids: [REQ-105-002, REQ-105-004]
+      description: Existing server and client consumers compile and render selected leaves without boundary errors.
+    - id: SCN-105-004
+      requirement_ids: [REQ-105-002, REQ-105-005]
+      description: Server fixtures pass serializable props while client fixtures retain ref/event behavior and Radix ARIA/DOM semantics with installed package versions.
+invariants:
+    - id: INV-105-001
+      description: The selected leaves contain no local hooks, browser API access, event handlers, or client-only state.
+    - id: INV-105-002
+      description: Removing a directive does not change the component public API or rendered behavior.
+    - id: INV-105-003
+      description: The pilot never crosses a feature subtree boundary or changes data fetching/authentication behavior.
+    - id: INV-105-004
+      description: Server consumers do not pass refs, event handlers, or other non-serializable props across the boundary.
+flows:
+    - id: FLOW-105-001
+      description: Inventory candidate leaf, verify client-only dependency absence and installed Radix entry, remove directive, and compile server-serializable and client-interactive consumer fixtures.
+      state_transitions: [module_imported, server_or_client_boundary_resolved, component_rendered]
+dependencies:
+    - id: DEP-105-001
+      name: selected stateless UI leaves
+      purpose: Initial safe reduction of client directives.
+      owner: UI maintainers
+      required_state: separator.tsx and label.tsx remain hook-free wrappers with unchanged exports.
+      description: Both selected files have no local hooks or browser APIs.
+      status: resolved
+    - id: DEP-105-002
+      name: App Router composition rules
+      purpose: Allows server components to import client-compatible UI leaves with serializable props while client consumers retain refs and handlers.
+      owner: Next.js/storefront maintainers
+      required_state: Consumer imports remain valid under the server/client graph.
+      description: The pilot relies on normal component composition, not subtree conversion.
+      status: resolved
+integrations:
+    - id: INT-105-001
+      system: Radix UI separator and label primitives
+      purpose: Preserve underlying accessible UI behavior.
+      failure_mode: Missing server compatibility, client ref/type regression, or changed DOM/ARIA semantics.
+      retry_idempotency: Render-only; no side effects.
+personas:
+    - id: PER-105-001
+      role: shopper_or_operator
+      applicability: Any user seeing selected UI primitives.
+    - id: PER-105-002
+      role: storefront_developer
+      applicability: Maintainers extending the component graph.
+security_boundaries:
+    - id: SEC-105-001
+      description: Boundary refactoring must not move authentication, user data, browser storage, or privileged server data across trust boundaries.
+business_rules:
+    - id: BR-105-001
+      description: Client boundaries are reserved for components that actually require client capabilities.
+decisions:
+    - id: DEC-105-001
+      question: What is the first refactor slice?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Remove directives only from separator.tsx and label.tsx, then review the evidence before expanding.
+      basis: They are small, stateless Radix wrappers and minimize compatibility risk.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-105-001
+      category: component
+      classification: REQUIRED
+      reason: tests/ren-105-boundaries.test.ts verifies serializable server props, client refs/handlers, semantics, classes, and Radix behavior.
+      scenarios: [SCN-105-001, SCN-105-004]
+    - id: TEXP-105-002
+      category: regression
+      classification: REQUIRED
+      reason: The allowlisted directive check and server/client fixtures verify only the selected files changed and non-candidate client components remain unchanged.
+      scenarios: [SCN-105-002, SCN-105-003, SCN-105-004]
+    - id: TEXP-105-003
+      category: security
+      classification: REQUIRED
+      reason: Confirms no auth, storage, user data, or privileged server boundary changes are introduced.
+      scenarios: [SCN-105-002, SCN-105-003]
+    - id: TEXP-105-004
+      category: regression
+      classification: REQUIRED
+      reason: Production build/render verification uses the installed Radix 1.1.2/2.1.2 entries and checks server/client fixture compatibility.
+      scenarios: [SCN-105-003, SCN-105-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-105-001
+          scenario_ids: [SCN-105-001]
+        - requirement_id: REQ-105-002
+          scenario_ids: [SCN-105-001, SCN-105-003]
+        - requirement_id: REQ-105-003
+          scenario_ids: [SCN-105-002]
+        - requirement_id: REQ-105-004
+          scenario_ids: [SCN-105-003]
+        - requirement_id: REQ-105-005
+          scenario_ids: [SCN-105-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-105-001
+          invariant_ids: [INV-105-001, INV-105-002]
+        - scenario_id: SCN-105-002
+          invariant_ids: [INV-105-001, INV-105-003]
+        - scenario_id: SCN-105-003
+          invariant_ids: [INV-105-002, INV-105-003]
+        - scenario_id: SCN-105-004
+          invariant_ids: [INV-105-002, INV-105-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-105-001
+          test_expectation_ids: [TEXP-105-001]
+        - scenario_id: SCN-105-002
+          test_expectation_ids: [TEXP-105-002, TEXP-105-003]
+        - scenario_id: SCN-105-003
+          test_expectation_ids: [TEXP-105-001, TEXP-105-002, TEXP-105-003]
+        - scenario_id: SCN-105-004
+          test_expectation_ids: [TEXP-105-001, TEXP-105-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-105-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-105-002, INV-105-004, DEP-105-002]
+          description: Server consumers are limited to serializable props; client consumers retain refs and handlers.
+        - id: CRIT-105-002
+          severity: MAJOR
+          references: [INT-105-001, REQ-105-005]
+          description: Installed Radix versions and production compatibility checks are explicit.
+        - id: CRIT-105-003
+          severity: MAJOR
+          references: [TEXP-105-001, TEXP-105-002, TEXP-105-003]
+          description: Allowlisted directive, consumer fixture, DOM/ref/ARIA, and unchanged-inventory checks are explicit.
+        - id: CRIT-105-004
+          severity: MINOR
+          references: [SPEC, investigation]
+          description: Inventory command, scope, and 2026-08-30 timestamp are recorded.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Codex specification gate (critic findings resolved; conservative pilot)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/main
+    base_commit: "467e28c8b437630b2d9aaf62fa666d07f3ff3fdf"
+    head_commit: "1fce19a99a736686d147478d2d8a37fea993cc2d"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PARTIAL
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-105-001: Add mounted server/client consumer fixtures for DOM, ARIA, and refs."
+        - "REV-105-002: Complete the production build in CI or with a longer allowance before deployment."
+    evidence:
+        - Compared the approved REN-105 contract with the uncommitted two-file leaf directive diff and focused test coverage.
+        - The full Bun test suite passed; the production build timed out after 124 seconds.
+        - Unrelated pre-existing worktree changes were excluded from task attribution.
+    governance_reentry_required: false

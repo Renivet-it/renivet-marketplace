@@ -4,7 +4,7 @@ task:
     title: Add server-side purchase_completed capture (no PostHog fallback today)
     source: linear
     branch: ayanganguly333/ren-129-130-131-132
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-131/add-server-side-purchase-completed-capture-no-posthog-fallback-today
         priority: High
@@ -47,10 +47,10 @@ investigation:
         - Whether the client event already reaches PostHog for the same order and how deduplication is configured.
 requirements:
     - id: REQ-131-001
-      description: Emit a server-side purchase_completed event after the approved authoritative order persistence point.
+      description: Submit one complete checkout mutation and emit exactly one server-side purchase_completed event after every resulting order persists.
       type: explicit
     - id: REQ-131-002
-      description: Ensure capture failure, retries, and client/server overlap cannot alter order/payment state or silently double-count purchases.
+      description: Use the checkout intent or reward redemption identity for PostHog deduplication and ensure capture failure or retries cannot alter state or double-count purchases.
       type: inferred
     - id: REQ-131-003
       description: Send only approved purchase analytics properties and preserve identity/privacy boundaries.
@@ -61,10 +61,10 @@ requirements:
 scenarios:
     - id: SCN-131-001
       requirement_ids: [REQ-131-001]
-      description: A normal persisted order produces the approved server-side purchase event after persistence.
+      description: A complete single- or multi-brand checkout produces one server event after all internal orders persist.
     - id: SCN-131-002
       requirement_ids: [REQ-131-002]
-      description: A multi-brand/multi-item checkout follows the approved one-event or per-order policy without duplicate revenue counting.
+      description: A multi-brand/multi-item checkout is submitted in one mutation and produces one aggregate event without duplicate revenue counting.
     - id: SCN-131-003
       requirement_ids: [REQ-131-002, REQ-131-003]
       description: Order rejection, transaction failure, PostHog rejection, timeout, retry, and client/server overlap preserve order state and event integrity.
@@ -80,10 +80,10 @@ invariants:
       description: Purchase events contain no payment credentials, addresses, verification secrets, or unnecessary contact PII.
 flows:
     - id: FLOW-131-001
-      description: Validate request, persist order(s), then construct and submit the approved purchase event asynchronously or in a failure-isolated boundary.
+      description: Submit all checkout items in one request, persist the internal split orders, then construct and submit one aggregate event in a failure-isolated boundary.
       state_transitions: [order_request, order_persisted, purchase_capture_attempted, observed_success_or_failure]
     - id: FLOW-131-002
-      description: Apply the selected aggregation/idempotency policy across split orders, reward orders, client overlap, and retries.
+      description: Use intentId or reward redemption ID as the checkout identity across split orders and retries; browser PostHog purchase capture remains disabled.
       state_transitions: [checkout_started, order_unit_identified, event_deduped_or_emitted]
 dependencies:
     - id: DEP-131-001
@@ -130,7 +130,7 @@ decisions:
       class: HUMAN_CONFIRMATION
       status: resolved
       recommendation: Emit one `purchase_completed` event per complete checkout using a stable checkout/order-group identifier for deduplication, rather than one event per brand-split order.
-      basis: Owner selected one event per complete checkout.
+      basis: Owner selected one event per complete checkout and approved replacing per-brand client mutations with one complete-checkout mutation.
       confidence: high
       consequence: high
       human_confirmation_required: true
@@ -138,12 +138,12 @@ test_expectations:
     - id: TEXP-131-001
       category: integration
       classification: REQUIRED
-      reason: Verifies capture occurs after durable order success and is isolated from order mutation failure.
+      reason: Verifies one complete-checkout mutation captures after all internal order persistence and isolates analytics failure.
       scenarios: [SCN-131-001, SCN-131-003]
     - id: TEXP-131-002
       category: regression
       classification: REQUIRED
-      reason: Protects payment, order, inventory, shipping, email, and existing client purchase behavior.
+      reason: Protects payment, order, inventory, shipping, email, and Meta Pixel/CAPI behavior while browser PostHog purchase remains disabled.
       scenarios: [SCN-131-001, SCN-131-003]
     - id: TEXP-131-003
       category: business_uat
@@ -211,28 +211,4 @@ critic:
 approval:
     state: APPROVED
     design_blockers: []
-    approved_by: Ayan Ganguly (owner confirmation)
-implementation_review:
-    artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: master
-    base_commit: "4943c40a46901692fb7f77c3bf1259530303798a"
-    head_commit: "8a5c8a4aa89c33d20f16ac88e4e6285de94a1a9f"
-    pr_url: null
-    material_drift: NO_DRIFT
-    reconciliation:
-        requirements: PASS
-        scenarios: PARTIAL
-        invariants: PASS
-        architecture: PASS
-        security: PASS
-        test_coverage: PARTIAL
-        scope: PASS
-    blocking_findings: []
-    required_actions:
-        - "REV-131-001: Add route-level integration coverage for persisted split/reward orders and PostHog failure isolation."
-    evidence:
-        - "Compared approved REN-131 contract with the base-to-head Git diff from 4943c40a46901692fb7f77c3bf1259530303798a to 8a5c8a4aa89c33d20f16ac88e4e6285de94a1a9f."
-        - "Server capture is placed after the complete order persistence loop in src/lib/trpc/routes/general/orders.ts."
-        - "Focused tests cover split aggregation, allowlisted properties, failure isolation, and removal of duplicate client PostHog purchase capture."
-    governance_reentry_required: false
+    approved_by: Ayan Ganguly (owner confirmation of corrected design)
