@@ -1,0 +1,214 @@
+schema_version: "1.0"
+task:
+    id: REN-131
+    title: Add server-side purchase_completed capture (no PostHog fallback today)
+    source: linear
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-131/add-server-side-purchase-completed-capture-no-posthog-fallback-today
+        priority: High
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Customer Tracking & Analytics Instrumentation
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Instrumentation is attached to the critical order-creation path and must not change order/payment state.
+        - Purchase and revenue analytics can be materially overstated by duplicate or multi-order semantics.
+        - Server-side event properties cross authenticated identity and external telemetry boundaries.
+    escalation_history:
+        - L2_to_L3: Order/revenue event semantics and multi-brand split behavior require an explicit business decision.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, project, status, relations, and comments
+        - Existing posthog-node client and event taxonomy
+        - Order tRPC route persistence, item/brand splitting, reward orders, and side effects
+        - Existing client purchase capture locations and failure/idempotency implications
+    excluded_areas:
+        - Payment provider reconciliation and webhook redesign
+        - Database schema/idempotency-key migration; not requested and must be evaluated separately if needed
+        - Application source/tests; read-only SPEC boundary
+    dependencies: [DEP-131-001, DEP-131-002]
+    integrations: [INT-131-001, INT-131-002]
+    security_boundaries: [SEC-131-001]
+    state_transitions:
+        - order_request -> order_persisted -> purchase_capture_attempted
+        - purchase_capture_attempted -> observed_success_or_failure
+    related_tests: [TEXP-131-001, TEXP-131-002, TEXP-131-003, TEXP-131-004]
+    uncertainties:
+        - Whether analytics should count a checkout, each brand-split order, or a business-level purchase once.
+        - Whether the client event already reaches PostHog for the same order and how deduplication is configured.
+requirements:
+    - id: REQ-131-001
+      description: Submit one complete checkout mutation and emit exactly one server-side purchase_completed event after every resulting order persists.
+      type: explicit
+    - id: REQ-131-002
+      description: Use the checkout intent or reward redemption identity for PostHog deduplication and ensure capture failure or retries cannot alter state or double-count purchases.
+      type: inferred
+    - id: REQ-131-003
+      description: Send only approved purchase analytics properties and preserve identity/privacy boundaries.
+      type: inferred
+    - id: REQ-131-004
+      description: Provide regression coverage for normal, split, reward, failed, and PostHog-unavailable order flows.
+      type: explicit
+scenarios:
+    - id: SCN-131-001
+      requirement_ids: [REQ-131-001]
+      description: A complete single- or multi-brand checkout produces one server event after all internal orders persist.
+    - id: SCN-131-002
+      requirement_ids: [REQ-131-002]
+      description: A multi-brand/multi-item checkout is submitted in one mutation and produces one aggregate event without duplicate revenue counting.
+    - id: SCN-131-003
+      requirement_ids: [REQ-131-002, REQ-131-003]
+      description: Order rejection, transaction failure, PostHog rejection, timeout, retry, and client/server overlap preserve order state and event integrity.
+    - id: SCN-131-004
+      requirement_ids: [REQ-131-003, REQ-131-004]
+      description: Reward/zero-value orders and authenticated identity produce only approved properties.
+invariants:
+    - id: INV-131-001
+      description: A purchase event is never emitted as proof of an order before the approved persistence point.
+    - id: INV-131-002
+      description: PostHog failure cannot roll back, duplicate, or falsely fail a successfully persisted order.
+    - id: INV-131-003
+      description: Purchase events contain no payment credentials, addresses, verification secrets, or unnecessary contact PII.
+flows:
+    - id: FLOW-131-001
+      description: Submit all checkout items in one request, persist the internal split orders, then construct and submit one aggregate event in a failure-isolated boundary.
+      state_transitions: [order_request, order_persisted, purchase_capture_attempted, observed_success_or_failure]
+    - id: FLOW-131-002
+      description: Use intentId or reward redemption ID as the checkout identity across split orders and retries; browser PostHog purchase capture remains disabled.
+      state_transitions: [checkout_started, order_unit_identified, event_deduped_or_emitted]
+dependencies:
+    - id: DEP-131-001
+      name: order persistence and transaction semantics
+      purpose: Authoritative success point for purchase analytics.
+      owner: Order-domain maintainers
+      required_state: Durable order state and known behavior for partial/multi-brand creation.
+      description: The current route creates per-item orders within a larger mutation and has external side effects.
+      status: resolved
+    - id: DEP-131-002
+      name: posthog-node client and event schema
+      purpose: Server-side capture and analytics contract.
+      owner: Analytics maintainers and PostHog administrators
+      required_state: Supported capture/flush behavior and approved property schema.
+      description: Existing `src/lib/posthog/client.tsx` exposes a shared server client.
+      status: resolved
+integrations:
+    - id: INT-131-001
+      system: PostHog server SDK
+      purpose: Reliable server-side purchase capture.
+      failure_mode: SDK/network rejection, timeout, process termination, or duplicate delivery.
+      retry_idempotency: Requires an explicit event identity/aggregation policy.
+    - id: INT-131-002
+      system: Clerk/order/payment domain
+      purpose: Authenticated customer identity and authoritative order success.
+      failure_mode: unauthorized request, payment/order rejection, partial order failure.
+      retry_idempotency: Order mutation behavior must remain unchanged.
+personas:
+    - id: PER-131-001
+      role: customer_purchaser
+      applicability: Customers whose browser may close before client capture.
+    - id: PER-131-002
+      role: analytics_operator
+      applicability: Users relying on purchase/revenue reporting.
+security_boundaries:
+    - id: SEC-131-001
+      description: Only authenticated, approved identity and minimal purchase metadata cross into PostHog; payment and address secrets remain inside their existing boundaries.
+business_rules:
+    - id: BR-131-001
+      description: Purchase reporting must represent the approved business purchase unit exactly once.
+decisions:
+    - id: DEC-131-001
+      question: Should a multi-brand checkout emit one purchase event, one event per persisted brand order, or another deduplicated business unit?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Emit one `purchase_completed` event per complete checkout using a stable checkout/order-group identifier for deduplication, rather than one event per brand-split order.
+      basis: Owner selected one event per complete checkout and approved replacing per-brand client mutations with one complete-checkout mutation.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-131-001
+      category: integration
+      classification: REQUIRED
+      reason: Verifies one complete-checkout mutation captures after all internal order persistence and isolates analytics failure.
+      scenarios: [SCN-131-001, SCN-131-003]
+    - id: TEXP-131-002
+      category: regression
+      classification: REQUIRED
+      reason: Protects payment, order, inventory, shipping, email, and Meta Pixel/CAPI behavior while browser PostHog purchase remains disabled.
+      scenarios: [SCN-131-001, SCN-131-003]
+    - id: TEXP-131-003
+      category: business_uat
+      classification: REQUIRED
+      reason: Confirms the selected multi-brand, reward, zero-value, and client/server counting policy.
+      scenarios: [SCN-131-002, SCN-131-004]
+    - id: TEXP-131-004
+      category: security
+      classification: REQUIRED
+      reason: Asserts minimal identity and purchase properties with no payment/address/secrets.
+      scenarios: [SCN-131-003, SCN-131-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-131-001
+          scenario_ids: [SCN-131-001]
+        - requirement_id: REQ-131-002
+          scenario_ids: [SCN-131-002, SCN-131-003]
+        - requirement_id: REQ-131-003
+          scenario_ids: [SCN-131-003, SCN-131-004]
+        - requirement_id: REQ-131-004
+          scenario_ids: [SCN-131-001, SCN-131-002, SCN-131-003, SCN-131-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-131-001
+          invariant_ids: [INV-131-001, INV-131-002]
+        - scenario_id: SCN-131-002
+          invariant_ids: [INV-131-001, INV-131-002]
+        - scenario_id: SCN-131-003
+          invariant_ids: [INV-131-002, INV-131-003]
+        - scenario_id: SCN-131-004
+          invariant_ids: [INV-131-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-131-001
+          test_expectation_ids: [TEXP-131-001, TEXP-131-002]
+        - scenario_id: SCN-131-002
+          test_expectation_ids: [TEXP-131-003]
+        - scenario_id: SCN-131-003
+          test_expectation_ids: [TEXP-131-001, TEXP-131-002, TEXP-131-004]
+        - scenario_id: SCN-131-004
+          test_expectation_ids: [TEXP-131-003, TEXP-131-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-131-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-131-001, DEC-131-001]
+          description: Multi-brand checkout aggregation and idempotency semantics require business confirmation.
+        - id: CRIT-131-002
+          severity: MAJOR
+          references: [REQ-131-002, SCN-131-003]
+          description: Capture must be failure-isolated and protected from client/server duplicate counting.
+        - id: CRIT-131-003
+          severity: MAJOR
+          references: [REQ-131-003, INV-131-003]
+          description: Purchase properties require an explicit minimal-data allowlist.
+        - id: CRIT-131-004
+          severity: MINOR
+          references: [TEXP-131-003]
+          description: Reward and split-order cases need business-level verification.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (owner confirmation of corrected design)

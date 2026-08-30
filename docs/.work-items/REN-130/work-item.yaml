@@ -1,0 +1,216 @@
+schema_version: "1.0"
+task:
+    id: REN-130
+    title: Add PostHog tracking to phone-first-sign-up.tsx
+    source: linear
+    branch: ayanganguly333/ren-129-130-131-132
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-130/add-posthog-tracking-to-phone-first-sign-uptsx
+        priority: High
+        labels: []
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Customer Tracking & Analytics Instrumentation
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Authentication funnel instrumentation spans Clerk client state and an external analytics SDK.
+        - Duplicate or sensitive events would corrupt business reporting or create privacy risk.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, project, status, relations, and comments
+        - Live phone-first sign-in/sign-up Clerk flows and dead legacy sign-in reference
+        - PostHog event constants/provider and existing auth instrumentation
+        - Duplicate, retry, failure, privacy, and redirect behavior
+    excluded_areas:
+        - Clerk configuration and provider dashboard settings
+        - Server-side identity or account synchronization behavior
+        - Application source/tests; read-only SPEC boundary
+    dependencies: [DEP-130-001]
+    integrations: [INT-130-001, INT-130-002]
+    security_boundaries: [SEC-130-001]
+    state_transitions:
+        - auth_form -> initiation_event -> verification_or_redirect
+        - verification_or_oauth -> completed_event -> authenticated_redirect
+    related_tests: [TEXP-130-001, TEXP-130-002, TEXP-130-003]
+    uncertainties:
+        - Whether existing dashboards expect generic auth event names or can adopt signup-specific names.
+requirements:
+    - id: REQ-130-001
+      description: Instrument the live phone-first sign-in and sign-up forms using a documented, consistent auth event taxonomy.
+      type: explicit
+    - id: REQ-130-002
+      description: Emit initiation and completion events at most once per logical attempt, including verification, OAuth, retry, and redirect paths.
+      type: inferred
+    - id: REQ-130-003
+      description: Preserve Clerk flow, redirect, error, legal-acceptance, and privacy behavior when analytics is unavailable.
+      type: inferred
+scenarios:
+    - id: SCN-130-001
+      requirement_ids: [REQ-130-001]
+      description: A phone or email sign-in/sign-up attempt emits the selected initiation event when the attempt begins.
+    - id: SCN-130-002
+      requirement_ids: [REQ-130-002]
+      description: Successful password, phone verification, email verification, and Google flows emit one completion event without duplicate rerender/retry emissions.
+    - id: SCN-130-003
+      requirement_ids: [REQ-130-003]
+      description: Clerk errors, blocked legal acceptance, unavailable PostHog, and abandoned verification do not block or falsely complete authentication.
+invariants:
+    - id: INV-130-001
+      description: Analytics calls cannot grant, deny, or alter a Clerk session.
+    - id: INV-130-002
+      description: Credentials, verification codes, access tokens, and raw contact secrets are never event properties.
+    - id: INV-130-003
+      description: One logical auth attempt cannot produce duplicate initiation or completion events solely from rerender/retry behavior.
+flows:
+    - id: FLOW-130-001
+      description: Start live auth form action, capture safe metadata, and continue the existing Clerk flow.
+      state_transitions: [auth_form, initiation_event, verification_or_redirect]
+    - id: FLOW-130-002
+      description: Complete verification/OAuth, emit completion once, and preserve existing session activation and redirect.
+      state_transitions:
+          [verification_or_oauth, completed_event, authenticated_redirect]
+dependencies:
+    - id: DEP-130-001
+      name: Clerk auth state and PostHog event constants
+      purpose: Existing authentication lifecycle and event naming contract.
+      owner: Application auth/analytics maintainers
+      required_state: Stable Clerk callbacks and documented event names.
+      description: The live forms already own the relevant Clerk transitions; PostHog constants already expose generic auth events.
+      status: resolved
+integrations:
+    - id: INT-130-001
+      system: Clerk
+      purpose: Phone, email, password, and Google authentication.
+      failure_mode: API errors, incomplete verification, retry, or redirect failure.
+      retry_idempotency: Clerk attempts may be retried; analytics must remain logically once-per-attempt.
+    - id: INT-130-002
+      system: PostHog browser SDK
+      purpose: Auth funnel reporting.
+      failure_mode: Uninitialized/blocked SDK or network failure.
+      retry_idempotency: Capture is best-effort and must not change auth behavior.
+personas:
+    - id: PER-130-001
+      role: customer_authenticating
+      applicability: Visitors signing in or creating accounts through phone-first forms.
+security_boundaries:
+    - id: SEC-130-001
+      description: Analytics receives only non-sensitive funnel metadata and never authentication secrets.
+business_rules:
+    - id: BR-130-001
+      description: Authentication success is determined only by Clerk; PostHog is observational.
+decisions:
+    - id: DEC-130-001
+      question: Should the existing generic auth event names be reused for signup, or should signup-specific names be added?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Reuse existing constants for compatibility unless analytics owners explicitly require separate signup dashboards; if separate names are added, document the mapping in the same change.
+      basis: Existing `POSTHOG_EVENTS.AUTH` constants and the issue's “or new SIGNUP-specific events” language.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-130-001
+      category: component
+      classification: REQUIRED
+      reason: Exercises phone/email/password/OAuth initiation and completion paths in the live forms.
+      scenarios: [SCN-130-001, SCN-130-002]
+    - id: TEXP-130-002
+      category: regression
+      classification: REQUIRED
+      reason: Verifies Clerk errors, retries, redirects, legal acceptance, and PostHog failure preserve auth behavior and avoid duplicates.
+      scenarios: [SCN-130-002, SCN-130-003]
+    - id: TEXP-130-003
+      category: security
+      classification: REQUIRED
+      reason: Asserts credentials, codes, tokens, and raw sensitive contact values are excluded from capture properties.
+      scenarios: [SCN-130-003]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-130-001
+          scenario_ids: [SCN-130-001]
+        - requirement_id: REQ-130-002
+          scenario_ids: [SCN-130-002]
+        - requirement_id: REQ-130-003
+          scenario_ids: [SCN-130-003]
+    scenario_to_invariants:
+        - scenario_id: SCN-130-001
+          invariant_ids: [INV-130-001, INV-130-002]
+        - scenario_id: SCN-130-002
+          invariant_ids: [INV-130-001, INV-130-003]
+        - scenario_id: SCN-130-003
+          invariant_ids: [INV-130-001, INV-130-002]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-130-001
+          test_expectation_ids: [TEXP-130-001]
+        - scenario_id: SCN-130-002
+          test_expectation_ids: [TEXP-130-001, TEXP-130-002]
+        - scenario_id: SCN-130-003
+          test_expectation_ids: [TEXP-130-002, TEXP-130-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - id: CRIT-130-001
+          severity: MAJOR
+          references: [REQ-130-001, DEC-130-001]
+          description: Event naming must remain compatible with existing dashboards or include an explicit mapping.
+        - id: CRIT-130-002
+          severity: MAJOR
+          references: [REQ-130-002, INV-130-003]
+          description: Verification and retry paths require once-per-logical-attempt guards.
+        - id: CRIT-130-003
+          severity: MINOR
+          references: [REQ-130-003, INV-130-002]
+          description: Sensitive-field exclusion should be asserted in tests.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Codex (spec owner)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "b9f0a8c17b691884cc78f9f6f10ebcd5eab82055"
+    head_commit: "2fab6e21967e4855ec4370f310ff2e062a737d1f"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-130-001: Add component-level coverage for phone/email/password initiation, verification completion, Google callback, retry, legal-acceptance, error, and PostHog-unavailable paths."
+    evidence:
+        - "Compared the approved REN-130 contract with the base-to-head diff from b9f0a8c17b691884cc78f9f6f10ebcd5eab82055 to 2fab6e21967e4855ec4370f310ff2e062a737d1f."
+        - "Commit 2fab6e21967e4855ec4370f310ff2e062a737d1f moves phone/email initiation capture into the live credential-submit transition and removes the unreachable resend placement."
+        - "Focused static coverage verifies one correctly shaped initiation event for both phone and email methods; safe-property and PostHog-failure tests remain present."
+        - "The live Clerk form, verification, retry, and SSO callback matrix remains without component-level automated coverage."
+    governance_reentry_required: false

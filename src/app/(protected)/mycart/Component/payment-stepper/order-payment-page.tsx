@@ -1,10 +1,10 @@
 "use client";
 
-import { getShiprocketBalance } from "@/actions/get-shiprocket-balance";
 import {
     trackInitiateCheckoutCapi,
     trackPurchaseCapi,
 } from "@/actions/analytics";
+import { getShiprocketBalance } from "@/actions/get-shiprocket-balance";
 // Impoert actions
 import { SwapStampCelebration } from "@/components/checkout/swap-stamp-celebration";
 import { PaymentProcessingModal } from "@/components/globals/modals";
@@ -319,20 +319,6 @@ export function OrderPage({
                           new Date().getTime() +
                           "_" +
                           Math.random().toString(36).substr(2, 9);
-
-                posthog?.capture(POSTHOG_EVENTS.COMMERCE.PURCHASE_COMPLETED, {
-                    order_id: newOrder.id,
-                    product_ids: variables.items.map(
-                        (item: any) => item.productId
-                    ),
-                    brand_ids: variables.items.map((item: any) => item.brandId),
-                    total_amount: Number(
-                        convertPaiseToRupees(variables.totalAmount)
-                    ),
-                    currency: "INR",
-                    total_items: variables.totalItems,
-                    payment_method: variables.paymentMethod,
-                });
 
                 fbEvent(
                     "Purchase",
@@ -941,8 +927,8 @@ export function OrderPage({
 
                     {isAdmin && (
                         <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-center text-sm text-amber-900">
-                            Only customer accounts can place orders. Please sign in
-                            with a customer account to buy.
+                            Only customer accounts can place orders. Please sign
+                            in with a customer account to buy.
                         </p>
                     )}
                     <Button

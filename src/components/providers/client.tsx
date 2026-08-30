@@ -13,6 +13,7 @@ import { PostHogProvider } from "posthog-js/react";
 import { Suspense, useEffect, useState } from "react";
 import superjson from "superjson";
 import { PostHogIdentifyBridge, PostHogPageView } from "../globals/posthog";
+import { POSTHOG_INIT_DELAY_MS } from "./posthog-init-policy";
 
 function getTrpcUrl() {
     if (typeof window !== "undefined") return "/api/trpc";
@@ -40,8 +41,8 @@ export function ClientProvider({ children }: LayoutProps) {
     );
 
     useEffect(() => {
-        // Delay PostHog initialization by 5 seconds so it doesn't block the initial page load (hydration)
-        // and doesn't get penalized by Google PageSpeed Insights.
+        // Delay PostHog initialization briefly so it doesn't block initial hydration
+        // while reducing the blind window for short visits.
         // PostHog will queue all events (like the initial page view) and flush them when initialized.
         const timer = setTimeout(() => {
             posthog.init(env.NEXT_PUBLIC_POSTHOG_KEY, {
@@ -49,7 +50,7 @@ export function ClientProvider({ children }: LayoutProps) {
                 capture_pageview: false,
                 capture_pageleave: true,
             });
-        }, 5000);
+        }, POSTHOG_INIT_DELAY_MS);
 
         return () => clearTimeout(timer);
     }, []);

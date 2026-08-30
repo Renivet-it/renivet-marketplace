@@ -1,0 +1,145 @@
+schema_version: "1.0"
+task:
+    id: REN-109
+    title: Cart page browser tab title reads "Profile | Renivet"
+    source: linear
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-109/cart-page-browser-tab-title-reads-profile-renivet
+        priority: Low
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Guest Journey QA Findings
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - Metadata-only correction on one route with no runtime state or data impact.
+investigation:
+    depth: focused
+    investigated_areas:
+        - Linear issue and repository route metadata
+        - Existing site-name title template
+        - Guest and authenticated cart render paths
+    excluded_areas:
+        - Checkout, authentication, and cart business logic
+        - Application source and tests during specification phase
+    dependencies: [DEP-109-001]
+    integrations: []
+    security_boundaries: []
+    state_transitions: [route_request -> metadata_resolved -> browser_title_rendered]
+    related_tests: [TEXP-109-001]
+    uncertainties: []
+requirements:
+    - id: REQ-109-001
+      description: Set the /mycart route default metadata title to Cart while retaining the existing site-name template.
+      type: explicit
+    - id: REQ-109-002
+      description: Preserve all cart rendering and route behavior for authenticated and guest users.
+      type: inferred
+scenarios:
+    - id: SCN-109-001
+      requirement_ids: [REQ-109-001]
+      description: Visiting /mycart produces the browser title Cart | Renivet.
+    - id: SCN-109-002
+      requirement_ids: [REQ-109-001, REQ-109-002]
+      description: Guest and authenticated cart paths retain their existing content while using the same cart title.
+invariants:
+    - id: INV-109-001
+      description: The cart route title never falls back to Profile.
+    - id: INV-109-002
+      description: The global site-name suffix and unrelated route titles remain unchanged.
+flows:
+    - id: FLOW-109-001
+      description: Next metadata resolution uses the cart route default and existing site-name template.
+      state_transitions: [route_request, metadata_resolved, browser_title_rendered]
+dependencies:
+    - id: DEP-109-001
+      name: Next route metadata
+      purpose: Supplies the browser title for /mycart.
+      owner: Storefront maintainers
+      required_state: Existing title template remains available.
+      description: The route already exports static metadata.
+      status: resolved
+integrations: []
+personas:
+    - id: PER-109-001
+      role: shopper
+      applicability: Anyone opening the cart route.
+security_boundaries: []
+business_rules:
+    - id: BR-109-001
+      description: Browser titles identify the current storefront area accurately.
+decisions:
+    - id: DEC-109-001
+      question: What title should the cart route use?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Use Cart with the existing Renivet suffix.
+      basis: Direct correction of the reported QA finding.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-109-001
+      category: regression
+      classification: REQUIRED
+      reason: Verifies the route metadata default and preserves the site-name template.
+      scenarios: [SCN-109-001, SCN-109-002]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-109-001
+          scenario_ids: [SCN-109-001, SCN-109-002]
+        - requirement_id: REQ-109-002
+          scenario_ids: [SCN-109-002]
+    scenario_to_invariants:
+        - scenario_id: SCN-109-001
+          invariant_ids: [INV-109-001, INV-109-002]
+        - scenario_id: SCN-109-002
+          invariant_ids: [INV-109-002]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-109-001
+          test_expectation_ids: [TEXP-109-001]
+        - scenario_id: SCN-109-002
+          test_expectation_ids: [TEXP-109-001]
+critic:
+    required: false
+    completed: false
+    artifact: null
+    reviewer: null
+    fresh_context: false
+    read_only: true
+    categories_reviewed: []
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Codex specification gate (low-risk, direct metadata correction)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/main
+    base_commit: "467e28c8b437630b2d9aaf62fa666d07f3ff3fdf"
+    head_commit: "1fce19a99a736686d147478d2d8a37fea993cc2d"
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: NOT_APPLICABLE
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-109-001: Add browser title smoke coverage when the browser test harness is available."
+    evidence:
+        - Compared the approved REN-109 contract with the relevant uncommitted cart metadata diff and static regression test.
+        - Unrelated pre-existing REN-131/132 worktree changes were excluded from task attribution.
+    governance_reentry_required: false
