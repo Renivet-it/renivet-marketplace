@@ -469,9 +469,6 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         trpc.general.orders.createOrder.useMutation({
             onSuccess: (order, variables) => {
                 const totalAmountPaise = Number(variables.totalAmount ?? 0);
-                const orderIds = Array.isArray(order)
-                    ? order.map((entry) => entry.id)
-                    : [];
                 const eventId =
                     typeof crypto !== "undefined" && crypto.randomUUID
                         ? crypto.randomUUID()
@@ -479,20 +476,6 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                           new Date().getTime() +
                           "_" +
                           Math.random().toString(36).substr(2, 9);
-
-                posthog?.capture(POSTHOG_EVENTS.COMMERCE.PURCHASE_COMPLETED, {
-                    order_ids: orderIds,
-                    product_ids: variables.items.map(
-                        (item: any) => item.productId
-                    ),
-                    brand_ids: variables.items.map((item: any) => item.brandId),
-                    total_amount: Number(
-                        convertPaiseToRupees(totalAmountPaise)
-                    ),
-                    currency: "INR",
-                    total_items: variables.totalItems,
-                    payment_method: variables.paymentMethod,
-                });
 
                 fbEvent(
                     "Purchase",
