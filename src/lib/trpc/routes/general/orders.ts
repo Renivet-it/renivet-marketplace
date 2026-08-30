@@ -1,10 +1,9 @@
 import { sendBrandOrderNotificationEmail } from "@/actions/send-brand-order-notification-email";
 import { sendOrderConfirmationEmail } from "@/actions/send-order-confirmation-email";
-import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
-import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
 import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { BitFieldSitePermission } from "@/config/permissions";
+import { capturePurchaseCompleted } from "@/lib/analytics/purchase-events";
 import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { db } from "@/lib/db";
 import { productQueries, refundQueries } from "@/lib/db/queries";
@@ -14,11 +13,14 @@ import {
     createOrder as createDelhiveryOrder,
     getShippingCharge,
 } from "@/lib/delhivery/orders";
+import { resolveDelhiveryUrl } from "@/lib/delhivery/url";
+import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
 import { computeCheckoutTaxLines } from "@/lib/finance/calculations";
 import {
     auditEntityChange,
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
+import { posthog } from "@/lib/posthog/client";
 import { razorpay } from "@/lib/razorpay";
 import {
     analytics,
@@ -673,7 +675,9 @@ export const ordersRouter = createTRPCRouter({
                             // Log the error but don't fail the mutation
                         }
                     } else {
-                        console.info(`Skipping brand order email for ${newOrder.id}: external side effects are disabled.`);
+                        console.info(
+                            `Skipping brand order email for ${newOrder.id}: external side effects are disabled.`
+                        );
                     }
                     // const sr = await shiprocket();
 
@@ -967,7 +971,9 @@ export const ordersRouter = createTRPCRouter({
                             ? await createDelhiveryOrder(delhiveryPayload)
                             : null;
                         if (!externalSideEffectsEnabled) {
-                            console.info(`Skipping Delhivery shipment creation for ${newOrder.id}: external side effects are disabled.`);
+                            console.info(
+                                `Skipping Delhivery shipment creation for ${newOrder.id}: external side effects are disabled.`
+                            );
                         }
                         console.log("✅ Delhivery Response:", srOrder);
                         let finalLength = baseLength;
@@ -1396,7 +1402,9 @@ export const ordersRouter = createTRPCRouter({
                             // Log the error but don't fail the mutation
                         }
                     } else {
-                        console.info(`Skipping customer order email for ${newOrder.id}: external side effects are disabled.`);
+                        console.info(
+                            `Skipping customer order email for ${newOrder.id}: external side effects are disabled.`
+                        );
                     }
 
                     if (isRewardOrder && itemRewardRedemptionId) {
@@ -1408,6 +1416,32 @@ export const ordersRouter = createTRPCRouter({
                     }
 
                     createdOrders.push(newOrder);
+                }
+
+                if (createdOrders.length > 0) {
+                    const checkoutId =
+                        input.intentId ??
+                        createdOrders
+                            .map((order: { id: string }) => order.id)
+                            .join("|");
+
+                    capturePurchaseCompleted(
+                        (event) => posthog.capture(event),
+                        {
+                            checkoutId,
+                            distinctId: user.id,
+                            orderIds: createdOrders.map(
+                                (order: { id: string }) => order.id
+                            ),
+                            productIds: input.items.map(
+                                (item) => item.productId
+                            ),
+                            brandIds: input.items.map((item) => item.brandId),
+                            totalAmountPaise: Number(input.totalAmount ?? 0),
+                            totalItems: input.totalItems,
+                            paymentMethod: input.paymentMethod ?? "unknown",
+                        }
+                    );
                 }
 
                 // NEW: Clear user cart once after all orders are created
@@ -2091,7 +2125,10 @@ export const ordersRouter = createTRPCRouter({
             };
             console.log(payload, "payloadpayloadpayload");
             const resp = await axios.post(
-                resolveDelhiveryUrl(process.env.DELHIVERY_BASE_URL, "/api/p/edit"),
+                resolveDelhiveryUrl(
+                    process.env.DELHIVERY_BASE_URL,
+                    "/api/p/edit"
+                ),
                 payload,
                 {
                     headers: {

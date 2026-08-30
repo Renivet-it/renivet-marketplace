@@ -1,0 +1,204 @@
+schema_version: "1.0"
+task:
+    id: REN-110
+    title: Radix Dialog missing Description/aria-describedby on search modal
+    source: linear
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-110/radix-dialog-missing-descriptionaria-describedby-on-search-modal
+        priority: Low
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Guest Journey QA Findings
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The change affects a shared Radix-based sheet integration and accessibility semantics.
+        - Incorrect dialog labelling could regress focus, screen-reader output, or search interaction.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue and reported browser warning
+        - ProductSearch caller and Sheet primitive exports
+        - Existing dialog accessibility patterns
+        - Search interaction and responsive shell boundaries
+    excluded_areas:
+        - Unrelated dialogs and dashboard command components
+        - Application source and tests during specification phase
+    dependencies: [DEP-110-001, DEP-110-002, DEP-110-003]
+    integrations: [INT-110-001]
+    security_boundaries: [SEC-110-001]
+    state_transitions: [search_triggered -> sheet_open -> description_associated -> search_interactive -> sheet_closed]
+    related_tests: [TEXP-110-001, TEXP-110-002, TEXP-110-003]
+    uncertainties:
+        - The reported wording says DialogContent, while the current storefront search implementation uses the Radix Dialog-backed SheetContent; the fix targets the observed storefront caller.
+requirements:
+    - id: REQ-110-001
+      description: Associate a non-empty accessible description with the product-search sheet content.
+      type: explicit
+    - id: REQ-110-002
+      description: Preserve existing search behavior, focus management, keyboard controls, results, and responsive presentation.
+      type: inferred
+    - id: REQ-110-003
+      description: Add a stable non-empty SheetDescription with className sr-only inside the shared search SheetContent, and avoid global warning suppression or unrelated dialog changes.
+      type: inferred
+scenarios:
+    - id: SCN-110-001
+      requirement_ids: [REQ-110-001]
+      description: Opening product search exposes a dialog content element with a valid aria-describedby target containing meaningful text.
+    - id: SCN-110-002
+      requirement_ids: [REQ-110-001, REQ-110-002]
+      description: Keyboard and assistive-technology users can open, use, and close search with existing focus behavior.
+    - id: SCN-110-003
+      requirement_ids: [REQ-110-002, REQ-110-003]
+      description: Navbar, landing, catalog, and event-filter ProductSearch consumers retain search results, loading states, mobile layout, and unrelated dialog behavior.
+invariants:
+    - id: INV-110-001
+      description: An open product-search sheet always has a resolvable accessible description.
+    - id: INV-110-002
+      description: No warning suppression, missing-description fallback, or global primitive behavior change is introduced.
+    - id: INV-110-003
+      description: Search state and user-entered query data are not exposed beyond existing UI boundaries.
+flows:
+    - id: FLOW-110-001
+      description: User triggers search, Radix opens the sheet, the hidden description is associated, and existing search interaction proceeds.
+      state_transitions: [search_triggered, sheet_open, description_associated, search_interactive, sheet_closed]
+dependencies:
+    - id: DEP-110-001
+      name: product-search sheet caller
+      purpose: Owns the storefront search dialog content and visible title.
+      owner: Storefront maintainers
+      required_state: Existing SheetHeader and SheetTitle remain present.
+      description: ProductSearch is the affected caller in the navbar search flow.
+      status: resolved
+    - id: DEP-110-002
+      name: Radix Dialog description primitive
+      purpose: Generates the aria-describedby relationship.
+      owner: UI component maintainers
+      required_state: SheetDescription remains a Radix Dialog Description wrapper.
+      description: The repository already exports SheetDescription from the shared sheet primitive.
+      status: resolved
+    - id: DEP-110-003
+      name: ProductSearch consumers
+      purpose: Ensures the shared accessibility fix is compatible across all current callers.
+      owner: Storefront maintainers
+      required_state: Navbar, landing, catalog, and event-filter consumers continue to mount ProductSearch with their current props.
+      description: Repository consumers include navbar-home, landing, storefront-catalog-page, shop-event-filters, and related storefront surfaces.
+      status: resolved
+integrations:
+    - id: INT-110-001
+      system: Radix UI Dialog accessibility semantics
+      purpose: Associates dialog content with its description and manages focus.
+      failure_mode: Missing or empty description, broken relationship, or focus regression.
+      retry_idempotency: Not applicable; render-only semantics.
+personas:
+    - id: PER-110-001
+      role: shopper
+      applicability: Anyone using product search.
+    - id: PER-110-002
+      role: assistive_technology_user
+      applicability: Users relying on dialog announcements and keyboard navigation.
+security_boundaries:
+    - id: SEC-110-001
+      description: The change adds static accessibility text only; it must not alter query, product, identity, or telemetry data handling.
+business_rules:
+    - id: BR-110-001
+      description: Every modal surface must communicate its purpose to assistive technology.
+decisions:
+    - id: DEC-110-001
+      question: Where should the missing description be fixed?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Add a stable visually hidden SheetDescription inside shared ProductSearch and verify every current consumer.
+      basis: ProductSearch is shared, so a caller-local fix would miss affected surfaces or create inconsistent semantics.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-110-001
+      category: accessibility
+      classification: REQUIRED
+      reason: Verifies the open search sheet has a valid aria-describedby relationship and non-empty description.
+      scenarios: [SCN-110-001, SCN-110-002]
+    - id: TEXP-110-002
+      category: regression
+      classification: REQUIRED
+      reason: Verifies keyboard open/close, search results, loading, and responsive behavior remain intact.
+      scenarios: [SCN-110-002, SCN-110-003]
+    - id: TEXP-110-003
+      category: exploratory
+      classification: REQUIRED
+      reason: Captures console output around opening each current ProductSearch consumer and asserts specifically that the Radix missing-description warning is absent.
+      scenarios: [SCN-110-001, SCN-110-003]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-110-001
+          scenario_ids: [SCN-110-001, SCN-110-002]
+        - requirement_id: REQ-110-002
+          scenario_ids: [SCN-110-002, SCN-110-003]
+        - requirement_id: REQ-110-003
+          scenario_ids: [SCN-110-003]
+    scenario_to_invariants:
+        - scenario_id: SCN-110-001
+          invariant_ids: [INV-110-001, INV-110-002]
+        - scenario_id: SCN-110-002
+          invariant_ids: [INV-110-001, INV-110-003]
+        - scenario_id: SCN-110-003
+          invariant_ids: [INV-110-002, INV-110-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-110-001
+          test_expectation_ids: [TEXP-110-001]
+        - scenario_id: SCN-110-002
+          test_expectation_ids: [TEXP-110-001, TEXP-110-002]
+        - scenario_id: SCN-110-003
+          test_expectation_ids: [TEXP-110-002, TEXP-110-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-110-001
+          severity: MAJOR
+          references: [REQ-110-003, DEP-110-001, SCN-110-003]
+          description: ProductSearch is shared by multiple storefront surfaces; shared-consumer coverage is now required.
+        - id: CRIT-110-002
+          severity: MINOR
+          references: [REQ-110-001, TEXP-110-001]
+          description: Description text, sr-only placement, and deterministic warning capture are explicit.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Codex specification gate (critic findings resolved)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/main
+    base_commit: "467e28c8b437630b2d9aaf62fa666d07f3ff3fdf"
+    head_commit: "1fce19a99a736686d147478d2d8a37fea993cc2d"
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-110-001: Add rendered accessibility and console-capture coverage when the browser test harness is available."
+    evidence:
+        - Compared the approved REN-110 contract with the shared ProductSearch diff and static accessibility regression test.
+        - Unrelated pre-existing REN-131/132 worktree changes were excluded from task attribution.
+    governance_reentry_required: false

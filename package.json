@@ -18,6 +18,7 @@
         "corporate-documents:seed-test": "bun run src/scripts/seed-corporate-document-chain-test.ts",
         "embeddings:brands": "bun run generateBrandEmbeddings.ts",
         "swap-rewards:backfill": "bun run src/scripts/backfill-swap-rewards.ts",
+        "agent-browser:network-blocking-spike": "bun run scripts/ren-122-network-blocking-spike.ts",
         "governance:validate": "bun run scripts/governance/validate-work-item.ts"
     },
     "dependencies": {
@@ -148,6 +149,7 @@
         "@types/react": "^19.0.8",
         "@types/react-dom": "^19.0.3",
         "@typescript-eslint/parser": "^8.23.0",
+        "agent-browser": "^0.35.1",
         "drizzle-kit": "^0.29.1",
         "eslint": "8.57.0",
         "eslint-config-next": "^15.1.6",

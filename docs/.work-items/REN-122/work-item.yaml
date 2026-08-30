@@ -1,0 +1,265 @@
+schema_version: "1.0"
+task:
+  id: REN-122
+  title: Network-level request blocking spike for agent-browser runs
+  source: linear
+  branch: ayanganguly333/ren-131-132-purchase-cart-analytics
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-122/network-level-request-blocking-spike-for-agent-browser-runs
+    priority: Low
+    labels: []
+    status: Backlog
+    assignee: Ayan Ganguly
+    project: Automated Testing Rollout
+    milestone: Journey Mapping & Automated Suite
+risk:
+  initial_risk: L2
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - The spike governs automated access to external communications, logistics, and analytics providers.
+    - Incorrectly claiming browser CDP blocking covers Next.js server egress would create a false safety control.
+    - The proposed mechanism needs an installed agent-browser runtime and a fail-closed automated-run contract.
+  escalation_history:
+    - Initial L2 retained: external integrations and safety-control scope are dependency-spanning, but this spike does not change production behavior.
+investigation:
+  depth: dependency_tracing
+  investigated_areas:
+    - Linear issue, metadata, relations, and comments (none)
+    - Current branch and pre-existing dirty worktree state
+    - agent-browser skill guidance and local CLI availability
+    - Existing environment and external-side-effect gating
+    - Delhivery, Meta CAPI, Twilio/WhatsApp, and Resend provider paths
+  excluded_areas:
+    - Provider API calls, credentials, production data, and live automated journeys because this is a specification-only safety spike
+    - Production network firewall/proxy configuration because no such infrastructure contract is present in the repository
+    - Application code, database schemas, migrations, and application tests during the specification phase
+  dependencies: [DEP-122-001, DEP-122-002, DEP-122-003]
+  integrations: [INT-122-001, INT-122-002, INT-122-003, INT-122-004]
+  security_boundaries: [SEC-122-001, SEC-122-002]
+  state_transitions: [preflight, routes_installed, synthetic_browser_request, aborted_outcome, cleanup]
+  related_tests: [TEXP-122-001, TEXP-122-002, TEXP-122-003, TEXP-122-004]
+  uncertainties:
+    - CDP route coverage is limited to browser-originated traffic; server-egress enforcement remains a separate infrastructure concern.
+requirements:
+  - id: REQ-122-001
+    description: Produce a reproducible agent-browser proof that abort routes are installed before any browser navigation or trigger.
+    type: explicit
+  - id: REQ-122-002
+    description: Cover Delhivery, Twilio, Meta CAPI, and Resend with explicit host patterns and record an aborted result for each safe synthetic browser request.
+    type: explicit
+  - id: REQ-122-003
+    description: Do not send provider credentials, PII, orders, emails, messages, or analytics events while validating the abort rules.
+    type: inferred
+  - id: REQ-122-004
+    description: Document that CDP routing blocks browser requests only and does not protect Next.js server-to-provider egress.
+    type: inferred
+  - id: REQ-122-005
+    description: Leave application source, existing side-effect gates, provider configuration, production data, and deployment configuration unchanged.
+    type: inferred
+scenarios:
+  - id: SCN-122-001
+    requirement_ids: [REQ-122-001, REQ-122-002, REQ-122-003]
+    description: Before a synthetic browser request, the run installs a route for each provider host and records an aborted result without contacting a provider with data or credentials.
+  - id: SCN-122-002
+    requirement_ids: [REQ-122-001, REQ-122-003]
+    description: Route installation or browser startup failure stops the run before any app navigation or external trigger.
+  - id: SCN-122-003
+    requirement_ids: [REQ-122-004, REQ-122-005]
+    description: The report identifies server-side provider call paths and explicitly states that they remain outside CDP blocking coverage.
+  - id: SCN-122-004
+    requirement_ids: [REQ-122-001, REQ-122-005]
+    description: The run removes routes and closes the browser after evidence capture, with no persisted production or application-state change.
+invariants:
+  - id: INV-122-001
+    description: No proof execution may send credentials, customer data, communications, fulfillment requests, analytics events, or payment/order mutations to a provider.
+  - id: INV-122-002
+    description: "A route-installation failure is fail-closed: no target application navigation or trigger occurs afterward."
+  - id: INV-122-003
+    description: Evidence must never represent browser CDP routing as a control over server-side provider egress.
+  - id: INV-122-004
+    description: The spike does not modify application behavior, provider configuration, production data, or deployment configuration.
+flows:
+  - id: FLOW-122-001
+    description: Preflight validates the CLI/runtime, registers all abort routes, issues only safe synthetic browser requests, records aborted outcomes, then cleans up.
+    state_transitions: [preflight, routes_installed, synthetic_browser_request, aborted_outcome, cleanup]
+  - id: FLOW-122-002
+    description: If preflight or route registration fails, the run exits before navigation; if evidence is captured, the report distinguishes browser traffic from server egress.
+    state_transitions: [preflight, failed_preflight, fail_closed_exit]
+dependencies:
+  - id: DEP-122-001
+    name: agent-browser CLI runtime
+    purpose: Provides CDP network route abort capability.
+    owner: Automated-suite maintainers
+    required_state: Installed and callable in the environment that will execute the proof.
+    description: agent-browser 0.35.1 is pinned as a development dependency; Bun's local CLI resolver and the local Chrome runtime passed preflight.
+    status: resolved
+  - id: DEP-122-002
+    name: existing external-side-effect gate
+    purpose: Application-level protection for selected server-side calls.
+    owner: Storefront/platform maintainers
+    required_state: Remains unchanged by the spike.
+    description: shouldRunExternalSideEffects is used by Delhivery and Meta CAPI, while the underlying Twilio module can send directly; this is not complete residual protection for all provider sends.
+    status: resolved
+  - id: DEP-122-003
+    name: server egress enforcement decision
+    purpose: Determines whether browser-only CDP evidence is sufficient or infrastructure enforcement is required.
+    owner: Task owner
+    required_state: Owner selects the intended safety boundary.
+    description: Owner approved browser-only scope for this task; CDP cannot observe/control Next.js server-side requests to provider APIs, which remain a separate infrastructure concern.
+    status: resolved
+integrations:
+  - id: INT-122-001
+    system: Delhivery
+    purpose: Logistics API host pattern https://track.delhivery.com/**.
+    failure_mode: Browser requests matching the rule are aborted; server-side axios calls are outside CDP coverage.
+    retry_idempotency: No provider call is intentionally attempted.
+  - id: INT-122-002
+    system: Twilio
+    purpose: WhatsApp API host pattern https://api.twilio.com/**.
+    failure_mode: Browser requests matching the rule are aborted; server-side SDK calls are outside CDP coverage.
+    retry_idempotency: No provider call is intentionally attempted.
+  - id: INT-122-003
+    system: Meta CAPI
+    purpose: Graph API host pattern https://graph.facebook.com/**.
+    failure_mode: Browser requests matching the rule are aborted; server-side SDK calls are outside CDP coverage.
+    retry_idempotency: No provider call is intentionally attempted.
+  - id: INT-122-004
+    system: Resend
+    purpose: Email API host pattern https://api.resend.com/**.
+    failure_mode: Browser requests matching the rule are aborted; server-side SDK calls are outside CDP coverage.
+    retry_idempotency: No provider call is intentionally attempted.
+personas:
+  - id: PER-122-001
+    role: test_operator
+    applicability: Runs the proof and needs truthful safety evidence before automated journeys are used.
+  - id: PER-122-002
+    role: platform_operator
+    applicability: Decides and operates any separate server-egress enforcement layer.
+security_boundaries:
+  - id: SEC-122-001
+    description: Synthetic test traffic contains no secrets, customer data, provider credentials, or side-effecting payloads.
+  - id: SEC-122-002
+    description: Browser CDP controls and server runtime egress are separate enforcement planes and cannot be conflated.
+business_rules:
+  - id: BR-122-001
+    description: Automated-run safety controls must fail closed and must not claim protection outside their actual network boundary.
+decisions:
+  - id: DEC-122-001
+    question: Is a browser-only CDP proof sufficient for REN-122, with a separate task for server egress controls?
+    class: HUMAN_CONFIRMATION
+    status: resolved
+    recommendation: Implement the browser-only proof and create a separate infrastructure task if server egress must be independently blocked.
+    basis: Owner approved the browser-only proof scope on 2026-08-31; repository evidence shows every named provider integration is initiated in the server/runtime while CDP sees browser-originated traffic only.
+    confidence: high
+    consequence: high
+    human_confirmation_required: true
+test_expectations:
+  - id: TEXP-122-001
+    category: exploratory
+    classification: REQUIRED
+    reason: tests/ren-122-network-blocking-spike.test.ts and the controlled Bun runner verify route-before-probe order, fail-closed setup, cleanup, response-status rejection, and evidence for all four host patterns.
+    scenarios: [SCN-122-001]
+  - id: TEXP-122-002
+    category: security
+    classification: REQUIRED
+    reason: Review the commands and evidence to verify no secrets, PII, provider payloads, or app journeys are used, and route setup fails closed.
+    scenarios: [SCN-122-001, SCN-122-002]
+  - id: TEXP-122-003
+    category: regression
+    classification: REQUIRED
+    reason: Confirm the spike changes no application source, existing gating, provider configuration, production data, or deployment configuration.
+    scenarios: [SCN-122-003, SCN-122-004]
+  - id: TEXP-122-004
+    category: business_uat
+    classification: REQUIRED
+    reason: Owner reviews the resulting report and accepts the browser-only coverage boundary or requests a separate server-egress design.
+    scenarios: [SCN-122-003]
+traceability:
+  requirement_to_scenarios:
+    - requirement_id: REQ-122-001
+      scenario_ids: [SCN-122-001, SCN-122-002, SCN-122-004]
+    - requirement_id: REQ-122-002
+      scenario_ids: [SCN-122-001]
+    - requirement_id: REQ-122-003
+      scenario_ids: [SCN-122-001, SCN-122-002]
+    - requirement_id: REQ-122-004
+      scenario_ids: [SCN-122-003]
+    - requirement_id: REQ-122-005
+      scenario_ids: [SCN-122-003, SCN-122-004]
+  scenario_to_invariants:
+    - scenario_id: SCN-122-001
+      invariant_ids: [INV-122-001, INV-122-002]
+    - scenario_id: SCN-122-002
+      invariant_ids: [INV-122-001, INV-122-002]
+    - scenario_id: SCN-122-003
+      invariant_ids: [INV-122-003, INV-122-004]
+    - scenario_id: SCN-122-004
+      invariant_ids: [INV-122-004]
+  scenario_to_test_expectations:
+    - scenario_id: SCN-122-001
+      test_expectation_ids: [TEXP-122-001, TEXP-122-002]
+    - scenario_id: SCN-122-002
+      test_expectation_ids: [TEXP-122-002]
+    - scenario_id: SCN-122-003
+      test_expectation_ids: [TEXP-122-003, TEXP-122-004]
+    - scenario_id: SCN-122-004
+      test_expectation_ids: [TEXP-122-003]
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Codex (fresh-context independent critic)
+  fresh_context: true
+  read_only: true
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - id: CRIT-122-001
+      severity: DESIGN_BLOCKER
+      references: [DEC-122-001, REQ-122-004, INV-122-003]
+      description: Browser CDP routing cannot control Next.js server-side provider egress; keep the task blocked pending scope confirmation.
+    - id: CRIT-122-002
+      severity: MAJOR
+      references: [DEP-122-002, REQ-122-004]
+      description: Correct the gate inventory because the underlying Twilio module can send directly and the shared setting defaults enabled when unconfigured.
+    - id: CRIT-122-003
+      severity: MAJOR
+      references: [REQ-122-001, REQ-122-002, TEXP-122-001]
+      description: Require deterministic route-match evidence and failure-safe cleanup rather than treating a failed fetch as proof of an abort.
+    - id: CRIT-122-004
+      severity: MINOR
+      references: [DEP-122-001, TEXP-122-001]
+      description: Pin or record the supported agent-browser runtime and route-output semantics before executing the proof.
+    - id: CRIT-122-005
+      severity: MINOR
+      references: [REQ-122-002]
+      description: Default Delhivery host coverage does not cover DELHIVERY_BASE_URL overrides and must be reported as such.
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Ayan Ganguly (browser-only proof scope confirmation)
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED
+  base_branch: ayanganguly333/ren-131-132-purchase-cart-analytics (REN-122 task-start baseline)
+  base_commit: "d1bd419729fe80c85ceb1769eaa15e2bc1c4074d"
+  head_commit: "627cbe4c878b0f62dbf70c05dcea3aa471b6effe"
+  pr_url: null
+  material_drift: NO_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PASS
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PASS
+    scope: PASS
+  blocking_findings: []
+  required_actions: []
+  evidence:
+    - Compared the REN-122 task-start baseline d1bd419729fe80c85ceb1769eaa15e2bc1c4074d with commit 627cbe4c878b0f62dbf70c05dcea3aa471b6effe.
+    - The integration branch contained unrelated completed-task commits before REN-122; the task-start comparison isolates the eight REN-122 paths.
+    - Statically reconciled the runner, focused test, package script, proof artifact, and task-local contract without executing application tests during review.
+  governance_reentry_required: false

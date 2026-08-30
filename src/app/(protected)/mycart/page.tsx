@@ -5,9 +5,7 @@ import {
 } from "@/components/globals/layouts";
 import { FooterWithLegal } from "@/components/globals/layouts/footer/footer-with-legal";
 import { ProfileNav } from "@/components/profile";
-import { siteConfig } from "@/config/site";
 import { auth } from "@clerk/nextjs/server";
-import { Metadata } from "next";
 import { Suspense } from "react";
 import GuestCartPage from "././Component/guest-cart-page";
 import AddressCheckoutSection from "./Component/address-stepper/address-checkout-section";
@@ -18,13 +16,9 @@ import CheckoutSection from "./Component/checkout-section";
 import CheckoutStepper from "./Component/checkout-stepper";
 import Page from "./Component/payment-stepper/payment";
 import WardrobeSuggestions from "./Component/wardrobe-suggestions";
+import { cartMetadata } from "./metadata";
 
-export const metadata: Metadata = {
-    title: {
-        default: "Profile",
-        template: "%s | " + siteConfig.name,
-    },
-};
+export const metadata = cartMetadata;
 
 export default async function CartPage({
     searchParams,
