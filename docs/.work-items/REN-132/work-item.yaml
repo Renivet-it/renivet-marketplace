@@ -3,7 +3,7 @@ task:
     id: REN-132
     title: Reconcile add_to_cart vs cart_added (4.3x discrepancy)
     source: linear
-    branch: ayanganguly333/ren-129-130-131-132
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
     status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-132/reconcile-add-to-cart-vs-cart-added-43x-discrepancy

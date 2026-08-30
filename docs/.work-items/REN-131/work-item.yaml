@@ -3,7 +3,7 @@ task:
     id: REN-131
     title: Add server-side purchase_completed capture (no PostHog fallback today)
     source: linear
-    branch: ayanganguly333/ren-129-130-131-132
+    branch: ayanganguly333/ren-131-132-purchase-cart-analytics
     status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-131/add-server-side-purchase-completed-capture-no-posthog-fallback-today
