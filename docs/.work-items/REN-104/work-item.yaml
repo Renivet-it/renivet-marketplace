@@ -30,6 +30,8 @@ investigation:
         - Checkout server/client composition and payment flow
         - Mycart payment components and protected orders segment
         - Existing not-found and error/logging conventions
+        - Root layout startup effects and guest cart/wishlist merge idempotency
+        - Global fallback dependency graph and localized recovery actions
     excluded_areas:
         - API/webhook try/catch redesign and provider retry contracts
         - Payment/order transaction semantics or database changes
@@ -37,14 +39,19 @@ investigation:
     dependencies: [DEP-104-001, DEP-104-002, DEP-104-003]
     integrations: [INT-104-001]
     security_boundaries: [SEC-104-001, SEC-104-002]
-    state_transitions: [route_request -> loading_boundary -> content_rendered -> render_failure -> recovery_or_navigation]
-    related_tests: [TEXP-104-001, TEXP-104-002, TEXP-104-003, TEXP-104-004, TEXP-104-005]
+    state_transitions:
+        [
+            route_request -> loading_boundary -> content_rendered -> render_failure -> explicit_global_reload_or_local_reset -> recovery_or_navigation,
+        ]
+    related_tests:
+        [TEXP-104-001, TEXP-104-002, TEXP-104-003, TEXP-104-004, TEXP-104-005]
     uncertainties:
         - API/webhook route failures remain outside this first UI-boundary slice and require a separate handler-level design.
         - Segment layout failures are not caught by that segment's error.tsx and remain covered only by a parent/root boundary.
+        - Browser failure-injection coverage remains required to prove framework recovery behavior end to end.
 requirements:
     - id: REQ-104-001
-      description: Add global error recovery for root application render failures with safe copy and a reset/reload action.
+      description: Add a minimal dependency-light global fallback with safe copy and a customer-initiated full-page reload action; it must not reset or reload automatically.
       type: explicit
     - id: REQ-104-002
       description: Add loading and error boundaries to checkout, mycart/payment, and orders route segments.
@@ -53,27 +60,27 @@ requirements:
       description: Preserve storefront shell, payment/order state semantics, and navigation while boundaries are active.
       type: inferred
     - id: REQ-104-004
-      description: Prevent sensitive exception details from reaching customer-facing boundary output and log only a stable marker, route segment, and Next error digest through the existing console.error convention.
+      description: Prevent sensitive exception details from reaching customer output; best-effort logging emits only a stable marker, route segment, and Next error digest, and a throwing logging sink cannot break fallback rendering.
       type: inferred
     - id: REQ-104-005
       description: Keep API and webhook error handling out of this UI-boundary change unless separately approved.
       type: inferred
     - id: REQ-104-006
-      description: Do not automatically retry or duplicate an in-flight payment/order mutation when a boundary reset is invoked; existing authoritative server state remains the source of truth.
+      description: Every recovery action is customer-initiated; global recovery uses full-page reload, localized purchase boundaries use App Router reset, and no recovery path automatically retries or duplicates startup, cart, wishlist, payment, order, or inventory mutations.
       type: inferred
 scenarios:
     - id: SCN-104-001
       requirement_ids: [REQ-104-001, REQ-104-004]
-      description: A root render failure shows safe global recovery UI and does not display exception details.
+      description: A root render failure shows a minimal safe fallback with no automatic timer; customer-initiated Try again performs one full-page reload without displaying exception details.
     - id: SCN-104-002
       requirement_ids: [REQ-104-002, REQ-104-003]
       description: Checkout, cart/payment, and orders initial loads show appropriate loading UI without false success state.
     - id: SCN-104-003
       requirement_ids: [REQ-104-002, REQ-104-003]
-      description: A segment render failure shows a recoverable error UI and reset invokes the App Router reset path.
+      description: A localized checkout, cart/payment, or orders render failure shows recoverable error UI, never retries automatically, and manual reset invokes the App Router reset path.
     - id: SCN-104-004
       requirement_ids: [REQ-104-004, REQ-104-005, REQ-104-006]
-      description: Payment/order failures remain isolated from UI recovery, reset does not auto-repeat a mutation, and API/webhook behavior is unchanged.
+      description: Root and localized boundaries never retry automatically, a throwing logging sink remains non-fatal, recovery does not directly invoke mutations, and API/webhook behavior is unchanged.
     - id: SCN-104-005
       requirement_ids: [REQ-104-002, REQ-104-004]
       description: Failures in the root layout and named segment layouts follow the documented parent/root coverage matrix and render safe fallback output.
@@ -90,17 +97,25 @@ invariants:
       description: Boundary logging contains only the marker, route segment, and error digest; raw exceptions and sensitive request data are excluded.
 flows:
     - id: FLOW-104-001
-      description: Route request enters loading boundary, renders content, and on render failure enters safe error boundary with reset/navigation recovery.
-      state_transitions: [route_request, loading_boundary, content_rendered, render_failure, recovery_or_navigation]
+      description: Route request enters loading boundary and renders content; a root failure enters a minimal fallback awaiting customer reload, while localized purchase failures await customer App Router reset.
+      state_transitions:
+          [
+              route_request,
+              loading_boundary,
+              content_rendered,
+              render_failure,
+              explicit_recovery_action,
+              recovery_or_navigation,
+          ]
     - id: FLOW-104-002
-      description: Root-level failure uses global recovery while page/content failures remain localized to checkout, cart/payment, or orders; segment-layout failures use the nearest parent/root boundary.
+      description: Root-level failure uses standalone global recovery while page/content failures remain localized in checkout, cart/payment, or orders; segment-layout failures use the nearest parent/root boundary.
       state_transitions: [content_rendered, segment_failure, localized_recovery]
 dependencies:
     - id: DEP-104-001
       name: Next App Router boundary contract
       purpose: Defines error.tsx, loading.tsx, and global-error.tsx behavior.
       owner: Storefront maintainers
-      required_state: Boundaries use the framework reset and client-component requirements correctly.
+      required_state: Global recovery is standalone and customer-reloads the document; localized purchase boundaries use explicit framework reset; neither mode auto-retries.
       description: No current route boundaries exist beyond not-found.tsx.
       status: resolved
     - id: DEP-104-002
@@ -121,8 +136,8 @@ integrations:
     - id: INT-104-001
       system: existing application observability
       purpose: Uses the existing console.error convention with a stable marker, route segment, and Next error digest; no raw exception payload.
-      failure_mode: Logging failure must not prevent safe fallback rendering.
-      retry_idempotency: Reset may retry rendering but must not repeat payment/order mutations.
+      failure_mode: Logging is guarded and a throwing sink must not prevent safe fallback rendering.
+      retry_idempotency: Recovery is customer-initiated only; no timer retries rendering or replays startup/payment/order mutations.
 personas:
     - id: PER-104-001
       role: shopper
@@ -148,11 +163,20 @@ decisions:
       confidence: high
       consequence: high
       human_confirmation_required: true
+    - id: DEC-104-002
+      question: Should global recovery automatically reload/reset or require a customer action?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Require customer action; use full-page reload globally and App Router reset locally, with no automatic timer.
+      basis: The owner accepted the production-safe recommendation after investigation showed root remount can replay the non-idempotent guest-cart merge and duplicate quantity.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
 test_expectations:
     - id: TEXP-104-001
       category: component
       classification: REQUIRED
-      reason: tests/ren-104-boundaries.test.ts verifies each named boundary renders safe copy and reset controls, including global-error html/body requirements.
+      reason: tests/ren-104-boundaries.test.ts verifies safe copy, distinct global-reload/localized-reset modes, absence of automatic timers, and global-error html/body requirements.
       scenarios: [SCN-104-001, SCN-104-002, SCN-104-003, SCN-104-005]
     - id: TEXP-104-002
       category: e2e
@@ -162,17 +186,17 @@ test_expectations:
     - id: TEXP-104-003
       category: security
       classification: REQUIRED
-      reason: Captures console.error and asserts only marker/segment/digest are logged and sensitive exception/provider payloads are not rendered.
+      reason: Captures a logging sink and asserts only marker/segment/digest are emitted, sensitive values are excluded, and a throwing sink cannot break fallback rendering.
       scenarios: [SCN-104-001, SCN-104-004, SCN-104-005]
     - id: TEXP-104-004
       category: regression
       classification: REQUIRED
-      reason: Confirms API/webhook handlers, payment state, authentication, and navigation behavior are unchanged; reset does not repeat mutations.
+      reason: Confirms API/webhook handlers, startup/payment state, authentication, and navigation behavior are unchanged; no recovery timer exists and recovery actions do not directly invoke mutations.
       scenarios: [SCN-104-003, SCN-104-004]
     - id: TEXP-104-005
       category: e2e
       classification: REQUIRED
-      reason: Injects render failures in named boundaries and verifies the coverage matrix, explicit reset behavior, and no auto-retry of in-flight payment/order actions.
+      reason: Injects root and localized render failures and verifies manual global reload, explicit localized reset, dependency-light root fallback, and no automatic retry of startup or purchase actions.
       scenarios: [SCN-104-003, SCN-104-004, SCN-104-005]
 traceability:
     requirement_to_scenarios:
@@ -214,37 +238,71 @@ critic:
     required: true
     completed: true
     artifact: CRITIQUE.md
-    reviewer: Codex (fresh-context independent critic)
+    reviewer: Carson (fresh-context independent critic)
     fresh_context: true
     read_only: true
-    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
     findings:
-        - id: CRIT-104-001
+        - id: CRIT-104-R01
           severity: DESIGN_BLOCKER
-          references: [INT-104-001, REQ-104-004]
-          description: "Logging convention and redaction are explicit; console.error contains marker/segment/digest only and logging failure cannot block fallback."
-        - id: CRIT-104-002
+          references: [REQ-104-001, REQ-104-004, REQ-104-006]
+          description: "Resolved: allowed scope now explicitly includes the dedicated global fallback, localized boundary, loading shell, logging helper, and tests."
+        - id: CRIT-104-R02
           severity: DESIGN_BLOCKER
-          references: [DEP-104-001, FLOW-104-002]
-          description: "Exact boundary files and layout coverage limitations are documented."
-        - id: CRIT-104-003
+          references: [INV-104-003, SCN-104-004, INT-104-001]
+          description: "Resolved: all automatic reset/reload behavior is prohibited because root remount can replay the non-idempotent guest-cart merge."
+        - id: CRIT-104-R03
+          severity: DESIGN_BLOCKER
+          references: [DEC-104-002]
+          description: "Resolved: fresh critique, revised contract, and approval gate replace the stale failed-review governance state."
+        - id: CRIT-104-R04
           severity: MAJOR
-          references: [INV-104-001, INV-104-003, REQ-104-006]
-          description: "Reset is explicit and non-automatic; authoritative payment/order state remains unchanged."
-        - id: CRIT-104-004
+          references: [REQ-104-001, SCN-104-003, FLOW-104-001]
+          description: "Resolved: global-reload and localized-reset are explicit separate recovery modes."
+        - id: CRIT-104-R05
           severity: MAJOR
-          references: [TEXP-104-001, TEXP-104-002, TEXP-104-003, TEXP-104-004]
-          description: "Test locations, failure injection, logging assertions, and API scope are concrete."
+          references: [REQ-104-004, INT-104-001, TEXP-104-003]
+          description: "Resolved: logging is guarded best-effort and a throwing-sink test is required."
+        - id: CRIT-104-R06
+          severity: MAJOR
+          references: [REQ-104-001, FLOW-104-002]
+          description: "Resolved: root fallback must be a standalone minimal module without storefront/auth/payment/provider imports."
+        - id: CRIT-104-R07
+          severity: MAJOR
+          references:
+              [
+                  TEXP-104-001,
+                  TEXP-104-002,
+                  TEXP-104-003,
+                  TEXP-104-004,
+                  TEXP-104-005,
+              ]
+          description: "Resolved in design: tests must prove mode-specific actions, no timers, root markup, logging isolation, and browser failure injection."
+        - id: CRIT-104-R08
+          severity: MINOR
+          references: [DEC-104-002]
+          description: "Superseded: removing automatic retry also removes suppression-window edge cases."
 approval:
     state: APPROVED
     design_blockers: []
-    approved_by: Ayan Ganguly (owner confirmation of scoped boundary implementation)
+    approved_by: Ayan Ganguly (owner accepted the production-safe manual recovery recommendation after cart replay risk was identified)
+
 implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: origin/main
-    base_commit: "467e28c8b437630b2d9aaf62fa666d07f3ff3fdf"
-    head_commit: "1fce19a99a736686d147478d2d8a37fea993cc2d"
+    base_branch: origin/master
+    base_commit: "4943c40a46901692fb7f77c3bf1259530303798a"
+    head_commit: "d16cff03095f7c06428e26f975a13f73bb8a8101"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
@@ -258,9 +316,9 @@ implementation_review:
     blocking_findings: []
     required_actions:
         - "REV-104-001: Add browser failure-injection and reset-journey coverage."
-        - "REV-104-002: Complete the production build in CI or with a longer allowance before deployment."
+        - "REV-104-002: Resolve or baseline unrelated compiler failures and complete the production build in CI."
     evidence:
-        - Compared the approved REN-104 contract with the uncommitted route-boundary implementation and focused test coverage.
-        - The full Bun test suite passed; the production build timed out after 124 seconds.
-        - Unrelated pre-existing worktree changes were excluded from task attribution.
+        - Compared the approved REN-104 contract with the root and localized recovery implementation, including untracked support files.
+        - Verified that root recovery uses customer-initiated full-page reload and localized purchase recovery uses customer-initiated App Router reset.
+        - Verified no automatic retry timer, payment/order mutation, API/webhook change, or raw exception logging was introduced.
     governance_reentry_required: false

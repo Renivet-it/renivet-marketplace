@@ -1,6 +1,6 @@
 "use client";
 
-import { RouteErrorBoundary } from "@/components/globals/errors/route-error-boundary";
+import { GlobalErrorRecovery } from "@/components/globals/errors/global-error-recovery";
 
 export default function GlobalError({
     error,
@@ -12,11 +12,7 @@ export default function GlobalError({
     return (
         <html lang="en">
             <body>
-                <RouteErrorBoundary
-                    error={error}
-                    reset={reset}
-                    segment="global"
-                />
+                <GlobalErrorRecovery error={error} reset={reset} />
             </body>
         </html>
     );

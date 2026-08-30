@@ -1,7 +1,8 @@
 "use client";
 
 import { NavbarHome, NavbarMob } from "@/components/globals/layouts";
-import { createRouteErrorLog } from "@/lib/route-error";
+import { logRouteError } from "@/lib/route-error";
+import { runRouteRecovery } from "@/lib/route-error-recovery";
 import { useEffect } from "react";
 
 type RouteErrorBoundaryProps = {
@@ -21,14 +22,19 @@ function RecoveryContent({ reset }: Pick<RouteErrorBoundaryProps, "reset">) {
                 We couldn’t load this page
             </h1>
             <p className="text-sm text-muted-foreground">
-                Your cart, payment, and order details have not been changed.
-                Please try again or return to shopping.
+                Something interrupted the connection. Nothing has been changed,
+                so you can safely try again.
             </p>
             <div className="flex flex-wrap justify-center gap-3">
                 <button
                     type="button"
                     className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
-                    onClick={reset}
+                    onClick={() =>
+                        runRouteRecovery("localized-reset", {
+                            reload: () => window.location.reload(),
+                            reset,
+                        })
+                    }
                 >
                     Try again
                 </button>
@@ -50,7 +56,7 @@ export function RouteErrorBoundary({
     storefrontShell = false,
 }: RouteErrorBoundaryProps) {
     useEffect(() => {
-        console.error(createRouteErrorLog(segment, error));
+        logRouteError(segment, error);
     }, [error, segment]);
 
     const content = <RecoveryContent reset={reset} />;

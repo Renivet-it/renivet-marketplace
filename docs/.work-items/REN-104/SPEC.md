@@ -2,24 +2,25 @@
 
 ## Goal
 
-Add App Router loading and error recovery boundaries to the highest-risk customer purchase route segments so checkout, payment, and order failures render a recoverable user state instead of an unhandled blank/error response.
+Provide production-safe App Router loading and error recovery for root, checkout, cart/payment, and order failures without exposing technical details or automatically replaying application startup or purchase mutations.
 
 ## Evidence and scope
 
-- Linear reports no `error.tsx`, `loading.tsx`, or `global-error.tsx` under `src/app`; only `not-found.tsx` exists.
-- The checkout route is server-rendered and delegates interactive purchase/payment behavior to `checkout-content.tsx`.
-- The protected orders segment already has a layout, while the cart route contains payment and checkout steps.
-- Scope is the first route-boundary slice with exact files: `src/app/global-error.tsx`; `src/app/(protected)/checkout/loading.tsx` and `error.tsx`; `src/app/(protected)/mycart/loading.tsx` and `error.tsx`; and `src/app/(protected)/orders/loading.tsx` and `error.tsx`. API/webhook handler error normalization, transaction semantics, and payment-provider redesign are separate work.
+- Linear reports that the application originally had no route-level loading/error boundaries.
+- Root remounts can run `MergeGuestCart` and `MergeGuestWishlist`; the cart merge increments existing quantities and is not idempotent. Global recovery therefore must not reset or reload automatically.
+- Global fallback code must remain independent of storefront navigation, authentication, payment, and provider component graphs so it can survive a root dependency failure.
+- Allowed files are the root and named segment boundary files plus their dedicated/shared support: `src/app/global-error.tsx`; checkout, mycart, and orders `loading.tsx`/`error.tsx`; `src/components/globals/errors/global-error-recovery.tsx`; `src/components/globals/errors/route-error-boundary.tsx`; `src/components/globals/layouts/storefront-loading-shell.tsx`; `src/lib/route-error.ts`; and `tests/ren-104-boundaries.test.ts`.
+- API/webhook error normalization, payment transaction semantics, guest-merge idempotency changes, schemas, and provider redesign remain outside scope.
 
 ## Acceptance criteria
 
-- Root-level render failures have a `global-error.tsx` recovery UI with a reset/reload action and safe user-facing copy.
-- Checkout, cart/payment, and orders segments have loading UI and recoverable error UI with `reset()`.
-- Boundary UI does not expose exception details, payment data, addresses, tokens, or server secrets.
-- Loading states preserve the existing storefront shell and avoid misleading success/payment states.
-- Error recovery logs only a stable boundary marker, route segment, and Next error digest through the repository's existing `console.error` convention; it must not log the raw exception or request/payment data. Logging failure cannot prevent fallback rendering.
-- Boundary tests in `tests/ren-104-boundaries.test.ts` cover initial loading, render failure, reset, safe copy, redacted logging, and unchanged API/webhook scope.
+- Root failures render a minimal, dependency-light fallback with neutral copy and a working `Try again` action that performs a full-page browser reload only after the customer clicks it.
+- Checkout, cart/payment, and orders retain localized loading/error UI; their manual `Try again` action invokes the App Router `reset()` callback and never reloads or retries automatically.
+- No recovery path schedules an automatic reset/reload or invokes cart, payment, order, inventory, wishlist, or guest-merge mutations.
+- Customer output contains no raw exception, stack, address, credential, token, or provider payload.
+- Boundary logging is best-effort: it emits only marker, segment, and digest, and a throwing logging sink cannot break the fallback.
+- Tests cover the distinct `global-reload` and `localized-reset` modes, absence of automatic timers, full-page root reload, localized reset, root `<html>/<body>` requirements, safe copy, logging redaction/failure isolation, and unchanged API/webhook scope.
 
 ## Decision
 
-Implement the exact bounded App Router boundary slice above. `global-error.tsx` must render its own `<html>` and `<body>`; segment boundaries cover page/content failures but not failures in the segment layout itself. Do not auto-retry in-flight payment/order mutations: the fallback offers explicit reset/navigation only, and the existing server/payment state remains authoritative. Keep API/webhook resilience explicitly out of this UI-boundary change.
+Use two explicit recovery modes. The root `global-error.tsx` renders a standalone minimal component and uses customer-initiated full-page reload. Localized purchase boundaries use the shared storefront component and customer-initiated App Router reset. Automatic reload/reset is prohibited because a root remount can replay the non-idempotent guest-cart merge and duplicate quantities. Existing server/payment state remains authoritative.
