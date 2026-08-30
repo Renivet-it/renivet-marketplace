@@ -9,7 +9,7 @@ REVIEW_PASSED_WITH_FINDINGS. Drift: NO_DRIFT. Base: `origin/master` at `4943c40a
 - Linear issue identity, title, status, labels, assignee, project, description, and relations match REN-104 and its local work item.
 - Pull requests: `https://github.com/Renivet-it/renivet-marketplace/pull/598` → `master`; `https://github.com/Renivet-it/renivet-marketplace/pull/599` → `main`.
 - Reviewed the boundary diff plus surrounding root layout guest-merge effects, checkout/cart/order boundaries, logging helper, and focused test file.
-- Included untracked support files `src/components/globals/errors/global-error-recovery.tsx` and `src/lib/route-error-recovery.ts` in the review.
+- Included committed support files `src/components/globals/errors/global-error-recovery.tsx` and `src/lib/route-error-recovery.ts` in the review.
 
 ## Requirement Reconciliation
 
