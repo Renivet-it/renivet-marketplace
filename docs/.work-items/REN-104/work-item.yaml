@@ -303,7 +303,7 @@ implementation_review:
     base_branch: origin/master
     base_commit: "4943c40a46901692fb7f77c3bf1259530303798a"
     head_commit: "d16cff03095f7c06428e26f975a13f73bb8a8101"
-    pr_url: null
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/598
     material_drift: NO_DRIFT
     reconciliation:
         requirements: PASS
@@ -321,4 +321,5 @@ implementation_review:
         - Compared the approved REN-104 contract with the root and localized recovery implementation, including untracked support files.
         - Verified that root recovery uses customer-initiated full-page reload and localized purchase recovery uses customer-initiated App Router reset.
         - Verified no automatic retry timer, payment/order mutation, API/webhook change, or raw exception logging was introduced.
+        - Opened PR #598 to master and PR #599 to main from the reviewed feature branch.
     governance_reentry_required: false
