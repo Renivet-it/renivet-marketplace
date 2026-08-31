@@ -1,0 +1,330 @@
+schema_version: "1.0"
+task:
+    id: REN-111
+    title: Inconsistent guest-redirect behavior across login walls
+    source: linear
+    branch: ayanganguly333/ren-111-inconsistent-guest-redirect-behavior-across-login-walls
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-111/inconsistent-guest-redirect-behavior-across-login-walls
+        priority: Medium
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Guest Journey QA Findings
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The change crosses middleware, server route guards, and a custom multi-step authentication flow.
+        - Redirect handling is security-sensitive because an unsafe implementation could introduce an open redirect.
+        - The issue touches guest-to-auth state transitions but not payment, order data, or schema state.
+    escalation_history: []
+investigation:
+    depth: auth_navigation_dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, attachments, comments, and relations
+        - Repository branch metadata availability and working-tree inspection
+        - Footer/navigation destination configuration
+        - Middleware guest route protection
+        - Corporate Orders and Become a Seller server guards
+        - Custom phone/email/Google sign-in and sign-up completion paths
+        - Existing cart and corporate redirect conventions
+        - Existing focused test patterns and Bun scripts
+    excluded_areas:
+        - Database schemas, migrations, and production data: no evidence of impact
+        - Payment, order, inventory, and external shipping integrations: no route or behavior dependency found
+        - tests/JOURNEYS.md: referenced by Linear but absent in this checkout
+        - Production secrets/configuration: not required for route-flow design
+    dependencies: [DEP-001, DEP-002]
+    integrations: [INT-001]
+    security_boundaries: [SEC-001]
+    state_transitions:
+        - guest_request -> sign_in_with_validated_destination
+        - sign_in_with_validated_destination -> authenticated_destination
+        - invalid_or_missing_destination -> safe_home_fallback
+    tests:
+        - tests/ren-111-guest-redirect.test.ts
+        - bun test
+        - bun run governance:validate -- docs/.work-items/REN-111/work-item.yaml
+    uncertainties:
+        - Git executable and checkout metadata were unavailable to the shell in this environment, so clean-state and current-branch confirmation could not be independently verified; the Linear branch name is recorded as the expected context.
+requirements:
+    - id: REQ-001
+      description: Guest entry to Corporate Orders and Become a Seller preserves the intended internal destination through sign-in.
+      type: explicit
+    - id: REQ-002
+      description: Every supported custom authentication completion path returns to the preserved destination, with a safe fallback when absent or invalid.
+      type: inferred
+    - id: REQ-003
+      description: Redirect destinations are limited to safe same-origin application paths and cannot create an open redirect.
+      type: inferred
+    - id: REQ-004
+      description: Existing authentication enforcement and cart redirect behavior remain compatible.
+      type: explicit
+    - id: REQ-005
+      description: The change is limited to redirect/auth navigation and focused regression coverage; no unrelated business behavior changes.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-004]
+      description: An unauthenticated guest selects Corporate Orders and reaches sign-in carrying the expected internal corporate destination.
+    - id: SCN-002
+      requirement_ids: [REQ-001, REQ-004]
+      description: An unauthenticated guest selects Become a Seller and reaches sign-in carrying the expected Seller destination.
+    - id: SCN-003
+      requirement_ids: [REQ-002]
+      description: Phone, email, email-verification, unknown-phone sign-up, standalone sign-up, and Google completion paths return to the preserved destination.
+    - id: SCN-004
+      requirement_ids: [REQ-002, REQ-003]
+      description: Missing, malformed, external, or protocol-relative redirect values fall back to `/` without navigation outside the application.
+    - id: SCN-005
+      requirement_ids: [REQ-004, REQ-005]
+      description: Existing cart `/mycart` return behavior and authenticated direct access remain unchanged.
+    - id: SCN-006
+      requirement_ids: [REQ-002, REQ-004]
+      description: Switching between sign-in and standalone sign-up retains the validated destination across refresh/back navigation and Clerk flow expiry falls back safely.
+invariants:
+    - id: INV-001
+      description: An unauthenticated protected destination never bypasses authentication.
+    - id: INV-002
+      description: A post-auth destination is either a validated same-origin application path or `/`.
+    - id: INV-003
+      description: Authentication completion does not discard a valid destination or substitute an unrelated default.
+    - id: INV-004
+      description: Redirect plumbing does not expose credentials, tokens, or private user data in logs or URLs beyond the destination value.
+flows:
+    - id: FLOW-001
+      description: Resolve and validate the guest destination at the middleware or server guard, expose it as redirect_url to the custom auth pages, then navigate to it after a successful phone, email, or sign-up session activation.
+      state_transitions: [guest_request -> sign_in_with_validated_destination, sign_in_with_validated_destination -> authenticated_destination]
+    - id: FLOW-002
+      description: Validate redirect_url before every application-controlled navigation; Google SSO uses the existing Clerk callback and receives the already validated destination as its configured completion target.
+      state_transitions: [invalid_or_missing_destination -> safe_home_fallback]
+dependencies:
+    - id: DEP-001
+      name: Clerk custom authentication session completion
+      purpose: Activates phone, email, verification, sign-up, and Google-authenticated sessions before final navigation.
+      owner: Renivet authentication implementation
+      required_state: Completion accepts a validated destination without changing session semantics.
+      description: Phone, email, sign-up, and Google completion must use the same validated internal destination and retain `/` as safe fallback.
+      status: resolved
+    - id: DEP-002
+      name: Next.js middleware and server redirect APIs
+      purpose: Protect guest routes and construct sign-in redirects.
+      owner: Renivet application
+      required_state: Middleware and server guards use one compatible destination convention.
+      description: Middleware and Seller server guards construct a redirect_url using the shared validation utility.
+      status: resolved
+integrations:
+    - id: INT-001
+      name: Clerk authentication
+      system: Clerk
+      purpose: Phone, email, Google sign-in and sign-up.
+      boundary: External identity provider session activation; no provider configuration change proposed.
+      failure_behavior: Preserve auth error handling and use safe fallback only after successful session completion.
+      retry_idempotency: Repeated completion must not cause an external redirect or duplicate application mutation.
+      status: existing
+personas:
+    - id: PER-001
+      role: guest_customer
+      applicability: Needs to resume the selected Corporate Orders or Seller journey after authentication.
+    - id: PER-002
+      role: authenticated_customer
+      applicability: Must retain direct access behavior and normal post-auth navigation.
+security_boundaries:
+    - id: SEC-001
+      description: Browser-controlled post-auth destination state must be validated before navigation.
+      name: post_auth_redirect_validation
+      assets: [authenticated_session, destination_url]
+      trust_boundary: Browser-provided query state crosses into post-auth navigation.
+      controls: Parse as a relative URL; require exactly one leading `/`; reject `//`, backslashes, control characters, absolute/protocol-relative URLs, and scheme-like values; preserve only an allowed application path and intended query/hash semantics.
+      failure_response: Navigate to `/` after successful authentication.
+business_rules:
+    - id: BR-001
+      description: Seller remains authenticated in the current contract; a public landing page is out of scope.
+      source: Current Seller page checks auth before loading brand-request data.
+decisions:
+    - id: DEC-001
+      question: Should Become a Seller remain login-gated, or should guests see a public marketing/landing page before authentication?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Keep the current login gate for this narrowly scoped fix and track a public landing page separately.
+      basis: User confirmed the current login gate; the existing page performs authenticated user/brand checks and renders a request form.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+      options:
+          - Keep authenticated Seller flow and repair redirect preservation.
+          - Introduce a public landing page and define its CTA/auth boundary separately.
+    - id: DEC-002
+      question: Should redirect preservation be implemented only for the two reported routes or through one shared mechanism for all protected route callers?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Use one shared mechanism for all existing internal redirect callers, including cart, Corporate Orders, Seller, and future login walls.
+      basis: Existing destination-bearing callers already use the same redirect_url convention, while the custom auth component currently hard-codes `/`.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-003
+      question: What should happen when redirect_url is missing, malformed, external, or protocol-relative?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Reject it and fall back to `/`.
+      basis: Browser-controlled external destinations could create an open redirect; the safe home fallback is reversible and consistent.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-004
+      question: Should Google SSO restore the validated destination just like phone, email, and sign-up flows?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Yes. Use the existing `/auth/sso-callback` flow and set Clerk's completion target to the already validated destination without changing provider configuration.
+      basis: The current Google flow already uses the callback; only its completion destination is hard-coded to `/`.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies canonical destination construction and same-origin validation.
+      scenarios: [SCN-001, SCN-002, SCN-004]
+    - id: TEXP-002
+      category: component
+      classification: REQUIRED
+      reason: Verifies the custom auth component preserves destinations across all completion branches.
+      scenarios: [SCN-003, SCN-004]
+    - id: TEXP-003
+      category: regression
+      classification: REQUIRED
+      reason: Protects existing cart redirect and authenticated route behavior.
+      scenarios: [SCN-005]
+    - id: TEXP-004
+      category: security
+      classification: REQUIRED
+      reason: Prevents open redirects from browser-controlled redirect values.
+      scenarios: [SCN-004]
+    - id: TEXP-005
+      category: e2e
+      classification: OPTIONAL
+      reason: Browser journey verification is useful after implementation but requires an auth-capable environment.
+      scenarios: [SCN-001, SCN-002, SCN-003]
+    - id: TEXP-006
+      category: regression
+      classification: REQUIRED
+      reason: Covers standalone sign-up, sign-in/sign-up switching, refresh/back, expired auth state, and account-sync failure recovery.
+      scenarios: [SCN-003, SCN-006]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Hubble (independent Critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-001
+          severity: DESIGN_BLOCKER
+          category: requirements_scenarios
+          summary: Standalone sign-up and sign-in-to-sign-up switching require explicit coverage.
+          references: [REQ-002, SCN-003, SCN-006]
+          evidence: phone-first-sign-up.tsx:56-149; phone-first-sign-in.tsx:553-560
+        - id: CRIT-002
+          severity: DESIGN_BLOCKER
+          category: security_privacy
+          summary: Redirect validation needs exact parser, allowlist, and encoded-input rules.
+          references: [REQ-003, SEC-001]
+          evidence: src/app/(auth)/auth/signin/page.tsx:10-19; phone-first-sign-in.tsx:65-81
+        - id: CRIT-003
+          severity: DESIGN_BLOCKER
+          category: integrations_idempotency
+          summary: Google callback restoration and callback replay behavior are unspecified.
+          references: [REQ-002, FLOW-001, INT-001]
+          evidence: phone-first-sign-in.tsx:143-157; src/app/(auth)/auth/sso-callback/page.tsx:14-39
+        - id: CRIT-004
+          severity: MAJOR
+          category: failure_recovery
+          summary: Auth errors, refresh/back, expired Clerk state, setActive failure, and account-sync failure need explicit recovery semantics.
+          references: [SCN-003, SCN-006, INV-003]
+          evidence: phone-first-sign-in.tsx:102-132,208-332
+        - id: CRIT-005
+          severity: MAJOR
+          category: compatibility_migration
+          summary: Existing corporate/profile destination callers need explicit compatibility scope and tests.
+          references: [REQ-004, SCN-005]
+          evidence: src/app/(protected)/profile/corporate/page.tsx:7-11; src/app/(protected)/profile/corporate/request-quote/page.tsx:8-15
+        - id: CRIT-006
+          severity: MINOR
+          category: observability_testability
+          summary: Tests should assert encoded construction, Google restoration, retry, and sync failure behavior.
+          references: [TEXP-001, TEXP-002, TEXP-005]
+          evidence: tests/ren-111-guest-redirect.test.ts is absent
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (user confirmation in Codex conversation)
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids: [SCN-001, SCN-002]
+        - requirement_id: REQ-002
+          scenario_ids: [SCN-003, SCN-004]
+        - requirement_id: REQ-003
+          scenario_ids: [SCN-004]
+        - requirement_id: REQ-004
+          scenario_ids: [SCN-001, SCN-002, SCN-005]
+        - requirement_id: REQ-005
+          scenario_ids: [SCN-005]
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids: [INV-001, INV-002]
+        - scenario_id: SCN-002
+          invariant_ids: [INV-001, INV-002]
+        - scenario_id: SCN-003
+          invariant_ids: [INV-002, INV-003]
+        - scenario_id: SCN-004
+          invariant_ids: [INV-002, INV-004]
+        - scenario_id: SCN-005
+          invariant_ids: [INV-001, INV-003]
+        - scenario_id: SCN-006
+          invariant_ids: [INV-002, INV-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids: [TEXP-001]
+        - scenario_id: SCN-002
+          test_expectation_ids: [TEXP-001]
+        - scenario_id: SCN-003
+          test_expectation_ids: [TEXP-002, TEXP-005]
+        - scenario_id: SCN-004
+          test_expectation_ids: [TEXP-001, TEXP-002, TEXP-004]
+        - scenario_id: SCN-005
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-006
+          test_expectation_ids: [TEXP-006]
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_BLOCKED
+    base_branch: main
+    base_commit: null
+    head_commit: null
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PARTIAL
+        security: PARTIAL
+        test_coverage: PARTIAL
+        scope: PARTIAL
+    blocking_findings:
+        - "REV-001: Required REN-111 comparison commits are unavailable on the current branch."
+    required_actions:
+        - Move or commit the REN-111 implementation onto its expected branch and rerun REVIEW.
+    evidence:
+        - "Comparison input unavailable: the current branch is REN-131/132 and the REN-111 changes are uncommitted."
+    governance_reentry_required: false

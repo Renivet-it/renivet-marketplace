@@ -4,6 +4,7 @@ import { BitFieldSitePermission } from "./config/permissions";
 import { generalSidebarConfig, generateBrandSideNav } from "./config/site";
 import { cFetch, getUserPermissions, hasPermission } from "./lib/utils";
 import { CachedUser, ResponseData } from "./lib/validations";
+import { buildAuthRedirectUrl } from "./lib/auth/redirect";
 
 export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
@@ -279,7 +280,9 @@ export default clerkMiddleware(async (auth, req) => {
             url.pathname.startsWith("/profile") ||
             url.pathname.startsWith("/become-a-seller")
         )
-            return NextResponse.redirect(new URL("/auth/signin", url));
+            return NextResponse.redirect(
+                new URL(buildAuthRedirectUrl(`${url.pathname}${url.search}`), url)
+            );
 
     return res;
 });

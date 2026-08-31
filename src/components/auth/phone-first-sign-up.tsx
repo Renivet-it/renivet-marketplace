@@ -7,11 +7,12 @@ import {
 import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { Google, RenivetFull } from "@/components/svgs";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { getSafeRedirectUrl } from "@/lib/auth/redirect";
 import { useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { FormEvent, useState } from "react";
 
@@ -31,6 +32,8 @@ function normalizeIndianPhone(value: string) {
 export function PhoneFirstSignUp() {
     const { isLoaded, setActive, signUp } = useSignUp();
     const posthog = usePostHog();
+    const searchParams = useSearchParams();
+    const destination = getSafeRedirectUrl(searchParams.get("redirect_url"));
     const router = useRouter();
     const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("details");
@@ -55,13 +58,14 @@ export function PhoneFirstSignUp() {
 
     const complete = async (sessionId: string | null) => {
         if (!sessionId) throw new Error("A session could not be created");
+        if (!setActive) throw new Error("Sign-up is still loading");
         await setActive({ session: sessionId });
         captureAuthEvent(
             posthog,
             POSTHOG_EVENTS.AUTH.SIGNED_IN,
             getAuthEventProperties("sign-up", method)
         );
-        router.push("/");
+        router.push(destination);
     };
 
     const continueWithGoogle = async () => {
@@ -82,7 +86,7 @@ export function PhoneFirstSignUp() {
                 strategy: "oauth_google",
                 legalAccepted: true,
                 redirectUrl: "/auth/sso-callback?flow=sign-up",
-                redirectUrlComplete: "/",
+                redirectUrlComplete: destination,
             });
         } catch (value) {
             showError(value);
@@ -397,7 +401,7 @@ export function PhoneFirstSignUp() {
                 Already have an account?{" "}
                 <Link
                     className="font-medium text-primary underline"
-                    href="/auth/signin"
+                        href={`/auth/signin?redirect_url=${encodeURIComponent(destination)}`}
                 >
                     Sign in
                 </Link>
