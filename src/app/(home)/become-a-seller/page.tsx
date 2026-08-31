@@ -22,6 +22,7 @@ import { eq } from "drizzle-orm";
 import { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { buildAuthRedirectUrl } from "@/lib/auth/redirect";
 
 export const metadata: Metadata = {
     title: "Become a Seller",
@@ -51,7 +52,7 @@ export default function Page() {
 
 async function BecomeASellerFetch() {
     const { userId } = await auth();
-    if (!userId) redirect("/auth/signin");
+    if (!userId) redirect(buildAuthRedirectUrl("/become-a-seller"));
 
     const [
         existingBrandRequest,
@@ -70,7 +71,7 @@ async function BecomeASellerFetch() {
         userCache.get(userId),
     ]);
 
-    if (!existingUser) redirect("/auth/signin");
+    if (!existingUser) redirect(buildAuthRedirectUrl("/become-a-seller"));
 
     if (existingUser?.roles.some((role) => role.isSiteRole)) {
         return (
