@@ -1,0 +1,10 @@
+# Architecture Critique — P05 Customer Journey & UX
+
+## The deepest architectural flaw is sequencing, not missing code
+`db.transaction()` is a necessary fix but not a sufficient one. The root architectural choice — capture payment client-side, then create orders client-side, in a callback that can be interrupted by the browser closing — means even a perfectly transactional `createOrder` mutation can simply never be called if the client disappears between capture and invocation (Failure Matrix scenario 4). This critique applies regardless of which V1 fix ships: the transaction boundary closes the "partial order" gap but not the "zero order, payment captured" gap unless paired with either the webhook-as-fallback resolution (FR-1.5) or the more invasive order-then-pay redesign (V2 candidate). This package is explicit that V1 does not fully close this risk — see `08-reliability/FAILURE_MATRIX.md` scenario 4 and `10-roadmap/V2.md`.
+
+## Three checkout implementations is a symptom, not just a maintenance annoyance
+REN-152 is usually framed as a code-quality/maintenance issue. The sharper critique: it's why REN-161 (a single-line business-rule question — does TRYNEW20 check new-customer status) required checking three files to answer definitively, and why a future similar question will keep requiring the same triplicated investigation until FR-4 lands. Consolidation is not cosmetic here — it's a prerequisite for this Epic's own future defect-fixing velocity.
+
+## The `ordersIntent.orderLog` design shows the right instinct, implemented incompletely
+Someone building this system clearly anticipated the need for a reconciliation aid (the intent-tracking table exists, is written to, is updated per step). The critique is that it stops one step short of being useful: it logs, but nothing reads it to detect anomalies, and it's overwritten rather than appended. FR-1.3's requirement is closer to "finish this existing idea" than "invent a new one" — worth stating plainly so the fix isn't over-designed as if starting from nothing.

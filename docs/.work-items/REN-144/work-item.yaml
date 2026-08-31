@@ -1,0 +1,752 @@
+linear_id: REN-144
+title: "Payment/order integrity: successful payment can result in partial or missing orders with no reliable reconciliation path"
+risk:
+  initial_risk: L3
+  initial_risk_source: preliminary_ai
+  path_rule_risk: L3
+  semantic_risk: L3
+  final_risk: L3
+  path_rule_matches:
+    - path: "src/lib/trpc/routes/general/orders.ts"
+      policy_rule: orders-inventory
+    - path: "src/lib/db/queries/product.ts"
+      policy_rule: orders-inventory
+    - path: "src/app/api/webhooks/razorpay/**"
+      policy_rule: payments
+  escalation_history: []
+state: READY_FOR_DEV
+state_history:
+  - state: INTAKE
+    entered_at: "2026-08-31T18:00:00Z"
+  - state: CLASSIFIED
+    entered_at: "2026-08-31T18:02:00Z"
+  - state: SPECIFICATION
+    entered_at: "2026-08-31T18:10:00Z"
+  - state: SCENARIO_DESIGN
+    entered_at: "2026-08-31T18:25:00Z"
+  - state: ARCHITECTURE
+    entered_at: "2026-08-31T18:40:00Z"
+  - state: CRITIQUE
+    entered_at: "2026-08-31T19:00:00Z"
+  - state: REVISION
+    entered_at: "2026-08-31T20:15:00Z"
+  - state: CRITIQUE
+    entered_at: "2026-08-31T20:30:00Z"
+  - state: REVISION
+    entered_at: "2026-08-31T21:00:00Z"
+  - state: CRITIQUE
+    entered_at: "2026-08-31T21:15:00Z"
+  - state: REVISION
+    entered_at: "2026-09-01T06:15:00Z"
+  - state: CRITIQUE
+    entered_at: "2026-09-01T06:25:00Z"
+  - state: REVISION
+    entered_at: "2026-09-01T06:45:00Z"
+  - state: CRITIQUE
+    entered_at: "2026-09-01T06:55:00Z"
+  - state: REVISION
+    entered_at: "2026-09-01T07:00:00Z"
+  - state: CRITIQUE
+    entered_at: "2026-09-01T07:20:00Z"
+  - state: REVISION
+    entered_at: "2026-09-01T07:35:00Z"
+  - state: APPROVAL_GATE
+    entered_at: "2026-09-01T07:45:00Z"
+  - state: APPROVED
+    entered_at: "2026-09-01T07:45:00Z"
+  - state: TEST_DESIGN
+    entered_at: "2026-09-01T07:46:00Z"
+  - state: READY_FOR_DEV
+    entered_at: "2026-09-01T07:47:00Z"
+owners:
+  developer: null
+  product: null
+scope_contract:
+  in_scope:
+    - "Multi-item and multi-brand order creation during checkout, both live checkout entry points (checkout-content.tsx flow and order-payment-page.tsx flow), since both call the same server-side createOrder path"
+    - "Transaction boundary around order-row creation per brand-call in src/lib/trpc/routes/general/orders.ts"
+    - "Cart-clearing scope following order creation (src/lib/razorpay/payment.ts deleteItemFromCart call)"
+    - "Success/partial/failure UI state distinction shown to the customer"
+    - "Webhook/reconciliation ID-matching for consumer orders (both payments and refunds webhooks)"
+    - "Orphaned/pending order-state detection and operator-facing alerting"
+    - "Interaction with REN-131's newly-shipped purchase_completed capture (verified this pass to inherit the same partial-success overstatement risk Gate B warned about pre-implementation)"
+  out_of_scope:
+    - "Corporate-order payment flows (separate schema, already has razorpayOrderId columns — confirmed not affected by this defect)"
+    - "General payment-method additions or checkout UI redesign beyond the success/partial/failure states"
+    - "Consolidating the two duplicate checkout code paths into one implementation (tracked separately; this fix must apply to whichever implementation(s) are live at implementation time)"
+    - "REN-133's client-side purchase_completed helper consolidation (separate ticket, sequenced after REN-131 per existing Gate B decision)"
+  dependencies:
+    - description: "Confirm whether a manual/admin-side reconciliation process for orphaned/partial orders already exists outside the codebase (support runbook, admin panel action) — materially affects how urgently the webhook/ID-matching fix must ship alongside the transaction/UI fix"
+      type: DESIGN_BLOCKER
+      status: resolved
+      resolved_at: "2026-09-01T07:00:00Z"
+    - description: "Critic Cycle 3 (2026-08-31): REQ-007's webhook fix design uses a singular lookup (orderQueries.getOrderById, backed by db.query.orders.findFirst) but a single razorpayOrderId/razorpayPaymentId is shared by MANY order rows (one per line item). A findFirst-based fix would reconcile only one sibling row per webhook event, leaving the rest unreconciled — potentially reintroducing REN-144's own core defect through the fix meant to close it. RESOLVED (controller iteration, 2026-09-01): a concrete engineering fix (switch to findMany keyed on orders.paymentId, loop reconciliation over every returned row) was designed directly into REQ-007 — this was a resolvable design question, not a business decision, so no human input was required."
+      type: DESIGN_BLOCKER
+      status: resolved
+      resolved_at: "2026-09-01T06:20:00Z"
+    - description: "Critic Cycle 3 (2026-08-31): REQ-010's atomic stock-decrement guarantee is defeated by two existing layers of silenced error handling — updateProductStock (product.ts:3541-3548) converts a failed per-item update into a swallowed {success:false} return instead of throwing, and orders.ts's call site (~1299-1313) has its corresponding TRPCError throw already commented out and never inspects the returned {updated, failed} object. Implementing the atomic WHERE quantity >= N guard exactly as specified would not actually prevent oversell unless a developer also removes/fixes both swallow points. RESOLVED (controller iteration, 2026-09-01): REQ-010 now specifies both required fixes explicitly, including a THIRD, sharper failure mode found by direct code re-verification — a zero-rows-affected UPDATE (the actual oversell-prevention mechanism) doesn't throw at all in this codebase's query pattern, so the fix must check for a falsy returned row, not just fix the try/catch. Concrete engineering fix, no human input required."
+      type: DESIGN_BLOCKER
+      status: resolved
+      resolved_at: "2026-09-01T06:20:00Z"
+    - description: "Critic Cycle 3 (2026-08-31): REQ-009's idempotency key requires NEW columns on the orders table (productId/variantId do not exist there today, only on orderItems and the transient input) — a schema change beyond the already-planned razorpayOrderId addition, not merely 'pick existing column names.' Needs explicit schema-design sign-off. RESOLVED (controller iteration, 2026-09-01): direct schema re-verification found orders.paymentId ALREADY EXISTS and is already populated with the Razorpay payment id for online orders (orders.ts:1315-1332) — no new column needed on orders. The actual gap is narrower than Cycle 3 feared: add one new nullable paymentId column to orderItems (denormalized from the same already-correct source) plus a unique constraint on orderItems(paymentId, productId, variantId). Concrete, evidence-grounded schema decision — no human/Product sign-off required, this is not a business ambiguity."
+      type: DESIGN_BLOCKER
+      status: resolved
+      resolved_at: "2026-09-01T06:20:00Z"
+    - description: "REN-131 (server-side purchase_completed capture) has already shipped (commit 8a5c8a4a, merged PR #599, 2026-08-30) and captures totalAmountPaise/totalItems from the full checkout input rather than from createdOrders — it must be re-patched to scope its emitted event to actual created orders once this issue's transaction/success-signal work lands, or it will keep overstating conversion value on every partial-failure checkout starting now, not just hypothetically"
+      type: IMPLEMENTATION_PREREQUISITE
+      status: unresolved
+      resolved_at: null
+    - description: "orderShipments.delhiveryTrackingJson-style raw-response persistence pattern already exists in the codebase and should be reused for order-creation failure logging rather than inventing a new mechanism"
+      type: INFORMATIONAL_DEPENDENCY
+      status: resolved
+      resolved_at: "2026-08-31T18:40:00Z"
+  assumptions:
+    - "Razorpay payment capture itself (HMAC verification) is out of scope and correctly implemented today; only what happens after capture (order-row creation, cart-clearing, UI state, webhook matching) is in scope"
+    - "The per-brand loop structure (one createOrder call per brand, itself looping per line item) remains the architecture; this SPEC does not propose collapsing multi-brand carts into a single atomic transaction across brands, since brands are independent fulfillment units — see INV-003 and the Architecture section for why atomicity is scoped per-brand, not per-checkout"
+  scope_changes: []
+requirements:
+  - id: REQ-001
+    text: "A payment that results in fewer created orders than paid-for line items must never present an unqualified 'success' state to the customer"
+    source: "REN-144 acceptance criteria (Linear)"
+  - id: REQ-002
+    text: "Cart-clearing must remove only items whose order was successfully created; items whose order-row creation failed must remain in the cart"
+    source: "REN-144 acceptance criteria (Linear)"
+  - id: REQ-003
+    text: "A partial or failed order-creation outcome must be discoverable by Renivet's own systems (support/ops) without relying on a customer complaint, within a defined time bound"
+    source: "REN-144 acceptance criteria (Linear)"
+  - id: REQ-004
+    text: "No order row may exist in a permanently unreconciled pending state with no path to resolution"
+    source: "REN-144 acceptance criteria (Linear)"
+  - id: REQ-005
+    text: "Existing full-success paths (all items succeed) must be unaffected in behavior or latency"
+    source: "REN-144 acceptance criteria (Linear)"
+  - id: REQ-006
+    text: "Order-row creation for a single brand's line items must be atomic: either all of that brand's items get order rows, or none do — no partial/orphaned rows within a single brand-call"
+    source: "Architect investigation — src/lib/trpc/routes/general/orders.ts has no db.transaction anywhere; root cause analysis in Gate B (docs/enhancement-improvements/execution-readiness/02-REN131_133_SEQUENCE.md)"
+  - id: REQ-007
+    text: "REVISED (Controller iteration Rev.4, 2026-09-01, resolves Critic Cycle 4's refund-logic finding): Razorpay payments webhook must resolve ALL consumer order rows sharing the payload's razorpay_payment_id — not one. Fix: replace `orderQueries.getOrderById` (`findFirst`) with `findMany` keyed on `orders.paymentId`, looping reconciliation-only logic (verify status, alert on mismatch) across every returned row. The gate keys off whether Phase 1 (order rows + stock decrement) already committed for this payment (per REQ-009's idempotency key), NOT shipment-row existence. ADDITIONAL SCOPE CLARIFICATION per Critic Cycle 4: the live handler's stock-insufficiency-triggered refund branch (`payments/route.ts` ~487-560 — computes stock availability for a single order and calls `razorpay.payments.refund()` for the FULL payment amount on failure) is ITSELF a re-fulfillment side effect that REQ-007's 'reconciliation-only' rule already covers, and must be skipped entirely for any Phase-1-committed order — NOT restructured into a pooled multi-row stock-check-and-refund mechanism. Rationale: once REQ-006/REQ-010 ship, stock is atomically confirmed sufficient BEFORE an order row is ever created, so this webhook-side stock re-check can never legitimately find insufficient stock for an order created after this fix ships — it is dead-by-design under the new architecture, not a case needing a batched refund redesign. This is the simpler, anti-overengineering-consistent resolution (reuse the existing 'skip all fulfillment side effects' gate rather than building new N-way refund-pooling logic) per this program's own stated preference for Reuse -> Simplify over new mechanism."
+    source: "REN-144 in-scope list (Linear). REVISED after Critic Cycle 1 (re-fulfillment risk), Critic Cycle 2 (evidence correction + gate criterion), Critic Cycle 3 (cardinality gap — findFirst vs the many-rows-per-payment reality), and controller iteration Rev.3 (switched to findMany + loop). REVISED AGAIN in controller iteration Rev.4 after Critic Cycle 4 verified the findMany switch is mechanically sound (`existingOrder` is used as a strictly singular object throughout the handler — `payments/route.ts:479-560` — so a naive loop would need the refund/stock-check branch specifically addressed, not just the lookup) and found the live refund branch calls `razorpay.payments.refund()` for the full amount per order, which would fire N times (once per sibling row) under a naive loop. Resolved by recognizing this branch is already within REQ-007's own 'skip fulfillment side effects' scope, not a new gap needing new logic — a concrete engineering/scoping decision, not a business ambiguity."
+  - id: REQ-009
+    text: "REVISED (Controller iteration Rev.4, 2026-09-01, resolves Critic Cycle 4's NULL-semantics finding): order-row creation is idempotent at the actual insert granularity of the current data model — one order row per line item. `orders.paymentId` already exists and is already populated with `input.razorpayPaymentId` for online payments — no new column needed on `orders`. Add a nullable `paymentId` (text) column to `orderItems`, written directly from `input.razorpayPaymentId` at insert time (Cycle 4 confirmed this value is already known pre-insert — it does NOT need to wait on the separate post-insert `updateOrderStatus` call that sets `orders.paymentId`; the earlier framing requiring Phase 1 to enclose that later call was an overstatement, corrected here). IDEMPOTENCY CONSTRAINT, corrected per Critic Cycle 4: a single 3-column unique constraint on `(paymentId, productId, variantId)` is INSUFFICIENT — Cycle 4 confirmed `orderItems.variantId` is nullable, and Postgres unique constraints treat NULL as distinct from every other NULL, meaning two rows with identical `(paymentId, productId)` and `variantId = NULL` (i.e. any non-variant product, the common case) would NOT collide, silently defeating protection for exactly this defect's target class. Corrected design: TWO partial unique indexes — `UNIQUE (paymentId, productId, variantId) WHERE paymentId IS NOT NULL AND variantId IS NOT NULL` (variant products) and `UNIQUE (paymentId, productId) WHERE paymentId IS NOT NULL AND variantId IS NULL` (non-variant products). Both filter on `paymentId IS NOT NULL`, so COD/reward orders (`paymentId: null`) remain correctly exempt from either index."
+    source: "Critic Cycle 1 finding (duplicate_operations/idempotency, blocking). REVISED after Critic Cycle 2 (granularity) and Critic Cycle 3 (schema-column gap). REVISED again in controller iteration Rev.3 (2026-09-01) after confirming `orders.paymentId` already exists and is already correctly populated. REVISED AGAIN in controller iteration Rev.4 (2026-09-01) after Critic Cycle 4 verified Rev.3's single unique constraint against the actual `orderItems` schema (`schema/order.ts:143-177`) and `orders.ts`'s stock-update call site (`item.variantId ?? undefined`) and found the NULL-vs-NULL gap for non-variant products — a concrete, code-verifiable engineering correction, not a new business ambiguity, resolved without Product/human input."
+  - id: REQ-010
+    text: "REVISED (Controller iteration, 2026-09-01, resolves Critic Cycle 3's error-swallowing DESIGN_BLOCKER): stock sufficiency AND the other stock-gating product-state flags (verificationStatus === approved, !isDeleted, isAvailable — currently bundled into one boolean with the quantity check) are evaluated atomically and conditionally at write time, inside the same transaction as the decrement, never from the pre-loop snapshot; two concurrent checkouts contending for the last unit of stock never both succeed. `updateProductStock`'s existing internal `db.transaction()` must be restructured to accept and join the outer per-brand-call transaction. TWO SPECIFIC CODE-LEVEL FAILURE MODES MUST BOTH BE CLOSED, not just the transaction-nesting: (1) `updateProductStock`'s per-item `try/catch` (product.ts:~3505-3548) currently converts any thrown error into a returned `{success:false, error:'Update failed (silenced)'}` object instead of propagating it — this must throw (or the caller must treat `success:false` as fatal, aborting the transaction) rather than being swallowed. (2) Separately and more critically: adding a `WHERE quantity >= N` guard to the `UPDATE` statement makes an insufficient-stock condition return ZERO ROWS, which is a normal (non-throwing) result in this codebase's Drizzle pattern (`const [result] = await tx.update(...).where(...).returning()` yields `result: undefined`, not a caught exception) — today's code would record this as `{success: true, data: undefined}`, not even reaching the swallowed-error path. The fix must explicitly check `if (!result) { /* insufficient stock */ }` and treat that as a hard failure, in addition to fixing the try/catch. The call site (orders.ts:~1299-1313) must inspect the result and rollback (throw within the transaction) rather than only logging via the currently-commented-out `TRPCError` throw."
+    source: "Critic Cycle 1 finding (concurrency/race_conditions/data_integrity, blocking) — verified the stock check at orders.ts:1258-1270 reads productDetailsByIndex fetched once via Promise.all before the per-item loop begins (lines 491-511), a TOCTOU race; verified updateProductStock (product.ts:3497-3537) has no WHERE quantity >= N floor guard. EXPANDED after Critic Cycle 2: verified updateProductStock opens its own internal db.transaction() and that isStockAvailable bundles non-quantity flags into the same pre-loop-snapshot boolean. EXPANDED after Critic Cycle 3: found the try/catch swallow point plus the call site's commented-out throw. REVISED again in this controller iteration with direct re-verification of the exact code (product.ts:3497-3548, orders.ts:1255-1313): found the swallow-point fix ALONE is insufficient — a `WHERE quantity >= N`-guarded UPDATE returning zero affected rows is not an exception in this codebase's `const [result] = await tx.update(...).returning()` pattern, so the fix must explicitly check for a falsy `result`, not just wrap in try/catch. This is a concrete engineering fix, resolved without Product/human input."
+  - id: REQ-011
+    text: "External side effects (Delhivery shipment creation, customer/brand emails) for a brand-call's items are only attempted after that brand-call's order rows, order-item rows, and stock decrements are durably committed to the database; a failure while performing an external side effect after commit never triggers a database rollback and never re-executes the database phase. A brand-call whose Phase 1 committed but whose Phase 2 (shipment) failed/is-pending must be marked in a durable, ops-visible way (e.g. a fulfillmentStatus flag) distinct from 'never attempted' — this is the signal REQ-007's webhook gate (below) must key off, NOT shipment-row existence."
+    source: "Critic Cycle 1 finding (invalid_state_transitions/rollback_recovery, blocking) — verified the current per-item loop (orders.ts lines 536-1440) creates a real Delhivery shipment/AWB (lines 1016-1039) and sends emails BEFORE validating/decrementing stock for that same item (lines 1258-1307), so a later item's failure in the same brand-call cannot un-send an earlier item's already-real shipment/email. Last clause added after Critic Cycle 2 found the original webhook-gate design (keying on shipment-row existence) would be defeated by exactly this Phase-2-pending state — see REQ-007."
+  - id: REQ-012
+    text: "The server-side full-cart-cache drop in the createOrder mutation (currently `userCartCache.drop(user.id)`, unconditional, fired once per createOrder/brand-call invocation) must be scoped to remove only the cart entries for the brand/items whose Phase 1 just committed in that specific invocation — never the customer's entire cart cache — since the client calls createOrder once per brand sequentially, and an unconditional full-cache drop after the first brand's call would wipe cart entries for brands whose createOrder call hasn't run yet."
+    source: "Critic Cycle 2 finding (2026-08-31) — verified at orders.ts:1447-1450 (`if (!input.isSwapRewardOrder) { await userCartCache.drop(user.id); }`, positioned after the per-item loop but BEFORE the client's payment.ts loop has called createOrder for any other brand). This is a second, independent cart-clearing defect from the client-side `deleteItemFromCart` call already covered by REQ-002/Architecture item 3 — Revision 1 addressed only the client-side call and missed this server-side one entirely."
+  - id: REQ-008
+    text: "Any analytics event describing the outcome of a checkout (including REN-131's purchase_completed) must be scoped to the orders that actually succeeded, never to the full checkout input, once a partial-failure signal exists"
+    source: "Architect investigation — verified 2026-08-31 that shipped commit 8a5c8a4a's capturePurchaseCompleted call uses input.totalAmount/input.items unconditionally whenever createdOrders.length > 0, inheriting exactly the overstatement risk Gate B (02-REN131_133_SEQUENCE.md) predicted pre-implementation"
+  - id: REQ-013
+    text: "ADDED (controller iteration, 2026-09-01, resolves DEC-001): when a brand-call's Phase 1 fails to commit despite payment capture (money captured, zero order rows exist for that brand/those items), a durable reconciliation record is raised via the existing `auditAndAlert` helper (`src/lib/monitoring-sla/audit.ts`) — entityType: 'payment_reconciliation', entityId: the razorpayPaymentId, type: 'order_reconciliation_required', severity: 'critical', dedupeKey: `order_reconciliation:{paymentId}:{brandId}`. This reuses the EXISTING `monitoringAlerts` table and its existing status lifecycle (open -> acknowledged -> escalated -> resolved, already implemented and already audited via `auditEntityChange`'s before/after value tracking) — zero new tables, zero new status machinery."
+    source: "DEC-001 resolution (Product/Support, 2026-09-01: no existing manual process). Grounded in direct verification of src/lib/monitoring-sla/audit.ts (auditEntityChange/createOperationalAlert/auditAndAlert) and src/lib/db/queries/monitoring-sla.ts's existing alert-status-transition function (accepts 'acknowledged'|'escalated'|'resolved', writes resolvedAt, audits the before/after status change) — this lifecycle already exists in full and only needs to be reused, not built."
+  - id: REQ-014
+    text: "REVISED (controller iteration Rev.5, 2026-09-01, sharpened per Critic Cycle 5): the reconciliation record must be operator-visible without querying raw DB tables. Concretely: `getActiveAlerts`/`getActiveAlertsPage` (`src/lib/db/queries/monitoring-sla.ts`) currently filter only by `status != resolved` and `severity` — a `type` filter parameter must be ADDED to these query functions (a small, well-scoped change, not already present), and whatever UI consumes them extended with columns for customer, payment, missing brand/items, and alert age, filtered to `type: 'order_reconciliation_required'`. This is more specific than 'extend the existing surface' — it names the exact query-layer gap."
+    source: "DEC-001 resolution — 'operator visibility' requirement. SHARPENED after Critic Cycle 5 (2026-09-01) found getActiveAlerts/getActiveAlertsPage have no type filter today — verified directly at monitoring-sla.ts:932-974 — so 'extend the existing surface' understated that a new filter parameter is genuinely needed, not just a UI-level change."
+  - id: REQ-015
+    text: "REVISED (controller iteration Rev.5, 2026-09-01, note added per Critic Cycle 5): provide an operator-triggered retry action that re-attempts order creation for exactly the missing brand/items, through the SAME createOrder path used at checkout time. A retry is protected by REQ-009's idempotency constraint (so it can never create a duplicate order even if triggered more than once, including by accident or concurrently) and is NEVER automatic or silent — always an explicit operator action. The outcome (success or renewed failure) is itself recorded via `auditEntityChange` and reflected in the reconciliation record's status. NOTED INTERACTION: a successful retry's `createOrder` invocation will independently emit REQ-008's `purchase_completed` analytics event for the newly-created rows — this is intentional and correct (it reflects real, newly-completed fulfillment), not a duplicate-analytics defect, but is called out explicitly so it isn't mistaken for one during implementation/testing."
+    source: "DEC-001 resolution — 'retry/recovery' requirement, plus this program's explicit 'never silently repair money/order state' principle. Reuses REQ-009's idempotency guarantee rather than inventing a separate retry-safety mechanism. Analytics-interaction note added after Critic Cycle 5 (2026-09-01) flagged it as worth stating explicitly, though not blocking."
+  - id: REQ-016
+    text: "REVISED (controller iteration Rev.5, 2026-09-01, resolves Critic Cycle 5's finding): if retry is not possible or not desired (e.g. the item is now out of stock, or the customer no longer wants it), an operator can issue a refund for specifically the unfulfilled portion using the EXISTING finance-refund pipeline — `src/lib/finance/refunds.ts`'s `createFinanceRefundCase(input: { amountPaise, ... })` (which already accepts an arbitrary partial amount, routes through an existing approval-threshold check via `getRefundApprovalThresholdPaise`, and is executed via the existing `executeApprovedRefund`) — for the unfulfilled line item(s)' amount specifically, never the full payment amount when only some items are unfulfilled, and never automatically. This action closes the reconciliation record with resolution type 'refunded'."
+    source: "DEC-001 resolution — 'refund handling' requirement. ORIGINAL CITATION WAS WRONG, corrected after Critic Cycle 5 (2026-09-01): the three originally-cited call sites (cancel-order-helper.ts:47-67, orders.ts:1797-1817, returnReplace.ts:626/719) were directly re-read and confirmed to ALL hardcode a full-order-total refund (`amount: order.totalAmount` / `existingOrder.totalAmount` / `customer.totalAmount`) — none supports a partial amount, which is REQ-016's own explicit, non-negotiable requirement. The genuinely partial-capable existing pattern is `src/lib/finance/refunds.ts`'s `createFinanceRefundCase`, which takes an arbitrary `amountPaise` — confirmed directly at finance/refunds.ts:39,240,256. This correction is a citation fix from evidence, not a new business decision or invented requirement."
+  - id: REQ-017
+    text: "REVISED (controller iteration Rev.5, 2026-09-01, note added per Critic Cycle 5): every reconciliation record must reach exactly one terminal resolution before being marked resolved: 'retried_and_fulfilled' (REQ-015 succeeded), 'manually_fulfilled' (operator created the order through an existing out-of-band mechanism, with a mandatory reason note), or 'refunded' (REQ-016). The full state-transition history (open -> ... -> resolved, with actor and reason at each step) must be reconstructable from the existing `auditEntityChange` audit-log table. No reconciliation record may be silently marked resolved without one of these three resolution types and an attributed actor. KNOWN LIMITATION, noted not deferred: the existing `updateAlertStatus`'s `AlertAction` type stores resolution detail in a free-text `reasonCode`/`notes` field, not a validated enum — the three resolution types are an APPLICATION-LAYER CONVENTION, not schema-enforced. This is acceptable for V1 (nothing in this codebase enforces stricter typing for alert resolution today, and adding a new enum column would be new schema beyond this fix's minimal footprint) but should be enforced by application-level validation (reject an unrecognized resolution string) at implementation time, not assumed automatically safe."
+    source: "DEC-001 resolution — 'audit trail' and 'final resolution' requirements, plus the explicit 'never silently repair' principle from the controller instruction. Reuses the existing auditEntityChange table exclusively. Limitation noted after Critic Cycle 5 (2026-09-01) confirmed AlertAction has no enum/metadata field for this — a real but non-blocking gap, addressed as an implementation-time validation requirement rather than a schema change."
+invariants:
+  - id: INV-001
+    statement: "No customer-facing 'success' (unqualified) state may be shown unless the number of created order rows equals the number of paid-for line items for that checkout"
+    source_derivation: "REN-144 CJ-F004"
+    validation_strategy: "Automated test: force a mid-loop brand failure in a multi-brand cart; assert the client never renders the unqualified success copy, and instead renders a partial-outcome state"
+    affected_scenarios: ["SCN-001", "SCN-006", "SCN-007"]
+    status: pending
+  - id: INV-002
+    statement: "A cart item is only removed from the cart if its corresponding order row was successfully created"
+    source_derivation: "REN-144 CJ-F004"
+    validation_strategy: "Automated test: force one brand's failure in a two-brand cart; assert the failed brand's cart rows remain, the succeeded brand's rows are cleared"
+    affected_scenarios: ["SCN-004", "SCN-006"]
+    status: pending
+  - id: INV-003
+    statement: "Order-row creation for a single brand-call is atomic: a failure partway through one brand's line items leaves zero rows for that brand, never a partial subset"
+    source_derivation: "Gate B root-cause analysis (02-REN131_133_SEQUENCE.md); DEF-003's sibling pattern (PAT-CONTRACT-01) of a stale/mismatched call site is the same defect class — a shared function contract (order-row insertion) has an implicit atomicity contract nothing currently enforces"
+    validation_strategy: "Automated test: force a failure on line item N of M within a single brand's loop; assert zero order rows exist for that brand afterward (query DB directly in the test)"
+    affected_scenarios: ["SCN-003", "SCN-017"]
+    status: pending
+  - id: INV-004
+    statement: "Every payment-capture event has a corresponding server-side record, within a bounded time window, that is either fully reconciled (order rows == paid items) or explicitly flagged pending_reconciliation and visible to ops — never silently unresolved"
+    source_derivation: "REN-144 acceptance criteria; DEF-002's PAT-EXTSTATE-01 pattern (a state transition must not be inferred from absence of failure)"
+    validation_strategy: "Integration/QA-runtime test: force a brand-call failure, assert an operational alert (via the existing createOperationalAlert helper, now specifically REQ-013's 'order_reconciliation_required' type) is raised and visible in the ops-facing surface within the same request cycle"
+    affected_scenarios: ["SCN-004", "SCN-009", "SCN-023"]
+    status: pending
+  - id: INV-012
+    statement: "ADDED (controller iteration, 2026-09-01): no reconciliation record ever transitions to resolved without an attributed operator action and one of exactly three recorded resolution types (retried_and_fulfilled / manually_fulfilled / refunded) — money or order state is never repaired by an automated process without a human-attributed, audited action"
+    source_derivation: "Controller instruction's explicit 'never silently repair money/order state' principle, made concrete via REQ-017 and the existing auditEntityChange table"
+    validation_strategy: "Automated test: attempt to mark a reconciliation record resolved without a resolution type or actor; assert rejected. Integration test: complete each of the three resolution paths (retry-success, manual-fulfillment, refund) and assert the full audit trail is reconstructable from auditEntityChange records alone."
+    affected_scenarios: ["SCN-024", "SCN-025", "SCN-026"]
+    status: pending
+  - id: INV-005
+    statement: "REVISED (controller iteration, 2026-09-01): a Razorpay payment webhook event for a consumer order resolves to ALL order rows sharing that payment (one per line item, per REQ-009), never just one — and never exits via 'Order not found' for a payment that genuinely has order rows"
+    source_derivation: "REN-144 in-scope list; verified this pass at src/app/api/webhooks/razorpay/{payments,refunds}/route.ts (getOrderById(orderId) where orderId is Razorpay's own order_id) vs. orders.ts:562 (generateOrderId(brand.name)). Revised after Critic Cycle 3 found the singular-lookup cardinality gap (see REQ-007) — this invariant's original 'the correct order(s)' phrasing was too weak to catch a fix that resolves only one of several correct rows."
+    validation_strategy: "Integration test: simulate a payments-webhook payload for a payment that produced 3 order rows (multi-item single-brand); assert ALL 3 rows are found and reconciled, not just one"
+    affected_scenarios: ["SCN-010", "SCN-011", "SCN-018", "SCN-021"]
+    status: pending
+  - id: INV-007
+    statement: "REVISED (Critic Cycle 2): no two order rows are ever created for the same (razorpayPaymentId, line-item-identifying key) tuple, even under a retried or concurrent duplicate request — where the key matches the actual one-row-per-line-item granularity of the current data model, not a per-brand aggregate"
+    source_derivation: "Critic Cycle 1 finding (duplicate_operations/idempotency, blocking); key granularity corrected after Critic Cycle 2 found the original (razorpayPaymentId, brandId) key would reject legitimate multi-item same-brand carts on the happy path"
+    validation_strategy: "Automated test: fire two concurrent (or sequential-retry) createOrder-equivalent calls carrying the same razorpayPaymentId for the same multi-item brand-call; assert exactly one order row per line item exists afterward (not zero, not two) — backed by a unique DB constraint at the verified-correct granularity, not merely an application-level check"
+    affected_scenarios: ["SCN-007"]
+    status: pending
+  - id: INV-011
+    statement: "A single createOrder/brand-call invocation's cart-clearing (both the client-side deleteItemFromCart call and the server-side userCartCache.drop call) removes only that invocation's own successfully-created items from the cart — never a different brand's items whose createOrder call hasn't run yet"
+    source_derivation: "Critic Cycle 2 finding (2026-08-31) — server-side userCartCache.drop(user.id) at orders.ts:1447-1450 is unconditional and fires once per brand-call, before the client's sequential per-brand loop has necessarily called createOrder for other brands"
+    validation_strategy: "Automated test: two-brand cart, mock/observe the cart cache between the first and second brand's createOrder calls; assert the second brand's cart entries are still present after the first brand's call completes, not wiped by its cache-drop"
+    affected_scenarios: ["SCN-019"]
+    status: pending
+  - id: INV-008
+    statement: "A product's stock quantity is never decremented below zero, and two concurrent checkouts contending for the last unit of stock never both succeed"
+    source_derivation: "Critic Cycle 1 finding (concurrency/race_conditions/data_integrity, blocking)"
+    validation_strategy: "Automated test: seed a product at quantity=1, fire two concurrent order-creation attempts for it; assert exactly one succeeds, one fails with an insufficient-stock error, and final quantity is 0, never negative"
+    affected_scenarios: ["SCN-008"]
+    status: pending
+  - id: INV-009
+    statement: "A brand-call's external side effects (Delhivery shipment creation, emails) are only ever attempted for items whose order/order-item rows and stock decrement are already durably committed; no real-world shipment or email is ever created for an item whose database phase ultimately failed or rolled back"
+    source_derivation: "Critic Cycle 1 finding (invalid_state_transitions/rollback_recovery, blocking)"
+    validation_strategy: "Automated test: force a stock-insufficiency failure on item 2 of a 2-item single-brand order; assert zero Delhivery shipment calls and zero emails were attempted for either item, and zero order rows exist for that brand-call (the DB phase is one atomic unit, external effects run only after, per-item, on the committed rows)"
+    affected_scenarios: ["SCN-003", "SCN-017"]
+    status: pending
+  - id: INV-010
+    statement: "REVISED (Critic Cycle 2): once REQ-007 ships, a Razorpay payments webhook event for a consumer order whose Phase 1 (order rows + stock decrement) already committed never re-decrements stock and never re-sends a fulfillment email for that order — regardless of whether Phase 2 (shipment creation) has succeeded, failed, or is still pending for that order"
+    source_derivation: "Critic Cycle 1 finding (external_dependency_failures, blocking). REVISED after Critic Cycle 2: (a) corrected the evidence — the live handler's risk is stock re-decrement + re-email only, Shiprocket/AWB code in this file is dead/commented-out, not a live risk; (b) corrected the gate criterion from 'shipment row exists' to 'order row exists / Phase 1 committed', since Cycle 2 found a Phase-2-pending order (legitimately no shipment row yet) would otherwise be wrongly treated as unfulfilled and have the dangerous pipeline re-run against it"
+    validation_strategy: "Integration test, three cases: (1) webhook fires for an order with Phase 1 AND Phase 2 complete — assert reconciliation-only. (2) webhook fires for an order with Phase 1 committed but Phase 2 still pending/failed (no shipment row) — assert STILL reconciliation-only. (3) webhook fires for a payment with MULTIPLE sibling order rows in mixed states (some Phase 2 complete, some pending) — assert every row is reconciled independently and correctly, none skipped. Case 2 is the gap Critic Cycle 2 found; case 3 is the gap Critic Cycle 3 found (see REQ-007)."
+    affected_scenarios: ["SCN-018", "SCN-020", "SCN-021"]
+    status: pending
+  - id: INV-006
+    statement: "An analytics purchase-completion event's reported amount/item-count must never exceed what was actually fulfilled (order rows actually created) for that checkout"
+    source_derivation: "Architect investigation, 2026-08-31 — REN-131 (commit 8a5c8a4a) currently violates this by construction"
+    validation_strategy: "Automated test: force a partial-brand failure; assert capturePurchaseCompleted (or its replacement call site) is invoked with amounts/items derived from createdOrders only, not input.totalAmount/input.items"
+    affected_scenarios: ["SCN-012"]
+    status: pending
+repository_investigation:
+  reconnaissance_completed: true
+  investigated_areas:
+    - "src/lib/trpc/routes/general/orders.ts (createOrder mutation, ~lines 480-1440) — order-row creation loop, email/notification try-catch blocks, outer catch, no db.transaction anywhere in the file (grep-confirmed)"
+    - "src/lib/razorpay/payment.ts (client-side onSuccess handler, lines 160-290) — per-brand loop (line 174), per-brand catch swallowing errors (line 201), throw-only-if-zero-succeeded gate (line 218), unconditional deleteItemFromCart (cart clearing), unconditional success modal copy"
+    - "src/app/api/webhooks/razorpay/payments/route.ts and .../refunds/route.ts — both resolve via orderQueries.getOrderById(orderId) keyed on Razorpay's own order_id"
+    - "src/lib/trpc/routes/general/orders.ts:562 — generateOrderId(brand.name), confirming consumer orders.id is brand-generated and never equal to a Razorpay order id"
+    - "src/lib/analytics/purchase-events.ts and the REN-131 diff (commit 8a5c8a4a) — capturePurchaseCompleted's input shape and the unconditional 'if (createdOrders.length > 0)' emission gate added to orders.ts"
+    - "docs/enhancement-improvements/execution-readiness/02-REN131_133_SEQUENCE.md (Gate B) — prior root-cause analysis and the REN-144 -> REN-131 -> REN-133 sequencing decision"
+    - "qa/FINDINGS/DEFECT_RECORDS.md DEF-003 and DEF-002 — sibling defect classes (stale call-site contract mismatch; external-state-without-positive-signal) reused as adversarial patterns for this design"
+    - "src/lib/db/schema (corporate order schema) — confirmed corporate orders already carry a razorpayOrderId column, used here as an existing precedent for the consumer-order webhook-matching fix rather than inventing a new mechanism"
+  affected_modules:
+    - "src/lib/trpc/routes/general/orders.ts"
+    - "src/lib/razorpay/payment.ts"
+    - "src/app/api/webhooks/razorpay/payments/route.ts"
+    - "src/app/api/webhooks/razorpay/refunds/route.ts"
+    - "src/lib/analytics/purchase-events.ts"
+    - "src/lib/db/schema/order.ts (additive column for webhook matching)"
+    - "src/lib/monitoring-sla/audit.ts (createOperationalAlert reuse)"
+  dependencies:
+    - "REN-131 (already shipped, must be re-patched once this ships — see scope_contract.dependencies)"
+    - "REN-133 (client-side helper consolidation, sequenced after REN-131 per Gate B; must be re-checked against whatever amount/item scoping this issue introduces)"
+  external_systems:
+    - "Razorpay (payment capture, payments webhook, refunds webhook)"
+    - "PostHog (purchase_completed analytics event, via REN-131)"
+  related_tests: []
+  security_boundaries:
+    - "None directly — this is a data-integrity/reconciliation defect, not an authorization boundary. Confirmed via investigation that the createOrder mutation is a protectedProcedure already scoped to the authenticated user's own cart/session; no cross-tenant or cross-user access path is introduced or altered by this fix."
+  state_transitions:
+    - "order: (none) -> pending -> [paid | orphaned/never-created]"
+    - "checkout UI: processing -> [full success | partial success | full failure] (partial success is a new state this SPEC introduces)"
+    - "cart: populated -> [fully cleared | partially cleared, matching only succeeded items]"
+  excluded_areas:
+    - "Corporate order payment flow (src/lib/trpc/routes/general/corporate-orders* equivalent)"
+    - "Checkout UI redesign / new payment methods"
+    - "Consolidating the two duplicate checkout implementations into one"
+  exclusion_reasons:
+    - "Confirmed via REN-144's own out-of-scope list and a targeted grep: corporate orders use a separate schema that already has razorpayOrderId columns and is unaffected by this defect class"
+    - "REN-144's target behavior explicitly scopes to reconciliation/integrity, not UI/payment-method redesign; a broader redesign would need its own SPEC"
+    - "Tracked as a separate, pre-existing initiative per REN-144's own out-of-scope note; this fix must apply to whichever implementation(s) are live at implementation time regardless of that separate effort's timing"
+  uncertainties:
+    - "Whether a manual/admin-side reconciliation process for orphaned orders already exists outside the codebase (support runbook, admin action) is unknown to this investigation — flagged as DEC-001, a DESIGN_BLOCKER dependency, not assumed either way"
+    - "Real-world frequency of the partial-failure condition is unmeasured (flagged in the source Linear issue itself as an evidence gap, not assumed high or low) — REQ-003/INV-004's observability work is what will produce this data going forward, it cannot inform this SPEC's design today"
+  investigation_depth: BROAD
+  escalation_required: false
+  escalation_reason: null
+  investigation_history:
+    - timestamp: "2026-08-31T18:10:00Z"
+      stage: RECONNAISSANCE
+      note: "Confirmed repo structure, CLAUDE.md governance conventions, existing docs/.work-items/ pattern, existing REN-143/REN-95 work items as format precedent, testing conventions (qa/TEST_ENVIRONMENT.md: zero test framework installed repo-wide as of this pass)"
+    - timestamp: "2026-08-31T18:20:00Z"
+      stage: IMPACT_IDENTIFICATION
+      note: "Identified createOrder (orders.ts), the razorpay client handler, both webhooks, and purchase-events.ts as the directly affected modules from the Linear issue's own technical breakdown, then independently re-verified each claim against origin/master rather than trusting the issue text alone"
+    - timestamp: "2026-08-31T18:35:00Z"
+      stage: DEPENDENCY_EXPANSION
+      note: "Followed the order-creation chain outward into REN-131's newly-merged analytics capture (not named in the original Linear issue, discovered by checking git log for recent changes to the affected files) and found it already inherits this defect's exact overstatement risk — expanded scope to include REQ-008/INV-006 as a result"
+    - timestamp: "2026-08-31T18:55:00Z"
+      stage: COMPLETENESS_CHECK
+      note: "Answered all ten Stage-4 questions in SPEC.md's Repository Investigation section; one unresolved uncertainty (manual reconciliation process existence) surfaced as DEC-001, not invented; risk level did not change from the CLASSIFIED-stage L3 floor since orders-inventory + payments path rules already forced L3 before investigation began"
+flow_design:
+  present: true
+  involves_external_system: true
+  synchronization_failure_handling: "On a brand-call failure, the failure is caught (existing behavior, preserved) but must now additionally: (1) not clear that brand's cart items, (2) raise an operational alert via createOperationalAlert with the failed brand/items, (3) not contribute to the emitted purchase_completed event's totals. On total mutation failure (zero brands succeeded), behavior is unchanged (existing throw)."
+  reconciliation_strategy: "New: a razorpayOrderId column persisted on each created consumer order row at creation time, populated from the same Razorpay order id already available in the client handler's payload — mirroring the existing corporate-order schema precedent. Webhooks query by this column instead of orders.id. A bounded-time (e.g. 30 minute) sweep or the existing order-ops dashboard's own pending-order query is extended to also flag any checkout whose alert-log shows a brand-call failure with no corresponding compensating action recorded, satisfying REQ-004/INV-004 without inventing a new infrastructure component."
+scenarios:
+  - id: SCN-001
+    category: happy_path
+    requirement_ref: REQ-001
+    invariant_ref: INV-001
+    description: "Multi-brand, multi-item cart; all brand-calls succeed; customer sees unqualified success; cart fully cleared; webhook (if it fires) resolves correctly via the new razorpayOrderId column"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::happy-path-multi-brand", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-002
+    category: alternate_paths
+    requirement_ref: REQ-005
+    invariant_ref: INV-002
+    description: "Single-brand, single-item cart (the majority real-world case) — confirm unaffected in behavior and latency (REQ-005)"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::single-brand-regression", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-003
+    category: failure
+    requirement_ref: REQ-006
+    invariant_ref: INV-003
+    description: "Force a failure on line item N of M within one brand's per-item loop; assert zero order rows exist for that brand (atomicity), other brands unaffected"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::atomic-brand-rollback", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-004
+    category: failure
+    requirement_ref: REQ-002
+    invariant_ref: INV-004
+    description: "Force one brand-call to fail entirely in a two-brand cart; assert the failed brand's items are NOT cleared from cart, the succeeded brand's are; assert an operational alert is raised; assert the client renders a partial-outcome state, not unqualified success"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::partial-multibrand-failure", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-005
+    category: invalid_state_transitions
+    requirement_ref: REQ-004
+    invariant_ref: INV-004
+    description: "An order row that would previously have been left in a permanently orphaned 'pending' state (per the current code's own documented failure mode) must instead either not exist at all (if its brand-call failed, per INV-003) or be reachable by the new reconciliation sweep — no state exists that is neither 'created and trackable' nor 'never created'"
+    verification: { type: qa_runtime, test_ref: null, reason_code: QA_RUNTIME_REQUIRED, reason: "Whether the reconciliation sweep actually surfaces every such row in a live-like environment can only be meaningfully verified by running the sweep against seeded data end-to-end, not proven from source alone" }
+    status: pending
+  - id: SCN-006
+    category: state_transitions
+    requirement_ref: REQ-001
+    invariant_ref: INV-001
+    description: "Client-side rendering: full success / partial success / full failure are three distinct, mutually exclusive UI states; partial success explicitly names which items succeeded and which did not"
+    verification: { type: manual, test_ref: null, reason_code: MANUAL_BUSINESS_VALIDATION_REQUIRED, reason: "The exact copy/UX for the partial-success state is a product/content decision, not a pass/fail assertion; engineering can assert the state is reachable and distinct, but the wording itself needs product sign-off" }
+    status: pending
+  - id: SCN-007
+    category: duplicate_operations
+    requirement_ref: REQ-009
+    invariant_ref: INV-007
+    description: "Customer double-submits the same checkout (e.g. double-click, or retries after a client-side timeout believing it failed) — assert no duplicate order rows are created for the same payment capture, enforced by a unique DB constraint on (razorpayPaymentId, brandId), not merely an application-level pre-check"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::double-submit-idempotency", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-008
+    category: concurrency
+    requirement_ref: REQ-010
+    invariant_ref: INV-008
+    description: "Two concurrent checkouts contend for the last unit of a product's stock — assert the stock check and decrement happen atomically inside the write transaction (never from the pre-loop Promise.all snapshot at orders.ts:491-511), exactly one succeeds, and final quantity is never negative"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::concurrent-last-unit-oversell", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-017
+    category: rollback_recovery
+    requirement_ref: REQ-011
+    invariant_ref: INV-009
+    description: "Force a stock-insufficiency failure on item 2 of a 2-item single-brand order; assert zero Delhivery shipment calls and zero emails were attempted for either item (external side effects run only after the brand-call's DB phase durably commits, per REQ-011) — this replaces relying on a compensating cancelDelhiveryOrder call, since with the phased design no shipment is ever created for a brand-call whose DB phase fails"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::db-phase-failure-no-external-side-effects", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-018
+    category: external_dependency_failures
+    requirement_ref: REQ-007
+    invariant_ref: INV-010
+    description: "A payment.captured webhook fires for a consumer order that already has committed order/order-item rows AND a completed shipment (Phase 1 + Phase 2 both done — the normal case once REQ-007's lookup fix lands) — assert the handler performs status reconciliation ONLY: no stock re-decrement, no re-sent email. This directly tests that fixing the lookup does not silently reactivate the dormant re-fulfillment pipeline found in Critic Cycle 1."
+    verification: { type: integration, test_ref: "webhooks.razorpay.payments.spec.ts::already-fulfilled-order-reconciliation-only", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-019
+    category: state_transitions
+    requirement_ref: REQ-012
+    invariant_ref: INV-011
+    description: "Two-brand cart checkout: brand A's createOrder call completes (including its own server-side userCartCache.drop) BEFORE brand B's createOrder call has been made by the client's sequential per-brand loop; assert brand B's cart entries are still present and unaffected by brand A's cache-drop"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::server-side-cart-drop-scoped-per-brand", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-020
+    category: invalid_state_transitions
+    requirement_ref: REQ-007
+    invariant_ref: INV-010
+    description: "A payment.captured webhook fires for a consumer order whose Phase 1 committed but whose Phase 2 (shipment) is still pending/failed (no shipment row exists yet, by design per REQ-011) — assert the handler STILL treats this as reconciliation-only and does not re-trigger stock decrement or re-send the confirmation email, i.e. the gate correctly keys off Phase-1/order-row existence, not shipment-row existence. This is the exact gap Critic Cycle 2 found the original shipment-row-based gate design would have missed."
+    verification: { type: integration, test_ref: "webhooks.razorpay.payments.spec.ts::phase2-pending-order-still-reconciliation-only", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-009
+    category: race_conditions
+    requirement_ref: REQ-003
+    invariant_ref: INV-004
+    description: "The operational alert for a brand-call failure and a concurrent, unrelated successful brand-call for the same checkout must not race such that the alert is lost or attributed to the wrong checkout/brand"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::alert-attribution-race", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-010
+    category: external_dependency_failures
+    requirement_ref: REQ-007
+    invariant_ref: INV-005
+    description: "Razorpay payments webhook fires for a consumer order — must resolve via the new razorpayOrderId column, not silently 404 as it does today"
+    verification: { type: integration, test_ref: "webhooks.razorpay.payments.spec.ts::consumer-order-resolution", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-011
+    category: external_dependency_failures
+    requirement_ref: REQ-007
+    invariant_ref: INV-005
+    description: "Razorpay refunds webhook fires for a consumer order — same resolution fix; must not overwrite unrelated audit fields on a consumer order (cross-check against DEF-019's adjacent finding on cancellationReasonCode overwriting, out of scope here but noted as a related risk not to reintroduce)"
+    verification: { type: integration, test_ref: "webhooks.razorpay.refunds.spec.ts::consumer-order-resolution", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-012
+    category: analytics
+    requirement_ref: REQ-008
+    invariant_ref: INV-006
+    description: "On a partial-brand-failure checkout, the purchase_completed event (REN-131) must be emitted with amounts/items derived from createdOrders only, never from the full checkout input"
+    verification: { type: automated, test_ref: "analytics.purchase-events.spec.ts::partial-checkout-scoping", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-013
+    category: rollback_recovery
+    requirement_ref: REQ-014
+    invariant_ref: INV-004
+    description: "Given a checkout that failed for one of several brands, an operator using the reconciliation sweep/ops surface can identify exactly which customer/items/brand needs manual follow-up, without querying raw DB tables directly"
+    verification: { type: qa_runtime, test_ref: null, reason_code: QA_RUNTIME_REQUIRED, reason: "Operator-facing usability of the reconciliation surface can only be meaningfully verified by using the actual running ops dashboard, not from source alone" }
+    status: pending
+  - id: SCN-014
+    category: security_abuse
+    requirement_ref: REQ-006
+    invariant_ref: INV-003
+    description: "A client-supplied totalAmount/items payload that does not match what was actually captured by Razorpay must not be trusted for order-row creation or for the analytics event — amounts must be derived server-side from the payment capture and DB-priced line items, not the client input, consistent with the existing PAT-AUTHZ-01-style principle of never trusting client-suppliable identity/value parameters for a security- or integrity-relevant decision"
+    verification: { type: security, test_ref: null, reason_code: SECURITY_SPECIALIST_REQUIRED, reason: "Confirming no client-controlled amount/id can influence order creation or analytics reporting is a security-review-shaped check, not a simple pass/fail unit assertion, given the existing DEF-024 (paise/rupee) and this issue's own analytics-scoping fix both touch the same amount-computation path" }
+    status: pending
+  - id: SCN-021
+    category: external_dependency_failures
+    requirement_ref: REQ-007
+    invariant_ref: INV-005
+    description: "ADDED (controller iteration, 2026-09-01, resolves Critic Cycle 3's cardinality finding; UPDATED Rev.4 per Critic Cycle 4): a payment.captured webhook fires for a payment that produced 3 order rows (multi-item single-brand checkout); assert the plural lookup (findMany on orders.paymentId) returns and reconciles ALL 3 rows, not just one — including the mixed-state case where one row's Phase 2 is complete and another's is still pending. ADDITIONALLY assert the handler's stock-insufficiency-triggered refund branch does NOT fire at all for any Phase-1-committed sibling row (it is in-scope 'fulfillment side effect' skipped by the same reconciliation-only gate, per REQ-007) — this is distinct from SCN-018/020's stock-decrement/email assertions and specifically closes Critic Cycle 4's finding that a naive per-row loop would otherwise fire N duplicate refund calls."
+    verification: { type: integration, test_ref: "webhooks.razorpay.payments.spec.ts::multi-order-payment-reconciles-all-siblings-no-duplicate-refunds", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-022
+    category: concurrency
+    requirement_ref: REQ-010
+    invariant_ref: INV-008
+    description: "ADDED (controller iteration, 2026-09-01, resolves Critic Cycle 3's error-swallowing finding): force the atomic WHERE quantity >= N guard to affect zero rows (seed insufficient stock); assert the falsy/undefined returned row is explicitly detected as a failure (not silently treated as {success:true}) and the transaction rolls back — this is distinct from SCN-008's concurrent-race scenario, testing the single-request insufficient-stock path through the exact code pattern (`const [result] = await tx.update(...).returning()`) that does not throw on zero rows"
+    verification: { type: automated, test_ref: "orders.createOrder.spec.ts::stock-update-zero-rows-detected-as-failure", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-023
+    category: rollback_recovery
+    requirement_ref: REQ-013
+    invariant_ref: INV-004
+    description: "ADDED (controller iteration, 2026-09-01, resolves DEC-001): force a brand-call's Phase 1 to fail after payment capture; assert a durable 'order_reconciliation_required' alert is created via auditAndAlert, visible in the existing monitoringAlerts open-alerts view, with the correct paymentId/brandId/customer identifying data"
+    verification: { type: automated, test_ref: "reconciliation.alert-creation.spec.ts::brand-call-failure-raises-reconciliation-record", reason_code: null, reason: null }
+    status: pending
+  - id: SCN-024
+    category: rollback_recovery
+    requirement_ref: REQ-015
+    invariant_ref: INV-012
+    description: "ADDED (controller iteration, 2026-09-01): operator triggers the retry action on an open reconciliation record; the missing order is created successfully; assert the reconciliation record transitions to resolved with resolution type 'retried_and_fulfilled', an attributed actor, and the transition is recorded in auditEntityChange. Also assert triggering retry twice (accidental double-click) never creates two orders, protected by REQ-009's idempotency constraint."
+    verification: { type: automated, test_ref: "reconciliation.retry.spec.ts::operator-retry-succeeds-idempotently" , reason_code: null, reason: null }
+    status: pending
+  - id: SCN-025
+    category: security_abuse
+    requirement_ref: REQ-016
+    invariant_ref: INV-012
+    description: "REVISED (controller Rev.5, corrected pipeline citation per Critic Cycle 5): operator issues a refund for the unfulfilled portion of a reconciliation record covering 2 of 3 paid items; assert the refund amount equals exactly the unfulfilled items' value (not the full payment), uses the existing src/lib/finance/refunds.ts createFinanceRefundCase/executeApprovedRefund pipeline (which already supports an arbitrary amountPaise, unlike the full-refund-only call sites originally and incorrectly cited), and the reconciliation record resolves with resolution type 'refunded' and an attributed actor"
+    verification: { type: manual, test_ref: null, reason_code: MANUAL_BUSINESS_VALIDATION_REQUIRED, reason: "Issuing a real (or sandboxed) Razorpay refund is a financial action best verified manually/in a sandbox environment per this codebase's own existing refund-testing precedent, not simulated purely in a unit test" }
+    status: pending
+  - id: SCN-026
+    category: invalid_state_transitions
+    requirement_ref: REQ-017
+    invariant_ref: INV-012
+    description: "ADDED (controller iteration, 2026-09-01): attempt to mark a reconciliation record resolved without one of the three defined resolution types or without an attributed actor; assert this is rejected — no code path exists that can silently close a reconciliation record. This is the direct test of this program's 'never silently repair money/order state' principle."
+    verification: { type: automated, test_ref: "reconciliation.resolution.spec.ts::cannot-resolve-without-attributed-resolution-type", reason_code: null, reason: null }
+    status: pending
+decisions:
+  - id: DEC-001
+    question: "Does a manual/admin-side reconciliation process for orphaned/partial orders already exist today outside the codebase (a support runbook, an admin panel action) that this SPEC's new automated reconciliation sweep would duplicate or should integrate with?"
+    context: "REN-144's own Linear description lists this exact question as an explicit precondition ('Confirm with the team whether any manual/admin-side reconciliation process exists today...not visible to either audit round'). Repository investigation (BROAD depth) found no such mechanism in source, but a manual/human process would not appear in source at all — this cannot be resolved by code investigation alone."
+    affected_scenarios: ["SCN-005", "SCN-013"]
+    options:
+      - "No such process exists — build the reconciliation sweep and ops-facing surface as net-new (this SPEC's current assumption)"
+      - "A manual process exists (e.g. support already manually reviews stuck orders) — the new sweep should feed into that existing workflow rather than creating a parallel one"
+    recommended: "Proceed on the assumption that no such process exists (consistent with this and the prior reconciliation pass's findings), but do not mark this work item APPROVED until Product/Support confirms this explicitly — a wrong assumption here risks building a duplicate, unused tool rather than integrating with a live one"
+    consequences: "If a manual process already exists and this is not confirmed before implementation, the new automated surface could go unused (duplicate tooling) or worse, create two sources of truth for the same reconciliation task"
+    status: resolved
+    resolution: "RESOLVED (2026-09-01) by Product/Support, authoritative: 'NO existing manual/admin reconciliation process exists for orphaned/partial orders outside the codebase.' Option 1 (build the new automated reconciliation sweep + ops-facing surface as net-new) is confirmed correct. REQ-013 through REQ-017 (added this iteration) specify the minimal, 100%-existing-infrastructure reconciliation design this decision authorizes: reuse the existing monitoringAlerts status lifecycle (open/acknowledged/escalated/resolved, already audited via auditEntityChange) for the reconciliation record, and the existing refunds table + razorpay.payments.refund pattern (already used by cancel-order-helper.ts/orders.ts/returnReplace.ts) for refund handling. Zero new tables beyond the already-planned orderItems.paymentId column; zero new services; no distributed saga, new OMS, or reconciliation platform — per this program's explicit smallest-safe-design instruction."
+    resolved_by: "Product/Support, relayed via controller iteration 2026-09-01"
+    resolved_at: "2026-09-01T07:00:00Z"
+    linear_comment_url: null
+critic_findings:
+  - category: happy_path
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "SCN-001 covers this adequately; the underlying per-item creation code (orders.ts:536-643, verified on origin/master) is consistent with the SPEC's description. No gap."
+    blocking: false
+  - category: alternate_paths
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "SCN-002 (single-brand regression) is present and reasonable; REQ-005 covers latency/behavior parity."
+    blocking: false
+  - category: invalid_inputs
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "Neither SPEC.md nor the scenarios cover a malformed/adversarial webhook payload (e.g. a well-formed order_id referencing an already-cancelled/refunded order) hitting the new razorpayOrderId lookup path. Non-blocking edge case; add at Step 8 (Test Architect)."
+    blocking: false
+  - category: missing_data
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "No new required-but-optional fields introduced beyond the additive razorpayOrderId column, populated at creation time from data already present in the client's payload."
+    blocking: false
+  - category: duplicate_operations
+    verdict: FINDING
+    depth: DEEP
+    justification: "SCN-007/SCN-008 originally asserted an idempotency-key mechanism the Architecture section never actually designed. Verified on origin/master: razorpayPaymentId/intentId are only logged (lines 274-275,307,403,622-637,1327), no existing-order lookup before insert, no unique constraint. A per-brand transaction alone does not provide idempotency. RESOLVED in Revision 1: REQ-009/INV-007 add an explicit unique-constraint-backed idempotency design; SCN-007 updated accordingly."
+    blocking: false
+  - category: existing_user_conflicts
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "No user-identity conflict surface is touched by this change."
+    blocking: false
+  - category: state_transitions
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "SCN-006 and the state-transition list are reasonable; the three-way UI state split is a legitimate new transition, correctly scoped to manual verification."
+    blocking: false
+  - category: invalid_state_transitions
+    verdict: FINDING
+    depth: DEEP
+    justification: "Traced the current per-item loop (orders.ts 536-1440): order row + orderItems insert, then a real Delhivery shipment/AWB (1016-1039), THEN stock validation/decrement (1258-1307), then email — all before pushing to createdOrders. A later item's failure in the same brand-call cannot un-send an earlier item's already-real shipment. Original Architecture's db.transaction() didn't specify whether it spans external calls or just DB writes. RESOLVED in Revision 1: REQ-011/INV-009 introduce a two-phase design (DB phase fully commits before any external side effect is attempted for that brand-call), eliminating this class of orphaned real-world side effect entirely rather than compensating after the fact."
+    blocking: false
+  - category: retries
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "No new retry logic introduced beyond what already exists (createShiprocketOrderWithRetry, pre-existing, untouched, currently dead code)."
+    blocking: false
+  - category: timeouts
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "Not materially changed by this SPEC's scope."
+    blocking: false
+  - category: external_dependency_failures
+    verdict: FINDING
+    depth: DEEP
+    justification: "Read both webhook handlers in full (payments/route.ts 445-823, refunds/route.ts 824-1207). The payments webhook's payment.captured case is a dormant, independently-written second fulfillment pipeline (re-decrements stock via updateProductStock at 621-639, re-sends confirmation email at 641-681, attempts Shiprocket AWB/label/manifest generation against fields the current create-time flow never populates) that never runs today only because the ID lookup fails — REQ-007's original scope (fix the lookup only) would reactivate it, double-decrementing stock and calling a courier API with an undefined shipment_id. RESOLVED in Revision 1: REQ-007 revised to require the webhook become reconciliation-only for orders already created at checkout time — no re-run of fulfillment side effects. INV-010/SCN-018 added."
+    blocking: false
+  - category: concurrency
+    verdict: FINDING
+    depth: DEEP
+    justification: "Two issues: (1) the stock-availability check reads productDetailsByIndex fetched once via Promise.all before the per-item loop begins (orders.ts 491-511) — a TOCTOU race across concurrent checkouts on the same product. (2) updateProductStock (product.ts 3497-3537) has no WHERE quantity >= N floor guard. The original per-brand-transaction proposal did not address either. RESOLVED in Revision 1: REQ-010/INV-008 require an atomic, conditional decrement evaluated at write time inside the transaction, replacing the pre-loop snapshot read as the authorization decision."
+    blocking: false
+  - category: race_conditions
+    verdict: FINDING
+    depth: DEEP
+    justification: "Same root cause as concurrency, viewed as a race — concurrent checkouts on the last unit of stock is an unmitigated overselling race. Also, SCN-009's alert-attribution-race scenario was asserted without a design for how concurrent createOperationalAlert calls avoid cross-attribution. RESOLVED (oversell) in Revision 1 via REQ-010/INV-008/SCN-008. Alert-attribution race (SCN-009) remains a Test-Design-stage concern, not blocking on its own — createOperationalAlert calls already carry the specific order/brand identifiers as parameters per its existing usage elsewhere in this file, so cross-attribution is unlikely by construction, but this should be explicitly asserted by SCN-009's eventual test."
+    blocking: false
+  - category: idempotency
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "Same underlying gap as duplicate_operations, flagged separately since it is its own checklist category. RESOLVED in Revision 1 via REQ-009/INV-007."
+    blocking: false
+  - category: authentication
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "createOrder remains protectedProcedure (orders.ts:251-303), unchanged by this SPEC; no new unauthenticated surface introduced (both webhook routes already require valid Razorpay HMAC signatures, unchanged by REQ-007's fix). Note: critic-checklist.yaml's mandatory_deep_at_l3 flat list omits authentication despite the inline per-category flag saying true — a policy-file inconsistency worth a maintainer fixing separately, not something this work item should self-resolve given the file's own stated review-rigor requirement for edits to it."
+    blocking: false
+  - category: authorization
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "Applied PAT-AUTHZ-01. createOrder's middleware (orders.ts:278-301) derives the acting user from ctx.user (session) and throws FORBIDDEN if user.id !== input.userId; getOrder/getOrdersByUserId do the same (175-184, 210-214). This SPEC does not alter any of these checks. Confirmed correct as the SPEC claims."
+    blocking: false
+  - category: tenant_isolation
+    verdict: FINDING
+    depth: DEEP
+    justification: "Order-creation/read paths are correctly user-scoped, no cross-user leak. However, the Architecture's proposed extension of the order-ops dashboard query (general/order-ops.ts) sits behind a single site-wide permission bit, not brand-scoped — very likely intentional (internal staff surface), but the SPEC should state this assumption explicitly rather than leave it implied, since the dashboard is named as in-scope infrastructure being extended. Addressed in Revision 1 by adding an explicit assumption note in the Architecture section; not a design change."
+    blocking: false
+  - category: security_abuse
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "SCN-014 already covers client-supplied-amount trust adequately, correctly routed to SECURITY_SPECIALIST_REQUIRED."
+    blocking: false
+  - category: pii
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "The new razorpayOrderId column stores only an opaque Razorpay identifier. createOperationalAlert is an existing, already-used mechanism with an unchanged PII-handling model. This SPEC operates downstream of PII data flows that already exist, unchanged. No new PII exposure introduced."
+    blocking: false
+  - category: data_integrity
+    verdict: FINDING
+    depth: DEEP
+    justification: "Umbrella of the concurrency/rollback/external-dependency findings above: (1) a real Delhivery AWB can be issued for a brand-call that ultimately fails; (2) stock can go negative under concurrent checkouts; (3) the payments webhook would double-decrement stock once its lookup is fixed, unless gated. All three demonstrated directly from origin/master, independent of the SPEC's original framing. RESOLVED in Revision 1 via REQ-009/010/011 and the corresponding invariants/scenarios."
+    blocking: false
+  - category: migrations
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "The additive razorpayOrderId column is correctly additive/reversible. Minor non-blocking note: pre-migration orders will have NULL in this column, so webhooks for orders placed just before deploy will still 404 until they age out — worth one sentence in Implementation Notes, not a design change."
+    blocking: false
+  - category: backward_compatibility
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "REQ-005 explicitly protects the full-success path; single-brand regression is scenario-covered (SCN-002)."
+    blocking: false
+  - category: rollback_recovery
+    verdict: FINDING
+    depth: DEEP
+    justification: "A db.transaction() can only roll back DB writes — it cannot un-create an already-issued Delhivery AWB or un-send an email. The original Architecture had no compensating-action design. RESOLVED in Revision 1: the two-phase design (REQ-011/INV-009/SCN-017) means external side effects are only ever attempted after the DB phase is durably committed, so a DB-phase failure never has an external side effect to compensate for in the first place — a stronger guarantee than adding a cancelDelhiveryOrder compensating call after the fact."
+    blocking: false
+  - category: observability
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "REQ-003/INV-004 and reuse of createOperationalAlert are reasonable; the reconciliation sweep is appropriately marked QA_RUNTIME_REQUIRED."
+    blocking: false
+  - category: analytics
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "REQ-008/INV-006/SCN-012 correctly diagnose that capturePurchaseCompleted's totalAmountPaise/productIds/brandIds/totalItems are computed from input.* rather than createdOrders (verified via git diff against origin/master). One nuance not previously noted: orderIds: createdOrders.map(...) is ALREADY correctly scoped in the current shipped code — only the amount/item/brand fields are wrong. Non-blocking; informational for whoever implements the re-patch so it doesn't unnecessarily touch the already-correct field."
+    blocking: false
+  - category: accessibility
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "SPEC.md explicitly and correctly excludes this — no new UI surface, only copy/state changes to existing checkout UI."
+    blocking: false
+  - category: mobile_responsive_behavior
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "Same justification as accessibility — correctly excluded by the SPEC's own reasoning."
+    blocking: false
+  - category: "duplicate_operations (Cycle 2 re-verification of Revision 1)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "STILL BLOCKING. Verified orders.ts:536-643 creates ONE ORDER ROW PER LINE ITEM (fresh generateOrderId() call every loop iteration), and orders schema has no brandId-level aggregation — a legitimate 3-item single-brand cart produces 3 rows sharing (razorpayPaymentId, brandId). Revision 1's literal (razorpayPaymentId, brandId) unique-constraint design would reject items 2 and 3 on the happy path, not just genuine retries. RESOLVED in Revision 2: REQ-009/INV-007 corrected to key at the actual per-line-item granularity."
+    blocking: false
+  - category: "idempotency (Cycle 2 re-verification)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "Same root cause and same resolution as duplicate_operations above."
+    blocking: false
+  - category: "invalid_state_transitions (Cycle 2 re-verification)"
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "RESOLVED. Confirmed on live code that the Phase 1 (DB-only) / Phase 2 (external, post-commit) split correctly eliminates the orphaned-shipment class described in Cycle 1 — nothing external happens before the DB phase commits, so there is nothing to orphan."
+    blocking: false
+  - category: "external_dependency_failures (Cycle 2 re-verification)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "PARTIALLY RESOLVED. The real risk (unconditional stock re-decrement + re-email in the live payments-webhook handler, payments/route.ts:444-821) is confirmed and the reconciliation-only fix direction is correct. Two corrections made in Revision 2: (1) the original justification's claim of a live Shiprocket/AWB risk was factually wrong — that code is dead/commented-out (lines 1-443) in this file; evidence corrected, requirement unchanged. (2) the proposed gate criterion ('shipment row exists') was itself broken by REQ-011's own Phase-2-pending state (see NEW FINDING B below) — corrected to key off Phase-1/order-row existence instead. refunds/route.ts independently confirmed to have no analogous risk, no gate needed there."
+    blocking: false
+  - category: "concurrency (Cycle 2 re-verification)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "PARTIALLY RESOLVED. The atomic-conditional-decrement direction is correct and confirmed to close the core oversell race. Two gaps found: (1) updateProductStock (product.ts:3497-3537) opens its own internal db.transaction() — Revision 1 didn't specify how this nests inside Phase 1's outer per-brand-call transaction; (2) isStockAvailable bundles non-quantity flags (verificationStatus, isDeleted, isAvailable) into the same pre-loop-snapshot boolean the SPEC's 'atomic decrement' language didn't explicitly cover. RESOLVED in Revision 2: REQ-010 expanded to require both the outer-transaction join and the non-quantity flags be re-checked atomically at write time."
+    blocking: false
+  - category: "race_conditions (Cycle 2 re-verification)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "Same evidence and resolution as concurrency above (oversell race). Alert-attribution race (SCN-009) remains a Test-Design-stage concern per Cycle 1, not re-examined in Cycle 2."
+    blocking: false
+  - category: "rollback_recovery (Cycle 2 re-verification)"
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "RESOLVED. Same evidence as invalid_state_transitions — the two-phase design means nothing external ever needs compensating, consistent with everything found in the live code."
+    blocking: false
+  - category: "data_integrity (Cycle 2 re-verification, umbrella)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "PARTIALLY RESOLVED as an umbrella — resolved on the invalid-state-transition/rollback components, still blocking on the idempotency-granularity and concurrency-nesting specifics until Revision 2's fixes (REQ-009/010) are themselves re-verified. Those specifics were confirmed re-verified/resolved at Cycle 3 and this controller iteration."
+    blocking: false
+  - category: "NEW (Cycle 2): reconciliation gate keyed on the wrong signal"
+    verdict: FINDING
+    depth: DEEP
+    justification: "Architecture item 5's original gate ('does this order already have a shipment row?') is defeated by REQ-011's own Phase-2-pending-failure design: a fully legitimate, Phase-1-committed order can have NO shipment row yet (Phase 2 still retrying). The original gate would misclassify that order as unfulfilled and let the dangerous re-decrement/re-email pipeline run against it — undoing the exact atomicity guarantee REQ-011 was built to provide. RESOLVED in Revision 2: gate criterion changed to key off order-row/Phase-1-commit existence, not shipment-row existence; SCN-020/INV-010 added to test the Phase-2-pending case specifically, which the original SCN-018 alone would not have caught."
+    blocking: false
+  - category: "NEW (Cycle 2): pre-existing server-side full-cart-drop bug, unaddressed by Revision 1"
+    verdict: FINDING
+    depth: DEEP
+    justification: "orders.ts:1447-1450 (`userCartCache.drop(user.id)`) unconditionally drops the customer's ENTIRE cart cache once per createOrder/brand-call invocation — fires after brand A's items complete but before the client's sequential per-brand loop has necessarily called createOrder for brand B. Revision 1's Architecture item 3 ('cart-clearing becomes scoped') only addressed the CLIENT-side deleteItemFromCart call and missed this independent server-side full-cache-drop entirely, meaning REQ-002 would still be violated even after Revision 1. RESOLVED in Revision 2: REQ-012/INV-011/SCN-019 added to scope this call site too."
+    blocking: false
+  - category: "idempotency key granularity (Cycle 3 re-verification of Revision 2)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "PARTIALLY RESOLVED at Cycle 3. Confirmed orders.ts:591-616 inserts one order row per line item, matching Cycle 2. But src/lib/db/schema/order.ts's orders table has NO productId/variantId columns today — those exist only on orderItems (which lacks a paymentId column) and the transient input object. RESOLVED in this controller iteration (2026-09-01): direct schema re-verification found orders.paymentId ALREADY EXISTS and is already populated with the Razorpay payment id (orders.ts:1315-1332) — the gap is narrower than feared. Concrete fix specified: add paymentId to orderItems (denormalized, same source), unique constraint on (paymentId, productId, variantId). No longer blocking — resolved as an engineering decision, not deferred to a human."
+    blocking: false
+  - category: "webhook gate criterion cardinality (Cycle 3 re-verification)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "NEW STRUCTURAL GAP at Cycle 3. payment.ts:141 confirms one Razorpay order_id is created per whole multi-brand checkout, not per brand — and since orders.ts creates one order row per LINE ITEM, a single razorpayOrderId/razorpayPaymentId is shared by MANY order rows. orderQueries.getOrderById (order.ts:999-1029) uses db.query.orders.findFirst — a singular lookup. RESOLVED in this controller iteration (2026-09-01): REQ-007 now specifies a concrete fix — findMany keyed on orders.paymentId, loop reconciliation over every returned sibling row. SCN-021/INV-005 added to test the multi-row case explicitly. No longer blocking — resolved as an engineering decision."
+    blocking: false
+  - category: "concurrency / stock-update error-swallowing (Cycle 3 re-verification)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "NEW STRUCTURAL GAP at Cycle 3. Confirmed db.transaction with an outer tx handle is standard, already-used Drizzle idiom in this codebase (corporate-order.ts:85,913) — no framework blocker to REQ-010's transaction-joining requirement. BUT updateProductStock (product.ts:3541-3548) wraps each per-item update in its own try/catch that silently converts a failure into a swallowed {success:false} return instead of throwing, AND the call site (orders.ts ~1299-1313) has its corresponding TRPCError throw already commented out. RESOLVED in this controller iteration (2026-09-01), with an important sharpening found by direct re-verification of product.ts:3497-3548: a WHERE-guarded UPDATE returning zero rows is NOT a thrown exception in this codebase's `const [result] = await tx.update(...).returning()` pattern — it silently produces `{success:true, data:undefined}`, bypassing even the try/catch entirely. REQ-010 now requires an explicit falsy-result check in addition to fixing the try/catch. SCN-022 added. No longer blocking — resolved as an engineering decision."
+    blocking: false
+  - category: "server-side cart-drop scoping (Cycle 3 re-verification)"
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "RESOLVED. src/lib/redis/methods/cart.ts confirms userCartCache keys are per-(userId, productId, variantId), not a single per-user blob, and an existing remove({userId, productId, variantId}) method already deletes one independent Redis key. REQ-012's fix (call remove() per committed item instead of the blanket drop()) is achievable with no read-modify-write race. No remaining gap."
+    blocking: false
+  - category: "Shiprocket evidence correction (Cycle 3 re-verification)"
+    verdict: NOT_APPLICABLE
+    depth: SHALLOW
+    justification: "RESOLVED. Confirmed payments/route.ts lines 1-443 (including the Shiprocket import) are entirely commented out; the live handler (444-821) contains only stock re-decrement and re-send-email, no Shiprocket calls. Matches Revision 2's corrected claim exactly."
+    blocking: false
+  - category: "REQ-009 idempotency constraint NULL-semantics (Cycle 4 verification of controller Rev.3)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "PARTIALLY RESOLVED at Cycle 4. Confirmed orders.paymentId population and orderItems's lack of a paymentId column exactly as Rev.3 claimed. But Rev.3's single 3-column unique constraint (paymentId, productId, variantId) does not protect the common case: orderItems.variantId is genuinely nullable (schema/order.ts:143-177, no .notNull()), and Postgres unique constraints treat NULL as distinct from every other NULL — two rows with identical (paymentId, productId) and variantId=NULL (any non-variant product) would not collide, silently defeating the constraint for exactly this defect's target class. RESOLVED in Rev.4: two partial unique indexes (filtered on variantId IS NOT NULL / IS NULL respectively, both also filtered on paymentId IS NOT NULL) close this correctly. Also simplified: orderItems.paymentId can be written at insert time directly, not requiring Phase 1 to enclose the later updateOrderStatus call as Rev.3 implied."
+    blocking: false
+  - category: "REQ-007 webhook refund-logic interaction (Cycle 4 verification of controller Rev.3)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "PARTIALLY RESOLVED at Cycle 4. Confirmed switching getOrderById to findMany is mechanically sound (existingOrder used as a strictly singular object throughout the live handler, so a naive array-feed would be a compile-time break, not silent). But found a genuine new gap: the live handler's stock-insufficiency-triggered refund branch (payments/route.ts ~487-560) calls razorpay.payments.refund() for the FULL payment amount per order — a naive per-sibling-row loop would fire N duplicate refund calls against the same payment. RESOLVED in Rev.4 by scoping clarification, not new mechanism: this refund branch is itself a 'fulfillment side effect' already covered by REQ-007's reconciliation-only gate and must be skipped entirely for a Phase-1-committed order (which, post-REQ-006/010, can never legitimately have insufficient stock at this stage) — simpler than building pooled multi-row refund logic, consistent with this program's Reuse-over-new-mechanism preference. SCN-021 updated to test this explicitly."
+    blocking: false
+  - category: "REQ-010 stock error-swallowing (Cycle 4 verification of controller Rev.3)"
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "RESOLVED, fully confirmed at Cycle 4. Both branches of updateProductStock (productVariants and plain products) use the same const [result] = await tx.update(...).returning() pattern with a zero-row result silently treated as success — exactly as Rev.3 claimed, no defaulting pattern elsewhere papers over it. The call site's need to inspect {updated, failed} was already in REQ-010's scope. No remaining gap; this is the one of the three Rev.3 fixes Cycle 4 found fully sound as written."
+    blocking: false
+  - category: "REQ-013 reconciliation-record mechanics (Cycle 5, final required cycle)"
+    verdict: NOT_APPLICABLE
+    depth: DEEP
+    justification: "RESOLVED/SOUND. Confirmed auditAndAlert/createOperationalAlert/auditEntityChange and the full monitoringAlerts open->acknowledged->escalated->resolved lifecycle (queries/monitoring-sla.ts:869-925) exist exactly as designed, no schema change needed for the lifecycle mechanics themselves."
+    blocking: false
+  - category: "REQ-014 operator visibility query-layer gap (Cycle 5)"
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "PARTIALLY RESOLVED at Cycle 5. getActiveAlerts/getActiveAlertsPage (monitoring-sla.ts:932-974) filter only by status/severity, no type filter — 'extend the existing surface' understated a genuine query-layer addition needed. RESOLVED in Rev.5: REQ-014 reworded to explicitly require adding a type filter parameter."
+    blocking: false
+  - category: "REQ-015 retry/analytics interaction (Cycle 5)"
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "Non-blocking note: a successful retry's createOrder call independently (and correctly) emits REQ-008's purchase_completed for the newly-fulfilled items — not a defect, but worth stating explicitly so it isn't mistaken for a duplicate-analytics bug during implementation/testing. RESOLVED in Rev.5 by adding this note to REQ-015."
+    blocking: false
+  - category: "REQ-016 wrong refund-pattern citation (Cycle 5)"
+    verdict: FINDING
+    depth: DEEP
+    justification: "BLOCKING at Cycle 5, RESOLVED in Rev.5. Direct re-read of all three originally-cited call sites (cancel-order-helper.ts:47-67, orders.ts:1797-1817, returnReplace.ts:626/719) confirmed each hardcodes a full-order-total refund amount — none supports REQ-016's own explicit, non-negotiable partial-amount requirement. The genuinely partial-capable existing pattern is src/lib/finance/refunds.ts's createFinanceRefundCase (accepts arbitrary amountPaise, routes through an existing approval-threshold check, executed via executeApprovedRefund). RESOLVED in Rev.5 by repointing REQ-016/SCN-025 to the correct pipeline — a citation correction from evidence, not a new business decision."
+    blocking: false
+  - category: "REQ-017 resolution-type enforcement (Cycle 5)"
+    verdict: FINDING
+    depth: SHALLOW
+    justification: "Non-blocking limitation: the existing AlertAction type stores resolution detail in free-text reasonCode/notes, not a validated enum — the three resolution types are an application-layer convention, not schema-enforced. Acceptable for V1 given this program's smallest-safe-design instruction (a new enum column would be new schema beyond this fix's footprint); RESOLVED in Rev.5 by noting this explicitly as an implementation-time validation requirement rather than leaving it silently assumed."
+    blocking: false
+approval_gate:
+  checked_at: "2026-09-01T07:45:00Z"
+  passed: true
+  checklist:
+    no_blocking_critique_findings: true
+    no_unresolved_decisions: true
+    all_requirements_have_scenarios: true
+    all_scenarios_have_valid_verification: true
+    all_invariants_have_validation_strategy: true
+    architecture_consistent_with_requirements: true
+    scope_resolved: true
+    design_blocker_dependencies_resolved: true
+    risk_escalation_reentry_complete: true
+implementation_prerequisites_status:
+  all_resolved: false
+  outstanding:
+    - "REN-131's capturePurchaseCompleted call site must be re-patched to scope to createdOrders once this issue's transaction/success-signal work exists (REQ-008) — this is separate implementation work tracked against REN-131, not a REN-144 SPEC gap, and does not block REN-144 reaching READY_FOR_DEV (it blocks READY_FOR_PR per the validator's own rule)."
+pr_validation_results: []
+traceability_gaps: []
+branch: "akshayatwork1/ren-144-paymentorder-integrity-successful-payment-can-result-in"
+pr_url: null
+promoted_artifacts: []

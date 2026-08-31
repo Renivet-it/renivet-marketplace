@@ -1,0 +1,16 @@
+# Gate E — Completion Evidence Reconciliation
+
+Linear status labels are not trusted alone — each item below is checked against actual work-item evidence files and/or current source code.
+
+| Item | Linear status | Verdict | Evidence |
+|---|---|---|---|
+| **REN-143** (Staging Hardening + Build-Trigger) | Deployed to Prod | **IMPLEMENTED BUT NOT VERIFIED** | `work-item.yaml`: `task.status: IN_REVIEW`, `DEP-006 status: pending_phase_a_evidence`. `PHASE-A-EVIDENCE.md`/`PHASE-B-EVIDENCE.md` still contain unfilled placeholders: `Approver: <enter approver name>`, staging/production deployment IDs `<copy from Vercel>`, rollback-test results `<record Vercel result>`, before/after build-count metrics `<record...>`. **The Linear label contradicts the work item's own recorded state.** |
+| **REN-115** (4 hardcoded Delhivery URLs + the 5th residual site) | Deployed to Prod | **VERIFIED COMPLETE** — a real gap from the prior reconciliation has now closed | `src/lib/trpc/routes/general/returnReplace.ts`'s `trackShipment` procedure (lines 897-901) now calls `resolveDelhiveryUrl(process.env.DELHIVERY_BASE_URL, ...)`, not a hardcoded URL. The two remaining literal `https://track.delhivery.com` strings (lines 559, 877) are inside commented-out dead code, not live. One non-blocking open item remains: `implementation_review.result: REVIEW_PASSED_WITH_FINDINGS`, `REV-001` (add four-path request-spy/regression test coverage) — recorded as "before merge if practical," not required. |
+| **REN-93** (unauthenticated finance export endpoints) | Deployed to Prod | **VERIFIED COMPLETE** (code-level) | `src/app/api/finance/tds/export/route.ts:14-38` and `src/app/api/reports/operational/route.ts:44-60` both now call `auth()` (401 if unauthenticated) then a permission gate (403 if unauthorized). No work-item evidence folder exists to independently confirm deployment/test proof beyond the source read. |
+| **REN-94** (unauthenticated Delhivery/Shiprocket endpoints) | Deployed to Prod | **VERIFIED COMPLETE** (code-level) | `src/app/api/delhivery/forward-order/route.ts:30-33` calls `requireLogisticsStaff()` before any Delhivery API call. Same caveat as REN-93 — no work-item evidence folder for independent deployment/test proof. |
+| **REN-136** (Node 20 → 24) | Deployed to Prod | **VERIFIED COMPLETE** | `package.json`: `"engines": {"node": "24.x"}`; `.nvmrc`: `24`. Matches the Linear status directly. |
+| REN-129, REN-130 | Deployed to Prod | **VERIFIED COMPLETE** (per the prior implementation-reconciliation pass; not re-audited here) | See `../implementation-reconciliation/P06_RECONCILIATION.md` |
+
+## Pattern worth flagging
+
+**REN-143 is the one clear discrepancy found between a Linear "Deployed to Prod" label and the underlying work-item's own recorded evidence state.** REN-115/93/94/136 all check out at the code level despite none (except REN-115) having a work-item evidence folder to independently confirm deployment/test proof — meaning "Deployed to Prod" in this workspace sometimes means "code merged and believed live," not always "evidence-verified." This is a governance-process observation, not a new defect: recommend the REN-143 evidence gap be closed (fill in the Deployments section, get a named Approver) before this reconciliation treats it as anything other than IMPLEMENTED BUT NOT VERIFIED.

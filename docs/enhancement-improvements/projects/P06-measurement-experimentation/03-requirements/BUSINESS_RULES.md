@@ -1,0 +1,7 @@
+# Business Rules — P06
+
+- **BRULE-1**: Currency sent to any external ad-tech platform (Meta today; GA4 if DECISION-P06-001 approves it) MUST be in the platform's expected transactional unit (rupees), never the internal storage unit (paise). This rule generalizes beyond REN-145's specific fix — any future integration must apply the same conversion.
+- **BRULE-2**: A "conversion event" (Purchase/purchase_completed) represents one customer checkout, not one internal order record. Renivet's own backend may create N order records for an N-brand cart (a legitimate internal modeling choice — see `04-architecture/DATA_FLOW.md`), but that internal fan-out MUST NOT leak into external conversion-counting.
+- **BRULE-3**: Analytics/tracking failures MUST NOT fail or roll back a real transaction. (Already true today — preserve.)
+- **BRULE-4**: GA4 instrumentation work is gated on an explicit product decision (DECISION-P06-001), not on engineering availability. No GA4 code should be written before that decision resolves, to avoid building against a "revenue source" the business may choose not to use.
+- **BRULE-5**: The PostHog-strict purchase count of 2 (per governing evidence) is a measurement-methodology artifact of strict-mode filtering, not a business signal of "only 2 purchases happened." No downstream report or dashboard may present the strict-mode count as an actual purchase count without this caveat attached.
