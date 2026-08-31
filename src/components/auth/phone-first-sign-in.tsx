@@ -9,12 +9,14 @@ import { resolveEmailPasswordSignIn } from "@/components/auth/email-password-sig
 import { OTPCodeInput } from "@/components/auth/otp-code-input";
 import { Google, RenivetFull } from "@/components/svgs";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { getSafeRedirectUrl } from "@/lib/auth/redirect";
 import { useSignIn, useSignUp } from "@clerk/nextjs";
 import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import Image from "next/image";
 import Link from "next/link";
 import { usePostHog } from "posthog-js/react";
 import { FormEvent, useState } from "react";
+import { useSearchParams } from "next/navigation";
 
 type Method = "phone" | "email";
 type Step = "credentials" | "phone-code" | "email-second-factor";
@@ -66,6 +68,8 @@ export function PhoneFirstSignIn() {
     const { isLoaded, signIn, setActive } = useSignIn();
     const { signUp, setActive: setSignUpActive } = useSignUp();
     const posthog = usePostHog();
+    const searchParams = useSearchParams();
+    const destination = getSafeRedirectUrl(searchParams.get("redirect_url"));
     const [method, setMethod] = useState<Method>("phone");
     const [step, setStep] = useState<Step>("credentials");
     const [phoneAttempt, setPhoneAttempt] = useState<PhoneAttempt>("sign-in");
@@ -114,7 +118,7 @@ export function PhoneFirstSignIn() {
         await fetch("/api/account/sync", { method: "POST" }).catch(
             () => undefined
         );
-        window.location.assign("/");
+        window.location.assign(destination);
     };
 
     const completePhoneSignUp = async (sessionId: string | null) => {
@@ -129,7 +133,7 @@ export function PhoneFirstSignIn() {
         await fetch("/api/account/sync", { method: "POST" }).catch(
             () => undefined
         );
-        window.location.assign("/");
+        window.location.assign(destination);
     };
 
     const isUnknownPhoneNumber = (value: unknown) =>
@@ -153,7 +157,7 @@ export function PhoneFirstSignIn() {
             await signIn.authenticateWithRedirect({
                 strategy: "oauth_google",
                 redirectUrl: "/auth/sso-callback?flow=sign-in",
-                redirectUrlComplete: "/",
+                redirectUrlComplete: destination,
             });
         } catch (value) {
             showError(value);
@@ -554,7 +558,7 @@ export function PhoneFirstSignIn() {
                     Don&apos;t have an account?{" "}
                     <Link
                         className="font-semibold text-primary underline-offset-4 hover:underline"
-                        href="/auth/signup"
+                        href={`/auth/signup?redirect_url=${encodeURIComponent(destination)}`}
                     >
                         Sign up
                     </Link>

@@ -1,6 +1,7 @@
 import { PhoneFirstSignUp } from "@/components/auth/phone-first-sign-up";
 import { GeneralShell } from "@/components/globals/layouts";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
     title: "Create an Account",
@@ -15,7 +16,9 @@ export default function Page() {
             }}
         >
             <div className="flex items-center justify-center">
-                <PhoneFirstSignUp />
+                <Suspense>
+                    <PhoneFirstSignUp />
+                </Suspense>
             </div>
         </GeneralShell>
     );
