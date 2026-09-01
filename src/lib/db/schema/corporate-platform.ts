@@ -405,8 +405,7 @@ export const corporateQuotes = pgTable(
             .notNull()
             .default(0),
         commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull()
-            .default(1800),
+            .notNull(),
         commissionGstAmountPaise: integer("commission_gst_amount_paise")
             .notNull()
             .default(0),
@@ -1298,8 +1297,7 @@ export const corporateSettlementStatements = pgTable(
         commissionPercentBps: integer("commission_percent_bps").notNull(),
         commissionAmountPaise: integer("commission_amount_paise").notNull(),
         commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull()
-            .default(1800),
+            .notNull(),
         commissionGstAmountPaise: integer(
             "commission_gst_amount_paise"
         ).notNull(),

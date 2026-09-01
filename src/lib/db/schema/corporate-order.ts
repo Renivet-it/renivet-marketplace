@@ -295,8 +295,7 @@ export const corporateOrders = pgTable(
             .notNull()
             .default(0),
         commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull()
-            .default(1800),
+            .notNull(),
         commissionGstAmountPaise: integer("commission_gst_amount_paise")
             .notNull()
             .default(0),
