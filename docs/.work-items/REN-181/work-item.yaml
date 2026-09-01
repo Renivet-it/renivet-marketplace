@@ -76,7 +76,7 @@ requirements:
       description: Reseller corporate settlements omit TCS and 194-O deductions by default and require explicit policy configuration to enable them.
       type: explicit
     - id: REQ-005
-      description: Commission GST uses approved Finance/HSN classification metadata and blocks when required classification is unavailable.
+      description: Commission GST is explicitly selected per manual quote/order, persisted as commissionGstRateBps, reused by every settlement/commission document, and blocks issuance when absent; Finance/CA still owns the approved rate decision.
       type: explicit
     - id: REQ-006
       description: Settlement numbers use the declared shared SET numbering authority and are unique per issued version.

@@ -18,7 +18,7 @@ Corporate settlement statements must be financially reproducible and auditable. 
 2. Before issuance, require an issued Customer Tax Invoice or authoritative order snapshot with non-null gross, GST, and commission values. Missing values return structured errors; remove `802000`, `102000`, 10%-of-subtotal, and other fabricated defaults.
 3. Add `SET` to the typed `nextCorporateDocumentNumber` prefix union and allocate settlement numbers through that authority. Retries for an already-issued order return the existing current statement; adjustments allocate a new version and number transactionally.
 4. Represent TCS/194-O as explicit deduction policy/configuration. Default both to zero/absent for reseller corporate orders; only an explicitly enabled, Finance-approved policy may calculate them. Do not silently infer marketplace status.
-5. Keep commission GST rate/classification configurable from approved Finance/HSN metadata. Do not decide the legal rate in this task; block issuance when required classification is unavailable.
+5. Capture the commission GST rate explicitly on each manual quote/order (stored as `commissionGstRateBps`) and reuse that immutable order value in settlement and commission documents. The UI may offer selectable rates, but this task does not decide which rate Finance/CA approves; issuance blocks when the order has no rate.
 6. Render gross, commission, commission GST, permitted deductions, net payable, settlement reference, issue date, and version from the immutable statement row.
 7. Add structured audit/error events for issuance, duplicate/idempotent retry, adjustment, missing source data, and policy gating. Preserve existing authorization and tenant boundaries.
 

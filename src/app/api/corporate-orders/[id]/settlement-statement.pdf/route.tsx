@@ -123,7 +123,16 @@ export async function GET(
             statement?.commissionAmountPaise ??
             Math.round((taxableValuePaise * commissionPercentBps) / 10000);
 
-        const commissionGstRateBps = statement?.commissionGstRateBps ?? 1800;
+        const commissionGstRateBps =
+            statement?.commissionGstRateBps ?? order.commissionGstRateBps;
+        if (commissionGstRateBps == null) {
+            return NextResponse.json(
+                {
+                    error: "Commission GST rate is not set for this order",
+                },
+                { status: 422 }
+            );
+        }
         const commissionGstAmountPaise =
             statement?.commissionGstAmountPaise ??
             Math.round((commissionAmountPaise * commissionGstRateBps) / 10000);

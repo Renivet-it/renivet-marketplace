@@ -880,7 +880,7 @@ export function AdminManualQuoteModal({
                                         onChange={setCommissionAmount}
                                     />
                                     <LabelledInput
-                                        label="GST on Commission (%)"
+                                        label="Order-specific GST on Commission (%)"
                                         type="number"
                                         min={0}
                                         max={100}
@@ -889,6 +889,9 @@ export function AdminManualQuoteModal({
                                         onChange={setCommissionGstPercent}
                                     />
                                 </div>
+                                <p className="text-[11px] text-slate-500">
+                                    This rate is saved on this order and used on its settlement and commission invoice.
+                                </p>
                                 {commissionAmountPaise > 0 && (
                                     <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
                                         <span>

@@ -697,7 +697,12 @@ export const corporateDocumentService = {
             (taxableValuePaise * commissionPercentBps) / 10000
         );
 
-        const commissionGstRateBps = 1800; // 18% SAC 9985
+        const commissionGstRateBps = order.commissionGstRateBps;
+        if (commissionGstRateBps == null) {
+            throw new Error(
+                "Cannot issue settlement statement: commission GST rate is not set on the order"
+            );
+        }
         const commissionGstAmountPaise = Math.round(
             (commissionAmountPaise * commissionGstRateBps) / 10000
         );

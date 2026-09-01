@@ -120,9 +120,15 @@ export async function GET(
             (order.quote?.commissionAmountPaise ?? 0) ||
             Math.round(((order.subtotalPaise ?? 400000) * 1000) / 10000); // default 10%
 
-        const commissionGstRateBps =
-            order.commissionGstRateBps ||
-            (order.quote?.commissionGstRateBps ?? 1800);
+        const commissionGstRateBps = order.commissionGstRateBps;
+        if (commissionGstRateBps == null) {
+            return NextResponse.json(
+                {
+                    error: "Commission GST rate is not set for this order",
+                },
+                { status: 422 }
+            );
+        }
 
         const commissionGstPaise =
             order.commissionGstAmountPaise ||

@@ -1763,8 +1763,13 @@ class CorporatePlatformService {
         );
 
         const commissionAmountPaise = parsed.commissionAmountPaise ?? 0;
+        if (parsed.commissionGstPercent == null) {
+            throw new Error(
+                "Commission GST rate is required for a corporate quote"
+            );
+        }
         const commissionGstRateBps = Math.round(
-            (parsed.commissionGstPercent ?? 18) * 100
+            parsed.commissionGstPercent * 100
         );
         const commissionGstAmountPaise = Math.round(
             (commissionAmountPaise * commissionGstRateBps) / 10000
