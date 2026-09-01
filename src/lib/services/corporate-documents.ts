@@ -4,6 +4,7 @@ import {
     brandConfidentials,
     corporateBrandPayouts,
     corporateBrandTaxInvoices,
+    corporateCustomizations,
     corporateDeliveryChallans,
     corporateDocumentSequences,
     corporateDocumentSettings,
@@ -24,7 +25,7 @@ import {
     corporateVendorPurchaseOrderInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 export async function getCorporateDocumentSettings() {
     const current = await db.query.corporateDocumentSettings.findFirst({
@@ -318,8 +319,7 @@ export const corporateDocumentService = {
         if (!order.brandId || !order.brand) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message:
-                    "Assign a brand before issuing the Fulfillment Order",
+                message: "Assign a brand before issuing the Fulfillment Order",
             });
         }
 
@@ -333,6 +333,12 @@ export const corporateDocumentService = {
             }
         );
         if (existing) return existing;
+
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const [settings, brandDetails, receiptVoucher] = await Promise.all([
             getCorporateDocumentSettings(),
@@ -376,6 +382,13 @@ export const corporateDocumentService = {
                 deliveryAddress,
                 paymentTerms: parsed.paymentTerms,
                 deliveryInstructions: parsed.deliveryInstructions ?? null,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 status: "issued",
                 createdByUserId: actorUserId,
             })
@@ -605,7 +618,7 @@ export const corporateDocumentService = {
             invoice?.totalAmountPaise ?? order.totalAmountPaise ?? 802000;
         const gstEmbeddedPaise = invoice
             ? invoice.cgstPaise + invoice.sgstPaise + invoice.igstPaise
-            : order.gstPaise ?? 102000;
+            : (order.gstPaise ?? 102000);
         const taxableValuePaise = Math.max(
             0,
             grossPaidPaise - gstEmbeddedPaise

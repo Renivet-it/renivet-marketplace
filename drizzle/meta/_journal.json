@@ -1772,6 +1772,13 @@
             "when": 1788284293490,
             "tag": "0272_corporate_qc_review",
             "breakpoints": true
+        },
+        {
+            "idx": 253,
+            "version": "7",
+            "when": 1788370800000,
+            "tag": "0273_corporate_fo_customizations",
+            "breakpoints": true
         }
     ]
 }

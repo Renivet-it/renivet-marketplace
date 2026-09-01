@@ -1,6 +1,10 @@
 import crypto from "crypto";
 import { env } from "@/../env";
 import {
+    buildCorporateCustomizationRows,
+    type CorporateCustomizationInput,
+} from "@/lib/corporate-customizations";
+import {
     extractCorporateDeliveryAddress,
     fillCorporateDeliveryAddressDefaults,
     formatCorporateDeliveryAddress,
@@ -16,6 +20,7 @@ import {
     corporateAdminAuditLogs,
     corporateBrandAuditLogs,
     corporateBrandTaxInvoices,
+    corporateCustomizations,
     corporateDeliveryChallans,
     corporateDocuments,
     corporateEscalations,
@@ -672,6 +677,11 @@ class CorporatePlatformService {
                       })
                     : null,
             ]);
+        const quoteCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.quoteId, quote.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const createdOrder = await db
             .insert(corporateOrders)
@@ -738,6 +748,13 @@ class CorporatePlatformService {
                 pricingSnapshot: {
                     subtotalPaise: quote.subtotalPaise,
                     customizationCostPaise: quote.customizationCostPaise,
+                    customizations: quoteCustomizations.map((row) => ({
+                        id: row.id,
+                        type: row.customizationType,
+                        amountPaise: row.costPaise,
+                        status: row.status,
+                        metadata: row.metadata,
+                    })),
                     gstAmountPaise: quote.gstAmountPaise,
                     totalAmountPaise: quote.totalAmountPaise,
                 },
@@ -772,6 +789,18 @@ class CorporatePlatformService {
             })
             .returning()
             .then((rows) => rows[0]);
+
+        if (quoteCustomizations.length) {
+            await db.insert(corporateCustomizations).values(
+                quoteCustomizations.map((row) => ({
+                    orderId: createdOrder.id,
+                    customizationType: row.customizationType,
+                    costPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                }))
+            );
+        }
 
         return createdOrder;
     }
@@ -1600,6 +1629,25 @@ class CorporatePlatformService {
             .returning()
             .then((rows) => rows[0]);
 
+        const customizationRows = buildCorporateCustomizationRows(
+            parsed.customizations as CorporateCustomizationInput[],
+            parsed.customizationCostPaise
+        );
+        if (customizationRows.length) {
+            await db.insert(corporateCustomizations).values(
+                customizationRows.map((row) => ({
+                    quoteId: created.id,
+                    customizationType: row.name,
+                    costPaise: row.amountPaise,
+                    metadata: {
+                        ...row,
+                        name: row.name,
+                        taxTreatment: row.taxTreatment,
+                    },
+                }))
+            );
+        }
+
         await db.insert(corporateQuoteRevisions).values({
             quoteId: created.id,
             revisionNumber: 1,
@@ -1807,6 +1855,25 @@ class CorporatePlatformService {
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             });
+
+            const customizationRows = buildCorporateCustomizationRows(
+                parsed.customizations as CorporateCustomizationInput[],
+                parsed.customizationCostPaise
+            );
+            if (customizationRows.length) {
+                await tx.insert(corporateCustomizations).values(
+                    customizationRows.map((row) => ({
+                        quoteId: quote.id,
+                        customizationType: row.name,
+                        costPaise: row.amountPaise,
+                        metadata: {
+                            ...row,
+                            name: row.name,
+                            taxTreatment: row.taxTreatment,
+                        },
+                    }))
+                );
+            }
 
             return { quote, profile };
         });

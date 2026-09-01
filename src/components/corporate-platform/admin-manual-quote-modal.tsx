@@ -260,9 +260,9 @@ export function AdminManualQuoteModal({
         commissionAmountPaise + commissionGstAmountPaise;
 
     const baseGstPaise = Math.round((subtotalPaise * gstPercentNum) / 100);
-    const customizationGstPaise = Math.round(
-        (extrasBreakdown.totalCustomizationPaise * 18) / 100
-    );
+    // Customization defaults to the parent product supply; REN-179 applies
+    // a separate approved classification only when explicitly selected.
+    const customizationGstPaise = 0;
     const taxPaise = baseGstPaise + customizationGstPaise;
     const taxablePaise =
         subtotalPaise + extrasBreakdown.totalCustomizationPaise;

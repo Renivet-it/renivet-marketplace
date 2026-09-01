@@ -916,6 +916,10 @@ export const corporateFulfillmentOrders = pgTable(
         deliveryAddress: text("delivery_address").notNull(),
         paymentTerms: text("payment_terms").notNull(),
         deliveryInstructions: text("delivery_instructions"),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         status: text("status", {
             enum: ["draft", "issued", "accepted", "cancelled"],
         })

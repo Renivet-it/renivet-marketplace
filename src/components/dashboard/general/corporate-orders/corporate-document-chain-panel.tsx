@@ -21,8 +21,14 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         trpc.general.corporatePlatform.getCorporateDocumentSettings.useQuery();
 
     const quantity = Math.max(1, Number(order.quantity || 1));
-    const pricingSnapshot = (order.pricingSnapshot ?? {}) as Record<string, unknown>;
-    const productSnapshot = (order.productConfigSnapshot ?? {}) as Record<string, unknown>;
+    const pricingSnapshot = (order.pricingSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const productSnapshot = (order.productConfigSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
     const quoteSnapshot = (order.quote ?? {}) as Record<string, unknown>;
 
     const calculatedUnitPricePaise =
@@ -31,14 +37,25 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         Number(quoteSnapshot.unitPricePaise ?? 0) ||
         Number(productSnapshot.unitPricePaise ?? 0) ||
         Number(order.unitPricePaise ?? 0) ||
-        (order.subtotalPaise ? Math.round(Number(order.subtotalPaise) / quantity) : 0) ||
-        (chain?.proformaInvoice?.taxableValuePaise
-            ? Math.round(Number(chain.proformaInvoice.taxableValuePaise) / quantity)
+        (order.subtotalPaise
+            ? Math.round(Number(order.subtotalPaise) / quantity)
             : 0) ||
-        (order.totalPaise ? Math.round(Number(order.totalPaise) / quantity) : 0) ||
-        (order.totalAmountPaise ? Math.round(Number(order.totalAmountPaise) / quantity) : 0);
+        (chain?.proformaInvoice?.taxableValuePaise
+            ? Math.round(
+                  Number(chain.proformaInvoice.taxableValuePaise) / quantity
+              )
+            : 0) ||
+        (order.totalPaise
+            ? Math.round(Number(order.totalPaise) / quantity)
+            : 0) ||
+        (order.totalAmountPaise
+            ? Math.round(Number(order.totalAmountPaise) / quantity)
+            : 0);
 
-    const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<string, unknown>;
+    const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
     const extraChargesList = Array.isArray(brandingSnapshot.appliedExtraCharges)
         ? (brandingSnapshot.appliedExtraCharges as Array<{
               name?: string;
@@ -50,14 +67,19 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         Number(order.quote?.customizationPaise ?? 0) ||
         Number(pricingSnapshot.customizationCostPaise ?? 0) ||
         Number(pricingSnapshot.customizationPaise ?? 0) ||
-        extraChargesList.reduce((sum, item) => sum + Number(item.amountPaise || 0), 0);
+        extraChargesList.reduce(
+            (sum, item) => sum + Number(item.amountPaise || 0),
+            0
+        );
 
     // Calculate base subtotal and base GST directly from Proforma Invoice:
-    const proformaTotalGstPaise = Number(chain?.proformaInvoice?.gstAmountPaise ?? 0);
+    const proformaTotalGstPaise = Number(
+        chain?.proformaInvoice?.gstAmountPaise ?? 0
+    );
     const proformaTaxablePaise = Number(
         chain?.proformaInvoice?.subtotalPaise ??
-        chain?.proformaInvoice?.taxableValuePaise ??
-        0
+            chain?.proformaInvoice?.taxableValuePaise ??
+            0
     );
     const proformaBaseSubtotalPaise =
         proformaTaxablePaise > quoteCustomizationPaise
@@ -66,10 +88,9 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
               ? proformaTaxablePaise
               : calculatedUnitPricePaise * quantity;
 
-    const customizationGstPaise =
-        quoteCustomizationPaise > 0
-            ? Math.round((quoteCustomizationPaise * 1800) / 10_000)
-            : 0;
+    const customizationGstPaise = Number(
+        (pricingSnapshot.customizationGstAmountPaise as number | undefined) ?? 0
+    );
 
     const proformaBaseGstAmountPaise =
         proformaTotalGstPaise > customizationGstPaise
@@ -98,9 +119,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                     ? Number(pricingSnapshot.gstRateBps) / 100
                     : null;
 
-    const defaultUnitPrice = calculatedUnitPricePaise > 0
-        ? (calculatedUnitPricePaise / 100).toFixed(2)
-        : "";
+    const defaultUnitPrice =
+        calculatedUnitPricePaise > 0
+            ? (calculatedUnitPricePaise / 100).toFixed(2)
+            : "";
     const defaultGstPercent = (
         exactSavedGstRate != null
             ? exactSavedGstRate
@@ -197,7 +219,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         chain?.settlementStatement
             ? String(chain.settlementStatement.commissionPercentBps / 100)
             : order.quote?.commissionAmountPaise && proformaTaxablePaise > 0
-              ? String(Math.round((order.quote.commissionAmountPaise * 100) / proformaTaxablePaise))
+              ? String(
+                    Math.round(
+                        (order.quote.commissionAmountPaise * 100) /
+                            proformaTaxablePaise
+                    )
+                )
               : "20"
     );
 
@@ -205,12 +232,11 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         chain?.customerTaxInvoice?.totalAmountPaise ??
         order.totalAmountPaise ??
         802000;
-    const settlementGstEmbeddedPaise =
-        chain?.customerTaxInvoice
-            ? chain.customerTaxInvoice.cgstPaise +
-              chain.customerTaxInvoice.sgstPaise +
-              chain.customerTaxInvoice.igstPaise
-            : order.gstPaise ?? 102000;
+    const settlementGstEmbeddedPaise = chain?.customerTaxInvoice
+        ? chain.customerTaxInvoice.cgstPaise +
+          chain.customerTaxInvoice.sgstPaise +
+          chain.customerTaxInvoice.igstPaise
+        : (order.gstPaise ?? 102000);
     const settlementTaxablePaise = Math.max(
         0,
         settlementGrossPaidPaise - settlementGstEmbeddedPaise
@@ -225,12 +251,8 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
     const calculatedGstOnCommissionPaise = Math.round(
         (calculatedCommissionPaise * 18) / 100
     );
-    const calculatedTcsPaise = Math.round(
-        (settlementTaxablePaise * 0.005)
-    );
-    const calculatedTdsPaise = Math.round(
-        (settlementGrossPaidPaise * 0.001)
-    );
+    const calculatedTcsPaise = Math.round(settlementTaxablePaise * 0.005);
+    const calculatedTdsPaise = Math.round(settlementGrossPaidPaise * 0.001);
     const calculatedNetRemittancePaise = Math.max(
         0,
         settlementTaxablePaise -
@@ -422,14 +444,17 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 Fulfillment Order (FO)
                             </h3>
                             <p className="mt-0.5 text-[10px] text-slate-500">
-                                Operational instruction — Generate the fulfillment order to instruct the brand to prepare and ship items.
+                                Operational instruction — Generate the
+                                fulfillment order to instruct the brand to
+                                prepare and ship items.
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             {chain?.proformaInvoice ? (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
                                     <CheckCircle2 className="size-3" />
-                                    Linked to Proforma ({chain.proformaInvoice.invoiceNumber})
+                                    Linked to Proforma (
+                                    {chain.proformaInvoice.invoiceNumber})
                                 </span>
                             ) : order.quote ? (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
@@ -468,7 +493,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 }
                             />
                         </CompactField>
-                        <CompactField label="Packaging / Extras charges" suffix="INR">
+                        <CompactField
+                            label="Packaging / Extras charges"
+                            suffix="INR"
+                        >
                             <Input
                                 inputMode="decimal"
                                 placeholder="0.00"
@@ -478,7 +506,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 }
                             />
                         </CompactField>
-                        <CompactField label="GST on packaging / extras" suffix="%">
+                        <CompactField
+                            label="GST on packaging / extras"
+                            suffix="%"
+                        >
                             <Input
                                 type="number"
                                 disabled
@@ -539,31 +570,59 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                         const parsedBaseGst = Number(gstRatePercent) || 0;
                         const parsedExtras = Number(customizationCharges) || 0;
                         const baseSubtotal = parsedUnitPrice * order.quantity;
-                        const baseGstAmt = Math.round((baseSubtotal * parsedBaseGst) / 100);
-                        const extrasGstAmt = Math.round((parsedExtras * 18) / 100);
-                        const grandTotal = baseSubtotal + parsedExtras + baseGstAmt + extrasGstAmt;
+                        const baseGstAmt = Math.round(
+                            (baseSubtotal * parsedBaseGst) / 100
+                        );
+                        const extrasGstAmt = Math.round(
+                            (parsedExtras * 18) / 100
+                        );
+                        const grandTotal =
+                            baseSubtotal +
+                            parsedExtras +
+                            baseGstAmt +
+                            extrasGstAmt;
 
                         return (
-                            <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/50 p-3 sm:grid-cols-5 text-xs">
+                            <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/50 p-3 text-xs sm:grid-cols-5">
                                 <div>
-                                    <p className="text-[10px] text-slate-500">Base Subtotal</p>
-                                    <p className="font-semibold text-slate-800">INR {baseSubtotal.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        Base Subtotal
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {baseSubtotal.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-500">Extras / Packing</p>
-                                    <p className="font-semibold text-slate-800">INR {parsedExtras.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        Extras / Packing
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {parsedExtras.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-500">GST on Base ({parsedBaseGst}%)</p>
-                                    <p className="font-semibold text-slate-800">INR {baseGstAmt.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        GST on Base ({parsedBaseGst}%)
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {baseGstAmt.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-500">GST on Extras (18%)</p>
-                                    <p className="font-semibold text-slate-800">INR {extrasGstAmt.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        GST on Extras (18%)
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {extrasGstAmt.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-semibold text-emerald-700">Grand Total</p>
-                                    <p className="font-bold text-emerald-700">INR {grandTotal.toFixed(2)}</p>
+                                    <p className="text-[10px] font-semibold text-emerald-700">
+                                        Grand Total
+                                    </p>
+                                    <p className="font-bold text-emerald-700">
+                                        INR {grandTotal.toFixed(2)}
+                                    </p>
                                 </div>
                             </div>
                         );
@@ -704,10 +763,13 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             ) : null}
                         </div>
                         <h3 className="mt-1 text-base font-semibold text-slate-900">
-                            Remit-to-Brand Settlement Statement (Commission + TCS + TDS)
+                            Remit-to-Brand Settlement Statement (Commission +
+                            TCS + TDS)
                         </h3>
                         <p className="mt-0.5 text-xs text-slate-500">
-                            Select the platform commission percentage to generate the settlement waterfall statement for this order.
+                            Select the platform commission percentage to
+                            generate the settlement waterfall statement for this
+                            order.
                         </p>
                     </div>
 
@@ -736,7 +798,9 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                     <button
                                         key={pct}
                                         type="button"
-                                        onClick={() => setCommissionPercent(String(pct))}
+                                        onClick={() =>
+                                            setCommissionPercent(String(pct))
+                                        }
                                         className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
                                             Number(commissionPercent) === pct
                                                 ? "bg-emerald-700 text-white shadow-sm"
@@ -755,11 +819,14 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                     step="0.5"
                                     placeholder="Enter commission percentage"
                                     value={commissionPercent}
-                                    onChange={(e) => setCommissionPercent(e.target.value)}
+                                    onChange={(e) =>
+                                        setCommissionPercent(e.target.value)
+                                    }
                                 />
                             </div>
                             <p className="mt-1 text-[11px] text-slate-400">
-                                Standard corporate commission is usually between 10% and 20%.
+                                Standard corporate commission is usually between
+                                10% and 20%.
                             </p>
                         </div>
 
@@ -788,28 +855,46 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             Live Waterfall Calculation Preview
                         </div>
                         <div className="divide-y divide-slate-100 text-xs">
-                            <div className="flex items-center justify-between px-4 py-2 bg-white">
-                                <span className="text-slate-600">Corporate buyer paid (incl. GST)</span>
+                            <div className="flex items-center justify-between bg-white px-4 py-2">
+                                <span className="text-slate-600">
+                                    Corporate buyer paid (incl. GST)
+                                </span>
                                 <span className="font-semibold text-slate-900">
-                                    ₹{(settlementGrossPaidPaise / 100).toFixed(2)}
+                                    ₹
+                                    {(settlementGrossPaidPaise / 100).toFixed(
+                                        2
+                                    )}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between px-4 py-2">
-                                <span className="text-slate-600">- GST embedded in sale (brand&apos;s liability)</span>
+                                <span className="text-slate-600">
+                                    - GST embedded in sale (brand&apos;s
+                                    liability)
+                                </span>
                                 <span className="font-medium text-rose-600">
-                                    -₹{(settlementGstEmbeddedPaise / 100).toFixed(2)}
+                                    -₹
+                                    {(settlementGstEmbeddedPaise / 100).toFixed(
+                                        2
+                                    )}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between bg-emerald-50/50 px-4 py-2 font-semibold text-emerald-950">
                                 <span>= Taxable Value</span>
-                                <span>₹{(settlementTaxablePaise / 100).toFixed(2)}</span>
+                                <span>
+                                    ₹{(settlementTaxablePaise / 100).toFixed(2)}
+                                </span>
                             </div>
-                            <div className="flex items-center justify-between px-4 py-2 bg-white">
+                            <div className="flex items-center justify-between bg-white px-4 py-2">
                                 <span className="text-slate-600">
-                                    - Platform Commission ({parsedCommissionPercent}% of ₹{(settlementTaxablePaise / 100).toFixed(2)})
+                                    - Platform Commission (
+                                    {parsedCommissionPercent}% of ₹
+                                    {(settlementTaxablePaise / 100).toFixed(2)})
                                 </span>
                                 <span className="font-medium text-rose-600">
-                                    -₹{(calculatedCommissionPaise / 100).toFixed(2)}
+                                    -₹
+                                    {(calculatedCommissionPaise / 100).toFixed(
+                                        2
+                                    )}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between px-4 py-2">
@@ -817,10 +902,13 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                     - GST on commission (18% under SAC 9985)
                                 </span>
                                 <span className="font-medium text-rose-600">
-                                    -₹{(calculatedGstOnCommissionPaise / 100).toFixed(2)}
+                                    -₹
+                                    {(
+                                        calculatedGstOnCommissionPaise / 100
+                                    ).toFixed(2)}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between px-4 py-2 bg-white">
+                            <div className="flex items-center justify-between bg-white px-4 py-2">
                                 <span className="text-slate-600">
                                     - TCS (0.5% of Taxable Value u/s 52)
                                 </span>
@@ -841,7 +929,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                     = Net Remittance to Brand
                                 </span>
                                 <span className="text-base font-bold text-emerald-700">
-                                    ₹{(calculatedNetRemittancePaise / 100).toFixed(2)}
+                                    ₹
+                                    {(
+                                        calculatedNetRemittancePaise / 100
+                                    ).toFixed(2)}
                                 </span>
                             </div>
                         </div>

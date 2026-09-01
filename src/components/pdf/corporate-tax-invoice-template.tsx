@@ -169,25 +169,16 @@ export function CorporateTaxInvoiceTemplate({
         Number(order.customizationPaise ?? 0)
     );
     const hasCustomization = customizationPaise > 0;
+    const customizationRows = Array.isArray(
+        (order.pricingSnapshot as any)?.customizations
+    )
+        ? (order.pricingSnapshot as any).customizations
+        : [];
     const baseTaxablePaise = hasCustomization
         ? Math.max(0, invoice.taxableValuePaise - customizationPaise)
         : invoice.taxableValuePaise;
 
-    const baseGstRateBps =
-        (order as any).quote?.gstRateBps ??
-        ((order as any).quote?.gstPercent
-            ? Math.round((order as any).quote.gstPercent * 100)
-            : null) ??
-        (hasCustomization && baseTaxablePaise > 0
-            ? Math.round(
-                  ((invoice.cgstPaise +
-                      invoice.sgstPaise +
-                      invoice.igstPaise -
-                      Math.round(customizationPaise * 0.18)) *
-                      10_000) /
-                      baseTaxablePaise
-              )
-            : (order.gstRateBps ?? 500));
+    const baseGstRateBps = order.gstRateBps;
 
     const baseGstPaise = Math.round(
         (baseTaxablePaise * baseGstRateBps) / 10_000
@@ -198,11 +189,17 @@ export function CorporateTaxInvoiceTemplate({
     const baseTotalPaise = baseTaxablePaise + baseGstPaise;
 
     const customGstPaise = hasCustomization
-        ? invoice.cgstPaise +
-          invoice.sgstPaise +
-          invoice.igstPaise -
-          baseGstPaise
+        ? Number(
+              (order.pricingSnapshot as any)?.customizationGstAmountPaise ??
+                  invoice.cgstPaise +
+                      invoice.sgstPaise +
+                      invoice.igstPaise -
+                      baseGstPaise
+          )
         : 0;
+    const customizationGstRateBps = Number(
+        (order.pricingSnapshot as any)?.customizationGstRateBps ?? 0
+    );
     const customCgstPaise = intra ? Math.round(customGstPaise / 2) : 0;
     const customSgstPaise = intra ? customGstPaise - customCgstPaise : 0;
     const customIgstPaise = intra ? 0 : customGstPaise;
@@ -249,8 +246,14 @@ export function CorporateTaxInvoiceTemplate({
             ? {
                   customizationPaise,
                   customizationGstPaise: customGstPaise,
-                  customizationGstRateBps: 1800,
-                  label: "Customization / Extras",
+                  customizationGstRateBps,
+                  label:
+                      customizationRows.length > 0
+                          ? customizationRows
+                                .map((row: any) => row.type || row.name)
+                                .filter(Boolean)
+                                .join(", ")
+                          : "Customization / Extras",
               }
             : null,
         taxSummary: {
