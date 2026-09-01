@@ -164,16 +164,26 @@ export function CorporateTaxInvoiceTemplate({
             : null);
 
     const intra = invoice.igstPaise === 0;
-    const customizationPaise = Math.max(
-        0,
-        Number(order.customizationPaise ?? 0)
-    );
-    const hasCustomization = customizationPaise > 0;
     const customizationRows = Array.isArray(
         (order.pricingSnapshot as any)?.customizations
     )
         ? (order.pricingSnapshot as any).customizations
         : [];
+    const customizationPaise = Math.max(
+        0,
+        customizationRows.length > 0
+            ? customizationRows.reduce(
+                  (sum: number, row: any) =>
+                      sum +
+                      Math.max(
+                          0,
+                          Number(row.amountPaise ?? row.costPaise ?? 0)
+                      ),
+                  0
+              )
+            : Number(order.customizationPaise ?? 0)
+    );
+    const hasCustomization = customizationPaise > 0;
     const baseTaxablePaise = hasCustomization
         ? Math.max(0, invoice.taxableValuePaise - customizationPaise)
         : invoice.taxableValuePaise;

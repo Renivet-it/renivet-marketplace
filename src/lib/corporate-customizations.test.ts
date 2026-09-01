@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import {
     buildCorporateCustomizationRows,
@@ -39,5 +40,23 @@ describe("corporate customization model", () => {
                 metadata: { legacy: true },
             }),
         ]);
+    });
+
+    test("keeps the customization snapshot on every corporate document", () => {
+        const schema = readFileSync(
+            new URL("./db/schema/corporate-platform.ts", import.meta.url),
+            "utf8"
+        );
+        for (const table of [
+            "corporateProformaInvoices",
+            "corporateFulfillmentOrders",
+            "corporateTaxInvoices",
+            "corporateSettlementStatements",
+        ]) {
+            expect(schema).toContain(`export const ${table}`);
+        }
+        expect(
+            schema.match(/customizations: jsonb\("customizations"\)/g)?.length
+        ).toBeGreaterThanOrEqual(6);
     });
 });

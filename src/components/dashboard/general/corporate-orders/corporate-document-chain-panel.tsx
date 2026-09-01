@@ -62,15 +62,21 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
               amountPaise?: number;
           }>)
         : [];
-    const quoteCustomizationPaise =
-        Number(order.quote?.customizationCostPaise ?? 0) ||
-        Number(order.quote?.customizationPaise ?? 0) ||
-        Number(pricingSnapshot.customizationCostPaise ?? 0) ||
-        Number(pricingSnapshot.customizationPaise ?? 0) ||
-        extraChargesList.reduce(
-            (sum, item) => sum + Number(item.amountPaise || 0),
-            0
-        );
+    const snapshotCustomizations = Array.isArray(pricingSnapshot.customizations)
+        ? (pricingSnapshot.customizations as Array<Record<string, unknown>>)
+        : [];
+    const quoteCustomizationPaise = snapshotCustomizations.length
+        ? snapshotCustomizations.reduce(
+              (sum, item) =>
+                  sum + Number(item.amountPaise ?? item.costPaise ?? 0),
+              0
+          )
+        : Number(pricingSnapshot.customizationCostPaise ?? 0) ||
+          Number(order.quote?.customizationCostPaise ?? 0) ||
+          extraChargesList.reduce(
+              (sum, item) => sum + Number(item.amountPaise || 0),
+              0
+          );
 
     // Calculate base subtotal and base GST directly from Proforma Invoice:
     const proformaTotalGstPaise = Number(
