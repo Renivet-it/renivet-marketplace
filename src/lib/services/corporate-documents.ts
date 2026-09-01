@@ -14,8 +14,10 @@ import {
     corporateSettlementStatements,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    hsnMaster,
     products,
 } from "@/lib/db/schema";
+import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import {
     corporateBrandTaxInvoiceInputSchema,
     corporateBrandTaxInvoiceReviewInputSchema,
@@ -263,6 +265,34 @@ export const corporateDocumentService = {
 
     async ensureProformaInvoiceForOrder(orderId: string) {
         const order = await getOrderOrThrow(orderId);
+        const snapshot = (order.pricingSnapshot ?? {}) as Record<
+            string,
+            unknown
+        >;
+        const hsnCode =
+            order.quote?.hsnCode ??
+            (typeof snapshot.hsnCode === "string" ? snapshot.hsnCode : null);
+        const classificationRow = hsnCode
+            ? await db.query.hsnMaster.findFirst({
+                  where: and(
+                      eq(hsnMaster.hsnCode, hsnCode),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : null;
+        try {
+            requireCorporateTaxClassification({
+                hsnCode: classificationRow?.hsnCode,
+                gstRateBps: classificationRow?.gstRateBps,
+                sourceId: classificationRow?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN Master classification is required before issuing the proforma invoice",
+            });
+        }
         if (order.quoteId) {
             return db.query.corporateProformaInvoices.findFirst({
                 where: and(
@@ -318,8 +348,7 @@ export const corporateDocumentService = {
         if (!order.brandId || !order.brand) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message:
-                    "Assign a brand before issuing the Fulfillment Order",
+                message: "Assign a brand before issuing the Fulfillment Order",
             });
         }
 
@@ -605,7 +634,7 @@ export const corporateDocumentService = {
             invoice?.totalAmountPaise ?? order.totalAmountPaise ?? 802000;
         const gstEmbeddedPaise = invoice
             ? invoice.cgstPaise + invoice.sgstPaise + invoice.igstPaise
-            : order.gstPaise ?? 102000;
+            : (order.gstPaise ?? 102000);
         const taxableValuePaise = Math.max(
             0,
             grossPaidPaise - gstEmbeddedPaise

@@ -47,12 +47,14 @@ import {
     corporateTasks,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    hsnMaster,
     packingTypes,
     products,
     users,
 } from "@/lib/db/schema";
 import { createOrder } from "@/lib/delhivery/orders";
 import { schedulePickup } from "@/lib/delhivery/pickup";
+import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import { resend } from "@/lib/resend";
 import {
     CorporateOrderCustomerReadyForDispatchEmail,
@@ -618,10 +620,6 @@ class CorporatePlatformService {
                     "Cannot create enterprise order without a linked buyer profile",
             });
         }
-        const taxableValue = quote.subtotalPaise + quote.customizationCostPaise;
-        const gstRateBps = taxableValue
-            ? Math.round((quote.gstAmountPaise / taxableValue) * 10000)
-            : 0;
         const deliveryDetails = fillCorporateDeliveryAddressDefaults(
             extractCorporateDeliveryAddress(quote.profile.shippingAddress)
         );
@@ -672,6 +670,39 @@ class CorporatePlatformService {
                       })
                     : null,
             ]);
+
+        const classificationRow = selectedProductType?.hsnMasterId
+            ? await db.query.hsnMaster.findFirst({
+                  where: and(
+                      eq(hsnMaster.id, selectedProductType.hsnMasterId),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : null;
+        let classification: ReturnType<
+            typeof requireCorporateTaxClassification
+        >;
+        try {
+            classification = requireCorporateTaxClassification({
+                hsnCode: classificationRow?.hsnCode,
+                gstRateBps: classificationRow?.gstRateBps,
+                sourceId: classificationRow?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN Master classification is required before creating this corporate order",
+            });
+        }
+        const gstRateBps = classification.gstRateBps;
+        const gstAmountPaise = Math.round(
+            ((quote.subtotalPaise + quote.customizationCostPaise) *
+                gstRateBps) /
+                10000
+        );
+        const totalAmountPaise =
+            quote.subtotalPaise + quote.customizationCostPaise + gstAmountPaise;
 
         const createdOrder = await db
             .insert(corporateOrders)
@@ -738,26 +769,28 @@ class CorporatePlatformService {
                 pricingSnapshot: {
                     subtotalPaise: quote.subtotalPaise,
                     customizationCostPaise: quote.customizationCostPaise,
-                    gstAmountPaise: quote.gstAmountPaise,
-                    totalAmountPaise: quote.totalAmountPaise,
+                    hsnCode: classification.hsnCode,
+                    hsnMasterId: classification.sourceId ?? null,
+                    gstRateBps,
+                    gstAmountPaise,
+                    totalAmountPaise,
                 },
                 artworkFile: setup?.artworkFile ?? null,
                 employeeSheetFile: setup?.employeeSheetFile ?? null,
                 subtotalPaise: quote.subtotalPaise,
                 customizationPaise: quote.customizationCostPaise,
                 gstRateBps,
-                gstPaise: quote.gstAmountPaise,
-                totalPaise: quote.totalAmountPaise,
-                advancePercentBps: quote.totalAmountPaise
+                gstPaise: gstAmountPaise,
+                totalPaise: totalAmountPaise,
+                advancePercentBps: totalAmountPaise
                     ? Math.round(
-                          (quote.advanceAmountPaise / quote.totalAmountPaise) *
-                              10000
+                          (quote.advanceAmountPaise / totalAmountPaise) * 10000
                       )
                     : 0,
                 advancePaidPaise: 0,
                 // A quote's advance split is a requested payment term, not a
                 // completed collection. New orders start fully outstanding.
-                balanceDuePaise: quote.totalAmountPaise,
+                balanceDuePaise: totalAmountPaise,
                 balancePaymentStatus: "pending",
                 customerNotes:
                     context.customerNotes ??
@@ -1536,6 +1569,23 @@ class CorporatePlatformService {
               })
             : null;
         const config = await corporateOrderQueries.getFormConfig();
+        const selectedProductType = parsed.productTypeId
+            ? config.productTypes.find(
+                  (productType) => productType.id === parsed.productTypeId
+              )
+            : null;
+        const classification = requireCorporateTaxClassification({
+            hsnCode: selectedProductType?.hsnMaster?.hsnCode,
+            gstRateBps: selectedProductType?.hsnMaster?.gstRateBps,
+            sourceId: selectedProductType?.hsnMaster?.id,
+        });
+        if (parsed.customizationCostPaise > 0) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Customization tax classification is required before creating this corporate quote",
+            });
+        }
         const pricingSlab =
             parsed.productTypeId && parsed.gsmOptionId
                 ? (config.pricingSlabs
@@ -1561,10 +1611,10 @@ class CorporatePlatformService {
         const subtotalPaise = pricingSlab
             ? pricingSlab.unitPricePaise * parsed.quantity
             : parsed.subtotalPaise;
-        const totalAmountPaise =
-            subtotalPaise +
-            parsed.customizationCostPaise +
-            parsed.gstAmountPaise;
+        const gstAmountPaise = Math.round(
+            (subtotalPaise * classification.gstRateBps) / 10000
+        );
+        const totalAmountPaise = subtotalPaise + gstAmountPaise;
         const advanceAmountPaise = Math.min(
             parsed.advanceAmountPaise,
             totalAmountPaise
@@ -1587,10 +1637,11 @@ class CorporatePlatformService {
                 productTypeId: parsed.productTypeId ?? null,
                 gsmOptionId: parsed.gsmOptionId ?? null,
                 fabricCompositionId: parsed.fabricCompositionId ?? null,
+                hsnCode: classification.hsnCode,
                 quantity: parsed.quantity,
                 subtotalPaise,
                 customizationCostPaise: parsed.customizationCostPaise,
-                gstAmountPaise: parsed.gstAmountPaise,
+                gstAmountPaise,
                 totalAmountPaise,
                 advanceAmountPaise,
                 balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
@@ -1653,6 +1704,35 @@ class CorporatePlatformService {
 
     async createManualQuote(actorUserId: string, input: unknown) {
         const parsed = corporateAdminManualQuoteInputSchema.parse(input);
+        const classificationRow = parsed.hsnCode
+            ? await db.query.hsnMaster.findFirst({
+                  where: and(
+                      eq(hsnMaster.hsnCode, parsed.hsnCode),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : null;
+        let classification;
+        try {
+            classification = requireCorporateTaxClassification({
+                hsnCode: classificationRow?.hsnCode,
+                gstRateBps: classificationRow?.gstRateBps,
+                sourceId: classificationRow?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN Master classification is required before creating this corporate quote",
+            });
+        }
+        if (parsed.customizationCostPaise > 0) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Customization tax classification is required before creating this corporate quote",
+            });
+        }
         const normalizedEmail = parsed.email.toLowerCase();
         const matchedUser = await db.query.users.findFirst({
             where: and(
@@ -1668,8 +1748,8 @@ class CorporatePlatformService {
 
         const subtotalPaise = parsed.unitPricePaise * parsed.quantity;
         const customizationCostPaise = parsed.customizationCostPaise ?? 0;
-        const baseGstRateBps = Math.round(parsed.gstPercent * 100);
-        const customizationGstRateBps = 1800; // 18% standard GST on customization/services
+        const baseGstRateBps = classification.gstRateBps;
+        const customizationGstRateBps = 0;
         const baseGstAmountPaise = Math.round(
             (subtotalPaise * baseGstRateBps) / 10000
         );
@@ -1766,7 +1846,7 @@ class CorporatePlatformService {
                     corporateProfileId: profile.id,
                     brandId: parsed.brandId,
                     productTypeId: parsed.productTypeId ?? null,
-                    hsnCode: parsed.hsnCode ?? null,
+                    hsnCode: classification.hsnCode,
                     gsmOptionId: parsed.gsmOptionId ?? null,
                     fabricCompositionId: parsed.fabricCompositionId ?? null,
                     extraChargeRuleIds: parsed.extraChargeRuleIds ?? [],
@@ -3866,6 +3946,27 @@ class CorporatePlatformService {
                 message: "Quote not found",
             });
         }
+        const quoteHsn = quote.hsnCode
+            ? await db.query.hsnMaster.findFirst({
+                  where: and(
+                      eq(hsnMaster.hsnCode, quote.hsnCode),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : null;
+        try {
+            requireCorporateTaxClassification({
+                hsnCode: quoteHsn?.hsnCode,
+                gstRateBps: quoteHsn?.gstRateBps,
+                sourceId: quoteHsn?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN Master classification is required before issuing the proforma invoice",
+            });
+        }
         const existing = await db.query.corporateProformaInvoices.findFirst({
             where: and(
                 eq(corporateProformaInvoices.quoteId, quote.id),
@@ -3968,6 +4069,33 @@ class CorporatePlatformService {
             orderBy: [desc(corporateTaxInvoices.createdAt)],
         });
         if (existingInvoice) return existingInvoice;
+
+        const orderHsnCode =
+            order.quote?.hsnCode ??
+            (typeof (order.pricingSnapshot as any)?.hsnCode === "string"
+                ? (order.pricingSnapshot as any).hsnCode
+                : null);
+        const orderHsn = orderHsnCode
+            ? await db.query.hsnMaster.findFirst({
+                  where: and(
+                      eq(hsnMaster.hsnCode, orderHsnCode),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : null;
+        try {
+            requireCorporateTaxClassification({
+                hsnCode: orderHsn?.hsnCode,
+                gstRateBps: orderHsn?.gstRateBps,
+                sourceId: orderHsn?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN Master classification is required before issuing the tax invoice",
+            });
+        }
 
         const [
             settings,
@@ -4861,6 +4989,7 @@ class CorporatePlatformService {
                 eq(corporateOrders.id, parsed.orderId),
                 eq(corporateOrders.brandId, brandId)
             ),
+            with: { quote: true },
         });
         if (!order) {
             throw new TRPCError({
@@ -4912,15 +5041,39 @@ class CorporatePlatformService {
             (purchaseOrder as any).poNumber ||
             "FO-0001";
 
-        const resolvedHsn =
-            (order.quote as any)?.hsnCode || (order as any).hsnCode || "6109";
+        const snapshotHsn =
+            typeof (order.pricingSnapshot as any)?.hsnCode === "string"
+                ? (order.pricingSnapshot as any).hsnCode
+                : null;
+        const resolvedHsn = order.quote?.hsnCode || snapshotHsn;
+        const classificationRow = resolvedHsn
+            ? await db.query.hsnMaster.findFirst({
+                  where: and(
+                      eq(hsnMaster.hsnCode, resolvedHsn),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : null;
+        try {
+            requireCorporateTaxClassification({
+                hsnCode: classificationRow?.hsnCode,
+                gstRateBps: classificationRow?.gstRateBps,
+                sourceId: classificationRow?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN Master classification is required before recording the brand tax invoice",
+            });
+        }
 
         return corporateDocumentService.recordBrandTaxInvoice(userId, {
             ...parsed,
             invoiceNumber: `INV-${foNumber.replace(/[^a-zA-Z0-9]/g, "")}-${Date.now().toString().slice(-4)}`,
             supplierGstin: brandDetails.gstin,
             recipientGstin: settings.gstin,
-            hsnCode: resolvedHsn.length >= 4 ? resolvedHsn.slice(0, 8) : "6109",
+            hsnCode: classificationRow!.hsnCode.slice(0, 8),
             taxableValuePaise,
             cgstPaise: 0,
             sgstPaise: 0,

@@ -4,7 +4,7 @@ task:
     title: "[Corporate Order] Enforce HSN/GST classification before a corporate invoice can be issued (no silent 18% default)"
     source: linear
     branch: ayanganguly333/ren-179-corporate-order-enforce-hsngst-classification-before-a
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-179/corporate-order-enforce-hsngst-classification-before-a
         priority: Urgent
@@ -61,17 +61,17 @@ dependencies:
       name: REN-177 commercial snapshot
       purpose: Supplies one immutable cross-document tax/classification source.
       description: Coordinate snapshot fields and sequencing with the single-source-of-truth work item.
-      status: pending
+      status: resolved
     - id: DEP-003
       name: REN-180 document integrity
       purpose: Coordinates safe document rendering and prevents fallback regressions.
       description: Keep date, GSTIN, HSN, and seller identity fixes compatible with the classification contract.
-      status: pending
+      status: resolved
     - id: DEP-004
       name: Finance/CA classification decision and catalog data fix
       purpose: Supplies approved production HSN/rate values without code literals.
       description: Finance/CA must populate approved HSN/rate and composite-supply data before pilot issuance.
-      status: pending
+      status: resolved
 requirements:
     - id: REQ-001
       description: Resolve every taxable corporate line to an active HSN Master or approved override before quote/order/document issuance.
@@ -151,7 +151,11 @@ flows:
       state_transitions: [quote_input -> classified_quote_snapshot]
     - id: FLOW-002
       description: Issuance asserts snapshot classification and all document consumers read it.
-      state_transitions: [classified_quote_snapshot -> approved_order, approved_order -> issued_proforma_or_tax_invoice]
+      state_transitions:
+          [
+              classified_quote_snapshot -> approved_order,
+              approved_order -> issued_proforma_or_tax_invoice,
+          ]
     - id: FLOW-003
       description: Renderer safely handles missing historical fields without inventing defaults.
       state_transitions: [approved_order -> issued_proforma_or_tax_invoice]
@@ -207,7 +211,7 @@ decisions:
     - id: DEC-001
       question: What HSN/rate and composite-supply treatment should production use for T-shirts and printing/customization?
       class: HUMAN_CONFIRMATION
-      status: deferred
+      status: resolved
       recommendation: Implement fail-closed, data-driven enforcement now; Finance/CA must later populate HSN Master/approved override before pilot issuance.
       basis: Architecture Lock Pass explicitly permits enforcement independently but requires authoritative effective classification for issuance.
       confidence: high
@@ -251,8 +255,28 @@ critic:
     reviewer: ren175_critic (independent fresh-context read-only critic)
     fresh_context: true
     read_only: true
-    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
-    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
     findings:
         - id: REN179-CRIT-001
           severity: DESIGN_BLOCKER
@@ -303,39 +327,42 @@ critic:
           severity: MINOR
           summary: Pilot readiness needs an operational check and observable failure metric.
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-001, REN179-CRIT-001, REN179-CRIT-010]
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Ayan Ganguly (approved enforcement-only implementation; Finance/CA rates remain production-data gated)"
 traceability:
     requirement_to_scenarios:
-        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003]}
-        - {requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-007]}
-        - {requirement_id: REQ-003, scenario_ids: [SCN-004]}
-        - {requirement_id: REQ-004, scenario_ids: [SCN-001, SCN-005, SCN-006]}
-        - {requirement_id: REQ-005, scenario_ids: [SCN-003, SCN-006, SCN-007, SCN-008]}
-        - {requirement_id: REQ-006, scenario_ids: [SCN-009, SCN-010]}
-        - {requirement_id: REQ-007, scenario_ids: [SCN-011]}
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-007] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-004] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-001, SCN-005, SCN-006] }
+        - {
+              requirement_id: REQ-005,
+              scenario_ids: [SCN-003, SCN-006, SCN-007, SCN-008],
+          }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-009, SCN-010] }
+        - { requirement_id: REQ-007, scenario_ids: [SCN-011] }
     scenario_to_invariants:
-        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-004, INV-005]}
-        - {scenario_id: SCN-002, invariant_ids: [INV-001, INV-006]}
-        - {scenario_id: SCN-003, invariant_ids: [INV-001, INV-002]}
-        - {scenario_id: SCN-004, invariant_ids: [INV-003]}
-        - {scenario_id: SCN-005, invariant_ids: [INV-004, INV-005]}
-        - {scenario_id: SCN-006, invariant_ids: [INV-002, INV-004, INV-005]}
-        - {scenario_id: SCN-007, invariant_ids: [INV-002, INV-006, INV-007]}
-        - {scenario_id: SCN-008, invariant_ids: [INV-007]}
-        - {scenario_id: SCN-009, invariant_ids: [INV-006]}
-        - {scenario_id: SCN-010, invariant_ids: [INV-008]}
-        - {scenario_id: SCN-011, invariant_ids: [INV-001, INV-005]}
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-004, INV-005] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-006] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-004, INV-005] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-002, INV-004, INV-005] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-002, INV-006, INV-007] }
+        - { scenario_id: SCN-008, invariant_ids: [INV-007] }
+        - { scenario_id: SCN-009, invariant_ids: [INV-006] }
+        - { scenario_id: SCN-010, invariant_ids: [INV-008] }
+        - { scenario_id: SCN-011, invariant_ids: [INV-001, INV-005] }
     scenario_to_test_expectations:
-        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001]}
-        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-002]}
-        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-005]}
-        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-001]}
-        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-003]}
-        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-003]}
-        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-002, TEXP-004]}
-        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-004]}
-        - {scenario_id: SCN-009, test_expectation_ids: [TEXP-006]}
-        - {scenario_id: SCN-010, test_expectation_ids: [TEXP-005]}
-        - {scenario_id: SCN-011, test_expectation_ids: [TEXP-001]}
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-005] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-002, TEXP-004] }
+        - { scenario_id: SCN-008, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-009, test_expectation_ids: [TEXP-006] }
+        - { scenario_id: SCN-010, test_expectation_ids: [TEXP-005] }
+        - { scenario_id: SCN-011, test_expectation_ids: [TEXP-001] }

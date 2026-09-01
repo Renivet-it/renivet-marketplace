@@ -75,7 +75,7 @@ The live audit confirmed independent defects remain in the current code: the cor
 - DEP-003: REN-180 document date/GSTIN/HSN rendering fixes must not reintroduce local fallbacks.
 - DEP-004: Existing corporate product catalog rows for Round Neck and Polo T-shirts require a Finance/CA-approved HSN/rate data fix before new pilot issuance.
 
-Decision DEC-001 is `HUMAN_CONFIRMATION` and deferred: Finance/CA must confirm the correct T-shirt HSN/rate and composite-supply treatment for printing/customization. This task may implement enforcement and data-source plumbing without hard-coding that answer; no unresolved rate value may be inserted into code or production data.
+Decision DEC-001 is resolved for this implementation slice (owner approval): no GST value will be hard-coded or populated by this task. Enforcement and data-source plumbing may proceed using the authoritative HSN Master; production catalog/rate population and pilot issuance remain gated on Finance/CA confirmation.
 
 ## Security, compatibility, and exclusions
 

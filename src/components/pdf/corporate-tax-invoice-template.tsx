@@ -8,6 +8,7 @@ import {
     RENIVET_CORPORATE_SELLER_NAME,
     RENIVET_CORPORATE_SIGNATORY,
 } from "@/lib/corporate-documents";
+import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import React from "react";
 
 const renivetLogoUrl =
@@ -114,7 +115,7 @@ export function CorporateTaxInvoiceTemplate({
         productSnapshot.productType?.name ??
         productSnapshot.productScopeSummary ??
         "Corporate merchandise";
-    const hsnCode =
+    const resolvedHsnCode =
         product?.hsn ??
         (typeof productSnapshot.hsnCode === "string"
             ? productSnapshot.hsnCode
@@ -124,7 +125,12 @@ export function CorporateTaxInvoiceTemplate({
             : undefined) ??
         (typeof (order as any).quote?.hsnCode === "string"
             ? (order as any).quote.hsnCode
-            : "6109");
+            : null);
+    const hsnCode =
+        resolvedHsnCode?.trim() ||
+        (() => {
+            throw new Error("Corporate tax invoice requires a resolved HSN");
+        })();
     const extraChargesList =
         Array.isArray(pricingSnapshot.appliedExtraCharges) &&
         pricingSnapshot.appliedExtraCharges.length > 0
@@ -173,21 +179,9 @@ export function CorporateTaxInvoiceTemplate({
         ? Math.max(0, invoice.taxableValuePaise - customizationPaise)
         : invoice.taxableValuePaise;
 
-    const baseGstRateBps =
-        (order as any).quote?.gstRateBps ??
-        ((order as any).quote?.gstPercent
-            ? Math.round((order as any).quote.gstPercent * 100)
-            : null) ??
-        (hasCustomization && baseTaxablePaise > 0
-            ? Math.round(
-                  ((invoice.cgstPaise +
-                      invoice.sgstPaise +
-                      invoice.igstPaise -
-                      Math.round(customizationPaise * 0.18)) *
-                      10_000) /
-                      baseTaxablePaise
-              )
-            : (order.gstRateBps ?? 500));
+    const baseGstRateBps = order.gstRateBps;
+
+    requireCorporateTaxClassification({ hsnCode, gstRateBps: baseGstRateBps });
 
     const baseGstPaise = Math.round(
         (baseTaxablePaise * baseGstRateBps) / 10_000
@@ -197,11 +191,16 @@ export function CorporateTaxInvoiceTemplate({
     const baseIgstPaise = intra ? 0 : baseGstPaise;
     const baseTotalPaise = baseTaxablePaise + baseGstPaise;
 
+    const customizationGstRateBps = Number(
+        pricingSnapshot.customizationGstRateBps
+    );
+    if (hasCustomization && !Number.isInteger(customizationGstRateBps)) {
+        throw new Error(
+            "Corporate tax invoice requires a resolved customization GST rate"
+        );
+    }
     const customGstPaise = hasCustomization
-        ? invoice.cgstPaise +
-          invoice.sgstPaise +
-          invoice.igstPaise -
-          baseGstPaise
+        ? Math.round((customizationPaise * customizationGstRateBps) / 10_000)
         : 0;
     const customCgstPaise = intra ? Math.round(customGstPaise / 2) : 0;
     const customSgstPaise = intra ? customGstPaise - customCgstPaise : 0;
@@ -249,7 +248,7 @@ export function CorporateTaxInvoiceTemplate({
             ? {
                   customizationPaise,
                   customizationGstPaise: customGstPaise,
-                  customizationGstRateBps: 1800,
+                  customizationGstRateBps,
                   label: "Customization / Extras",
               }
             : null,
@@ -285,7 +284,7 @@ export function CorporateTaxInvoiceTemplate({
                 ? [
                       {
                           quantity: 1,
-                          gstRateBps: 1800,
+                          gstRateBps: customizationGstRateBps,
                           mrpPaise: customizationPaise,
                           taxableValuePaise: customizationPaise,
                           cgstPaise: customCgstPaise,
