@@ -1,4 +1,3 @@
-import React from "react";
 import {
     Document,
     Image,
@@ -7,6 +6,7 @@ import {
     Text,
     View,
 } from "@react-pdf/renderer";
+import React from "react";
 
 const ink = "#1e2a22";
 const moss = "#3f5e42";
@@ -273,7 +273,10 @@ function money(value?: number | null) {
 }
 
 function date(value: string | Date) {
-    return new Date(value).toLocaleDateString("en-IN");
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime())
+        ? new Date().toLocaleDateString("en-IN")
+        : parsed.toLocaleDateString("en-IN");
 }
 
 export function CorporateCommercialDocumentTemplate({
@@ -340,8 +343,7 @@ export function CorporateCommercialDocumentTemplate({
     const references = [...baseReferences, ...passedReferences];
     const hasPricing = Boolean(data.totals);
     const firstItem = data.items?.[0] ?? data.item;
-    const gstRateBps =
-        firstItem?.gstRateBps ?? data.totals?.gstRateBps ?? null;
+    const gstRateBps = firstItem?.gstRateBps ?? data.totals?.gstRateBps ?? null;
     const gstAmountPaise =
         firstItem?.gstAmountPaise ?? data.totals?.gstAmountPaise ?? null;
 
@@ -352,9 +354,9 @@ export function CorporateCommercialDocumentTemplate({
                     <Image src={renivetLogoUrl} style={styles.logo} />
                     <View style={styles.headerCopy}>
                         <Text style={styles.title}>{data.title}</Text>
-                    {data.subtitle ? (
-                        <Text style={styles.subtitle}>{data.subtitle}</Text>
-                    ) : null}
+                        {data.subtitle ? (
+                            <Text style={styles.subtitle}>{data.subtitle}</Text>
+                        ) : null}
                     </View>
                 </View>
 
@@ -390,11 +392,7 @@ export function CorporateCommercialDocumentTemplate({
                             Description
                         </Text>
                         {showSku ? (
-                            <Text
-                                style={[styles.th, styles.sku]}
-                            >
-                                SKU
-                            </Text>
+                            <Text style={[styles.th, styles.sku]}>SKU</Text>
                         ) : null}
                         <Text
                             style={[
@@ -557,8 +555,7 @@ export function CorporateCommercialDocumentTemplate({
                                               : styles.quantity,
                                     ]}
                                 >
-                                    {rowItem.quantity}{" "}
-                                    {rowItem.unit || "pcs"}
+                                    {rowItem.quantity} {rowItem.unit || "pcs"}
                                 </Text>
                                 <Text
                                     style={[
@@ -636,50 +633,52 @@ export function CorporateCommercialDocumentTemplate({
                 <View
                     style={[
                         styles.lower,
-                        ...(showSignatureBlock
-                            ? []
-                            : [styles.lowerTotalsOnly]),
+                        ...(showSignatureBlock ? [] : [styles.lowerTotalsOnly]),
                     ]}
                 >
                     {showSignatureBlock ? (
                         <View style={styles.identity}>
-                        <Text style={styles.identityName}>
-                            {data.declarationCompanyName.toUpperCase()}
-                        </Text>
-                        {data.bank ? (
-                            <>
-                                <Text style={styles.label}>BANK DETAILS</Text>
-                                <BankRow
-                                    label="Bank name"
-                                    value={data.bank.bankName}
-                                />
-                                <BankRow
-                                    label="Account name"
-                                    value={data.bank.accountName || "Renivet"}
-                                />
-                                <BankRow
-                                    label="Account number"
-                                    value={data.bank.accountNumber}
-                                />
-                                <BankRow
-                                    label="IFSC code"
-                                    value={data.bank.ifsc}
-                                />
-                                {data.bank.branch ? (
+                            <Text style={styles.identityName}>
+                                {data.declarationCompanyName.toUpperCase()}
+                            </Text>
+                            {data.bank ? (
+                                <>
+                                    <Text style={styles.label}>
+                                        BANK DETAILS
+                                    </Text>
                                     <BankRow
-                                        label="Branch"
-                                        value={data.bank.branch}
+                                        label="Bank name"
+                                        value={data.bank.bankName}
                                     />
-                                ) : null}
-                            </>
-                        ) : null}
-                        <Text style={styles.signature}>
-                            For {data.declarationCompanyName}
-                            {"\n"}
-                            {data.signatoryName}
-                            {"\n"}
-                            Authorised Signatory
-                        </Text>
+                                    <BankRow
+                                        label="Account name"
+                                        value={
+                                            data.bank.accountName || "Renivet"
+                                        }
+                                    />
+                                    <BankRow
+                                        label="Account number"
+                                        value={data.bank.accountNumber}
+                                    />
+                                    <BankRow
+                                        label="IFSC code"
+                                        value={data.bank.ifsc}
+                                    />
+                                    {data.bank.branch ? (
+                                        <BankRow
+                                            label="Branch"
+                                            value={data.bank.branch}
+                                        />
+                                    ) : null}
+                                </>
+                            ) : null}
+                            <Text style={styles.signature}>
+                                For {data.declarationCompanyName}
+                                {"\n"}
+                                {data.signatoryName}
+                                {"\n"}
+                                Authorised Signatory
+                            </Text>
                         </View>
                     ) : null}
 
@@ -728,8 +727,7 @@ export function CorporateCommercialDocumentTemplate({
                                             label={`GST on customization (${(
                                                 (data.totals
                                                     .customizationGstRateBps ??
-                                                    1800) /
-                                                100
+                                                    1800) / 100
                                             ).toFixed(2)}%)`}
                                             value={
                                                 data.totals
@@ -769,19 +767,22 @@ export function CorporateCommercialDocumentTemplate({
                                             value={gstAmountPaise ?? 0}
                                         />
                                     ) : null}
-                                    {!showDetailedTax && data.totals.cgstPaise ? (
+                                    {!showDetailedTax &&
+                                    data.totals.cgstPaise ? (
                                         <Total
                                             label="CGST"
                                             value={data.totals.cgstPaise}
                                         />
                                     ) : null}
-                                    {!showDetailedTax && data.totals.sgstPaise ? (
+                                    {!showDetailedTax &&
+                                    data.totals.sgstPaise ? (
                                         <Total
                                             label="SGST"
                                             value={data.totals.sgstPaise}
                                         />
                                     ) : null}
-                                    {!showDetailedTax && data.totals.igstPaise ? (
+                                    {!showDetailedTax &&
+                                    data.totals.igstPaise ? (
                                         <Total
                                             label="IGST"
                                             value={data.totals.igstPaise}

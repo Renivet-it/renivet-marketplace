@@ -1,0 +1,333 @@
+schema_version: "1.0"
+task:
+    id: REN-175
+    title: "[Corporate Order] Route all order-status writes through one guarded transition (dispatch/QC bypass)"
+    source: linear
+    branch: ayanganguly333/ren-175-corporate-order-route-all-order-status-writes-through-one
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-175/corporate-order-route-all-order-status-writes-through-one-guarded
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The issue changes corporate order lifecycle transitions and dispatch eligibility.
+        - It closes an authorization gap in a brand-facing tRPC mutation.
+        - It affects tax-invoice triggering, status history, shipment state, and external delivery operations.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue description, priority, labels, status, branch context, comments, and relations
+        - Repository status writers and the guarded corporateOrderService.updateStatus implementation
+        - saveShipment, createCorporateForwardOrder/Delhivery status update, and brand status mutation
+        - Corporate platform router middleware and brand membership boundary
+        - Corporate order query update method and status-history/event side effects
+        - Corporate order UI callers for admin shipment and brand status actions
+        - Existing repository tests and Bun verification scripts
+    excluded_areas:
+        - QC approval implementation because it is REN-176
+        - Warehouse-mode document policy because it is REN-183
+        - E-way-bill generation automation
+        - Database schema/migrations because the issue states no schema change is required
+        - Non-corporate order/cart/shipping status writers
+    dependencies: [DEP-001, DEP-002]
+    integrations: [INT-001, INT-002]
+    security_boundaries: [SEC-001, SEC-002]
+    state_transitions:
+        - shipment_status -> corporate_order_ready_for_dispatch
+        - shipment_status -> corporate_order_dispatched
+        - shipment_status -> corporate_order_delivered
+        - brand_workspace_request -> guarded_corporate_order_status
+        - admin_order_request -> guarded_corporate_order_status
+    related_tests:
+        - TEXP-001
+        - TEXP-002
+        - TEXP-003
+        - TEXP-004
+    uncertainties:
+        - REN-176 has not yet supplied the QC approval state or predicate; this contract requires it to be added once at the shared guard boundary.
+        - REN-183 has not yet defined the warehouse-mode equivalent document; this issue must not invent that policy.
+        - Git executable is unavailable in this environment, so current branch cleanliness and commit ancestry cannot be independently confirmed.
+dependencies:
+    - id: DEP-001
+      name: REN-176 QC approval gate
+      purpose: Supplies the QC approval predicate required before dispatch.
+      description: Coordinate the shared guard integration; do not duplicate the predicate in endpoint code.
+      status: resolved
+    - id: DEP-002
+      name: REN-183 warehouse-mode document requirement
+      purpose: Defines the equivalent pre-dispatch document for renivet_warehouse delivery mode.
+      description: Coordinate the policy; do not infer a warehouse document in REN-175.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Every corporate order transition to ready_for_dispatch, dispatched, or delivered must pass one shared authoritative guard.
+      type: explicit
+    - id: REQ-002
+      description: The shared guard must enforce the current Fulfillment Order, delivery-mode-appropriate Delivery Challan, and applicable e-way-bill prerequisites.
+      type: explicit
+    - id: REQ-003
+      description: Brand status mutation must require authentication, site permission, assigned-brand membership, and the shared transition guard.
+      type: explicit
+    - id: REQ-004
+      description: Shipment and Delhivery status writers must not persist a guarded corporate order status when the shared guard rejects it.
+      type: inferred
+    - id: REQ-005
+      description: Existing status history, audit/event, notification, and tax-invoice side effects remain consistent with a successful transition.
+      type: inferred
+    - id: REQ-006
+      description: Competing status transitions are serialized or conditionally applied, and same-target retries are idempotent without duplicate transition records or side effects.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-002, REQ-004]
+      description: saveShipment attempts dispatched or delivered without a Fulfillment Order or required delivery document and the order transition is rejected.
+    - id: SCN-002
+      requirement_ids: [REQ-001, REQ-002, REQ-004]
+      description: Delhivery forward-order creation cannot silently move an order to ready_for_dispatch unless the shared prerequisites pass.
+    - id: SCN-003
+      requirement_ids: [REQ-001, REQ-002, REQ-003]
+      description: A brand member attempts dispatched without the required document chain and receives the same precondition rejection as an admin.
+    - id: SCN-004
+      requirement_ids: [REQ-003]
+      description: An unauthenticated or insufficiently permissioned caller cannot invoke the brand status mutation, even if brand membership data is present.
+    - id: SCN-005
+      requirement_ids: [REQ-001, REQ-005]
+      description: An authorized transition with all current prerequisites succeeds once, records one coherent history/event path, and preserves the tax-invoice trigger behavior.
+    - id: SCN-006
+      requirement_ids: [REQ-001, REQ-005]
+      description: A non-dispatch status update remains compatible and does not require dispatch-only documents.
+    - id: SCN-007
+      requirement_ids: [REQ-001, REQ-002, REQ-004]
+      description: A direct delivered request from the brand path is rejected when dispatch prerequisites are absent, preventing a skipped dispatched state.
+    - id: SCN-008
+      requirement_ids: [REQ-001, REQ-005, REQ-006]
+      description: Two concurrent callers targeting a guarded status result in one committed transition and no duplicate history, audit, event, notification, or tax-invoice attempt; a same-target retry is a no-op.
+invariants:
+    - id: INV-001
+      description: No alternate endpoint can reach a guarded corporate order status by directly updating corporateOrders.status.
+    - id: INV-002
+      description: A rejected guarded transition leaves the corporate order status outside the requested guarded state.
+    - id: INV-003
+      description: Only authenticated, authorized, assigned actors can initiate a brand status transition.
+    - id: INV-004
+      description: Successful status changes have consistent order state, status history, audit/event records, and transition side effects.
+    - id: INV-005
+      description: At most one guarded transition from an expected source status can commit, and a rejected or duplicate request cannot create a second transition record or side effect.
+flows:
+    - id: FLOW-001
+      description: Admin, shipment, Delhivery, and brand callers converge on the shared corporate transition guard before guarded status persistence.
+      state_transitions: [shipment_status -> corporate_order_dispatched, brand_workspace_request -> guarded_corporate_order_status, admin_order_request -> guarded_corporate_order_status]
+    - id: FLOW-002
+      description: Guard rejection returns a precondition or authorization error without claiming the requested order transition succeeded.
+      state_transitions: [brand_workspace_request -> guarded_corporate_order_status]
+    - id: FLOW-003
+      description: A guarded transition uses transaction/conditional-update serialization, commits local records together, and runs external notifications as logged best-effort effects.
+      state_transitions: [admin_order_request -> guarded_corporate_order_status]
+integrations:
+    - id: INT-001
+      system: tRPC corporate platform router
+      purpose: Exposes shipment and brand status mutations.
+      failure_mode: Authentication/permission middleware or service guard rejects the request.
+    - id: INT-002
+      system: Delhivery shipment workflow
+      purpose: Creates forward shipments and may request ready_for_dispatch.
+      failure_mode: Order transition is rejected while shipment result remains accurately reported.
+personas:
+    - id: PER-001
+      role: site_order_operator
+      applicability: Can manage corporate orders only with the existing site permission.
+    - id: PER-002
+      role: assigned_brand_member
+      applicability: Can perform only the brand-allowed statuses for its assigned order and must pass shared guards.
+    - id: PER-003
+      role: unauthenticated_or_unprivileged_caller
+      applicability: Must be rejected at the router boundary.
+security_boundaries:
+    - id: SEC-001
+      description: The corporate platform tRPC router must authenticate and authorize status-changing mutations with the existing site permission middleware.
+    - id: SEC-002
+      description: The corporate order transition service must enforce document and dispatch preconditions server-side, independent of caller UI.
+business_rules:
+    - id: BR-001
+      description: Dispatches at or above Rs. 50,000 require an e-way bill number.
+      source: Existing corporateOrderService.updateStatus guard.
+    - id: BR-002
+      description: direct_to_customer dispatch requires a Delivery Challan in the document chain.
+      source: Existing corporateOrderService.updateStatus guard.
+decisions:
+    - id: DEC-001
+      question: Where should QC approval be enforced?
+      class: RECOMMEND_CONTINUE
+      status: deferred_dependency
+      recommendation: Add it once in the shared guard when REN-176 supplies the approval state; do not duplicate endpoint checks.
+      basis: The Linear issue explicitly delegates QC flow to REN-176 and requires this issue to remain independently landable.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-002
+      question: What document satisfies renivet_warehouse pre-dispatch control?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Fail closed for warehouse-mode guarded transitions until REN-183 adds the inbound receipt/GRN requirement.
+      basis: Owner confirmation explicitly approved this safe interim policy; REN-183 remains responsible for the later warehouse document implementation.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: api
+      classification: REQUIRED
+      reason: Proves saveShipment cannot bypass the guarded dispatch prerequisites.
+      scenarios: [SCN-001]
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Proves Delhivery-created shipment status cannot directly write ready_for_dispatch without the shared guard.
+      scenarios: [SCN-002]
+    - id: TEXP-003
+      category: security
+      classification: REQUIRED
+      reason: Proves brand status changes enforce router authentication/permission and service membership controls.
+      scenarios: [SCN-003, SCN-004]
+    - id: TEXP-004
+      category: regression
+      classification: REQUIRED
+      reason: Proves legitimate guarded and non-dispatch transitions retain their current side effects and compatibility.
+      scenarios: [SCN-005, SCN-006]
+    - id: TEXP-005
+      category: integration
+      classification: REQUIRED
+      reason: Proves concurrent and retried requests serialize and do not duplicate transition records or side effects.
+      scenarios: [SCN-008]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context read-only critic
+    fresh_context: true
+    read_only: true
+    required_categories:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    categories_reviewed:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    findings:
+        - id: DB-001
+          severity: DESIGN_BLOCKER
+          summary: Warehouse-mode equivalent pre-dispatch document is undefined; defer to REN-183 and fail closed.
+        - id: MJ-001
+          severity: MAJOR
+          summary: Shipment persistence must be atomic or validate-before-persist with guarded order transition.
+        - id: MJ-002
+          severity: MAJOR
+          summary: Define local transaction and best-effort external side-effect failure policy.
+        - id: MJ-003
+          severity: MAJOR
+          summary: Prevent future direct guarded status writes through an enforceable writer boundary or static audit.
+        - id: MJ-004
+          severity: MAJOR
+          summary: Serialize concurrent transitions and define idempotent retries.
+        - id: mn-001
+          severity: MINOR
+          summary: Pin MANAGE_ORDERS middleware and test it separately from membership.
+        - id: mn-002
+          severity: MINOR
+          summary: Assert rejected side-effect absence and failure telemetry.
+approval:
+    state: READY_FOR_DEV
+    design_blockers: []
+    approved_by: "Ayan Ganguly (owner confirmation: fail closed until REN-183 GRN)"
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-005, SCN-006]
+        - requirement_id: REQ-002
+          scenario_ids: [SCN-001, SCN-002, SCN-003]
+        - requirement_id: REQ-003
+          scenario_ids: [SCN-003, SCN-004]
+        - requirement_id: REQ-004
+          scenario_ids: [SCN-001, SCN-002]
+        - requirement_id: REQ-005
+          scenario_ids: [SCN-005, SCN-006]
+        - requirement_id: REQ-006
+          scenario_ids: [SCN-008]
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids: [INV-001, INV-002]
+        - scenario_id: SCN-002
+          invariant_ids: [INV-001, INV-002]
+        - scenario_id: SCN-003
+          invariant_ids: [INV-001, INV-002, INV-003]
+        - scenario_id: SCN-004
+          invariant_ids: [INV-003]
+        - scenario_id: SCN-005
+          invariant_ids: [INV-004]
+        - scenario_id: SCN-006
+          invariant_ids: [INV-004]
+        - scenario_id: SCN-007
+          invariant_ids: [INV-001, INV-002]
+        - scenario_id: SCN-008
+          invariant_ids: [INV-004, INV-005]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids: [TEXP-001]
+        - scenario_id: SCN-002
+          test_expectation_ids: [TEXP-002]
+        - scenario_id: SCN-003
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-004
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-005
+          test_expectation_ids: [TEXP-004]
+        - scenario_id: SCN-006
+          test_expectation_ids: [TEXP-004]
+        - scenario_id: SCN-007
+          test_expectation_ids: [TEXP-001, TEXP-003]
+        - scenario_id: SCN-008
+          test_expectation_ids: [TEXP-005]
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_BLOCKED
+    base_branch: main
+    base_commit: null
+    head_commit: null
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PARTIAL
+        security: PARTIAL
+        test_coverage: PARTIAL
+        scope: PARTIAL
+    blocking_findings:
+        - "REV-001: Required comparison base and exact base/head commits are unavailable."
+    required_actions:
+        - "Run REN-175 review in an environment with Git access and rerun the governance review."
+    evidence:
+        - "Comparison input unavailable: base branch merge-base and exact base/head commits could not be established because Git is unavailable."
+    governance_reentry_required: false

@@ -107,7 +107,15 @@ export async function GET(
 
     const brandId = quote?.brandId || order?.brandId || null;
 
-    const [settings, product, brand, brandConfidential, productTypeRecord, gsmOptionRecord, fabricCompositionRecord] = await Promise.all([
+    const [
+        settings,
+        product,
+        brand,
+        brandConfidential,
+        productTypeRecord,
+        gsmOptionRecord,
+        fabricCompositionRecord,
+    ] = await Promise.all([
         getCorporateDocumentSettings(),
         quote?.productId
             ? db.query.products.findFirst({
@@ -126,10 +134,7 @@ export async function GET(
             : Promise.resolve(null),
         quote?.productTypeId
             ? db.query.corporateProductTypes.findFirst({
-                  where: eq(
-                      corporateProductTypes.id,
-                      quote.productTypeId
-                  ),
+                  where: eq(corporateProductTypes.id, quote.productTypeId),
                   with: { hsnMaster: true },
               })
             : Promise.resolve(null),
@@ -151,13 +156,9 @@ export async function GET(
     const taxableValuePaise = invoice.subtotalPaise;
     const quantity = order?.quantity ?? quote?.quantity ?? 1;
     const baseSubtotalPaise =
-        quote?.subtotalPaise ??
-        order?.subtotalPaise ??
-        taxableValuePaise;
+        quote?.subtotalPaise ?? order?.subtotalPaise ?? taxableValuePaise;
     const customizationPaise =
-        quote?.customizationCostPaise ??
-        order?.customizationPaise ??
-        0;
+        quote?.customizationCostPaise ?? order?.customizationPaise ?? 0;
 
     const gstRateBps =
         order?.gstRateBps ??
@@ -173,7 +174,11 @@ export async function GET(
         "title",
         "label",
     ]);
-    const orderGsm = configText(orderConfig.gsmOption, ["gsm", "name", "label"]);
+    const orderGsm = configText(orderConfig.gsmOption, [
+        "gsm",
+        "name",
+        "label",
+    ]);
     const orderFabric = configText(orderConfig.fabricComposition, [
         "name",
         "composition",
@@ -264,17 +269,7 @@ export async function GET(
     const extrasSummary = extraChargeDescriptions.join(", ");
 
     const itemDetail =
-        [
-            specsSummary,
-            extrasSummary
-                ? `Extras: ${extrasSummary}`
-                : customizationPaise > 0
-                  ? `Customization & extras (+INR ${(customizationPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
-                  : null,
-        ]
-            .filter(Boolean)
-            .join(" | ") ||
-        "Customization and specifications as approved in the corporate quote";
+        specsSummary || "Specifications as approved in the corporate quote";
 
     const resolvedHsn =
         quote?.hsnCode ||
@@ -336,7 +331,9 @@ export async function GET(
     const customizationGstRateBps = 1800;
     const customizationGstAmountPaise =
         customizationPaise > 0
-            ? Math.round((customizationPaise * customizationGstRateBps) / 10_000)
+            ? Math.round(
+                  (customizationPaise * customizationGstRateBps) / 10_000
+              )
             : 0;
 
     const baseGstAmountPaise =
@@ -346,16 +343,14 @@ export async function GET(
               ? totalGstFromDb
               : Math.round(
                     (baseSubtotalPaise *
-                        (quote?.gstRateBps ??
-                            order?.gstRateBps ??
-                            1800)) /
+                        (quote?.gstRateBps ?? order?.gstRateBps ?? 1800)) /
                         10_000
                 );
 
     const baseGstRateBps =
         baseSubtotalPaise > 0
             ? Math.round((baseGstAmountPaise / baseSubtotalPaise) * 10_000)
-            : quote?.gstRateBps ?? order?.gstRateBps ?? 1800;
+            : (quote?.gstRateBps ?? order?.gstRateBps ?? 1800);
 
     const computedTotalGstPaise =
         totalGstFromDb > 0
@@ -443,35 +438,55 @@ export async function GET(
                           : null,
                   },
               ],
-        item: {
-            description: resolvedItemName,
-            detail: itemDetail,
-            sku: product?.sku ?? product?.nativeSku,
-            hsn: resolvedHsn,
-            quantity,
-            unit: "pcs",
-            unitRatePaise: Math.round(
-                baseSubtotalPaise / Math.max(1, quantity)
-            ),
-            amountPaise: baseSubtotalPaise,
-            gstRateBps: baseGstRateBps,
-            gstAmountPaise: baseGstAmountPaise,
-            totalAmountPaise: baseSubtotalPaise + baseGstAmountPaise,
-        },
+        items: [
+            {
+                description: resolvedItemName,
+                detail: itemDetail,
+                sku: product?.sku ?? product?.nativeSku,
+                hsn: resolvedHsn,
+                quantity,
+                unit: "pcs",
+                unitRatePaise: Math.round(
+                    baseSubtotalPaise / Math.max(1, quantity)
+                ),
+                amountPaise: baseSubtotalPaise,
+                gstRateBps: baseGstRateBps,
+                gstAmountPaise: baseGstAmountPaise,
+                totalAmountPaise: baseSubtotalPaise + baseGstAmountPaise,
+            },
+            ...(customizationPaise > 0
+                ? [
+                      {
+                          description: "Customization / Extras",
+                          detail: extrasSummary || undefined,
+                          hsn: resolvedHsn,
+                          quantity: 1,
+                          unit: "lot",
+                          unitRatePaise: customizationPaise,
+                          amountPaise: customizationPaise,
+                          gstRateBps: customizationGstRateBps,
+                          gstAmountPaise: customizationGstAmountPaise,
+                          totalAmountPaise:
+                              customizationPaise + customizationGstAmountPaise,
+                      },
+                  ]
+                : []),
+        ],
         totals: {
             subtotalPaise:
                 customizationPaise > 0 ? baseSubtotalPaise : undefined,
             customizationPaise:
                 customizationPaise > 0 ? customizationPaise : undefined,
             taxableValuePaise,
-            baseGstRateBps:
-                customizationPaise > 0 ? baseGstRateBps : undefined,
+            baseGstRateBps: customizationPaise > 0 ? baseGstRateBps : undefined,
             baseGstAmountPaise:
                 customizationPaise > 0 ? baseGstAmountPaise : undefined,
             customizationGstRateBps:
                 customizationPaise > 0 ? customizationGstRateBps : undefined,
             customizationGstAmountPaise:
-                customizationPaise > 0 ? customizationGstAmountPaise : undefined,
+                customizationPaise > 0
+                    ? customizationGstAmountPaise
+                    : undefined,
             gstRateBps: baseGstRateBps,
             gstAmountPaise: computedTotalGstPaise,
             totalAmountPaise: computedTotalAmountPaise,

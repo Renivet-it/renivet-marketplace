@@ -99,6 +99,7 @@ export const corporateAdminManualQuoteInputSchema = z.object({
     contactPerson: z.string().trim().min(2).max(160),
     email: z.string().trim().email().max(254),
     phone: z.string().trim().min(8).max(20),
+    gstNumber: z.string().trim().max(64).nullable().optional(),
     deliveryAddress: z.string().trim().max(1000).nullable().optional(),
     deliveryCity: z.string().trim().max(100).nullable().optional(),
     deliveryState: z.string().trim().max(100).nullable().optional(),
@@ -109,7 +110,13 @@ export const corporateAdminManualQuoteInputSchema = z.object({
         .nullable()
         .optional()
         .or(z.literal("")),
-    deliveryCountry: z.string().trim().max(100).default("India").nullable().optional(),
+    deliveryCountry: z
+        .string()
+        .trim()
+        .max(100)
+        .default("India")
+        .nullable()
+        .optional(),
     brandId: z.string().uuid(),
     productTypeId: z.string().uuid().nullable().optional(),
     hsnCode: z.string().trim().max(16).nullable().optional(),
@@ -357,9 +364,21 @@ export const corporateShipmentInputSchema = z.object({
 });
 
 export const corporateConsigneeAddressInputSchema = z.object({
-    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
-    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
-    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    contactPersonName: z
+        .string()
+        .trim()
+        .min(2, "Contact person name is required")
+        .max(200),
+    mobileNumber: z
+        .string()
+        .trim()
+        .min(10, "Valid mobile number is required")
+        .max(15),
+    deliveryAddress: z
+        .string()
+        .trim()
+        .min(5, "Delivery address is required")
+        .max(1000),
     deliveryCity: z.string().trim().min(2, "City is required").max(100),
     deliveryState: z.string().trim().max(100).nullable().optional(),
     deliveryPincode: z
@@ -372,9 +391,21 @@ export const corporateConsigneeAddressInputSchema = z.object({
 
 export const corporateUpdateConsigneeAddressInputSchema = z.object({
     orderId: z.string().uuid(),
-    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
-    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
-    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    contactPersonName: z
+        .string()
+        .trim()
+        .min(2, "Contact person name is required")
+        .max(200),
+    mobileNumber: z
+        .string()
+        .trim()
+        .min(10, "Valid mobile number is required")
+        .max(15),
+    deliveryAddress: z
+        .string()
+        .trim()
+        .min(5, "Delivery address is required")
+        .max(1000),
     deliveryCity: z.string().trim().min(2, "City is required").max(100),
     deliveryState: z.string().trim().max(100).nullable().optional(),
     deliveryPincode: z
@@ -453,6 +484,12 @@ export const corporateQcSubmissionInputSchema = z.object({
         .nullable()
         .optional(),
     images: z.array(corporatePlatformFileSchema).min(1).max(10),
+});
+
+export const corporateQcReviewInputSchema = z.object({
+    submissionId: z.string().uuid(),
+    decision: z.enum(["approved", "rejected"]),
+    reviewNotes: z.string().trim().max(1000).nullable().optional(),
 });
 
 export const corporatePaymentInputSchema = z.object({

@@ -577,13 +577,7 @@ export const corporatePaymentRequests = pgTable(
             enum: ["advance", "balance", "full", "partial"],
         }).notNull(),
         status: text("status", {
-            enum: [
-                "pending",
-                "initiated",
-                "paid",
-                "expired",
-                "cancelled",
-            ],
+            enum: ["pending", "initiated", "paid", "expired", "cancelled"],
         })
             .notNull()
             .default("pending"),
@@ -705,7 +699,8 @@ export const corporateQcSubmissions = pgTable(
                 onDelete: "set null",
             }
         ),
-        reviewedAt: date("reviewed_at"),
+        reviewedAt: timestamp("reviewed_at"),
+        reviewNotes: text("review_notes"),
         ...timestamps,
     },
     (table) => ({
@@ -1223,7 +1218,9 @@ export const corporateRefundVouchers = pgTable(
         voucherNumberUnique: uniqueIndex(
             "corporate_refund_vouchers_number_idx"
         ).on(table.voucherNumber),
-        orderIdx: index("corporate_refund_vouchers_order_idx").on(table.orderId),
+        orderIdx: index("corporate_refund_vouchers_order_idx").on(
+            table.orderId
+        ),
     })
 );
 
@@ -1283,7 +1280,9 @@ export const corporateSettlementStatements = pgTable(
         commissionGstRateBps: integer("commission_gst_rate_bps")
             .notNull()
             .default(1800),
-        commissionGstAmountPaise: integer("commission_gst_amount_paise").notNull(),
+        commissionGstAmountPaise: integer(
+            "commission_gst_amount_paise"
+        ).notNull(),
         tcsPercentBps: integer("tcs_percent_bps").notNull().default(50),
         tcsAmountPaise: integer("tcs_amount_paise").notNull(),
         tdsPercentBps: integer("tds_percent_bps").notNull().default(10),

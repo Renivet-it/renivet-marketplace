@@ -29,6 +29,7 @@ import {
     corporateProformaInvoiceInputSchema,
     corporatePurchaseOrderInputSchema,
     corporatePurchaseOrderReviewInputSchema,
+    corporateQcReviewInputSchema,
     corporateQcSubmissionInputSchema,
     corporateQuoteDecisionInputSchema,
     corporateQuoteInputSchema,
@@ -180,9 +181,16 @@ export const corporatePlatformRouter = createTRPCRouter({
             return corporatePlatformService.createTask(ctx.user.id, input);
         }),
     submitQc: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateQcSubmissionInputSchema)
         .mutation(({ ctx, input }) => {
             return corporatePlatformService.submitQc(ctx.user.id, input);
+        }),
+    reviewQc: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateQcReviewInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.reviewQc(ctx.user.id, input);
         }),
     saveShipment: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
@@ -411,6 +419,7 @@ export const corporatePlatformRouter = createTRPCRouter({
             return corporateDocumentService.updateSettings(input);
         }),
     updateBrandAssignedOrderStatus: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(
             z.object({
                 brandId: z.string().uuid(),

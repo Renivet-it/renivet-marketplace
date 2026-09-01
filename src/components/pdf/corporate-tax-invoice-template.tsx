@@ -187,7 +187,7 @@ export function CorporateTaxInvoiceTemplate({
                       10_000) /
                       baseTaxablePaise
               )
-            : order.gstRateBps ?? 500);
+            : (order.gstRateBps ?? 500));
 
     const baseGstPaise = Math.round(
         (baseTaxablePaise * baseGstRateBps) / 10_000
@@ -281,6 +281,25 @@ export function CorporateTaxInvoiceTemplate({
                     sku: product?.sku,
                 },
             },
+            ...(hasCustomization
+                ? [
+                      {
+                          quantity: 1,
+                          gstRateBps: 1800,
+                          mrpPaise: customizationPaise,
+                          taxableValuePaise: customizationPaise,
+                          cgstPaise: customCgstPaise,
+                          sgstPaise: customSgstPaise,
+                          igstPaise: customIgstPaise,
+                          totalPaise: customTotalPaise,
+                          product: {
+                              title: "Customization / Extras",
+                              price: customizationPaise,
+                              hsCode: hsnCode,
+                          },
+                      },
+                  ]
+                : []),
         ],
         brand: {
             name: seller.name,
