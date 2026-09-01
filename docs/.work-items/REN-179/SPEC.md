@@ -77,6 +77,8 @@ The live audit confirmed independent defects remain in the current code: the cor
 
 Decision DEC-001 is resolved for this implementation slice (owner approval): no GST value will be hard-coded or populated by this task. Enforcement and data-source plumbing may proceed using the authoritative HSN Master; production catalog/rate population and pilot issuance remain gated on Finance/CA confirmation.
 
+Decision DEC-002 is resolved by owner approval: during manual corporate quote creation, an operator-entered HSN code that is not yet present in HSN Master may create an active HSN Master row immediately using the entered GST rate. This is an explicit persisted classification entry, not a silent fallback.
+
 ## Security, compatibility, and exclusions
 
 Reuse `MANAGE_ORDERS` authorization and existing tenant/order scoping. Do not build a new HSN UI, alter non-corporate tax behavior, decide legal GST classification, or encode ₹ thresholds/rates from the Mili example. Do not rewrite already-issued financial documents. Additive migrations are preferred; any backfill must be explicitly safe and must not invent missing classifications.

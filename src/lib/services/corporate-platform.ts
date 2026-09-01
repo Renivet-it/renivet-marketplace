@@ -1704,7 +1704,7 @@ class CorporatePlatformService {
 
     async createManualQuote(actorUserId: string, input: unknown) {
         const parsed = corporateAdminManualQuoteInputSchema.parse(input);
-        const classificationRow = parsed.hsnCode
+        let classificationRow = parsed.hsnCode
             ? await db.query.hsnMaster.findFirst({
                   where: and(
                       eq(hsnMaster.hsnCode, parsed.hsnCode),
@@ -1712,6 +1712,37 @@ class CorporatePlatformService {
                   ),
               })
             : null;
+        if (parsed.hsnCode && !classificationRow) {
+            const normalizedHsnCode = parsed.hsnCode.trim();
+            const gstRateBps = Math.round(parsed.gstPercent * 100);
+            try {
+                classificationRow = await db
+                    .insert(hsnMaster)
+                    .values({
+                        hsnCode: normalizedHsnCode,
+                        description: "Corporate manual quote classification",
+                        gstRateBps,
+                        isActive: true,
+                        metadata: {
+                            source: "corporate_manual_quote",
+                            createdByUserId: actorUserId,
+                        },
+                    })
+                    .onConflictDoNothing({ target: hsnMaster.hsnCode })
+                    .returning()
+                    .then((rows) => rows[0] ?? null);
+                if (!classificationRow) {
+                    classificationRow = await db.query.hsnMaster.findFirst({
+                        where: and(
+                            eq(hsnMaster.hsnCode, normalizedHsnCode),
+                            eq(hsnMaster.isActive, true)
+                        ),
+                    });
+                }
+            } catch {
+                classificationRow = null;
+            }
+        }
         let classification;
         try {
             classification = requireCorporateTaxClassification({

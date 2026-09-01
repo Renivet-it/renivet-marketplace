@@ -1,5 +1,5 @@
-import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
+import { describe, expect, test } from "bun:test";
 import { requireCorporateTaxClassification } from "./corporate-tax-classification";
 
 describe("corporate tax classification", () => {
@@ -37,7 +37,10 @@ describe("corporate tax classification", () => {
 
     test("does not retain product tax fallbacks in document or invoice paths", () => {
         const template = readFileSync(
-            new URL("../../components/pdf/corporate-tax-invoice-template.tsx", import.meta.url),
+            new URL(
+                "../../components/pdf/corporate-tax-invoice-template.tsx",
+                import.meta.url
+            ),
             "utf8"
         );
         const invoiceService = readFileSync(
@@ -48,5 +51,9 @@ describe("corporate tax classification", () => {
         expect(template).not.toContain("?? 500");
         expect(template).not.toContain("gstRateBps: 1800");
         expect(invoiceService).not.toContain('|| "6109"');
+        expect(invoiceService).toContain(
+            "onConflictDoNothing({ target: hsnMaster.hsnCode })"
+        );
+        expect(invoiceService).toContain("isActive: true");
     });
 });
