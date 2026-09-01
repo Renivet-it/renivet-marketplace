@@ -26,7 +26,7 @@ The order already contains many required values (`sizeBreakdown`, `employeeRows`
 2. Build the snapshot once at the authoritative order/FO issuance boundary, persist it atomically with the Fulfillment Order, and prevent post-issuance edits from changing the rendered document.
 3. Make the FO PDF and all related corporate readers consume the stored snapshot and stored commercial totals; they must not recompute from quote/order tables or apply local defaults.
 4. Include GST and all approved customization/extras amounts in the stored commercial total, with line-level reconciliation and explicit tax/shipping classifications. Do not invent GST or freight treatment while Finance/CA decisions are pending.
-5. Persist and render direct-delivery versus warehouse-delivery responsibility explicitly. Direct mode names the customer ship-to; warehouse mode names Renivet warehouse and states Renivet onward-dispatch responsibility. No unapproved freight line may be introduced.
+5. Persist and render direct-delivery versus warehouse-delivery responsibility explicitly. Direct mode names the customer ship-to; warehouse mode names Renivet warehouse and states Renivet onward-dispatch responsibility. The order-creation shipping dropdown offers `NOT_CHARGED` (default), `INCLUDED_IN_SUPPLY`, and `SEPARATELY_CHARGED`; the selected value is stored and rendered without inventing a freight line.
 6. Carry the full customization list from REN-178 and all FO form fields, including Packaging/Extras, so UI success is impossible when a value is dropped.
 7. Preserve existing authorization, delivery-mode controls, QC/dispatch gates, idempotency, and legacy FO readability through an additive migration/backfill policy.
 
@@ -70,7 +70,7 @@ The order already contains many required values (`sizeBreakdown`, `employeeRows`
 - DEP-003: REN-180 document date/GSTIN/HSN rendering contract.
 - DEP-004: REN-183 warehouse-mode GRN and `customerShippingCharge` classification.
 
-DEC-001 is `HUMAN_CONFIRMATION` and deferred: Finance/CA must approve customization tax treatment, HSN/rate, and shipping-charge classification. REN-177 stores explicit metadata and blocks unapproved issuance; it must not choose a legal/financial rule.
+DEC-001 is partially resolved: shipping classification has three selectable values with `NOT_CHARGED` as the default, confirmed by the owner. Finance/CA must still approve customization tax treatment and HSN/rate. REN-177 stores explicit metadata and blocks unapproved issuance; it must not choose a legal/financial rule.
 
 ## Security, compatibility, and exclusions
 

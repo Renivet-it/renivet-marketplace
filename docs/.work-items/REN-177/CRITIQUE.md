@@ -6,7 +6,7 @@ All required categories were reviewed.
 
 ## Findings
 
-- **DESIGN_BLOCKER DB-001** — `DEC-001`, `REQ-003/005`: Finance/CA GST/composite-supply and REN-183 shipping-charge classifications are unresolved; issuance must remain fail-closed.
+- **DESIGN_BLOCKER DB-001** — `DEC-001`, `REQ-003`: Finance/CA GST/composite-supply treatment and customization rate remain unresolved; issuance must remain fail-closed. Owner has since resolved shipping UI behavior as a three-option field defaulting to `NOT_CHARGED`.
 - **MAJOR MJ-001** — `REQ-001/002/006`: The spec must define concrete snapshot storage/version/hash, immutability, FK linkage, and an atomic write boundary; current FO insertion is direct and non-transactional.
 - **MAJOR MJ-002** — `REQ-003`, `INV-002`: Current FO total excludes GST, customization, and extras; require canonical line/tax calculation before insert.
 - **MAJOR MJ-003** — `REQ-002/004`, `INV-003`: FO PDF and other templates independently recompute order/quote values; require exhaustive consumer inventory and no silent fallback/recomputation.

@@ -47,7 +47,7 @@ investigation:
     related_tests: [TEXP-001, TEXP-002, TEXP-003, TEXP-004, TEXP-005, TEXP-006]
     uncertainties:
         - REN-178 customization schema and REN-183 shipping classification are pending.
-        - Finance/CA tax treatment is intentionally unresolved.
+        - Finance/CA customization tax treatment/rate is intentionally unresolved.
         - Historical FOs lack fields that cannot always be derived and need an explicit compatibility policy.
 dependencies:
     - id: DEP-001
@@ -68,8 +68,8 @@ dependencies:
     - id: DEP-004
       name: REN-183 delivery-mode controls
       purpose: Supplies warehouse GRN and shipping-charge classification rules.
-      description: Snapshot must record delivery responsibility and approved customer shipping charge state.
-      status: pending
+      description: Snapshot records delivery responsibility and exposes NOT_CHARGED (default), INCLUDED_IN_SUPPLY, or SEPARATELY_CHARGED.
+      status: resolved
 requirements:
     - id: REQ-001
       description: Persist a complete immutable versioned corporate commercial/production snapshot at FO issuance.
@@ -211,11 +211,11 @@ business_rules:
       source: REN-177 and REN-183 dependency.
 decisions:
     - id: DEC-001
-      question: What GST/composite-supply and customerShippingCharge classifications should the snapshot encode?
+      question: What GST/composite-supply classification and rate should customization lines use?
       class: HUMAN_CONFIRMATION
       status: deferred
-      recommendation: Finance/CA and REN-183 must approve; snapshot stores flexible explicit metadata and blocks guessed issuance.
-      basis: Financial/legal consequence and explicit Linear dependencies.
+      recommendation: Finance/CA must approve; shipping classification is resolved as a three-option field defaulting to NOT_CHARGED.
+      basis: Financial/legal consequence; owner confirmed shipping dropdown behavior while customization tax rate remains pending.
       confidence: high
       consequence: high
       human_confirmation_required: true
@@ -262,7 +262,7 @@ critic:
     findings:
         - id: REN177-CRIT-001
           severity: DESIGN_BLOCKER
-          summary: Finance/CA GST and REN-183 shipping classifications are unresolved.
+          summary: Finance/CA customization GST treatment and rate remain unresolved; shipping dropdown behavior is now owner-confirmed.
         - id: REN177-CRIT-002
           severity: MAJOR
           summary: Snapshot storage, versioning, immutability, linkage, and atomic write boundary need concrete design.
