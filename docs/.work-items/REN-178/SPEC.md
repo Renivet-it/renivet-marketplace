@@ -18,7 +18,7 @@ The Fulfillment Order form, mutation schema, service, snapshots, PDF templates, 
 
 ## Canonical design
 
-The existing customization table is expanded with structured fields and a stable display order. The order-level commercial snapshot stores the ordered customization list and its version. Quote revisions capture their own immutable customization list. FO, PI, customer invoice, settlement, replacement, and related document readers consume that snapshot rather than re-deriving amounts from UI fields or mutable rows. Parent customization tax treatment references the product classification; separate treatment references its own approved classification.
+The existing customization table is expanded with structured fields and a stable display order. The order-level commercial snapshot stores the ordered customization list and its version. Quote revisions capture their own immutable customization list. FO, PI, customer invoice, settlement, replacement, and related document readers consume that snapshot rather than re-deriving amounts from UI fields or mutable rows. At quote creation, the admin selects whether each customization is included in the parent product supply or is a separate supply. Included customizations use the parent classification; separate customizations require an approved HSN/SAC master classification, and its GST rate is persisted in the snapshot.
 
 All parent-plus-customization writes use one database transaction with idempotent retry behavior. The legacy backfill is bounded and idempotent, reports reconciliation counts, and preserves old scalar columns until the read/write cutover is verified.
 

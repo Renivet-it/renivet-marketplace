@@ -116,6 +116,11 @@ export function AdminManualQuoteModal({
     const [manualExtraAmount, setManualExtraAmount] = useState<string>("0");
     const [manualExtraDescription, setManualExtraDescription] =
         useState<string>("");
+    const [customizationTaxTreatment, setCustomizationTaxTreatment] =
+        useState<"included_in_product_supply" | "separate_supply">(
+            "included_in_product_supply"
+        );
+    const [customizationHsnId, setCustomizationHsnId] = useState("");
 
     // Commercial Terms
     const [advancePercent, setAdvancePercent] = useState("30");
@@ -124,8 +129,7 @@ export function AdminManualQuoteModal({
 
     // Commission & GST on Commission
     const [commissionAmount, setCommissionAmount] = useState<string>("0");
-    const [commissionGstPercent, setCommissionGstPercent] =
-        useState<string>("18");
+    const [commissionHsnId, setCommissionHsnId] = useState("");
 
     // Reset form on modal open
     useEffect(() => {
@@ -249,10 +253,10 @@ export function AdminManualQuoteModal({
         0,
         Math.round((Number(commissionAmount) || 0) * 100)
     );
-    const commissionGstPercentNum = Math.max(
-        0,
-        Number(commissionGstPercent) || 0
+    const commissionHsn = orderConfig?.hsnOptions?.find(
+        (option) => option.id === commissionHsnId
     );
+    const commissionGstPercentNum = (commissionHsn?.gstRateBps ?? 0) / 100;
     const commissionGstAmountPaise = Math.round(
         (commissionAmountPaise * commissionGstPercentNum) / 100
     );
@@ -260,9 +264,17 @@ export function AdminManualQuoteModal({
         commissionAmountPaise + commissionGstAmountPaise;
 
     const baseGstPaise = Math.round((subtotalPaise * gstPercentNum) / 100);
-    // Customization defaults to the parent product supply; REN-179 applies
-    // a separate approved classification only when explicitly selected.
-    const customizationGstPaise = 0;
+    const customizationHsn = orderConfig?.hsnOptions?.find(
+        (option) => option.id === customizationHsnId
+    );
+    const customizationGstRateBps =
+        customizationTaxTreatment === "included_in_product_supply"
+            ? Math.round(gstPercentNum * 100)
+            : (customizationHsn?.gstRateBps ?? 0);
+    const customizationGstPaise = Math.round(
+        (extrasBreakdown.totalCustomizationPaise * customizationGstRateBps) /
+            10_000
+    );
     const taxPaise = baseGstPaise + customizationGstPaise;
     const taxablePaise =
         subtotalPaise + extrasBreakdown.totalCustomizationPaise;
@@ -293,7 +305,11 @@ export function AdminManualQuoteModal({
         gstPercentNum <= 100 &&
         Number.isFinite(advancePercentNum) &&
         advancePercentNum >= 0 &&
-        advancePercentNum <= 100;
+        advancePercentNum <= 100 &&
+        Boolean(commissionHsn) &&
+        (extrasBreakdown.totalCustomizationPaise === 0 ||
+            customizationTaxTreatment === "included_in_product_supply" ||
+            Boolean(customizationHsn));
 
     const canSubmit = isStep1Valid && isStep2Valid && isStep3Valid;
 
@@ -341,7 +357,28 @@ export function AdminManualQuoteModal({
             quantity: qtyNum,
             unitPricePaise,
             customizationCostPaise: extrasBreakdown.totalCustomizationPaise,
+            customizations:
+                extrasBreakdown.totalCustomizationPaise > 0
+                    ? [
+                          {
+                              name:
+                                  manualExtraDescription.trim() ||
+                                  "Customization / extras",
+                              amountPaise:
+                                  extrasBreakdown.totalCustomizationPaise,
+                              quantity: 1,
+                              basis: "per_order",
+                              taxTreatment: customizationTaxTreatment,
+                              hsnCode:
+                                  customizationTaxTreatment === "separate_supply"
+                                      ? (customizationHsn?.hsnCode ?? null)
+                                      : activeHsnCode || null,
+                              displayOrder: 1,
+                          },
+                      ]
+                    : [],
             commissionAmountPaise,
+            commissionHsnCode: commissionHsn?.hsnCode ?? null,
             commissionGstPercent: commissionGstPercentNum,
             gstPercent: gstPercentNum,
             advancePercent: advancePercentNum,
@@ -814,6 +851,59 @@ export function AdminManualQuoteModal({
                                 </div>
                             </div>
 
+                            {extrasBreakdown.totalCustomizationPaise > 0 ? (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                                    <h4 className="text-xs font-bold text-slate-900">
+                                        Customization GST Treatment
+                                    </h4>
+                                    <p className="mt-1 text-[11px] text-slate-600">
+                                        Choose whether these extras are included in the garment supply or billed as a separate service.
+                                    </p>
+                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                        <CompactSelect
+                                            label="Tax treatment"
+                                            value={customizationTaxTreatment}
+                                            onChange={(value) =>
+                                                setCustomizationTaxTreatment(
+                                                    value as
+                                                        | "included_in_product_supply"
+                                                        | "separate_supply"
+                                                )
+                                            }
+                                            options={[
+                                                {
+                                                    value: "included_in_product_supply",
+                                                    label: "Part of main product supply",
+                                                },
+                                                {
+                                                    value: "separate_supply",
+                                                    label: "Separate supply / service",
+                                                },
+                                            ]}
+                                        />
+                                        {customizationTaxTreatment ===
+                                        "separate_supply" ? (
+                                            <CompactSelect
+                                                label="Separate HSN/SAC from Master"
+                                                value={customizationHsnId}
+                                                onChange={setCustomizationHsnId}
+                                                options={(orderConfig?.hsnOptions ?? []).map(
+                                                    (hsn) => ({
+                                                        value: hsn.id,
+                                                        label: `${hsn.hsnCode} — ${hsn.description} (${hsn.gstRateBps / 100}%)`,
+                                                    })
+                                                )}
+                                                required
+                                            />
+                                        ) : (
+                                            <div className="flex items-end text-[11px] text-slate-600">
+                                                Uses the selected product HSN/GST rate ({gstPercentNum}%).
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
+
                             {/* Taxes & Commercial Terms */}
                             <div className="grid gap-3 sm:grid-cols-3">
                                 <div>
@@ -879,18 +969,21 @@ export function AdminManualQuoteModal({
                                         value={commissionAmount}
                                         onChange={setCommissionAmount}
                                     />
-                                    <LabelledInput
-                                        label="Order-specific GST on Commission (%)"
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        placeholder="18"
-                                        value={commissionGstPercent}
-                                        onChange={setCommissionGstPercent}
+                                    <CompactSelect
+                                        label="Commission HSN/SAC from Master"
+                                        value={commissionHsnId}
+                                        onChange={setCommissionHsnId}
+                                        options={(orderConfig?.hsnOptions ?? []).map(
+                                            (hsn) => ({
+                                                value: hsn.id,
+                                                label: `${hsn.hsnCode} — ${hsn.description} (${hsn.gstRateBps / 100}%)`,
+                                            })
+                                        )}
+                                        required
                                     />
                                 </div>
                                 <p className="text-[11px] text-slate-500">
-                                    This rate is saved on this order and used on its settlement and commission invoice.
+                                    The selected HSN/SAC supplies the GST rate saved on this order and used on its settlement and commission invoice.
                                 </p>
                                 {commissionAmountPaise > 0 && (
                                     <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
@@ -959,7 +1052,7 @@ export function AdminManualQuoteModal({
                                     </div>
                                     <div>
                                         <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                                            GST on Custom (18%)
+                                            GST on Custom ({customizationGstRateBps / 100}%)
                                         </div>
                                         <div className="mt-1 text-xs font-bold text-slate-800">
                                             {formatINR(customizationGstPaise)}

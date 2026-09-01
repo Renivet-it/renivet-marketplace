@@ -130,6 +130,7 @@ export const corporateAdminManualQuoteInputSchema = z.object({
     customizationCostPaise: z.number().int().nonnegative().default(0),
     customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     commissionAmountPaise: z.number().int().nonnegative().default(0),
+    commissionHsnCode: z.string().trim().max(16).nullable().optional(),
     commissionGstPercent: z.number().min(0).max(100).optional(),
     gstPercent: z.number().min(0).max(100).default(0),
     advancePercent: z.number().min(0).max(100).default(30),

@@ -35,3 +35,31 @@ export function buildCorporateCustomizationRows(
         },
     ];
 }
+
+export function calculateCorporateCustomizationTax(
+    rows: CorporateCustomizationInput[],
+    parentGstRateBps: number,
+    separateSupplyRatesByHsn: Record<string, number>
+) {
+    const calculatedRows = rows.map((row) => {
+        const gstRateBps =
+            row.taxTreatment === "included_in_product_supply"
+                ? parentGstRateBps
+                : separateSupplyRatesByHsn[row.hsnCode ?? ""];
+        if (!Number.isInteger(gstRateBps) || gstRateBps < 0) {
+            throw new Error(
+                `An approved HSN/SAC classification is required for separate customization: ${row.name}`
+            );
+        }
+        return {
+            ...row,
+            gstRateBps,
+            gstPaise: Math.round((row.amountPaise * gstRateBps) / 10_000),
+        };
+    });
+
+    return {
+        rows: calculatedRows,
+        gstPaise: calculatedRows.reduce((sum, row) => sum + row.gstPaise, 0),
+    };
+}

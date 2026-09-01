@@ -76,7 +76,7 @@ requirements:
       description: Reseller corporate settlements omit TCS and 194-O deductions by default and require explicit policy configuration to enable them.
       type: explicit
     - id: REQ-005
-      description: Commission GST is explicitly selected per manual quote/order, persisted as commissionGstRateBps, reused by every settlement/commission document, and blocks issuance when absent; Finance/CA still owns the approved rate decision.
+      description: Admin selects a commission-service HSN/SAC from the master per manual quote/order; its code and GST rate are persisted and reused by every settlement/commission document, which block when absent.
       type: explicit
     - id: REQ-006
       description: Settlement numbers use the declared shared SET numbering authority and are unique per issued version.
@@ -173,9 +173,9 @@ decisions:
     - id: DEC-001
       question: What exact commission GST rate/classification is legally approved?
       class: HUMAN_CONFIRMATION
-      status: unresolved
-      recommendation: Require Finance/CA-approved metadata and block issuance if absent; do not hard-code a rate.
-      basis: Linear keeps Finance/CA item 4 open and explicitly excludes deciding it here.
+      status: resolved
+      recommendation: Admin selects the commission-service HSN/SAC from the approved HSN master; persist its code and GST rate per order and block issuance if absent.
+      basis: Ayan confirmed the commission is a separate service and its classification/rate must be selected from the HSN master.
       confidence: high
       consequence: high
       human_confirmation_required: true

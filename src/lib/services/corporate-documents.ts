@@ -729,9 +729,9 @@ export const corporateDocumentService = {
                 : 0;
 
         const commissionGstRateBps = order.commissionGstRateBps;
-        if (commissionGstRateBps == null) {
+        if (commissionGstRateBps == null || !order.commissionHsnCode) {
             throw new Error(
-                "Cannot issue settlement statement: commission GST rate is not set on the order"
+                "Cannot issue settlement statement: commission HSN/SAC classification is not set on the order"
             );
         }
         const commissionGstAmountPaise = Math.round(

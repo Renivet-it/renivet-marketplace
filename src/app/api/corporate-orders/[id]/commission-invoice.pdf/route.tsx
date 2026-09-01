@@ -118,10 +118,12 @@ export async function GET(
         const commissionTaxablePaise = order.commissionAmountPaise;
 
         const commissionGstRateBps = order.commissionGstRateBps;
-        if (commissionGstRateBps == null) {
+        const commissionHsnCode = order.commissionHsnCode;
+        if (commissionGstRateBps == null || !commissionHsnCode) {
             return NextResponse.json(
                 {
-                    error: "Commission GST rate is not set for this order",
+                    error:
+                        "Commission HSN/SAC classification is not set for this order",
                 },
                 { status: 422 }
             );
@@ -237,8 +239,8 @@ export async function GET(
                         title: `Marketplace Facilitation & Platform Commission Services (Order: ${order.publicOrderId})`,
                         price: commissionTaxablePaise,
                         compareAtPrice: commissionTaxablePaise,
-                        hsCode: "9985",
-                        sku: "SAC-9985",
+                        hsCode: commissionHsnCode,
+                        sku: `SAC-${commissionHsnCode}`,
                     },
                 },
             ],

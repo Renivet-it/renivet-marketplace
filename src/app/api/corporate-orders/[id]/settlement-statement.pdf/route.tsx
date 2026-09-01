@@ -127,6 +127,7 @@ export async function GET(
             commissionPercent: statement.commissionPercentBps / 100,
             commissionAmountPaise: statement.commissionAmountPaise,
             commissionGstRatePercent: statement.commissionGstRateBps / 100,
+            commissionHsnCode: order.commissionHsnCode ?? "Not recorded",
             commissionGstAmountPaise: statement.commissionGstAmountPaise,
             tcsPercent: statement.tcsPercentBps / 100,
             tcsAmountPaise: statement.tcsAmountPaise,

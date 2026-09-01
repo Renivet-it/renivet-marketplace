@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { env } from "@/../env";
 import {
     buildCorporateCustomizationRows,
+    calculateCorporateCustomizationTax,
     type CorporateCustomizationInput,
 } from "@/lib/corporate-customizations";
 import {
@@ -577,6 +578,11 @@ class CorporatePlatformService {
             totalAmountPaise: number;
             advanceAmountPaise: number;
             balanceAmountPaise: number;
+            commissionAmountPaise: number;
+            commissionHsnCode: string | null;
+            commissionGstRateBps: number;
+            commissionGstAmountPaise: number;
+            commissionTotalPaise: number;
             profile?: {
                 userId: string | null;
                 companyName: string;
@@ -684,6 +690,18 @@ class CorporatePlatformService {
                 where: eq(corporateCustomizations.quoteId, quote.id),
                 orderBy: [asc(corporateCustomizations.createdAt)],
             });
+        const customizationGstAmountPaise = quoteCustomizations.reduce(
+            (sum, row) =>
+                sum + Number((row.metadata as Record<string, unknown>)?.gstPaise ?? 0),
+            0
+        );
+        const customizationGstRateBps =
+            quote.customizationCostPaise > 0
+                ? Math.round(
+                      (customizationGstAmountPaise * 10_000) /
+                          quote.customizationCostPaise
+                  )
+                : 0;
 
         const createdOrder = await db
             .insert(corporateOrders)
@@ -750,6 +768,8 @@ class CorporatePlatformService {
                 pricingSnapshot: {
                     subtotalPaise: quote.subtotalPaise,
                     customizationCostPaise: quote.customizationCostPaise,
+                    customizationGstAmountPaise,
+                    customizationGstRateBps,
                     customizations: quoteCustomizations.map((row) => ({
                         id: row.id,
                         type: row.customizationType,
@@ -774,6 +794,11 @@ class CorporatePlatformService {
                       )
                     : 0,
                 advancePaidPaise: 0,
+                commissionAmountPaise: quote.commissionAmountPaise,
+                commissionHsnCode: quote.commissionHsnCode,
+                commissionGstRateBps: quote.commissionGstRateBps,
+                commissionGstAmountPaise: quote.commissionGstAmountPaise,
+                commissionTotalPaise: quote.commissionTotalPaise,
                 // A quote's advance split is a requested payment term, not a
                 // completed collection. New orders start fully outstanding.
                 balanceDuePaise: quote.totalAmountPaise,
@@ -1748,13 +1773,73 @@ class CorporatePlatformService {
         const subtotalPaise = parsed.unitPricePaise * parsed.quantity;
         const customizationCostPaise = parsed.customizationCostPaise ?? 0;
         const baseGstRateBps = Math.round(parsed.gstPercent * 100);
-        const customizationGstRateBps = 1800; // 18% standard GST on customization/services
+        const customizationRows = buildCorporateCustomizationRows(
+            parsed.customizations as CorporateCustomizationInput[],
+            customizationCostPaise
+        );
+        if (
+            customizationCostPaise > 0 &&
+            customizationRows.some(
+                (row) => row.taxTreatment === "not_yet_classified"
+            )
+        ) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Choose whether each customization is included in the main product supply or is a separate supply",
+            });
+        }
+        const separateHsnCodes = [
+            ...new Set(
+                customizationRows
+                    .filter((row) => row.taxTreatment === "separate_supply")
+                    .map((row) => row.hsnCode?.trim())
+                    .filter((code): code is string => Boolean(code))
+            ),
+        ];
+        if (
+            customizationRows.some(
+                (row) =>
+                    row.taxTreatment === "separate_supply" &&
+                    !row.hsnCode?.trim()
+            )
+        ) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Select an approved HSN/SAC for every separate customization supply",
+            });
+        }
+        const separateClassifications = separateHsnCodes.length
+            ? await db.query.hsnMaster.findMany({
+                  where: and(
+                      inArray(hsnMaster.hsnCode, separateHsnCodes),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : [];
+        const separateSupplyRatesByHsn = Object.fromEntries(
+            separateClassifications.map((classification) => [
+                classification.hsnCode,
+                classification.gstRateBps,
+            ])
+        );
+        const customizationTax = calculateCorporateCustomizationTax(
+            customizationRows,
+            baseGstRateBps,
+            separateSupplyRatesByHsn
+        );
+        const customizationGstRateBps =
+            customizationCostPaise > 0
+                ? Math.round(
+                      (customizationTax.gstPaise * 10_000) /
+                          customizationCostPaise
+                  )
+                : 0;
         const baseGstAmountPaise = Math.round(
             (subtotalPaise * baseGstRateBps) / 10000
         );
-        const customizationGstAmountPaise = Math.round(
-            (customizationCostPaise * customizationGstRateBps) / 10000
-        );
+        const customizationGstAmountPaise = customizationTax.gstPaise;
         const gstAmountPaise = baseGstAmountPaise + customizationGstAmountPaise;
         const taxablePaise = subtotalPaise + customizationCostPaise;
         const totalAmountPaise = taxablePaise + gstAmountPaise;
@@ -1763,14 +1848,34 @@ class CorporatePlatformService {
         );
 
         const commissionAmountPaise = parsed.commissionAmountPaise ?? 0;
-        if (parsed.commissionGstPercent == null) {
-            throw new Error(
-                "Commission GST rate is required for a corporate quote"
-            );
+        const commissionHsnCode = parsed.commissionHsnCode?.trim() || null;
+        if (!commissionHsnCode) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Select an approved HSN/SAC for the commission service",
+            });
         }
-        const commissionGstRateBps = Math.round(
-            parsed.commissionGstPercent * 100
-        );
+        const commissionClassification = await db.query.hsnMaster.findFirst({
+            where: and(
+                eq(hsnMaster.hsnCode, commissionHsnCode),
+                eq(hsnMaster.isActive, true)
+            ),
+        });
+        try {
+            requireCorporateTaxClassification({
+                hsnCode: commissionClassification?.hsnCode,
+                gstRateBps: commissionClassification?.gstRateBps,
+                sourceId: commissionClassification?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN/SAC Master classification is required for the commission service",
+            });
+        }
+        const commissionGstRateBps = commissionClassification!.gstRateBps;
         const commissionGstAmountPaise = Math.round(
             (commissionAmountPaise * commissionGstRateBps) / 10000
         );
@@ -1865,6 +1970,7 @@ class CorporatePlatformService {
                     advanceAmountPaise,
                     balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
                     commissionAmountPaise,
+                    commissionHsnCode,
                     commissionGstRateBps,
                     commissionGstAmountPaise,
                     commissionTotalPaise,
@@ -1888,18 +1994,14 @@ class CorporatePlatformService {
                 customizationCostPaise: parsed.customizationCostPaise,
                 gstAmountPaise,
                 totalAmountPaise,
-                customizations: parsed.customizations,
+                customizations: customizationTax.rows,
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             });
 
-            const customizationRows = buildCorporateCustomizationRows(
-                parsed.customizations as CorporateCustomizationInput[],
-                parsed.customizationCostPaise
-            );
             if (customizationRows.length) {
                 await tx.insert(corporateCustomizations).values(
-                    customizationRows.map((row) => ({
+                    customizationTax.rows.map((row) => ({
                         quoteId: quote.id,
                         customizationType: row.name,
                         costPaise: row.amountPaise,
@@ -1907,6 +2009,8 @@ class CorporatePlatformService {
                             ...row,
                             name: row.name,
                             taxTreatment: row.taxTreatment,
+                            gstRateBps: row.gstRateBps,
+                            gstPaise: row.gstPaise,
                         },
                     }))
                 );

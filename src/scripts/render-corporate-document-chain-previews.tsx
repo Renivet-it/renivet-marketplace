@@ -173,6 +173,7 @@ async function main() {
                     commissionPercent: 20,
                     commissionAmountPaise: 1_200_000,
                     commissionGstRatePercent: 18,
+                    commissionHsnCode: "9985",
                     commissionGstAmountPaise: 216_000,
                     tcsPercent: 0.5,
                     tcsAmountPaise: 30_000,

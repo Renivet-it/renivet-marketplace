@@ -306,6 +306,7 @@ export type CorporateSettlementData = {
     commissionPercent: number;
     commissionAmountPaise: number;
     commissionGstRatePercent: number;
+    commissionHsnCode: string;
     commissionGstAmountPaise: number;
     tcsPercent: number;
     tcsAmountPaise: number;
@@ -446,7 +447,7 @@ export function CorporateSettlementStatementTemplate({
 
                     <View style={styles.waterfallRow}>
                         <Text>
-                            - GST on commission ({data.commissionGstRatePercent}% of Commission under SAC 9985)
+                            - GST on commission ({data.commissionGstRatePercent}% under HSN/SAC {data.commissionHsnCode})
                         </Text>
                         <Text style={styles.deductionValue}>
                             -{formatInr(data.commissionGstAmountPaise)}

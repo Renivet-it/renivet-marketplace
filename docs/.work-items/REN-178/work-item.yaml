@@ -78,7 +78,7 @@ requirements:
       description: Preserve existing scalar customization amounts through an approved migration/compatibility representation.
       type: explicit
     - id: REQ-005
-      description: Keep separate visual rows independent from tax treatment; do not invent or hard-code a customization GST rate in this task.
+      description: Keep separate visual rows independent from tax treatment; admin selects included-in-product or separate-supply treatment, and each separate supply requires an approved HSN/SAC master classification whose rate is persisted without hard-coding.
       type: explicit
     - id: REQ-006
       description: Preserve existing authorization, upload validation, tenant scoping, idempotency, and atomicity boundaries.
