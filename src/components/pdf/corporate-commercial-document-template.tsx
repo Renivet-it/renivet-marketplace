@@ -493,6 +493,15 @@ export function CorporateCommercialDocumentTemplate({
                           : []
                     ).map((rowItem, idx) => {
                         const rowGstRateBps = rowItem.gstRateBps ?? gstRateBps;
+                        if (
+                            showDetailedTax &&
+                            (rowItem.amountPaise ?? 0) > 0 &&
+                            rowGstRateBps === null
+                        ) {
+                            throw new Error(
+                                "Corporate document requires a resolved GST classification"
+                            );
+                        }
                         const rowGstAmountPaise =
                             rowItem.gstAmountPaise ??
                             (rowItem.amountPaise && rowGstRateBps
@@ -727,7 +736,7 @@ export function CorporateCommercialDocumentTemplate({
                                             label={`GST on customization (${(
                                                 (data.totals
                                                     .customizationGstRateBps ??
-                                                    1800) / 100
+                                                    0) / 100
                                             ).toFixed(2)}%)`}
                                             value={
                                                 data.totals

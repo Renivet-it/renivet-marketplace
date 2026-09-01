@@ -20,6 +20,12 @@ The normal corporate `buildQuote` path resolves `corporateProductTypes.hsnMaster
 
 The corporate tax invoice template has two unsafe independent fallbacks: an unresolved HSN ends in the literal `6109`, and an unresolved base rate ends in `order.gstRateBps ?? 500`. The customization line also hard-codes 18%. These can render a document whose printed HSN/rate disagrees with the amount charged. The service-issued invoice currently snapshots order totals, but the renderer can derive different display values. Existing documents and legacy orders need a compatibility policy that never invents a classification for a newly issued document.
 
+## Locked acceptance criteria (Architecture Lock Pass, 2026-09-02)
+
+For every customer-facing taxable corporate invoice: HSN is mandatory; GST comes from the authoritative HSN/tax master; no schema, settings, template, settlement, or customization layer may apply a generic 18%/5% rate; no hard-coded HSN such as `6109` is permitted; displayed GST must equal charged GST; effective statutory rules and transaction value are the computation basis; value-slab thresholds must be data-driven; the authority and effective version/date must be traceable; future rate changes must be data changes; and missing/invalid classification must fail closed. The enforcement mechanism may be implemented before the Finance/CA catalog data fix, but pilot issuance remains blocked until authoritative records exist.
+
+The live audit confirmed independent defects remain in the current code: the corporate settings schema default `1800`, the tax invoice HSN fallback `6109`, the tax invoice rate fallback `500`, and the customization-line `1800`/`0.18` literals. The commission-GST `1800` in settlement is tracked under REN-181, not this product/HSN scope.
+
 ## Requirements
 
 1. Trace every corporate quote/order/PI/tax-invoice issuance path and resolve taxable product HSN and GST rate from the active HSN Master or an explicit approved override.
@@ -69,7 +75,9 @@ The corporate tax invoice template has two unsafe independent fallbacks: an unre
 - DEP-003: REN-180 document date/GSTIN/HSN rendering fixes must not reintroduce local fallbacks.
 - DEP-004: Existing corporate product catalog rows for Round Neck and Polo T-shirts require a Finance/CA-approved HSN/rate data fix before new pilot issuance.
 
-Decision DEC-001 is `HUMAN_CONFIRMATION` and deferred: Finance/CA must confirm the correct T-shirt HSN/rate and composite-supply treatment for printing/customization. This task may implement enforcement and data-source plumbing without hard-coding that answer; no unresolved rate value may be inserted into code or production data.
+Decision DEC-001 is resolved for this implementation slice (owner approval): no GST value will be hard-coded or populated by this task. Enforcement and data-source plumbing may proceed using the authoritative HSN Master; production catalog/rate population and pilot issuance remain gated on Finance/CA confirmation.
+
+Decision DEC-002 is resolved by owner approval: during manual corporate quote creation, an operator-entered HSN code that is not yet present in HSN Master may create an active HSN Master row immediately using the entered GST rate. This is an explicit persisted classification entry, not a silent fallback.
 
 ## Security, compatibility, and exclusions
 

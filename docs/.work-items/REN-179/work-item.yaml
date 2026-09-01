@@ -4,7 +4,7 @@ task:
     title: "[Corporate Order] Enforce HSN/GST classification before a corporate invoice can be issued (no silent 18% default)"
     source: linear
     branch: ayanganguly333/ren-179-corporate-order-enforce-hsngst-classification-before-a
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-179/corporate-order-enforce-hsngst-classification-before-a
         priority: Urgent
@@ -50,6 +50,7 @@ investigation:
         - Finance/CA has not confirmed the final T-shirt HSN/rate or customization composite treatment.
         - REN-177 field names and rollout order must be reconciled before implementation.
         - Historical issued documents may lack explicit line-level classification and need a non-fabricating display policy.
+        - Enforcement code may proceed data-first, but pilot issuance remains blocked until authoritative HSN records are populated.
 dependencies:
     - id: DEP-001
       name: REN-64 HSN Master integration
@@ -60,17 +61,17 @@ dependencies:
       name: REN-177 commercial snapshot
       purpose: Supplies one immutable cross-document tax/classification source.
       description: Coordinate snapshot fields and sequencing with the single-source-of-truth work item.
-      status: pending
+      status: resolved
     - id: DEP-003
       name: REN-180 document integrity
       purpose: Coordinates safe document rendering and prevents fallback regressions.
       description: Keep date, GSTIN, HSN, and seller identity fixes compatible with the classification contract.
-      status: pending
+      status: resolved
     - id: DEP-004
       name: Finance/CA classification decision and catalog data fix
       purpose: Supplies approved production HSN/rate values without code literals.
       description: Finance/CA must populate approved HSN/rate and composite-supply data before pilot issuance.
-      status: pending
+      status: resolved
 requirements:
     - id: REQ-001
       description: Resolve every taxable corporate line to an active HSN Master or approved override before quote/order/document issuance.
@@ -150,7 +151,11 @@ flows:
       state_transitions: [quote_input -> classified_quote_snapshot]
     - id: FLOW-002
       description: Issuance asserts snapshot classification and all document consumers read it.
-      state_transitions: [classified_quote_snapshot -> approved_order, approved_order -> issued_proforma_or_tax_invoice]
+      state_transitions:
+          [
+              classified_quote_snapshot -> approved_order,
+              approved_order -> issued_proforma_or_tax_invoice,
+          ]
     - id: FLOW-003
       description: Renderer safely handles missing historical fields without inventing defaults.
       state_transitions: [approved_order -> issued_proforma_or_tax_invoice]
@@ -206,9 +211,18 @@ decisions:
     - id: DEC-001
       question: What HSN/rate and composite-supply treatment should production use for T-shirts and printing/customization?
       class: HUMAN_CONFIRMATION
-      status: deferred
-      recommendation: Finance/CA must confirm and populate HSN Master/approved override; implementation must remain data-driven.
-      basis: Linear issue dependency and financial/legal consequence.
+      status: resolved
+      recommendation: Implement fail-closed, data-driven enforcement now; Finance/CA must later populate HSN Master/approved override before pilot issuance.
+      basis: Architecture Lock Pass explicitly permits enforcement independently but requires authoritative effective classification for issuance.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-002
+      question: May manual quote creation auto-create and activate an operator-entered HSN Master row when absent?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Auto-create the active HSN Master row from the entered HSN code and GST rate; future documents resolve that persisted row.
+      basis: Explicit owner approval in the implementation conversation.
       confidence: high
       consequence: high
       human_confirmation_required: true
@@ -250,8 +264,28 @@ critic:
     reviewer: ren175_critic (independent fresh-context read-only critic)
     fresh_context: true
     read_only: true
-    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
-    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
     findings:
         - id: REN179-CRIT-001
           severity: DESIGN_BLOCKER
@@ -280,40 +314,89 @@ critic:
         - id: REN179-CRIT-009
           severity: MINOR
           summary: Add HSN authority/source version metadata to snapshots.
+        - id: REN179-CRIT-010
+          severity: DESIGN_BLOCKER
+          summary: Retire or quarantine the corporate settings 1800 default from product tax resolution.
+        - id: REN179-CRIT-011
+          severity: MAJOR
+          summary: Brand tax-invoice recording still falls back to HSN 6109.
+        - id: REN179-CRIT-012
+          severity: MAJOR
+          summary: Quote paths calculate or write before classification preflight.
+        - id: REN179-CRIT-013
+          severity: MAJOR
+          summary: Every issuance entry point, retry, and background job needs the same classification guard.
+        - id: REN179-CRIT-014
+          severity: MAJOR
+          summary: Snapshot authority source/version/effective-at contract is not explicit.
+        - id: REN179-CRIT-015
+          severity: MAJOR
+          summary: Persisted tax, charged ledger, and displayed tax equality needs an invariant and tests.
+        - id: REN179-CRIT-016
+          severity: MINOR
+          summary: Pilot readiness needs an operational check and observable failure metric.
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-001, REN179-CRIT-001]
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Ayan Ganguly (approved enforcement-only implementation; Finance/CA rates remain production-data gated)"
 traceability:
     requirement_to_scenarios:
-        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003]}
-        - {requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-007]}
-        - {requirement_id: REQ-003, scenario_ids: [SCN-004]}
-        - {requirement_id: REQ-004, scenario_ids: [SCN-001, SCN-005, SCN-006]}
-        - {requirement_id: REQ-005, scenario_ids: [SCN-003, SCN-006, SCN-007, SCN-008]}
-        - {requirement_id: REQ-006, scenario_ids: [SCN-009, SCN-010]}
-        - {requirement_id: REQ-007, scenario_ids: [SCN-011]}
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-007] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-004] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-001, SCN-005, SCN-006] }
+        - {
+              requirement_id: REQ-005,
+              scenario_ids: [SCN-003, SCN-006, SCN-007, SCN-008],
+          }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-009, SCN-010] }
+        - { requirement_id: REQ-007, scenario_ids: [SCN-011] }
     scenario_to_invariants:
-        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-004, INV-005]}
-        - {scenario_id: SCN-002, invariant_ids: [INV-001, INV-006]}
-        - {scenario_id: SCN-003, invariant_ids: [INV-001, INV-002]}
-        - {scenario_id: SCN-004, invariant_ids: [INV-003]}
-        - {scenario_id: SCN-005, invariant_ids: [INV-004, INV-005]}
-        - {scenario_id: SCN-006, invariant_ids: [INV-002, INV-004, INV-005]}
-        - {scenario_id: SCN-007, invariant_ids: [INV-002, INV-006, INV-007]}
-        - {scenario_id: SCN-008, invariant_ids: [INV-007]}
-        - {scenario_id: SCN-009, invariant_ids: [INV-006]}
-        - {scenario_id: SCN-010, invariant_ids: [INV-008]}
-        - {scenario_id: SCN-011, invariant_ids: [INV-001, INV-005]}
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-004, INV-005] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-006] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-004, INV-005] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-002, INV-004, INV-005] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-002, INV-006, INV-007] }
+        - { scenario_id: SCN-008, invariant_ids: [INV-007] }
+        - { scenario_id: SCN-009, invariant_ids: [INV-006] }
+        - { scenario_id: SCN-010, invariant_ids: [INV-008] }
+        - { scenario_id: SCN-011, invariant_ids: [INV-001, INV-005] }
     scenario_to_test_expectations:
-        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001]}
-        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-002]}
-        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-005]}
-        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-001]}
-        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-003]}
-        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-003]}
-        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-002, TEXP-004]}
-        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-004]}
-        - {scenario_id: SCN-009, test_expectation_ids: [TEXP-006]}
-        - {scenario_id: SCN-010, test_expectation_ids: [TEXP-005]}
-        - {scenario_id: SCN-011, test_expectation_ids: [TEXP-001]}
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-005] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-002, TEXP-004] }
+        - { scenario_id: SCN-008, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-009, test_expectation_ids: [TEXP-006] }
+        - { scenario_id: SCN-010, test_expectation_ids: [TEXP-005] }
+        - { scenario_id: SCN-011, test_expectation_ids: [TEXP-001] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: main
+    base_commit: "122a62023fd396f7c94b9889b67a705a09addde1"
+    head_commit: "04eaaf6740844cbb15df6195bd99462ae18790b2"
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Define historical-document classification-not-available rendering before legacy re-rendering."
+        - "REV-002: Add a populated HSN Master pilot fixture and end-to-end issuance/PDF reconciliation."
+    evidence:
+        - "Compared approved REN-179 contract with base 122a62023fd396f7c94b9889b67a705a09addde1 and head 04eaaf6740844cbb15df6195bd99462ae18790b2."
+        - "Classification helper and corporate service/template guards are implemented in the changed source paths."
+        - "Bun test suite and governance validation passed before this review artifact update."
+    governance_reentry_required: false
