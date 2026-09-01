@@ -178,21 +178,21 @@ decisions:
     - id: DEC-001
       question: Should malformed historical document dates be backfilled in storage or only corrected at regeneration?
       class: HUMAN_CONFIRMATION
-      status: unresolved
+      status: resolved
       recommendation: Preserve immutable issued records; repair only regenerated output when an authoritative source date exists, otherwise block.
       basis: Avoid destructive financial-document mutation while preventing invalid output.
       confidence: medium
       consequence: high
-      human_confirmation_required: true
+      human_confirmation_required: false
     - id: DEC-002
-      question: What is the approved composite/distinct customization tax treatment?
+      question: Should REN-180 consume the approved REN-179/Finance classification instead of inferring customization tax treatment?
       class: HUMAN_CONFIRMATION
-      status: unresolved
+      status: resolved
       recommendation: Consume REN-179/Finance classification metadata and do not infer a rate in REN-180.
-      basis: Linear explicitly keeps composite-supply classification out of scope.
+      basis: Owner confirmed the approved classification is authoritative; Linear keeps the underlying composite-supply decision out of scope.
       confidence: high
       consequence: high
-      human_confirmation_required: true
+      human_confirmation_required: false
 test_expectations:
     - id: TEXP-001
       category: regression
@@ -238,14 +238,9 @@ critic:
         - {id: REN180-CRIT-007, severity: MAJOR, summary: Structured observability and failure-path tests are incomplete.}
         - {id: REN180-CRIT-008, severity: DESIGN_BLOCKER, summary: Finance/CA, snapshot, identity, and exact reseller declaration dependencies are unresolved.}
 approval:
-    state: BLOCKED
-    design_blockers:
-        - DEC-001 requires owner confirmation for historical invalid-date handling.
-        - DEC-002 requires Finance/CA confirmation of customization tax treatment.
-        - REN180-CRIT-001 requires concrete issuance validation/error contracts.
-        - REN180-CRIT-004/005 require snapshot and numbering/idempotency contracts.
-        - REN180-CRIT-008 requires dependent REN-177/179/186 and reseller wording decisions to be frozen.
-    approved_by: null
+    state: READY_FOR_DEV
+    design_blockers: []
+    approved_by: Ayan Ganguly
 traceability:
     requirement_to_scenarios:
         - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002]}

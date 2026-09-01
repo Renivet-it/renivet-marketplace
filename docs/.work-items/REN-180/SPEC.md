@@ -23,6 +23,15 @@ Corporate PI, tax invoice, and related documents must render the persisted corpo
 6. Route commission-invoice numbering through `nextCorporateDocumentNumber` and reconcile declaration/notes text with the reseller model.
 7. Make order-summary advance/balance display read from or reconcile against the canonical commercial/payment snapshot used by PI, FO, invoice, and settlement.
 
+## Concrete issuance contract
+
+- The gate applies before a PI or tax invoice is created/marked `issued`, and also before regenerating an issued document. Draft quote editing may continue without GSTIN/HSN.
+- The gate reads the REN-177 snapshot adapter (version/hash plus line items, tax classification, totals, and payment state) in the same transaction as document issuance. Missing, stale, or mismatched snapshots return a structured `CORPORATE_DOCUMENT_SOURCE_INVALID` error.
+- Missing customer GSTIN or any taxable-line HSN returns `CORPORATE_DOCUMENT_TAX_DATA_INCOMPLETE`; no document is marked issued.
+- A malformed persisted date is never replaced with “today.” Regeneration uses the authoritative stored issue date, then the source quote/order creation date; if neither is valid it returns `CORPORATE_DOCUMENT_DATE_INVALID`. `validUntil` is omitted when absent and is blocked when present but malformed.
+- Commission numbering is allocated once through `nextCorporateDocumentNumber`, persisted with the commission document, and reused by retries; a uniqueness conflict retries allocation transactionally.
+- Corporate payloads expose explicit `billTo` and `shipTo` parties. For this order they are both Mili AI; shipping fee rows are omitted when `customerShippingCharge` is `NOT_CHARGED`.
+
 ## Explicit exclusions
 
 - Composite-supply tax classification remains a Finance/CA decision; this task consumes the approved classification.
@@ -33,9 +42,11 @@ Corporate PI, tax invoice, and related documents must render the persisted corpo
 ## Decisions / assumptions
 
 - The exact `documentDate` key mismatch is an `AUTO_DECIDE` defect fix.
-- “Required GSTIN/HSN” means non-empty persisted values at issuance; no GSTIN checksum/format validator is introduced.
-- Existing issued documents are immutable; invalid legacy records are repaired on regeneration only when source data is available, otherwise regeneration is blocked with an actionable error.
-- The canonical commercial snapshot/payment state from REN-177 is the source of truth; if unavailable, issuance/display must fail closed rather than recalculate silently.
+- “Required GSTIN/HSN” means non-empty persisted values at PI/tax-invoice issuance and regeneration; no GSTIN checksum/format validator is introduced.
+- Existing issued documents remain immutable. Invalid legacy records are corrected only in regenerated output when an authoritative date exists; otherwise regeneration is blocked with an actionable error. **Owner confirmed.**
+- The canonical commercial snapshot/payment state from REN-177 is the source of truth; if unavailable, issuance/display fails closed rather than recalculating silently. **Owner confirmed.**
+- Customization GST uses the approved HSN/tax classification from REN-179; no hard-coded 18% fallback. **Owner confirmed.**
+- Commission numbers are persistent and retry-stable through the shared numbering authority. **Owner confirmed.**
 
 ## Acceptance examples
 
