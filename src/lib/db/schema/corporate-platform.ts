@@ -391,6 +391,10 @@ export const corporateQuotes = pgTable(
             .default(0),
         gstAmountPaise: integer("gst_amount_paise").notNull().default(0),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         advanceAmountPaise: integer("advance_amount_paise")
             .notNull()
             .default(0),
@@ -451,6 +455,10 @@ export const corporateQuoteRevisions = pgTable(
             .default(0),
         gstAmountPaise: integer("gst_amount_paise").notNull().default(0),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         comments: text("comments"),
         createdByUserId: text("created_by_user_id").references(() => users.id, {
             onDelete: "set null",
@@ -836,6 +844,10 @@ export const corporateProformaInvoices = pgTable(
         subtotalPaise: integer("subtotal_paise").notNull(),
         gstAmountPaise: integer("gst_amount_paise").notNull(),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         validUntil: date("valid_until"),
         paymentTerms: text("payment_terms"),
         deliveryTimeline: text("delivery_timeline"),
@@ -1067,6 +1079,10 @@ export const corporateTaxInvoices = pgTable("corporate_tax_invoices", {
     sgstPaise: integer("sgst_paise").notNull().default(0),
     igstPaise: integer("igst_paise").notNull().default(0),
     totalAmountPaise: integer("total_amount_paise").notNull(),
+    customizations: jsonb("customizations")
+        .$type<Array<Record<string, unknown>>>()
+        .notNull()
+        .default([]),
     advanceAdjustmentPaise: integer("advance_adjustment_paise")
         .notNull()
         .default(0),
@@ -1298,6 +1314,10 @@ export const corporateSettlementStatements = pgTable(
             .notNull()
             .default("issued"),
         notes: text("notes"),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         ...timestamps,
     },
     (table) => ({

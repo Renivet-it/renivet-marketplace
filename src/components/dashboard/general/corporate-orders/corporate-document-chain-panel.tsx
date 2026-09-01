@@ -281,6 +281,17 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             deliveryMode,
             paymentTerms,
             deliveryInstructions: deliveryInstructions || null,
+            customizations:
+                toPaise(customizationCharges) > 0
+                    ? [
+                          {
+                              name: "Packaging / Extras",
+                              amountPaise: toPaise(customizationCharges),
+                              taxTreatment: "included_in_product_supply",
+                              displayOrder: 1,
+                          },
+                      ]
+                    : [],
         });
     };
 
@@ -573,9 +584,7 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                         const baseGstAmt = Math.round(
                             (baseSubtotal * parsedBaseGst) / 100
                         );
-                        const extrasGstAmt = Math.round(
-                            (parsedExtras * 18) / 100
-                        );
+                        const extrasGstAmt = 0;
                         const grandTotal =
                             baseSubtotal +
                             parsedExtras +

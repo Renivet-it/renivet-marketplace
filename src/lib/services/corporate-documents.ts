@@ -281,6 +281,11 @@ export const corporateDocumentService = {
             orderBy: [desc(corporateProformaInvoices.createdAt)],
         });
         if (existing) return existing;
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const [settings, invoiceNumber] = await Promise.all([
             getCorporateDocumentSettings(),
@@ -302,6 +307,13 @@ export const corporateDocumentService = {
                 subtotalPaise: order.subtotalPaise + order.customizationPaise,
                 gstAmountPaise: order.gstPaise,
                 totalAmountPaise: order.totalPaise,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 paymentTerms: settings.defaultPaymentTerms,
                 deliveryTimeline:
                     "Delivery timeline will be confirmed after order review and artwork confirmation.",
@@ -334,6 +346,28 @@ export const corporateDocumentService = {
         );
         if (existing) return existing;
 
+        if (parsed.customizations.length > 0) {
+            await db.insert(corporateCustomizations).values(
+                parsed.customizations.map((customization, index) => ({
+                    orderId: order.id,
+                    customizationType: String(
+                        customization.name ??
+                            customization.type ??
+                            "Customization"
+                    ),
+                    costPaise: Math.max(
+                        0,
+                        Number(customization.amountPaise ?? 0)
+                    ),
+                    metadata: {
+                        ...customization,
+                        displayOrder: Number(
+                            customization.displayOrder ?? index + 1
+                        ),
+                    },
+                }))
+            );
+        }
         const orderCustomizations =
             await db.query.corporateCustomizations.findMany({
                 where: eq(corporateCustomizations.orderId, order.id),
@@ -658,6 +692,11 @@ export const corporateDocumentService = {
         );
 
         const statementDate = new Date();
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
         const statementNumber = await nextCorporateDocumentNumber(
             "SET",
             statementDate
@@ -687,6 +726,13 @@ export const corporateDocumentService = {
                 tdsPercentBps,
                 tdsAmountPaise,
                 netRemittancePaise,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 status: "issued",
                 notes: input.notes ?? null,
             })

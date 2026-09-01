@@ -215,6 +215,7 @@ export const corporateQuoteRevisionInputSchema = z.object({
     quoteId: z.string().uuid(),
     subtotalPaise: z.number().int().nonnegative(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     gstAmountPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().nonnegative(),
     comments: z.string().trim().max(1000).nullable().optional(),
@@ -542,6 +543,7 @@ export const corporateVendorPurchaseOrderInputSchema = z.object({
     deliveryMode: z.enum(["renivet_warehouse", "direct_to_customer"]),
     paymentTerms: z.string().trim().min(3).max(500),
     deliveryInstructions: z.string().trim().max(1000).nullable().optional(),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
 });
 
 export const corporateBrandTaxInvoiceInputSchema = z.object({

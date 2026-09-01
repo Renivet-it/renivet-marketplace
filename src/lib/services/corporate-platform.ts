@@ -1655,6 +1655,7 @@ class CorporatePlatformService {
             customizationCostPaise: created.customizationCostPaise,
             gstAmountPaise: created.gstAmountPaise,
             totalAmountPaise: created.totalAmountPaise,
+            customizations: customizationRows.map((row) => ({ ...row })),
             comments: parsed.comments ?? null,
             createdByUserId: actorUserId,
         });
@@ -1852,6 +1853,7 @@ class CorporatePlatformService {
                 customizationCostPaise: parsed.customizationCostPaise,
                 gstAmountPaise,
                 totalAmountPaise,
+                customizations: parsed.customizations,
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             });
@@ -2560,6 +2562,7 @@ class CorporatePlatformService {
                 customizationCostPaise: parsed.customizationCostPaise,
                 gstAmountPaise: parsed.gstAmountPaise,
                 totalAmountPaise: parsed.totalAmountPaise,
+                customizations: parsed.customizations,
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             })
@@ -2906,7 +2909,6 @@ class CorporatePlatformService {
             );
             createdOrderId = createdOrder.id;
         }
-
         const updated = await db
             .update(corporatePurchaseOrders)
             .set({
@@ -3941,6 +3943,11 @@ class CorporatePlatformService {
             orderBy: [desc(corporateProformaInvoices.createdAt)],
         });
         if (existing) return existing;
+        const quoteCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.quoteId, quote.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const [settings, invoiceNumber] = await Promise.all([
             getCorporateDocumentSettings(),
@@ -3968,6 +3975,13 @@ class CorporatePlatformService {
                     quote.subtotalPaise + quote.customizationCostPaise,
                 gstAmountPaise: quote.gstAmountPaise,
                 totalAmountPaise: quote.totalAmountPaise,
+                customizations: quoteCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 paymentTerms: settings.defaultPaymentTerms,
                 termsAndConditions:
                     "This proforma invoice is not a tax invoice. Supply is subject to quote acceptance, receipt of the corporate purchase order, and payment confirmation.",
@@ -4036,6 +4050,11 @@ class CorporatePlatformService {
         });
         if (existingInvoice) return existingInvoice;
 
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
         const [
             settings,
             brandDetails,
@@ -4114,6 +4133,13 @@ class CorporatePlatformService {
                 sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
                 igstPaise: isIntraState ? 0 : order.gstPaise,
                 totalAmountPaise: order.totalPaise,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 advanceAdjustmentPaise: order.advancePaidPaise,
                 paymentTerms: "Net 15",
                 bankDetailsSnapshot: settings
