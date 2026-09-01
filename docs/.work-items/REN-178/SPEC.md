@@ -12,9 +12,15 @@ The Fulfillment Order form, mutation schema, service, snapshots, PDF templates, 
 
 ## Decisions and open questions
 
-- DEC-001 (HUMAN_CONFIRMATION): Finance/CA decides composite versus distinct tax treatment; this task stores the treatment metadata but does not choose a rate.
-- DEC-002 (HUMAN_CONFIRMATION): Existing scalar customization amounts must be migrated as a synthetic customization row with an explicit legacy marker, or an alternative approved compatibility policy must be chosen.
-- DEC-003 (RECOMMEND_CONTINUE): Use an order-level customization parent when no product line ID exists, while preserving product/line identifiers when supplied.
+- DEC-001 (RESOLVED): If a customization is part of the main product supply, it uses the parent product tax treatment. If it is separate, it uses its own approved HSN/GST classification. FO, PI, and invoice display the same result.
+- DEC-002 (RESOLVED): Existing scalar customization amounts become one synthetic `Legacy Customization` row with an explicit legacy marker.
+- DEC-003 (RESOLVED): REN-178 keeps one product per corporate order and supports multiple customization rows beneath that product; multi-product order lines are out of scope.
+
+## Canonical design
+
+The existing customization table is expanded with structured fields and a stable display order. The order-level commercial snapshot stores the ordered customization list and its version. Quote revisions capture their own immutable customization list. FO, PI, customer invoice, settlement, replacement, and related document readers consume that snapshot rather than re-deriving amounts from UI fields or mutable rows. Parent customization tax treatment references the product classification; separate treatment references its own approved classification.
+
+All parent-plus-customization writes use one database transaction with idempotent retry behavior. The legacy backfill is bounded and idempotent, reports reconciliation counts, and preserves old scalar columns until the read/write cutover is verified.
 
 ## Verification intent
 

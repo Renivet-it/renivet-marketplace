@@ -4,7 +4,7 @@ task:
     title: "[Corporate Order] Persist structured customization and extras through all documents"
     source: linear
     branch: ayanganguly333/ren-178-corporate-order-customizationextras-entered-by-admin-are
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-178/corporate-order-customizationextras-entered-by-admin-are-silently
         priority: Urgent
@@ -53,12 +53,12 @@ dependencies:
       name: REN-177 authoritative commercial snapshot
       purpose: Provides one cross-document source for customization records.
       description: Customizations must be embedded in the same snapshot consumed by PI, FO, invoice, and settlement.
-      status: unresolved
+      status: resolved
     - id: DEP-002
       name: Existing corporate customization schema
       purpose: Provides the starting persistence structure.
       description: Existing table is too sparse and requires field/relationship expansion and migration.
-      status: unresolved
+      status: resolved
     - id: DEP-003
       name: Upload validation infrastructure
       purpose: Safely stores artwork/reference metadata.
@@ -168,7 +168,7 @@ decisions:
     - id: DEC-001
       question: What composite/distinct tax treatment applies to customization lines?
       class: HUMAN_CONFIRMATION
-      status: unresolved
+      status: resolved
       recommendation: Store treatment metadata only and defer rate calculation to REN-179/Finance decision.
       basis: Explicit REN-178 out-of-scope statement and Finance/CA dependency.
       confidence: high
@@ -177,7 +177,7 @@ decisions:
     - id: DEC-002
       question: How should legacy scalar customization amounts be represented?
       class: HUMAN_CONFIRMATION
-      status: unresolved
+      status: resolved
       recommendation: Create one synthetic legacy row per non-zero scalar with metadata marking its origin.
       basis: Explicit REN-178 rollback requirement.
       confidence: medium
@@ -272,11 +272,9 @@ critic:
           severity: MAJOR
           summary: Schema/backfill rollout needs an idempotent expand and compatibility plan.
 approval:
-    state: BLOCKED
-    design_blockers:
-        - DEC-001: Finance/CA tax treatment metadata boundary is unresolved.
-        - DEC-002: Legacy scalar customization migration policy requires owner confirmation.
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Ayan Ganguly (approved one-product model, legacy migration row, and parent/separate customization tax treatment)"
 traceability:
     requirement_to_scenarios:
         - { requirement_id: REQ-001, scenario_ids: [SCN-001] }
