@@ -4,7 +4,7 @@ task:
     title: "[Corporate Order] Proforma/tax document data integrity: invalid date, missing GSTIN/HSN, wrong seller identity framing"
     source: linear
     branch: ayanganguly333/ren-180-corporate-order-proformatax-document-data-integrity-invalid
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-180/corporate-order-proformatax-document-data-integrity-invalid
         priority: High
@@ -241,6 +241,33 @@ approval:
     state: APPROVED
     design_blockers: []
     approved_by: Ayan Ganguly
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: origin/master
+    base_commit: "0423b6be32340155d480aa5fc49d3f88eeff1523"
+    head_commit: "62ba9db634f7edbd58cb5a26a74a6016b38137b1"
+    pr_url: null
+    material_drift: MATERIAL_DRIFT
+    reconciliation:
+        requirements: FAIL
+        scenarios: FAIL
+        invariants: FAIL
+        architecture: PARTIAL
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PARTIAL
+    blocking_findings:
+        - "REV-001: Ship To and no-shipping-row behavior are not implemented."
+        - "REV-002: Canonical snapshot/payment reconciliation is incomplete."
+        - "REV-003: Commission number is not persisted for retry stability."
+    required_actions:
+        - Implement explicit shipTo and conditional shipping rows.
+        - Wire summary and document readers to canonical snapshot/payment state.
+        - Persist and reuse commission document numbers transactionally.
+    evidence:
+        - Compared the approved contract with the recorded base-to-head Git diff.
+    governance_reentry_required: true
 traceability:
     requirement_to_scenarios:
         - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002]}
