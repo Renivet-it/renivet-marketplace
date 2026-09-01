@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
     boolean,
     date,
@@ -1290,6 +1290,13 @@ export const corporateSettlementStatements = pgTable(
             .notNull()
             .references(() => brands.id, { onDelete: "cascade" }),
         statementNumber: text("statement_number").notNull(),
+        version: integer("version").notNull().default(1),
+        supersedesStatementId: uuid("supersedes_statement_id"),
+        isCurrent: boolean("is_current").notNull().default(true),
+        issuedByUserId: text("issued_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        adjustmentReason: text("adjustment_reason"),
         statementDate: date("statement_date").notNull(),
         grossPaidPaise: integer("gross_paid_paise").notNull(),
         gstEmbeddedPaise: integer("gst_embedded_paise").notNull(),
@@ -1301,9 +1308,9 @@ export const corporateSettlementStatements = pgTable(
         commissionGstAmountPaise: integer(
             "commission_gst_amount_paise"
         ).notNull(),
-        tcsPercentBps: integer("tcs_percent_bps").notNull().default(50),
+        tcsPercentBps: integer("tcs_percent_bps").notNull().default(0),
         tcsAmountPaise: integer("tcs_amount_paise").notNull(),
-        tdsPercentBps: integer("tds_percent_bps").notNull().default(10),
+        tdsPercentBps: integer("tds_percent_bps").notNull().default(0),
         tdsAmountPaise: integer("tds_amount_paise").notNull(),
         netRemittancePaise: integer("net_remittance_paise").notNull(),
         status: text("status", {
@@ -1325,6 +1332,11 @@ export const corporateSettlementStatements = pgTable(
         orderIdx: index("corporate_settlement_statements_order_idx").on(
             table.orderId
         ),
+        currentOrderIdx: uniqueIndex(
+            "corporate_settlement_statements_current_order_idx"
+        )
+            .on(table.orderId)
+            .where(sql`${table.isCurrent} = true`),
         brandIdx: index("corporate_settlement_statements_brand_idx").on(
             table.brandId
         ),

@@ -85,8 +85,11 @@ export async function GET(
         const [statement, invoice, settings, brandConfidential] =
             await Promise.all([
                 db.query.corporateSettlementStatements.findFirst({
-                    where: eq(corporateSettlementStatements.orderId, order.id),
-                    orderBy: [desc(corporateSettlementStatements.createdAt)],
+                    where: and(
+                        eq(corporateSettlementStatements.orderId, order.id),
+                        eq(corporateSettlementStatements.isCurrent, true)
+                    ),
+                    orderBy: [desc(corporateSettlementStatements.version)],
                 }),
                 db.query.corporateTaxInvoices.findFirst({
                     where: eq(corporateTaxInvoices.orderId, order.id),
@@ -98,93 +101,38 @@ export async function GET(
                 }),
             ]);
 
-        // Fallback calculations if not explicitly saved:
-        const grossPaidPaise =
-            statement?.grossPaidPaise ??
-            invoice?.totalAmountPaise ??
-            order.totalAmountPaise ??
-            802000;
-
-        const gstEmbeddedPaise =
-            statement?.gstEmbeddedPaise ??
-            (invoice ? invoice.cgstPaise + invoice.sgstPaise + invoice.igstPaise : order.gstPaise ?? 102000);
-
-        const taxableValuePaise =
-            statement?.taxableValuePaise ??
-            (grossPaidPaise - gstEmbeddedPaise);
-
-        const commissionPercentBps =
-            statement?.commissionPercentBps ??
-            (order.quote?.commissionAmountPaise && taxableValuePaise > 0
-                ? Math.round((order.quote.commissionAmountPaise * 10000) / taxableValuePaise)
-                : 2000); // default 20%
-
-        const commissionAmountPaise =
-            statement?.commissionAmountPaise ??
-            Math.round((taxableValuePaise * commissionPercentBps) / 10000);
-
-        const commissionGstRateBps =
-            statement?.commissionGstRateBps ?? order.commissionGstRateBps;
-        if (commissionGstRateBps == null) {
+        if (!statement) {
             return NextResponse.json(
                 {
-                    error: "Commission GST rate is not set for this order",
+                    message:
+                        "Settlement statement has not been issued for this order",
                 },
                 { status: 422 }
             );
         }
-        const commissionGstAmountPaise =
-            statement?.commissionGstAmountPaise ??
-            Math.round((commissionAmountPaise * commissionGstRateBps) / 10000);
-
-        const tcsPercentBps = statement?.tcsPercentBps ?? 50; // 0.5%
-        const tcsAmountPaise =
-            statement?.tcsAmountPaise ??
-            Math.round((taxableValuePaise * tcsPercentBps) / 10000);
-
-        const tdsPercentBps = statement?.tdsPercentBps ?? 10; // 0.1%
-        const tdsAmountPaise =
-            statement?.tdsAmountPaise ??
-            Math.round((grossPaidPaise * tdsPercentBps) / 10000);
-
-        const netRemittancePaise =
-            statement?.netRemittancePaise ??
-            (taxableValuePaise -
-                commissionAmountPaise -
-                commissionGstAmountPaise -
-                tcsAmountPaise -
-                tdsAmountPaise);
-
-        const statementNumber =
-            statement?.statementNumber ??
-            `SET/2627/${String(order.sequenceNo ?? 1).padStart(5, "0")}`;
-        const statementDate = statement?.statementDate ?? new Date();
-
-        const invoiceNumber =
-            invoice?.invoiceNumber ??
-            `BAM/2627/${String(order.sequenceNo ?? 1).padStart(5, "0")}`;
 
         const brandAddress =
             corporatePartyAddress(brandConfidential ?? {}) ||
             "Registered brand address";
 
         const settlementData: CorporateSettlementData = {
-            statementNumber,
-            statementDate,
+            statementNumber: statement.statementNumber,
+            statementDate: statement.statementDate,
             orderNumber: order.publicOrderId,
-            invoiceNumber,
-            grossPaidPaise,
-            gstEmbeddedPaise,
-            taxableValuePaise,
-            commissionPercent: commissionPercentBps / 100,
-            commissionAmountPaise,
-            commissionGstRatePercent: commissionGstRateBps / 100,
-            commissionGstAmountPaise,
-            tcsPercent: tcsPercentBps / 100,
-            tcsAmountPaise,
-            tdsPercent: tdsPercentBps / 100,
-            tdsAmountPaise,
-            netRemittancePaise,
+            invoiceNumber: invoice?.invoiceNumber ?? "Not recorded",
+            version: statement.version,
+            grossPaidPaise: statement.grossPaidPaise,
+            gstEmbeddedPaise: statement.gstEmbeddedPaise,
+            taxableValuePaise: statement.taxableValuePaise,
+            commissionPercent: statement.commissionPercentBps / 100,
+            commissionAmountPaise: statement.commissionAmountPaise,
+            commissionGstRatePercent: statement.commissionGstRateBps / 100,
+            commissionGstAmountPaise: statement.commissionGstAmountPaise,
+            tcsPercent: statement.tcsPercentBps / 100,
+            tcsAmountPaise: statement.tcsAmountPaise,
+            tdsPercent: statement.tdsPercentBps / 100,
+            tdsAmountPaise: statement.tdsAmountPaise,
+            netRemittancePaise: statement.netRemittancePaise,
             brand: {
                 name: order.brand.name,
                 legalName: brandConfidential?.bankAccountHolderName || order.brand.name,
@@ -204,7 +152,7 @@ export async function GET(
                 pan: settings.pan || "AAACR1234F",
                 supportEmail: settings.supportEmail || "support@renivet.com",
             },
-            notes: statement?.notes || null,
+            notes: statement.notes || null,
         };
 
         const stream = await renderToStream(
@@ -215,7 +163,7 @@ export async function GET(
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
         }
 
-        const safeStatementNumber = statementNumber.replace(/[^a-z0-9_-]+/gi, "_");
+        const safeStatementNumber = statement.statementNumber.replace(/[^a-z0-9_-]+/gi, "_");
 
         return new NextResponse(Buffer.concat(chunks), {
             headers: {

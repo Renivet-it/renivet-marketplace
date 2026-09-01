@@ -163,6 +163,7 @@ async function main() {
             <CorporateSettlementStatementTemplate
                 data={{
                     statementNumber: "SET/2627/00001",
+                    version: 1,
                     statementDate: "2026-08-20",
                     orderNumber: "REN-CORP-PO-1787161038701",
                     invoiceNumber: "BAM/2627/00001",

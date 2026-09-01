@@ -115,10 +115,7 @@ export async function GET(
             }),
         ]);
 
-        const commissionTaxablePaise =
-            order.commissionAmountPaise ||
-            (order.quote?.commissionAmountPaise ?? 0) ||
-            Math.round(((order.subtotalPaise ?? 400000) * 1000) / 10000); // default 10%
+        const commissionTaxablePaise = order.commissionAmountPaise;
 
         const commissionGstRateBps = order.commissionGstRateBps;
         if (commissionGstRateBps == null) {
@@ -130,13 +127,25 @@ export async function GET(
             );
         }
 
-        const commissionGstPaise =
-            order.commissionGstAmountPaise ||
-            Math.round((commissionTaxablePaise * commissionGstRateBps) / 10_000);
-
-        const commissionTotalPaise =
-            order.commissionTotalPaise ||
-            commissionTaxablePaise + commissionGstPaise;
+        const commissionGstPaise = order.commissionGstAmountPaise;
+        const commissionTotalPaise = order.commissionTotalPaise;
+        if (
+            !Number.isFinite(commissionTaxablePaise) ||
+            !Number.isFinite(commissionGstPaise) ||
+            !Number.isFinite(commissionTotalPaise) ||
+            commissionTaxablePaise < 0 ||
+            commissionGstPaise < 0 ||
+            commissionTotalPaise !==
+                commissionTaxablePaise + commissionGstPaise
+        ) {
+            return NextResponse.json(
+                {
+                    error:
+                        "A complete agreed commission snapshot is required for this order",
+                },
+                { status: 422 }
+            );
+        }
 
         const renivetStateCode = (settings.gstin || "19").slice(0, 2);
         const brandStateCode = (brandConfidential?.gstin || "19").slice(0, 2);

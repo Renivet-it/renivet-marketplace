@@ -296,6 +296,7 @@ function formatInr(paise: number) {
 
 export type CorporateSettlementData = {
     statementNumber: string;
+    version: number;
     statementDate: string | Date;
     orderNumber: string;
     invoiceNumber: string;
@@ -362,7 +363,7 @@ export function CorporateSettlementStatementTemplate({
                 <View style={styles.grid}>
                     <View style={styles.party}>
                         <Text style={styles.sectionLabel}>
-                            ISSUED BY (MARKETPLACE FACILITATOR)
+                            ISSUED BY (RESELLER / SELLER OF RECORD)
                         </Text>
                         <Text style={styles.name}>{data.renivet.name}</Text>
                         <Text style={styles.body}>{data.renivet.address}</Text>
@@ -386,7 +387,9 @@ export function CorporateSettlementStatementTemplate({
                 <View style={styles.meta}>
                     <View style={styles.metaCell}>
                         <Text style={styles.metaLabel}>Statement Number</Text>
-                        <Text style={styles.metaValue}>{data.statementNumber}</Text>
+                        <Text style={styles.metaValue}>
+                            {data.statementNumber} (v{data.version})
+                        </Text>
                     </View>
                     <View style={styles.metaCell}>
                         <Text style={styles.metaLabel}>Statement Date</Text>
@@ -409,7 +412,7 @@ export function CorporateSettlementStatementTemplate({
                 {/* Settlement Waterfall Table */}
                 <View style={styles.waterfallTable}>
                     <View style={styles.waterfallHead}>
-                        <Text>SETTLEMENT WATERFALL (COMMISSION + TCS + TDS)</Text>
+                        <Text>SETTLEMENT WATERFALL</Text>
                         <Text>AMOUNT</Text>
                     </View>
 
@@ -450,23 +453,23 @@ export function CorporateSettlementStatementTemplate({
                         </Text>
                     </View>
 
-                    <View style={styles.waterfallRow}>
-                        <Text>
-                            - TCS ({data.tcsPercent}% of Taxable Value u/s 52 of GST Act)
-                        </Text>
-                        <Text style={styles.deductionValue}>
-                            -{formatInr(data.tcsAmountPaise)}
-                        </Text>
-                    </View>
+                    {data.tcsAmountPaise > 0 ? (
+                        <View style={styles.waterfallRow}>
+                            <Text>- TCS ({data.tcsPercent}% of Taxable Value)</Text>
+                            <Text style={styles.deductionValue}>
+                                -{formatInr(data.tcsAmountPaise)}
+                            </Text>
+                        </View>
+                    ) : null}
 
-                    <View style={styles.waterfallRow}>
-                        <Text>
-                            - TDS ({data.tdsPercent}% of Gross u/s 194-O of Income Tax Act)
-                        </Text>
-                        <Text style={styles.deductionValue}>
-                            -{formatInr(data.tdsAmountPaise)}
-                        </Text>
-                    </View>
+                    {data.tdsAmountPaise > 0 ? (
+                        <View style={styles.waterfallRow}>
+                            <Text>- TDS ({data.tdsPercent}% of Gross)</Text>
+                            <Text style={styles.deductionValue}>
+                                -{formatInr(data.tdsAmountPaise)}
+                            </Text>
+                        </View>
+                    ) : null}
 
                     <View style={[styles.waterfallRow, styles.waterfallNet]}>
                         <Text>= NET REMITTANCE TO BRAND</Text>
@@ -494,12 +497,6 @@ export function CorporateSettlementStatementTemplate({
                         <Text style={[styles.summaryHeadCell, styles.colGstCommn]}>
                             GST Commn
                         </Text>
-                        <Text style={[styles.summaryHeadCell, styles.colTcs]}>
-                            TCS
-                        </Text>
-                        <Text style={[styles.summaryHeadCell, styles.colTds]}>
-                            TDS
-                        </Text>
                         <Text
                             style={[
                                 styles.summaryHeadCell,
@@ -526,12 +523,6 @@ export function CorporateSettlementStatementTemplate({
                         <View style={[styles.summaryCell, styles.colGstCommn]}>
                             <Text>{formatInr(data.commissionGstAmountPaise)}</Text>
                         </View>
-                        <View style={[styles.summaryCell, styles.colTcs]}>
-                            <Text>{formatInr(data.tcsAmountPaise)}</Text>
-                        </View>
-                        <View style={[styles.summaryCell, styles.colTds]}>
-                            <Text>{formatInr(data.tdsAmountPaise)}</Text>
-                        </View>
                         <View
                             style={[
                                 styles.summaryCell,
@@ -551,13 +542,7 @@ export function CorporateSettlementStatementTemplate({
                             Statutory Declarations & Notes
                         </Text>
                         <Text style={styles.declarationText}>
-                            1. TCS @ 0.5% deducted under Section 52 of the CGST/SGST Act and credited against brand GSTIN.
-                        </Text>
-                        <Text style={styles.declarationText}>
-                            2. TDS @ 0.1% deducted under Section 194-O of the Income Tax Act on gross order value and credited against brand PAN.
-                        </Text>
-                        <Text style={styles.declarationText}>
-                            3. GST on commission charged at 18% under SAC 9985. The brand is eligible to claim Input Tax Credit (ITC).
+                            GST on commission is charged at {data.commissionGstRatePercent}% as recorded for this order.
                         </Text>
                         {data.notes ? (
                             <Text style={[styles.declarationText, { marginTop: 2, fontStyle: "italic" }]}>

@@ -221,44 +221,34 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             onError: (error) => handleClientError(error),
         });
 
-    const [commissionPercent, setCommissionPercent] = useState(
-        chain?.settlementStatement
-            ? String(chain.settlementStatement.commissionPercentBps / 100)
-            : order.quote?.commissionAmountPaise && proformaTaxablePaise > 0
-              ? String(
-                    Math.round(
-                        (order.quote.commissionAmountPaise * 100) /
-                            proformaTaxablePaise
-                    )
-                )
-              : "20"
-    );
-
     const settlementGrossPaidPaise =
         chain?.customerTaxInvoice?.totalAmountPaise ??
-        order.totalAmountPaise ??
-        802000;
+        order.totalAmountPaise;
     const settlementGstEmbeddedPaise = chain?.customerTaxInvoice
         ? chain.customerTaxInvoice.cgstPaise +
           chain.customerTaxInvoice.sgstPaise +
           chain.customerTaxInvoice.igstPaise
-        : (order.gstPaise ?? 102000);
+        : order.gstPaise;
     const settlementTaxablePaise = Math.max(
         0,
         settlementGrossPaidPaise - settlementGstEmbeddedPaise
     );
-    const parsedCommissionPercent = Math.max(
-        0,
-        Math.min(100, Number(commissionPercent) || 0)
-    );
-    const calculatedCommissionPaise = Math.round(
-        (settlementTaxablePaise * parsedCommissionPercent) / 100
-    );
+    const calculatedCommissionPaise = order.commissionAmountPaise;
+    const parsedCommissionPercent =
+        settlementTaxablePaise > 0
+            ? Math.round(
+                  (calculatedCommissionPaise * 10_000) /
+                      settlementTaxablePaise
+              ) / 100
+            : 0;
+    const commissionGstRatePercent =
+        (order.commissionGstRateBps ?? 0) / 100;
     const calculatedGstOnCommissionPaise = Math.round(
-        (calculatedCommissionPaise * 18) / 100
+        (calculatedCommissionPaise * (order.commissionGstRateBps ?? 0)) /
+            10_000
     );
-    const calculatedTcsPaise = Math.round(settlementTaxablePaise * 0.005);
-    const calculatedTdsPaise = Math.round(settlementGrossPaidPaise * 0.001);
+    const calculatedTcsPaise = 0;
+    const calculatedTdsPaise = 0;
     const calculatedNetRemittancePaise = Math.max(
         0,
         settlementTaxablePaise -
@@ -778,13 +768,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             ) : null}
                         </div>
                         <h3 className="mt-1 text-base font-semibold text-slate-900">
-                            Remit-to-Brand Settlement Statement (Commission +
-                            TCS + TDS)
+                            Remit-to-Brand Settlement Statement
                         </h3>
                         <p className="mt-0.5 text-xs text-slate-500">
-                            Select the platform commission percentage to
-                            generate the settlement waterfall statement for this
-                            order.
+                            Uses the agreed commission and commission GST saved
+                            on this order. Reseller settlements do not apply
+                            marketplace TCS or 194-O by default.
                         </p>
                     </div>
 
@@ -802,47 +791,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                 </div>
 
                 <div className="mt-4 grid gap-6 lg:grid-cols-12">
-                    {/* Left Controls: Commission Selector */}
+                    {/* Left Controls: Settlement source */}
                     <div className="space-y-4 lg:col-span-4">
-                        <div>
-                            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Platform Commission (%)
-                            </label>
-                            <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                {[5, 10, 15, 20, 25].map((pct) => (
-                                    <button
-                                        key={pct}
-                                        type="button"
-                                        onClick={() =>
-                                            setCommissionPercent(String(pct))
-                                        }
-                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                                            Number(commissionPercent) === pct
-                                                ? "bg-emerald-700 text-white shadow-sm"
-                                                : "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                                        }`}
-                                    >
-                                        {pct}%
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="mt-2.5">
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="0.5"
-                                    placeholder="Enter commission percentage"
-                                    value={commissionPercent}
-                                    onChange={(e) =>
-                                        setCommissionPercent(e.target.value)
-                                    }
-                                />
-                            </div>
-                            <p className="mt-1 text-[11px] text-slate-400">
-                                Standard corporate commission is usually between
-                                10% and 20%.
-                            </p>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                            Commission and GST are locked from the corporate
+                            order snapshot. Correct the order before issuing a
+                            settlement if these amounts are wrong.
                         </div>
 
                         <Button
@@ -851,15 +805,17 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             onClick={() =>
                                 issueSettlement.mutate({
                                     orderId: order.id,
-                                    commissionPercent: parsedCommissionPercent,
                                 })
                             }
-                            disabled={issueSettlement.isPending}
+                            disabled={
+                                issueSettlement.isPending ||
+                                Boolean(chain?.settlementStatement)
+                            }
                         >
                             {issueSettlement.isPending
                                 ? "Generating..."
                                 : chain?.settlementStatement
-                                  ? "Update Settlement Statement"
+                                  ? "Settlement Already Issued"
                                   : "Generate Settlement Statement"}
                         </Button>
                     </div>
@@ -914,7 +870,7 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             </div>
                             <div className="flex items-center justify-between px-4 py-2">
                                 <span className="text-slate-600">
-                                    - GST on commission (18% under SAC 9985)
+                                    - GST on commission ({commissionGstRatePercent}% as saved on order)
                                 </span>
                                 <span className="font-medium text-rose-600">
                                     -₹

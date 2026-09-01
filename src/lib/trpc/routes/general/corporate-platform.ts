@@ -444,15 +444,16 @@ export const corporatePlatformRouter = createTRPCRouter({
         .input(
             z.object({
                 orderId: z.string().uuid(),
-                commissionPercent: z.number().min(0).max(100),
                 notes: z.string().trim().max(1000).nullish(),
+                adjustmentReason: z.string().trim().min(3).max(1000).nullish(),
             })
         )
         .mutation(({ ctx, input }) => {
-            return corporateDocumentService.issueSettlementStatement(
-                ctx.user.id,
-                input
-            );
+            return corporateDocumentService.issueSettlementStatement(ctx.user.id, {
+                ...input,
+                notes: input.notes ?? undefined,
+                adjustmentReason: input.adjustmentReason ?? undefined,
+            });
         }),
     generateReport: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))

@@ -79,7 +79,7 @@ export async function nextBrandInvoiceNumber(params: {
 }
 
 export async function nextCorporateDocumentNumber(
-    prefix: "PI" | "RV" | "FO" | "RPO" | "CINV" | "DC" | "CN" | "DN" | "QT",
+    prefix: "PI" | "RV" | "FO" | "RPO" | "CINV" | "DC" | "CN" | "DN" | "QT" | "SET",
     date: string | Date = new Date()
 ) {
     const financialYear = corporateFinancialYear(date);
@@ -663,7 +663,11 @@ export const corporateDocumentService = {
 
     async issueSettlementStatement(
         actorUserId: string,
-        input: { orderId: string; commissionPercent: number; notes?: string }
+        input: {
+            orderId: string;
+            notes?: string;
+            adjustmentReason?: string;
+        }
     ) {
         const order = await getOrderOrThrow(input.orderId);
         if (!order.brandId || !order.brand) {
@@ -673,29 +677,56 @@ export const corporateDocumentService = {
             });
         }
 
+        const existingStatement =
+            await db.query.corporateSettlementStatements.findFirst({
+                where: and(
+                    eq(corporateSettlementStatements.orderId, order.id),
+                    eq(corporateSettlementStatements.isCurrent, true)
+                ),
+                orderBy: [desc(corporateSettlementStatements.version)],
+            });
+        const adjustmentReason = input.adjustmentReason?.trim() || null;
+        if (existingStatement && !adjustmentReason) return existingStatement;
+
         const invoice = await db.query.corporateTaxInvoices.findFirst({
             where: eq(corporateTaxInvoices.orderId, order.id),
             orderBy: [desc(corporateTaxInvoices.createdAt)],
         });
 
         const grossPaidPaise =
-            invoice?.totalAmountPaise ?? order.totalAmountPaise ?? 802000;
+            invoice?.totalAmountPaise ?? order.totalPaise;
         const gstEmbeddedPaise = invoice
             ? invoice.cgstPaise + invoice.sgstPaise + invoice.igstPaise
-            : (order.gstPaise ?? 102000);
+            : order.gstPaise;
+        if (
+            !Number.isFinite(grossPaidPaise) ||
+            !Number.isFinite(gstEmbeddedPaise) ||
+            grossPaidPaise < 0 ||
+            gstEmbeddedPaise < 0 ||
+            gstEmbeddedPaise > grossPaidPaise
+        ) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "A valid customer invoice or corporate order financial snapshot is required before settlement issuance",
+            });
+        }
         const taxableValuePaise = Math.max(
             0,
             grossPaidPaise - gstEmbeddedPaise
         );
 
-        const commissionPercent = Math.max(
-            0,
-            Math.min(100, Number(input.commissionPercent || 0))
-        );
-        const commissionPercentBps = Math.round(commissionPercent * 100);
-        const commissionAmountPaise = Math.round(
-            (taxableValuePaise * commissionPercentBps) / 10000
-        );
+        const commissionAmountPaise = order.commissionAmountPaise;
+        if (!Number.isFinite(commissionAmountPaise) || commissionAmountPaise < 0) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "An agreed commission amount is required before settlement issuance",
+            });
+        }
+        const commissionPercentBps =
+            taxableValuePaise > 0
+                ? Math.round((commissionAmountPaise * 10000) / taxableValuePaise)
+                : 0;
 
         const commissionGstRateBps = order.commissionGstRateBps;
         if (commissionGstRateBps == null) {
@@ -707,15 +738,11 @@ export const corporateDocumentService = {
             (commissionAmountPaise * commissionGstRateBps) / 10000
         );
 
-        const tcsPercentBps = 50; // 0.5% Section 52
-        const tcsAmountPaise = Math.round(
-            (taxableValuePaise * tcsPercentBps) / 10000
-        );
-
-        const tdsPercentBps = 10; // 0.1% Section 194-O
-        const tdsAmountPaise = Math.round(
-            (grossPaidPaise * tdsPercentBps) / 10000
-        );
+        // Reseller/seller-of-record corporate orders do not use marketplace TCS/194-O.
+        const tcsPercentBps = 0;
+        const tcsAmountPaise = 0;
+        const tdsPercentBps = 0;
+        const tdsAmountPaise = 0;
 
         const netRemittancePaise = Math.max(
             0,
@@ -732,74 +759,87 @@ export const corporateDocumentService = {
                 where: eq(corporateCustomizations.orderId, order.id),
                 orderBy: [asc(corporateCustomizations.createdAt)],
             });
-        const statementNumber = await nextCorporateDocumentNumber(
-            "SET",
-            statementDate
-        );
+        return db.transaction(async (tx) => {
+            const currentPayout = await tx.query.corporateBrandPayouts.findFirst({
+                where: eq(corporateBrandPayouts.orderId, order.id),
+            });
+            if (adjustmentReason && currentPayout?.payoutStatus === "paid") {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message:
+                        "A paid brand payout cannot be adjusted; create a separate finance-approved correction",
+                });
+            }
+            if (existingStatement) {
+                await tx
+                    .update(corporateSettlementStatements)
+                    .set({ isCurrent: false, updatedAt: new Date() })
+                    .where(eq(corporateSettlementStatements.id, existingStatement.id));
+            }
 
-        // Delete previous statements for this order if re-generating
-        await db
-            .delete(corporateSettlementStatements)
-            .where(eq(corporateSettlementStatements.orderId, order.id));
+            const statementNumber = await nextCorporateDocumentNumber(
+                "SET",
+                statementDate
+            );
+            const [statement] = await tx
+                .insert(corporateSettlementStatements)
+                .values({
+                    statementNumber,
+                    orderId: order.id,
+                    brandId: order.brandId!,
+                    version: (existingStatement?.version ?? 0) + 1,
+                    supersedesStatementId: existingStatement?.id ?? null,
+                    isCurrent: true,
+                    issuedByUserId: actorUserId,
+                    adjustmentReason,
+                    statementDate: statementDate.toISOString().slice(0, 10),
+                    grossPaidPaise,
+                    gstEmbeddedPaise,
+                    taxableValuePaise,
+                    commissionPercentBps,
+                    commissionAmountPaise,
+                    commissionGstRateBps,
+                    commissionGstAmountPaise,
+                    tcsPercentBps,
+                    tcsAmountPaise,
+                    tdsPercentBps,
+                    tdsAmountPaise,
+                    netRemittancePaise,
+                    customizations: orderCustomizations.map((row) => ({
+                        id: row.id,
+                        type: row.customizationType,
+                        amountPaise: row.costPaise,
+                        status: row.status,
+                        metadata: row.metadata,
+                    })),
+                    status: "issued",
+                    notes: input.notes ?? null,
+                })
+                .returning();
 
-        const [statement] = await db
-            .insert(corporateSettlementStatements)
-            .values({
-                statementNumber,
-                orderId: order.id,
-                brandId: order.brandId,
-                statementDate: statementDate.toISOString().slice(0, 10),
-                grossPaidPaise,
-                gstEmbeddedPaise,
-                taxableValuePaise,
-                commissionPercentBps,
-                commissionAmountPaise,
-                commissionGstRateBps,
-                commissionGstAmountPaise,
-                tcsPercentBps,
-                tcsAmountPaise,
-                tdsPercentBps,
-                tdsAmountPaise,
-                netRemittancePaise,
-                customizations: orderCustomizations.map((row) => ({
-                    id: row.id,
-                    type: row.customizationType,
-                    amountPaise: row.costPaise,
-                    status: row.status,
-                    metadata: row.metadata,
-                })),
-                status: "issued",
-                notes: input.notes ?? null,
-            })
-            .returning();
-
-        // Also upsert corporateBrandPayouts
-        const existingPayout = await db.query.corporateBrandPayouts.findFirst({
-            where: eq(corporateBrandPayouts.orderId, order.id),
-        });
-
-        if (existingPayout) {
-            await db
-                .update(corporateBrandPayouts)
-                .set({
+            if (currentPayout) {
+                await tx
+                    .update(corporateBrandPayouts)
+                    .set({
+                        grossOrderValuePaise: grossPaidPaise,
+                        commissionAmountPaise,
+                        netPayablePaise: netRemittancePaise,
+                        payoutStatus: "approved",
+                    })
+                    .where(eq(corporateBrandPayouts.id, currentPayout.id));
+            } else {
+                await tx.insert(corporateBrandPayouts).values({
+                    orderId: order.id,
+                    brandId: order.brandId!,
                     grossOrderValuePaise: grossPaidPaise,
                     commissionAmountPaise,
                     netPayablePaise: netRemittancePaise,
                     payoutStatus: "approved",
-                })
-                .where(eq(corporateBrandPayouts.id, existingPayout.id));
-        } else {
-            await db.insert(corporateBrandPayouts).values({
-                orderId: order.id,
-                brandId: order.brandId,
-                grossOrderValuePaise: grossPaidPaise,
-                commissionAmountPaise,
-                netPayablePaise: netRemittancePaise,
-                payoutStatus: "approved",
-            });
-        }
+                });
+            }
 
-        return statement;
+            return statement;
+        });
     },
 
     async getOrderDocumentChain(orderId: string) {
@@ -854,8 +894,11 @@ export const corporateDocumentService = {
                 orderBy: [desc(corporateDeliveryChallans.createdAt)],
             }),
             db.query.corporateSettlementStatements.findFirst({
-                where: eq(corporateSettlementStatements.orderId, order.id),
-                orderBy: [desc(corporateSettlementStatements.createdAt)],
+                where: and(
+                    eq(corporateSettlementStatements.orderId, order.id),
+                    eq(corporateSettlementStatements.isCurrent, true)
+                ),
+                orderBy: [desc(corporateSettlementStatements.version)],
             }),
         ]);
 
