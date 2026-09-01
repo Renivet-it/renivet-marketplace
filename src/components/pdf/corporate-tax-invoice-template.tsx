@@ -124,7 +124,7 @@ export function CorporateTaxInvoiceTemplate({
             : undefined) ??
         (typeof (order as any).quote?.hsnCode === "string"
             ? (order as any).quote.hsnCode
-            : "6109");
+            : undefined);
     const extraChargesList =
         Array.isArray(pricingSnapshot.appliedExtraCharges) &&
         pricingSnapshot.appliedExtraCharges.length > 0
