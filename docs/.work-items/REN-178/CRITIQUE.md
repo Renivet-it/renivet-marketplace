@@ -1,23 +1,67 @@
-# REN-178 Independent Critic Review
+# REN-178 Critic Review
 
-Reviewer: independent fresh-context read-only critic (`ren176_critic`)
+Independent fresh-context, read-only review of the REN-178 contract and repository.
 
-All required categories were reviewed.
+### CRIT-178-01 — BLOCKER
 
-## Findings
+The existing `corporateCustomizations` table lacks the required product/order-line parent, descriptive fields, quantity/basis, production instruction, artwork/reference, tax treatment, display order, and immutable snapshot/version.
 
-- **DESIGN_BLOCKER REN178-CRIT-001** — `DEP-001`/`REQ-001`: REN-177 snapshot schema/version is unresolved, so a single authoritative model and rollout gate cannot yet be guaranteed.
-- **DESIGN_BLOCKER REN178-CRIT-002** — `DEC-001`/`REQ-007`: Existing service, invoice template, and FO UI hard-code 18% customization GST; the spec must define removal/legacy behavior before release.
-- **MAJOR REN178-CRIT-003** — `REQ-001`: Existing `corporateCustomizations` lacks explicit identity, parent line, name, description, basis, quantity, instruction, artwork, display order, tax metadata, and snapshot/version fields.
-- **MAJOR REN178-CRIT-004** — `INV-001`, `SCN-008`: No database uniqueness/source-row identity guarantees exactly-once customization rows under retries or concurrency.
-- **MAJOR REN178-CRIT-005** — `REQ-004`, `INV-002`: Basis/rounding and zero/flat/per-unit residual allocation are underspecified and can cause paise divergence.
-- **MAJOR REN178-CRIT-006** — `REQ-003`, `SCN-005`: FO persistence, immutable snapshot linkage, edit blocking, and stale-version conflict behavior are not concrete.
-- **MAJOR REN178-CRIT-007** — `REQ-006`, `SCN-010`: Legacy backfill lacks deterministic source selection, marker, rerun safety, and issued-document policy.
-- **MAJOR REN178-CRIT-008** — `REQ-005`, `INV-005`: URL ownership, signed-read authorization, content verification, and orphan cleanup need concrete server-side controls.
-- **MAJOR REN178-CRIT-009** — `REQ-008`, `INV-004`: Cross-document transaction/outbox/version-pinning behavior is unspecified, allowing stale or partial downstream documents.
-- **MINOR REN178-CRIT-010** — Observability lacks structured reconciliation/version errors, metrics, and audit correlation IDs.
-- **MINOR REN178-CRIT-011** — Tests should cover zero/overflow/many-line/duplicate-order/rounding/migration-rerun and old-document regeneration cases.
+### CRIT-178-02 — BLOCKER
 
-## Disposition
+The canonical commercial snapshot must explicitly contain ordered customization records and a stable revision. Current PI, FO, invoice, and settlement tables contain aggregates only.
 
-The two design blockers are preserved. The implementation must first align with REN-177’s concrete snapshot contract and remove existing inferred 18% tax behavior; Finance/CA treatment remains outside this task. The remaining findings are required design refinements before `READY_FOR_DEV`.
+### CRIT-178-03 — HIGH
+
+Parent and customization writes are not consistently atomic. Require transactions, rollback behavior, and retry/idempotency semantics.
+
+### CRIT-178-04 — HIGH
+
+FO issuance currently drops extras and computes totals independently. FO must read/validate the canonical snapshot and prevent duplicate concurrent issuance.
+
+### CRIT-178-05 — HIGH
+
+Quote revisions do not preserve customization rows. Add immutable revision-level customization snapshot/versioning.
+
+### CRIT-178-06 — HIGH
+
+Legacy scalar migration overlaps quote and order fields. Define a backfill/reconciliation rule that preserves descriptions and avoids double counting.
+
+### CRIT-178-07 — HIGH
+
+Customization tax treatment must remain explicit and data-driven; the existing 18% customization behavior contradicts the issue’s composite-supply boundary.
+
+### CRIT-178-08 — HIGH
+
+Specify whether PI, FO, tax invoice, settlement, credit/debit notes, and receipt records reference or embed the immutable customization snapshot.
+
+### CRIT-178-09 — HIGH
+
+The current schema supports one product per quote/order. Decide whether REN-178 remains single-product or introduces order lines before defining Product → Customizations[] foreign keys.
+
+### CRIT-178-10 — MEDIUM
+
+Per-customization artwork references need validated ownership, MIME/size, URL/key allowlists, and immutable metadata snapshots.
+
+### CRIT-178-11 — HIGH
+
+Replacement orders currently proportionally clone the scalar customization amount; structured rows need deterministic source/version linkage.
+
+### CRIT-178-12 — MEDIUM
+
+Serializers, list/detail APIs, migration tests, concurrency tests, and full E2E document assertions are required.
+
+### CRIT-178-13 — HIGH
+
+The manual quote modal and document-chain panel still hard-code or heuristically reconstruct customization GST/amounts. They must read canonical persisted rows and approved tax-treatment metadata.
+
+### CRIT-178-14 — MEDIUM
+
+Snapshot/customization mismatches need explicit validation errors and observability rather than silent UI fallback recomputation.
+
+### CRIT-178-15 — HIGH
+
+The schema/backfill rollout needs an idempotent expand/dual-read/dual-write/contracted migration plan, dry-run reconciliation counts, and rollback compatibility for old application versions.
+
+## Critic Attestation
+
+Reviewer: independent fresh-context critic (`ren178_critic`); read-only: true. Categories covered: requirements/scenarios, failure/recovery, security/privacy, state/data consistency, integrations/idempotency, compatibility/migration, observability/testability, assumptions/dependencies.

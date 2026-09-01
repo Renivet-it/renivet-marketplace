@@ -1,6 +1,10 @@
 import crypto from "crypto";
 import { env } from "@/../env";
 import {
+    buildCorporateCustomizationRows,
+    type CorporateCustomizationInput,
+} from "@/lib/corporate-customizations";
+import {
     extractCorporateDeliveryAddress,
     fillCorporateDeliveryAddressDefaults,
     formatCorporateDeliveryAddress,
@@ -16,6 +20,7 @@ import {
     corporateAdminAuditLogs,
     corporateBrandAuditLogs,
     corporateBrandTaxInvoices,
+    corporateCustomizations,
     corporateDeliveryChallans,
     corporateDocuments,
     corporateEscalations,
@@ -672,6 +677,11 @@ class CorporatePlatformService {
                       })
                     : null,
             ]);
+        const quoteCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.quoteId, quote.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const createdOrder = await db
             .insert(corporateOrders)
@@ -738,6 +748,13 @@ class CorporatePlatformService {
                 pricingSnapshot: {
                     subtotalPaise: quote.subtotalPaise,
                     customizationCostPaise: quote.customizationCostPaise,
+                    customizations: quoteCustomizations.map((row) => ({
+                        id: row.id,
+                        type: row.customizationType,
+                        amountPaise: row.costPaise,
+                        status: row.status,
+                        metadata: row.metadata,
+                    })),
                     gstAmountPaise: quote.gstAmountPaise,
                     totalAmountPaise: quote.totalAmountPaise,
                 },
@@ -772,6 +789,18 @@ class CorporatePlatformService {
             })
             .returning()
             .then((rows) => rows[0]);
+
+        if (quoteCustomizations.length) {
+            await db.insert(corporateCustomizations).values(
+                quoteCustomizations.map((row) => ({
+                    orderId: createdOrder.id,
+                    customizationType: row.customizationType,
+                    costPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                }))
+            );
+        }
 
         return createdOrder;
     }
@@ -1574,42 +1603,68 @@ class CorporatePlatformService {
             .from(corporateQuotes)
             .then((rows) => (rows[0]?.count ?? 0) + 1);
 
-        const created = await db
-            .insert(corporateQuotes)
-            .values({
-                quoteNumber: makeNumber("QUO", sequence),
-                rfqId: parsed.rfqId ?? null,
-                corporateProfileId: parsed.corporateProfileId,
-                brandId: parsed.brandId,
-                productId: parsed.productId ?? null,
-                corporateProductConfigId:
-                    parsed.corporateProductConfigId ?? null,
-                productTypeId: parsed.productTypeId ?? null,
-                gsmOptionId: parsed.gsmOptionId ?? null,
-                fabricCompositionId: parsed.fabricCompositionId ?? null,
-                quantity: parsed.quantity,
-                subtotalPaise,
-                customizationCostPaise: parsed.customizationCostPaise,
-                gstAmountPaise: parsed.gstAmountPaise,
-                totalAmountPaise,
-                advanceAmountPaise,
-                balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
-                validUntil: parsed.validUntil ?? null,
-                status: "sent",
-            })
-            .returning()
-            .then((rows) => rows[0]);
-
-        await db.insert(corporateQuoteRevisions).values({
-            quoteId: created.id,
-            revisionNumber: 1,
-            subtotalPaise: created.subtotalPaise,
-            customizationCostPaise: created.customizationCostPaise,
-            gstAmountPaise: created.gstAmountPaise,
-            totalAmountPaise: created.totalAmountPaise,
-            comments: parsed.comments ?? null,
-            createdByUserId: actorUserId,
-        });
+        const { created, customizationRows } = await db.transaction(
+            async (tx) => {
+                const created = await tx
+                    .insert(corporateQuotes)
+                    .values({
+                        quoteNumber: makeNumber("QUO", sequence),
+                        rfqId: parsed.rfqId ?? null,
+                        corporateProfileId: parsed.corporateProfileId,
+                        brandId: parsed.brandId,
+                        productId: parsed.productId ?? null,
+                        corporateProductConfigId:
+                            parsed.corporateProductConfigId ?? null,
+                        productTypeId: parsed.productTypeId ?? null,
+                        gsmOptionId: parsed.gsmOptionId ?? null,
+                        fabricCompositionId: parsed.fabricCompositionId ?? null,
+                        quantity: parsed.quantity,
+                        subtotalPaise,
+                        customizationCostPaise: parsed.customizationCostPaise,
+                        gstAmountPaise: parsed.gstAmountPaise,
+                        totalAmountPaise,
+                        advanceAmountPaise,
+                        balanceAmountPaise:
+                            totalAmountPaise - advanceAmountPaise,
+                        validUntil: parsed.validUntil ?? null,
+                        status: "sent",
+                    })
+                    .returning()
+                    .then((rows) => rows[0]);
+                const customizationRows = buildCorporateCustomizationRows(
+                    parsed.customizations as CorporateCustomizationInput[],
+                    parsed.customizationCostPaise
+                );
+                if (customizationRows.length) {
+                    await tx.insert(corporateCustomizations).values(
+                        customizationRows.map((row) => ({
+                            quoteId: created.id,
+                            customizationType: row.name,
+                            costPaise: row.amountPaise,
+                            metadata: {
+                                ...row,
+                                name: row.name,
+                                taxTreatment: row.taxTreatment,
+                            },
+                        }))
+                    );
+                }
+                await tx.insert(corporateQuoteRevisions).values({
+                    quoteId: created.id,
+                    revisionNumber: 1,
+                    subtotalPaise: created.subtotalPaise,
+                    customizationCostPaise: created.customizationCostPaise,
+                    gstAmountPaise: created.gstAmountPaise,
+                    totalAmountPaise: created.totalAmountPaise,
+                    customizations: customizationRows.map((row) => ({
+                        ...row,
+                    })),
+                    comments: parsed.comments ?? null,
+                    createdByUserId: actorUserId,
+                });
+                return { created, customizationRows };
+            }
+        );
 
         if (rfq) {
             await db
@@ -1804,9 +1859,29 @@ class CorporatePlatformService {
                 customizationCostPaise: parsed.customizationCostPaise,
                 gstAmountPaise,
                 totalAmountPaise,
+                customizations: parsed.customizations,
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             });
+
+            const customizationRows = buildCorporateCustomizationRows(
+                parsed.customizations as CorporateCustomizationInput[],
+                parsed.customizationCostPaise
+            );
+            if (customizationRows.length) {
+                await tx.insert(corporateCustomizations).values(
+                    customizationRows.map((row) => ({
+                        quoteId: quote.id,
+                        customizationType: row.name,
+                        costPaise: row.amountPaise,
+                        metadata: {
+                            ...row,
+                            name: row.name,
+                            taxTreatment: row.taxTreatment,
+                        },
+                    }))
+                );
+            }
 
             return { quote, profile };
         });
@@ -2493,6 +2568,7 @@ class CorporatePlatformService {
                 customizationCostPaise: parsed.customizationCostPaise,
                 gstAmountPaise: parsed.gstAmountPaise,
                 totalAmountPaise: parsed.totalAmountPaise,
+                customizations: parsed.customizations,
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             })
@@ -2839,7 +2915,6 @@ class CorporatePlatformService {
             );
             createdOrderId = createdOrder.id;
         }
-
         const updated = await db
             .update(corporatePurchaseOrders)
             .set({
@@ -3874,6 +3949,11 @@ class CorporatePlatformService {
             orderBy: [desc(corporateProformaInvoices.createdAt)],
         });
         if (existing) return existing;
+        const quoteCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.quoteId, quote.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const [settings, invoiceNumber] = await Promise.all([
             getCorporateDocumentSettings(),
@@ -3901,6 +3981,13 @@ class CorporatePlatformService {
                     quote.subtotalPaise + quote.customizationCostPaise,
                 gstAmountPaise: quote.gstAmountPaise,
                 totalAmountPaise: quote.totalAmountPaise,
+                customizations: quoteCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 paymentTerms: settings.defaultPaymentTerms,
                 termsAndConditions:
                     "This proforma invoice is not a tax invoice. Supply is subject to quote acceptance, receipt of the corporate purchase order, and payment confirmation.",
@@ -3969,6 +4056,11 @@ class CorporatePlatformService {
         });
         if (existingInvoice) return existingInvoice;
 
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
         const [
             settings,
             brandDetails,
@@ -4047,6 +4139,13 @@ class CorporatePlatformService {
                 sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
                 igstPaise: isIntraState ? 0 : order.gstPaise,
                 totalAmountPaise: order.totalPaise,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 advanceAdjustmentPaise: order.advancePaidPaise,
                 paymentTerms: "Net 15",
                 bankDetailsSnapshot: settings

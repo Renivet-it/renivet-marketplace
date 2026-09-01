@@ -4,6 +4,7 @@ import {
     brandConfidentials,
     corporateBrandPayouts,
     corporateBrandTaxInvoices,
+    corporateCustomizations,
     corporateDeliveryChallans,
     corporateDocumentSequences,
     corporateDocumentSettings,
@@ -24,7 +25,7 @@ import {
     corporateVendorPurchaseOrderInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { TRPCError } from "@trpc/server";
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 
 export async function getCorporateDocumentSettings() {
     const current = await db.query.corporateDocumentSettings.findFirst({
@@ -280,6 +281,11 @@ export const corporateDocumentService = {
             orderBy: [desc(corporateProformaInvoices.createdAt)],
         });
         if (existing) return existing;
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const [settings, invoiceNumber] = await Promise.all([
             getCorporateDocumentSettings(),
@@ -301,6 +307,13 @@ export const corporateDocumentService = {
                 subtotalPaise: order.subtotalPaise + order.customizationPaise,
                 gstAmountPaise: order.gstPaise,
                 totalAmountPaise: order.totalPaise,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 paymentTerms: settings.defaultPaymentTerms,
                 deliveryTimeline:
                     "Delivery timeline will be confirmed after order review and artwork confirmation.",
@@ -318,8 +331,7 @@ export const corporateDocumentService = {
         if (!order.brandId || !order.brand) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
-                message:
-                    "Assign a brand before issuing the Fulfillment Order",
+                message: "Assign a brand before issuing the Fulfillment Order",
             });
         }
 
@@ -333,6 +345,34 @@ export const corporateDocumentService = {
             }
         );
         if (existing) return existing;
+
+        if (parsed.customizations.length > 0) {
+            await db.insert(corporateCustomizations).values(
+                parsed.customizations.map((customization, index) => ({
+                    orderId: order.id,
+                    customizationType: String(
+                        customization.name ??
+                            customization.type ??
+                            "Customization"
+                    ),
+                    costPaise: Math.max(
+                        0,
+                        Number(customization.amountPaise ?? 0)
+                    ),
+                    metadata: {
+                        ...customization,
+                        displayOrder: Number(
+                            customization.displayOrder ?? index + 1
+                        ),
+                    },
+                }))
+            );
+        }
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const [settings, brandDetails, receiptVoucher] = await Promise.all([
             getCorporateDocumentSettings(),
@@ -376,6 +416,13 @@ export const corporateDocumentService = {
                 deliveryAddress,
                 paymentTerms: parsed.paymentTerms,
                 deliveryInstructions: parsed.deliveryInstructions ?? null,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 status: "issued",
                 createdByUserId: actorUserId,
             })
@@ -605,7 +652,7 @@ export const corporateDocumentService = {
             invoice?.totalAmountPaise ?? order.totalAmountPaise ?? 802000;
         const gstEmbeddedPaise = invoice
             ? invoice.cgstPaise + invoice.sgstPaise + invoice.igstPaise
-            : order.gstPaise ?? 102000;
+            : (order.gstPaise ?? 102000);
         const taxableValuePaise = Math.max(
             0,
             grossPaidPaise - gstEmbeddedPaise
@@ -645,6 +692,11 @@ export const corporateDocumentService = {
         );
 
         const statementDate = new Date();
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
         const statementNumber = await nextCorporateDocumentNumber(
             "SET",
             statementDate
@@ -674,6 +726,13 @@ export const corporateDocumentService = {
                 tdsPercentBps,
                 tdsAmountPaise,
                 netRemittancePaise,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 status: "issued",
                 notes: input.notes ?? null,
             })

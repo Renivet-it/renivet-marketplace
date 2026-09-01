@@ -128,6 +128,7 @@ export const corporateAdminManualQuoteInputSchema = z.object({
     quantity: z.number().int().positive().max(1_000_000),
     unitPricePaise: z.number().int().positive(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     commissionAmountPaise: z.number().int().nonnegative().default(0),
     commissionGstPercent: z.number().min(0).max(100).default(18),
     gstPercent: z.number().min(0).max(100).default(0),
@@ -195,6 +196,7 @@ export const corporateQuoteInputSchema = z.object({
     quantity: z.number().int().positive(),
     subtotalPaise: z.number().int().nonnegative(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     gstAmountPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().nonnegative(),
     advanceAmountPaise: z.number().int().nonnegative().default(0),
@@ -213,6 +215,7 @@ export const corporateQuoteRevisionInputSchema = z.object({
     quoteId: z.string().uuid(),
     subtotalPaise: z.number().int().nonnegative(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     gstAmountPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().nonnegative(),
     comments: z.string().trim().max(1000).nullable().optional(),
@@ -540,6 +543,7 @@ export const corporateVendorPurchaseOrderInputSchema = z.object({
     deliveryMode: z.enum(["renivet_warehouse", "direct_to_customer"]),
     paymentTerms: z.string().trim().min(3).max(500),
     deliveryInstructions: z.string().trim().max(1000).nullable().optional(),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
 });
 
 export const corporateBrandTaxInvoiceInputSchema = z.object({
