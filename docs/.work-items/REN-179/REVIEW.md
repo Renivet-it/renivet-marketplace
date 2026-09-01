@@ -2,15 +2,15 @@
 
 ## Executive Result
 
-REVIEW_PASSED_WITH_FINDINGS. The implementation is within the approved enforcement-only scope with MINOR_DRIFT. Comparison: `main` merge-base `122a62023fd396f7c94b9889b67a705a09addde1` through head `75acf45e953e2f8b9362d259a757fc8e44c89b85`. Governance re-entry is not required.
+REVIEW_PASSED_WITH_FINDINGS. The implementation is within the approved enforcement-only scope with MINOR_DRIFT. Comparison: `main` merge-base `122a62023fd396f7c94b9889b67a705a09addde1` through head `04eaaf6740844cbb15df6195bd99462ae18790b2`. Governance re-entry is not required.
 
 ## Review Scope and Git Evidence
 
-Reviewed the approved READY_FOR_DEV contract, the base-to-head diff, quote/order creation, document issuance, and corporate PDF renderers. The feature branch contains the REN-179 governance artifacts and implementation changes; no uncommitted application changes were present at review start.
+Reviewed the approved READY_FOR_DEV contract, including DEC-002 owner approval, the base-to-head diff, quote/order creation, document issuance, and corporate PDF renderers. The feature branch contains the REN-179 governance artifacts and implementation changes; no uncommitted application changes were present at review start.
 
 ## Requirement Reconciliation
 
-- REQ-001/002: PASS — `createQuote`, `createManualQuote`, order creation, proforma issuance, tax invoice issuance, and brand tax invoice recording resolve an active `hsnMaster` row and fail with `PRECONDITION_FAILED` when absent.
+- REQ-001/002: PASS — `createQuote`, `createManualQuote`, order creation, proforma issuance, tax invoice issuance, and brand tax invoice recording resolve an active `hsnMaster` row and fail with `PRECONDITION_FAILED` when absent. Manual quote creation now persists and activates an explicitly entered missing HSN row using DEC-002.
 - REQ-003: PASS — authoritative rate is used for order tax computation; existing net-per-piece finance calculation remains covered by `src/lib/finance/calculations.test.ts`.
 - REQ-004: PASS — order pricing snapshots now persist HSN source, rate, GST amount, and reconciled total; tax invoice rendering validates the same classification.
 - REQ-005: PASS — changed corporate issuance/template paths no longer substitute `6109` or generic product GST rates.
