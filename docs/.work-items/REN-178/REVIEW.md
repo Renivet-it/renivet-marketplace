@@ -2,7 +2,7 @@
 
 ## Executive Result
 
-REVIEW_FAILED with MATERIAL_DRIFT. The implementation adds structured quote/order/FO storage, but does not satisfy the approved end-to-end immutable snapshot contract. Governance re-entry is required. Base `122a62023fd396f7c94b9889b67a705a09addde1`; head `a1036c7dba482b6b70a7070af65e07dad558eb1d`.
+REVIEW_FAILED with MATERIAL_DRIFT. The implementation now propagates structured snapshots to PI, FO, tax invoice, and settlement records and adds a legacy backfill, but transaction/idempotency and full E2E coverage remain incomplete. Governance re-entry is required. Base `122a62023fd396f7c94b9889b67a705a09addde1`; head `8fd643b213e29fb7ac443b90d5eb208ec45d9eef`.
 
 ## Review Scope and Git Evidence
 
@@ -11,10 +11,10 @@ Reviewed the approved REN-178 work item, Linear issue, base-to-head diff, custom
 ## Requirement Reconciliation
 
 - REQ-001: PARTIAL — structured rows are normalized and persisted for quote/order/FO, but the database table still stores many required fields only inside metadata.
-- REQ-002: FAIL — PI, customer invoice, settlement, and quote revision paths do not all persist/read the same immutable customization snapshot.
+- REQ-002: PARTIAL — PI, tax invoice, settlement, FO, and quote revision snapshots are now persisted; readers still need complete snapshot-only enforcement.
 - REQ-003: PARTIAL — FO now has a customization column and reads order rows, but the UI mutation does not submit a structured customization list.
-- REQ-004: FAIL — no scalar backfill migration creates `Legacy Customization` rows for historical data.
-- REQ-005: FAIL — the invoice template still derives base tax from legacy fields and does not implement the approved parent/separate tax treatment contract end to end.
+- REQ-004: PASS — migration `0274_corporate_customization_snapshots.sql` backfills legacy scalar rows idempotently.
+- REQ-005: PARTIAL — hard-coded customization GST was removed, but full parent/separate tax calculation remains dependent on REN-179 classification data.
 - REQ-006: PARTIAL — existing authorization remains, but parent-plus-customization writes are not consistently transactional or concurrency-safe.
 
 ## Scenario Reconciliation
@@ -23,11 +23,11 @@ SCN-001, SCN-002, and SCN-004 are PARTIAL. SCN-003, SCN-005, and SCN-006 FAIL be
 
 ## Invariant Reconciliation
 
-INV-001 is PARTIAL. INV-002, INV-003, INV-004, and INV-005 FAIL for downstream snapshot equality, migration preservation, and atomic write guarantees.
+INV-001, INV-002, and INV-003 are PARTIAL. INV-004 and INV-005 remain FAIL for transaction atomicity and complete snapshot-only rendering.
 
 ## Flow and Architecture Review
 
-FLOW-001 is partially implemented through `buildCorporateCustomizationRows` and quote/order inserts. FLOW-002 fails because PI/invoice/settlement readers continue using scalar/aggregate values rather than a shared customization snapshot. FLOW-003 fails because no historical backfill or explicit unavailable policy was added.
+FLOW-001 and FLOW-002 are partially implemented through structured rows and snapshot columns on quote revisions, PI, FO, invoice, and settlement. FLOW-003 is implemented by the idempotent legacy backfill, but historical unavailable rendering remains undefined.
 
 ## Security and Integration Review
 
@@ -47,7 +47,7 @@ TEXP-001, TEXP-002, and TEXP-003 are not covered by an end-to-end test. TEXP-004
 
 - Severity: BLOCKER
 - Category: requirement
-- Description: PI, invoice, settlement, and quote revision consumers do not use one immutable customization snapshot.
+- Description: Downstream consumers are not yet enforced to read only the immutable customization snapshot.
 - Evidence: REQ-002/INV-002; `corporateProformaInvoices`, `corporateTaxInvoices`, and `corporateSettlementStatements` remain aggregate-only while rows are written to `corporateCustomizations`.
 - Impact: Customer-facing documents can diverge or omit customization data.
 - Recommendation: Add canonical snapshot/version linkage and update every downstream reader before re-review.
@@ -56,8 +56,8 @@ TEXP-001, TEXP-002, and TEXP-003 are not covered by an end-to-end test. TEXP-004
 
 - Severity: BLOCKER
 - Category: compatibility
-- Description: Historical scalar customization amounts are not backfilled into `Legacy Customization` rows.
-- Evidence: REQ-004/SCN-003; migration `0273_corporate_fo_customizations.sql` only adds the FO JSON column.
+- Description: Legacy backfill does not yet include a dry-run reconciliation report.
+- Evidence: REQ-004/SCN-003; migration `0274_corporate_customization_snapshots.sql` creates rows but emits no reconciliation counts.
 - Impact: Existing orders remain dependent on the old scalar and cannot meet the new model.
 - Recommendation: Add an idempotent expand/backfill migration with reconciliation counts.
 

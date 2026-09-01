@@ -302,7 +302,7 @@ implementation_review:
     result: REVIEW_FAILED
     base_branch: main
     base_commit: "122a62023fd396f7c94b9889b67a705a09addde1"
-    head_commit: "a1036c7dba482b6b70a7070af65e07dad558eb1d"
+    head_commit: "8fd643b213e29fb7ac443b90d5eb208ec45d9eef"
     pr_url: null
     material_drift: MATERIAL_DRIFT
     reconciliation:
@@ -322,6 +322,6 @@ implementation_review:
         - "Wrap parent/customization writes in transactions and add FO issuance idempotency."
         - "Add end-to-end, migration, concurrency, authorization, and document immutability tests."
     evidence:
-        - "Compared approved REN-178 contract with base 122a62023fd396f7c94b9889b67a705a09addde1 and head a1036c7dba482b6b70a7070af65e07dad558eb1d."
+        - "Compared approved REN-178 contract with base 122a62023fd396f7c94b9889b67a705a09addde1 and head 8fd643b213e29fb7ac443b90d5eb208ec45d9eef."
         - "Bun test completed with 165 passed and 1 skipped, but required REN-178 end-to-end coverage is absent."
     governance_reentry_required: true
