@@ -9,6 +9,7 @@ import { userCache } from "@/lib/redis/methods";
 import {
     corporatePartyAddress,
     getCorporateDocumentSettings,
+    nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
@@ -139,7 +140,7 @@ export async function GET(
         const sgstPaise = intra ? commissionGstPaise - cgstPaise : 0;
         const igstPaise = intra ? 0 : commissionGstPaise;
 
-        const commissionNumber = `COM/2627/${String(order.sequenceNo ?? 1).padStart(5, "0")}`;
+        const commissionNumber = await nextCorporateDocumentNumber("CINV");
         const invoiceDate = order.createdAt ?? new Date();
 
         const downloadUrl = `${new URL(request.url).origin}/api/corporate-orders/${order.id}/commission-invoice.pdf`;

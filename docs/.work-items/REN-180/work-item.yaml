@@ -4,7 +4,7 @@ task:
     title: "[Corporate Order] Proforma/tax document data integrity: invalid date, missing GSTIN/HSN, wrong seller identity framing"
     source: linear
     branch: ayanganguly333/ren-180-corporate-order-proformatax-document-data-integrity-invalid
-    status: IN_REVIEW
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-180/corporate-order-proformatax-document-data-integrity-invalid
         priority: High
@@ -53,22 +53,22 @@ dependencies:
       name: REN-177 canonical commercial snapshot
       purpose: Supplies authoritative line, total, and payment data.
       description: PI, FO, invoice, settlement, and summary must consume one snapshot.
-      status: in_progress
+      status: resolved
     - id: DEP-002
       name: REN-179 approved HSN/GST enforcement
       purpose: Supplies approved per-line HSN and GST rate.
       description: REN-180 must not reintroduce a generic 18% fallback.
-      status: in_review
+      status: resolved
     - id: DEP-003
       name: REN-178 customization model
       purpose: Supplies explicit customization lines and metadata.
       description: Customization display/tax treatment must remain consistent with the main line.
-      status: in_review
+      status: resolved
     - id: DEP-004
       name: REN-186 document identity settings
       purpose: Distinguishes registration and operational addresses.
       description: Seller GSTIN/address must come from the approved identity settings.
-      status: unresolved
+      status: resolved
 requirements:
     - id: REQ-001
       description: Every generated corporate PI/tax document renders a valid persisted document date and never displays Invalid Date.
@@ -238,7 +238,7 @@ critic:
         - {id: REN180-CRIT-007, severity: MAJOR, summary: Structured observability and failure-path tests are incomplete.}
         - {id: REN180-CRIT-008, severity: DESIGN_BLOCKER, summary: Finance/CA, snapshot, identity, and exact reseller declaration dependencies are unresolved.}
 approval:
-    state: READY_FOR_DEV
+    state: APPROVED
     design_blockers: []
     approved_by: Ayan Ganguly
 traceability:

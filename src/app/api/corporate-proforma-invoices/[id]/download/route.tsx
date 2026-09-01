@@ -21,6 +21,10 @@ import {
     corporatePartyAddress,
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
+import {
+    assertCorporateTaxData,
+    resolveCorporateDocumentDate,
+} from "@/lib/utils/corporate-document-integrity";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
@@ -328,7 +332,7 @@ export async function GET(
     const totalAmountFromDb =
         quote?.totalAmountPaise ?? invoice.totalAmountPaise;
 
-    const customizationGstRateBps = 1800;
+    const customizationGstRateBps = gstRateBps;
     const customizationGstAmountPaise =
         customizationPaise > 0
             ? Math.round(
@@ -343,14 +347,14 @@ export async function GET(
               ? totalGstFromDb
               : Math.round(
                     (baseSubtotalPaise *
-                        (quote?.gstRateBps ?? order?.gstRateBps ?? 1800)) /
+                        gstRateBps) /
                         10_000
                 );
 
     const baseGstRateBps =
         baseSubtotalPaise > 0
             ? Math.round((baseGstAmountPaise / baseSubtotalPaise) * 10_000)
-            : (quote?.gstRateBps ?? order?.gstRateBps ?? 1800);
+            : gstRateBps;
 
     const computedTotalGstPaise =
         totalGstFromDb > 0
@@ -365,8 +369,21 @@ export async function GET(
         (invoice as any).issueDate ||
         invoice.invoiceDate ||
         (invoice as any).createdAt;
-    const parsedDate = rawDate ? new Date(rawDate) : new Date();
-    const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+    let safeDate: Date;
+    let safeValidUntil: Date | undefined;
+    try {
+        safeDate = resolveCorporateDocumentDate(rawDate, quote?.createdAt ?? order?.createdAt);
+        safeValidUntil = invoice.validUntil
+            ? resolveCorporateDocumentDate(invoice.validUntil)
+            : undefined;
+        assertCorporateTaxData(
+            order?.gstNumber ?? quote?.profile.gstNumber,
+            [{ hsnCode: resolvedHsn, taxable: true }]
+        );
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "CORPORATE_DOCUMENT_SOURCE_INVALID";
+        return NextResponse.json({ message }, { status: 422 });
+    }
 
     const data: CorporateCommercialDocumentData = {
         title: "PROFORMA INVOICE",
@@ -374,19 +391,16 @@ export async function GET(
             "Commercial proposal issued before supply. This is not a tax invoice.",
         documentType: "proforma_invoice",
         documentNumber: invoice.invoiceNumber,
-        date: safeDate,
-        validUntil: invoice.validUntil
-            ? new Date(invoice.validUntil)
-            : undefined,
-        fromLabel: "From (Supplier)",
+        documentDate: safeDate,
+        validUntil: safeValidUntil,
+        fromLabel: "Seller",
         toLabel: "To",
         from: {
-            name: supplierName,
-            address: supplierAddress,
-            gstin: supplierGstin,
+            name: settings.legalName || "Renivet",
+            address: renivetAddress,
+            gstin: settings.gstin,
             email: supplierEmail,
             phone: supplierPhone,
-            facilitatedBy: `Facilitated by: ${settings.legalName}, ${renivetAddress} | GSTIN: ${settings.gstin || "N/A"}`,
         },
         to: order
             ? {
@@ -426,7 +440,7 @@ export async function GET(
             : [
                   { label: "Quote number", value: quote!.quoteNumber },
                   {
-                      label: "Supplier brand",
+                      label: "Brand fulfillment partner",
                       value: supplierName,
                   },
                   {
