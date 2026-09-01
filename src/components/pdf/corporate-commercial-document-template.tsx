@@ -233,6 +233,7 @@ export type CorporateCommercialDocumentData = {
     toLabel: string;
     from: CorporateCommercialParty;
     to: CorporateCommercialParty;
+    shipTo?: CorporateCommercialParty | null;
     references?: Array<{ label: string; value?: string | null }>;
     item?: CorporateCommercialItem;
     items?: CorporateCommercialItem[];
@@ -362,7 +363,8 @@ export function CorporateCommercialDocumentTemplate({
 
                 <View style={styles.grid}>
                     <Party label={data.fromLabel} party={data.from} />
-                    <Party label={data.toLabel} party={data.to} right />
+                    <Party label="Bill To" party={data.to} right />
+                    {data.shipTo ? <Party label="Ship To" party={data.shipTo} /> : null}
                 </View>
 
                 <View style={styles.meta}>

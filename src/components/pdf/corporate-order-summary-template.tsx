@@ -360,6 +360,9 @@ export function CorporateOrderSummaryTemplate({
     const product = order.productConfigSnapshot ?? {};
     const branding = order.brandingConfigSnapshot ?? {};
     const pricing = order.pricingSnapshot ?? {};
+    const payment = order.commercialSnapshot?.payment ?? order.paymentSnapshot ?? {};
+    const advancePaidPaise = payment.advancePaidPaise ?? order.advancePaidPaise;
+    const balanceDuePaise = payment.balanceDuePaise ?? order.balanceDuePaise;
     const colorsSelected = (product.colors ?? [])
         .map((item: any) => item.name)
         .filter(Boolean)
@@ -575,11 +578,11 @@ export function CorporateOrderSummaryTemplate({
                         />
                         <TotalRow
                             label="Advance received"
-                            value={toMoney(order.advancePaidPaise)}
+                            value={toMoney(advancePaidPaise)}
                         />
                         <TotalRow
                             label="Balance due"
-                            value={toMoney(order.balanceDuePaise)}
+                            value={toMoney(balanceDuePaise)}
                         />
                         <Text style={styles.amountWords}>
                             {toAmountWords(order.totalPaise)}
@@ -591,8 +594,8 @@ export function CorporateOrderSummaryTemplate({
                     <View style={styles.notePanel}>
                         <Text style={styles.noteTitle}>Payment position</Text>
                         <Text style={styles.noteText}>
-                            {order.balanceDuePaise > 0
-                                ? `${toMoney(order.advancePaidPaise)} has been received. ${toMoney(order.balanceDuePaise)} remains payable against the final payment request.`
+                            {balanceDuePaise > 0
+                                ? `${toMoney(advancePaidPaise)} has been received. ${toMoney(balanceDuePaise)} remains payable against the final payment request.`
                                 : "The full order value has been received. No further payment is due for this order."}
                         </Text>
                     </View>

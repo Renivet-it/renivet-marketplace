@@ -428,6 +428,21 @@ export async function GET(
                   email: quote!.profile.email,
                   phone: quote!.profile.phone,
               },
+        shipTo: order
+            ? {
+                  name: order.companyName,
+                  address: [
+                      order.deliveryAddress,
+                      order.deliveryCity,
+                      order.deliveryState,
+                      order.deliveryPincode,
+                      order.deliveryCountry,
+                  ]
+                      .filter(Boolean)
+                      .join(", "),
+                  gstin: order.gstNumber,
+              }
+            : null,
         references: order
             ? [
                   { label: "Corporate order", value: order.publicOrderId },

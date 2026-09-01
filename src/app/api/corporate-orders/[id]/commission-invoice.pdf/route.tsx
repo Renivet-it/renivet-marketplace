@@ -4,7 +4,7 @@ import {
 } from "@/components/pdf/invoice-template";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
-import { brandConfidentials, brandMembers } from "@/lib/db/schema";
+import { brandConfidentials, brandMembers, corporateOrders } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
 import {
     corporatePartyAddress,
@@ -14,7 +14,7 @@ import {
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 
@@ -140,7 +140,25 @@ export async function GET(
         const sgstPaise = intra ? commissionGstPaise - cgstPaise : 0;
         const igstPaise = intra ? 0 : commissionGstPaise;
 
-        const commissionNumber = await nextCorporateDocumentNumber("CINV");
+        let commissionNumber = order.commissionInvoiceNumber;
+        if (!commissionNumber) {
+            const allocated = await nextCorporateDocumentNumber("CINV");
+            const persisted = await db
+                .update(corporateOrders)
+                .set({ commissionInvoiceNumber: allocated })
+                .where(
+                    and(
+                        eq(corporateOrders.id, order.id),
+                        isNull(corporateOrders.commissionInvoiceNumber)
+                    )
+                )
+                .returning({
+                    commissionInvoiceNumber:
+                        corporateOrders.commissionInvoiceNumber,
+                });
+            commissionNumber =
+                persisted[0]?.commissionInvoiceNumber ?? allocated;
+        }
         const invoiceDate = order.createdAt ?? new Date();
 
         const downloadUrl = `${new URL(request.url).origin}/api/corporate-orders/${order.id}/commission-invoice.pdf`;
