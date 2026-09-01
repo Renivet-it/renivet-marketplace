@@ -383,6 +383,26 @@ class CorporateOrderQueries {
         return updated ? this.parseOrder(updated) : null;
     }
 
+    async updateCorporateOrderStatusIfCurrent(
+        id: string,
+        expectedStatus: typeof corporateOrders.$inferSelect.status,
+        nextStatus: typeof corporateOrders.$inferSelect.status
+    ) {
+        const updated = await db
+            .update(corporateOrders)
+            .set({ status: nextStatus, updatedAt: new Date() })
+            .where(
+                and(
+                    eq(corporateOrders.id, id),
+                    eq(corporateOrders.status, expectedStatus)
+                )
+            )
+            .returning()
+            .then((rows) => rows[0]);
+
+        return updated ? this.parseOrder(updated) : null;
+    }
+
     async getOrderById(id: string) {
         const [order, taxInvoice] = await Promise.all([
             db.query.corporateOrders.findFirst({

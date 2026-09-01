@@ -68,6 +68,7 @@ import {
     nextBrandInvoiceNumber,
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
+import { corporateOrderService } from "@/lib/services/corporate-order";
 import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import {
     convertValueToLabel,
@@ -1722,6 +1723,7 @@ class CorporatePlatformService {
                           contactPerson: parsed.contactPerson,
                           email: normalizedEmail,
                           phone: parsed.phone,
+                          gstNumber: parsed.gstNumber ?? null,
                           ...(hasDeliveryAddress ? { shippingAddress } : {}),
                           updatedAt: new Date(),
                       })
@@ -1736,6 +1738,7 @@ class CorporatePlatformService {
                           contactPerson: parsed.contactPerson,
                           email: normalizedEmail,
                           phone: parsed.phone,
+                          gstNumber: parsed.gstNumber ?? null,
                           billingAddress: {},
                           shippingAddress,
                           isDefault: true,
@@ -3055,37 +3058,42 @@ class CorporatePlatformService {
                     : null;
 
         if (nextOrderStatus && order.status !== nextOrderStatus) {
-            await corporateOrderQueries.updateCorporateOrder(order.id, {
-                status: nextOrderStatus,
-            });
-
-            await corporateOrderQueries.createStatusHistory({
-                corporateOrderId: order.id,
-                fromStatus: order.status,
-                toStatus: nextOrderStatus,
-                changedByUserId: actorUserId,
-                note: `Shipment updated to ${convertValueToLabel(saved.status)}`,
-                metadata: {
-                    source: "shipment_panel",
-                    shipmentId: saved.id,
-                    provider: saved.provider,
-                    trackingNumber: saved.trackingNumber,
-                },
-            });
-
-            if (nextOrderStatus === "delivered") {
-                await this.notifyCustomerOrderDelivered({
-                    order: {
-                        id: order.id,
-                        publicOrderId: order.publicOrderId,
-                        companyName: order.companyName,
-                        quantity: order.quantity,
-                        totalPaise: order.totalPaise,
-                        advancePaidPaise: order.advancePaidPaise,
-                        balanceDuePaise: order.balanceDuePaise,
-                        emailAddress: order.emailAddress,
+            try {
+                await corporateOrderService.updateStatus({
+                    corporateOrderId: order.id,
+                    toStatus: nextOrderStatus,
+                    changedByUserId: actorUserId,
+                    note: `Shipment updated to ${convertValueToLabel(saved.status)}`,
+                    metadata: {
+                        source: "shipment_panel",
+                        shipmentId: saved.id,
+                        provider: saved.provider,
+                        trackingNumber: saved.trackingNumber,
                     },
                 });
+            } catch (error) {
+                if (existing) {
+                    await db
+                        .update(corporateShipments)
+                        .set({
+                            courierName: existing.courierName,
+                            trackingNumber: existing.trackingNumber,
+                            awbNumber: existing.awbNumber,
+                            trackingUrl: existing.trackingUrl,
+                            dispatchDate: existing.dispatchDate,
+                            deliveryDate: existing.deliveryDate,
+                            status: existing.status,
+                            provider: existing.provider,
+                            rawPayload: existing.rawPayload,
+                            updatedAt: existing.updatedAt,
+                        })
+                        .where(eq(corporateShipments.id, existing.id));
+                } else {
+                    await db
+                        .delete(corporateShipments)
+                        .where(eq(corporateShipments.id, saved.id));
+                }
+                throw error;
             }
         }
 
@@ -3204,10 +3212,8 @@ class CorporatePlatformService {
             deliveryPincode = parsed.consignee.deliveryPincode;
             deliveryCountry = parsed.consignee.deliveryCountry;
 
-            const currentCompanySnapshot = (order.companySnapshot ?? {}) as Record<
-                string,
-                unknown
-            >;
+            const currentCompanySnapshot = (order.companySnapshot ??
+                {}) as Record<string, unknown>;
             const updatedCompanySnapshot = {
                 ...currentCompanySnapshot,
                 contactPersonName,
@@ -3334,11 +3340,14 @@ class CorporatePlatformService {
                 ? (packageData as Record<string, unknown>)
                 : {};
         const waybill =
-            typeof packageRecord.waybill === "string" && packageRecord.waybill.trim()
+            typeof packageRecord.waybill === "string" &&
+            packageRecord.waybill.trim()
                 ? packageRecord.waybill.trim()
-                : typeof packageRecord.awb === "string" && packageRecord.awb.trim()
+                : typeof packageRecord.awb === "string" &&
+                    packageRecord.awb.trim()
                   ? packageRecord.awb.trim()
-                  : typeof rawData.waybill === "string" && rawData.waybill.trim()
+                  : typeof rawData.waybill === "string" &&
+                      rawData.waybill.trim()
                     ? rawData.waybill.trim()
                     : typeof rawData.awb === "string" && rawData.awb.trim()
                       ? rawData.awb.trim()
@@ -3415,13 +3424,8 @@ class CorporatePlatformService {
         }
 
         if (order.status !== "ready_for_dispatch") {
-            await corporateOrderQueries.updateCorporateOrder(order.id, {
-                status: "ready_for_dispatch",
-            });
-
-            await corporateOrderQueries.createStatusHistory({
+            await corporateOrderService.updateStatus({
                 corporateOrderId: order.id,
-                fromStatus: order.status,
                 toStatus: "ready_for_dispatch",
                 changedByUserId: actorUserId,
                 note: "Delhivery forward order created",
@@ -4408,48 +4412,44 @@ class CorporatePlatformService {
             settlementStatements,
             documentSettings,
         ] = await Promise.all([
-                orderRows.length
-                    ? db.query.corporateVendorPurchaseOrders.findMany({
-                          where: inArray(
-                              corporateVendorPurchaseOrders.orderId,
-                              orderRows.map((order) => order.id)
-                          ),
-                          orderBy: [
-                              desc(corporateVendorPurchaseOrders.createdAt),
-                          ],
-                      })
-                    : Promise.resolve([]),
-                orderRows.length
-                    ? db.query.corporateBrandTaxInvoices.findMany({
-                          where: inArray(
-                              corporateBrandTaxInvoices.orderId,
-                              orderRows.map((order) => order.id)
-                          ),
-                          orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
-                      })
-                    : Promise.resolve([]),
-                orderRows.length
-                    ? db.query.corporateTaxInvoices.findMany({
-                          where: inArray(
-                              corporateTaxInvoices.orderId,
-                              orderRows.map((order) => order.id)
-                          ),
-                          orderBy: [desc(corporateTaxInvoices.createdAt)],
-                      })
-                    : Promise.resolve([]),
-                orderRows.length
-                    ? db.query.corporateSettlementStatements.findMany({
-                          where: inArray(
-                              corporateSettlementStatements.orderId,
-                              orderRows.map((order) => order.id)
-                          ),
-                          orderBy: [
-                              desc(corporateSettlementStatements.createdAt),
-                          ],
-                      })
-                    : Promise.resolve([]),
-                getCorporateDocumentSettings(),
-            ]);
+            orderRows.length
+                ? db.query.corporateVendorPurchaseOrders.findMany({
+                      where: inArray(
+                          corporateVendorPurchaseOrders.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateBrandTaxInvoices.findMany({
+                      where: inArray(
+                          corporateBrandTaxInvoices.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateTaxInvoices.findMany({
+                      where: inArray(
+                          corporateTaxInvoices.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateTaxInvoices.createdAt)],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateSettlementStatements.findMany({
+                      where: inArray(
+                          corporateSettlementStatements.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateSettlementStatements.createdAt)],
+                  })
+                : Promise.resolve([]),
+            getCorporateDocumentSettings(),
+        ]);
         const vendorPoByOrderId = new Map<
             string,
             (typeof vendorPurchaseOrders)[number]
@@ -4540,15 +4540,26 @@ class CorporatePlatformService {
         );
 
         const sanitizedOrders = orderRows.map((order) => {
-            const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<string, unknown>;
-            const companySnapshot = (order.companySnapshot ?? {}) as Record<string, unknown>;
+            const brandingSnapshot = (order.brandingConfigSnapshot ??
+                {}) as Record<string, unknown>;
+            const companySnapshot = (order.companySnapshot ?? {}) as Record<
+                string,
+                unknown
+            >;
             const rawArtwork =
                 (order.artworkFile as Record<string, unknown> | null) ||
-                (brandingSnapshot.artworkFile as Record<string, unknown> | null) ||
+                (brandingSnapshot.artworkFile as Record<
+                    string,
+                    unknown
+                > | null) ||
                 (brandingSnapshot.logoFile as Record<string, unknown> | null) ||
                 (companySnapshot.logoFile as Record<string, unknown> | null);
 
-            let artworkFile: { url: string; name: string; size: number | null } | null = null;
+            let artworkFile: {
+                url: string;
+                name: string;
+                size: number | null;
+            } | null = null;
             if (rawArtwork) {
                 const url =
                     (rawArtwork.url as string) ||
@@ -4562,19 +4573,23 @@ class CorporatePlatformService {
                             (rawArtwork.fileName as string) ||
                             (rawArtwork.originalName as string) ||
                             "artwork-logo.png",
-                        size: typeof rawArtwork.size === "number" ? rawArtwork.size : null,
+                        size:
+                            typeof rawArtwork.size === "number"
+                                ? rawArtwork.size
+                                : null,
                     };
                 }
             }
 
             const logoLocations = Array.isArray(brandingSnapshot.logoLocations)
-                ? (brandingSnapshot.logoLocations as Array<{ name?: string }>)
+                ? ((brandingSnapshot.logoLocations as Array<{ name?: string }>)
                       .map((l) => (typeof l === "string" ? l : l?.name))
-                      .filter(Boolean) as string[]
+                      .filter(Boolean) as string[])
                 : [];
 
             const printMethod =
-                typeof brandingSnapshot.printMethod === "object" && brandingSnapshot.printMethod !== null
+                typeof brandingSnapshot.printMethod === "object" &&
+                brandingSnapshot.printMethod !== null
                     ? (brandingSnapshot.printMethod as { name?: string }).name
                     : typeof brandingSnapshot.printMethod === "string"
                       ? brandingSnapshot.printMethod
@@ -4602,7 +4617,9 @@ class CorporatePlatformService {
                         ? {
                               id: purchaseOrder.id,
                               poNumber: purchaseOrder.poNumber,
-                              foNumber: (purchaseOrder as any).foNumber || purchaseOrder.poNumber,
+                              foNumber:
+                                  (purchaseOrder as any).foNumber ||
+                                  purchaseOrder.poNumber,
                               issueDate: purchaseOrder.issueDate,
                               expectedDeliveryDate:
                                   purchaseOrder.expectedDeliveryDate,
@@ -4655,67 +4672,68 @@ class CorporatePlatformService {
                           }
                         : null;
                 })(),
-            selectedGarment: {
-                productType:
-                    (order.quote?.productTypeId
-                        ? productTypeById.get(order.quote.productTypeId)?.name
-                        : null) ??
-                    snapshotLabel(
-                        (
-                            (order.productConfigSnapshot ?? {}) as Record<
-                                string,
-                                unknown
-                            >
-                        ).productType,
-                        ["name", "title", "label"]
-                    ) ??
-                    "Pending admin setup",
-                gsm:
-                    (order.quote?.gsmOptionId
-                        ? gsmOptionById.get(order.quote.gsmOptionId)?.label
-                        : null) ??
-                    snapshotLabel(
-                        (
-                            (order.productConfigSnapshot ?? {}) as Record<
-                                string,
-                                unknown
-                            >
-                        ).gsmOption,
-                        ["label", "name", "gsm", "gsmValue"]
-                    ) ??
-                    "Pending admin setup",
-                fabricComposition:
-                    (order.quote?.fabricCompositionId
-                        ? fabricCompositionById.get(
-                              order.quote.fabricCompositionId
-                          )?.name
-                        : null) ??
-                    snapshotLabel(
-                        (
-                            (order.productConfigSnapshot ?? {}) as Record<
-                                string,
-                                unknown
-                            >
-                        ).fabricComposition,
-                        ["name", "composition", "label"]
-                    ) ??
-                    "Pending admin setup",
-            },
-            employeeRows: order.employeeRows.map((row, index) => ({
-                employeeCode: this.maskEmployeeName(
-                    row.employeeName ?? "",
-                    index
-                ),
-                size: row.size,
-            })),
-            statusHistory: order.statusHistory.map((item) => ({
-                id: item.id,
-                toStatus: item.toStatus,
-                note: item.note,
-                createdAt: item.createdAt,
-            })),
-        };
-    });
+                selectedGarment: {
+                    productType:
+                        (order.quote?.productTypeId
+                            ? productTypeById.get(order.quote.productTypeId)
+                                  ?.name
+                            : null) ??
+                        snapshotLabel(
+                            (
+                                (order.productConfigSnapshot ?? {}) as Record<
+                                    string,
+                                    unknown
+                                >
+                            ).productType,
+                            ["name", "title", "label"]
+                        ) ??
+                        "Pending admin setup",
+                    gsm:
+                        (order.quote?.gsmOptionId
+                            ? gsmOptionById.get(order.quote.gsmOptionId)?.label
+                            : null) ??
+                        snapshotLabel(
+                            (
+                                (order.productConfigSnapshot ?? {}) as Record<
+                                    string,
+                                    unknown
+                                >
+                            ).gsmOption,
+                            ["label", "name", "gsm", "gsmValue"]
+                        ) ??
+                        "Pending admin setup",
+                    fabricComposition:
+                        (order.quote?.fabricCompositionId
+                            ? fabricCompositionById.get(
+                                  order.quote.fabricCompositionId
+                              )?.name
+                            : null) ??
+                        snapshotLabel(
+                            (
+                                (order.productConfigSnapshot ?? {}) as Record<
+                                    string,
+                                    unknown
+                                >
+                            ).fabricComposition,
+                            ["name", "composition", "label"]
+                        ) ??
+                        "Pending admin setup",
+                },
+                employeeRows: order.employeeRows.map((row, index) => ({
+                    employeeCode: this.maskEmployeeName(
+                        row.employeeName ?? "",
+                        index
+                    ),
+                    size: row.size,
+                })),
+                statusHistory: order.statusHistory.map((item) => ({
+                    id: item.id,
+                    toStatus: item.toStatus,
+                    note: item.note,
+                    createdAt: item.createdAt,
+                })),
+            };
+        });
 
         await db.insert(corporateBrandAuditLogs).values({
             brandId,
@@ -4787,12 +4805,11 @@ class CorporatePlatformService {
         const taxableValuePaise =
             (purchaseOrder as any).taxableValuePaise ??
             purchaseOrder.totalAmountPaise ??
-            (purchaseOrder.unitSellPricePaise * purchaseOrder.quantity) ??
+            purchaseOrder.unitSellPricePaise * purchaseOrder.quantity ??
             0;
 
         const totalAmountPaise =
-            purchaseOrder.totalAmountPaise ??
-            taxableValuePaise;
+            purchaseOrder.totalAmountPaise ?? taxableValuePaise;
 
         const foNumber =
             (purchaseOrder as any).foNumber ||
@@ -4800,9 +4817,7 @@ class CorporatePlatformService {
             "FO-0001";
 
         const resolvedHsn =
-            (order.quote as any)?.hsnCode ||
-            (order as any).hsnCode ||
-            "6109";
+            (order.quote as any)?.hsnCode || (order as any).hsnCode || "6109";
 
         return corporateDocumentService.recordBrandTaxInvoice(userId, {
             ...parsed,
@@ -4842,24 +4857,10 @@ class CorporatePlatformService {
             input.orderId
         );
         const orderReference = quote?.quoteNumber ?? order.publicOrderId;
+        const didTransition = order.status !== input.toStatus;
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(
-            order.id,
-            {
-                status: input.toStatus,
-            }
-        );
-
-        if (!updated) {
-            throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to update corporate order status",
-            });
-        }
-
-        await corporateOrderQueries.createStatusHistory({
+        const updated = await corporateOrderService.updateStatus({
             corporateOrderId: order.id,
-            fromStatus: order.status,
             toStatus: input.toStatus,
             changedByUserId: userId,
             note:
@@ -4872,6 +4873,8 @@ class CorporatePlatformService {
                 orderSource: quote ? "quote" : "self_service",
             },
         });
+
+        if (!didTransition) return updated;
 
         await db.insert(corporateBrandAuditLogs).values({
             brandId,
@@ -4928,21 +4931,6 @@ class CorporatePlatformService {
             });
 
             await this.notifyCustomerOrderReadyForDispatch({
-                order: {
-                    id: order.id,
-                    publicOrderId: order.publicOrderId,
-                    companyName: order.companyName,
-                    quantity: order.quantity,
-                    totalPaise: order.totalPaise,
-                    advancePaidPaise: order.advancePaidPaise,
-                    balanceDuePaise: order.balanceDuePaise,
-                    emailAddress: order.emailAddress,
-                },
-            });
-        }
-
-        if (input.toStatus === "delivered" && order.status !== "delivered") {
-            await this.notifyCustomerOrderDelivered({
                 order: {
                     id: order.id,
                     publicOrderId: order.publicOrderId,

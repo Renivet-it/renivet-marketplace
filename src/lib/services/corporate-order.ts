@@ -300,8 +300,7 @@ class CorporateOrderService {
                     ? {
                           bankName: documentSettings.bankName,
                           bankAccountName: documentSettings.bankAccountName,
-                          bankAccountNumber:
-                              documentSettings.bankAccountNumber,
+                          bankAccountNumber: documentSettings.bankAccountNumber,
                           bankIfscCode: documentSettings.bankIfscCode,
                           bankBranch: documentSettings.bankBranch,
                       }
@@ -808,7 +807,9 @@ class CorporateOrderService {
             updated.id,
             advancePayment.id
         );
-        await corporateDocumentService.ensureProformaInvoiceForOrder(updated.id);
+        await corporateDocumentService.ensureProformaInvoiceForOrder(
+            updated.id
+        );
 
         const settings = await corporateOrderQueries.getOrderSettings();
         const customerHref = getAbsoluteURL(
@@ -1080,35 +1081,34 @@ class CorporateOrderService {
 
         const nextStatus =
             order.status === "inquiry_received" ? "under_review" : order.status;
-        const updated = await corporateOrderQueries.updateCorporateOrder(
+        const assigned = await corporateOrderQueries.updateCorporateOrder(
             order.id,
-            {
-                brandId: brand.id,
-                status: nextStatus,
-            }
+            { brandId: brand.id }
         );
-        if (!updated) {
+        if (!assigned) {
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to assign the supplier brand",
             });
         }
 
-        await corporateOrderQueries.createStatusHistory({
-            corporateOrderId: order.id,
-            fromStatus: order.status,
-            toStatus: nextStatus,
-            changedByUserId,
-            note:
-                parsed.note ||
-                `Supplier brand assigned: ${brand.name}`,
-            metadata: {
-                action: "brand_assigned",
-                brandId: brand.id,
-                brandName: brand.name,
-                previousBrandId: order.brandId ?? null,
-            },
-        });
+        const updated =
+            nextStatus === order.status
+                ? assigned
+                : await this.updateStatus({
+                      corporateOrderId: order.id,
+                      toStatus: nextStatus,
+                      changedByUserId,
+                      note:
+                          parsed.note ||
+                          `Supplier brand assigned: ${brand.name}`,
+                      metadata: {
+                          action: "brand_assigned",
+                          brandId: brand.id,
+                          brandName: brand.name,
+                          previousBrandId: order.brandId ?? null,
+                      },
+                  });
 
         return { order: updated, brand };
     }
@@ -1118,6 +1118,7 @@ class CorporateOrderService {
         toStatus: CorporateOrderWorkflowStatus;
         changedByUserId: string;
         note?: string;
+        metadata?: Record<string, unknown>;
     }) {
         const order = await corporateOrderQueries.getOrderById(
             input.corporateOrderId
@@ -1129,7 +1130,15 @@ class CorporateOrderService {
             });
         }
 
-        if (["ready_for_dispatch", "dispatched"].includes(input.toStatus)) {
+        if (order.status === input.toStatus) {
+            return order;
+        }
+
+        if (
+            ["ready_for_dispatch", "dispatched", "delivered"].includes(
+                input.toStatus
+            )
+        ) {
             const chain = order.documentChain;
             if (!chain?.vendorPurchaseOrder) {
                 throw new TRPCError({
@@ -1149,9 +1158,21 @@ class CorporateOrderService {
                         "Issue the delivery challan before direct dispatch",
                 });
             }
+            if (
+                chain.vendorPurchaseOrder.deliveryMode === "renivet_warehouse"
+            ) {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message:
+                        "Warehouse dispatch is blocked until the inbound goods-received document is recorded",
+                });
+            }
         }
 
-        if (input.toStatus === "dispatched" && order.totalPaise >= 5_000_000) {
+        if (
+            ["dispatched", "delivered"].includes(input.toStatus) &&
+            order.totalPaise >= 5_000_000
+        ) {
             const chain = order.documentChain;
             const deliveryChallan = chain?.deliveryChallan;
             const eWayBill =
@@ -1169,17 +1190,18 @@ class CorporateOrderService {
             }
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(
-            order.id,
-            {
-                status: input.toStatus,
-            }
-        );
+        const updated =
+            await corporateOrderQueries.updateCorporateOrderStatusIfCurrent(
+                order.id,
+                order.status,
+                input.toStatus
+            );
 
         if (!updated) {
             throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to update corporate order status",
+                code: "CONFLICT",
+                message:
+                    "Corporate order status changed; refresh and retry the transition",
             });
         }
 
@@ -1191,6 +1213,7 @@ class CorporateOrderService {
             note:
                 input.note ??
                 `Status changed to ${convertValueToLabel(input.toStatus)}`,
+            metadata: input.metadata,
         });
 
         if (["ready_for_dispatch", "dispatched"].includes(input.toStatus)) {

@@ -411,6 +411,7 @@ export const corporatePlatformRouter = createTRPCRouter({
             return corporateDocumentService.updateSettings(input);
         }),
     updateBrandAssignedOrderStatus: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(
             z.object({
                 brandId: z.string().uuid(),
