@@ -183,7 +183,7 @@ decisions:
       basis: Avoid destructive financial-document mutation while preventing invalid output.
       confidence: medium
       consequence: high
-      human_confirmation_required: false
+      human_confirmation_required: true
     - id: DEC-002
       question: Should REN-180 consume the approved REN-179/Finance classification instead of inferring customization tax treatment?
       class: HUMAN_CONFIRMATION
@@ -192,7 +192,7 @@ decisions:
       basis: Owner confirmed the approved classification is authoritative; Linear keeps the underlying composite-supply decision out of scope.
       confidence: high
       consequence: high
-      human_confirmation_required: false
+      human_confirmation_required: true
 test_expectations:
     - id: TEXP-001
       category: regression
