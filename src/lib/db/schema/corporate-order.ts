@@ -303,6 +303,7 @@ export const corporateOrders = pgTable(
         commissionTotalPaise: integer("commission_total_paise")
             .notNull()
             .default(0),
+        commissionInvoiceNumber: text("commission_invoice_number").unique(),
         razorpayOrderId: text("razorpay_order_id"),
         razorpayPaymentId: text("razorpay_payment_id"),
         razorpaySignature: text("razorpay_signature"),
