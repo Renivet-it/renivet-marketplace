@@ -1,0 +1,276 @@
+schema_version: "1.0"
+task:
+    id: REN-180
+    title: "[Corporate Order] Proforma/tax document data integrity: invalid date, missing GSTIN/HSN, wrong seller identity framing"
+    source: linear
+    branch: ayanganguly333/ren-180-corporate-order-proformatax-document-data-integrity-invalid
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-180/corporate-order-proformatax-document-data-integrity-invalid
+        priority: High
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Customer-facing financial and tax documents can be legally incorrect or misleading.
+        - Corporate order totals, tax classification, payment state, and document numbering cross multiple persisted records and integrations.
+        - GSTIN, addresses, and party identity are customer/company data.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-180 description, updates, comments, and relations
+        - PI download route and corporate commercial document template
+        - Commission invoice route and shared document numbering service
+        - Corporate order summary payment rendering
+        - Corporate document service, schema, validation, and manual quote paths
+        - Related REN-177, REN-178, REN-179, REN-181, REN-183, and REN-186 contracts
+    excluded_areas:
+        - Finance/CA composite-supply classification decision
+        - Warehouse GRN workflow in REN-183
+        - Registration/operational address model in REN-186
+        - Consumer invoice redesign
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+    integrations: [INT-001, INT-002, INT-003]
+    security_boundaries: [SEC-001, SEC-002]
+    state_transitions:
+        - quote_or_order_data -> canonical_commercial_snapshot
+        - snapshot -> issued_corporate_documents
+        - issued_document -> regenerated_or_blocked
+    related_tests: [TEXP-001, TEXP-002, TEXP-003, TEXP-004, TEXP-005]
+    uncertainties:
+        - Historical issued documents with missing GSTIN/HSN require a non-destructive regeneration policy.
+        - Exact snapshot API/read model from REN-177 must be selected during implementation.
+dependencies:
+    - id: DEP-001
+      name: REN-177 canonical commercial snapshot
+      purpose: Supplies authoritative line, total, and payment data.
+      description: PI, FO, invoice, settlement, and summary must consume one snapshot.
+      status: in_progress
+    - id: DEP-002
+      name: REN-179 approved HSN/GST enforcement
+      purpose: Supplies approved per-line HSN and GST rate.
+      description: REN-180 must not reintroduce a generic 18% fallback.
+      status: in_review
+    - id: DEP-003
+      name: REN-178 customization model
+      purpose: Supplies explicit customization lines and metadata.
+      description: Customization display/tax treatment must remain consistent with the main line.
+      status: in_review
+    - id: DEP-004
+      name: REN-186 document identity settings
+      purpose: Distinguishes registration and operational addresses.
+      description: Seller GSTIN/address must come from the approved identity settings.
+      status: unresolved
+requirements:
+    - id: REQ-001
+      description: Every generated corporate PI/tax document renders a valid persisted document date and never displays Invalid Date.
+      type: explicit
+    - id: REQ-002
+      description: Corporate document issuance requires non-empty customer GSTIN and per-line HSN; GSTIN entry is presence-only, not format validation.
+      type: explicit
+    - id: REQ-003
+      description: GST and totals use the approved per-line HSN/tax classification and canonical snapshot, never invoice-total derivation or silent generic defaults.
+      type: explicit
+    - id: REQ-004
+      description: Corporate documents label Renivet as seller, Greysome as fulfillment partner, and the corporate customer as buyer; consumer facilitator language is absent.
+      type: explicit
+    - id: REQ-005
+      description: Corporate documents show Bill To and Ship To and omit shipping/shipping-GST rows when no shipping fee is charged.
+      type: explicit
+    - id: REQ-006
+      description: Commission invoice numbers use the shared corporate numbering authority and declaration/notes match the reseller model.
+      type: explicit
+    - id: REQ-007
+      description: Order-summary advance and balance values read from or reconcile against the canonical commercial/payment snapshot.
+      type: explicit
+    - id: REQ-008
+      description: Existing authorization, tenant scoping, immutability, and fail-closed issuance behavior are preserved.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      description: PI generated from a valid quote/order prints the valid document date.
+      requirement_ids: [REQ-001, REQ-003]
+    - id: SCN-002
+      description: Malformed or absent date is safely handled without Invalid Date output.
+      requirement_ids: [REQ-001, REQ-008]
+    - id: SCN-003
+      description: Issuance is blocked with actionable errors when customer GSTIN or any line HSN is missing.
+      requirement_ids: [REQ-002, REQ-008]
+    - id: SCN-004
+      description: Representative Mili order renders approved line GST/HSN and snapshot-exact totals.
+      requirement_ids: [REQ-003]
+    - id: SCN-005
+      description: Corporate PDF shows reseller party labels, Bill To/Ship To, and no facilitator or fake shipping-zero text.
+      requirement_ids: [REQ-004, REQ-005]
+    - id: SCN-006
+      description: Commission invoice numbering remains unique across retries and uses shared authority.
+      requirement_ids: [REQ-006, REQ-008]
+    - id: SCN-007
+      description: Order summary payment values match the canonical snapshot, including advance and balance.
+      requirement_ids: [REQ-007]
+    - id: SCN-008
+      description: Unauthorized or cross-tenant document download remains rejected and does not leak GSTIN/address data.
+      requirement_ids: [REQ-008]
+invariants:
+    - id: INV-001
+      description: No rendered corporate document contains Invalid Date.
+    - id: INV-002
+      description: Issued corporate documents have non-empty customer GSTIN and HSN for every taxable line.
+    - id: INV-003
+      description: GST, totals, and payment values reconcile exactly to the canonical snapshot.
+    - id: INV-004
+      description: Corporate documents never use consumer facilitator language or identify Greysome as seller.
+    - id: INV-005
+      description: Document numbers are allocated by the shared authority and remain idempotent under retry.
+    - id: INV-006
+      description: Authorization and tenant boundaries are preserved for all document data.
+flows:
+    - id: FLOW-001
+      description: Quote/order -> snapshot validation -> corporate document payload -> PDF rendering.
+      state_transitions: [quote_or_order_data -> canonical_commercial_snapshot, snapshot -> issued_corporate_documents]
+    - id: FLOW-002
+      description: Invalid source data -> actionable issuance block or safe regeneration fallback.
+      state_transitions: [issued_document -> regenerated_or_blocked]
+integrations:
+    - id: INT-001
+      system: Corporate document service
+      purpose: Allocate numbers and assemble persisted document data.
+      failure_mode: Transaction/error response; no partial issuance.
+    - id: INT-002
+      system: HSN/tax master and commercial snapshot
+      purpose: Provide approved line classifications and totals.
+      failure_mode: Issuance blocks when classification or snapshot is unavailable.
+    - id: INT-003
+      system: React-PDF corporate templates
+      purpose: Render consistent party, date, tax, address, and payment output.
+      failure_mode: Safe formatter/fail-closed data validation prevents invalid output.
+personas:
+    - id: PER-001
+      role: corporate_operations_admin
+      applicability: Creates quotes and issues corporate documents.
+    - id: PER-002
+      role: corporate_customer
+      applicability: Receives legally clear PI/tax documents.
+    - id: PER-003
+      role: finance_or_tax_reviewer
+      applicability: Relies on approved GST/HSN and seller identity.
+security_boundaries:
+    - id: SEC-001
+      description: Existing document download authorization and corporate tenant scoping remain mandatory.
+    - id: SEC-002
+      description: GSTIN and address data are only exposed to authorized document recipients.
+business_rules:
+    - id: BR-001
+      description: Renivet is reseller/seller of record; Greysome is fulfillment partner, not seller.
+      source: Linear REN-180 confirmed corporate model.
+    - id: BR-002
+      description: Shipping rows are omitted when customerShippingCharge is NOT_CHARGED.
+      source: Linear REN-180 update and REN-183 dependency.
+decisions:
+    - id: DEC-001
+      question: Should malformed historical document dates be backfilled in storage or only corrected at regeneration?
+      class: HUMAN_CONFIRMATION
+      status: unresolved
+      recommendation: Preserve immutable issued records; repair only regenerated output when an authoritative source date exists, otherwise block.
+      basis: Avoid destructive financial-document mutation while preventing invalid output.
+      confidence: medium
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-002
+      question: What is the approved composite/distinct customization tax treatment?
+      class: HUMAN_CONFIRMATION
+      status: unresolved
+      recommendation: Consume REN-179/Finance classification metadata and do not infer a rate in REN-180.
+      basis: Linear explicitly keeps composite-supply classification out of scope.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: regression
+      classification: REQUIRED
+      reason: Generate representative PI/tax PDFs and assert valid date, no Invalid Date, GSTIN, HSN, and exact seller strings.
+      scenarios: [SCN-001, SCN-002, SCN-005]
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Verify approved HSN/GST and totals match the canonical snapshot across PI, FO, invoice, and settlement.
+      scenarios: [SCN-003, SCN-004, SCN-007]
+    - id: TEXP-003
+      category: business_uat
+      classification: REQUIRED
+      reason: Verify Mili AI Bill To/Ship To and omission of shipping-zero rows.
+      scenarios: [SCN-005]
+    - id: TEXP-004
+      category: integration
+      classification: REQUIRED
+      reason: Verify commission numbering uses shared authority and remains unique under retry/concurrency.
+      scenarios: [SCN-006]
+    - id: TEXP-005
+      category: security
+      classification: REQUIRED
+      reason: Verify unauthorized/cross-tenant downloads remain forbidden and do not expose party data.
+      scenarios: [SCN-008]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren180_critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - {id: REN180-CRIT-001, severity: DESIGN_BLOCKER, summary: Issuance entrypoints and machine-readable GSTIN/HSN/snapshot validation contract are unspecified.}
+        - {id: REN180-CRIT-002, severity: DESIGN_BLOCKER, summary: Date fallback fabricates current dates; malformed and validUntil behavior needs an explicit fail-closed policy.}
+        - {id: REN180-CRIT-003, severity: MAJOR, summary: Corporate tenant scope, PII access, and audit requirements are not explicit.}
+        - {id: REN180-CRIT-004, severity: DESIGN_BLOCKER, summary: Snapshot adapter/version and atomic reconciliation rule are unspecified.}
+        - {id: REN180-CRIT-005, severity: DESIGN_BLOCKER, summary: Commission numbering persistence/idempotency and PI check-then-insert race are unspecified.}
+        - {id: REN180-CRIT-006, severity: MAJOR, summary: Legacy nullable fields and missing shipTo payload require compatibility/migration design.}
+        - {id: REN180-CRIT-007, severity: MAJOR, summary: Structured observability and failure-path tests are incomplete.}
+        - {id: REN180-CRIT-008, severity: DESIGN_BLOCKER, summary: Finance/CA, snapshot, identity, and exact reseller declaration dependencies are unresolved.}
+approval:
+    state: BLOCKED
+    design_blockers:
+        - DEC-001 requires owner confirmation for historical invalid-date handling.
+        - DEC-002 requires Finance/CA confirmation of customization tax treatment.
+        - REN180-CRIT-001 requires concrete issuance validation/error contracts.
+        - REN180-CRIT-004/005 require snapshot and numbering/idempotency contracts.
+        - REN180-CRIT-008 requires dependent REN-177/179/186 and reseller wording decisions to be frozen.
+    approved_by: null
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-003]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-001, SCN-004]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-005]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-005]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-006]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-007]}
+        - {requirement_id: REQ-008, scenario_ids: [SCN-002, SCN-003, SCN-006, SCN-008]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-003]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-001]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-002, INV-006]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-002, INV-003]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-001, INV-004]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-005]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-003]}
+        - {scenario_id: SCN-008, invariant_ids: [INV-006]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-001, TEXP-003]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-005]}
