@@ -2,7 +2,7 @@
 
 ## Executive Result
 
-REVIEW_FAILED with MATERIAL_DRIFT. The implementation now propagates structured snapshots to PI, FO, tax invoice, and settlement records and adds a legacy backfill, but transaction/idempotency and full E2E coverage remain incomplete. Governance re-entry is required. Base `122a62023fd396f7c94b9889b67a705a09addde1`; head `8fd643b213e29fb7ac443b90d5eb208ec45d9eef`.
+REVIEW_FAILED with MATERIAL_DRIFT. The implementation now propagates structured snapshots to PI, FO, tax invoice, and settlement records, adds a legacy backfill, and makes renderers prefer snapshots, but transaction/idempotency and full E2E coverage remain incomplete. Governance re-entry is required. Base `122a62023fd396f7c94b9889b67a705a09addde1`; head `62a1db119accba2d715d9454cdbec5d60f09b9b4`.
 
 ## Review Scope and Git Evidence
 
