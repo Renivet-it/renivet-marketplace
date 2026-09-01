@@ -26,6 +26,7 @@ import {
     corporateEscalations,
     corporateFabricCompositions,
     corporateGsmOptions,
+    hsnMaster,
     corporateNotifications,
     corporateOrders,
     corporateOrderStatusHistory,
@@ -74,6 +75,7 @@ import {
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
 import { corporateOrderService } from "@/lib/services/corporate-order";
+import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import {
     convertValueToLabel,
@@ -1708,6 +1710,28 @@ class CorporatePlatformService {
 
     async createManualQuote(actorUserId: string, input: unknown) {
         const parsed = corporateAdminManualQuoteInputSchema.parse(input);
+        const normalizedHsnCode = parsed.hsnCode?.trim() || null;
+        if (normalizedHsnCode) {
+            await db
+                .insert(hsnMaster)
+                .values({
+                    hsnCode: normalizedHsnCode,
+                    description: "Corporate manual quote classification",
+                    gstRateBps: Math.round(parsed.gstPercent * 100),
+                })
+                .onConflictDoNothing({ target: hsnMaster.hsnCode });
+            const classification = await db.query.hsnMaster.findFirst({
+                where: and(
+                    eq(hsnMaster.hsnCode, normalizedHsnCode),
+                    eq(hsnMaster.isActive, true)
+                ),
+            });
+            requireCorporateTaxClassification({
+                hsnCode: classification?.hsnCode,
+                gstRateBps: classification?.gstRateBps,
+                sourceId: classification?.id,
+            });
+        }
         const normalizedEmail = parsed.email.toLowerCase();
         const matchedUser = await db.query.users.findFirst({
             where: and(
@@ -5012,14 +5036,20 @@ class CorporatePlatformService {
             "FO-0001";
 
         const resolvedHsn =
-            (order.quote as any)?.hsnCode || (order as any).hsnCode || "6109";
+            (order.quote as any)?.hsnCode || (order as any).hsnCode || null;
+        if (!resolvedHsn || resolvedHsn.length < 4) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "An approved HSN classification is required before issuing the tax invoice",
+            });
+        }
 
         return corporateDocumentService.recordBrandTaxInvoice(userId, {
             ...parsed,
             invoiceNumber: `INV-${foNumber.replace(/[^a-zA-Z0-9]/g, "")}-${Date.now().toString().slice(-4)}`,
             supplierGstin: brandDetails.gstin,
             recipientGstin: settings.gstin,
-            hsnCode: resolvedHsn.length >= 4 ? resolvedHsn.slice(0, 8) : "6109",
+            hsnCode: resolvedHsn.slice(0, 8),
             taxableValuePaise,
             cgstPaise: 0,
             sgstPaise: 0,

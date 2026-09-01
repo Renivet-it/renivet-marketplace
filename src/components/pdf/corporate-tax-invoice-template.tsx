@@ -298,7 +298,7 @@ export function CorporateTaxInvoiceTemplate({
                 ? [
                       {
                           quantity: 1,
-                          gstRateBps: 1800,
+                          gstRateBps: customizationGstRateBps,
                           mrpPaise: customizationPaise,
                           taxableValuePaise: customizationPaise,
                           cgstPaise: customCgstPaise,
