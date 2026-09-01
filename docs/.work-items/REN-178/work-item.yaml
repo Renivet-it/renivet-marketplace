@@ -4,7 +4,7 @@ task:
     title: "[Corporate Order] Persist structured customization and extras through all documents"
     source: linear
     branch: ayanganguly333/ren-178-corporate-order-customizationextras-entered-by-admin-are
-    status: READY_FOR_DEV
+    status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-178/corporate-order-customizationextras-entered-by-admin-are-silently
         priority: Urgent
@@ -297,3 +297,31 @@ traceability:
         - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001] }
         - { scenario_id: SCN-005, test_expectation_ids: [TEXP-004] }
         - { scenario_id: SCN-006, test_expectation_ids: [TEXP-001, TEXP-004] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_FAILED
+    base_branch: main
+    base_commit: "122a62023fd396f7c94b9889b67a705a09addde1"
+    head_commit: "a1036c7dba482b6b70a7070af65e07dad558eb1d"
+    pr_url: null
+    material_drift: MATERIAL_DRIFT
+    reconciliation:
+        requirements: FAIL
+        scenarios: FAIL
+        invariants: FAIL
+        architecture: FAIL
+        security: PARTIAL
+        test_coverage: FAIL
+        scope: FAIL
+    blocking_findings:
+        - "REV-001: Downstream corporate documents do not share one immutable customization snapshot."
+        - "REV-002: Legacy scalar customization amounts have no backfill migration."
+    required_actions:
+        - "Complete canonical snapshot/version linkage for PI, FO, invoice, settlement, and quote revisions."
+        - "Add an idempotent legacy scalar backfill and reconciliation report."
+        - "Wrap parent/customization writes in transactions and add FO issuance idempotency."
+        - "Add end-to-end, migration, concurrency, authorization, and document immutability tests."
+    evidence:
+        - "Compared approved REN-178 contract with base 122a62023fd396f7c94b9889b67a705a09addde1 and head a1036c7dba482b6b70a7070af65e07dad558eb1d."
+        - "Bun test completed with 165 passed and 1 skipped, but required REN-178 end-to-end coverage is absent."
+    governance_reentry_required: true
