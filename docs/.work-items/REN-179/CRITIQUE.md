@@ -23,3 +23,15 @@ Migration compatibility has no non-corporate impact; additive migration/backfill
 ## Disposition
 
 DB-001 is preserved as a design blocker. The specification is revised to require pre-issuance assertions, a complete template consumer inventory, canonical line snapshot/rounding, stable structured errors, and concurrency-safe issuance. READY_FOR_DEV is not granted until Finance/CA confirms the classification dependency and the owner approves the revised contract.
+
+## Architecture Lock rerun (2026-09-02)
+
+- **DESIGN_BLOCKER REN179-CRIT-010** — Retire/quarantine the `corporateOrderSettings.gstRateBps` 1800 default so legacy/config paths cannot violate the locked no-generic-rate rule.
+- **MAJOR REN179-CRIT-011** — `corporate-platform.ts` brand tax-invoice recording still falls back to HSN `6109`; it must fail closed and use the classified snapshot.
+- **MAJOR REN179-CRIT-012** — `createQuote` and `createManualQuote` write or calculate before classification preflight; require transaction-scoped preflight and rollback tests.
+- **MAJOR REN179-CRIT-013** — Expand the issuance call graph/guard to PI, FO, settlement, exports, direct brand invoice, retries, and background jobs.
+- **MAJOR REN179-CRIT-014** — Define explicit snapshot source ID/version/effective-at fields; HSN master changes must affect future snapshots only.
+- **MAJOR REN179-CRIT-015** — Test equality between persisted line taxes, charged ledger amounts, and every PDF/API display; reject mismatches.
+- **MINOR REN179-CRIT-016** — Add an operational pilot-readiness check/metric so fail-closed deployment state is observable.
+
+Rerun disposition: preserve REN179-CRIT-010 as an additional blocker; all other findings are required design actions before implementation review.

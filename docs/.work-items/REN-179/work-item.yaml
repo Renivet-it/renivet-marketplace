@@ -50,6 +50,7 @@ investigation:
         - Finance/CA has not confirmed the final T-shirt HSN/rate or customization composite treatment.
         - REN-177 field names and rollout order must be reconciled before implementation.
         - Historical issued documents may lack explicit line-level classification and need a non-fabricating display policy.
+        - Enforcement code may proceed data-first, but pilot issuance remains blocked until authoritative HSN records are populated.
 dependencies:
     - id: DEP-001
       name: REN-64 HSN Master integration
@@ -207,8 +208,8 @@ decisions:
       question: What HSN/rate and composite-supply treatment should production use for T-shirts and printing/customization?
       class: HUMAN_CONFIRMATION
       status: deferred
-      recommendation: Finance/CA must confirm and populate HSN Master/approved override; implementation must remain data-driven.
-      basis: Linear issue dependency and financial/legal consequence.
+      recommendation: Implement fail-closed, data-driven enforcement now; Finance/CA must later populate HSN Master/approved override before pilot issuance.
+      basis: Architecture Lock Pass explicitly permits enforcement independently but requires authoritative effective classification for issuance.
       confidence: high
       consequence: high
       human_confirmation_required: true
@@ -280,9 +281,30 @@ critic:
         - id: REN179-CRIT-009
           severity: MINOR
           summary: Add HSN authority/source version metadata to snapshots.
+        - id: REN179-CRIT-010
+          severity: DESIGN_BLOCKER
+          summary: Retire or quarantine the corporate settings 1800 default from product tax resolution.
+        - id: REN179-CRIT-011
+          severity: MAJOR
+          summary: Brand tax-invoice recording still falls back to HSN 6109.
+        - id: REN179-CRIT-012
+          severity: MAJOR
+          summary: Quote paths calculate or write before classification preflight.
+        - id: REN179-CRIT-013
+          severity: MAJOR
+          summary: Every issuance entry point, retry, and background job needs the same classification guard.
+        - id: REN179-CRIT-014
+          severity: MAJOR
+          summary: Snapshot authority source/version/effective-at contract is not explicit.
+        - id: REN179-CRIT-015
+          severity: MAJOR
+          summary: Persisted tax, charged ledger, and displayed tax equality needs an invariant and tests.
+        - id: REN179-CRIT-016
+          severity: MINOR
+          summary: Pilot readiness needs an operational check and observable failure metric.
 approval:
     state: BLOCKED
-    design_blockers: [DEC-001, REN179-CRIT-001]
+    design_blockers: [DEC-001, REN179-CRIT-001, REN179-CRIT-010]
     approved_by: null
 traceability:
     requirement_to_scenarios:

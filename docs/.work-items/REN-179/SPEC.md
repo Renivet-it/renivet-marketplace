@@ -20,6 +20,12 @@ The normal corporate `buildQuote` path resolves `corporateProductTypes.hsnMaster
 
 The corporate tax invoice template has two unsafe independent fallbacks: an unresolved HSN ends in the literal `6109`, and an unresolved base rate ends in `order.gstRateBps ?? 500`. The customization line also hard-codes 18%. These can render a document whose printed HSN/rate disagrees with the amount charged. The service-issued invoice currently snapshots order totals, but the renderer can derive different display values. Existing documents and legacy orders need a compatibility policy that never invents a classification for a newly issued document.
 
+## Locked acceptance criteria (Architecture Lock Pass, 2026-09-02)
+
+For every customer-facing taxable corporate invoice: HSN is mandatory; GST comes from the authoritative HSN/tax master; no schema, settings, template, settlement, or customization layer may apply a generic 18%/5% rate; no hard-coded HSN such as `6109` is permitted; displayed GST must equal charged GST; effective statutory rules and transaction value are the computation basis; value-slab thresholds must be data-driven; the authority and effective version/date must be traceable; future rate changes must be data changes; and missing/invalid classification must fail closed. The enforcement mechanism may be implemented before the Finance/CA catalog data fix, but pilot issuance remains blocked until authoritative records exist.
+
+The live audit confirmed independent defects remain in the current code: the corporate settings schema default `1800`, the tax invoice HSN fallback `6109`, the tax invoice rate fallback `500`, and the customization-line `1800`/`0.18` literals. The commission-GST `1800` in settlement is tracked under REN-181, not this product/HSN scope.
+
 ## Requirements
 
 1. Trace every corporate quote/order/PI/tax-invoice issuance path and resolve taxable product HSN and GST rate from the active HSN Master or an explicit approved override.
