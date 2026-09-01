@@ -3,7 +3,7 @@ task:
     id: REN-181
     title: "[Corporate Order] Settlement Statement: remove fabricated fallback values, make immutable/versioned, gate inappropriate TCS/194-O deductions"
     source: linear
-    branch: ayanganguly333/ren-181-corporate-order-settlement-statement-remove-fabricated
+    branch: ayanganguly333/corporate-order-qc
     status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-181/corporate-order-settlement-statement-remove-fabricated
