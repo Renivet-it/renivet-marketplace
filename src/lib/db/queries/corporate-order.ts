@@ -35,6 +35,7 @@ import {
     corporateProductTypes,
     corporateProformaInvoices,
     corporatePurchaseOrders,
+    corporateQcSubmissions,
     corporateReceiptVouchers,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
@@ -403,6 +404,14 @@ class CorporateOrderQueries {
         return updated ? this.parseOrder(updated) : null;
     }
 
+    async getLatestQcSubmissionForOrder(orderId: string) {
+        return db.query.corporateQcSubmissions.findFirst({
+            where: eq(corporateQcSubmissions.orderId, orderId),
+            orderBy: [desc(corporateQcSubmissions.createdAt)],
+            with: { images: true, submittedBy: true, reviewedBy: true },
+        });
+    }
+
     async getOrderById(id: string) {
         const [order, taxInvoice] = await Promise.all([
             db.query.corporateOrders.findFirst({
@@ -412,6 +421,14 @@ class CorporateOrderQueries {
                     shipment: true,
                     statusHistory: {
                         orderBy: [desc(corporateOrderStatusHistory.createdAt)],
+                    },
+                    qcSubmissions: {
+                        orderBy: [desc(corporateQcSubmissions.createdAt)],
+                        with: {
+                            images: true,
+                            submittedBy: true,
+                            reviewedBy: true,
+                        },
                     },
                     user: true,
                 },

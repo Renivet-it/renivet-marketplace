@@ -486,6 +486,12 @@ export const corporateQcSubmissionInputSchema = z.object({
     images: z.array(corporatePlatformFileSchema).min(1).max(10),
 });
 
+export const corporateQcReviewInputSchema = z.object({
+    submissionId: z.string().uuid(),
+    decision: z.enum(["approved", "rejected"]),
+    reviewNotes: z.string().trim().max(1000).nullable().optional(),
+});
+
 export const corporatePaymentInputSchema = z.object({
     orderId: z.string().uuid().nullable().optional(),
     quoteId: z.string().uuid().nullable().optional(),

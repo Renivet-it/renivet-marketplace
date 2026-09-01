@@ -13,6 +13,7 @@ import {
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import {
+    corporateQcSubmissions,
     corporateQuotes,
     corporateReplacementRequests,
     corporateRtoShipments,
@@ -395,6 +396,7 @@ export const corporateOrdersRelations = relations(
             references: [corporateShipments.orderId],
         }),
         statusHistory: many(corporateOrderStatusHistory),
+        qcSubmissions: many(corporateQcSubmissions),
         replacementRequests: many(corporateReplacementRequests, {
             relationName: "corporate_order_replacement_requests",
         }),

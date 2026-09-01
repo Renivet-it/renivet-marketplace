@@ -94,6 +94,7 @@ import {
     corporateProformaInvoiceInputSchema,
     corporatePurchaseOrderInputSchema,
     corporatePurchaseOrderReviewInputSchema,
+    corporateQcReviewInputSchema,
     corporateQcSubmissionInputSchema,
     corporateQuoteDecisionInputSchema,
     corporateQuoteInputSchema,
@@ -3619,40 +3620,75 @@ class CorporatePlatformService {
 
     async submitQc(actorUserId: string, input: unknown) {
         const parsed = corporateQcSubmissionInputSchema.parse(input);
-        const created = await db
-            .insert(corporateQcSubmissions)
-            .values({
-                orderId: parsed.orderId,
-                submittedByUserId: actorUserId,
-                status: "submitted",
-                remarks: parsed.remarks ?? null,
-                sampleCoveragePercent: parsed.sampleCoveragePercent ?? null,
-                submittedAt: new Date().toISOString().slice(0, 10),
-            })
-            .returning()
-            .then((rows) => rows[0]);
-
-        await db.insert(corporateQcImages).values(
-            parsed.images.map((image) => ({
-                qcSubmissionId: created.id,
-                imageUrl: image.url,
-                imageType: image.type,
-            }))
-        );
-
-        await db.insert(corporateDocuments).values(
-            parsed.images.map((image, index) => ({
-                entityType: "qc_submission",
-                entityId: created.id,
-                documentType: "qc_image",
-                fileName: image.name,
-                fileUrl: image.url,
-                mimeType: image.type,
-                fileSizeBytes: image.size,
-                uploadedByUserId: actorUserId,
-                version: index + 1,
-            }))
-        );
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+            columns: { id: true, status: true },
+        });
+        if (!order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+        if (!["quality_check", "in_production"].includes(order.status)) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "QC evidence can only be submitted during production QC",
+            });
+        }
+        for (const image of parsed.images) {
+            let parsedUrl: URL;
+            try {
+                parsedUrl = new URL(image.url);
+            } catch {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "QC evidence URL is invalid",
+                });
+            }
+            if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "QC evidence URL must use HTTP or HTTPS",
+                });
+            }
+        }
+        const created = await db.transaction(async (tx) => {
+            const submission = await tx
+                .insert(corporateQcSubmissions)
+                .values({
+                    orderId: parsed.orderId,
+                    submittedByUserId: actorUserId,
+                    status: "submitted",
+                    remarks: parsed.remarks ?? null,
+                    sampleCoveragePercent: parsed.sampleCoveragePercent ?? null,
+                    submittedAt: new Date().toISOString().slice(0, 10),
+                })
+                .returning()
+                .then((rows) => rows[0]);
+            await tx.insert(corporateQcImages).values(
+                parsed.images.map((image) => ({
+                    qcSubmissionId: submission.id,
+                    imageUrl: image.url,
+                    imageType: image.type,
+                }))
+            );
+            await tx.insert(corporateDocuments).values(
+                parsed.images.map((image, index) => ({
+                    entityType: "qc_submission",
+                    entityId: submission.id,
+                    documentType: "qc_image",
+                    fileName: image.name,
+                    fileUrl: image.url,
+                    mimeType: image.type,
+                    fileSizeBytes: image.size,
+                    uploadedByUserId: actorUserId,
+                    version: index + 1,
+                }))
+            );
+            return submission;
+        });
 
         await this.createEvent(
             "qc_submission",
@@ -3666,6 +3702,66 @@ class CorporatePlatformService {
         );
 
         return created;
+    }
+
+    async reviewQc(actorUserId: string, input: unknown) {
+        const parsed = corporateQcReviewInputSchema.parse(input);
+        const submission = await db.query.corporateQcSubmissions.findFirst({
+            where: eq(corporateQcSubmissions.id, parsed.submissionId),
+            with: { order: true },
+        });
+        if (!submission) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "QC submission not found",
+            });
+        }
+        if (submission.status !== "submitted") {
+            if (submission.status === parsed.decision) return submission;
+            throw new TRPCError({
+                code: "CONFLICT",
+                message: "QC submission has already been finalized",
+            });
+        }
+
+        const reviewedAt = new Date();
+        const updated = await db
+            .update(corporateQcSubmissions)
+            .set({
+                status: parsed.decision,
+                reviewedByUserId: actorUserId,
+                reviewedAt,
+                reviewNotes: parsed.reviewNotes ?? null,
+            })
+            .where(
+                and(
+                    eq(corporateQcSubmissions.id, parsed.submissionId),
+                    eq(corporateQcSubmissions.status, "submitted")
+                )
+            )
+            .returning()
+            .then((rows) => rows[0]);
+
+        if (!updated) {
+            throw new TRPCError({
+                code: "CONFLICT",
+                message: "QC submission was reviewed by another request",
+            });
+        }
+
+        await this.createEvent(
+            "qc_submission",
+            updated.id,
+            `QC_${parsed.decision.toUpperCase()}`,
+            {
+                orderId: updated.orderId,
+                decision: parsed.decision,
+                reviewedAt: reviewedAt.toISOString(),
+            },
+            actorUserId
+        );
+
+        return updated;
     }
 
     async recordPayment(actorUserId: string, input: unknown) {

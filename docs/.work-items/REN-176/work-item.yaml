@@ -1,0 +1,414 @@
+schema_version: "1.0"
+task:
+    id: REN-176
+    title: "[Corporate Order] Implement real QC approval gate for corporate fulfillment"
+    source: linear
+    branch: ayanganguly333/ren-176-corporate-order-implement-real-qc-approval-gate-for
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-176/corporate-order-implement-real-qc-approval-gate-for
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - QC approval controls corporate order dispatch eligibility.
+        - The task changes authorization boundaries and auditability.
+        - The task affects order lifecycle state and shared REN-175 guard behavior.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue description, updates, priority, labels, status, branch, and relations
+        - Existing QC submission service, router, validation schema, and database schema
+        - Corporate order status schema and REN-175 shared transition guard
+        - Existing corporate order-management permission middleware and audit/event patterns
+        - Existing corporate admin order UI surfaces and repository tests
+    excluded_areas:
+        - AQL/statistical sampling methodology
+        - Non-corporate marketplace QC
+        - Warehouse GRN implementation (REN-183)
+        - E-way bill generation
+        - QC PDF/export format
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: [INT-001, INT-002, INT-003, INT-004]
+    security_boundaries: [SEC-001, SEC-002, SEC-003, SEC-004]
+    state_transitions:
+        - qc_submission_pending -> qc_submission_submitted
+        - qc_submission_submitted -> qc_submission_approved
+        - qc_submission_submitted -> qc_submission_rejected
+        - corporate_order_quality_check -> corporate_order_ready_for_dispatch
+    related_tests:
+        - TEXP-001
+        - TEXP-002
+        - TEXP-003
+        - TEXP-004
+        - TEXP-005
+        - TEXP-006
+    uncertainties:
+        - The issue wording conflicts on whether reviewer identity must differ from submitter; owner confirmation is required.
+        - The exact existing admin UI surface for QC review must be selected during implementation.
+        - REN-175 is implemented on a separate branch; integration must target its shared guard contract.
+        - Existing QC rows require a compatibility policy if review fields or uniqueness constraints are added.
+dependencies:
+    - id: DEP-001
+      name: REN-175 shared status-transition guard
+      purpose: Provides the single dispatch gate where approved-QC existence must be enforced.
+      description: Add one approved-QC predicate at the shared guard boundary; do not duplicate endpoint checks.
+      status: resolved
+    - id: DEP-002
+      name: Existing corporate order-management authorization
+      purpose: Protects submit and review mutations.
+      description: Reuse BitFieldSitePermission.MANAGE_ORDERS and server-side tenant/order checks.
+      status: resolved
+    - id: DEP-003
+      name: QC schema migration and legacy-row policy
+      purpose: Supplies review notes/precision and deterministic handling of existing QC rows.
+      description: Additive migration and rollout/backfill behavior must be defined before implementation.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Corporate QC must support separate submission and explicit review outcomes of approved or rejected, with reviewer identity, timestamp, and optional notes.
+      type: explicit
+    - id: REQ-002
+      description: Only an explicit approved QC submission satisfies the dispatch precondition; pending, submitted, or rejected records do not.
+      type: explicit
+    - id: REQ-003
+      description: Submit and review mutations must be authenticated, permission-protected, and scoped to the corporate order and its authorized actors.
+      type: explicit
+    - id: REQ-004
+      description: The shared REN-175 transition guard must enforce the approved-QC predicate for dispatch eligibility.
+      type: explicit
+    - id: REQ-005
+      description: QC evidence and review history must remain queryable per order, including images, coverage, remarks, decision, reviewer, and timestamps.
+      type: explicit
+    - id: REQ-006
+      description: Review finalization must be concurrency-safe and retry-safe, preventing conflicting decisions or duplicate audit events.
+      type: inferred
+    - id: REQ-007
+      description: An admin UI must allow authorized reviewers to inspect QC evidence and record approval or rejection.
+      type: explicit
+    - id: REQ-008
+      description: Review notes, timestamps, and legacy submission compatibility must be represented by an additive migration-safe data contract.
+      type: inferred
+    - id: REQ-009
+      description: QC evidence URLs and retrieval must be validated and restricted to authorized corporate-order viewers.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-003, REQ-005]
+      description: An authorized actor submits valid QC evidence and the submission records actor, date, images, coverage, and remarks.
+    - id: SCN-002
+      requirement_ids: [REQ-001, REQ-003, REQ-005]
+      description: An unauthorized or unauthenticated caller cannot submit QC evidence.
+    - id: SCN-003
+      requirement_ids: [REQ-001, REQ-003]
+      description: An authorized reviewer approves a submitted QC record and reviewer identity, timestamp, and notes are persisted.
+    - id: SCN-004
+      requirement_ids: [REQ-001, REQ-003]
+      description: An authorized reviewer rejects a submitted QC record and the rejection is persisted with reviewer identity, timestamp, and notes.
+    - id: SCN-005
+      requirement_ids: [REQ-002, REQ-004]
+      description: A transition to ready_for_dispatch or later dispatch status is rejected when no QC exists or QC is pending, submitted, or rejected.
+    - id: SCN-006
+      requirement_ids: [REQ-002, REQ-004]
+      description: A transition with an explicit approved QC record proceeds through the existing shared guard when all other prerequisites pass.
+    - id: SCN-007
+      requirement_ids: [REQ-006]
+      description: Competing review requests allow at most one final decision; retries do not duplicate review events.
+    - id: SCN-008
+      requirement_ids: [REQ-007]
+      description: The corporate admin UI displays QC evidence and exposes approval/rejection only to authorized reviewers.
+    - id: SCN-009
+      requirement_ids: [REQ-001, REQ-006]
+      description: A reviewer attempts to finalize a missing or already-finalized submission and receives a safe conflict/not-found response.
+    - id: SCN-010
+      requirement_ids: [REQ-005, REQ-008]
+      description: A submission or review write fails mid-operation and leaves no partial evidence or finalized decision.
+    - id: SCN-011
+      requirement_ids: [REQ-005, REQ-008]
+      description: A newer submission cannot be bypassed by an older approved submission, and legacy rows follow the defined rollout policy.
+    - id: SCN-012
+      requirement_ids: [REQ-009]
+      description: An unauthorized viewer cannot retrieve QC evidence for another order.
+invariants:
+    - id: INV-001
+      description: Only status approved satisfies the QC dispatch predicate.
+    - id: INV-002
+      description: Every finalized QC decision has reviewer identity and review timestamp.
+    - id: INV-003
+      description: QC mutations cannot cross corporate-order authorization boundaries.
+    - id: INV-004
+      description: Dispatch eligibility is enforced in the shared status-transition guard, not endpoint-specific code.
+    - id: INV-005
+      description: A QC submission has at most one effective final review decision and one corresponding audit event.
+    - id: INV-006
+      description: Submission and review records are atomic and never expose partial evidence or review metadata.
+    - id: INV-007
+      description: Only the active/latest QC submission can satisfy the dispatch predicate.
+    - id: INV-008
+      description: QC evidence access is authorized and does not expose cross-order media.
+flows:
+    - id: FLOW-001
+      description: Submitter uploads QC evidence, then an authorized reviewer records approve/reject, with all evidence and review metadata queryable from the order.
+      state_transitions: [qc_submission_pending -> qc_submission_submitted, qc_submission_submitted -> qc_submission_approved, qc_submission_submitted -> qc_submission_rejected]
+    - id: FLOW-002
+      description: All corporate dispatch callers converge on REN-175 shared guard, which checks approved QC before allowing dispatch.
+      state_transitions: [corporate_order_quality_check -> corporate_order_ready_for_dispatch]
+    - id: FLOW-003
+      description: Conditional review update and audit event handling prevents duplicate final decisions under retry or concurrency.
+      state_transitions: [qc_submission_submitted -> qc_submission_approved, qc_submission_submitted -> qc_submission_rejected]
+    - id: FLOW-004
+      description: Submission/review writes use transaction or compensating recovery, with explicit legacy-row and active-version handling.
+      state_transitions: [qc_submission_submitted -> qc_submission_approved]
+integrations:
+    - id: INT-001
+      system: tRPC corporate platform router
+      purpose: Exposes submit and review mutations.
+      failure_mode: Authentication/permission middleware rejects unauthorized requests.
+    - id: INT-002
+      system: corporate order database
+      purpose: Stores QC submissions, images, documents, and review metadata.
+      failure_mode: Validation, not-found, or conflict error without partial finalization.
+    - id: INT-003
+      system: REN-175 status transition service
+      purpose: Enforces approved-QC precondition before dispatch.
+      failure_mode: Precondition failure leaves order status unchanged.
+    - id: INT-004
+      system: QC evidence storage and document access
+      purpose: Stores and serves QC images under corporate-order authorization.
+      failure_mode: Invalid or unauthorized evidence access is rejected without disclosure.
+personas:
+    - id: PER-001
+      role: qc_submitter
+      applicability: Authorized corporate operations actor submitting evidence.
+    - id: PER-002
+      role: qc_reviewer
+      applicability: Authorized reviewer recording approval or rejection.
+    - id: PER-003
+      role: unauthorized_caller
+      applicability: Must be rejected at router/service boundaries.
+security_boundaries:
+    - id: SEC-001
+      description: submitQc must use authenticated corporate order-management authorization.
+    - id: SEC-002
+      description: review/approve/reject must use authenticated MANAGE_ORDERS authorization and enforce order/submission scope.
+    - id: SEC-003
+      description: Review metadata and evidence must not be writable by unprivileged callers or spoofable through client input.
+    - id: SEC-004
+      description: QC image URLs and evidence reads must be validated and scoped to authorized order viewers.
+business_rules:
+    - id: BR-001
+      description: A QC row is insufficient; only explicit approved status satisfies dispatch.
+      source: REN-176 acceptance criteria.
+    - id: BR-002
+      description: QC approval is required before ready_for_dispatch and subsequent dispatch states.
+      source: REN-176 scope and REN-175 shared guard.
+decisions:
+    - id: DEC-001
+      question: Must the approving reviewer be different from the submitting user?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Allow the reviewer to be the same person or a different person, provided the reviewer is authenticated, authorized, and recorded.
+      basis: The issue wording was contradictory; owner confirmation explicitly allows same or different reviewer identity.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-002
+      question: Which permission grants QC review?
+      class: RECOMMEND_CONTINUE
+      status: proposed
+      recommendation: Reuse MANAGE_ORDERS, matching the existing corporate admin mutation policy and REN-175.
+      basis: Existing corporate platform routes consistently use BitFieldSitePermission.MANAGE_ORDERS for order-changing operations.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-001
+      category: api
+      classification: REQUIRED
+      reason: Covers valid QC submission persistence and malformed input rejection.
+      scenarios: [SCN-001]
+    - id: TEXP-002
+      category: security
+      classification: REQUIRED
+      reason: Covers unauthenticated, unpermissioned, and cross-order QC mutation rejection.
+      scenarios: [SCN-002]
+    - id: TEXP-003
+      category: api
+      classification: REQUIRED
+      reason: Covers approval/rejection metadata, explicit status, and audit history.
+      scenarios: [SCN-003, SCN-004, SCN-009]
+    - id: TEXP-004
+      category: integration
+      classification: REQUIRED
+      reason: Covers shared guard rejection for non-approved QC and success for approved QC.
+      scenarios: [SCN-005, SCN-006]
+    - id: TEXP-005
+      category: integration
+      classification: REQUIRED
+      reason: Covers concurrency/idempotency and UI review access behavior.
+      scenarios: [SCN-007, SCN-008]
+    - id: TEXP-006
+      category: integration
+      classification: REQUIRED
+      reason: Covers atomic rollback, latest-submission semantics, legacy rows, and evidence authorization.
+      scenarios: [SCN-010, SCN-011, SCN-012]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context read-only critic
+    fresh_context: true
+    read_only: true
+    required_categories:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    categories_reviewed:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    findings:
+        - id: REN176-CRIT-001
+          severity: DESIGN_BLOCKER
+          summary: Review notes/timestamp contract requires additive migration and field semantics.
+        - id: REN176-CRIT-002
+          severity: DESIGN_BLOCKER
+          summary: Reviewer-versus-submitter identity rule is contradictory and unresolved.
+        - id: REN176-CRIT-003
+          severity: MAJOR
+          summary: Submission and review writes need atomicity/recovery semantics.
+        - id: REN176-CRIT-004
+          severity: MAJOR
+          summary: Review event idempotency and deduplication are unspecified.
+        - id: REN176-CRIT-005
+          severity: MAJOR
+          summary: Latest submission/revision semantics must prevent stale approval bypass.
+        - id: REN176-CRIT-006
+          severity: MAJOR
+          summary: QC mutation role and tenant authorization matrix is underspecified.
+        - id: REN176-CRIT-007
+          severity: MAJOR
+          summary: QC evidence URL validation and retrieval privacy controls are unspecified.
+        - id: REN176-CRIT-008
+          severity: MINOR
+          summary: Blocked-dispatch/review-conflict observability taxonomy is unspecified.
+        - id: REN176-CRIT-009
+          severity: MINOR
+          summary: DB-backed race, rollback, revision, and evidence-access tests are needed.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Ayan Ganguly (owner confirmation: same or different reviewer; approved QC data rules)"
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-001
+          scenario_ids: [SCN-001, SCN-003, SCN-004, SCN-009]
+        - requirement_id: REQ-002
+          scenario_ids: [SCN-005, SCN-006]
+        - requirement_id: REQ-003
+          scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-004]
+        - requirement_id: REQ-004
+          scenario_ids: [SCN-005, SCN-006]
+        - requirement_id: REQ-005
+          scenario_ids: [SCN-001, SCN-003, SCN-004]
+        - requirement_id: REQ-006
+          scenario_ids: [SCN-007, SCN-009]
+        - requirement_id: REQ-007
+          scenario_ids: [SCN-008]
+        - requirement_id: REQ-008
+          scenario_ids: [SCN-010, SCN-011]
+        - requirement_id: REQ-009
+          scenario_ids: [SCN-012]
+    scenario_to_invariants:
+        - scenario_id: SCN-001
+          invariant_ids: [INV-002, INV-003]
+        - scenario_id: SCN-002
+          invariant_ids: [INV-003]
+        - scenario_id: SCN-003
+          invariant_ids: [INV-001, INV-002, INV-005]
+        - scenario_id: SCN-004
+          invariant_ids: [INV-001, INV-002, INV-005]
+        - scenario_id: SCN-005
+          invariant_ids: [INV-001, INV-004]
+        - scenario_id: SCN-006
+          invariant_ids: [INV-001, INV-004]
+        - scenario_id: SCN-007
+          invariant_ids: [INV-002, INV-005]
+        - scenario_id: SCN-008
+          invariant_ids: [INV-003]
+        - scenario_id: SCN-009
+          invariant_ids: [INV-002, INV-005]
+        - scenario_id: SCN-010
+          invariant_ids: [INV-006]
+        - scenario_id: SCN-011
+          invariant_ids: [INV-007]
+        - scenario_id: SCN-012
+          invariant_ids: [INV-008]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-001
+          test_expectation_ids: [TEXP-001]
+        - scenario_id: SCN-002
+          test_expectation_ids: [TEXP-002]
+        - scenario_id: SCN-003
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-004
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-005
+          test_expectation_ids: [TEXP-004]
+        - scenario_id: SCN-006
+          test_expectation_ids: [TEXP-004]
+        - scenario_id: SCN-007
+          test_expectation_ids: [TEXP-005]
+        - scenario_id: SCN-008
+          test_expectation_ids: [TEXP-005]
+        - scenario_id: SCN-009
+          test_expectation_ids: [TEXP-003]
+        - scenario_id: SCN-010
+          test_expectation_ids: [TEXP-006]
+        - scenario_id: SCN-011
+          test_expectation_ids: [TEXP-006]
+        - scenario_id: SCN-012
+          test_expectation_ids: [TEXP-006]
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: main
+    base_commit: "122a62023fd396f7c94b9889b67a705a09addde1"
+    head_commit: "97f1ed77989370f4d2f830d3d0fc3338aca40c19"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PARTIAL
+    blocking_findings: []
+    required_actions:
+        - "Add DB-backed integration coverage for QC race, rollback, and evidence authorization."
+        - "Publish the implementation on the expected REN-176 Linear branch."
+    evidence:
+        - "Compared approved REN-176 contract with the origin/main merge-base and inspected all REN-176 changed files, including the shared guard and QC admin UI."
+        - "Working tree diff check is clean; uncommitted implementation state is recorded in REVIEW.md."
+    governance_reentry_required: false

@@ -1092,23 +1092,21 @@ class CorporateOrderService {
             });
         }
 
-        const updated =
-            nextStatus === order.status
-                ? assigned
-                : await this.updateStatus({
-                      corporateOrderId: order.id,
-                      toStatus: nextStatus,
-                      changedByUserId,
-                      note:
-                          parsed.note ||
-                          `Supplier brand assigned: ${brand.name}`,
-                      metadata: {
-                          action: "brand_assigned",
-                          brandId: brand.id,
-                          brandName: brand.name,
-                          previousBrandId: order.brandId ?? null,
-                      },
-                  });
+        let updated = assigned;
+        if (nextStatus !== order.status) {
+            updated = await this.updateStatus({
+                corporateOrderId: order.id,
+                toStatus: "under_review",
+                changedByUserId,
+                note: parsed.note || `Supplier brand assigned: ${brand.name}`,
+                metadata: {
+                    action: "brand_assigned",
+                    brandId: brand.id,
+                    brandName: brand.name,
+                    previousBrandId: order.brandId ?? null,
+                },
+            });
+        }
 
         return { order: updated, brand };
     }
@@ -1165,6 +1163,16 @@ class CorporateOrderService {
                     code: "PRECONDITION_FAILED",
                     message:
                         "Warehouse dispatch is blocked until the inbound goods-received document is recorded",
+                });
+            }
+            const latestQc =
+                await corporateOrderQueries.getLatestQcSubmissionForOrder(
+                    order.id
+                );
+            if (latestQc?.status !== "approved") {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "QC approval is required before dispatch",
                 });
             }
         }
