@@ -1,0 +1,334 @@
+schema_version: "1.0"
+task:
+    id: REN-178
+    title: "[Corporate Order] Customization/extras entered by admin are silently dropped — build extensible Customization model"
+    source: linear
+    branch: ayanganguly333/ren-178-corporate-order-customizationextras-entered-by-admin-are
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-178/corporate-order-customizationextras-entered-by-admin-are
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Changes financial/order data persistence and customer-facing documents.
+        - Crosses quote, order, fulfillment, invoice, and settlement integrations.
+        - Fixes a silent data-loss defect involving artwork and production instructions.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, updates, comments, relations, and branch context
+        - Existing corporateCustomizations schema and current scalar customization fields
+        - Manual quote UI/service/schema and quote revision writes
+        - FO UI/schema/mutation/service path and dropped Packaging/Extras field
+        - PI, tax invoice, commercial document, order summary, and settlement readers
+        - Existing upload validation, authorization, migrations, tests, and REN-177 dependency
+    excluded_areas:
+        - Finance/CA composite-vs-distinct tax decision
+        - New upload storage infrastructure
+        - Non-corporate marketplace customization behavior
+        - REN-183 warehouse GRN implementation
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+    integrations: [INT-001, INT-002, INT-003, INT-004, INT-005]
+    security_boundaries: [SEC-001, SEC-002, SEC-003]
+    state_transitions:
+        - customization_input -> persisted_quote_snapshot
+        - persisted_quote_snapshot -> persisted_order_snapshot
+        - persisted_order_snapshot -> issued_fulfillment_and_customer_documents
+    related_tests: [TEXP-001, TEXP-002, TEXP-003, TEXP-004, TEXP-005, TEXP-006]
+    uncertainties:
+        - REN-177 snapshot field names/version and rollout order are pending.
+        - Finance/CA tax treatment is intentionally unresolved and must not be inferred.
+        - Existing issued documents have only aggregate/scalar data and need a non-fabricating legacy policy.
+dependencies:
+    - id: DEP-001
+      name: REN-177 canonical commercial snapshot
+      purpose: Provides the single cross-document customization source.
+      description: Align customization fields and versioning with the authoritative snapshot contract.
+      status: pending
+    - id: DEP-002
+      name: Existing corporateCustomizations table
+      purpose: Supplies an additive persistence starting point.
+      description: Extend or replace the minimal table without losing existing scalar totals.
+      status: resolved
+    - id: DEP-003
+      name: Existing upload and authorization controls
+      purpose: Protects artwork/reference data and corporate order boundaries.
+      description: Reuse current file validation, MANAGE_ORDERS, and tenant/order scoping.
+      status: resolved
+    - id: DEP-004
+      name: REN-179/REN-180 document and tax consumers
+      purpose: Ensures customization data is rendered consistently without tax fallback assumptions.
+      description: Coordinate document fields and defer classification behavior to approved tax authority.
+      status: pending
+requirements:
+    - id: REQ-001
+      description: Persist an extensible structured customization list as a first-class part of the canonical commercial snapshot.
+      type: explicit
+    - id: REQ-002
+      description: Preserve every entered customization field through quote, PI, order, FO, invoice, and settlement/document outputs.
+      type: explicit
+    - id: REQ-003
+      description: Fix manual quote and FO Packaging/Extras input so UI values are validated and committed before success.
+      type: explicit
+    - id: REQ-004
+      description: Reconcile customization line amounts and aggregate scalar totals under one documented rounding/basis policy.
+      type: inferred
+    - id: REQ-005
+      description: Validate artwork/reference uploads and enforce corporate authorization and order scoping.
+      type: explicit
+    - id: REQ-006
+      description: Provide additive legacy migration that preserves historical totals without inventing tax/product facts.
+      type: explicit
+    - id: REQ-007
+      description: Render customizations separately for transparency without hard-coding or deciding their GST treatment.
+      type: explicit
+    - id: REQ-008
+      description: Preserve idempotency and atomicity across parent document and customization writes.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-002]
+      description: Two distinct customizations persist with stable identity, fields, and display order.
+    - id: SCN-002
+      requirement_ids: [REQ-001, REQ-003]
+      description: Manual quote entry either persists all fields or fails before reporting success.
+    - id: SCN-003
+      requirement_ids: [REQ-002, REQ-007]
+      description: Quote and PI show the saved customization list without implying separate tax treatment.
+    - id: SCN-004
+      requirement_ids: [REQ-002, REQ-004]
+      description: Approved quote order snapshot and aggregate total reconcile with its customizations.
+    - id: SCN-005
+      requirement_ids: [REQ-002, REQ-003]
+      description: FO Packaging/Extras is persisted and rendered in the issued FO.
+    - id: SCN-006
+      requirement_ids: [REQ-002, REQ-007]
+      description: Invoice and settlement consumers render the same snapshot list.
+    - id: SCN-007
+      requirement_ids: [REQ-005, REQ-008]
+      description: Invalid artwork/reference input is rejected atomically.
+    - id: SCN-008
+      requirement_ids: [REQ-008]
+      description: Concurrent/retried issuance is idempotent and does not duplicate rows.
+    - id: SCN-009
+      requirement_ids: [REQ-005]
+      description: Unauthorized cross-order customization mutation/read is rejected.
+    - id: SCN-010
+      requirement_ids: [REQ-006]
+      description: Legacy scalar values are represented by marked legacy rows without numeric change.
+    - id: SCN-011
+      requirement_ids: [REQ-007]
+      description: Future approved tax-treatment metadata changes do not require changing persistence fields.
+invariants:
+    - id: INV-001
+      description: Each accepted customization exists exactly once per snapshot/version with stable display order.
+    - id: INV-002
+      description: Customization lines reconcile exactly to the snapshot aggregate under the rounding policy.
+    - id: INV-003
+      description: Downstream documents consume one authoritative customization snapshot.
+    - id: INV-004
+      description: Parent and customization writes commit atomically before UI success.
+    - id: INV-005
+      description: Artwork/reference data is validated and order-scoped.
+    - id: INV-006
+      description: Legacy migration preserves historical scalar totals and labels inferred fields.
+    - id: INV-007
+      description: Visual line separation never determines GST classification.
+    - id: INV-008
+      description: Existing corporate authorization and tenant boundaries remain enforced.
+flows:
+    - id: FLOW-001
+      description: Validated customization array is saved with quote revision and canonical snapshot.
+      state_transitions: [customization_input -> persisted_quote_snapshot]
+    - id: FLOW-002
+      description: Quote acceptance materializes the same customization list on the order and FO.
+      state_transitions: [persisted_quote_snapshot -> persisted_order_snapshot, persisted_order_snapshot -> issued_fulfillment_and_customer_documents]
+    - id: FLOW-003
+      description: PI, FO, invoice, settlement, and summary renderers consume snapshot customizations.
+      state_transitions: [persisted_order_snapshot -> issued_fulfillment_and_customer_documents]
+    - id: FLOW-004
+      description: Legacy scalar backfill creates explicitly marked compatibility rows.
+      state_transitions: [persisted_order_snapshot -> issued_fulfillment_and_customer_documents]
+integrations:
+    - id: INT-001
+      system: Manual quote and FO admin UI/tRPC
+      purpose: Collects and submits customization arrays and Packaging/Extras.
+      failure_mode: Schema validation rejects malformed input before success.
+    - id: INT-002
+      system: Corporate customization/order database
+      purpose: Stores structured rows and snapshot data.
+      failure_mode: Transaction rollback prevents partial parent/customization writes.
+    - id: INT-003
+      system: REN-177 commercial snapshot
+      purpose: Provides immutable cross-document customization source.
+      failure_mode: Version mismatch blocks issuance until reconciled.
+    - id: INT-004
+      system: Corporate PDF/document templates
+      purpose: Renders customization lines and references.
+      failure_mode: Missing data is explicit, never silently dropped or invented.
+    - id: INT-005
+      system: Artwork/reference storage
+      purpose: Stores validated production references.
+      failure_mode: Invalid type/size/URL rejected without persisted orphan row.
+personas:
+    - id: PER-001
+      role: corporate_operations_admin
+      applicability: Enters manual quote and FO customizations.
+    - id: PER-002
+      role: corporate_customer
+      applicability: Reviews quote/PI and receives invoice.
+    - id: PER-003
+      role: supplier_brand
+      applicability: Uses FO customization instructions for production.
+    - id: PER-004
+      role: unauthorized_actor
+      applicability: Must not mutate or read another order's customizations.
+security_boundaries:
+    - id: SEC-001
+      description: Admin customization mutations require authenticated MANAGE_ORDERS authorization.
+    - id: SEC-002
+      description: Reads and writes are scoped to the corporate order/tenant and cannot be spoofed by client IDs.
+    - id: SEC-003
+      description: Artwork/reference metadata and URLs use existing upload validation and access controls.
+business_rules:
+    - id: BR-001
+      description: Every UI customization value must be persisted or the operation must fail visibly.
+      source: REN-178 acceptance criteria.
+    - id: BR-002
+      description: Separate display lines do not imply separate GST treatment.
+      source: REN-178 final Linear update and Finance/CA dependency.
+    - id: BR-003
+      description: Legacy scalar values are migrated as marked compatibility rows without invented details.
+      source: REN-178 rollback/release notes.
+decisions:
+    - id: DEC-001
+      question: Should customization/printing be treated as composite supply or a distinct taxable supply, and at what rate?
+      class: HUMAN_CONFIRMATION
+      status: deferred
+      recommendation: Finance/CA must decide; persist flexible taxTreatment metadata and let REN-179/180 apply approved authority.
+      basis: Explicit Linear out-of-scope/dependency and financial/legal consequence.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Validates customization schema, basis, ordering, and aggregate reconciliation.
+      scenarios: [SCN-001, SCN-004]
+    - id: TEXP-002
+      category: api
+      classification: REQUIRED
+      reason: Covers manual quote and FO persistence, validation, and regression for Packaging/Extras.
+      scenarios: [SCN-002, SCN-005]
+    - id: TEXP-003
+      category: integration
+      classification: REQUIRED
+      reason: Proves end-to-end propagation through quote, PI, order, FO, invoice, and settlement.
+      scenarios: [SCN-003, SCN-004, SCN-006]
+    - id: TEXP-004
+      category: security
+      classification: REQUIRED
+      reason: Covers upload validation and cross-order authorization.
+      scenarios: [SCN-007, SCN-009]
+    - id: TEXP-005
+      category: regression
+      classification: REQUIRED
+      reason: Covers legacy scalar migration and historical totals.
+      scenarios: [SCN-010]
+    - id: TEXP-006
+      category: e2e
+      classification: REQUIRED
+      reason: Covers two or more customizations and retry/idempotency across document issuance.
+      scenarios: [SCN-008, SCN-011]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren176_critic (independent fresh-context read-only critic)
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: REN178-CRIT-001
+          severity: DESIGN_BLOCKER
+          summary: REN-177 snapshot schema/version contract is unresolved.
+        - id: REN178-CRIT-002
+          severity: DESIGN_BLOCKER
+          summary: Existing service/template/UI hard-code 18% customization GST despite deferred Finance/CA treatment.
+        - id: REN178-CRIT-003
+          severity: MAJOR
+          summary: Minimal customization table lacks the required structured and snapshot/version fields.
+        - id: REN178-CRIT-004
+          severity: MAJOR
+          summary: Exactly-once identity and uniqueness are unspecified.
+        - id: REN178-CRIT-005
+          severity: MAJOR
+          summary: Basis, rounding, and aggregate reconciliation are underspecified.
+        - id: REN178-CRIT-006
+          severity: MAJOR
+          summary: FO persistence, immutable linkage, and stale-version behavior are unspecified.
+        - id: REN178-CRIT-007
+          severity: MAJOR
+          summary: Legacy backfill lacks deterministic idempotent policy.
+        - id: REN178-CRIT-008
+          severity: MAJOR
+          summary: Artwork/reference ownership and retrieval controls need concrete design.
+        - id: REN178-CRIT-009
+          severity: MAJOR
+          summary: Cross-document transaction/outbox and version pinning are unspecified.
+        - id: REN178-CRIT-010
+          severity: MINOR
+          summary: Observability and reconciliation error contract is absent.
+        - id: REN178-CRIT-011
+          severity: MINOR
+          summary: Extreme-value, rounding, migration-rerun, and regeneration tests are missing.
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-001, REN178-CRIT-001, REN178-CRIT-002]
+    approved_by: null
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-001, SCN-003, SCN-004, SCN-005, SCN-006]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-002, SCN-005]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-004]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-007, SCN-009]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-010]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-003, SCN-006, SCN-011]}
+        - {requirement_id: REQ-008, scenario_ids: [SCN-007, SCN-008]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-002]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-001, INV-004]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-003, INV-007]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-002, INV-003]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-003, INV-004]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-003, INV-007]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-004, INV-005]}
+        - {scenario_id: SCN-008, invariant_ids: [INV-001, INV-004]}
+        - {scenario_id: SCN-009, invariant_ids: [INV-005, INV-008]}
+        - {scenario_id: SCN-010, invariant_ids: [INV-006]}
+        - {scenario_id: SCN-011, invariant_ids: [INV-007]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001, TEXP-006]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-001, TEXP-003]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-002, TEXP-003]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-006]}
+        - {scenario_id: SCN-009, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-010, test_expectation_ids: [TEXP-005]}
+        - {scenario_id: SCN-011, test_expectation_ids: [TEXP-006]}
