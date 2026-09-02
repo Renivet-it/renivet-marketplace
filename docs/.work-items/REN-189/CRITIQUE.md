@@ -21,7 +21,7 @@ Mode: Read-only; no application files, tests, Linear records, or Git state were 
 
 Evidence: `src/lib/fb-capi.ts` persists raw `userData`/`customData`; `src/lib/db/schema/capi-logs.ts` stores unrestricted JSONB; the CAPI dashboard/router exposes complete rows.
 
-Disposition: Resolved in contract. `REQ-007`, `INV-005`, `SCN-009`, `DEC-004`, and `TEXP-008/009` now require a safe new-row projection, legacy dashboard/export redaction, and tests covering provider-token and raw-PII absence.
+Disposition: Resolved by stakeholder decision and contract revision. Raw supplied customer/request values remain in Renivet logs behind existing authorization; provider credentials remain prohibited. `REQ-007`, `INV-005`, `SCN-009`, `DEC-004`, and `TEXP-008/009` define and test this boundary.
 
 ### D-002 — Design blocker: traceability and test IDs were inconsistent
 
