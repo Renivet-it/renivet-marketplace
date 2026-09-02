@@ -1,0 +1,23 @@
+# Independent Critic review — REN-182
+
+## Final gate
+
+Reviewer `ren182_last_gate` completed a fresh-context, read-only review of all
+required categories after the contract revisions. Result: **READY**, with no
+remaining design blockers or findings.
+
+Reviewer: `ren182_critic` (fresh context, read-only)
+
+All required review categories were examined; none was inapplicable.
+
+## Findings
+
+1. **CRIT-001 — DESIGN_BLOCKER** (`REQ-001`, `SCN-001`, `SCN-004`, `DEP-001`, `TEXP-003`): The required tax-component comparison cannot be sourced from the current FO. The FO stores quantity, unit price, and total but not taxable value, CGST, SGST, or IGST. The design needs an authoritative source, schema change, or approved scope decision. Evidence: `src/lib/db/schema/corporate-platform.ts:905-923`.
+2. **CRIT-002 — MAJOR** (`REQ-001`, `SCN-004`, `INV-003`, `TEXP-003`): There is no immutable supplier-asserted FO number/reference in the input or database. Define the field and normalization/comparison rules. Evidence: `src/lib/validations/corporate-platform.ts:550-564`, `src/lib/db/schema/corporate-platform.ts:970-983`.
+3. **CRIT-003 — MAJOR** (`SCN-002`–`SCN-008`, `FLOW-001`–`FLOW-003`, `TEXP-002`–`TEXP-005`): Correction/resubmission, duplicate, concurrent-submission, and reviewer-race semantics are absent. Readers currently take the newest row, so a held upload can displace a valid record. Define active/superseded semantics. Evidence: `src/lib/services/corporate-documents.ts:884-887`, `src/lib/services/corporate-platform.ts:4793-4800`.
+4. **CRIT-004 — DESIGN_BLOCKER** (`REQ-004`, `REQ-007`, `SCN-005`, `SCN-006`, `SEC-002`, `DEC-002`, `TEXP-004`): Override authority, service-level authorization, and immutable actor/time/reason evidence are not specified. Current review lacks actor input and updates by invoice ID. Evidence: `src/lib/trpc/routes/general/corporate-platform.ts:397-401`, `src/lib/services/corporate-documents.ts:580-592`.
+5. **CRIT-005 — DESIGN_BLOCKER** (`REQ-002`–`REQ-005`, `SCN-005`, `SCN-007`, `INV-001`, `INV-002`, `FLOW-002`, `FLOW-003`, `DEC-001`–`DEC-003`): `held`, `overridden_for_financial_use`, and `unverified` are not one exhaustive state model. Define the enum, legal transitions, actors, terminal/superseded states, and trusted query predicate. Evidence: `src/lib/db/schema/corporate-platform.ts:986-1001`.
+6. **CRIT-006 — MAJOR** (`REQ-002`, `REQ-003`, `FLOW-001`, `FLOW-003`, `INT-001`, `INT-002`, `TEXP-001`–`TEXP-004`): Submission/upload/override have no idempotency or orphan-file recovery contract. Define deterministic uniqueness/correction strategy and transaction boundary. Evidence: `src/lib/services/corporate-platform.ts:5156-5167`, `src/lib/services/corporate-documents.ts:552-577`.
+7. **CRIT-007 — MAJOR** (`REQ-007`, `SCN-008`, `INT-001`, `DEP-003`, `DEC-004`, `TEXP-005`): Legacy status trust, migration/default policy, and feature-flag behavior for reads/writes/overrides are undefined. Evidence: `src/lib/db/schema/corporate-platform.ts:986-1001`.
+8. **CRIT-008 — MAJOR** (`REQ-003`, `REQ-004`, `INV-002`, `BR-003`, `TEXP-004`, `TEXP-005`): Require immutable audit events, an operator held/unverified queue, transition/error telemetry, flag monitoring, and test coverage for races and trusted predicates. Evidence: schema stores only mutable `reviewNotes` and timestamps at `src/lib/db/schema/corporate-platform.ts:995-1008`.
+9. **CRIT-009 — DESIGN_BLOCKER** (`REQ-005`, `INV-001`, `BR-001`, `DEC-002`, `DEC-003`, `TEXP-005`): Consumer inventory is incomplete. Identify every dashboard/API/reporting/document consumer as informational or financial and apply the trusted predicate to the latter. Settlement presently does not consume brand invoices. Evidence: `src/lib/services/corporate-documents.ts:664-700,845-914`, `src/lib/services/corporate-platform.ts:4753-4759,4960-4971`.

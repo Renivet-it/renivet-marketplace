@@ -14,6 +14,7 @@ import {
     corporateProductTypes,
     corporateProformaInvoices,
     corporateQuotes,
+    corporateCustomizations,
     products,
 } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
@@ -21,6 +22,15 @@ import {
     corporatePartyAddress,
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
+import {
+    assertCorporateTaxData,
+    getCorporateTaxDataMissingFields,
+    resolveCorporateDocumentDate,
+} from "@/lib/utils/corporate-document-integrity";
+import {
+    resolveCorporatePlaceOfSupply,
+    splitCorporateGstByPlaceOfSupply,
+} from "@/lib/finance/corporate-place-of-supply";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
@@ -107,7 +117,15 @@ export async function GET(
 
     const brandId = quote?.brandId || order?.brandId || null;
 
-    const [settings, product, brand, brandConfidential, productTypeRecord, gsmOptionRecord, fabricCompositionRecord] = await Promise.all([
+    const [
+        settings,
+        product,
+        brand,
+        brandConfidential,
+        productTypeRecord,
+        gsmOptionRecord,
+        fabricCompositionRecord,
+    ] = await Promise.all([
         getCorporateDocumentSettings(),
         quote?.productId
             ? db.query.products.findFirst({
@@ -126,10 +144,7 @@ export async function GET(
             : Promise.resolve(null),
         quote?.productTypeId
             ? db.query.corporateProductTypes.findFirst({
-                  where: eq(
-                      corporateProductTypes.id,
-                      quote.productTypeId
-                  ),
+                  where: eq(corporateProductTypes.id, quote.productTypeId),
                   with: { hsnMaster: true },
               })
             : Promise.resolve(null),
@@ -151,13 +166,23 @@ export async function GET(
     const taxableValuePaise = invoice.subtotalPaise;
     const quantity = order?.quantity ?? quote?.quantity ?? 1;
     const baseSubtotalPaise =
-        quote?.subtotalPaise ??
-        order?.subtotalPaise ??
-        taxableValuePaise;
+        quote?.subtotalPaise ?? order?.subtotalPaise ?? taxableValuePaise;
     const customizationPaise =
-        quote?.customizationCostPaise ??
-        order?.customizationPaise ??
-        0;
+        quote?.customizationCostPaise ?? order?.customizationPaise ?? 0;
+    const customizationQuoteId = quote?.id ?? order?.quoteId;
+    const customizationRecords = customizationQuoteId
+        ? await db.query.corporateCustomizations.findMany({
+              where: eq(corporateCustomizations.quoteId, customizationQuoteId),
+          })
+        : [];
+    const customizationIsIncludedInMainSupply =
+        customizationPaise > 0 &&
+        customizationRecords.length > 0 &&
+        customizationRecords.every(
+            (row) =>
+                (row.metadata as Record<string, unknown>)?.taxTreatment ===
+                "included_in_product_supply"
+        );
 
     const gstRateBps =
         order?.gstRateBps ??
@@ -173,7 +198,11 @@ export async function GET(
         "title",
         "label",
     ]);
-    const orderGsm = configText(orderConfig.gsmOption, ["gsm", "name", "label"]);
+    const orderGsm = configText(orderConfig.gsmOption, [
+        "gsm",
+        "name",
+        "label",
+    ]);
     const orderFabric = configText(orderConfig.fabricComposition, [
         "name",
         "composition",
@@ -264,17 +293,7 @@ export async function GET(
     const extrasSummary = extraChargeDescriptions.join(", ");
 
     const itemDetail =
-        [
-            specsSummary,
-            extrasSummary
-                ? `Extras: ${extrasSummary}`
-                : customizationPaise > 0
-                  ? `Customization & extras (+INR ${(customizationPaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })})`
-                  : null,
-        ]
-            .filter(Boolean)
-            .join(" | ") ||
-        "Customization and specifications as approved in the corporate quote";
+        specsSummary || "Specifications as approved in the corporate quote";
 
     const resolvedHsn =
         quote?.hsnCode ||
@@ -295,6 +314,23 @@ export async function GET(
         billing.state,
         billing.postalCode ?? billing.pincode,
         billing.country,
+    ]
+        .filter(
+            (value): value is string =>
+                typeof value === "string" && value.trim().length > 0
+        )
+        .join(", ");
+    const shipping = (quote?.profile.shippingAddress ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const shippingAddress = [
+        shipping.addressLine1 ?? shipping.address ?? shipping.street,
+        shipping.addressLine2,
+        shipping.city,
+        shipping.state,
+        shipping.postalCode ?? shipping.pincode,
+        shipping.country,
     ]
         .filter(
             (value): value is string =>
@@ -333,45 +369,101 @@ export async function GET(
     const totalAmountFromDb =
         quote?.totalAmountPaise ?? invoice.totalAmountPaise;
 
-    const customizationGstRateBps = 1800;
+    const customizationGstRateBps = gstRateBps;
+    const combinedParentSupplyGstPaise = Math.round(
+        ((baseSubtotalPaise + customizationPaise) * gstRateBps) / 10_000
+    );
     const customizationGstAmountPaise =
-        customizationPaise > 0
-            ? Math.round((customizationPaise * customizationGstRateBps) / 10_000)
+        customizationIsIncludedInMainSupply
+            ? combinedParentSupplyGstPaise -
+              Math.round((baseSubtotalPaise * gstRateBps) / 10_000)
+            : customizationPaise > 0
+            ? Math.round(
+                  (customizationPaise * customizationGstRateBps) / 10_000
+              )
             : 0;
 
     const baseGstAmountPaise =
-        totalGstFromDb > customizationGstAmountPaise
+        customizationIsIncludedInMainSupply
+            ? Math.round((baseSubtotalPaise * gstRateBps) / 10_000)
+            : totalGstFromDb > customizationGstAmountPaise
             ? totalGstFromDb - customizationGstAmountPaise
             : totalGstFromDb > 0
               ? totalGstFromDb
               : Math.round(
                     (baseSubtotalPaise *
-                        (quote?.gstRateBps ??
-                            order?.gstRateBps ??
-                            1800)) /
+                        gstRateBps) /
                         10_000
                 );
 
     const baseGstRateBps =
         baseSubtotalPaise > 0
             ? Math.round((baseGstAmountPaise / baseSubtotalPaise) * 10_000)
-            : quote?.gstRateBps ?? order?.gstRateBps ?? 1800;
+            : gstRateBps;
 
     const computedTotalGstPaise =
-        totalGstFromDb > 0
+        customizationIsIncludedInMainSupply
+            ? combinedParentSupplyGstPaise
+            : totalGstFromDb > 0
             ? totalGstFromDb
             : baseGstAmountPaise + customizationGstAmountPaise;
     const computedTotalAmountPaise =
-        totalAmountFromDb > 0
+        customizationIsIncludedInMainSupply
+            ? baseSubtotalPaise + customizationPaise + computedTotalGstPaise
+            : totalAmountFromDb > 0
             ? totalAmountFromDb
             : baseSubtotalPaise + customizationPaise + computedTotalGstPaise;
+
+    const placeOfSupply = resolveCorporatePlaceOfSupply({
+        deliveryState: order?.deliveryState ?? (typeof shipping.state === "string" ? shipping.state : null),
+        billingState: order ? null : (typeof billing.state === "string" ? billing.state : null),
+    });
+    const supplierState = resolveCorporatePlaceOfSupply({
+        registeredState: brandConfidential?.state,
+    });
+    const proformaGstSplit = splitCorporateGstByPlaceOfSupply({
+        taxableValuePaise,
+        gstRateBps,
+        supplierStateCode: supplierState.stateCode,
+        placeOfSupplyStateCode: placeOfSupply.stateCode,
+    });
 
     const rawDate =
         (invoice as any).issueDate ||
         invoice.invoiceDate ||
         (invoice as any).createdAt;
-    const parsedDate = rawDate ? new Date(rawDate) : new Date();
-    const safeDate = isNaN(parsedDate.getTime()) ? new Date() : parsedDate;
+    let safeDate: Date;
+    let safeValidUntil: Date | undefined;
+    const missingTaxFields = getCorporateTaxDataMissingFields(
+        order?.gstNumber ?? quote?.profile.gstNumber,
+        [{ hsnCode: resolvedHsn, taxable: true }]
+    );
+    if (missingTaxFields.length > 0) {
+        return NextResponse.json(
+            {
+                code: "CORPORATE_DOCUMENT_TAX_DATA_INCOMPLETE",
+                message: `Cannot download this proforma until ${missingTaxFields
+                    .map((field) =>
+                        field === "customer_gstin"
+                            ? "the customer GSTIN is entered"
+                            : "an HSN code is selected"
+                    )
+                    .join(" and ")}.`,
+                missingFields: missingTaxFields,
+            },
+            { status: 422 }
+        );
+    }
+    try {
+        safeDate = resolveCorporateDocumentDate(rawDate, quote?.createdAt ?? order?.createdAt);
+        safeValidUntil = invoice.validUntil
+            ? resolveCorporateDocumentDate(invoice.validUntil)
+            : undefined;
+        assertCorporateTaxData(order?.gstNumber ?? quote?.profile.gstNumber, [{ hsnCode: resolvedHsn, taxable: true }]);
+    } catch (error) {
+        const message = error instanceof Error ? error.message : "CORPORATE_DOCUMENT_SOURCE_INVALID";
+        return NextResponse.json({ message }, { status: 422 });
+    }
 
     const data: CorporateCommercialDocumentData = {
         title: "PROFORMA INVOICE",
@@ -379,10 +471,8 @@ export async function GET(
             "Commercial proposal issued before supply. This is not a tax invoice.",
         documentType: "proforma_invoice",
         documentNumber: invoice.invoiceNumber,
-        date: safeDate,
-        validUntil: invoice.validUntil
-            ? new Date(invoice.validUntil)
-            : undefined,
+        documentDate: safeDate,
+        validUntil: safeValidUntil,
         fromLabel: "From (Supplier)",
         toLabel: "To",
         from: {
@@ -391,7 +481,7 @@ export async function GET(
             gstin: supplierGstin,
             email: supplierEmail,
             phone: supplierPhone,
-            facilitatedBy: `Facilitated by: ${settings.legalName}, ${renivetAddress} | GSTIN: ${settings.gstin || "N/A"}`,
+            facilitatedBy: `Facilitated by: ${settings.legalName || "Renivet"}, ${renivetAddress}${settings.gstin ? ` | GSTIN: ${settings.gstin}` : ""}`,
         },
         to: order
             ? {
@@ -414,11 +504,26 @@ export async function GET(
                       quote!.profile.companyName ||
                       quote!.profile.contactPerson ||
                       "Corporate customer",
-                  address: billingAddress || "Not provided",
+                  address: shippingAddress || billingAddress || "Not provided",
                   gstin: quote!.profile.gstNumber,
                   email: quote!.profile.email,
                   phone: quote!.profile.phone,
               },
+        shipTo: order
+            ? {
+                  name: order.companyName,
+                  address: [
+                      order.deliveryAddress,
+                      order.deliveryCity,
+                      order.deliveryState,
+                      order.deliveryPincode,
+                      order.deliveryCountry,
+                  ]
+                      .filter(Boolean)
+                      .join(", "),
+                  gstin: order.gstNumber,
+              }
+            : null,
         references: order
             ? [
                   { label: "Corporate order", value: order.publicOrderId },
@@ -431,7 +536,7 @@ export async function GET(
             : [
                   { label: "Quote number", value: quote!.quoteNumber },
                   {
-                      label: "Supplier brand",
+                      label: "Brand fulfillment partner",
                       value: supplierName,
                   },
                   {
@@ -443,21 +548,40 @@ export async function GET(
                           : null,
                   },
               ],
-        item: {
-            description: resolvedItemName,
-            detail: itemDetail,
-            sku: product?.sku ?? product?.nativeSku,
-            hsn: resolvedHsn,
-            quantity,
-            unit: "pcs",
-            unitRatePaise: Math.round(
-                baseSubtotalPaise / Math.max(1, quantity)
-            ),
-            amountPaise: baseSubtotalPaise,
-            gstRateBps: baseGstRateBps,
-            gstAmountPaise: baseGstAmountPaise,
-            totalAmountPaise: baseSubtotalPaise + baseGstAmountPaise,
-        },
+        items: [
+            {
+                description: resolvedItemName,
+                detail: itemDetail,
+                sku: product?.sku ?? product?.nativeSku,
+                hsn: resolvedHsn,
+                quantity,
+                unit: "pcs",
+                unitRatePaise: Math.round(
+                    baseSubtotalPaise / Math.max(1, quantity)
+                ),
+                amountPaise: baseSubtotalPaise,
+                gstRateBps: baseGstRateBps,
+                gstAmountPaise: baseGstAmountPaise,
+                totalAmountPaise: baseSubtotalPaise + baseGstAmountPaise,
+            },
+            ...(customizationPaise > 0
+                ? [
+                      {
+                          description: "Customization / Extras",
+                          detail: extrasSummary || undefined,
+                          hsn: resolvedHsn,
+                          quantity: 1,
+                          unit: "lot",
+                          unitRatePaise: customizationPaise,
+                          amountPaise: customizationPaise,
+                          gstRateBps: customizationGstRateBps,
+                          gstAmountPaise: customizationGstAmountPaise,
+                          totalAmountPaise:
+                              customizationPaise + customizationGstAmountPaise,
+                      },
+                  ]
+                : []),
+        ],
         totals: {
             subtotalPaise:
                 customizationPaise > 0 ? baseSubtotalPaise : undefined,
@@ -465,15 +589,26 @@ export async function GET(
                 customizationPaise > 0 ? customizationPaise : undefined,
             taxableValuePaise,
             baseGstRateBps:
-                customizationPaise > 0 ? baseGstRateBps : undefined,
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
+                    ? baseGstRateBps
+                    : undefined,
             baseGstAmountPaise:
-                customizationPaise > 0 ? baseGstAmountPaise : undefined,
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
+                    ? baseGstAmountPaise
+                    : undefined,
             customizationGstRateBps:
-                customizationPaise > 0 ? customizationGstRateBps : undefined,
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
+                    ? customizationGstRateBps
+                    : undefined,
             customizationGstAmountPaise:
-                customizationPaise > 0 ? customizationGstAmountPaise : undefined,
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
+                    ? customizationGstAmountPaise
+                    : undefined,
             gstRateBps: baseGstRateBps,
             gstAmountPaise: computedTotalGstPaise,
+            cgstPaise: proformaGstSplit.cgstPaise,
+            sgstPaise: proformaGstSplit.sgstPaise,
+            igstPaise: proformaGstSplit.igstPaise,
             totalAmountPaise: computedTotalAmountPaise,
         },
         notes: [

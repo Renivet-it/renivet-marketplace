@@ -99,6 +99,7 @@ export const corporateAdminManualQuoteInputSchema = z.object({
     contactPerson: z.string().trim().min(2).max(160),
     email: z.string().trim().email().max(254),
     phone: z.string().trim().min(8).max(20),
+    gstNumber: z.string().trim().min(1, "Customer GSTIN is required").max(64),
     deliveryAddress: z.string().trim().max(1000).nullable().optional(),
     deliveryCity: z.string().trim().max(100).nullable().optional(),
     deliveryState: z.string().trim().max(100).nullable().optional(),
@@ -109,10 +110,16 @@ export const corporateAdminManualQuoteInputSchema = z.object({
         .nullable()
         .optional()
         .or(z.literal("")),
-    deliveryCountry: z.string().trim().max(100).default("India").nullable().optional(),
+    deliveryCountry: z
+        .string()
+        .trim()
+        .max(100)
+        .default("India")
+        .nullable()
+        .optional(),
     brandId: z.string().uuid(),
     productTypeId: z.string().uuid().nullable().optional(),
-    hsnCode: z.string().trim().max(16).nullable().optional(),
+    hsnCode: z.string().trim().min(1, "HSN code is required").max(16),
     gsmOptionId: z.string().uuid().nullable().optional(),
     fabricCompositionId: z.string().uuid().nullable().optional(),
     extraChargeRuleIds: z.array(z.string().uuid()).default([]),
@@ -121,8 +128,10 @@ export const corporateAdminManualQuoteInputSchema = z.object({
     quantity: z.number().int().positive().max(1_000_000),
     unitPricePaise: z.number().int().positive(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     commissionAmountPaise: z.number().int().nonnegative().default(0),
-    commissionGstPercent: z.number().min(0).max(100).default(18),
+    commissionHsnCode: z.string().trim().max(16).nullable().optional(),
+    commissionGstPercent: z.number().min(0).max(100).optional(),
     gstPercent: z.number().min(0).max(100).default(0),
     advancePercent: z.number().min(0).max(100).default(30),
     validUntil: z.string().date().nullable().optional(),
@@ -188,6 +197,7 @@ export const corporateQuoteInputSchema = z.object({
     quantity: z.number().int().positive(),
     subtotalPaise: z.number().int().nonnegative(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     gstAmountPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().nonnegative(),
     advanceAmountPaise: z.number().int().nonnegative().default(0),
@@ -206,6 +216,7 @@ export const corporateQuoteRevisionInputSchema = z.object({
     quoteId: z.string().uuid(),
     subtotalPaise: z.number().int().nonnegative(),
     customizationCostPaise: z.number().int().nonnegative().default(0),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
     gstAmountPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().nonnegative(),
     comments: z.string().trim().max(1000).nullable().optional(),
@@ -357,9 +368,21 @@ export const corporateShipmentInputSchema = z.object({
 });
 
 export const corporateConsigneeAddressInputSchema = z.object({
-    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
-    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
-    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    contactPersonName: z
+        .string()
+        .trim()
+        .min(2, "Contact person name is required")
+        .max(200),
+    mobileNumber: z
+        .string()
+        .trim()
+        .min(10, "Valid mobile number is required")
+        .max(15),
+    deliveryAddress: z
+        .string()
+        .trim()
+        .min(5, "Delivery address is required")
+        .max(1000),
     deliveryCity: z.string().trim().min(2, "City is required").max(100),
     deliveryState: z.string().trim().max(100).nullable().optional(),
     deliveryPincode: z
@@ -372,9 +395,21 @@ export const corporateConsigneeAddressInputSchema = z.object({
 
 export const corporateUpdateConsigneeAddressInputSchema = z.object({
     orderId: z.string().uuid(),
-    contactPersonName: z.string().trim().min(2, "Contact person name is required").max(200),
-    mobileNumber: z.string().trim().min(10, "Valid mobile number is required").max(15),
-    deliveryAddress: z.string().trim().min(5, "Delivery address is required").max(1000),
+    contactPersonName: z
+        .string()
+        .trim()
+        .min(2, "Contact person name is required")
+        .max(200),
+    mobileNumber: z
+        .string()
+        .trim()
+        .min(10, "Valid mobile number is required")
+        .max(15),
+    deliveryAddress: z
+        .string()
+        .trim()
+        .min(5, "Delivery address is required")
+        .max(1000),
     deliveryCity: z.string().trim().min(2, "City is required").max(100),
     deliveryState: z.string().trim().max(100).nullable().optional(),
     deliveryPincode: z
@@ -455,6 +490,12 @@ export const corporateQcSubmissionInputSchema = z.object({
     images: z.array(corporatePlatformFileSchema).min(1).max(10),
 });
 
+export const corporateQcReviewInputSchema = z.object({
+    submissionId: z.string().uuid(),
+    decision: z.enum(["approved", "rejected"]),
+    reviewNotes: z.string().trim().max(1000).nullable().optional(),
+});
+
 export const corporatePaymentInputSchema = z.object({
     orderId: z.string().uuid().nullable().optional(),
     quoteId: z.string().uuid().nullable().optional(),
@@ -503,13 +544,18 @@ export const corporateVendorPurchaseOrderInputSchema = z.object({
     deliveryMode: z.enum(["renivet_warehouse", "direct_to_customer"]),
     paymentTerms: z.string().trim().min(3).max(500),
     deliveryInstructions: z.string().trim().max(1000).nullable().optional(),
+    customizations: z.array(z.record(z.string(), z.unknown())).default([]),
 });
 
 export const corporateBrandTaxInvoiceInputSchema = z.object({
     orderId: z.string().uuid(),
     vendorPurchaseOrderId: z.string().uuid().nullable().optional(),
+    uploadId: z.string().uuid().nullable().optional(),
     invoiceNumber: z.string().trim().min(1).max(100),
     invoiceDate: z.string().date(),
+    foReference: z.string().trim().min(1).max(100),
+    quantity: z.number().int().positive(),
+    unitRatePaise: z.number().int().positive(),
     supplierGstin: gstinSchema,
     recipientGstin: gstinSchema,
     hsnCode: z.string().trim().min(4).max(8),
@@ -518,27 +564,38 @@ export const corporateBrandTaxInvoiceInputSchema = z.object({
     sgstPaise: z.number().int().nonnegative().default(0),
     igstPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().positive(),
-    file: corporatePlatformFileSchema,
+    file: corporatePlatformFileSchema.extend({ key: z.string().min(1) }),
 });
 
 export const corporateBrandInvoiceUploadInputSchema = z.object({
     orderId: z.string().uuid(),
     vendorPurchaseOrderId: z.string().uuid(),
     invoiceDate: z.string().date(),
-    file: corporatePlatformFileSchema,
+    file: corporatePlatformFileSchema.extend({ key: z.string().min(1) }),
 });
 
 export const corporateBrandTaxInvoiceReviewInputSchema = z.object({
     invoiceId: z.string().uuid(),
-    validationStatus: z.enum(["validated", "rejected"]),
+    validationStatus: z.enum(["accepted", "rejected"]),
     gstr2bStatus: z.enum(["pending", "matched", "mismatch"]),
-    reviewNotes: z.string().trim().max(1000).nullable().optional(),
+    reviewReason: z.string().trim().max(1000).nullable().optional(),
+    expectedVersion: z.number().int().positive(),
 });
 
 export const corporateDeliveryChallanInputSchema = z.object({
     orderId: z.string().uuid(),
     vendorPurchaseOrderId: z.string().uuid().nullable().optional(),
     eWayBillNumber: z.string().trim().max(50).nullable().optional(),
+});
+
+export const corporateWarehouseGoodsReceiptInputSchema = z.object({
+    orderId: z.string().uuid(),
+    vendorPurchaseOrderId: z.string().uuid(),
+    warehouseName: z.string().trim().min(2).max(200),
+    receivedQuantity: z.number().int().positive(),
+    receiptDate: z.string().date(),
+    receiverName: z.string().trim().min(2).max(200),
+    deliveryReference: z.string().trim().max(200).nullable().optional(),
 });
 
 export const corporateDocumentSettingsInputSchema = z.object({

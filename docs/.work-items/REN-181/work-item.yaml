@@ -1,0 +1,259 @@
+schema_version: "1.0"
+task:
+    id: REN-181
+    title: "[Corporate Order] Settlement Statement: remove fabricated fallback values, make immutable/versioned, gate inappropriate TCS/194-O deductions"
+    source: linear
+    branch: ayanganguly333/corporate-order-qc
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-181/corporate-order-settlement-statement-remove-fabricated
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Settlement values determine brand remittance and are financial records.
+        - Existing behavior deletes history and fabricates tax/commission values.
+        - Schema, numbering, policy, audit, and external document paths interact.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-181 description, updates, and relations
+        - Settlement issuance service, schema, numbering, and PDF rendering
+        - Commission invoice fallback path
+        - Corporate order/invoice source fields and authorization boundaries
+        - Related REN-179, REN-180, REN-185, and REN-187 contracts
+    excluded_areas:
+        - Finance/CA exact commission GST rate/classification
+        - REN-185 statutory threshold correction
+        - General ledger and unrelated payout systems
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: [INT-001, INT-002, INT-003]
+    security_boundaries: [SEC-001, SEC-002]
+    state_transitions:
+        - source_financial_data -> issued_settlement_v1
+        - issued_settlement_v1 -> current_settlement_version
+        - current_settlement_version -> immutable_adjustment_version
+    related_tests: [TEXP-001, TEXP-002, TEXP-003, TEXP-004, TEXP-005]
+    uncertainties:
+        - Exact Finance/CA commission GST classification is unresolved.
+        - Legacy settlement rows need a safe version-1 backfill policy.
+dependencies:
+    - id: DEP-001
+      name: REN-177 canonical commercial snapshot
+      purpose: Provides authoritative gross, tax, commission, and payment values.
+      description: Settlement must not re-derive values from unrelated mutable rows.
+      status: resolved
+    - id: DEP-002
+      name: Finance/CA commission GST decision
+      purpose: Determines approved commission GST classification/rate.
+      description: Engineering can gate on metadata but cannot decide the legal rate.
+      status: unresolved
+    - id: DEP-003
+      name: Corporate document numbering authority
+      purpose: Supplies typed, unique SET numbers.
+      description: SET must be declared in nextCorporateDocumentNumber.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Issuance fails closed when real gross, GST, or commission source values are unavailable; no fabricated fallback values are allowed.
+      type: explicit
+    - id: REQ-002
+      description: Issued settlement statements are immutable; corrections create a linked, versioned adjustment with actor, timestamp, and reason.
+      type: explicit
+    - id: REQ-003
+      description: Repeated issuance is idempotent and does not delete or replace the current statement.
+      type: explicit
+    - id: REQ-004
+      description: Reseller corporate settlements omit TCS and 194-O deductions by default and require explicit policy configuration to enable them.
+      type: explicit
+    - id: REQ-005
+      description: Admin selects a commission-service HSN/SAC from the master per manual quote/order; its code and GST rate are persisted and reused by every settlement/commission document, which block when absent.
+      type: explicit
+    - id: REQ-006
+      description: Settlement numbers use the declared shared SET numbering authority and are unique per issued version.
+      type: explicit
+    - id: REQ-007
+      description: Settlement PDF clearly renders gross, commission, commission GST, permitted deductions, net payable, reference, date, and version from the persisted statement.
+      type: explicit
+    - id: REQ-008
+      description: Existing authorization, tenant scoping, auditability, and non-destructive migration boundaries are preserved.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      description: Valid source data issues one settlement with reconciled values and SET number.
+      requirement_ids: [REQ-001, REQ-005, REQ-006, REQ-007]
+    - id: SCN-002
+      description: Missing invoice/order gross or GST blocks issuance with a structured error.
+      requirement_ids: [REQ-001]
+    - id: SCN-003
+      description: Missing commission blocks settlement and commission PDF rather than calculating a fallback.
+      requirement_ids: [REQ-001, REQ-005]
+    - id: SCN-004
+      description: Repeated issuance returns the existing statement without deletion or number churn.
+      requirement_ids: [REQ-002, REQ-003, REQ-006]
+    - id: SCN-005
+      description: Explicit correction creates version 2 linked to version 1 with audit metadata.
+      requirement_ids: [REQ-002, REQ-007, REQ-008]
+    - id: SCN-006
+      description: Reseller-default settlement omits TCS/194-O; an explicitly enabled policy is visible and auditable.
+      requirement_ids: [REQ-004, REQ-007]
+    - id: SCN-007
+      description: Concurrent issuance/adjustment attempts preserve one current version and unique numbers.
+      requirement_ids: [REQ-002, REQ-003, REQ-006]
+    - id: SCN-008
+      description: Unauthorized or cross-tenant users cannot view or mutate settlement records.
+      requirement_ids: [REQ-008]
+invariants:
+    - id: INV-001
+      description: No settlement or commission document contains fabricated financial values.
+    - id: INV-002
+      description: Issued settlement rows are append-only and linked by version/supersedes metadata.
+    - id: INV-003
+      description: At most one current settlement version exists per order.
+    - id: INV-004
+      description: Reseller-default TCS/194-O amounts are zero or absent.
+    - id: INV-005
+      description: Every issued version has a unique SET-authority number.
+    - id: INV-006
+      description: Rendered settlement totals reconcile exactly to persisted statement fields.
+    - id: INV-007
+      description: Authorization and tenant boundaries apply to settlement read/write paths.
+flows:
+    - id: FLOW-001
+      description: Snapshot/invoice source -> validation/policy gate -> immutable settlement version -> PDF/payout readers.
+      state_transitions: [source_financial_data -> issued_settlement_v1, issued_settlement_v1 -> current_settlement_version]
+    - id: FLOW-002
+      description: Explicit correction -> new linked version -> current-version pointer/audit trail.
+      state_transitions: [current_settlement_version -> immutable_adjustment_version]
+integrations:
+    - id: INT-001
+      system: Corporate database
+      purpose: Persist immutable settlement versions and audit metadata.
+      failure_mode: Transaction rollback; prior issued version remains readable.
+    - id: INT-002
+      system: Corporate document numbering service
+      purpose: Allocate typed SET numbers.
+      failure_mode: Unique/transaction retry; no duplicate issued number.
+    - id: INT-003
+      system: Finance/HSN policy configuration
+      purpose: Supply approved commission GST and deduction policy.
+      failure_mode: Missing policy blocks issuance.
+personas:
+    - id: PER-001
+      role: corporate_operations_admin
+      applicability: Issues or explicitly adjusts a settlement.
+    - id: PER-002
+      role: brand_finance_user
+      applicability: Receives immutable remittance statement.
+    - id: PER-003
+      role: finance_or_tax_reviewer
+      applicability: Reviews commission tax and deduction policy.
+security_boundaries:
+    - id: SEC-001
+      description: Existing authenticated corporate document permissions and tenant checks remain mandatory.
+    - id: SEC-002
+      description: Settlement audit metadata and financial values are restricted to authorized users.
+business_rules:
+    - id: BR-001
+      description: Reseller-of-record corporate orders do not apply marketplace TCS/194-O by default.
+      source: Linear REN-181 D-018 update.
+    - id: BR-002
+      description: An issued statement is never deleted; corrections are versioned adjustments.
+      source: Linear REN-181 acceptance criteria.
+decisions:
+    - id: DEC-001
+      question: What exact commission GST rate/classification is legally approved?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Admin selects the commission-service HSN/SAC from the approved HSN master; persist its code and GST rate per order and block issuance if absent.
+      basis: Ayan confirmed the commission is a separate service and its classification/rate must be selected from the HSN master.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: integration
+      classification: REQUIRED
+      reason: Verify valid settlement values reconcile and no fabricated fallback is used.
+      scenarios: [SCN-001, SCN-002, SCN-003]
+    - id: TEXP-002
+      category: regression
+      classification: REQUIRED
+      reason: Verify repeat issuance preserves the original row and current version.
+      scenarios: [SCN-004]
+    - id: TEXP-003
+      category: integration
+      classification: REQUIRED
+      reason: Verify versioned adjustment, supersedes linkage, actor/time/reason, and unique SET number.
+      scenarios: [SCN-005, SCN-007]
+    - id: TEXP-004
+      category: business_uat
+      classification: REQUIRED
+      reason: Verify reseller-default TCS/194-O omission and explicit-policy visibility.
+      scenarios: [SCN-006]
+    - id: TEXP-005
+      category: security
+      classification: REQUIRED
+      reason: Verify unauthorized/cross-tenant settlement access remains forbidden.
+      scenarios: [SCN-008]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren181_critic
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - {id: REN181-CRIT-001, severity: DESIGN_BLOCKER, summary: Finance/CA commission GST classification is unresolved.}
+        - {id: REN181-CRIT-002, severity: MAJOR, summary: Snapshot source authority and reconciliation are unspecified.}
+        - {id: REN181-CRIT-003, severity: MAJOR, summary: PDF and commission routes retain fabricated fallbacks.}
+        - {id: REN181-CRIT-004, severity: MAJOR, summary: Transactional immutability/versioning and current-version constraints are unspecified.}
+        - {id: REN181-CRIT-005, severity: MAJOR, summary: Legacy migration and financial retention policy are unspecified.}
+        - {id: REN181-CRIT-006, severity: MAJOR, summary: TCS/194-O policy schema and caller-input controls are unspecified.}
+        - {id: REN181-CRIT-007, severity: MAJOR, summary: Issuance/read authorization and PII boundaries are underspecified.}
+        - {id: REN181-CRIT-008, severity: MAJOR, summary: Audit observability and failure/concurrency test contracts are incomplete.}
+approval:
+    state: BLOCKED
+    design_blockers:
+        - DEC-001 requires Finance/CA confirmation of commission GST classification.
+        - REN181-CRIT-002/004/005/006/007 require concrete source, transaction, migration, policy, and authorization contracts.
+    approved_by: null
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-004, SCN-005, SCN-007]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-004, SCN-007]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-006]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-001, SCN-003]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-001, SCN-004, SCN-005, SCN-007]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-001, SCN-005, SCN-006]}
+        - {requirement_id: REQ-008, scenario_ids: [SCN-005, SCN-008]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-005, INV-006]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-001]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-001]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-002, INV-003, INV-005]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-002, INV-005, INV-006]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-004, INV-006]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-002, INV-003, INV-005]}
+        - {scenario_id: SCN-008, invariant_ids: [INV-007]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-005]}

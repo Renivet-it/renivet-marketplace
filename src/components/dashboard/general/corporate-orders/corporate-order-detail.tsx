@@ -58,6 +58,7 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
         "overview" | "product" | "documents" | "payments" | "activity"
     >("overview");
     const [statusNote, setStatusNote] = useState("");
+    const [qcReviewNotes, setQcReviewNotes] = useState("");
     const [selectedBrandId, setSelectedBrandId] = useState(
         initialData.brand?.id ?? ""
     );
@@ -159,6 +160,16 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
             await utils.general.corporateOrders.getOrderById.invalidate({
                 corporateOrderId: initialData.id,
             });
+        },
+        onError: (error) => handleClientError(error),
+    });
+    const reviewQc = trpc.general.corporatePlatform.reviewQc.useMutation({
+        onSuccess: async () => {
+            await utils.general.corporateOrders.getOrderById.invalidate({
+                corporateOrderId: initialData.id,
+            });
+            setQcReviewNotes("");
+            toast.success("QC review recorded");
         },
         onError: (error) => handleClientError(error),
     });
@@ -356,18 +367,31 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                     <SnapshotSection title="Company & Delivery">
                                         <div className="mb-2 flex items-center justify-between">
                                             <span className="text-[10px] text-slate-500">
-                                                {isCorporateDeliveryAddressValid(initialData) ? (
-                                                    <span className="font-medium text-emerald-700">✓ Address verified</span>
+                                                {isCorporateDeliveryAddressValid(
+                                                    initialData
+                                                ) ? (
+                                                    <span className="font-medium text-emerald-700">
+                                                        ✓ Address verified
+                                                    </span>
                                                 ) : (
-                                                    <span className="font-medium text-rose-700">⚠ Incomplete address for Delhivery</span>
+                                                    <span className="font-medium text-rose-700">
+                                                        ⚠ Incomplete address
+                                                        for Delhivery
+                                                    </span>
                                                 )}
                                             </span>
                                             <button
                                                 type="button"
-                                                onClick={() => setIsEditingAddress((prev) => !prev)}
+                                                onClick={() =>
+                                                    setIsEditingAddress(
+                                                        (prev) => !prev
+                                                    )
+                                                }
                                                 className="text-[11px] font-semibold text-sky-700 hover:underline"
                                             >
-                                                {isEditingAddress ? "Cancel" : "Edit Consignee & Address"}
+                                                {isEditingAddress
+                                                    ? "Cancel"
+                                                    : "Edit Consignee & Address"}
                                             </button>
                                         </div>
 
@@ -376,13 +400,19 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                 <div className="grid gap-3 sm:grid-cols-2">
                                                     <label className="space-y-1">
                                                         <span className="block text-[10px] font-medium text-slate-500">
-                                                            Contact Person Name *
+                                                            Contact Person Name
+                                                            *
                                                         </span>
                                                         <Input
                                                             className="h-9 py-1 text-xs"
-                                                            value={consigneeName}
+                                                            value={
+                                                                consigneeName
+                                                            }
                                                             onChange={(e) =>
-                                                                setConsigneeName(e.target.value)
+                                                                setConsigneeName(
+                                                                    e.target
+                                                                        .value
+                                                                )
                                                             }
                                                         />
                                                     </label>
@@ -392,9 +422,14 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                         </span>
                                                         <Input
                                                             className="h-9 py-1 text-xs"
-                                                            value={consigneePhone}
+                                                            value={
+                                                                consigneePhone
+                                                            }
                                                             onChange={(e) =>
-                                                                setConsigneePhone(e.target.value)
+                                                                setConsigneePhone(
+                                                                    e.target
+                                                                        .value
+                                                                )
                                                             }
                                                         />
                                                     </label>
@@ -402,13 +437,16 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
 
                                                 <label className="block space-y-1">
                                                     <span className="block text-[10px] font-medium text-slate-500">
-                                                        Delivery Street Address *
+                                                        Delivery Street Address
+                                                        *
                                                     </span>
                                                     <Input
                                                         className="h-9 py-1 text-xs"
                                                         value={consigneeAddress}
                                                         onChange={(e) =>
-                                                            setConsigneeAddress(e.target.value)
+                                                            setConsigneeAddress(
+                                                                e.target.value
+                                                            )
                                                         }
                                                     />
                                                 </label>
@@ -420,9 +458,14 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                         </span>
                                                         <Input
                                                             className="h-9 py-1 text-xs"
-                                                            value={consigneeCity}
+                                                            value={
+                                                                consigneeCity
+                                                            }
                                                             onChange={(e) =>
-                                                                setConsigneeCity(e.target.value)
+                                                                setConsigneeCity(
+                                                                    e.target
+                                                                        .value
+                                                                )
                                                             }
                                                         />
                                                     </label>
@@ -433,9 +476,14 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                         <Input
                                                             className="h-9 py-1 text-xs"
                                                             placeholder="e.g. West Bengal"
-                                                            value={consigneeState}
+                                                            value={
+                                                                consigneeState
+                                                            }
                                                             onChange={(e) =>
-                                                                setConsigneeState(e.target.value)
+                                                                setConsigneeState(
+                                                                    e.target
+                                                                        .value
+                                                                )
                                                             }
                                                         />
                                                     </label>
@@ -446,9 +494,14 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                         <Input
                                                             className="h-9 py-1 text-xs"
                                                             maxLength={6}
-                                                            value={consigneePincode}
+                                                            value={
+                                                                consigneePincode
+                                                            }
                                                             onChange={(e) =>
-                                                                setConsigneePincode(e.target.value)
+                                                                setConsigneePincode(
+                                                                    e.target
+                                                                        .value
+                                                                )
                                                             }
                                                         />
                                                     </label>
@@ -458,9 +511,14 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                         </span>
                                                         <Input
                                                             className="h-9 py-1 text-xs"
-                                                            value={consigneeCountry}
+                                                            value={
+                                                                consigneeCountry
+                                                            }
                                                             onChange={(e) =>
-                                                                setConsigneeCountry(e.target.value)
+                                                                setConsigneeCountry(
+                                                                    e.target
+                                                                        .value
+                                                                )
                                                             }
                                                         />
                                                     </label>
@@ -470,7 +528,11 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                     <Button
                                                         variant="outline"
                                                         className="h-8 text-[11px]"
-                                                        onClick={() => setIsEditingAddress(false)}
+                                                        onClick={() =>
+                                                            setIsEditingAddress(
+                                                                false
+                                                            )
+                                                        }
                                                     >
                                                         Cancel
                                                     </Button>
@@ -478,32 +540,53 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                         className="h-8 text-[11px]"
                                                         disabled={
                                                             updateConsignee.isPending ||
-                                                            !isCorporateDeliveryAddressValid({
-                                                                contactPersonName: consigneeName,
-                                                                mobileNumber: consigneePhone,
-                                                                deliveryAddress: consigneeAddress,
-                                                                deliveryCity: consigneeCity,
-                                                                deliveryPincode: consigneePincode,
-                                                                deliveryCountry: consigneeCountry,
-                                                            })
+                                                            !isCorporateDeliveryAddressValid(
+                                                                {
+                                                                    contactPersonName:
+                                                                        consigneeName,
+                                                                    mobileNumber:
+                                                                        consigneePhone,
+                                                                    deliveryAddress:
+                                                                        consigneeAddress,
+                                                                    deliveryCity:
+                                                                        consigneeCity,
+                                                                    deliveryPincode:
+                                                                        consigneePincode,
+                                                                    deliveryCountry:
+                                                                        consigneeCountry,
+                                                                }
+                                                            )
                                                         }
                                                         onClick={() => {
-                                                            updateConsignee.mutate({
-                                                                corporateOrderId: initialData.id,
-                                                                orderId: initialData.id,
-                                                                contactPersonName: consigneeName.trim(),
-                                                                mobileNumber: consigneePhone.trim(),
-                                                                deliveryAddress: consigneeAddress.trim(),
-                                                                deliveryCity: consigneeCity.trim(),
-                                                                deliveryState:
-                                                                    consigneeState.trim() || undefined,
-                                                                deliveryPincode: consigneePincode.trim(),
-                                                                deliveryCountry:
-                                                                    consigneeCountry.trim() || "India",
-                                                            } as any);
+                                                            updateConsignee.mutate(
+                                                                {
+                                                                    corporateOrderId:
+                                                                        initialData.id,
+                                                                    orderId:
+                                                                        initialData.id,
+                                                                    contactPersonName:
+                                                                        consigneeName.trim(),
+                                                                    mobileNumber:
+                                                                        consigneePhone.trim(),
+                                                                    deliveryAddress:
+                                                                        consigneeAddress.trim(),
+                                                                    deliveryCity:
+                                                                        consigneeCity.trim(),
+                                                                    deliveryState:
+                                                                        consigneeState.trim() ||
+                                                                        undefined,
+                                                                    deliveryPincode:
+                                                                        consigneePincode.trim(),
+                                                                    deliveryCountry:
+                                                                        consigneeCountry.trim() ||
+                                                                        "India",
+                                                                } as any
+                                                            );
                                                         }}
                                                     >
-                                                        {updateConsignee.isPending ? "Saving..." : "Save Address"}
+                                                        {updateConsignee.isPending
+                                                            ? "Saving..."
+                                                            : "Save Address"}
                                                     </Button>
                                                 </div>
                                             </div>
@@ -533,7 +616,8 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                                                     ],
                                                     [
                                                         "Supplier brand",
-                                                        initialData.brand?.name ??
+                                                        initialData.brand
+                                                            ?.name ??
                                                             "Not assigned",
                                                     ],
                                                     [
@@ -863,57 +947,199 @@ export function CorporateOrderDetail({ initialData }: { initialData: any }) {
                     ) : null}
 
                     {activeDetailTab === "activity" ? (
-                        <Panel title="Status Timeline">
-                            {initialData.statusHistory?.length ? (
-                                <div className="overflow-x-auto rounded-lg border border-slate-200">
-                                    <table className="w-full min-w-[560px] text-left text-xs">
-                                        <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
-                                            <tr>
-                                                <th className="px-3 py-2">
-                                                    Status
-                                                </th>
-                                                <th className="px-3 py-2">
-                                                    Date
-                                                </th>
-                                                <th className="px-3 py-2">
-                                                    Note
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {initialData.statusHistory.map(
-                                                (item: any) => (
-                                                    <tr
-                                                        key={item.id}
-                                                        className="border-t border-slate-100"
-                                                    >
-                                                        <td className="px-3 py-2 font-semibold text-slate-900">
+                        <>
+                            <Panel title="Quality Control Review">
+                                {initialData.qcSubmissions?.length ? (
+                                    <div className="space-y-3">
+                                        {initialData.qcSubmissions.map(
+                                            (submission: any) => (
+                                                <div
+                                                    key={submission.id}
+                                                    className="rounded-lg border border-slate-200 p-3 text-xs"
+                                                >
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="font-semibold text-slate-900">
                                                             {convertValueToLabel(
-                                                                item.toStatus
+                                                                submission.status
                                                             )}
-                                                        </td>
-                                                        <td className="whitespace-nowrap px-3 py-2 text-slate-500">
+                                                        </span>
+                                                        <span className="text-slate-500">
+                                                            {submission.sampleCoveragePercent ??
+                                                                0}
+                                                            % sampled
+                                                        </span>
+                                                    </div>
+                                                    {submission.remarks ? (
+                                                        <p className="mt-2 text-slate-600">
+                                                            {submission.remarks}
+                                                        </p>
+                                                    ) : null}
+                                                    {submission.images
+                                                        ?.length ? (
+                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                            {submission.images.map(
+                                                                (
+                                                                    image: any
+                                                                ) => (
+                                                                    <a
+                                                                        key={
+                                                                            image.id
+                                                                        }
+                                                                        href={
+                                                                            image.imageUrl
+                                                                        }
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="text-blue-700 underline"
+                                                                    >
+                                                                        View
+                                                                        evidence
+                                                                    </a>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    ) : null}
+                                                    {submission.status ===
+                                                    "submitted" ? (
+                                                        <div className="mt-3 space-y-2">
+                                                            <textarea
+                                                                className="min-h-16 w-full rounded-md border border-input px-3 py-2 text-xs"
+                                                                placeholder="Review notes"
+                                                                value={
+                                                                    qcReviewNotes
+                                                                }
+                                                                onChange={(
+                                                                    event
+                                                                ) =>
+                                                                    setQcReviewNotes(
+                                                                        event
+                                                                            .target
+                                                                            .value
+                                                                    )
+                                                                }
+                                                            />
+                                                            <div className="flex gap-2">
+                                                                <Button
+                                                                    size="sm"
+                                                                    onClick={() =>
+                                                                        reviewQc.mutate(
+                                                                            {
+                                                                                submissionId:
+                                                                                    submission.id,
+                                                                                decision:
+                                                                                    "approved",
+                                                                                reviewNotes:
+                                                                                    qcReviewNotes ||
+                                                                                    undefined,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        reviewQc.isPending
+                                                                    }
+                                                                >
+                                                                    Approve QC
+                                                                </Button>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    onClick={() =>
+                                                                        reviewQc.mutate(
+                                                                            {
+                                                                                submissionId:
+                                                                                    submission.id,
+                                                                                decision:
+                                                                                    "rejected",
+                                                                                reviewNotes:
+                                                                                    qcReviewNotes ||
+                                                                                    undefined,
+                                                                            }
+                                                                        )
+                                                                    }
+                                                                    disabled={
+                                                                        reviewQc.isPending
+                                                                    }
+                                                                >
+                                                                    Reject QC
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    ) : submission.reviewedAt ? (
+                                                        <p className="mt-2 text-slate-500">
+                                                            Reviewed{" "}
                                                             {new Date(
-                                                                item.createdAt
+                                                                submission.reviewedAt
                                                             ).toLocaleString(
                                                                 "en-IN"
                                                             )}
-                                                        </td>
-                                                        <td className="px-3 py-2 text-slate-600">
-                                                            {item.note || "—"}
-                                                        </td>
-                                                    </tr>
-                                                )
-                                            )}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            ) : (
-                                <p className="text-xs text-slate-500">
-                                    No status changes recorded yet.
-                                </p>
-                            )}
-                        </Panel>
+                                                            {submission.reviewNotes
+                                                                ? ` — ${submission.reviewNotes}`
+                                                                : ""}
+                                                        </p>
+                                                    ) : null}
+                                                </div>
+                                            )
+                                        )}
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-slate-500">
+                                        No QC submission recorded.
+                                    </p>
+                                )}
+                            </Panel>
+                            <Panel title="Status Timeline">
+                                {initialData.statusHistory?.length ? (
+                                    <div className="overflow-x-auto rounded-lg border border-slate-200">
+                                        <table className="w-full min-w-[560px] text-left text-xs">
+                                            <thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500">
+                                                <tr>
+                                                    <th className="px-3 py-2">
+                                                        Status
+                                                    </th>
+                                                    <th className="px-3 py-2">
+                                                        Date
+                                                    </th>
+                                                    <th className="px-3 py-2">
+                                                        Note
+                                                    </th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {initialData.statusHistory.map(
+                                                    (item: any) => (
+                                                        <tr
+                                                            key={item.id}
+                                                            className="border-t border-slate-100"
+                                                        >
+                                                            <td className="px-3 py-2 font-semibold text-slate-900">
+                                                                {convertValueToLabel(
+                                                                    item.toStatus
+                                                                )}
+                                                            </td>
+                                                            <td className="whitespace-nowrap px-3 py-2 text-slate-500">
+                                                                {new Date(
+                                                                    item.createdAt
+                                                                ).toLocaleString(
+                                                                    "en-IN"
+                                                                )}
+                                                            </td>
+                                                            <td className="px-3 py-2 text-slate-600">
+                                                                {item.note ||
+                                                                    "—"}
+                                                            </td>
+                                                        </tr>
+                                                    )
+                                                )}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                ) : (
+                                    <p className="text-xs text-slate-500">
+                                        No status changes recorded yet.
+                                    </p>
+                                )}
+                            </Panel>
+                        </>
                     ) : null}
                 </div>
 

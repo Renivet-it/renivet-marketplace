@@ -22,6 +22,10 @@ import {
     getCorporateDocumentSettings,
 } from "@/lib/services/corporate-documents";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
+import {
+    assertCorporateTaxData,
+    resolveCorporateDocumentDate,
+} from "@/lib/utils/corporate-document-integrity";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
 import { and, desc, eq } from "drizzle-orm";
@@ -98,7 +102,11 @@ const INDIAN_STATES = [
  * so the customer tax invoice can include the GST state and state code.
  */
 function deliveryPlaceOfSupply(...values: Array<string | null | undefined>) {
-    const deliveryText = values.map(text).filter(Boolean).join(" ").toLowerCase();
+    const deliveryText = values
+        .map(text)
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
     if (!deliveryText) return undefined;
 
     return INDIAN_STATES.find((state) =>
@@ -154,7 +162,12 @@ export async function GET(
               : null;
         const isBrandOwner = order.brand?.ownerId === userId;
 
-        if (!canViewAdmin && !brandMembership && !isBrandOwner && order.userId !== userId) {
+        if (
+            !canViewAdmin &&
+            !brandMembership &&
+            !isBrandOwner &&
+            order.userId !== userId
+        ) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 });
         }
 
@@ -202,6 +215,19 @@ export async function GET(
         }
 
         const profile = order.quote?.profile;
+        try {
+            resolveCorporateDocumentDate(invoice.invoiceDate, order.createdAt);
+            assertCorporateTaxData(
+                profile?.gstNumber ?? order.gstNumber ?? invoice.buyerGstin,
+                [{ hsnCode: product?.hsCode, taxable: true }]
+            );
+        } catch (error) {
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "CORPORATE_DOCUMENT_SOURCE_INVALID";
+            return NextResponse.json({ message }, { status: 422 });
+        }
         const profileBillingAddress =
             profile?.billingAddress &&
             typeof profile.billingAddress === "object" &&
@@ -223,12 +249,14 @@ export async function GET(
             "West Bengal";
 
         const placeOfSupply =
-            text(profileBillingAddress.state) ||
+            text(invoice.placeOfSupplyStateName) ||
+            text(order.deliveryState) ||
             deliveryPlaceOfSupply(
                 order.deliveryAddress,
                 order.deliveryCity,
                 order.deliveryCountry
             ) ||
+            text(profileBillingAddress.state) ||
             shipFromFallbackState;
         const receiptVoucher = invoice.receiptVoucherId
             ? await db.query.corporateReceiptVouchers.findFirst({
@@ -276,23 +304,20 @@ export async function GET(
                     "Not available",
             },
             seller: {
-                name: order.brand.name,
+                name: RENIVET_CORPORATE_SELLER_NAME,
                 logoUrl:
                     order.brand.logoUrl ||
                     "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNqU6nAZGz8F0U3cHoOhlNY6tCDW7PIAe4fpJw",
                 email: order.brand.email,
                 phone: order.brand.phone,
-                gstin: brandConfidential?.gstin || settings.gstin,
+                gstin: settings.gstin,
                 cin: settings.cin,
-                address: sellerAddress || "Not provided",
-                addressLine1:
-                    brandConfidential?.addressLine1 ?? settings.addressLine1,
-                addressLine2:
-                    brandConfidential?.addressLine2 ?? settings.addressLine2,
-                city: brandConfidential?.city ?? settings.city,
-                state: brandConfidential?.state ?? settings.state,
-                postalCode:
-                    brandConfidential?.postalCode ?? settings.postalCode,
+                address: corporatePartyAddress(settings) || "Not provided",
+                addressLine1: settings.addressLine1,
+                addressLine2: settings.addressLine2,
+                city: settings.city,
+                state: settings.state,
+                postalCode: settings.postalCode,
                 country: brandConfidential?.country ?? settings.country,
                 bankName: settings.bankName,
                 bankAccountHolderName: settings.bankAccountName,

@@ -122,7 +122,7 @@ export function deriveGstRateBps(params: {
 }) {
     const normalizedHsn = params.hsnCode?.trim() ?? "";
     if (/^(61|62|63)/.test(normalizedHsn)) {
-        return params.unitPricePaise <= 250_000 ? 500 : 1800;
+        return params.unitPricePaise <= 100_000 ? 500 : 1200;
     }
 
     return params.fallbackRateBps ?? 0;

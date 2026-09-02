@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import {
     boolean,
     date,
@@ -391,6 +391,10 @@ export const corporateQuotes = pgTable(
             .default(0),
         gstAmountPaise: integer("gst_amount_paise").notNull().default(0),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         advanceAmountPaise: integer("advance_amount_paise")
             .notNull()
             .default(0),
@@ -400,9 +404,8 @@ export const corporateQuotes = pgTable(
         commissionAmountPaise: integer("commission_amount_paise")
             .notNull()
             .default(0),
-        commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull()
-            .default(1800),
+        commissionHsnCode: text("commission_hsn_code"),
+        commissionGstRateBps: integer("commission_gst_rate_bps").notNull(),
         commissionGstAmountPaise: integer("commission_gst_amount_paise")
             .notNull()
             .default(0),
@@ -451,6 +454,10 @@ export const corporateQuoteRevisions = pgTable(
             .default(0),
         gstAmountPaise: integer("gst_amount_paise").notNull().default(0),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         comments: text("comments"),
         createdByUserId: text("created_by_user_id").references(() => users.id, {
             onDelete: "set null",
@@ -577,13 +584,7 @@ export const corporatePaymentRequests = pgTable(
             enum: ["advance", "balance", "full", "partial"],
         }).notNull(),
         status: text("status", {
-            enum: [
-                "pending",
-                "initiated",
-                "paid",
-                "expired",
-                "cancelled",
-            ],
+            enum: ["pending", "initiated", "paid", "expired", "cancelled"],
         })
             .notNull()
             .default("pending"),
@@ -705,7 +706,8 @@ export const corporateQcSubmissions = pgTable(
                 onDelete: "set null",
             }
         ),
-        reviewedAt: date("reviewed_at"),
+        reviewedAt: timestamp("reviewed_at"),
+        reviewNotes: text("review_notes"),
         ...timestamps,
     },
     (table) => ({
@@ -841,6 +843,10 @@ export const corporateProformaInvoices = pgTable(
         subtotalPaise: integer("subtotal_paise").notNull(),
         gstAmountPaise: integer("gst_amount_paise").notNull(),
         totalAmountPaise: integer("total_amount_paise").notNull(),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         validUntil: date("valid_until"),
         paymentTerms: text("payment_terms"),
         deliveryTimeline: text("delivery_timeline"),
@@ -912,7 +918,15 @@ export const corporateFulfillmentOrders = pgTable(
         unitSellPricePaise: integer("unit_sell_price_paise")
             .notNull()
             .default(0),
+        gstRateBps: integer("gst_rate_bps"),
+        taxableValuePaise: integer("taxable_value_paise"),
+        cgstPaise: integer("cgst_paise"),
+        sgstPaise: integer("sgst_paise"),
+        igstPaise: integer("igst_paise"),
         totalAmountPaise: integer("total_amount_paise").notNull().default(0),
+        supplierGstin: text("supplier_gstin"),
+        recipientGstin: text("recipient_gstin"),
+        hsnCode: text("hsn_code"),
         deliveryMode: text("delivery_mode", {
             enum: ["renivet_warehouse", "direct_to_customer"],
         })
@@ -921,6 +935,10 @@ export const corporateFulfillmentOrders = pgTable(
         deliveryAddress: text("delivery_address").notNull(),
         paymentTerms: text("payment_terms").notNull(),
         deliveryInstructions: text("delivery_instructions"),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         status: text("status", {
             enum: ["draft", "issued", "accepted", "cancelled"],
         })
@@ -946,6 +964,50 @@ export const corporateFulfillmentOrders = pgTable(
 
 export const corporateVendorPurchaseOrders = corporateFulfillmentOrders;
 
+export const corporateBrandTaxInvoiceUploads = pgTable(
+    "corporate_brand_tax_invoice_uploads",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "restrict" }),
+        vendorPurchaseOrderId: uuid("vendor_purchase_order_id")
+            .notNull()
+            .references(() => corporateFulfillmentOrders.id, {
+                onDelete: "cascade",
+            }),
+        declaredInvoiceDate: date("declared_invoice_date"),
+        fileName: text("file_name").notNull(),
+        fileUrl: text("file_url").notNull(),
+        fileKey: text("file_key").notNull(),
+        fileType: text("file_type").notNull(),
+        fileSize: integer("file_size").notNull(),
+        status: text("status", {
+            enum: ["pending_review", "captured", "superseded"],
+        })
+            .notNull()
+            .default("pending_review"),
+        uploadedByUserId: text("uploaded_by_user_id").references(
+            () => users.id,
+            { onDelete: "set null" }
+        ),
+        ...timestamps,
+    },
+    (table) => ({
+        fileKeyUnique: uniqueIndex(
+            "corporate_brand_tax_invoice_uploads_order_file_idx"
+        ).on(table.orderId, table.fileKey),
+        pendingFoUnique: uniqueIndex(
+            "corporate_brand_tax_invoice_uploads_pending_fo_idx"
+        )
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.status} = 'pending_review'`),
+    })
+);
+
 export const corporateBrandTaxInvoices = pgTable(
     "corporate_brand_tax_invoices",
     {
@@ -960,8 +1022,16 @@ export const corporateBrandTaxInvoices = pgTable(
             () => corporateFulfillmentOrders.id,
             { onDelete: "set null" }
         ),
+        uploadId: uuid("upload_id").references(
+            () => corporateBrandTaxInvoiceUploads.id,
+            { onDelete: "set null" }
+        ),
+        supersedesInvoiceId: uuid("supersedes_invoice_id"),
         invoiceNumber: text("invoice_number").notNull(),
         invoiceDate: date("invoice_date").notNull(),
+        foReference: text("fo_reference"),
+        quantity: integer("quantity"),
+        unitRatePaise: integer("unit_rate_paise"),
         supplierGstin: text("supplier_gstin").notNull(),
         recipientGstin: text("recipient_gstin").notNull(),
         hsnCode: text("hsn_code").notNull(),
@@ -972,11 +1042,12 @@ export const corporateBrandTaxInvoices = pgTable(
         totalAmountPaise: integer("total_amount_paise").notNull(),
         fileName: text("file_name").notNull(),
         fileUrl: text("file_url").notNull(),
+        fileKey: text("file_key"),
         validationStatus: text("validation_status", {
-            enum: ["pending", "validated", "rejected"],
+            enum: ["held", "accepted", "rejected", "superseded"],
         })
             .notNull()
-            .default("pending"),
+            .default("held"),
         validationIssues: jsonb("validation_issues")
             .$type<string[]>()
             .notNull()
@@ -987,6 +1058,15 @@ export const corporateBrandTaxInvoices = pgTable(
             .notNull()
             .default("pending"),
         reviewNotes: text("review_notes"),
+        reviewedByUserId: text("reviewed_by_user_id").references(
+            () => users.id,
+            { onDelete: "set null" }
+        ),
+        reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+        transitionVersion: integer("transition_version").notNull().default(1),
+        isCurrentAccepted: boolean("is_current_accepted")
+            .notNull()
+            .default(false),
         isDeprecated: boolean("is_deprecated").notNull().default(true),
         uploadedByUserId: text("uploaded_by_user_id").references(
             () => users.id,
@@ -1006,6 +1086,14 @@ export const corporateBrandTaxInvoices = pgTable(
         gstr2bIdx: index("corporate_brand_tax_invoices_gstr2b_idx").on(
             table.gstr2bStatus
         ),
+        heldFoUnique: uniqueIndex("corporate_brand_tax_invoices_held_fo_idx")
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.validationStatus} = 'held'`),
+        acceptedFoUnique: uniqueIndex(
+            "corporate_brand_tax_invoices_current_accepted_fo_idx"
+        )
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.isCurrentAccepted} = true`),
     })
 );
 
@@ -1051,6 +1139,62 @@ export const corporateDeliveryChallans = pgTable(
     })
 );
 
+export const corporateWarehouseGoodsReceipts = pgTable(
+    "corporate_warehouse_goods_receipts",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        vendorPurchaseOrderId: uuid("vendor_purchase_order_id")
+            .notNull()
+            .references(() => corporateFulfillmentOrders.id, {
+                onDelete: "cascade",
+            }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "restrict" }),
+        warehouseName: text("warehouse_name").notNull(),
+        receivedQuantity: integer("received_quantity").notNull(),
+        receiptDate: date("receipt_date").notNull(),
+        receiverName: text("receiver_name").notNull(),
+        deliveryReference: text("delivery_reference"),
+        status: text("status", {
+            enum: ["accepted", "rejected", "superseded"],
+        })
+            .notNull()
+            .default("accepted"),
+        receiptVersion: integer("receipt_version").notNull().default(1),
+        isCurrentAccepted: boolean("is_current_accepted")
+            .notNull()
+            .default(true),
+        createdByUserId: text("created_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        reviewedByUserId: text("reviewed_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
+        reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+        ...timestamps,
+    },
+    (table) => ({
+        orderIdx: index("corporate_warehouse_goods_receipts_order_idx").on(
+            table.orderId
+        ),
+        foIdx: index("corporate_warehouse_goods_receipts_fo_idx").on(
+            table.vendorPurchaseOrderId
+        ),
+        currentFoUnique: uniqueIndex(
+            "corporate_warehouse_goods_receipts_current_fo_idx"
+        )
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.isCurrentAccepted} = true`),
+    })
+);
+
 export const corporateTaxInvoices = pgTable("corporate_tax_invoices", {
     id: uuid("id").primaryKey().notNull().defaultRandom(),
     invoiceNumber: text("invoice_number").notNull(),
@@ -1067,7 +1211,14 @@ export const corporateTaxInvoices = pgTable("corporate_tax_invoices", {
     cgstPaise: integer("cgst_paise").notNull().default(0),
     sgstPaise: integer("sgst_paise").notNull().default(0),
     igstPaise: integer("igst_paise").notNull().default(0),
+    placeOfSupplyStateCode: text("place_of_supply_state_code"),
+    placeOfSupplyStateName: text("place_of_supply_state_name"),
+    placeOfSupplySource: text("place_of_supply_source"),
     totalAmountPaise: integer("total_amount_paise").notNull(),
+    customizations: jsonb("customizations")
+        .$type<Array<Record<string, unknown>>>()
+        .notNull()
+        .default([]),
     advanceAdjustmentPaise: integer("advance_adjustment_paise")
         .notNull()
         .default(0),
@@ -1223,7 +1374,9 @@ export const corporateRefundVouchers = pgTable(
         voucherNumberUnique: uniqueIndex(
             "corporate_refund_vouchers_number_idx"
         ).on(table.voucherNumber),
-        orderIdx: index("corporate_refund_vouchers_order_idx").on(table.orderId),
+        orderIdx: index("corporate_refund_vouchers_order_idx").on(
+            table.orderId
+        ),
     })
 );
 
@@ -1274,19 +1427,26 @@ export const corporateSettlementStatements = pgTable(
             .notNull()
             .references(() => brands.id, { onDelete: "cascade" }),
         statementNumber: text("statement_number").notNull(),
+        version: integer("version").notNull().default(1),
+        supersedesStatementId: uuid("supersedes_statement_id"),
+        isCurrent: boolean("is_current").notNull().default(true),
+        issuedByUserId: text("issued_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        adjustmentReason: text("adjustment_reason"),
         statementDate: date("statement_date").notNull(),
         grossPaidPaise: integer("gross_paid_paise").notNull(),
         gstEmbeddedPaise: integer("gst_embedded_paise").notNull(),
         taxableValuePaise: integer("taxable_value_paise").notNull(),
         commissionPercentBps: integer("commission_percent_bps").notNull(),
         commissionAmountPaise: integer("commission_amount_paise").notNull(),
-        commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull()
-            .default(1800),
-        commissionGstAmountPaise: integer("commission_gst_amount_paise").notNull(),
-        tcsPercentBps: integer("tcs_percent_bps").notNull().default(50),
+        commissionGstRateBps: integer("commission_gst_rate_bps").notNull(),
+        commissionGstAmountPaise: integer(
+            "commission_gst_amount_paise"
+        ).notNull(),
+        tcsPercentBps: integer("tcs_percent_bps").notNull().default(0),
         tcsAmountPaise: integer("tcs_amount_paise").notNull(),
-        tdsPercentBps: integer("tds_percent_bps").notNull().default(10),
+        tdsPercentBps: integer("tds_percent_bps").notNull().default(0),
         tdsAmountPaise: integer("tds_amount_paise").notNull(),
         netRemittancePaise: integer("net_remittance_paise").notNull(),
         status: text("status", {
@@ -1295,6 +1455,10 @@ export const corporateSettlementStatements = pgTable(
             .notNull()
             .default("issued"),
         notes: text("notes"),
+        customizations: jsonb("customizations")
+            .$type<Array<Record<string, unknown>>>()
+            .notNull()
+            .default([]),
         ...timestamps,
     },
     (table) => ({
@@ -1304,6 +1468,11 @@ export const corporateSettlementStatements = pgTable(
         orderIdx: index("corporate_settlement_statements_order_idx").on(
             table.orderId
         ),
+        currentOrderIdx: uniqueIndex(
+            "corporate_settlement_statements_current_order_idx"
+        )
+            .on(table.orderId)
+            .where(sql`${table.isCurrent} = true`),
         brandIdx: index("corporate_settlement_statements_brand_idx").on(
             table.brandId
         ),
@@ -1858,6 +2027,32 @@ export const corporateDeliveryChallansRelations = relations(
         }),
         createdBy: one(users, {
             fields: [corporateDeliveryChallans.createdByUserId],
+            references: [users.id],
+        }),
+    })
+);
+
+export const corporateWarehouseGoodsReceiptsRelations = relations(
+    corporateWarehouseGoodsReceipts,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateWarehouseGoodsReceipts.orderId],
+            references: [corporateOrders.id],
+        }),
+        vendorPurchaseOrder: one(corporateVendorPurchaseOrders, {
+            fields: [corporateWarehouseGoodsReceipts.vendorPurchaseOrderId],
+            references: [corporateVendorPurchaseOrders.id],
+        }),
+        brand: one(brands, {
+            fields: [corporateWarehouseGoodsReceipts.brandId],
+            references: [brands.id],
+        }),
+        createdBy: one(users, {
+            fields: [corporateWarehouseGoodsReceipts.createdByUserId],
+            references: [users.id],
+        }),
+        reviewedBy: one(users, {
+            fields: [corporateWarehouseGoodsReceipts.reviewedByUserId],
             references: [users.id],
         }),
     })
