@@ -102,7 +102,11 @@ const INDIAN_STATES = [
  * so the customer tax invoice can include the GST state and state code.
  */
 function deliveryPlaceOfSupply(...values: Array<string | null | undefined>) {
-    const deliveryText = values.map(text).filter(Boolean).join(" ").toLowerCase();
+    const deliveryText = values
+        .map(text)
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
     if (!deliveryText) return undefined;
 
     return INDIAN_STATES.find((state) =>
@@ -158,7 +162,12 @@ export async function GET(
               : null;
         const isBrandOwner = order.brand?.ownerId === userId;
 
-        if (!canViewAdmin && !brandMembership && !isBrandOwner && order.userId !== userId) {
+        if (
+            !canViewAdmin &&
+            !brandMembership &&
+            !isBrandOwner &&
+            order.userId !== userId
+        ) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 });
         }
 
@@ -213,7 +222,10 @@ export async function GET(
                 [{ hsnCode: product?.hsCode, taxable: true }]
             );
         } catch (error) {
-            const message = error instanceof Error ? error.message : "CORPORATE_DOCUMENT_SOURCE_INVALID";
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "CORPORATE_DOCUMENT_SOURCE_INVALID";
             return NextResponse.json({ message }, { status: 422 });
         }
         const profileBillingAddress =
@@ -237,12 +249,14 @@ export async function GET(
             "West Bengal";
 
         const placeOfSupply =
-            text(profileBillingAddress.state) ||
+            text(invoice.placeOfSupplyStateName) ||
+            text(order.deliveryState) ||
             deliveryPlaceOfSupply(
                 order.deliveryAddress,
                 order.deliveryCity,
                 order.deliveryCountry
             ) ||
+            text(profileBillingAddress.state) ||
             shipFromFallbackState;
         const receiptVoucher = invoice.receiptVoucherId
             ? await db.query.corporateReceiptVouchers.findFirst({

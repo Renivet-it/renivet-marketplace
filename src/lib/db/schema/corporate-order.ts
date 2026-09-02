@@ -251,6 +251,7 @@ export const corporateOrders = pgTable(
         mobileNumber: text("mobile_number").notNull(),
         gstNumber: text("gst_number"),
         deliveryCountry: text("delivery_country").notNull(),
+        deliveryState: text("delivery_state"),
         deliveryCity: text("delivery_city").notNull(),
         deliveryPincode: text("delivery_pincode").notNull(),
         deliveryAddress: text("delivery_address").notNull(),
@@ -295,8 +296,7 @@ export const corporateOrders = pgTable(
             .notNull()
             .default(0),
         commissionHsnCode: text("commission_hsn_code"),
-        commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull(),
+        commissionGstRateBps: integer("commission_gst_rate_bps").notNull(),
         commissionGstAmountPaise: integer("commission_gst_amount_paise")
             .notNull()
             .default(0),

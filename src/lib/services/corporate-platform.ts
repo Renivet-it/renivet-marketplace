@@ -62,6 +62,10 @@ import {
 } from "@/lib/db/schema";
 import { createOrder } from "@/lib/delhivery/orders";
 import { schedulePickup } from "@/lib/delhivery/pickup";
+import {
+    resolveCorporatePlaceOfSupply,
+    splitCorporateGstByPlaceOfSupply,
+} from "@/lib/finance/corporate-place-of-supply";
 import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import { resend } from "@/lib/resend";
 import {
@@ -4233,25 +4237,23 @@ class CorporatePlatformService {
             order.quote?.profile?.gstNumber?.trim() ??
             order.gstNumber?.trim() ??
             "";
-        const sellerStateCode = gstStateCode(sellerGstin);
-        const buyerStateCode = gstStateCode(buyerGstin);
         const billingAddress = order.quote?.profile?.billingAddress as
             | Record<string, unknown>
             | undefined;
-        const sellerState = brandDetails?.state?.trim().toLowerCase();
-        const buyerState =
-            typeof billingAddress?.state === "string"
-                ? billingAddress.state.trim().toLowerCase()
-                : "";
-        // If either GSTIN is unavailable, retain the existing intra-state split.
-        // When both codes exist, use IGST for an inter-state supply.
-        const isIntraState =
-            sellerStateCode && buyerStateCode
-                ? sellerStateCode === buyerStateCode
-                : sellerState && buyerState
-                  ? sellerState === buyerState
-                  : true;
-        const gstHalf = Math.round(order.gstPaise / 2);
+        const placeOfSupply = resolveCorporatePlaceOfSupply({
+            deliveryState: order.deliveryState,
+            billingState:
+                typeof billingAddress?.state === "string"
+                    ? billingAddress.state
+                    : null,
+            registeredState: buyerGstin ? gstStateCode(buyerGstin) : null,
+        });
+        const taxSplit = splitCorporateGstByPlaceOfSupply({
+            taxableValuePaise: order.subtotalPaise + order.customizationPaise,
+            gstRateBps: order.gstRateBps,
+            supplierStateCode: gstStateCode(settings.gstin),
+            placeOfSupplyStateCode: placeOfSupply.stateCode,
+        });
         const invoiceDate = new Date();
         const invoiceNumber = await nextBrandInvoiceNumber({
             brandId: order.brandId,
@@ -4274,9 +4276,12 @@ class CorporatePlatformService {
                 dueDate: dueDate.toISOString().slice(0, 10),
                 taxableValuePaise:
                     order.subtotalPaise + order.customizationPaise,
-                cgstPaise: isIntraState ? gstHalf : 0,
-                sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
-                igstPaise: isIntraState ? 0 : order.gstPaise,
+                cgstPaise: taxSplit.cgstPaise,
+                sgstPaise: taxSplit.sgstPaise,
+                igstPaise: taxSplit.igstPaise,
+                placeOfSupplyStateCode: placeOfSupply.stateCode || null,
+                placeOfSupplyStateName: placeOfSupply.stateName || null,
+                placeOfSupplySource: placeOfSupply.source,
                 totalAmountPaise: order.totalPaise,
                 customizations: orderCustomizations.map((row) => ({
                     id: row.id,

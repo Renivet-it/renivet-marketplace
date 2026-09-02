@@ -1211,6 +1211,9 @@ export const corporateTaxInvoices = pgTable("corporate_tax_invoices", {
     cgstPaise: integer("cgst_paise").notNull().default(0),
     sgstPaise: integer("sgst_paise").notNull().default(0),
     igstPaise: integer("igst_paise").notNull().default(0),
+    placeOfSupplyStateCode: text("place_of_supply_state_code"),
+    placeOfSupplyStateName: text("place_of_supply_state_name"),
+    placeOfSupplySource: text("place_of_supply_source"),
     totalAmountPaise: integer("total_amount_paise").notNull(),
     customizations: jsonb("customizations")
         .$type<Array<Record<string, unknown>>>()
