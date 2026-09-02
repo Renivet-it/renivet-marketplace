@@ -1786,6 +1786,13 @@
             "when": 1788374400000,
             "tag": "0274_corporate_customization_snapshots",
             "breakpoints": true
+        },
+        {
+            "idx": 255,
+            "version": "7",
+            "when": 1788378000000,
+            "tag": "0282_corporate_quote_customizations",
+            "breakpoints": true
         }
     ]
 }
