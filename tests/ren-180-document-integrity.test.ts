@@ -107,7 +107,8 @@ describe("REN-180 corporate document integrity", () => {
         );
 
         expect(route).toContain('label: "Expected delivery"');
-        expect(route).toContain('vendorPo.expectedDeliveryDate || ""');
+        expect(route).toContain("date.setDate(date.getDate() + 7)");
+        expect(route).toContain("value: expectedDeliveryDate");
     });
 
     test("keeps customization pricing out of the base row and marks its HSN as not applicable", () => {
