@@ -129,7 +129,7 @@ decisions:
     - {id: DEC-002, question: What happens for uncertain user agents?, class: RECOMMEND_CONTINUE, status: resolved, recommendation: Fail open and send eligible analytics to avoid false-negative customer suppression., confidence: medium, consequence: medium, human_confirmation_required: false}
     - {id: DEC-003, question: Is a fixed EMQ target guaranteed?, class: AUTO_DECIDE, status: resolved, recommendation: No; measure improvement in eligible human traffic and target above 6 where traffic and consent allow., confidence: high, consequence: low, human_confirmation_required: false}
     - {id: DEC-004, question: Should Renivet CAPI logs retain raw supplied customer/request data?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Yes; retain raw profile, address, IP, browser, and click values behind existing authorized dashboard/export access, while never logging provider credentials., confidence: high, consequence: high, human_confirmation_required: true}
-    - {id: DEC-005, question: How are event IDs owned and reused?, class: HUMAN_CONFIRMATION, status: unresolved, recommendation: Request/action-scoped IDs for upper-funnel events and deterministic completed-order IDs for Purchase; reuse across Pixel/CAPI and same-order retries; stop if no canonical identity exists., confidence: medium, consequence: high, human_confirmation_required: true}
+    - {id: DEC-005, question: How are event IDs owned and reused?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Request/action-scoped IDs for upper-funnel events and deterministic completed-order IDs for Purchase; reuse across Pixel/CAPI and same-order retries; stop if no canonical identity exists., confidence: medium, consequence: high, human_confirmation_required: true}
     - {id: DEC-006, question: How are historical raw CAPI-log rows handled?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Do not rewrite historical rows and continue showing their raw values to authorized operators, consistent with the approved raw-log decision., confidence: high, consequence: high, human_confirmation_required: true}
 test_expectations:
     - {id: TEXP-001, category: unit, classification: REQUIRED, reason: Proves crawler detection, ordinary-browser acceptance, uncertain-agent fail-open behavior, and feature-flag control.}
@@ -209,6 +209,5 @@ critic:
 approval:
     state: BLOCKED
     design_blockers:
-        - Stakeholder confirmation is required for deterministic Purchase event-ID ownership and same-order retry behavior (DEC-005).
         - Meta Events Manager Test Events and Search Console/URL Inspection access must be confirmed before READY_FOR_DEV.
     approved_by: null
