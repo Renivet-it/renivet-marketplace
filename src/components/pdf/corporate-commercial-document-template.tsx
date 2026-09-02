@@ -249,6 +249,7 @@ export type CorporateCommercialDocumentData = {
         | "Proforma Invoice"
         | "Purchase Order"
         | "Fulfillment Order"
+        | "Brand Fulfillment Order"
         | "Delivery Challan";
     subtitle: string;
     documentType?: string;
@@ -389,7 +390,7 @@ export function CorporateCommercialDocumentTemplate({
                     <Image src={renivetLogoUrl} style={styles.logo} />
                     <View style={styles.headerCopy}>
                         <Text style={styles.title}>{data.title}</Text>
-                        {data.subtitle ? (
+                        {data.subtitle && !isFulfillmentOrder ? (
                             <Text style={styles.subtitle}>{data.subtitle}</Text>
                         ) : null}
                     </View>

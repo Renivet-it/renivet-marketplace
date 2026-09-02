@@ -75,7 +75,9 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain("gstAmountPaise");
         expect(route).toContain('description: "Customization / Extras"');
         expect(route).toContain('unit: "lot"');
+        expect(route).toContain('title: "Brand Fulfillment Order"');
         expect(template).toContain("SIZE-WISE PRODUCTION BREAKDOWN");
+        expect(template).toContain("data.subtitle && !isFulfillmentOrder");
         expect(template).toContain("Agreed rate per piece (excl. GST)");
         expect(template).toContain("Grand total incl. GST");
     });

@@ -212,7 +212,7 @@ export async function GET(
         "Manufacture and fulfil as per approved corporate specifications.";
 
     const data: CorporateCommercialDocumentData = {
-        title: "Fulfillment Order",
+        title: "Brand Fulfillment Order",
         subtitle:
             "Operational instruction — NOT a purchase order. Renivet is not buying from the brand.",
         documentType: "fulfillment_order",
