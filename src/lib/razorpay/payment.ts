@@ -5,6 +5,7 @@ import { verifyPayment } from "@/actions/get-shiprocket-balance";
 import { processOrderAfterPayment } from "@/actions/process-order-after-payment";
 import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 import { siteConfig } from "@/config/site";
+import { isCompleteMetaPurchaseOrder } from "@/lib/analytics/meta-purchase";
 // Assuming needed for value formatting if not available
 // crypto is usually available globally in Node but for client side... wait.
 // payment.ts is a utility file. Is it client or server?
@@ -113,6 +114,7 @@ export function createRazorpayPaymentOptions({
     deleteItemFromCart: (input: { userId: string }) => void;
     orderIntentId: string;
     onOrderSuccess?: () => Promise<void>;
+    onPurchaseSuccess?: () => void | Promise<void>;
 }) {
     const options: RazorpayPaymentOptions = {
         key: env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
@@ -219,6 +221,16 @@ export function createRazorpayPaymentOptions({
                     throw new Error(
                         "No orders were created successfully. Please contact support."
                     );
+                }
+
+                if (
+                    isCompleteMetaPurchaseOrder(
+                        createdOrders.length,
+                        orderDetailsByBrand.length
+                    ) &&
+                    onPurchaseSuccess
+                ) {
+                    await onPurchaseSuccess();
                 }
 
                 // Step 4: Send WhatsApp notification

@@ -1,0 +1,192 @@
+schema_version: "1.0"
+task:
+    id: REN-145
+    title: Meta Purchase event currency unit and event fan-out correction
+    source: linear
+    branch: ayanganguly333/ren-145-meta-purchase-event-currency-unit-defect-and-per-brand-event
+    status: READY_FOR_DEV
+    linear:
+        priority: Urgent
+        status: Backlog
+        labels: [qa-finding]
+        assignee: Ayan Ganguly
+        url: https://linear.app/renivet/issue/REN-145/meta-purchase-event-currency-unit-defect-and-per-brand-event-fan-out
+        comments: []
+        relations: [REN-138, REN-92, REN-116, REN-114, REN-144, REN-133, REN-166]
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Two checkout implementations and shared analytics transport are affected.
+        - Meta is an external conversion-reporting integration with material business impact.
+        - Event granularity changes reported conversion count and value and requires product confirmation.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - src/app/(protected)/checkout/checkout-content.tsx
+        - src/app/(protected)/mycart/Component/payment-stepper/order-payment-page.tsx
+        - src/actions/analytics.ts
+        - src/lib/fbpixel.ts
+        - src/lib/fb-capi.ts
+        - src/lib/utils.ts
+        - src/lib/analytics/purchase-events.test.ts
+        - src/actions/analytics.test.ts
+        - src/lib/external-side-effects.ts
+        - Linear REN-145 issue, relations, and comments
+    excluded_areas:
+        - area: database schemas and migrations
+          reason: No schema change is required by the issue or observed call paths.
+        - area: historical Meta data correction
+          reason: Explicitly out of scope and unsupported by the application path.
+        - area: git status/diff command output
+          reason: git executable is unavailable; branch was read from .git/HEAD.
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: [INT-001, INT-002, INT-003]
+    security_boundaries: [SEC-001]
+    state_transitions:
+        - checkout_ready -> order_creation_in_progress
+        - order_creation_in_progress -> order_created
+        - order_creation_in_progress -> order_creation_failed
+        - order_created -> purchase_event_dispatched
+        - purchase_event_dispatched -> analytics_failed
+    related_tests:
+        - src/actions/analytics.test.ts
+        - src/lib/fb-capi.test.ts
+        - src/lib/analytics/purchase-events.test.ts
+    uncertainties:
+        - Product has not resolved full-order versus per-brand Purchase semantics.
+        - Historical distortion is probable but not quantified.
+requirements:
+    - {id: REQ-001, description: Meta Purchase value is numeric INR rupees derived from paise with the existing helper., type: explicit}
+    - {id: REQ-002, description: Both checkout implementations use the approved Purchase semantic unit., type: explicit}
+    - {id: REQ-003, description: Pixel and CAPI describe the same amount item set count currency and logical event., type: explicit}
+    - {id: REQ-004, description: Pixel and CAPI share one event ID per logical Purchase., type: explicit}
+    - {id: REQ-005, description: Existing InitiateCheckout PostHog order creation and kill-switch behavior remain unchanged., type: explicit}
+    - {id: REQ-006, description: No historical correction or unsupported multiplier is claimed., type: explicit}
+    - {id: REQ-007, description: Eligible zero-pay reward purchases remain zero-valued., type: inferred}
+    - {id: REQ-008, description: This task does not introduce a new order/analytics idempotency guarantee outside REN-144., type: inferred}
+scenarios:
+    - {id: SCN-001, requirement_ids: [REQ-001, REQ-003], description: Single-brand paid checkout sends correctly valued equivalent Pixel/CAPI events.}
+    - {id: SCN-002, requirement_ids: [REQ-002, REQ-003], description: Multi-brand checkout matches the approved event count values IDs and items.}
+    - {id: SCN-003, requirement_ids: [REQ-004], description: Pixel and CAPI for one logical event share an event ID.}
+    - {id: SCN-004, requirement_ids: [REQ-001, REQ-005, REQ-007], description: Eligible reward checkout preserves zero value and order behavior.}
+    - {id: SCN-005, requirement_ids: [REQ-002, REQ-005], description: COD and Razorpay use the same approved semantics.}
+    - {id: SCN-006, requirement_ids: [REQ-005, REQ-008], description: Order failure retry exhaustion or CAPI failure preserves existing isolation.}
+    - {id: SCN-007, requirement_ids: [REQ-005], description: InitiateCheckout and PostHog purchase regressions are absent.}
+    - {id: SCN-008, requirement_ids: [REQ-005], description: External-side-effect kill-switch behavior is unchanged.}
+    - {id: SCN-009, requirement_ids: [REQ-006], description: Historical review reports only evidence-supported impact.}
+invariants:
+    - {id: INV-001, description: INR Purchase values are never raw paise integers.}
+    - {id: INV-002, description: Pixel/CAPI use the same event ID and semantic payload.}
+    - {id: INV-003, description: Internal brand splitting cannot add events beyond the approved boundary.}
+    - {id: INV-004, description: Analytics failures remain isolated from order creation and user errors.}
+    - {id: INV-005, description: InitiateCheckout/PostHog monetary units do not change.}
+    - {id: INV-006, description: No historical correction is attempted or claimed.}
+flows:
+    - id: FLOW-001
+      description: Create orders, reach the approved success boundary, convert to rupees, generate an ID, and dispatch equivalent Pixel/CAPI events.
+      state_transitions: [{from: checkout_ready, to: order_creation_in_progress}, {from: order_creation_in_progress, to: order_created}, {from: order_created, to: purchase_event_dispatched}, {from: order_creation_in_progress, to: order_creation_failed}]
+    - id: FLOW-002
+      description: Preserve retry and analytics-failure isolation without adding an idempotency mechanism.
+      state_transitions: [{from: order_creation_failed, to: retrying}, {from: retrying, to: order_created}, {from: retrying, to: order_creation_failed}, {from: purchase_event_dispatched, to: analytics_failed}]
+dependencies:
+    - {id: DEP-001, description: Product decision resolved as one full customer-order Purchase event using the complete cart total., status: resolved}
+    - {id: DEP-002, description: REN-144 order/payment integrity may affect retry interpretation; no implementation dependency for this scope., status: resolved}
+    - {id: DEP-003, description: REN-133 and REN-138 coordinated sequencing on overlapping paths; no implementation dependency for this scope., status: resolved}
+integrations:
+    - {id: INT-001, system: Meta Pixel, purpose: Receive client Purchase events with INR value and event ID.}
+    - {id: INT-002, system: Meta Conversions API, purpose: Receive server Purchase events with equivalent data and event ID.}
+    - {id: INT-003, system: PostHog, purpose: Regression reference for purchase_completed behavior.}
+personas:
+    - {id: PER-001, role: checkout_customer, applicability: Primary actor for paid and reward checkout.}
+    - {id: PER-002, role: marketing_analytics_operator, applicability: Consumer of Meta conversion reporting.}
+security_boundaries:
+    - {id: SEC-001, description: Existing authenticated checkout/server-action boundary for CAPI identity and address data.}
+business_rules:
+    - {id: BR-001, description: INR Meta event values are rupees, not paise.}
+    - {id: BR-002, description: Product approval determines event granularity, not loop structure.}
+    - {id: BR-003, description: Shared event ID is required for Pixel/CAPI deduplication.}
+decisions:
+    - {id: DEC-001, question: Full customer order or brand sub-order Purchase semantics?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Use one full-order event for conversion-count/AOV consistency; product confirmed this choice., confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-002, question: Historical Meta correction?, class: AUTO_DECIDE, status: resolved, recommendation: No; out of scope and unsupported., confidence: high, consequence: low, human_confirmation_required: false}
+    - {id: DEC-003, question: Bundle related analytics work?, class: RECOMMEND_CONTINUE, status: resolved, recommendation: Coordinate sequencing without expanding scope., confidence: high, consequence: medium, human_confirmation_required: false}
+test_expectations:
+    - {id: TEXP-001, category: component, classification: REQUIRED, reason: Both UIs need focused numeric rupee assertions.}
+    - {id: TEXP-002, category: component, classification: REQUIRED, reason: Multi-brand count/value/items are the central semantic regression.}
+    - {id: TEXP-003, category: unit, classification: REQUIRED, reason: Shared ID and equivalent transport payloads need deterministic assertions.}
+    - {id: TEXP-004, category: regression, classification: REQUIRED, reason: Existing InitiateCheckout and PostHog behavior is protected.}
+    - {id: TEXP-005, category: external_integration, classification: REQUIRED, reason: Meta Events Manager must confirm real count and value.}
+    - {id: TEXP-006, category: security, classification: REQUIRED, reason: External-side-effect suppression must remain unchanged.}
+    - {id: TEXP-007, category: exploratory, classification: REQUIRED, reason: Retry failure COD Razorpay reward and cart paths need coverage.}
+    - {id: TEXP-008, category: business_uat, classification: OPTIONAL, reason: Historical review must remain evidence-bounded.}
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-004]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-005]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-001, SCN-002]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-003]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-004, SCN-005, SCN-006, SCN-007, SCN-008]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-009]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-004]}
+        - {requirement_id: REQ-008, scenario_ids: [SCN-006]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-002]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-001, INV-003]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-002]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-004]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-003]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-004]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-005]}
+        - {scenario_id: SCN-008, invariant_ids: [INV-004]}
+        - {scenario_id: SCN-009, invariant_ids: [INV-006]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001, TEXP-005]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-002, TEXP-005]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-007]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-007]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-007]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-006]}
+        - {scenario_id: SCN-009, test_expectation_ids: [TEXP-008]}
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent_read_only_governance_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - {severity: MINOR, id: REQ-008, description: Retry/idempotency remains coordinated with REN-144.}
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Product decision recorded from user confirmation; governance workflow
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: main
+    base_commit: "e7719c593157748314ed6ccaa63b412df7f39468"
+    head_commit: "457db53d203e16f8835c490501fd3bff398cf6a1"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Run Meta Events Manager single-brand and multi-brand sandbox verification before production rollout."
+        - "REV-002: Reconcile the current branch with the intended REN-145 feature branch before opening the PR."
+    evidence:
+        - Compared the approved REN-145 contract against the main-to-HEAD implementation diff and uncommitted task changes.
+        - Reviewed focused payload, complete-order gate, and checkout call-site tests without treating REVIEW as test execution.
+    governance_reentry_required: false
