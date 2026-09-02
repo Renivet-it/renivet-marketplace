@@ -215,7 +215,7 @@ implementation_review:
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: origin/master
     base_commit: "27b9a69fd5ee4ffa766e195a494b1cfe9f907266"
-    head_commit: "8cb94ef0b141ad678279fe3dad65b0f6a041d151"
+    head_commit: "8c5f66c776aa183b5baa78e20f484416382ea6d9"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
@@ -230,6 +230,6 @@ implementation_review:
     required_actions:
         - "Complete Meta Test Events, crawler/browser inspection, and 48–72-hour EMQ verification after deployment."
     evidence:
-        - "Compared the approved contract with the origin/master-to-8cb94ef0b141ad678279fe3dad65b0f6a041d151 Git diff."
+        - "Compared the approved contract with the origin/master-to-8c5f66c776aa183b5baa78e20f484416382ea6d9 Git diff."
         - "Static review found required external and post-deployment validation remains operator-owned."
     governance_reentry_required: false
