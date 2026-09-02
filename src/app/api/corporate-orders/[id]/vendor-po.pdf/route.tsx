@@ -282,19 +282,35 @@ export async function GET(
                 value: "Renivet issues Tax Invoice on brand behalf",
             },
         ],
-        item: {
-            description:
-                product?.title ?? productType ?? "Corporate merchandise",
-            detail: itemDetail,
-            sku: product?.sku ?? product?.nativeSku,
-            hsn,
-            quantity: vendorPo.quantity,
-            unitRatePaise: unitPricePaise,
-            amountPaise: baseSubtotalPaise,
-            gstRateBps: vendorPo.gstRateBps,
-            gstAmountPaise,
-            totalAmountPaise,
-        },
+        items: [
+            {
+                description:
+                    product?.title ?? productType ?? "Corporate merchandise",
+                detail: itemDetail,
+                sku: product?.sku ?? product?.nativeSku,
+                hsn,
+                quantity: vendorPo.quantity,
+                unitRatePaise: unitPricePaise,
+                amountPaise: baseSubtotalPaise,
+                totalAmountPaise: baseSubtotalPaise,
+            },
+            ...(customizationPaise > 0
+                ? [
+                      {
+                          description: "Customization / Extras",
+                          detail:
+                              extrasSummary ||
+                              "Customization included with the product supply.",
+                          hsn,
+                          quantity: 1,
+                          unit: "lot",
+                          unitRatePaise: customizationPaise,
+                          amountPaise: customizationPaise,
+                          totalAmountPaise: customizationPaise,
+                      },
+                  ]
+                : []),
+        ],
         sizeBreakdown,
         totals: {
             subtotalPaise:
