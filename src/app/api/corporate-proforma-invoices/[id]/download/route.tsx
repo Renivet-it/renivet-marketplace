@@ -465,6 +465,16 @@ export async function GET(
         return NextResponse.json({ message }, { status: 422 });
     }
 
+    const advanceBasePaise =
+        quote?.totalAmountPaise ?? order?.totalPaise ?? computedTotalAmountPaise;
+    const advanceDuePaise = Math.round(
+        (advanceBasePaise * advancePercent) / 100
+    );
+    const advanceTerm = `Advance payable: INR ${(advanceDuePaise / 100).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (${advancePercent}% of the proforma total).`;
+    const validityTerm = safeValidUntil
+        ? `Validity: this proforma invoice and its underlying quote are valid until ${safeValidUntil.toLocaleDateString("en-IN")}.`
+        : null;
+
     const data: CorporateCommercialDocumentData = {
         title: "PROFORMA INVOICE",
         subtitle:
@@ -472,7 +482,6 @@ export async function GET(
         documentType: "proforma_invoice",
         documentNumber: invoice.invoiceNumber,
         documentDate: safeDate,
-        validUntil: safeValidUntil,
         fromLabel: "From (Supplier)",
         toLabel: "To",
         from: {
@@ -509,28 +518,6 @@ export async function GET(
                   email: quote!.profile.email,
                   phone: quote!.profile.phone,
               },
-        shipTo: order
-            ? {
-                  name: order.companyName,
-                  address: [
-                      order.deliveryAddress,
-                      order.deliveryCity,
-                      order.deliveryState,
-                      order.deliveryPincode,
-                      order.deliveryCountry,
-                  ]
-                      .filter(Boolean)
-                      .join(", "),
-                  gstin: order.gstNumber,
-              }
-            : {
-                  name:
-                      quote!.profile.companyName ||
-                      quote!.profile.contactPerson ||
-                      "Corporate customer",
-                  address: shippingAddress || billingAddress || "Not provided",
-                  gstin: quote!.profile.gstNumber,
-              },
         references: order
             ? [
                   { label: "Corporate order", value: order.publicOrderId },
@@ -545,14 +532,6 @@ export async function GET(
                   {
                       label: "Brand fulfillment partner",
                       value: supplierName,
-                  },
-                  {
-                      label: "Quote validity",
-                      value: invoice.validUntil
-                          ? new Date(invoice.validUntil).toLocaleDateString(
-                                "en-IN"
-                            )
-                          : null,
                   },
               ],
         items: [
@@ -621,6 +600,8 @@ export async function GET(
         },
         notes: [
             dynamicAdvanceTerm,
+            advanceTerm,
+            ...(validityTerm ? [validityTerm] : []),
             invoice.deliveryTimeline ||
                 "Delivery timeline will be confirmed upon order review.",
             invoice.termsAndConditions ||

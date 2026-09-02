@@ -154,7 +154,7 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain("igstPaise: proformaGstSplit.igstPaise");
     });
 
-    test("keeps proforma customization commercial and renders Ship To", () => {
+    test("keeps proforma customization commercial and moves validity and advance terms to notes", () => {
         const route = readFileSync(
             new URL(
                 "../src/app/api/corporate-proforma-invoices/[id]/download/route.tsx",
@@ -163,8 +163,8 @@ describe("REN-180 corporate document integrity", () => {
             "utf8"
         );
 
-        expect(route).toContain("shipTo: order");
-        expect(route).toContain("shippingAddress || billingAddress");
+        expect(route).toContain("Advance payable:");
+        expect(route).toContain("underlying quote are valid until");
         expect(route).toContain("gstRateBps: undefined");
         expect(route).toContain("totalAmountPaise: customizationPaise");
     });
