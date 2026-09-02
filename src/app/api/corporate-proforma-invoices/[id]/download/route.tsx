@@ -23,6 +23,7 @@ import {
 } from "@/lib/services/corporate-documents";
 import {
     assertCorporateTaxData,
+    getCorporateTaxDataMissingFields,
     resolveCorporateDocumentDate,
 } from "@/lib/utils/corporate-document-integrity";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
@@ -371,15 +372,32 @@ export async function GET(
         (invoice as any).createdAt;
     let safeDate: Date;
     let safeValidUntil: Date | undefined;
+    const missingTaxFields = getCorporateTaxDataMissingFields(
+        order?.gstNumber ?? quote?.profile.gstNumber,
+        [{ hsnCode: resolvedHsn, taxable: true }]
+    );
+    if (missingTaxFields.length > 0) {
+        return NextResponse.json(
+            {
+                code: "CORPORATE_DOCUMENT_TAX_DATA_INCOMPLETE",
+                message: `Cannot download this proforma until ${missingTaxFields
+                    .map((field) =>
+                        field === "customer_gstin"
+                            ? "the customer GSTIN is entered"
+                            : "an HSN code is selected"
+                    )
+                    .join(" and ")}.`,
+                missingFields: missingTaxFields,
+            },
+            { status: 422 }
+        );
+    }
     try {
         safeDate = resolveCorporateDocumentDate(rawDate, quote?.createdAt ?? order?.createdAt);
         safeValidUntil = invoice.validUntil
             ? resolveCorporateDocumentDate(invoice.validUntil)
             : undefined;
-        assertCorporateTaxData(
-            order?.gstNumber ?? quote?.profile.gstNumber,
-            [{ hsnCode: resolvedHsn, taxable: true }]
-        );
+        assertCorporateTaxData(order?.gstNumber ?? quote?.profile.gstNumber, [{ hsnCode: resolvedHsn, taxable: true }]);
     } catch (error) {
         const message = error instanceof Error ? error.message : "CORPORATE_DOCUMENT_SOURCE_INVALID";
         return NextResponse.json({ message }, { status: 422 });

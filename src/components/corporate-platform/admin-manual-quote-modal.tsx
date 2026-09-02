@@ -295,9 +295,14 @@ export function AdminManualQuoteModal({
         contactPerson.trim().length >= 2 &&
         /^\S+@\S+\.\S+$/.test(email.trim()) &&
         phone.trim().length >= 8 &&
+        gstNumber.trim().length > 0 &&
         (!deliveryPincode.trim() || /^\d{6}$/.test(deliveryPincode.trim()));
 
-    const isStep2Valid = Boolean(brandId) && qtyNum > 0 && unitPricePaise > 0;
+    const isStep2Valid =
+        Boolean(brandId) &&
+        Boolean(activeHsnCode) &&
+        qtyNum > 0 &&
+        unitPricePaise > 0;
 
     const isStep3Valid =
         Number.isFinite(gstPercentNum) &&

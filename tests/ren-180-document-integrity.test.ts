@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import {
+    getCorporateTaxDataMissingFields,
     resolveCorporateDocumentDate,
     assertCorporateTaxData,
 } from "@/lib/utils/corporate-document-integrity";
@@ -30,5 +31,12 @@ describe("REN-180 corporate document integrity", () => {
                 { hsnCode: null, taxable: false },
             ])
         ).not.toThrow();
+    });
+
+    test("identifies the missing tax fields for a blocked document download", () => {
+        expect(getCorporateTaxDataMissingFields("", [{ hsnCode: "", taxable: true }])).toEqual([
+            "customer_gstin",
+            "hsn_code",
+        ]);
     });
 });
