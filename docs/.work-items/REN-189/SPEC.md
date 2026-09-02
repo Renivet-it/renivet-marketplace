@@ -2,7 +2,7 @@
 
 ## Status
 
-`IN_REVIEW` pending independent Critic review and governance validation. This artifact specifies the work only; it does not implement the issue.
+`READY_FOR_DEV`. Independent Critic review, stakeholder decisions, and governance validation are complete. This artifact specifies the work only; it does not implement the issue.
 
 ## Objective
 

@@ -4,7 +4,7 @@ task:
     title: Improve Meta CAPI event match quality and analytics signal integrity
     source: linear
     branch: ayanganguly333/ren-189-improve-meta-capi-event-match-quality-and-analytics-signal
-    status: BLOCKED
+    status: READY_FOR_DEV
 risk:
     initial_risk: L1
     path_rule_risk: L3
@@ -101,9 +101,9 @@ flows:
 dependencies:
     - {id: DEP-001, description: REN-145 corrected full-order Purchase payload and semantics., status: resolved}
     - {id: DEP-002, description: Shared analytics wrappers and product/cart/checkout callers., status: resolved}
-    - {id: DEP-003, description: Existing browser cookies, consent path, Pixel loader, and Meta sanitizer/hash contract., status: to_validate}
+    - {id: DEP-003, description: Existing browser cookies, consent path, Pixel loader, and Meta sanitizer/hash contract., status: resolved}
     - {id: DEP-004, description: Existing capi_logs schema, dashboard, export, and authorization boundary., status: resolved}
-    - {id: DEP-005, description: Meta Test Events and Search Console/URL Inspection access., status: to_validate}
+    - {id: DEP-005, description: Meta Test Events and Search Console/URL Inspection access confirmed by stakeholder., status: resolved}
 integrations:
     - {id: INT-001, system: Meta Pixel and Conversions API, purpose: Receive eligible browser/server events with matchable identifiers and deduplicated IDs.}
     - {id: INT-002, system: Postgres capi_logs, purpose: Persist privacy-safe event outcome diagnostics.}
@@ -207,7 +207,6 @@ critic:
         - {id: M-002, severity: MAJOR, summary: Stable event IDs did not establish application-level duplicate behavior, status: resolved_in_contract, disposition: Defined ownership/lifetime for request/action/Purchase IDs, deterministic completed-order Purchase IDs, Meta deduplication, and unique operational counting.}
         - {id: M-003, severity: MAJOR, summary: fbclid/fbc capture and one-time hashing boundary were underspecified, status: resolved_in_contract, disposition: Defined _fbc precedence, consent-eligible fbclid conversion format, no fabrication, and separate raw-identifier versus personal-field handling.}
 approval:
-    state: BLOCKED
-    design_blockers:
-        - Meta Events Manager Test Events and Search Console/URL Inspection access must be confirmed before READY_FOR_DEV.
-    approved_by: null
+    state: APPROVED
+    design_blockers: []
+    approved_by: stakeholder_and_independent_codex_critic
