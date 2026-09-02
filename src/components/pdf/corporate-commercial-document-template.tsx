@@ -557,9 +557,15 @@ export function CorporateCommercialDocumentTemplate({
                           ? [data.item]
                           : []
                     ).map((rowItem, idx) => {
-                        const rowGstRateBps = rowItem.gstRateBps ?? gstRateBps;
+                        const isCustomizationRow =
+                            rowItem.description.trim().toLowerCase() ===
+                            "customization / extras";
+                        const rowGstRateBps = isCustomizationRow
+                            ? null
+                            : (rowItem.gstRateBps ?? gstRateBps);
                         if (
                             showDetailedTax &&
+                            !isCustomizationRow &&
                             (rowItem.amountPaise ?? 0) > 0 &&
                             rowGstRateBps === null
                         ) {
@@ -617,7 +623,7 @@ export function CorporateCommercialDocumentTemplate({
                                               : styles.hsn,
                                     ]}
                                 >
-                                    {rowItem.hsn || "-"}
+                                    {isCustomizationRow ? "NA" : rowItem.hsn || "-"}
                                 </Text>
                                 <Text
                                     style={[
@@ -667,7 +673,9 @@ export function CorporateCommercialDocumentTemplate({
                                                     : styles.purchaseGstRate,
                                             ]}
                                         >
-                                            {rowGstRateBps === null ||
+                                            {isCustomizationRow
+                                                ? "NA"
+                                                : rowGstRateBps === null ||
                                             rowGstRateBps === undefined
                                                 ? "-"
                                                 : `${(rowGstRateBps / 100).toFixed(2)}%`}
@@ -680,7 +688,9 @@ export function CorporateCommercialDocumentTemplate({
                                                     : styles.purchaseGstAmount,
                                             ]}
                                         >
-                                            {hasPricing
+                                            {isCustomizationRow
+                                                ? "NA"
+                                                : hasPricing
                                                 ? money(rowGstAmountPaise)
                                                 : "-"}
                                         </Text>
@@ -697,7 +707,11 @@ export function CorporateCommercialDocumentTemplate({
                                         styles.last,
                                     ]}
                                 >
-                                    {hasPricing ? money(rowTotalPaise) : "-"}
+                                    {isCustomizationRow
+                                        ? "NA"
+                                        : hasPricing
+                                          ? money(rowTotalPaise)
+                                          : "-"}
                                 </Text>
                             </View>
                         );
