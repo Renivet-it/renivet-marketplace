@@ -52,6 +52,8 @@ describe("REN-180 corporate document integrity", () => {
 
         expect(route).toContain('fromLabel: "From (Supplier)"');
         expect(route).toContain("facilitatedBy:");
+        expect(route).toContain("quote?.profile.shippingAddress");
+        expect(route).toContain("shippingAddress || billingAddress || \"Not provided\"");
     });
 
     test("fulfillment orders show size-wise production and GST-inclusive commercial details", () => {

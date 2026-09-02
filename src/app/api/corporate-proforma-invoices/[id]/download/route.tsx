@@ -316,6 +316,23 @@ export async function GET(
                 typeof value === "string" && value.trim().length > 0
         )
         .join(", ");
+    const shipping = (quote?.profile.shippingAddress ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const shippingAddress = [
+        shipping.addressLine1 ?? shipping.address ?? shipping.street,
+        shipping.addressLine2,
+        shipping.city,
+        shipping.state,
+        shipping.postalCode ?? shipping.pincode,
+        shipping.country,
+    ]
+        .filter(
+            (value): value is string =>
+                typeof value === "string" && value.trim().length > 0
+        )
+        .join(", ");
 
     // Dynamic advance percentage
     let advancePercent = 30;
@@ -469,7 +486,7 @@ export async function GET(
                       quote!.profile.companyName ||
                       quote!.profile.contactPerson ||
                       "Corporate customer",
-                  address: billingAddress || "Not provided",
+                  address: shippingAddress || billingAddress || "Not provided",
                   gstin: quote!.profile.gstNumber,
                   email: quote!.profile.email,
                   phone: quote!.profile.phone,
