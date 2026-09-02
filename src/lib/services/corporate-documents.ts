@@ -451,12 +451,24 @@ export const corporateDocumentService = {
             });
         }
         const unitSellPricePaise = parsed.unitBuyPricePaise;
+        const includedCustomizationPaise = parsed.customizations.reduce(
+            (sum, customization) =>
+                customization.taxTreatment === "included_in_product_supply"
+                    ? sum +
+                      Math.max(
+                          0,
+                          Number(customization.amountPaise ?? 0)
+                      )
+                    : sum,
+            0
+        );
         const issueDate = new Date();
         const foNumber = await nextCorporateDocumentNumber("FO", issueDate);
         const taxSnapshot = buildFulfillmentTaxSnapshot({
             foReference: foNumber,
             quantity: order.quantity,
             unitRatePaise: unitSellPricePaise,
+            includedCustomizationPaise,
             gstRateBps: parsed.gstRateBps,
             supplierGstin: brandDetails.gstin,
             recipientGstin: settings.gstin,

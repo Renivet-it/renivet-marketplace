@@ -21,6 +21,22 @@ const expected = {
 };
 
 describe("REN-182 brand tax invoice enforcement", () => {
+    test("includes parent-supply packaging in the fulfillment taxable value before GST", () => {
+        const snapshot = buildFulfillmentTaxSnapshot({
+            foReference: "FO/2627/00001",
+            quantity: 30,
+            unitRatePaise: 40_000,
+            includedCustomizationPaise: 200_000,
+            gstRateBps: 500,
+            supplierGstin: "33BCEPJ5961L1ZD",
+            recipientGstin: "10AANCR5687A1ZG",
+            hsnCode: "6109",
+        });
+
+        expect(snapshot.taxableValuePaise).toBe(1_400_000);
+        expect(snapshot.igstPaise).toBe(70_000);
+        expect(snapshot.totalAmountPaise).toBe(1_470_000);
+    });
     test("snapshots intra-state FO tax deterministically in paise", () => {
         expect(
             buildFulfillmentTaxSnapshot({
