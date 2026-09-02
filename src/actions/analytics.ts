@@ -2,6 +2,7 @@
 "use server";
 
 import {
+    buildMetaProfileUserData,
     isCrawlerAnalyticsSuppressionEnabled,
     isLikelyAnalyticsBot,
     mergeMetaUserData,
@@ -54,26 +55,34 @@ async function enrichCapiUserData(
     userData: CapiUserData,
     requestData: CapiRequestData
 ) {
+    let profile: CapiUserData | undefined;
     let primaryAddress:
         | { city?: string; state?: string; zip?: string; phone?: string }
         | undefined;
 
-    if (userData.external_id) {
-        try {
-            const user = await currentUser();
-            if (user && user.id === userData.external_id) {
+    try {
+        const user = await currentUser();
+        if (
+            user &&
+            (!userData.external_id || user.id === userData.external_id)
+        ) {
+            profile = buildMetaProfileUserData(user);
+            try {
                 const dbUser = await userQueries.getUser(user.id);
                 primaryAddress =
                     dbUser?.addresses?.find((address) => address.isPrimary) ||
                     dbUser?.addresses?.[0];
+            } catch (error) {
+                console.error("Error enriching CAPI address data:", error);
             }
-        } catch (error) {
-            console.error("Error enriching CAPI data:", error);
         }
+    } catch (error) {
+        console.error("Error enriching CAPI profile data:", error);
     }
 
     return mergeMetaUserData({
         supplied: userData,
+        profile,
         primaryAddress: primaryAddress
             ? {
                   ct: primaryAddress.city,

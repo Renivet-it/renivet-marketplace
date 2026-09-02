@@ -53,6 +53,7 @@ test("uses the completed database orders for a repeatable full-order event id", 
             content_type: "product",
             content_ids: ["product-a"],
             num_items: 1,
+            order_id: "purchase:order-a:order-b",
         },
     });
 });

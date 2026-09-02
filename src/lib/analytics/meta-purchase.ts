@@ -38,8 +38,12 @@ export function buildMetaPurchaseTrackingEvent({
     totalAmountPaise: number;
     items: MetaPurchaseItem[];
 }) {
+    const eventId = buildPurchaseEventId(completedOrderIds);
     return {
-        eventId: buildPurchaseEventId(completedOrderIds),
-        purchasePayload: buildMetaPurchasePayload({ totalAmountPaise, items }),
+        eventId,
+        purchasePayload: {
+            ...buildMetaPurchasePayload({ totalAmountPaise, items }),
+            order_id: eventId,
+        },
     };
 }

@@ -1,12 +1,37 @@
 import { expect, test } from "bun:test";
 import {
     buildFbcFromFbclid,
+    buildMetaProfileUserData,
     buildPurchaseEventId,
     createCapiSuppressionDiagnostic,
     isCrawlerAnalyticsSuppressionEnabled,
     isLikelyAnalyticsBot,
+    isValidFbc,
+    isValidFbp,
     mergeMetaUserData,
 } from "./meta-event-quality";
+
+test("builds all available registered-user profile identifiers", () => {
+    expect(
+        buildMetaProfileUserData({
+            id: "user_1",
+            firstName: "Ayan",
+            lastName: "Ganguly",
+            emailAddresses: [{ emailAddress: "ayan@renivet.com" }],
+            phoneNumbers: [{ phoneNumber: "+91 9000000000" }],
+            externalAccounts: [
+                { provider: "oauth_facebook", externalId: "facebook_1" },
+            ],
+        })
+    ).toEqual({
+        em: "ayan@renivet.com",
+        ph: "+91 9000000000",
+        fn: "Ayan",
+        ln: "Ganguly",
+        external_id: "user_1",
+        fb_login_id: "facebook_1",
+    });
+});
 
 test("suppresses clear crawler user agents but keeps ordinary browsers eligible", () => {
     expect(
@@ -17,6 +42,11 @@ test("suppresses clear crawler user agents but keeps ordinary browsers eligible"
     expect(
         isLikelyAnalyticsBot(
             "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36"
+        )
+    ).toBe(false);
+    expect(
+        isLikelyAnalyticsBot(
+            "Mozilla/5.0 (Linux; Android 10; CUBOT X30) AppleWebKit/537.36 Chrome/91 Mobile Safari/537.36"
         )
     ).toBe(false);
     expect(isLikelyAnalyticsBot("")).toBe(false);
@@ -62,11 +92,34 @@ test("creates an fbc only from a real click id and preserves an existing value",
         buildFbcFromFbclid({ fbclid: "paid-click", timestampMs: 1711111111111 })
     ).toBe("fb.1.1711111111111.paid-click");
     expect(buildFbcFromFbclid({ timestampMs: 1711111111111 })).toBeUndefined();
+    expect(
+        buildFbcFromFbclid({
+            existingFbc: "invalid-cookie",
+            fbclid: "paid-click",
+            timestampMs: 1711111111111,
+        })
+    ).toBe("fb.1.1711111111111.paid-click");
+    expect(
+        buildFbcFromFbclid({
+            fbclid: "not a valid click id",
+            timestampMs: 1711111111111,
+        })
+    ).toBeUndefined();
+    expect(isValidFbc("not-an-fbc")).toBe(false);
+    expect(isValidFbp("not-an-fbp")).toBe(false);
+    expect(isValidFbp("fb.1.1558571054389.1098115397")).toBe(true);
 });
 
 test("prefers checkout address and only fills missing guest location from trusted geo data", () => {
     expect(
         mergeMetaUserData({
+            supplied: {
+                ct: "Stale city",
+                st: "Stale state",
+                zp: "999999",
+                country: "US",
+                ph: "+1 5550000000",
+            },
             profile: {
                 em: "profile@renivet.com",
                 ph: "+91 9000000000",
