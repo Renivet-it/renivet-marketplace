@@ -467,7 +467,7 @@ export function CorporateCommercialDocumentTemplate({
                             {showDetailedTax
                                 ? "Unit price excl. GST"
                                 : isFulfillmentOrder
-                                  ? "Agreed rate (excl. GST)"
+                                  ? "Agreed rate per piece (excl. GST)"
                                   : "Rate INR"}
                         </Text>
                         {showDetailedTax ? (
