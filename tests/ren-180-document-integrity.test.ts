@@ -137,4 +137,19 @@ describe("REN-180 corporate document integrity", () => {
         expect(template).toContain('label={`SGST (${');
         expect(template).toContain('label={`IGST (${');
     });
+
+    test("passes GST split values to proforma rendering", () => {
+        const route = readFileSync(
+            new URL(
+                "../src/app/api/corporate-proforma-invoices/[id]/download/route.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(route).toContain("splitCorporateGstByPlaceOfSupply");
+        expect(route).toContain("cgstPaise: proformaGstSplit.cgstPaise");
+        expect(route).toContain("sgstPaise: proformaGstSplit.sgstPaise");
+        expect(route).toContain("igstPaise: proformaGstSplit.igstPaise");
+    });
 });

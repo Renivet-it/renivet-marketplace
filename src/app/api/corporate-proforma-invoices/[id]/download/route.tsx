@@ -27,6 +27,10 @@ import {
     getCorporateTaxDataMissingFields,
     resolveCorporateDocumentDate,
 } from "@/lib/utils/corporate-document-integrity";
+import {
+    resolveCorporatePlaceOfSupply,
+    splitCorporateGstByPlaceOfSupply,
+} from "@/lib/finance/corporate-place-of-supply";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
@@ -410,6 +414,20 @@ export async function GET(
             ? totalAmountFromDb
             : baseSubtotalPaise + customizationPaise + computedTotalGstPaise;
 
+    const placeOfSupply = resolveCorporatePlaceOfSupply({
+        deliveryState: order?.deliveryState ?? (typeof shipping.state === "string" ? shipping.state : null),
+        billingState: order ? null : (typeof billing.state === "string" ? billing.state : null),
+    });
+    const supplierState = resolveCorporatePlaceOfSupply({
+        registeredState: brandConfidential?.state,
+    });
+    const proformaGstSplit = splitCorporateGstByPlaceOfSupply({
+        taxableValuePaise,
+        gstRateBps,
+        supplierStateCode: supplierState.stateCode,
+        placeOfSupplyStateCode: placeOfSupply.stateCode,
+    });
+
     const rawDate =
         (invoice as any).issueDate ||
         invoice.invoiceDate ||
@@ -588,6 +606,9 @@ export async function GET(
                     : undefined,
             gstRateBps: baseGstRateBps,
             gstAmountPaise: computedTotalGstPaise,
+            cgstPaise: proformaGstSplit.cgstPaise,
+            sgstPaise: proformaGstSplit.sgstPaise,
+            igstPaise: proformaGstSplit.igstPaise,
             totalAmountPaise: computedTotalAmountPaise,
         },
         notes: [
