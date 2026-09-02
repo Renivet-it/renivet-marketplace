@@ -523,7 +523,14 @@ export async function GET(
                       .join(", "),
                   gstin: order.gstNumber,
               }
-            : null,
+            : {
+                  name:
+                      quote!.profile.companyName ||
+                      quote!.profile.contactPerson ||
+                      "Corporate customer",
+                  address: shippingAddress || billingAddress || "Not provided",
+                  gstin: quote!.profile.gstNumber,
+              },
         references: order
             ? [
                   { label: "Corporate order", value: order.publicOrderId },
@@ -574,10 +581,11 @@ export async function GET(
                           unit: "lot",
                           unitRatePaise: customizationPaise,
                           amountPaise: customizationPaise,
-                          gstRateBps: customizationGstRateBps,
-                          gstAmountPaise: customizationGstAmountPaise,
-                          totalAmountPaise:
-                              customizationPaise + customizationGstAmountPaise,
+                          // Customization is shown as a commercial amount;
+                          // GST is determined once from the overall taxable value.
+                          gstRateBps: undefined,
+                          gstAmountPaise: undefined,
+                          totalAmountPaise: customizationPaise,
                       },
                   ]
                 : []),
