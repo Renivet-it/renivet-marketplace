@@ -11,6 +11,7 @@ import { PaymentProcessingModal } from "@/components/globals/modals";
 import { Button } from "@/components/ui/button-general";
 import { Separator } from "@/components/ui/separator";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { buildMetaPurchaseTrackingEvent } from "@/lib/analytics/meta-purchase";
 import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 // import { orderQueries } from "@/lib/db/queries"; // No longer needed directly for client-side intent creation
 import { fbEvent } from "@/lib/fbpixel";
@@ -310,57 +311,7 @@ export function OrderPage({
 
     const { mutateAsync: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
-            onSuccess: (newOrder, variables) => {
-                console.log("Successfully created order:", newOrder);
-                const eventId =
-                    typeof crypto !== "undefined" && crypto.randomUUID
-                        ? crypto.randomUUID()
-                        : "evt_" +
-                          new Date().getTime() +
-                          "_" +
-                          Math.random().toString(36).substr(2, 9);
-
-                fbEvent(
-                    "Purchase",
-                    {
-                        value: variables.totalAmount,
-                        currency: "INR",
-                        content_type: "product",
-                        content_ids: variables.items.map(
-                            (item: any) => item.productId
-                        ),
-                        num_items: variables.totalItems,
-                    },
-                    { eventId }
-                );
-
-                trackPurchaseCapi(
-                    eventId,
-                    {
-                        em: user?.email,
-                        ph: selectedShippingAddress?.phone,
-                        fn: user?.firstName ?? undefined,
-                        ln: user?.lastName ?? undefined,
-                        ct: selectedShippingAddress?.city,
-                        st: selectedShippingAddress?.state,
-                        zp: selectedShippingAddress?.zip,
-                        external_id: user?.id,
-                        fb_login_id: user?.externalAccounts?.find(
-                            (acc) => acc.provider === "oauth_facebook"
-                        )?.externalId,
-                    },
-                    {
-                        value: variables.totalAmount,
-                        currency: "INR",
-                        content_type: "product",
-                        content_ids: variables.items.map(
-                            (item: any) => item.productId
-                        ),
-                        num_items: variables.totalItems,
-                    },
-                    getAbsoluteURL(window.location.href)
-                ).catch((err) => console.error("CAPI Purchase Error:", err));
-            },
+            onSuccess: () => undefined,
             onError: (err) => {
                 console.error("Error creating order:", {
                     message: err.message,
@@ -369,6 +320,39 @@ export function OrderPage({
                 handleClientError(err);
             },
         });
+
+    const trackMetaPurchase = (completedOrderIds: string[]) => {
+        if (completedOrderIds.length === 0) {
+            console.error("Skipping Meta Purchase without completed order IDs");
+            return;
+        }
+
+        const { eventId, purchasePayload } = buildMetaPurchaseTrackingEvent({
+            completedOrderIds,
+            totalAmountPaise: payableTotalPaise,
+            items: allAvailableItems.map((item) => ({
+                productId: item.product.id,
+                quantity: item.quantity,
+            })),
+        });
+
+        fbEvent("Purchase", purchasePayload, { eventId });
+        trackPurchaseCapi(
+            eventId,
+            {
+                em: user?.email,
+                ph: selectedShippingAddress?.phone,
+                fn: user?.firstName ?? undefined,
+                ln: user?.lastName ?? undefined,
+                ct: selectedShippingAddress?.city,
+                st: selectedShippingAddress?.state,
+                zp: selectedShippingAddress?.zip,
+                external_id: user?.id,
+            },
+            purchasePayload,
+            getAbsoluteURL(window.location.href)
+        ).catch((err) => console.error("CAPI Purchase Error:", err));
+    };
 
     const buildOrderDetailsByBrand = ({
         paymentMethod,
@@ -582,18 +566,19 @@ export function OrderPage({
                                 ...orderDetails,
                                 intentId, // ✅ Pass intentId to backend
                             }); // After successful order creation, link the intent to the order
-                            if (orderIntent?.id && createdOrder?.id) {
-                                // Assuming createdOrder will have an ID after creation
-                                await linkOrderIntentToOrder({
-                                    userId: user.id,
-                                    intentId: orderIntent.id,
-                                    orderId: createdOrder.id,
-                                });
-                                console.log(
-                                    `Intent ${orderIntent.id} linked to order ${createdOrder.id}`
+                            if (orderIntent?.id) {
+                                await Promise.all(
+                                    createdOrder.map((order: { id: string }) =>
+                                        linkOrderIntentToOrder({
+                                            userId: user.id,
+                                            intentId: orderIntent.id,
+                                            orderId: order.id,
+                                        })
+                                    )
                                 );
                             }
                             console.log(orderDetails, "orderDetails for fb");
+                            return createdOrder;
                         } catch (error: any) {
                             console.error(
                                 "Failed to create order after retries:",
@@ -608,6 +593,7 @@ export function OrderPage({
                     deleteItemFromCart,
                     orderIntentId: orderIntent.id,
                     onOrderSuccess: playSwapStampCelebration,
+                    onPurchaseSuccess: trackMetaPurchase,
                 });
 
                 initializeRazorpayPayment(options);
@@ -663,9 +649,17 @@ export function OrderPage({
         setIsProcessingModalOpen(true);
 
         try {
+            const completedOrderIds: string[] = [];
             for (const orderDetails of orderDetailsByBrand) {
-                await retryCreateOrder(orderDetails);
+                const createdOrders = await retryCreateOrder(orderDetails);
+                completedOrderIds.push(
+                    ...createdOrders.map(
+                        (createdOrder: { id: string }) => createdOrder.id
+                    )
+                );
             }
+
+            trackMetaPurchase(completedOrderIds);
 
             setProcessingModalTitle("Order Placed Successfully");
             setProcessingModalDescription(

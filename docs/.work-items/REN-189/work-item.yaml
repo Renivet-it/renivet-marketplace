@@ -1,0 +1,235 @@
+schema_version: "1.0"
+task:
+    id: REN-189
+    title: Improve Meta CAPI event match quality and analytics signal integrity
+    source: linear
+    branch: ayanganguly333/ren-189-improve-meta-capi-event-match-quality-and-analytics-signal
+    status: READY_FOR_DEV
+risk:
+    initial_risk: L1
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Shared Meta external-integration behavior affects multiple event types and both browser/server channels.
+        - Customer identity fields and internal CAPI logs cross a PII/security boundary.
+        - Crawler classification must preserve SEO and page-rendering behavior while changing analytics side effects.
+        - Purchase tracking coordinates with the REN-145 order-lifecycle contract.
+    escalation_history:
+        - from: L1
+          to: L3
+          reason: External advertising integration, customer identity/log privacy, SEO safety, and Purchase coordination require structured design and independent Critic review.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-189 metadata, description, comments, relations, and REN-145 context
+        - Supplied capi-logs-all-1788378144506.csv event counts, field coverage, user agents, and statuses
+        - src/actions/analytics.ts request data and event wrappers
+        - src/lib/fb-capi.ts provider construction, sanitization, and CAPI log persistence
+        - src/lib/fbpixel.ts browser sanitization and Pixel event path
+        - src/lib/capi-view-content.ts and src/app/(marketing)/products/[slug]/page.tsx ViewContent flow
+        - src/lib/db/schema/capi-logs.ts and CAPI dashboard/router export path
+        - src/app/robots.ts SEO crawler policy
+        - AddToCart and both checkout event callers
+        - Existing tests and related REN-145/REN-138/REN-133 work
+    excluded_areas:
+        - Historical Meta correction: not available through this implementation.
+        - SEO redesign, robots policy, metadata, sitemap, and product content: prohibited by requirements.
+        - Token rotation/environment hardening: owned by REN-92/REN-116.
+        - CAPI timeout/connection-pool architecture: owned by REN-138/REN-139.
+        - Queue, retry, attribution redesign, schema migration, and legal interpretation: no evidence authorizes them.
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004, DEP-005]
+    integrations: [INT-001, INT-002, INT-003, INT-004]
+    security_boundaries: [SEC-001, SEC-002, SEC-003, SEC-004, SEC-005]
+    state_transitions:
+        - request_received -> classified -> analytics_suppressed_or_eligible
+        - eligible -> identity_enriched -> pixel_and_capi_dispatched -> observed
+        - complete_order -> purchase_verified -> full_order_purchase_dispatched
+        - c_api_log_started -> safe_log_persisted_or_privacy_safe_failure
+    related_tests:
+        - src/actions/analytics.test.ts
+        - src/lib/fb-capi.test.ts
+        - src/lib/fbpixel.test.ts
+        - src/lib/external-side-effects.test.ts
+        - src/app/(marketing)/products/[slug]/page.tsx
+        - src/app/robots.ts
+    uncertainties:
+        - Exact Meta EMQ movement cannot be guaranteed and must be measured after new traffic.
+        - User-agent classification cannot prove crawler identity for every request; uncertain traffic should fail open.
+        - Consent behavior and deployed cookie configuration may explain part of the low identifier coverage and must be measured separately.
+        - The implementation must verify that the completed customer-order flow exposes a stable canonical identity for deterministic Purchase event IDs; absence is a design blocker for Purchase only.
+requirements:
+    - {id: REQ-001, description: Clear crawler requests are suppressed from Meta analytics without changing page access or SEO output., type: explicit}
+    - {id: REQ-002, description: Suppression is reversible and produces privacy-safe diagnostics., type: explicit}
+    - {id: REQ-003, description: Eligible browser identifiers are captured and preserved correctly., type: explicit}
+    - {id: REQ-004, description: Eligible customer identity is centralized with profile/address precedence and trusted guest IP-geolocation fallback, then normalized and hashed exactly once for Meta., type: explicit}
+    - {id: REQ-005, description: Pixel/CAPI event names and stable event IDs remain consistent without unintended duplicates., type: explicit}
+    - {id: REQ-006, description: REN-145 full-order Purchase correctness remains intact., type: explicit}
+    - {id: REQ-007, description: New CAPI logs retain approved raw supplied customer/request data behind existing authorization and never provider credentials., type: explicit}
+    - {id: REQ-008, description: Human-only quality, suppression, delivery, and SEO verification are observable., type: inferred}
+scenarios:
+    - {id: SCN-001, requirement_ids: [REQ-001, REQ-002, REQ-008], description: Clear crawler page request renders normally while its Meta event is suppressed and counted safely.}
+    - {id: SCN-002, requirement_ids: [REQ-001, REQ-003, REQ-005], description: Anonymous ordinary browser remains eligible with no fabricated identity data.}
+    - {id: SCN-003, requirement_ids: [REQ-003, REQ-005], description: Browser with fbp and valid ad-click context preserves identifiers and deduplicates Pixel/CAPI.}
+    - {id: SCN-004, requirement_ids: [REQ-004, REQ-007], description: Authenticated profile/address data uses precedence rules, is enriched for Meta, and raw supplied values remain in authorized Renivet logs.}
+    - {id: SCN-004A, requirement_ids: [REQ-004], description: Guest supplied values are preferred and trusted IP geolocation fills only missing location values when available.}
+    - {id: SCN-005, requirement_ids: [REQ-003, REQ-004], description: Consent-limited or missing-data session omits unavailable fields without invalid payloads.}
+    - {id: SCN-006, requirement_ids: [REQ-005, REQ-008], description: Re-render/repeated invocation does not create unintended duplicate events.}
+    - {id: SCN-007, requirement_ids: [REQ-005, REQ-006], description: Complete single/multi-brand order emits one correct full-order Purchase.}
+    - {id: SCN-008, requirement_ids: [REQ-006, REQ-008], description: Partial order or telemetry failure cannot create a false Purchase or change checkout state.}
+    - {id: SCN-009, requirement_ids: [REQ-007, REQ-008], description: CAPI logs retain approved raw supplied values and remain operationally useful to authorized operators without provider credentials.}
+    - {id: SCN-010, requirement_ids: [REQ-001, REQ-003, REQ-004, REQ-005, REQ-008], description: Provider, cookie, consent, and database failures remain bounded and non-blocking.}
+invariants:
+    - {id: INV-001, description: Analytics suppression never changes page access, rendering, SEO output, or indexing controls.}
+    - {id: INV-002, description: Only clear crawlers are suppressed; uncertain user agents fail open.}
+    - {id: INV-003, description: No fabricated identity data is sent and unavailable fields are omitted.}
+    - {id: INV-004, description: fbp/fbc remain raw identifiers and are not hashed.}
+    - {id: INV-005, description: Personal fields are hashed once for Meta; approved raw supplied values remain in authorized Renivet logs and provider credentials never do.}
+    - {id: INV-006, description: Pixel/CAPI pairs share one stable event ID and event name.}
+    - {id: INV-007, description: Telemetry cannot change page, checkout, payment, order, or Purchase business state.}
+    - {id: INV-008, description: REN-145 full-order Purchase semantics and rupee units remain true.}
+flows:
+    - id: FLOW-001
+      description: Capture request data, classify crawler, suppress or schedule analytics, and render the page unchanged.
+      state_transitions: [{from: request_received, to: classified}, {from: classified, to: analytics_suppressed_or_eligible}]
+    - id: FLOW-002
+      description: Capture eligible identifiers, enrich identity, dispatch Pixel/CAPI with one event ID, and observe bounded outcomes.
+      state_transitions: [{from: eligible, to: identity_enriched}, {from: identity_enriched, to: pixel_and_capi_dispatched}, {from: pixel_and_capi_dispatched, to: observed}]
+    - id: FLOW-003
+      description: Verify complete order, build full-order Purchase, dispatch one Pixel/CAPI pair, and persist safe diagnostics.
+      state_transitions: [{from: complete_order, to: purchase_verified}, {from: purchase_verified, to: full_order_purchase_dispatched}, {from: full_order_purchase_dispatched, to: observed}]
+dependencies:
+    - {id: DEP-001, description: REN-145 corrected full-order Purchase payload and semantics., status: resolved}
+    - {id: DEP-002, description: Shared analytics wrappers and product/cart/checkout callers., status: resolved}
+    - {id: DEP-003, description: Existing browser cookies, consent path, Pixel loader, and Meta sanitizer/hash contract., status: resolved}
+    - {id: DEP-004, description: Existing capi_logs schema, dashboard, export, and authorization boundary., status: resolved}
+    - {id: DEP-005, description: Meta Test Events and Search Console/URL Inspection access confirmed by stakeholder., status: resolved}
+integrations:
+    - {id: INT-001, system: Meta Pixel and Conversions API, purpose: Receive eligible browser/server events with matchable identifiers and deduplicated IDs.}
+    - {id: INT-002, system: Postgres capi_logs, purpose: Persist privacy-safe event outcome diagnostics.}
+    - {id: INT-003, system: Next/Vercel request lifecycle, purpose: Keep page rendering independent from non-critical analytics.}
+    - {id: INT-004, system: Google/Meta crawlers and Search Console, purpose: Confirm normal page access and unchanged SEO-visible output.}
+personas:
+    - {id: PER-001, role: customer_or_shopper, applicability: Receives unchanged page, checkout, payment, and order behavior.}
+    - {id: PER-002, role: operations_or_analytics_user, applicability: Needs trustworthy human-only event and delivery diagnostics.}
+    - {id: PER-003, role: application_operator, applicability: Needs reversible rollout, safe logs, and observable failures.}
+security_boundaries:
+    - {id: SEC-001, description: Meta token, database client, and provider calls remain server-only.}
+    - {id: SEC-002, description: Existing external-side-effect gate remains before provider and log side effects.}
+    - {id: SEC-003, description: New logs may retain approved raw customer/request data but never access tokens or provider credentials; existing authorization remains enforced.}
+    - {id: SEC-004, description: Existing CAPI dashboard authorization remains unchanged.}
+    - {id: SEC-005, description: Consent and first-party data boundaries are respected; no synthetic identifiers are introduced.}
+business_rules:
+    - {id: BR-001, description: CAPI is non-critical telemetry and cannot fail customer business operations.}
+    - {id: BR-002, description: Crawler suppression applies only to analytics, never page access or SEO content.}
+    - {id: BR-003, description: Anonymous or consent-limited users receive only legitimately available data.}
+    - {id: BR-004, description: Purchase remains one complete full-order event under REN-145 semantics.}
+decisions:
+    - {id: DEC-001, question: Should clear crawlers be excluded only from Meta analytics?, class: RECOMMEND_CONTINUE, status: resolved, recommendation: Yes; retain page access and suppress only analytics because crawler traffic is not customer behavior and represents 67.3% of the supplied events., confidence: high, consequence: medium, human_confirmation_required: false}
+    - {id: DEC-002, question: What happens for uncertain user agents?, class: RECOMMEND_CONTINUE, status: resolved, recommendation: Fail open and send eligible analytics to avoid false-negative customer suppression., confidence: medium, consequence: medium, human_confirmation_required: false}
+    - {id: DEC-003, question: Is a fixed EMQ target guaranteed?, class: AUTO_DECIDE, status: resolved, recommendation: No; measure improvement in eligible human traffic and target above 6 where traffic and consent allow., confidence: high, consequence: low, human_confirmation_required: false}
+    - {id: DEC-004, question: Should Renivet CAPI logs retain raw supplied customer/request data?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Yes; retain raw profile, address, IP, browser, and click values behind existing authorized dashboard/export access, while never logging provider credentials., confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-005, question: How are event IDs owned and reused?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Request/action-scoped IDs for upper-funnel events and deterministic completed-order IDs for Purchase; reuse across Pixel/CAPI and same-order retries; stop if no canonical identity exists., confidence: medium, consequence: high, human_confirmation_required: true}
+    - {id: DEC-006, question: How are historical raw CAPI-log rows handled?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Do not rewrite historical rows and continue showing their raw values to authorized operators, consistent with the approved raw-log decision., confidence: high, consequence: high, human_confirmation_required: true}
+test_expectations:
+    - {id: TEXP-001, category: unit, classification: REQUIRED, reason: Proves crawler detection, ordinary-browser acceptance, uncertain-agent fail-open behavior, and feature-flag control.}
+    - {id: TEXP-002, category: unit, classification: REQUIRED, reason: Proves fbp/fbc/fbclid preservation, validation, and no fabrication or hashing.}
+    - {id: TEXP-003, category: unit, classification: REQUIRED, reason: Proves profile/address precedence, guest trusted-IP fallback, identity normalization, invalid-value omission, dummy-value rejection, and one-time outbound hashing.}
+    - {id: TEXP-004, category: unit, classification: REQUIRED, reason: Proves stable Pixel/CAPI IDs and duplicate suppression.}
+    - {id: TEXP-005, category: integration, classification: REQUIRED, reason: Proves product page rendering and request lifecycle are unchanged for crawlers and humans.}
+    - {id: TEXP-006, category: integration, classification: REQUIRED, reason: Proves anonymous, authenticated, consent-limited, cookie-missing, and ad-click payload behavior.}
+    - {id: TEXP-007, category: integration, classification: REQUIRED, reason: Proves complete single/multi-brand Purchase and partial-order suppression.}
+    - {id: TEXP-008, category: security, classification: REQUIRED, reason: Proves approved raw customer/request data is retained, provider credentials are absent, and authorization remains enforced.}
+    - {id: TEXP-009, category: component, classification: REQUIRED, reason: Proves dashboard/export diagnostics and coverage views remain useful without raw PII.}
+    - {id: TEXP-010, category: regression, classification: REQUIRED, reason: Protects InitiateCheckout, AddToCart, PostHog, kill-switch, checkout, order, and REN-145 behavior.}
+    - {id: TEXP-011, category: e2e, classification: REQUIRED, reason: Confirms normal crawler access and human browser analytics without SEO-visible regression.}
+    - {id: TEXP-012, category: external_integration, classification: REQUIRED, reason: Meta Test Events must confirm identifiers, values, event IDs, deduplication, and Purchase payloads.}
+    - {id: TEXP-013, category: external_integration, classification: REQUIRED, reason: Meta Test Events must confirm identifiers, values, event IDs, deduplication, and Purchase payloads.}
+    - {id: TEXP-014, category: business_uat, classification: REQUIRED, reason: EMQ and human-only coverage must be compared after 48–72 hours without claiming guaranteed 10/10.}
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-010]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-001, SCN-009]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-002, SCN-003, SCN-005, SCN-010]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-004, SCN-005, SCN-010]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-003, SCN-006, SCN-007, SCN-010]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-007, SCN-008]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-004, SCN-009]}
+        - {requirement_id: REQ-008, scenario_ids: [SCN-001, SCN-006, SCN-008, SCN-009, SCN-010]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-002]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-001, INV-003]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-004, INV-006]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-003, INV-005]}
+        - {scenario_id: SCN-004A, invariant_ids: [INV-003, INV-005]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-003, INV-005]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-006, INV-007]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-006, INV-008]}
+        - {scenario_id: SCN-008, invariant_ids: [INV-007, INV-008]}
+        - {scenario_id: SCN-009, invariant_ids: [INV-005]}
+        - {scenario_id: SCN-010, invariant_ids: [INV-003, INV-007]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001, TEXP-005, TEXP-011]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-001, TEXP-006, TEXP-011]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-002, TEXP-004, TEXP-006, TEXP-012]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-003, TEXP-008]}
+        - {scenario_id: SCN-004A, test_expectation_ids: [TEXP-003, TEXP-006]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-002, TEXP-003, TEXP-006]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-004, TEXP-010]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-007, TEXP-010, TEXP-012]}
+        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-007, TEXP-010]}
+        - {scenario_id: SCN-009, test_expectation_ids: [TEXP-008, TEXP-009]}
+        - {scenario_id: SCN-010, test_expectation_ids: [TEXP-005, TEXP-006, TEXP-010]}
+    flow_to_test_expectations:
+        - {flow_id: FLOW-001, test_expectation_ids: [TEXP-001, TEXP-002, TEXP-005, TEXP-011]}
+        - {flow_id: FLOW-002, test_expectation_ids: [TEXP-002, TEXP-003, TEXP-004, TEXP-006, TEXP-010, TEXP-012]}
+        - {flow_id: FLOW-003, test_expectation_ids: [TEXP-004, TEXP-007, TEXP-008, TEXP-010, TEXP-012]}
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent_codex_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    findings:
+        - {id: D-001, severity: DESIGN_BLOCKER, summary: New CAPI logging conflicted with raw PII persistence, status: resolved_by_stakeholder, disposition: Stakeholder approved retaining raw supplied customer/request values in Renivet logs behind existing authorization; provider credentials remain prohibited; contract updated in REQ-007, INV-005, SCN-009, TEXP-008/009.}
+        - {id: D-002, severity: DESIGN_BLOCKER, summary: Governance traceability and SPEC/YAML test IDs were inconsistent, status: resolved_in_contract, disposition: Reconciled test IDs and added explicit flow_to_test_expectations mappings.}
+        - {id: M-001, severity: MAJOR, summary: Production rollout flag and fail behavior were unspecified, status: resolved_in_contract, disposition: Defined META_CAPI_SUPPRESS_CRAWLERS, disabled-by-default on missing/read failure, explicit operator enablement, and fail-open uncertain-agent behavior.}
+        - {id: M-002, severity: MAJOR, summary: Stable event IDs did not establish application-level duplicate behavior, status: resolved_in_contract, disposition: Defined ownership/lifetime for request/action/Purchase IDs, deterministic completed-order Purchase IDs, Meta deduplication, and unique operational counting.}
+        - {id: M-003, severity: MAJOR, summary: fbclid/fbc capture and one-time hashing boundary were underspecified, status: resolved_in_contract, disposition: Defined _fbc precedence, consent-eligible fbclid conversion format, no fabrication, and separate raw-identifier versus personal-field handling.}
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: stakeholder_and_independent_codex_critic
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "27b9a69fd5ee4ffa766e195a494b1cfe9f907266"
+    head_commit: "8c5f66c776aa183b5baa78e20f484416382ea6d9"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PARTIAL
+        security: PARTIAL
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "Complete Meta Test Events, crawler/browser inspection, and 48–72-hour EMQ verification after deployment."
+    evidence:
+        - "Compared the approved contract with the origin/master-to-8c5f66c776aa183b5baa78e20f484416382ea6d9 Git diff."
+        - "Static review found required external and post-deployment validation remains operator-owned."
+    governance_reentry_required: false
