@@ -174,6 +174,13 @@ describe("REN-180 corporate document integrity", () => {
             new URL("../src/lib/services/corporate-platform.ts", import.meta.url),
             "utf8"
         );
+        const route = readFileSync(
+            new URL(
+                "../src/app/api/corporate-proforma-invoices/[id]/download/route.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
         const template = readFileSync(
             new URL(
                 "../src/components/pdf/corporate-commercial-document-template.tsx",
@@ -184,5 +191,7 @@ describe("REN-180 corporate document integrity", () => {
 
         expect(service).toContain("crypto.randomInt");
         expect(template).toContain('label="Taxable value"');
+        expect(route).toContain('hsn: "NA"');
+        expect(template).toContain("isCustomizationRow");
     });
 });

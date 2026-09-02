@@ -555,7 +555,7 @@ export async function GET(
                       {
                           description: "Customization / Extras",
                           detail: extrasSummary || undefined,
-                          hsn: resolvedHsn,
+                          hsn: "NA",
                           quantity: 1,
                           unit: "lot",
                           unitRatePaise: customizationPaise,
