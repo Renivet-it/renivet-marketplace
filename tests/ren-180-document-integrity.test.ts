@@ -123,4 +123,18 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain('description: "Customization / Extras"');
         expect(route).toContain('hsn: "NA"');
     });
+
+    test("renders intra-state and inter-state GST components in FO totals", () => {
+        const template = readFileSync(
+            new URL(
+                "../src/components/pdf/corporate-commercial-document-template.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(template).toContain('label="CGST"');
+        expect(template).toContain('label="SGST"');
+        expect(template).toContain('label="IGST"');
+    });
 });

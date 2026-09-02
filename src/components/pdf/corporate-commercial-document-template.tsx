@@ -798,15 +798,37 @@ export function CorporateCommercialDocumentTemplate({
                                         label="Taxable value (excl. GST)"
                                         value={data.totals.taxableValuePaise}
                                     />
-                                    <Total
-                                        label={`GST${
-                                            gstRateBps === null ||
-                                            gstRateBps === undefined
-                                                ? ""
-                                                : ` (${(gstRateBps / 100).toFixed(2)}%)`
-                                        }`}
-                                        value={gstAmountPaise ?? 0}
-                                    />
+                                    {(data.totals.cgstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label="CGST"
+                                            value={data.totals.cgstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.sgstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label="SGST"
+                                            value={data.totals.sgstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.igstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label="IGST"
+                                            value={data.totals.igstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.cgstPaise ?? 0) <= 0 &&
+                                    (data.totals.sgstPaise ?? 0) <= 0 &&
+                                    (data.totals.igstPaise ?? 0) <= 0 ? (
+                                        <Total
+                                            label={`GST${
+                                                gstRateBps === null ||
+                                                gstRateBps === undefined
+                                                    ? ""
+                                                    : ` (${(gstRateBps / 100).toFixed(2)}%)`
+                                            }`}
+                                            value={gstAmountPaise ?? 0}
+                                        />
+                                    ) : null}
                                 </>
                             ) : data.totals.customizationPaise &&
                             data.totals.customizationPaise > 0 ? (
