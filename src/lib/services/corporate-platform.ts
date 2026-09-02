@@ -147,8 +147,8 @@ const corporateReplacementReasonLabels = {
     other: "Other",
 } as const;
 
-function makeNumber(prefix: string, sequence: number) {
-    return `${prefix}-${String(sequence).padStart(5, "0")}`;
+function makeNumber(prefix: string, _sequence: number) {
+    return `${prefix}-${crypto.randomInt(10000, 100000)}`;
 }
 
 function parseCorporateOpsEmails() {

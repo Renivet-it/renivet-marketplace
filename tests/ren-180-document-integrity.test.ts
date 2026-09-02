@@ -168,4 +168,21 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain("gstRateBps: undefined");
         expect(route).toContain("totalAmountPaise: customizationPaise");
     });
+
+    test("uses random quote identifiers and shows proforma taxable value", () => {
+        const service = readFileSync(
+            new URL("../src/lib/services/corporate-platform.ts", import.meta.url),
+            "utf8"
+        );
+        const template = readFileSync(
+            new URL(
+                "../src/components/pdf/corporate-commercial-document-template.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(service).toContain("crypto.randomInt");
+        expect(template).toContain('label="Taxable value"');
+    });
 });

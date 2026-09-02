@@ -877,6 +877,12 @@ export function CorporateCommercialDocumentTemplate({
                                         }
                                         value={data.totals.customizationPaise}
                                     />
+                                    {!isFulfillmentOrder ? (
+                                        <Total
+                                            label="Taxable value"
+                                            value={data.totals.taxableValuePaise}
+                                        />
+                                    ) : null}
                                     {!hasGstSplit && data.totals.baseGstAmountPaise !==
                                         undefined &&
                                     data.totals.baseGstAmountPaise !== null ? (
