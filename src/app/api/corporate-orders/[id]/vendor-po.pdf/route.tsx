@@ -219,7 +219,7 @@ export async function GET(
         documentNumber: docNumber,
         documentDate: vendorPo.issueDate || new Date(),
         validUntil: vendorPo.expectedDeliveryDate,
-        fromLabel: "Issued By (Platform)",
+        fromLabel: "Fulfilled By",
         toLabel: "Fulfillment Brand (Supplier)",
         from: {
             name: settings.legalName,

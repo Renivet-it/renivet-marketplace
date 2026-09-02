@@ -83,4 +83,17 @@ describe("REN-180 corporate document integrity", () => {
         expect(template).toContain("Agreed rate per piece (excl. GST)");
         expect(template).toContain("Grand total incl. GST");
     });
+
+    test("labels the Renivet FO issuer block as fulfilled by", () => {
+        const route = readFileSync(
+            new URL(
+                "../src/app/api/corporate-orders/[id]/vendor-po.pdf/route.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(route).toContain('fromLabel: "Fulfilled By"');
+        expect(route).not.toContain('fromLabel: "Issued By (Platform)"');
+    });
 });
