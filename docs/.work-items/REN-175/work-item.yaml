@@ -3,7 +3,7 @@ task:
     id: REN-175
     title: "[Corporate Order] Route all order-status writes through one guarded transition (dispatch/QC bypass)"
     source: linear
-    branch: ayanganguly333/ren-175-corporate-order-route-all-order-status-writes-through-one
+    branch: ayanganguly333/corporate-order-qc
     status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-175/corporate-order-route-all-order-status-writes-through-one-guarded

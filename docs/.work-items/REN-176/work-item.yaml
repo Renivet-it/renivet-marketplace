@@ -3,7 +3,7 @@ task:
     id: REN-176
     title: "[Corporate Order] Implement real QC approval gate for corporate fulfillment"
     source: linear
-    branch: ayanganguly333/ren-176-corporate-order-implement-real-qc-approval-gate-for
+    branch: ayanganguly333/corporate-order-qc
     status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-176/corporate-order-implement-real-qc-approval-gate-for

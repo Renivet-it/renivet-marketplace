@@ -206,6 +206,13 @@ export async function GET(
     const itemDetail =
         specsSummary ||
         "Manufacture and fulfil as per approved corporate specifications.";
+    const expectedDeliveryDate = (() => {
+        const date = vendorPo.expectedDeliveryDate
+            ? new Date(vendorPo.expectedDeliveryDate)
+            : new Date();
+        if (!vendorPo.expectedDeliveryDate) date.setDate(date.getDate() + 7);
+        return date.toLocaleDateString("en-IN");
+    })();
 
     const data: CorporateCommercialDocumentData = {
         title: "Brand Fulfillment Order",
@@ -241,7 +248,7 @@ export async function GET(
             },
             {
                 label: "Expected delivery",
-                value: vendorPo.expectedDeliveryDate || "",
+                value: expectedDeliveryDate,
             },
             { label: "Corporate order", value: order.publicOrderId },
             {

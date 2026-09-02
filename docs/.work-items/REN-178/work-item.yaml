@@ -3,7 +3,7 @@ task:
     id: REN-178
     title: "[Corporate Order] Persist structured customization and extras through all documents"
     source: linear
-    branch: ayanganguly333/ren-178-corporate-order-customizationextras-entered-by-admin-are
+    branch: ayanganguly333/corporate-order-qc
     status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-178/corporate-order-customizationextras-entered-by-admin-are-silently

@@ -3,7 +3,7 @@ task:
     id: REN-177
     title: "[Corporate Order] Fulfillment Order must be the single authoritative production source (size/artwork/color/QC/GST missing)"
     source: linear
-    branch: ayanganguly333/ren-177-corporate-order-fulfillment-order-must-be-the-single
+    branch: ayanganguly333/corporate-order-qc
     status: BLOCKED
     linear:
         url: https://linear.app/renivet/issue/REN-177/corporate-order-fulfillment-order-must-be-the-single
