@@ -84,6 +84,7 @@ export function AdminManualQuoteModal({
     const [contactPerson, setContactPerson] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
+    const [gstNumber, setGstNumber] = useState("");
 
     // Delivery / Consignee Address
     const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -101,16 +102,25 @@ export function AdminManualQuoteModal({
     const [unitPrice, setUnitPrice] = useState("399");
 
     // HSN & GST Connection
-    const [selectedHsnMode, setSelectedHsnMode] = useState<"preset" | "manual">("preset");
+    const [selectedHsnMode, setSelectedHsnMode] = useState<"preset" | "manual">(
+        "preset"
+    );
     const [selectedHsnId, setSelectedHsnId] = useState<string>("");
     const [manualHsnCode, setManualHsnCode] = useState<string>("");
     const [gstPercent, setGstPercent] = useState("18");
-    const [isGstManuallyOverridden, setIsGstManuallyOverridden] = useState(false);
+    const [isGstManuallyOverridden, setIsGstManuallyOverridden] =
+        useState(false);
 
     // Optional Extras
     const [selectedExtraIds, setSelectedExtraIds] = useState<string[]>([]);
     const [manualExtraAmount, setManualExtraAmount] = useState<string>("0");
-    const [manualExtraDescription, setManualExtraDescription] = useState<string>("");
+    const [manualExtraDescription, setManualExtraDescription] =
+        useState<string>("");
+    const [customizationTaxTreatment, setCustomizationTaxTreatment] =
+        useState<"included_in_product_supply" | "separate_supply">(
+            "included_in_product_supply"
+        );
+    const [customizationHsnId, setCustomizationHsnId] = useState("");
 
     // Commercial Terms
     const [advancePercent, setAdvancePercent] = useState("30");
@@ -119,7 +129,7 @@ export function AdminManualQuoteModal({
 
     // Commission & GST on Commission
     const [commissionAmount, setCommissionAmount] = useState<string>("0");
-    const [commissionGstPercent, setCommissionGstPercent] = useState<string>("18");
+    const [commissionHsnId, setCommissionHsnId] = useState("");
 
     // Reset form on modal open
     useEffect(() => {
@@ -167,7 +177,9 @@ export function AdminManualQuoteModal({
             setSelectedHsnMode("manual");
         } else {
             setSelectedHsnMode("preset");
-            const option = orderConfig?.hsnOptions?.find((h) => h.id === hsnOptionId);
+            const option = orderConfig?.hsnOptions?.find(
+                (h) => h.id === hsnOptionId
+            );
             if (option) {
                 updateDerivedGst(option.hsnCode, Number(unitPrice || 0));
             }
@@ -185,7 +197,8 @@ export function AdminManualQuoteModal({
         setUnitPrice(priceStr);
         const currentHsn =
             selectedHsnMode === "preset"
-                ? orderConfig?.hsnOptions?.find((h) => h.id === selectedHsnId)?.hsnCode
+                ? orderConfig?.hsnOptions?.find((h) => h.id === selectedHsnId)
+                      ?.hsnCode
                 : manualHsnCode;
         if (currentHsn) {
             updateDerivedGst(currentHsn, Number(priceStr || 0));
@@ -194,14 +207,22 @@ export function AdminManualQuoteModal({
 
     // Extra charges calculation
     const qtyNum = Math.max(0, Number(quantity) || 0);
-    const unitPricePaise = Math.max(0, Math.round((Number(unitPrice) || 0) * 100));
+    const unitPricePaise = Math.max(
+        0,
+        Math.round((Number(unitPrice) || 0) * 100)
+    );
     const subtotalPaise = qtyNum * unitPricePaise;
 
     const extrasBreakdown = useMemo(() => {
         const rules = orderConfig?.extraChargeRules || [];
-        const selectedRules = rules.filter((r) => selectedExtraIds.includes(r.id));
+        const selectedRules = rules.filter((r) =>
+            selectedExtraIds.includes(r.id)
+        );
         const ruleTotalPaise = selectedRules.reduce((sum, r) => {
-            const cost = r.chargeType === "per_unit" ? r.amountPaise * qtyNum : r.amountPaise;
+            const cost =
+                r.chargeType === "per_unit"
+                    ? r.amountPaise * qtyNum
+                    : r.amountPaise;
             return sum + cost;
         }, 0);
         const manualPaise = Math.max(
@@ -214,20 +235,28 @@ export function AdminManualQuoteModal({
             manualPaise,
             totalCustomizationPaise: ruleTotalPaise + manualPaise,
         };
-    }, [orderConfig?.extraChargeRules, selectedExtraIds, qtyNum, manualExtraAmount]);
+    }, [
+        orderConfig?.extraChargeRules,
+        selectedExtraIds,
+        qtyNum,
+        manualExtraAmount,
+    ]);
 
     const gstPercentNum = Math.max(0, Number(gstPercent) || 0);
-    const advancePercentNum = Math.max(0, Math.min(100, Number(advancePercent) || 0));
+    const advancePercentNum = Math.max(
+        0,
+        Math.min(100, Number(advancePercent) || 0)
+    );
 
     // Commission calculations
     const commissionAmountPaise = Math.max(
         0,
         Math.round((Number(commissionAmount) || 0) * 100)
     );
-    const commissionGstPercentNum = Math.max(
-        0,
-        Number(commissionGstPercent) || 0
+    const commissionHsn = orderConfig?.hsnOptions?.find(
+        (option) => option.id === commissionHsnId
     );
+    const commissionGstPercentNum = (commissionHsn?.gstRateBps ?? 0) / 100;
     const commissionGstAmountPaise = Math.round(
         (commissionAmountPaise * commissionGstPercentNum) / 100
     );
@@ -235,11 +264,20 @@ export function AdminManualQuoteModal({
         commissionAmountPaise + commissionGstAmountPaise;
 
     const baseGstPaise = Math.round((subtotalPaise * gstPercentNum) / 100);
+    const customizationHsn = orderConfig?.hsnOptions?.find(
+        (option) => option.id === customizationHsnId
+    );
+    const customizationGstRateBps =
+        customizationTaxTreatment === "included_in_product_supply"
+            ? Math.round(gstPercentNum * 100)
+            : (customizationHsn?.gstRateBps ?? 0);
     const customizationGstPaise = Math.round(
-        (extrasBreakdown.totalCustomizationPaise * 18) / 100
+        (extrasBreakdown.totalCustomizationPaise * customizationGstRateBps) /
+            10_000
     );
     const taxPaise = baseGstPaise + customizationGstPaise;
-    const taxablePaise = subtotalPaise + extrasBreakdown.totalCustomizationPaise;
+    const taxablePaise =
+        subtotalPaise + extrasBreakdown.totalCustomizationPaise;
     const totalPaise = taxablePaise + taxPaise;
     const advancePaise = Math.round((totalPaise * advancePercentNum) / 100);
     const balancePaise = totalPaise - advancePaise;
@@ -247,7 +285,8 @@ export function AdminManualQuoteModal({
     // Active HSN Code
     const activeHsnCode =
         selectedHsnMode === "preset"
-            ? orderConfig?.hsnOptions?.find((h) => h.id === selectedHsnId)?.hsnCode || ""
+            ? orderConfig?.hsnOptions?.find((h) => h.id === selectedHsnId)
+                  ?.hsnCode || ""
             : manualHsnCode.trim();
 
     // Validation per step
@@ -258,10 +297,7 @@ export function AdminManualQuoteModal({
         phone.trim().length >= 8 &&
         (!deliveryPincode.trim() || /^\d{6}$/.test(deliveryPincode.trim()));
 
-    const isStep2Valid =
-        Boolean(brandId) &&
-        qtyNum > 0 &&
-        unitPricePaise > 0;
+    const isStep2Valid = Boolean(brandId) && qtyNum > 0 && unitPricePaise > 0;
 
     const isStep3Valid =
         Number.isFinite(gstPercentNum) &&
@@ -269,7 +305,11 @@ export function AdminManualQuoteModal({
         gstPercentNum <= 100 &&
         Number.isFinite(advancePercentNum) &&
         advancePercentNum >= 0 &&
-        advancePercentNum <= 100;
+        advancePercentNum <= 100 &&
+        Boolean(commissionHsn) &&
+        (extrasBreakdown.totalCustomizationPaise === 0 ||
+            customizationTaxTreatment === "included_in_product_supply" ||
+            Boolean(customizationHsn));
 
     const canSubmit = isStep1Valid && isStep2Valid && isStep3Valid;
 
@@ -300,6 +340,7 @@ export function AdminManualQuoteModal({
             contactPerson: contactPerson.trim(),
             email: email.trim().toLowerCase(),
             phone: phone.trim(),
+            gstNumber: gstNumber.trim() || null,
             deliveryAddress: deliveryAddress.trim() || null,
             deliveryCity: deliveryCity.trim() || null,
             deliveryState: deliveryState.trim() || null,
@@ -316,7 +357,28 @@ export function AdminManualQuoteModal({
             quantity: qtyNum,
             unitPricePaise,
             customizationCostPaise: extrasBreakdown.totalCustomizationPaise,
+            customizations:
+                extrasBreakdown.totalCustomizationPaise > 0
+                    ? [
+                          {
+                              name:
+                                  manualExtraDescription.trim() ||
+                                  "Customization / extras",
+                              amountPaise:
+                                  extrasBreakdown.totalCustomizationPaise,
+                              quantity: 1,
+                              basis: "per_order",
+                              taxTreatment: customizationTaxTreatment,
+                              hsnCode:
+                                  customizationTaxTreatment === "separate_supply"
+                                      ? (customizationHsn?.hsnCode ?? null)
+                                      : activeHsnCode || null,
+                              displayOrder: 1,
+                          },
+                      ]
+                    : [],
             commissionAmountPaise,
+            commissionHsnCode: commissionHsn?.hsnCode ?? null,
             commissionGstPercent: commissionGstPercentNum,
             gstPercent: gstPercentNum,
             advancePercent: advancePercentNum,
@@ -338,7 +400,8 @@ export function AdminManualQuoteModal({
                                     Create Manual Corporate Quote
                                 </DialogTitle>
                                 <DialogDescription className="mt-0.5 text-xs text-slate-600">
-                                    Prepare and send commercial quotes with automated HSN taxes and itemized extras.
+                                    Prepare and send commercial quotes with
+                                    automated HSN taxes and itemized extras.
                                 </DialogDescription>
                             </div>
                             <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-800">
@@ -358,7 +421,13 @@ export function AdminManualQuoteModal({
                                     key={s.id}
                                     type="button"
                                     onClick={() => {
-                                        if (s.id < currentStep || (s.id === 2 && isStep1Valid) || (s.id === 3 && isStep1Valid && isStep2Valid)) {
+                                        if (
+                                            s.id < currentStep ||
+                                            (s.id === 2 && isStep1Valid) ||
+                                            (s.id === 3 &&
+                                                isStep1Valid &&
+                                                isStep2Valid)
+                                        ) {
                                             setCurrentStep(s.id);
                                         }
                                     }}
@@ -409,7 +478,9 @@ export function AdminManualQuoteModal({
                                     Customer Contact Information
                                 </h3>
                                 <p className="text-xs text-slate-500">
-                                    Enter buyer details. Quote will be automatically linked to their corporate profile.
+                                    Enter buyer details. Quote will be
+                                    automatically linked to their corporate
+                                    profile.
                                 </p>
                             </div>
 
@@ -444,6 +515,12 @@ export function AdminManualQuoteModal({
                                     value={phone}
                                     onChange={setPhone}
                                 />
+                                <LabelledInput
+                                    label="Customer GSTIN"
+                                    placeholder="Enter customer GSTIN"
+                                    value={gstNumber}
+                                    onChange={setGstNumber}
+                                />
                             </div>
 
                             <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
@@ -451,7 +528,8 @@ export function AdminManualQuoteModal({
                                     <div className="flex items-center gap-2">
                                         <Truck className="h-4 w-4 text-slate-600" />
                                         <h4 className="text-xs font-bold text-slate-900">
-                                            Delivery / Consignee Address (Recommended)
+                                            Delivery / Consignee Address
+                                            (Recommended)
                                         </h4>
                                     </div>
                                     <span className="text-[11px] text-slate-500">
@@ -514,7 +592,9 @@ export function AdminManualQuoteModal({
                                     Product Selection & HSN Tax Association
                                 </h3>
                                 <p className="text-xs text-slate-500">
-                                    Selecting a product type or HSN automatically determines the applicable GST rate (5% vs 18% based on the ₹2,500 threshold).
+                                    Selecting an apparel product type or HSN
+                                    determines GST from its net per-piece base
+                                    value, excluding customisation.
                                 </p>
                             </div>
 
@@ -533,7 +613,9 @@ export function AdminManualQuoteModal({
                                     label="Product Type"
                                     value={productTypeId}
                                     onChange={handleProductTypeChange}
-                                    options={(orderConfig?.productTypes ?? []).map((pt) => ({
+                                    options={(
+                                        orderConfig?.productTypes ?? []
+                                    ).map((pt) => ({
                                         value: pt.id,
                                         label: pt.name,
                                     }))}
@@ -543,7 +625,9 @@ export function AdminManualQuoteModal({
                                     label="GSM Option"
                                     value={gsmOptionId}
                                     onChange={setGsmOptionId}
-                                    options={(orderConfig?.gsmOptions ?? []).map((gsm) => ({
+                                    options={(
+                                        orderConfig?.gsmOptions ?? []
+                                    ).map((gsm) => ({
                                         value: gsm.id,
                                         label: gsm.label,
                                     }))}
@@ -553,7 +637,9 @@ export function AdminManualQuoteModal({
                                     label="Fabric Composition"
                                     value={fabricCompositionId}
                                     onChange={setFabricCompositionId}
-                                    options={(orderConfig?.fabricCompositions ?? []).map((fc) => ({
+                                    options={(
+                                        orderConfig?.fabricCompositions ?? []
+                                    ).map((fc) => ({
                                         value: fc.id,
                                         label: fc.name,
                                     }))}
@@ -578,14 +664,23 @@ export function AdminManualQuoteModal({
                                 <div className="grid gap-3 sm:grid-cols-2">
                                     <CompactSelect
                                         label="Select HSN from Master"
-                                        value={selectedHsnMode === "manual" ? "manual" : selectedHsnId}
+                                        value={
+                                            selectedHsnMode === "manual"
+                                                ? "manual"
+                                                : selectedHsnId
+                                        }
                                         onChange={handleHsnSelectChange}
                                         options={[
-                                            ...(orderConfig?.hsnOptions ?? []).map((h) => ({
+                                            ...(
+                                                orderConfig?.hsnOptions ?? []
+                                            ).map((h) => ({
                                                 value: h.id,
                                                 label: `${h.hsnCode} — ${h.description} (${h.gstRateBps / 100}%)`,
                                             })),
-                                            { value: "manual", label: "✎ Enter Custom / Manual HSN Code" },
+                                            {
+                                                value: "manual",
+                                                label: "✎ Enter Custom / Manual HSN Code",
+                                            },
                                         ]}
                                         optional
                                     />
@@ -601,9 +696,14 @@ export function AdminManualQuoteModal({
                                     ) : (
                                         <div className="flex flex-col justify-end">
                                             <p className="text-[11px] text-slate-500">
-                                                HSN Code: <span className="font-mono font-bold text-slate-800">{activeHsnCode || "Auto (Apparel)"}</span>
+                                                HSN Code:{" "}
+                                                <span className="font-mono font-bold text-slate-800">
+                                                    {activeHsnCode ||
+                                                        "Auto (Apparel)"}
+                                                </span>
                                                 <br />
-                                                Rate rules: ≤ ₹2,500 = 5% GST | &gt; ₹2,500 = 18% GST
+                                                Rate rules: ≤ ₹1,000 = 5% GST |
+                                                &gt; ₹1,000 = 12% GST
                                             </p>
                                         </div>
                                     )}
@@ -643,7 +743,9 @@ export function AdminManualQuoteModal({
                                     Optional Extras & Customizations
                                 </h3>
                                 <p className="text-xs text-slate-500">
-                                    Select optional extras or add manual custom charges. These will itemize on the invoice and add to taxable value.
+                                    Select optional extras or add manual custom
+                                    charges. These will itemize on the invoice
+                                    and add to taxable value.
                                 </p>
                             </div>
 
@@ -653,53 +755,76 @@ export function AdminManualQuoteModal({
                                     Predefined Extra Charges / Add-ons
                                 </label>
                                 <div className="grid gap-2 sm:grid-cols-2">
-                                    {(orderConfig?.extraChargeRules ?? []).map((rule) => {
-                                        const isSelected = selectedExtraIds.includes(rule.id);
-                                        const costInr =
-                                            rule.chargeType === "per_unit"
-                                                ? (rule.amountPaise * qtyNum) / 100
-                                                : rule.amountPaise / 100;
-                                        return (
-                                            <div
-                                                key={rule.id}
-                                                onClick={() => {
-                                                    setSelectedExtraIds((prev) =>
-                                                        prev.includes(rule.id)
-                                                            ? prev.filter((id) => id !== rule.id)
-                                                            : [...prev, rule.id]
-                                                    );
-                                                }}
-                                                className={cn(
-                                                    "flex cursor-pointer items-start justify-between rounded-lg border p-3 transition-all select-none",
-                                                    isSelected
-                                                        ? "border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600"
-                                                        : "border-slate-200 bg-white hover:border-slate-300"
-                                                )}
-                                            >
-                                                <div className="flex items-start gap-2.5">
-                                                    <input
-                                                        type="checkbox"
-                                                        checked={isSelected}
-                                                        onChange={() => {}}
-                                                        className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
-                                                    />
-                                                    <div>
-                                                        <p className="text-xs font-medium text-slate-900">
-                                                            {rule.name}
-                                                        </p>
-                                                        <span className="text-[10px] text-slate-500">
-                                                            {rule.chargeType === "per_unit"
-                                                                ? `₹${rule.amountPaise / 100} / unit`
-                                                                : `Flat ₹${rule.amountPaise / 100}`}
-                                                        </span>
+                                    {(orderConfig?.extraChargeRules ?? []).map(
+                                        (rule) => {
+                                            const isSelected =
+                                                selectedExtraIds.includes(
+                                                    rule.id
+                                                );
+                                            const costInr =
+                                                rule.chargeType === "per_unit"
+                                                    ? (rule.amountPaise *
+                                                          qtyNum) /
+                                                      100
+                                                    : rule.amountPaise / 100;
+                                            return (
+                                                <div
+                                                    key={rule.id}
+                                                    onClick={() => {
+                                                        setSelectedExtraIds(
+                                                            (prev) =>
+                                                                prev.includes(
+                                                                    rule.id
+                                                                )
+                                                                    ? prev.filter(
+                                                                          (
+                                                                              id
+                                                                          ) =>
+                                                                              id !==
+                                                                              rule.id
+                                                                      )
+                                                                    : [
+                                                                          ...prev,
+                                                                          rule.id,
+                                                                      ]
+                                                        );
+                                                    }}
+                                                    className={cn(
+                                                        "flex cursor-pointer select-none items-start justify-between rounded-lg border p-3 transition-all",
+                                                        isSelected
+                                                            ? "border-emerald-600 bg-emerald-50/50 ring-1 ring-emerald-600"
+                                                            : "border-slate-200 bg-white hover:border-slate-300"
+                                                    )}
+                                                >
+                                                    <div className="flex items-start gap-2.5">
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={isSelected}
+                                                            onChange={() => {}}
+                                                            className="mt-0.5 h-4 w-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                                                        />
+                                                        <div>
+                                                            <p className="text-xs font-medium text-slate-900">
+                                                                {rule.name}
+                                                            </p>
+                                                            <span className="text-[10px] text-slate-500">
+                                                                {rule.chargeType ===
+                                                                "per_unit"
+                                                                    ? `₹${rule.amountPaise / 100} / unit`
+                                                                    : `Flat ₹${rule.amountPaise / 100}`}
+                                                            </span>
+                                                        </div>
                                                     </div>
+                                                    <span className="text-xs font-bold text-slate-800">
+                                                        +
+                                                        {formatINR(
+                                                            costInr * 100
+                                                        )}
+                                                    </span>
                                                 </div>
-                                                <span className="text-xs font-bold text-slate-800">
-                                                    +{formatINR(costInr * 100)}
-                                                </span>
-                                            </div>
-                                        );
-                                    })}
+                                            );
+                                        }
+                                    )}
                                 </div>
                             </div>
 
@@ -725,6 +850,59 @@ export function AdminManualQuoteModal({
                                     />
                                 </div>
                             </div>
+
+                            {extrasBreakdown.totalCustomizationPaise > 0 ? (
+                                <div className="rounded-xl border border-amber-200 bg-amber-50/50 p-4">
+                                    <h4 className="text-xs font-bold text-slate-900">
+                                        Customization GST Treatment
+                                    </h4>
+                                    <p className="mt-1 text-[11px] text-slate-600">
+                                        Choose whether these extras are included in the garment supply or billed as a separate service.
+                                    </p>
+                                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                        <CompactSelect
+                                            label="Tax treatment"
+                                            value={customizationTaxTreatment}
+                                            onChange={(value) =>
+                                                setCustomizationTaxTreatment(
+                                                    value as
+                                                        | "included_in_product_supply"
+                                                        | "separate_supply"
+                                                )
+                                            }
+                                            options={[
+                                                {
+                                                    value: "included_in_product_supply",
+                                                    label: "Part of main product supply",
+                                                },
+                                                {
+                                                    value: "separate_supply",
+                                                    label: "Separate supply / service",
+                                                },
+                                            ]}
+                                        />
+                                        {customizationTaxTreatment ===
+                                        "separate_supply" ? (
+                                            <CompactSelect
+                                                label="Separate HSN/SAC from Master"
+                                                value={customizationHsnId}
+                                                onChange={setCustomizationHsnId}
+                                                options={(orderConfig?.hsnOptions ?? []).map(
+                                                    (hsn) => ({
+                                                        value: hsn.id,
+                                                        label: `${hsn.hsnCode} — ${hsn.description} (${hsn.gstRateBps / 100}%)`,
+                                                    })
+                                                )}
+                                                required
+                                            />
+                                        ) : (
+                                            <div className="flex items-end text-[11px] text-slate-600">
+                                                Uses the selected product HSN/GST rate ({gstPercentNum}%).
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : null}
 
                             {/* Taxes & Commercial Terms */}
                             <div className="grid gap-3 sm:grid-cols-3">
@@ -775,7 +953,7 @@ export function AdminManualQuoteModal({
                             </div>
 
                             {/* Platform Commission & GST on Commission */}
-                            <div className="rounded-lg border border-slate-200 bg-slate-50/50 p-3.5 space-y-3">
+                            <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50/50 p-3.5">
                                 <div className="flex items-center gap-2">
                                     <Sparkles className="h-4 w-4 text-emerald-600" />
                                     <span className="text-xs font-semibold text-slate-900">
@@ -791,23 +969,45 @@ export function AdminManualQuoteModal({
                                         value={commissionAmount}
                                         onChange={setCommissionAmount}
                                     />
-                                    <LabelledInput
-                                        label="GST on Commission (%)"
-                                        type="number"
-                                        min={0}
-                                        max={100}
-                                        placeholder="18"
-                                        value={commissionGstPercent}
-                                        onChange={setCommissionGstPercent}
+                                    <CompactSelect
+                                        label="Commission HSN/SAC from Master"
+                                        value={commissionHsnId}
+                                        onChange={setCommissionHsnId}
+                                        options={(orderConfig?.hsnOptions ?? []).map(
+                                            (hsn) => ({
+                                                value: hsn.id,
+                                                label: `${hsn.hsnCode} — ${hsn.description} (${hsn.gstRateBps / 100}%)`,
+                                            })
+                                        )}
+                                        required
                                     />
                                 </div>
+                                <p className="text-[11px] text-slate-500">
+                                    The selected HSN/SAC supplies the GST rate saved on this order and used on its settlement and commission invoice.
+                                </p>
                                 {commissionAmountPaise > 0 && (
-                                    <div className="flex items-center justify-between rounded-md bg-emerald-50 px-3 py-2 text-xs text-emerald-800 border border-emerald-200">
+                                    <div className="flex items-center justify-between rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
                                         <span>
-                                            Net Commission: <strong>{formatINR(commissionAmountPaise)}</strong> + GST ({commissionGstPercentNum}%): <strong>{formatINR(commissionGstAmountPaise)}</strong>
+                                            Net Commission:{" "}
+                                            <strong>
+                                                {formatINR(
+                                                    commissionAmountPaise
+                                                )}
+                                            </strong>{" "}
+                                            + GST ({commissionGstPercentNum}%):{" "}
+                                            <strong>
+                                                {formatINR(
+                                                    commissionGstAmountPaise
+                                                )}
+                                            </strong>
                                         </span>
                                         <span>
-                                            Total: <strong>{formatINR(commissionTotalPaise)}</strong>
+                                            Total:{" "}
+                                            <strong>
+                                                {formatINR(
+                                                    commissionTotalPaise
+                                                )}
+                                            </strong>
                                         </span>
                                     </div>
                                 )}
@@ -836,7 +1036,10 @@ export function AdminManualQuoteModal({
                                             Customization
                                         </div>
                                         <div className="mt-1 text-xs font-bold text-emerald-700">
-                                            +{formatINR(extrasBreakdown.totalCustomizationPaise)}
+                                            +
+                                            {formatINR(
+                                                extrasBreakdown.totalCustomizationPaise
+                                            )}
                                         </div>
                                     </div>
                                     <div>
@@ -849,7 +1052,7 @@ export function AdminManualQuoteModal({
                                     </div>
                                     <div>
                                         <div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                                            GST on Custom (18%)
+                                            GST on Custom ({customizationGstRateBps / 100}%)
                                         </div>
                                         <div className="mt-1 text-xs font-bold text-slate-800">
                                             {formatINR(customizationGstPaise)}
@@ -891,7 +1094,11 @@ export function AdminManualQuoteModal({
                                 type="button"
                                 variant="outline"
                                 className="h-9 gap-1.5 text-xs"
-                                onClick={() => setCurrentStep((prev) => Math.max(1, prev - 1))}
+                                onClick={() =>
+                                    setCurrentStep((prev) =>
+                                        Math.max(1, prev - 1)
+                                    )
+                                }
                             >
                                 <ArrowLeft className="h-3.5 w-3.5" />
                                 Previous
@@ -917,7 +1124,11 @@ export function AdminManualQuoteModal({
                                     (currentStep === 1 && !isStep1Valid) ||
                                     (currentStep === 2 && !isStep2Valid)
                                 }
-                                onClick={() => setCurrentStep((prev) => Math.min(3, prev + 1))}
+                                onClick={() =>
+                                    setCurrentStep((prev) =>
+                                        Math.min(3, prev + 1)
+                                    )
+                                }
                             >
                                 Next Step
                                 <ArrowRight className="h-3.5 w-3.5" />
@@ -926,7 +1137,9 @@ export function AdminManualQuoteModal({
                             <Button
                                 type="button"
                                 className="h-9 gap-1.5 bg-emerald-600 text-xs font-semibold text-white shadow hover:bg-emerald-700"
-                                disabled={!canSubmit || createManualQuote.isPending}
+                                disabled={
+                                    !canSubmit || createManualQuote.isPending
+                                }
                                 onClick={handleSubmit}
                             >
                                 {createManualQuote.isPending ? (
@@ -970,7 +1183,8 @@ function LabelledInput({
     return (
         <div>
             <label className="text-xs font-semibold text-slate-800">
-                {label} {required ? <span className="text-rose-500">*</span> : null}
+                {label}{" "}
+                {required ? <span className="text-rose-500">*</span> : null}
             </label>
             <Input
                 type={type}
@@ -1004,14 +1218,17 @@ function CompactSelect({
     return (
         <div>
             <label className="text-xs font-semibold text-slate-800">
-                {label} {required ? <span className="text-rose-500">*</span> : null}
+                {label}{" "}
+                {required ? <span className="text-rose-500">*</span> : null}
             </label>
             <select
                 value={value}
                 onChange={(e) => onChange(e.target.value)}
                 className="mt-1 flex h-9 w-full rounded-md border border-slate-200 bg-white px-2.5 py-1 text-xs text-slate-900 shadow-sm focus:border-emerald-600 focus:outline-none focus:ring-1 focus:ring-emerald-600"
             >
-                <option value="">{optional ? "Not specified" : "Select option..."}</option>
+                <option value="">
+                    {optional ? "Not specified" : "Select option..."}
+                </option>
                 {options.map((opt) => (
                     <option key={opt.value} value={opt.value}>
                         {opt.label}

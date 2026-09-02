@@ -35,9 +35,11 @@ import {
     corporateProductTypes,
     corporateProformaInvoices,
     corporatePurchaseOrders,
+    corporateQcSubmissions,
     corporateReceiptVouchers,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    corporateWarehouseGoodsReceipts,
     hsnMaster,
     users,
 } from "../schema";
@@ -383,6 +385,34 @@ class CorporateOrderQueries {
         return updated ? this.parseOrder(updated) : null;
     }
 
+    async updateCorporateOrderStatusIfCurrent(
+        id: string,
+        expectedStatus: typeof corporateOrders.$inferSelect.status,
+        nextStatus: typeof corporateOrders.$inferSelect.status
+    ) {
+        const updated = await db
+            .update(corporateOrders)
+            .set({ status: nextStatus, updatedAt: new Date() })
+            .where(
+                and(
+                    eq(corporateOrders.id, id),
+                    eq(corporateOrders.status, expectedStatus)
+                )
+            )
+            .returning()
+            .then((rows) => rows[0]);
+
+        return updated ? this.parseOrder(updated) : null;
+    }
+
+    async getLatestQcSubmissionForOrder(orderId: string) {
+        return db.query.corporateQcSubmissions.findFirst({
+            where: eq(corporateQcSubmissions.orderId, orderId),
+            orderBy: [desc(corporateQcSubmissions.createdAt)],
+            with: { images: true, submittedBy: true, reviewedBy: true },
+        });
+    }
+
     async getOrderById(id: string) {
         const [order, taxInvoice] = await Promise.all([
             db.query.corporateOrders.findFirst({
@@ -392,6 +422,14 @@ class CorporateOrderQueries {
                     shipment: true,
                     statusHistory: {
                         orderBy: [desc(corporateOrderStatusHistory.createdAt)],
+                    },
+                    qcSubmissions: {
+                        orderBy: [desc(corporateQcSubmissions.createdAt)],
+                        with: {
+                            images: true,
+                            submittedBy: true,
+                            reviewedBy: true,
+                        },
                     },
                     user: true,
                 },
@@ -414,6 +452,7 @@ class CorporateOrderQueries {
             vendorPurchaseOrder,
             brandTaxInvoice,
             deliveryChallan,
+            warehouseGoodsReceipt,
             payments,
         ] = await Promise.all([
             db.query.corporateProformaInvoices
@@ -450,6 +489,13 @@ class CorporateOrderQueries {
             db.query.corporateDeliveryChallans.findFirst({
                 where: eq(corporateDeliveryChallans.orderId, id),
                 orderBy: [desc(corporateDeliveryChallans.createdAt)],
+            }),
+            db.query.corporateWarehouseGoodsReceipts.findFirst({
+                where: and(
+                    eq(corporateWarehouseGoodsReceipts.orderId, id),
+                    eq(corporateWarehouseGoodsReceipts.isCurrentAccepted, true)
+                ),
+                orderBy: [desc(corporateWarehouseGoodsReceipts.createdAt)],
             }),
             db.query.corporatePayments.findMany({
                 where: eq(corporatePayments.orderId, id),
@@ -590,6 +636,7 @@ class CorporateOrderQueries {
                 brandTaxInvoice,
                 customerTaxInvoice: taxInvoice ?? null,
                 deliveryChallan,
+                warehouseGoodsReceipt,
             },
             statusHistory: order.statusHistory.map((item) =>
                 corporateOrderStatusHistorySchema.parse({

@@ -13,6 +13,7 @@ import {
 import { timestamps } from "../helper";
 import { brands } from "./brand";
 import {
+    corporateQcSubmissions,
     corporateQuotes,
     corporateReplacementRequests,
     corporateRtoShipments,
@@ -250,6 +251,7 @@ export const corporateOrders = pgTable(
         mobileNumber: text("mobile_number").notNull(),
         gstNumber: text("gst_number"),
         deliveryCountry: text("delivery_country").notNull(),
+        deliveryState: text("delivery_state"),
         deliveryCity: text("delivery_city").notNull(),
         deliveryPincode: text("delivery_pincode").notNull(),
         deliveryAddress: text("delivery_address").notNull(),
@@ -293,15 +295,15 @@ export const corporateOrders = pgTable(
         commissionAmountPaise: integer("commission_amount_paise")
             .notNull()
             .default(0),
-        commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull()
-            .default(1800),
+        commissionHsnCode: text("commission_hsn_code"),
+        commissionGstRateBps: integer("commission_gst_rate_bps").notNull(),
         commissionGstAmountPaise: integer("commission_gst_amount_paise")
             .notNull()
             .default(0),
         commissionTotalPaise: integer("commission_total_paise")
             .notNull()
             .default(0),
+        commissionInvoiceNumber: text("commission_invoice_number").unique(),
         razorpayOrderId: text("razorpay_order_id"),
         razorpayPaymentId: text("razorpay_payment_id"),
         razorpaySignature: text("razorpay_signature"),
@@ -395,6 +397,7 @@ export const corporateOrdersRelations = relations(
             references: [corporateShipments.orderId],
         }),
         statusHistory: many(corporateOrderStatusHistory),
+        qcSubmissions: many(corporateQcSubmissions),
         replacementRequests: many(corporateReplacementRequests, {
             relationName: "corporate_order_replacement_requests",
         }),

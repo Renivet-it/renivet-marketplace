@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export function CorporateDocumentChainPanel({ order }: { order: any }) {
+    const [brandInvoiceReviewReason, setBrandInvoiceReviewReason] =
+        useState("");
     const utils = trpc.useUtils();
     const { data: chain = order.documentChain } =
         trpc.general.corporatePlatform.getOrderDocumentChain.useQuery(
@@ -21,8 +23,14 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         trpc.general.corporatePlatform.getCorporateDocumentSettings.useQuery();
 
     const quantity = Math.max(1, Number(order.quantity || 1));
-    const pricingSnapshot = (order.pricingSnapshot ?? {}) as Record<string, unknown>;
-    const productSnapshot = (order.productConfigSnapshot ?? {}) as Record<string, unknown>;
+    const pricingSnapshot = (order.pricingSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const productSnapshot = (order.productConfigSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
     const quoteSnapshot = (order.quote ?? {}) as Record<string, unknown>;
 
     const calculatedUnitPricePaise =
@@ -31,33 +39,55 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         Number(quoteSnapshot.unitPricePaise ?? 0) ||
         Number(productSnapshot.unitPricePaise ?? 0) ||
         Number(order.unitPricePaise ?? 0) ||
-        (order.subtotalPaise ? Math.round(Number(order.subtotalPaise) / quantity) : 0) ||
-        (chain?.proformaInvoice?.taxableValuePaise
-            ? Math.round(Number(chain.proformaInvoice.taxableValuePaise) / quantity)
+        (order.subtotalPaise
+            ? Math.round(Number(order.subtotalPaise) / quantity)
             : 0) ||
-        (order.totalPaise ? Math.round(Number(order.totalPaise) / quantity) : 0) ||
-        (order.totalAmountPaise ? Math.round(Number(order.totalAmountPaise) / quantity) : 0);
+        (chain?.proformaInvoice?.taxableValuePaise
+            ? Math.round(
+                  Number(chain.proformaInvoice.taxableValuePaise) / quantity
+              )
+            : 0) ||
+        (order.totalPaise
+            ? Math.round(Number(order.totalPaise) / quantity)
+            : 0) ||
+        (order.totalAmountPaise
+            ? Math.round(Number(order.totalAmountPaise) / quantity)
+            : 0);
 
-    const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<string, unknown>;
+    const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<
+        string,
+        unknown
+    >;
     const extraChargesList = Array.isArray(brandingSnapshot.appliedExtraCharges)
         ? (brandingSnapshot.appliedExtraCharges as Array<{
               name?: string;
               amountPaise?: number;
           }>)
         : [];
-    const quoteCustomizationPaise =
-        Number(order.quote?.customizationCostPaise ?? 0) ||
-        Number(order.quote?.customizationPaise ?? 0) ||
-        Number(pricingSnapshot.customizationCostPaise ?? 0) ||
-        Number(pricingSnapshot.customizationPaise ?? 0) ||
-        extraChargesList.reduce((sum, item) => sum + Number(item.amountPaise || 0), 0);
+    const snapshotCustomizations = Array.isArray(pricingSnapshot.customizations)
+        ? (pricingSnapshot.customizations as Array<Record<string, unknown>>)
+        : [];
+    const quoteCustomizationPaise = snapshotCustomizations.length
+        ? snapshotCustomizations.reduce(
+              (sum, item) =>
+                  sum + Number(item.amountPaise ?? item.costPaise ?? 0),
+              0
+          )
+        : Number(pricingSnapshot.customizationCostPaise ?? 0) ||
+          Number(order.quote?.customizationCostPaise ?? 0) ||
+          extraChargesList.reduce(
+              (sum, item) => sum + Number(item.amountPaise || 0),
+              0
+          );
 
     // Calculate base subtotal and base GST directly from Proforma Invoice:
-    const proformaTotalGstPaise = Number(chain?.proformaInvoice?.gstAmountPaise ?? 0);
+    const proformaTotalGstPaise = Number(
+        chain?.proformaInvoice?.gstAmountPaise ?? 0
+    );
     const proformaTaxablePaise = Number(
         chain?.proformaInvoice?.subtotalPaise ??
-        chain?.proformaInvoice?.taxableValuePaise ??
-        0
+            chain?.proformaInvoice?.taxableValuePaise ??
+            0
     );
     const proformaBaseSubtotalPaise =
         proformaTaxablePaise > quoteCustomizationPaise
@@ -66,10 +96,9 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
               ? proformaTaxablePaise
               : calculatedUnitPricePaise * quantity;
 
-    const customizationGstPaise =
-        quoteCustomizationPaise > 0
-            ? Math.round((quoteCustomizationPaise * 1800) / 10_000)
-            : 0;
+    const customizationGstPaise = Number(
+        (pricingSnapshot.customizationGstAmountPaise as number | undefined) ?? 0
+    );
 
     const proformaBaseGstAmountPaise =
         proformaTotalGstPaise > customizationGstPaise
@@ -98,9 +127,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                     ? Number(pricingSnapshot.gstRateBps) / 100
                     : null;
 
-    const defaultUnitPrice = calculatedUnitPricePaise > 0
-        ? (calculatedUnitPricePaise / 100).toFixed(2)
-        : "";
+    const defaultUnitPrice =
+        calculatedUnitPricePaise > 0
+            ? (calculatedUnitPricePaise / 100).toFixed(2)
+            : "";
     const defaultGstPercent = (
         exactSavedGstRate != null
             ? exactSavedGstRate
@@ -184,6 +214,14 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             },
             onError: (error) => handleClientError(error),
         });
+    const recordWarehouseReceipt =
+        trpc.general.corporatePlatform.recordWarehouseGoodsReceipt.useMutation({
+            onSuccess: async () => {
+                toast.success("Warehouse goods receipt recorded");
+                await refresh();
+            },
+            onError: (error) => handleClientError(error),
+        });
     const issueSettlement =
         trpc.general.corporatePlatform.issueSettlementStatement.useMutation({
             onSuccess: async () => {
@@ -193,44 +231,30 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             onError: (error) => handleClientError(error),
         });
 
-    const [commissionPercent, setCommissionPercent] = useState(
-        chain?.settlementStatement
-            ? String(chain.settlementStatement.commissionPercentBps / 100)
-            : order.quote?.commissionAmountPaise && proformaTaxablePaise > 0
-              ? String(Math.round((order.quote.commissionAmountPaise * 100) / proformaTaxablePaise))
-              : "20"
-    );
-
     const settlementGrossPaidPaise =
-        chain?.customerTaxInvoice?.totalAmountPaise ??
-        order.totalAmountPaise ??
-        802000;
-    const settlementGstEmbeddedPaise =
-        chain?.customerTaxInvoice
-            ? chain.customerTaxInvoice.cgstPaise +
-              chain.customerTaxInvoice.sgstPaise +
-              chain.customerTaxInvoice.igstPaise
-            : order.gstPaise ?? 102000;
+        chain?.customerTaxInvoice?.totalAmountPaise ?? order.totalAmountPaise;
+    const settlementGstEmbeddedPaise = chain?.customerTaxInvoice
+        ? chain.customerTaxInvoice.cgstPaise +
+          chain.customerTaxInvoice.sgstPaise +
+          chain.customerTaxInvoice.igstPaise
+        : order.gstPaise;
     const settlementTaxablePaise = Math.max(
         0,
         settlementGrossPaidPaise - settlementGstEmbeddedPaise
     );
-    const parsedCommissionPercent = Math.max(
-        0,
-        Math.min(100, Number(commissionPercent) || 0)
-    );
-    const calculatedCommissionPaise = Math.round(
-        (settlementTaxablePaise * parsedCommissionPercent) / 100
-    );
+    const calculatedCommissionPaise = order.commissionAmountPaise;
+    const parsedCommissionPercent =
+        settlementTaxablePaise > 0
+            ? Math.round(
+                  (calculatedCommissionPaise * 10_000) / settlementTaxablePaise
+              ) / 100
+            : 0;
+    const commissionGstRatePercent = (order.commissionGstRateBps ?? 0) / 100;
     const calculatedGstOnCommissionPaise = Math.round(
-        (calculatedCommissionPaise * 18) / 100
+        (calculatedCommissionPaise * (order.commissionGstRateBps ?? 0)) / 10_000
     );
-    const calculatedTcsPaise = Math.round(
-        (settlementTaxablePaise * 0.005)
-    );
-    const calculatedTdsPaise = Math.round(
-        (settlementGrossPaidPaise * 0.001)
-    );
+    const calculatedTcsPaise = 0;
+    const calculatedTdsPaise = 0;
     const calculatedNetRemittancePaise = Math.max(
         0,
         settlementTaxablePaise -
@@ -259,6 +283,17 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             deliveryMode,
             paymentTerms,
             deliveryInstructions: deliveryInstructions || null,
+            customizations:
+                toPaise(customizationCharges) > 0
+                    ? [
+                          {
+                              name: "Packaging / Extras",
+                              amountPaise: toPaise(customizationCharges),
+                              taxTreatment: "included_in_product_supply",
+                              displayOrder: 1,
+                          },
+                      ]
+                    : [],
         });
     };
 
@@ -331,7 +366,7 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             optionalNote:
                 chain?.vendorPurchaseOrder?.deliveryMode !==
                 "direct_to_customer"
-                    ? "Not required for warehouse fulfilment"
+                    ? "Warehouse receipt required before dispatch"
                     : undefined,
         },
         {
@@ -422,14 +457,17 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 Fulfillment Order (FO)
                             </h3>
                             <p className="mt-0.5 text-[10px] text-slate-500">
-                                Operational instruction — Generate the fulfillment order to instruct the brand to prepare and ship items.
+                                Operational instruction — Generate the
+                                fulfillment order to instruct the brand to
+                                prepare and ship items.
                             </p>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
                             {chain?.proformaInvoice ? (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700">
                                     <CheckCircle2 className="size-3" />
-                                    Linked to Proforma ({chain.proformaInvoice.invoiceNumber})
+                                    Linked to Proforma (
+                                    {chain.proformaInvoice.invoiceNumber})
                                 </span>
                             ) : order.quote ? (
                                 <span className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-medium text-sky-700">
@@ -468,7 +506,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 }
                             />
                         </CompactField>
-                        <CompactField label="Packaging / Extras charges" suffix="INR">
+                        <CompactField
+                            label="Packaging / Extras charges"
+                            suffix="INR"
+                        >
                             <Input
                                 inputMode="decimal"
                                 placeholder="0.00"
@@ -478,7 +519,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 }
                             />
                         </CompactField>
-                        <CompactField label="GST on packaging / extras" suffix="%">
+                        <CompactField
+                            label="GST on packaging / extras"
+                            suffix="%"
+                        >
                             <Input
                                 type="number"
                                 disabled
@@ -539,31 +583,57 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                         const parsedBaseGst = Number(gstRatePercent) || 0;
                         const parsedExtras = Number(customizationCharges) || 0;
                         const baseSubtotal = parsedUnitPrice * order.quantity;
-                        const baseGstAmt = Math.round((baseSubtotal * parsedBaseGst) / 100);
-                        const extrasGstAmt = Math.round((parsedExtras * 18) / 100);
-                        const grandTotal = baseSubtotal + parsedExtras + baseGstAmt + extrasGstAmt;
+                        const baseGstAmt = Math.round(
+                            (baseSubtotal * parsedBaseGst) / 100
+                        );
+                        const extrasGstAmt = 0;
+                        const grandTotal =
+                            baseSubtotal +
+                            parsedExtras +
+                            baseGstAmt +
+                            extrasGstAmt;
 
                         return (
-                            <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/50 p-3 sm:grid-cols-5 text-xs">
+                            <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/50 p-3 text-xs sm:grid-cols-5">
                                 <div>
-                                    <p className="text-[10px] text-slate-500">Base Subtotal</p>
-                                    <p className="font-semibold text-slate-800">INR {baseSubtotal.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        Base Subtotal
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {baseSubtotal.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-500">Extras / Packing</p>
-                                    <p className="font-semibold text-slate-800">INR {parsedExtras.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        Extras / Packing
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {parsedExtras.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-500">GST on Base ({parsedBaseGst}%)</p>
-                                    <p className="font-semibold text-slate-800">INR {baseGstAmt.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        GST on Base ({parsedBaseGst}%)
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {baseGstAmt.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] text-slate-500">GST on Extras (18%)</p>
-                                    <p className="font-semibold text-slate-800">INR {extrasGstAmt.toFixed(2)}</p>
+                                    <p className="text-[10px] text-slate-500">
+                                        GST on Extras (18%)
+                                    </p>
+                                    <p className="font-semibold text-slate-800">
+                                        INR {extrasGstAmt.toFixed(2)}
+                                    </p>
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-semibold text-emerald-700">Grand Total</p>
-                                    <p className="font-bold text-emerald-700">INR {grandTotal.toFixed(2)}</p>
+                                    <p className="text-[10px] font-semibold text-emerald-700">
+                                        Grand Total
+                                    </p>
+                                    <p className="font-bold text-emerald-700">
+                                        INR {grandTotal.toFixed(2)}
+                                    </p>
                                 </div>
                             </div>
                         );
@@ -591,6 +661,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                         chain.vendorPurchaseOrder.totalAmountPaise
                     }
                     recipientGstin={settings?.gstin}
+                    expectedQuantity={chain.vendorPurchaseOrder.quantity}
+                    expectedUnitRatePaise={
+                        chain.vendorPurchaseOrder.unitSellPricePaise
+                    }
+                    foReference={chain.vendorPurchaseOrder.foNumber}
+                    pendingUpload={chain.brandTaxInvoiceUpload ?? null}
                     onComplete={refresh}
                 />
             ) : null}
@@ -619,37 +695,63 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 </p>
                             ) : null}
                         </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                disabled={reviewBrandInvoice.isPending}
-                                onClick={() =>
-                                    reviewBrandInvoice.mutate({
-                                        invoiceId: chain.brandTaxInvoice.id,
-                                        validationStatus: "validated",
-                                        gstr2bStatus: "matched",
-                                        reviewNotes:
-                                            "Validated against Renivet PO and matched in GSTR-2B.",
-                                    })
-                                }
-                            >
-                                Validate and match
-                            </Button>
-                            <Button
-                                variant="outline"
-                                disabled={reviewBrandInvoice.isPending}
-                                onClick={() =>
-                                    reviewBrandInvoice.mutate({
-                                        invoiceId: chain.brandTaxInvoice.id,
-                                        validationStatus: "rejected",
-                                        gstr2bStatus: "mismatch",
-                                        reviewNotes:
-                                            "Invoice requires correction.",
-                                    })
-                                }
-                            >
-                                Mark mismatch
-                            </Button>
+                        <div className="flex min-w-[280px] flex-col gap-2">
+                            {chain.brandTaxInvoice.validationIssues?.length ? (
+                                <Input
+                                    value={brandInvoiceReviewReason}
+                                    onChange={(event) =>
+                                        setBrandInvoiceReviewReason(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="Reason required to accept mismatch"
+                                />
+                            ) : null}
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    disabled={
+                                        reviewBrandInvoice.isPending ||
+                                        (chain.brandTaxInvoice.validationIssues
+                                            ?.length > 0 &&
+                                            !brandInvoiceReviewReason.trim())
+                                    }
+                                    onClick={() =>
+                                        reviewBrandInvoice.mutate({
+                                            invoiceId: chain.brandTaxInvoice.id,
+                                            validationStatus: "accepted",
+                                            gstr2bStatus: "matched",
+                                            reviewReason:
+                                                brandInvoiceReviewReason ||
+                                                "Validated against the Fulfillment Order snapshot.",
+                                            expectedVersion:
+                                                chain.brandTaxInvoice
+                                                    .transitionVersion,
+                                        })
+                                    }
+                                >
+                                    Validate and match
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    disabled={reviewBrandInvoice.isPending}
+                                    onClick={() =>
+                                        reviewBrandInvoice.mutate({
+                                            invoiceId: chain.brandTaxInvoice.id,
+                                            validationStatus: "rejected",
+                                            gstr2bStatus: "mismatch",
+                                            reviewReason:
+                                                brandInvoiceReviewReason ||
+                                                "Invoice requires correction.",
+                                            expectedVersion:
+                                                chain.brandTaxInvoice
+                                                    .transitionVersion,
+                                        })
+                                    }
+                                >
+                                    Mark mismatch
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -689,6 +791,89 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                 </div>
             ) : null}
 
+            {chain?.vendorPurchaseOrder?.deliveryMode ===
+            "renivet_warehouse" ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 className="font-semibold text-slate-900">
+                        Warehouse goods received
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-600">
+                        Admin confirmation is required before Renivet dispatches
+                        warehouse-mode orders. No GRN file upload is required.
+                    </p>
+                    {chain.warehouseGoodsReceipt ? (
+                        <p className="mt-3 text-xs font-medium text-emerald-700">
+                            Received{" "}
+                            {chain.warehouseGoodsReceipt.receivedQuantity} of{" "}
+                            {chain.vendorPurchaseOrder.quantity} units on{" "}
+                            {chain.warehouseGoodsReceipt.receiptDate} by{" "}
+                            {chain.warehouseGoodsReceipt.receiverName}.
+                        </p>
+                    ) : (
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <Input
+                                placeholder="Warehouse name"
+                                id="warehouse-name"
+                            />
+                            <Input
+                                placeholder="Receiver name"
+                                id="warehouse-receiver"
+                            />
+                            <Input
+                                type="number"
+                                min={1}
+                                defaultValue={
+                                    chain.vendorPurchaseOrder.quantity
+                                }
+                                placeholder="Received quantity"
+                                id="warehouse-quantity"
+                            />
+                            <Input
+                                type="date"
+                                defaultValue={new Date()
+                                    .toISOString()
+                                    .slice(0, 10)}
+                                id="warehouse-date"
+                            />
+                            <Input
+                                placeholder="Delivery reference (optional)"
+                                id="warehouse-reference"
+                            />
+                            <Button
+                                disabled={recordWarehouseReceipt.isPending}
+                                onClick={() => {
+                                    const value = (id: string) =>
+                                        (
+                                            document.getElementById(
+                                                id
+                                            ) as HTMLInputElement
+                                        )?.value.trim();
+                                    recordWarehouseReceipt.mutate({
+                                        orderId: order.id,
+                                        vendorPurchaseOrderId:
+                                            chain.vendorPurchaseOrder!.id,
+                                        warehouseName: value("warehouse-name"),
+                                        receiverName:
+                                            value("warehouse-receiver"),
+                                        receivedQuantity: Number(
+                                            value("warehouse-quantity")
+                                        ),
+                                        receiptDate: value("warehouse-date"),
+                                        deliveryReference:
+                                            value("warehouse-reference") ||
+                                            null,
+                                    });
+                                }}
+                            >
+                                {recordWarehouseReceipt.isPending
+                                    ? "Saving..."
+                                    : "Confirm goods received"}
+                            </Button>
+                        </div>
+                    )}
+                </div>
+            ) : null}
+
             {/* Step 8: Doc 7 — Settlement Waterfall (Renivet -> Brand) */}
             <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 pb-4">
@@ -704,10 +889,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             ) : null}
                         </div>
                         <h3 className="mt-1 text-base font-semibold text-slate-900">
-                            Remit-to-Brand Settlement Statement (Commission + TCS + TDS)
+                            Remit-to-Brand Settlement Statement
                         </h3>
                         <p className="mt-0.5 text-xs text-slate-500">
-                            Select the platform commission percentage to generate the settlement waterfall statement for this order.
+                            Uses the agreed commission and commission GST saved
+                            on this order. Reseller settlements do not apply
+                            marketplace TCS or 194-O by default.
                         </p>
                     </div>
 
@@ -725,42 +912,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                 </div>
 
                 <div className="mt-4 grid gap-6 lg:grid-cols-12">
-                    {/* Left Controls: Commission Selector */}
+                    {/* Left Controls: Settlement source */}
                     <div className="space-y-4 lg:col-span-4">
-                        <div>
-                            <label className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                                Platform Commission (%)
-                            </label>
-                            <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                {[5, 10, 15, 20, 25].map((pct) => (
-                                    <button
-                                        key={pct}
-                                        type="button"
-                                        onClick={() => setCommissionPercent(String(pct))}
-                                        className={`rounded-md px-2.5 py-1 text-xs font-semibold transition-all ${
-                                            Number(commissionPercent) === pct
-                                                ? "bg-emerald-700 text-white shadow-sm"
-                                                : "border border-slate-200 bg-slate-50 text-slate-700 hover:bg-slate-100"
-                                        }`}
-                                    >
-                                        {pct}%
-                                    </button>
-                                ))}
-                            </div>
-                            <div className="mt-2.5">
-                                <Input
-                                    type="number"
-                                    min="0"
-                                    max="100"
-                                    step="0.5"
-                                    placeholder="Enter commission percentage"
-                                    value={commissionPercent}
-                                    onChange={(e) => setCommissionPercent(e.target.value)}
-                                />
-                            </div>
-                            <p className="mt-1 text-[11px] text-slate-400">
-                                Standard corporate commission is usually between 10% and 20%.
-                            </p>
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+                            Commission and GST are locked from the corporate
+                            order snapshot. Correct the order before issuing a
+                            settlement if these amounts are wrong.
                         </div>
 
                         <Button
@@ -769,15 +926,17 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             onClick={() =>
                                 issueSettlement.mutate({
                                     orderId: order.id,
-                                    commissionPercent: parsedCommissionPercent,
                                 })
                             }
-                            disabled={issueSettlement.isPending}
+                            disabled={
+                                issueSettlement.isPending ||
+                                Boolean(chain?.settlementStatement)
+                            }
                         >
                             {issueSettlement.isPending
                                 ? "Generating..."
                                 : chain?.settlementStatement
-                                  ? "Update Settlement Statement"
+                                  ? "Settlement Already Issued"
                                   : "Generate Settlement Statement"}
                         </Button>
                     </div>
@@ -788,39 +947,62 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             Live Waterfall Calculation Preview
                         </div>
                         <div className="divide-y divide-slate-100 text-xs">
-                            <div className="flex items-center justify-between px-4 py-2 bg-white">
-                                <span className="text-slate-600">Corporate buyer paid (incl. GST)</span>
+                            <div className="flex items-center justify-between bg-white px-4 py-2">
+                                <span className="text-slate-600">
+                                    Corporate buyer paid (incl. GST)
+                                </span>
                                 <span className="font-semibold text-slate-900">
-                                    ₹{(settlementGrossPaidPaise / 100).toFixed(2)}
+                                    ₹
+                                    {(settlementGrossPaidPaise / 100).toFixed(
+                                        2
+                                    )}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between px-4 py-2">
-                                <span className="text-slate-600">- GST embedded in sale (brand&apos;s liability)</span>
+                                <span className="text-slate-600">
+                                    - GST embedded in sale (brand&apos;s
+                                    liability)
+                                </span>
                                 <span className="font-medium text-rose-600">
-                                    -₹{(settlementGstEmbeddedPaise / 100).toFixed(2)}
+                                    -₹
+                                    {(settlementGstEmbeddedPaise / 100).toFixed(
+                                        2
+                                    )}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between bg-emerald-50/50 px-4 py-2 font-semibold text-emerald-950">
                                 <span>= Taxable Value</span>
-                                <span>₹{(settlementTaxablePaise / 100).toFixed(2)}</span>
+                                <span>
+                                    ₹{(settlementTaxablePaise / 100).toFixed(2)}
+                                </span>
                             </div>
-                            <div className="flex items-center justify-between px-4 py-2 bg-white">
+                            <div className="flex items-center justify-between bg-white px-4 py-2">
                                 <span className="text-slate-600">
-                                    - Platform Commission ({parsedCommissionPercent}% of ₹{(settlementTaxablePaise / 100).toFixed(2)})
+                                    - Platform Commission (
+                                    {parsedCommissionPercent}% of ₹
+                                    {(settlementTaxablePaise / 100).toFixed(2)})
                                 </span>
                                 <span className="font-medium text-rose-600">
-                                    -₹{(calculatedCommissionPaise / 100).toFixed(2)}
+                                    -₹
+                                    {(calculatedCommissionPaise / 100).toFixed(
+                                        2
+                                    )}
                                 </span>
                             </div>
                             <div className="flex items-center justify-between px-4 py-2">
                                 <span className="text-slate-600">
-                                    - GST on commission (18% under SAC 9985)
+                                    - GST on commission (
+                                    {commissionGstRatePercent}% as saved on
+                                    order)
                                 </span>
                                 <span className="font-medium text-rose-600">
-                                    -₹{(calculatedGstOnCommissionPaise / 100).toFixed(2)}
+                                    -₹
+                                    {(
+                                        calculatedGstOnCommissionPaise / 100
+                                    ).toFixed(2)}
                                 </span>
                             </div>
-                            <div className="flex items-center justify-between px-4 py-2 bg-white">
+                            <div className="flex items-center justify-between bg-white px-4 py-2">
                                 <span className="text-slate-600">
                                     - TCS (0.5% of Taxable Value u/s 52)
                                 </span>
@@ -841,7 +1023,10 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                     = Net Remittance to Brand
                                 </span>
                                 <span className="text-base font-bold text-emerald-700">
-                                    ₹{(calculatedNetRemittancePaise / 100).toFixed(2)}
+                                    ₹
+                                    {(
+                                        calculatedNetRemittancePaise / 100
+                                    ).toFixed(2)}
                                 </span>
                             </div>
                         </div>

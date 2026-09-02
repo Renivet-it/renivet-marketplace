@@ -1,0 +1,284 @@
+schema_version: "1.0"
+task:
+    id: REN-184
+    title: "[Corporate Order] Replace GSTIN-prefix-only place-of-supply proxy with actual delivery/registration address data"
+    source: linear
+    branch: ayanganguly333/corporate-order-qc
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-184/corporate-order-replace-gstin-prefix-only-place-of-supply-proxy-with
+        priority: Medium
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - GST classification affects financial documents and statutory tax reporting.
+        - The change spans persisted address snapshots, tax calculation call sites, PDF rendering, and multiple order legs.
+        - Finance/CA policy is required for the commission/service-invoice place-of-supply authority.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-184 description, updates, and relations
+        - All GSTIN prefix, gstStateCode, placeOfSupply, deliveryState, and address tax-split call sites
+        - Corporate order/address schemas, snapshots, FO, customer invoice, commission invoice, and proforma routes
+        - Existing GST rounding/component helpers and document templates
+    excluded_areas:
+        - Automated geocoding or address verification
+        - New statutory GST rate policy
+        - General services place-of-supply model beyond the commission decision boundary
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: [INT-001, INT-002]
+    security_boundaries: [SEC-001]
+    state_transitions:
+        - address_entered -> place_of_supply_snapshotted
+        - place_of_supply_snapshotted -> document_issued
+        - address_changed_after_issue -> prior_snapshot_unchanged
+dependencies:
+    - id: DEP-001
+      name: Corporate delivery-address capture
+      purpose: Supplies the ship-to state for goods place of supply.
+      description: Existing address helpers and snapshots carry delivery state in some paths; the order persistence contract must make it explicit.
+      status: resolved
+    - id: DEP-002
+      name: GST calculation and document templates
+      purpose: Consume the resolved state and preserve exact CGST/SGST/IGST totals.
+      description: All identified PDF/document call sites must use the shared resolver.
+      status: resolved
+    - id: DEP-003
+      name: Finance/CA place-of-supply policy for commission/service invoice
+      purpose: Determines the authoritative state source for the Renivet commission leg.
+      description: Goods delivery state must not be assumed to govern the commission/service invoice.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Determine goods place of supply from actual delivery/ship-to state, not solely from GSTIN prefixes.
+      type: explicit
+    - id: REQ-002
+      description: Keep billing, registered, and delivery addresses distinct and persist the place-of-supply source in issued snapshots.
+      type: explicit
+    - id: REQ-003
+      description: Replace all GSTIN-prefix-only CGST/SGST/IGST tax-split call sites with one shared leg-aware resolver.
+      type: explicit
+    - id: REQ-004
+      description: Preserve exact GST paise reconciliation, rounded GST amounts, and independent tax treatment for each corporate leg.
+      type: explicit
+    - id: REQ-005
+      description: Fail closed on missing/ambiguous state unless an approved fallback is explicitly recorded; issued snapshots remain immutable after address edits.
+      type: inferred
+    - id: REQ-006
+      description: Do not change shipping-charge classification or invent tax lines for uncharged shipping.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      description: Customer GSTIN state differs from delivery state; goods tax uses IGST based on delivery state.
+      requirement_ids: [REQ-001, REQ-003, REQ-004]
+    - id: SCN-002
+      description: Registration and delivery are in the same state; goods tax remains CGST plus SGST.
+      requirement_ids: [REQ-001, REQ-004]
+    - id: SCN-003
+      description: Brand→Renivet and Renivet→customer legs resolve tax independently from their own delivery/registration context.
+      requirement_ids: [REQ-001, REQ-003, REQ-004]
+    - id: SCN-004
+      description: Missing or conflicting state is rejected or uses only an approved recorded fallback; no GSTIN-prefix default is used.
+      requirement_ids: [REQ-002, REQ-005]
+    - id: SCN-005
+      description: Billing and registered state differ from delivery state; documents show distinct values and use delivery for goods place of supply.
+      requirement_ids: [REQ-002, REQ-006]
+    - id: SCN-006
+      description: Address changes after issuance do not mutate the issued place-of-supply snapshot or tax split.
+      requirement_ids: [REQ-002, REQ-005]
+    - id: SCN-007
+      description: Commission/service invoice uses the Finance-approved authority rather than inheriting goods delivery state.
+      requirement_ids: [REQ-003, REQ-004]
+invariants:
+    - id: INV-001
+      description: Goods tax split is determined by the recorded actual place of supply, never a GSTIN prefix alone.
+    - id: INV-002
+      description: Billing, registration, ship-to, and place-of-supply values remain distinct and traceable.
+    - id: INV-003
+      description: Each leg uses its own supplier/recipient/place-of-supply context and exact paise reconciliation.
+    - id: INV-004
+      description: Issued place-of-supply snapshots are immutable and stable after later address edits.
+    - id: INV-005
+      description: Missing or ambiguous place-of-supply data cannot silently produce a fabricated tax split.
+flows:
+    - id: FLOW-001
+      description: Capture delivery/billing/registration addresses -> resolve and snapshot place of supply -> calculate tax components -> render documents.
+      state_transitions:
+          [
+              address_entered -> place_of_supply_snapshotted,
+              place_of_supply_snapshotted -> document_issued,
+          ]
+    - id: FLOW-002
+      description: Audit every tax-split call site and route each leg through the shared resolver.
+      state_transitions: [prefix_heuristic -> explicit_place_of_supply]
+integrations:
+    - id: INT-001
+      system: Corporate database and document snapshots
+      purpose: Persist delivery state, source, and immutable tax component context.
+      failure_mode: Missing delivery state uses the approved recorded billing/registered fallback; no hard-coded state is used.
+    - id: INT-002
+      system: Corporate PDF/document generation
+      purpose: Render consistent Bill To, Ship To, registered address, Place of Supply, and tax components.
+      failure_mode: A route with missing delivery state records the approved fallback source rather than defaulting to a GSTIN prefix.
+personas:
+    - id: PER-001
+      role: corporate_order_admin
+      applicability: Captures/corrects delivery data and issues documents.
+    - id: PER-002
+      role: finance_or_ca_reviewer
+      applicability: Confirms commission/service place-of-supply authority and any fallback policy.
+    - id: PER-003
+      role: corporate_customer
+      applicability: Supplies billing, registration, and delivery addresses.
+security_boundaries:
+    - id: SEC-001
+      description: Address and tax snapshots are order-scoped, access-controlled, and cannot be changed by an unrelated tenant or after issuance.
+business_rules:
+    - id: BR-001
+      description: For goods, place of supply is generally where movement terminates; delivery/ship-to state is the primary source.
+      source: Linear REN-184 expected behavior and Section 10 reference.
+    - id: BR-002
+      description: Registration state is not a substitute for delivery state when the two differ.
+      source: Linear REN-184 business problem and acceptance criteria.
+    - id: BR-003
+      description: Commission/service invoice place of supply requires Finance/CA confirmation and must not inherit the goods rule by assumption.
+      source: Linear REN-184 update and REN-186 dependency.
+decisions:
+    - id: DEC-001
+      question: What is the Finance/CA-approved place-of-supply authority for the Renivet commission/service invoice?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Compare Renivet’s registered GST state with the brand’s registered GST state for commission GST; do not inherit customer delivery state.
+      basis: User approved this rule for the current implementation.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-002
+      question: When delivery state is absent, may a verified billing or registered address be used as fallback?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: When delivery state is missing, use verified billing/registered state, persist the fallback source, and do not block document generation.
+      basis: User explicitly approved a non-blocking fallback.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Shared resolver must map explicit delivery state and distinguish registration/billing state.
+      scenarios: [SCN-001, SCN-002, SCN-004]
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Every identified PDF/document tax split must consume the resolver per leg.
+      scenarios: [SCN-003, SCN-007]
+    - id: TEXP-003
+      category: regression
+      classification: REQUIRED
+      reason: Same-state behavior, GST paise reconciliation, and shipping classification must remain unchanged.
+      scenarios: [SCN-002, SCN-005]
+    - id: TEXP-004
+      category: security
+      classification: REQUIRED
+      reason: Address/tax snapshots must remain order-scoped and immutable after issuance.
+      scenarios: [SCN-006]
+    - id: TEXP-005
+      category: ui_ux
+      classification: REQUIRED
+      reason: Documents must distinguish Bill To, Ship To, registration address, and Place of Supply.
+      scenarios: [SCN-005]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren184_critic
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - id: CRIT-001
+          classification: MINOR
+          summary: Finance/CA authority and missing-state fallback decisions are unresolved.
+        - id: CRIT-002
+          classification: MAJOR
+          summary: Multiple GSTIN-prefix-only tax split paths remain.
+        - id: CRIT-003
+          classification: MAJOR
+          summary: Missing/ambiguous states silently use unsafe defaults.
+        - id: CRIT-004
+          classification: MAJOR
+          summary: Place of supply is not persisted immutably on issued documents.
+        - id: CRIT-005
+          classification: MAJOR
+          summary: Per-leg tax contexts and finance export can disagree.
+        - id: CRIT-006
+          classification: MAJOR
+          summary: Required resolver, fail-closed, immutability, and route coverage tests are absent.
+        - id: CRIT-007
+          classification: MINOR
+          summary: Document model does not expose registered and ship-to addresses distinctly.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+traceability:
+    requirement_to_scenarios:
+        - {
+              requirement_id: REQ-001,
+              scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-004],
+          }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-004, SCN-005, SCN-006] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-001, SCN-003, SCN-007] }
+        - {
+              requirement_id: REQ-004,
+              scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-007],
+          }
+        - { requirement_id: REQ-005, scenario_ids: [SCN-004, SCN-006] }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-005] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-003] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002, INV-005] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-002, INV-003] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-004] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-001, INV-003] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001, TEXP-003] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003, TEXP-005] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-002] }

@@ -25,6 +25,10 @@ import {
     corporateTaxInvoices,
 } from "@/lib/db/schema";
 import { hsnMaster } from "@/lib/db/schema/finance-compliance";
+import {
+    resolveCorporatePlaceOfSupply,
+    splitCorporateGstByPlaceOfSupply,
+} from "@/lib/finance/corporate-place-of-supply";
 import { razorpay } from "@/lib/razorpay";
 import { resend } from "@/lib/resend";
 import {
@@ -249,23 +253,23 @@ class CorporateOrderService {
             order.quote?.profile?.gstNumber?.trim() ??
             order.gstNumber?.trim() ??
             "";
-        const sellerStateCode = gstStateCode(sellerGstin);
-        const buyerStateCode = gstStateCode(buyerGstin);
         const billingAddress = order.quote?.profile?.billingAddress as
             | Record<string, unknown>
             | undefined;
-        const sellerState = brandDetails?.state?.trim().toLowerCase();
-        const buyerState =
-            typeof billingAddress?.state === "string"
-                ? billingAddress.state.trim().toLowerCase()
-                : "";
-        const isIntraState =
-            sellerStateCode && buyerStateCode
-                ? sellerStateCode === buyerStateCode
-                : sellerState && buyerState
-                  ? sellerState === buyerState
-                  : true;
-        const gstHalf = Math.round(order.gstPaise / 2);
+        const placeOfSupply = resolveCorporatePlaceOfSupply({
+            deliveryState: order.deliveryState,
+            billingState:
+                typeof billingAddress?.state === "string"
+                    ? billingAddress.state
+                    : null,
+            registeredState: buyerGstin ? gstStateCode(buyerGstin) : null,
+        });
+        const taxSplit = splitCorporateGstByPlaceOfSupply({
+            taxableValuePaise: order.subtotalPaise + order.customizationPaise,
+            gstRateBps: order.gstRateBps,
+            supplierStateCode: gstStateCode(documentSettings.gstin),
+            placeOfSupplyStateCode: placeOfSupply.stateCode,
+        });
 
         const invoiceDate = new Date();
         const invoiceNumber = await nextBrandInvoiceNumber({
@@ -290,9 +294,12 @@ class CorporateOrderService {
                 dueDate: dueDate.toISOString().slice(0, 10),
                 taxableValuePaise:
                     order.subtotalPaise + order.customizationPaise,
-                cgstPaise: isIntraState ? gstHalf : 0,
-                sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
-                igstPaise: isIntraState ? 0 : order.gstPaise,
+                cgstPaise: taxSplit.cgstPaise,
+                sgstPaise: taxSplit.sgstPaise,
+                igstPaise: taxSplit.igstPaise,
+                placeOfSupplyStateCode: placeOfSupply.stateCode || null,
+                placeOfSupplyStateName: placeOfSupply.stateName || null,
+                placeOfSupplySource: placeOfSupply.source,
                 totalAmountPaise: order.totalPaise,
                 advanceAdjustmentPaise: order.advancePaidPaise,
                 paymentTerms: "Net 15",
@@ -300,8 +307,7 @@ class CorporateOrderService {
                     ? {
                           bankName: documentSettings.bankName,
                           bankAccountName: documentSettings.bankAccountName,
-                          bankAccountNumber:
-                              documentSettings.bankAccountNumber,
+                          bankAccountNumber: documentSettings.bankAccountNumber,
                           bankIfscCode: documentSettings.bankIfscCode,
                           bankBranch: documentSettings.bankBranch,
                       }
@@ -371,6 +377,7 @@ class CorporateOrderService {
             mobileNumber: parsed.mobileNumber,
             gstNumber: parsed.gstNumber ?? null,
             deliveryCountry: deliveryDetails.deliveryCountry,
+            deliveryState: deliveryDetails.deliveryState || null,
             deliveryCity: deliveryDetails.deliveryCity,
             deliveryPincode: deliveryDetails.deliveryPincode,
             deliveryAddress: deliveryDetails.deliveryAddress,
@@ -386,6 +393,7 @@ class CorporateOrderService {
                 mobileNumber: parsed.mobileNumber,
                 gstNumber: parsed.gstNumber ?? null,
                 deliveryCountry: deliveryDetails.deliveryCountry,
+                deliveryState: deliveryDetails.deliveryState,
                 deliveryCity: deliveryDetails.deliveryCity,
                 deliveryPincode: deliveryDetails.deliveryPincode,
                 deliveryAddress: deliveryDetails.deliveryAddress,
@@ -808,7 +816,9 @@ class CorporateOrderService {
             updated.id,
             advancePayment.id
         );
-        await corporateDocumentService.ensureProformaInvoiceForOrder(updated.id);
+        await corporateDocumentService.ensureProformaInvoiceForOrder(
+            updated.id
+        );
 
         const settings = await corporateOrderQueries.getOrderSettings();
         const customerHref = getAbsoluteURL(
@@ -1080,35 +1090,32 @@ class CorporateOrderService {
 
         const nextStatus =
             order.status === "inquiry_received" ? "under_review" : order.status;
-        const updated = await corporateOrderQueries.updateCorporateOrder(
+        const assigned = await corporateOrderQueries.updateCorporateOrder(
             order.id,
-            {
-                brandId: brand.id,
-                status: nextStatus,
-            }
+            { brandId: brand.id }
         );
-        if (!updated) {
+        if (!assigned) {
             throw new TRPCError({
                 code: "INTERNAL_SERVER_ERROR",
                 message: "Failed to assign the supplier brand",
             });
         }
 
-        await corporateOrderQueries.createStatusHistory({
-            corporateOrderId: order.id,
-            fromStatus: order.status,
-            toStatus: nextStatus,
-            changedByUserId,
-            note:
-                parsed.note ||
-                `Supplier brand assigned: ${brand.name}`,
-            metadata: {
-                action: "brand_assigned",
-                brandId: brand.id,
-                brandName: brand.name,
-                previousBrandId: order.brandId ?? null,
-            },
-        });
+        let updated = assigned;
+        if (nextStatus !== order.status) {
+            updated = await this.updateStatus({
+                corporateOrderId: order.id,
+                toStatus: "under_review",
+                changedByUserId,
+                note: parsed.note || `Supplier brand assigned: ${brand.name}`,
+                metadata: {
+                    action: "brand_assigned",
+                    brandId: brand.id,
+                    brandName: brand.name,
+                    previousBrandId: order.brandId ?? null,
+                },
+            });
+        }
 
         return { order: updated, brand };
     }
@@ -1118,6 +1125,7 @@ class CorporateOrderService {
         toStatus: CorporateOrderWorkflowStatus;
         changedByUserId: string;
         note?: string;
+        metadata?: Record<string, unknown>;
     }) {
         const order = await corporateOrderQueries.getOrderById(
             input.corporateOrderId
@@ -1129,7 +1137,15 @@ class CorporateOrderService {
             });
         }
 
-        if (["ready_for_dispatch", "dispatched"].includes(input.toStatus)) {
+        if (order.status === input.toStatus) {
+            return order;
+        }
+
+        if (
+            ["ready_for_dispatch", "dispatched", "delivered"].includes(
+                input.toStatus
+            )
+        ) {
             const chain = order.documentChain;
             if (!chain?.vendorPurchaseOrder) {
                 throw new TRPCError({
@@ -1149,9 +1165,40 @@ class CorporateOrderService {
                         "Issue the delivery challan before direct dispatch",
                 });
             }
+            if (
+                chain.vendorPurchaseOrder.deliveryMode === "renivet_warehouse"
+            ) {
+                const receipt = chain.warehouseGoodsReceipt;
+                if (
+                    !receipt ||
+                    receipt.status !== "accepted" ||
+                    !receipt.isCurrentAccepted ||
+                    receipt.receivedQuantity <
+                        chain.vendorPurchaseOrder.quantity
+                ) {
+                    throw new TRPCError({
+                        code: "PRECONDITION_FAILED",
+                        message:
+                            "Warehouse dispatch requires an accepted goods-received confirmation for the full Fulfillment Order quantity",
+                    });
+                }
+            }
+            const latestQc =
+                await corporateOrderQueries.getLatestQcSubmissionForOrder(
+                    order.id
+                );
+            if (latestQc?.status !== "approved") {
+                throw new TRPCError({
+                    code: "PRECONDITION_FAILED",
+                    message: "QC approval is required before dispatch",
+                });
+            }
         }
 
-        if (input.toStatus === "dispatched" && order.totalPaise >= 5_000_000) {
+        if (
+            ["dispatched", "delivered"].includes(input.toStatus) &&
+            order.totalPaise >= 5_000_000
+        ) {
             const chain = order.documentChain;
             const deliveryChallan = chain?.deliveryChallan;
             const eWayBill =
@@ -1169,17 +1216,18 @@ class CorporateOrderService {
             }
         }
 
-        const updated = await corporateOrderQueries.updateCorporateOrder(
-            order.id,
-            {
-                status: input.toStatus,
-            }
-        );
+        const updated =
+            await corporateOrderQueries.updateCorporateOrderStatusIfCurrent(
+                order.id,
+                order.status,
+                input.toStatus
+            );
 
         if (!updated) {
             throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to update corporate order status",
+                code: "CONFLICT",
+                message:
+                    "Corporate order status changed; refresh and retry the transition",
             });
         }
 
@@ -1191,6 +1239,7 @@ class CorporateOrderService {
             note:
                 input.note ??
                 `Status changed to ${convertValueToLabel(input.toStatus)}`,
+            metadata: input.metadata,
         });
 
         if (["ready_for_dispatch", "dispatched"].includes(input.toStatus)) {

@@ -1,0 +1,368 @@
+schema_version: "1.0"
+task:
+    id: REN-182
+    title: "[Corporate Order] Brand Tax Invoice validation must block on material discrepancies, not just flag them"
+    source: linear
+    branch: ayanganguly333/corporate-order-qc
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-182/corporate-order-brand-tax-invoice-validation-must-block-on-material
+        priority: High
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Supplier tax invoices are financial records that may influence settlement and reporting.
+        - The task changes enforcement, review/override authority, and financial data state transitions.
+        - Schema, legacy-data, brand-upload, authorization, and downstream consumer boundaries are involved.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-182 description, relations, and comments
+        - Brand tax-invoice creation, validation, review, schema, and document download route
+        - Brand-assigned upload path and its fabricated FO-derived values
+        - Fulfillment Order source fields and settlement issuance/read paths
+        - TRPC authorization boundaries and existing document-chain test script
+    excluded_areas:
+        - OCR/extraction or visual analysis of uploaded invoice files
+        - Customer tax-invoice calculation and unrelated ledger/payout systems
+        - Finance/CA legal interpretation beyond the required override policy decision
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: [INT-001, INT-002]
+    security_boundaries: [SEC-001, SEC-002]
+    state_transitions:
+        - submitted -> accepted
+        - submitted_with_material_discrepancy -> held
+        - held -> accepted
+        - held -> rejected
+    related_tests:
+        [TEXP-001, TEXP-002, TEXP-003, TEXP-004, TEXP-005, TEXP-006, TEXP-007]
+    uncertainties:
+        - Existing Fulfillment Orders without reliable snapshots block new acceptance until reissued with a snapshot.
+dependencies:
+    - id: DEP-001
+      name: Fulfillment Order source data
+      purpose: Supplies the authoritative order/brand/quantity/rate/amount/reference comparison values.
+      description: New/reissued FOs persist the full financial snapshot; legacy FOs without one block new acceptance rather than use invented defaults.
+      status: resolved
+    - id: DEP-002
+      name: Finance/CA override policy
+      purpose: Determines who may override a material discrepancy and its effect on financial use.
+      description: This is a financial-control decision, not an engineering default.
+      status: resolved
+    - id: DEP-003
+      name: Operations rollout decision
+      purpose: Determines immediate enforcement or a controlled feature-flag transition with notice.
+      description: Linear explicitly requires that the tightening is not shipped silently.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Validate supplier GSTIN, recipient GSTIN, HSN, quantity, unit rate, taxable value, GST, arithmetic, FO reference, and total against the authoritative assigned order/FO data.
+      type: explicit
+    - id: REQ-002
+      description: A material discrepancy never silently becomes accepted, validated, or usable as a financial input.
+      type: explicit
+    - id: REQ-003
+      description: Persist every failed validation check and expose a clear error/status to the submitting user and authorized reviewer.
+      type: explicit
+    - id: REQ-004
+      description: An order admin with MANAGE_ORDERS may accept or reject a held invoice; accepting a mismatch requires an attributed mandatory reason.
+      type: explicit
+    - id: REQ-005
+      description: Settlement/reporting consumers explicitly exclude held/rejected invoices and admit only statuses permitted by the approved policy.
+      type: explicit
+    - id: REQ-006
+      description: Brand-file upload stays pending review until an admin captures/reviews structured invoice facts; it does not fabricate invoice values from the FO.
+      type: inferred
+    - id: REQ-007
+      description: Existing authorization, brand membership, tenant isolation, historical readability, and uploaded-file access controls remain intact.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      description: A fully matching structured invoice is stored as accepted and remains available to permitted downstream consumers.
+      requirement_ids: [REQ-001, REQ-002, REQ-003, REQ-005]
+    - id: SCN-002
+      description: An invoice whose taxable value plus GST does not equal its total is held/rejected with the arithmetic failure recorded.
+      requirement_ids: [REQ-001, REQ-002, REQ-003]
+    - id: SCN-003
+      description: An invoice with mismatched supplier or recipient GSTIN is held/rejected with every applicable failed check recorded.
+      requirement_ids: [REQ-001, REQ-002, REQ-003]
+    - id: SCN-004
+      description: An invoice with incorrect HSN, FO reference, quantity, rate, taxable value, GST, or total is held/rejected and cannot be used downstream.
+      requirement_ids: [REQ-001, REQ-002, REQ-003, REQ-005]
+    - id: SCN-005
+      description: An order admin accepts a held invoice with a reason; the original discrepancy evidence and actor/time audit record remain intact.
+      requirement_ids: [REQ-002, REQ-003, REQ-004, REQ-005]
+    - id: SCN-006
+      description: An unauthorized, cross-brand, or missing-reason held-invoice acceptance attempt is rejected without changing invoice state.
+      requirement_ids: [REQ-004, REQ-007]
+    - id: SCN-007
+      description: A brand-file upload with no extracted structured data remains pending review until admin capture; it is never falsely validated from copied FO values.
+      requirement_ids: [REQ-002, REQ-006, REQ-007]
+    - id: SCN-008
+      description: A pre-existing pending/validated/rejected record remains readable after migration; legacy validated records require fresh review and are not newly trusted.
+      requirement_ids: [REQ-002, REQ-003, REQ-007]
+    - id: SCN-009
+      description: Same-key retry returns one candidate; concurrent corrected uploads leave one current accepted invoice; held/rejected replacements preserve the predecessor; a superseded candidate cannot be accepted; and a file-only retry recovers safely.
+      requirement_ids: [REQ-002, REQ-003, REQ-007]
+    - id: SCN-010
+      description: FO snapshot tax is calculated deterministically from unit buy price, quantity, GST rate, and GSTIN state codes; invoice tax components must match exactly in paise.
+      requirement_ids: [REQ-001, REQ-003]
+invariants:
+    - id: INV-001
+      description: A material validation discrepancy cannot enter financial settlement/reporting as a trusted invoice without explicit admin acceptance with a reason.
+    - id: INV-002
+      description: Validation findings, source comparison reference, decision audit evidence, and supersession linkage are preserved and cannot be erased by normal review.
+    - id: INV-003
+      description: Validation uses the immutable issued FO snapshot; per FO there is at most one pending upload, one held captured invoice, and one current accepted invoice, with capture atomically closing the source upload.
+    - id: INV-004
+      description: No server path fabricates invoice facts from FO data while representing them as brand-submitted data.
+    - id: INV-005
+      description: Authorization and tenant/brand boundaries apply to submission, review, override, download, and downstream reads.
+flows:
+    - id: FLOW-001
+      description: Structured supplier invoice submission -> authoritative FO/order comparison -> accepted or held/rejected record -> restricted consumer read.
+      state_transitions:
+          [submitted -> accepted, submitted_with_material_discrepancy -> held]
+    - id: FLOW-002
+      description: Held invoice -> order-admin reasoned acceptance or rejection, retaining original findings and audit evidence.
+      state_transitions: [held -> accepted, held -> rejected]
+    - id: FLOW-003
+      description: Brand file upload -> pending admin structured capture -> validation -> accepted/held/rejected, without fabricated facts.
+      state_transitions:
+          [
+              submitted -> pending_review,
+              pending_review -> accepted,
+              pending_review -> held,
+          ]
+integrations:
+    - id: INT-001
+      system: Corporate database
+      purpose: Persist invoices, validation results, state transitions, reviewer attribution, and legacy-compatible migration.
+      failure_mode: Transaction rollback leaves no partially trusted invoice state.
+    - id: INT-002
+      system: Uploaded invoice-file provider
+      purpose: Store and serve the supplier-uploaded evidence file under existing access control.
+      failure_mode: File upload failure prevents invoice submission; no document row is trusted without the associated evidence.
+personas:
+    - id: PER-001
+      role: brand_member
+      applicability: Uploads the supplier invoice for an assigned order.
+    - id: PER-002
+      role: corporate_operations_admin
+      applicability: Captures/reviews structured invoice data under existing order permissions.
+    - id: PER-003
+      role: corporate_order_admin_with_manage_orders
+      applicability: Performs a held-invoice acceptance with an attributed mandatory reason.
+security_boundaries:
+    - id: SEC-001
+      description: Brand members can submit only for their assigned brand/order and must not access other brands' invoice data or files.
+    - id: SEC-002
+      description: Held-invoice acceptance requires MANAGE_ORDERS authorization and immutable actor/time/reason evidence.
+business_rules:
+    - id: BR-001
+      description: Material discrepancies must block/hold acceptance rather than merely be tagged for later review.
+      source: Linear REN-182 expected behavior and acceptance criteria.
+    - id: BR-002
+      description: OCR/extraction of uploaded invoice files is out of scope; enforcement is based on captured structured data.
+      source: Linear REN-182 out of scope.
+    - id: BR-003
+      description: The release must be communicated to Operations and must not silently tighten live-brand behavior.
+      source: Linear REN-182 rollback/release notes.
+decisions:
+    - id: DEC-001
+      question: Should material-discrepancy submissions be retained as held records or rejected without creating a financial invoice row?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Retain as held, preserving evidence while excluding it from financial use.
+      basis: Supports correction/audit without silent financial acceptance.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-002
+      question: Which permission/role can accept a held invoice, and may that acceptance admit it to settlement/reporting?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Existing MANAGE_ORDERS admin authority; require reason, actor, time, and permit financial use only after acceptance.
+      basis: Ayan confirmed admin accepts/rejects uploaded tax invoices and asked for a mandatory mismatch-acceptance reason.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-003
+      question: How should file-only brand uploads be handled without OCR?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Store as pending review until admin structured capture, rather than copying FO values into an apparently validated invoice.
+      basis: Ayan confirmed brand or admin uploads and admin accepts/rejects; existing path cannot compare facts found only inside a file.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-004
+      question: Is enforcement immediate or feature-flagged for a defined transition period with Ops notice?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Enforce on release with an Operations release note.
+      basis: Ayan instructed implementation; Linear requires the tightening is not shipped silently.
+      confidence: medium
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: integration
+      classification: REQUIRED
+      reason: A fully matching invoice must validate and normal permitted consumer behavior must remain available.
+      scenarios: [SCN-001]
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Arithmetic and GSTIN mismatches must be held/rejected, record all issues, and not become trusted.
+      scenarios: [SCN-002, SCN-003]
+    - id: TEXP-003
+      category: integration
+      classification: REQUIRED
+      reason: HSN, FO reference, quantity, rate, taxable value, GST, and total mismatches need fail-closed coverage.
+      scenarios: [SCN-004]
+    - id: TEXP-004
+      category: security
+      classification: REQUIRED
+      reason: Override authorization, mandatory reason, brand isolation, and file/document access require direct verification.
+      scenarios: [SCN-005, SCN-006, SCN-007]
+    - id: TEXP-005
+      category: regression
+      classification: REQUIRED
+      reason: Historical records and downstream settlement/reporting selectors must not gain untrusted invoice use after migration.
+      scenarios: [SCN-004, SCN-008]
+    - id: TEXP-006
+      category: integration
+      classification: REQUIRED
+      reason: Verify idempotent upload retry, concurrent correction/supersession, stale-review rejection, and file-upload/database recovery.
+      scenarios: [SCN-009]
+    - id: TEXP-007
+      category: unit
+      classification: REQUIRED
+      reason: Verify taxable-value rounding and exact intra-state CGST/SGST versus inter-state IGST component comparison.
+      scenarios: [SCN-010]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren182_last_gate
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+traceability:
+    requirement_to_scenarios:
+        - {
+              requirement_id: REQ-001,
+              scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-004, SCN-010],
+          }
+        - {
+              requirement_id: REQ-002,
+              scenario_ids:
+                  [
+                      SCN-001,
+                      SCN-002,
+                      SCN-003,
+                      SCN-004,
+                      SCN-005,
+                      SCN-007,
+                      SCN-008,
+                  ],
+          }
+        - {
+              requirement_id: REQ-003,
+              scenario_ids:
+                  [
+                      SCN-001,
+                      SCN-002,
+                      SCN-003,
+                      SCN-004,
+                      SCN-005,
+                      SCN-009,
+                      SCN-010,
+                  ],
+          }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-005, SCN-006] }
+        - { requirement_id: REQ-005, scenario_ids: [SCN-001, SCN-004, SCN-005] }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-007] }
+        - {
+              requirement_id: REQ-007,
+              scenario_ids: [SCN-006, SCN-007, SCN-008, SCN-009],
+          }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-002, INV-003] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-001, INV-002, INV-003] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-001, INV-002, INV-005] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-002, INV-005] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-001, INV-004, INV-005] }
+        - { scenario_id: SCN-008, invariant_ids: [INV-001, INV-002, INV-005] }
+        - { scenario_id: SCN-009, invariant_ids: [INV-001, INV-002, INV-003] }
+        - { scenario_id: SCN-010, invariant_ids: [INV-001, INV-003] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-003, TEXP-005] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-008, test_expectation_ids: [TEXP-005] }
+        - { scenario_id: SCN-009, test_expectation_ids: [TEXP-006] }
+        - { scenario_id: SCN-010, test_expectation_ids: [TEXP-007] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED
+    base_branch: main
+    base_commit: e7719c593157748314ed6ccaa63b412df7f39468
+    head_commit: 818837af4ed4d434867d717cddf4c277c2494fe8
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PASS
+        scope: PASS
+    blocking_findings: []
+    required_actions: []
+    evidence:
+        - Compared the approved contract with the recorded main-to-head Git diff and REN-182 implementation symbols.
+    governance_reentry_required: false

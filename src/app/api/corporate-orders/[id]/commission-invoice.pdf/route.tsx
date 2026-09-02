@@ -4,16 +4,23 @@ import {
 } from "@/components/pdf/invoice-template";
 import { BitFieldSitePermission } from "@/config/permissions";
 import { db } from "@/lib/db";
-import { brandConfidentials, brandMembers } from "@/lib/db/schema";
+import {
+    brandConfidentials,
+    brandMembers,
+    corporateOrders,
+} from "@/lib/db/schema";
+import { splitCorporateGstByPlaceOfSupply } from "@/lib/finance/corporate-place-of-supply";
 import { userCache } from "@/lib/redis/methods";
 import {
     corporatePartyAddress,
     getCorporateDocumentSettings,
+    gstStateCode,
+    nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import QRCode from "qrcode";
 
@@ -96,13 +103,21 @@ export async function GET(
               : null;
         const isBrandOwner = order.brand?.ownerId === userId;
 
-        if (!canViewAdmin && !brandMembership && !isBrandOwner && order.userId !== userId) {
+        if (
+            !canViewAdmin &&
+            !brandMembership &&
+            !isBrandOwner &&
+            order.userId !== userId
+        ) {
             return NextResponse.json({ message: "Forbidden" }, { status: 403 });
         }
 
         if (!order.brand) {
             return NextResponse.json(
-                { message: "A brand must be assigned to generate commission invoice" },
+                {
+                    message:
+                        "A brand must be assigned to generate commission invoice",
+                },
                 { status: 422 }
             );
         }
@@ -114,32 +129,66 @@ export async function GET(
             }),
         ]);
 
-        const commissionTaxablePaise =
-            order.commissionAmountPaise ||
-            (order.quote?.commissionAmountPaise ?? 0) ||
-            Math.round(((order.subtotalPaise ?? 400000) * 1000) / 10000); // default 10%
+        const commissionTaxablePaise = order.commissionAmountPaise;
 
-        const commissionGstRateBps =
-            order.commissionGstRateBps ||
-            (order.quote?.commissionGstRateBps ?? 1800);
+        const commissionGstRateBps = order.commissionGstRateBps;
+        const commissionHsnCode = order.commissionHsnCode;
+        if (commissionGstRateBps == null || !commissionHsnCode) {
+            return NextResponse.json(
+                {
+                    error: "Commission HSN/SAC classification is not set for this order",
+                },
+                { status: 422 }
+            );
+        }
 
-        const commissionGstPaise =
-            order.commissionGstAmountPaise ||
-            Math.round((commissionTaxablePaise * commissionGstRateBps) / 10_000);
+        const commissionGstPaise = order.commissionGstAmountPaise;
+        const commissionTotalPaise = order.commissionTotalPaise;
+        if (
+            !Number.isFinite(commissionTaxablePaise) ||
+            !Number.isFinite(commissionGstPaise) ||
+            !Number.isFinite(commissionTotalPaise) ||
+            commissionTaxablePaise < 0 ||
+            commissionGstPaise < 0 ||
+            commissionTotalPaise !== commissionTaxablePaise + commissionGstPaise
+        ) {
+            return NextResponse.json(
+                {
+                    error: "A complete agreed commission snapshot is required for this order",
+                },
+                { status: 422 }
+            );
+        }
 
-        const commissionTotalPaise =
-            order.commissionTotalPaise ||
-            commissionTaxablePaise + commissionGstPaise;
+        const commissionTax = splitCorporateGstByPlaceOfSupply({
+            taxableValuePaise: commissionTaxablePaise,
+            gstRateBps: commissionGstRateBps,
+            supplierStateCode: gstStateCode(settings.gstin),
+            placeOfSupplyStateCode: gstStateCode(brandConfidential?.gstin),
+        });
+        const cgstPaise = commissionTax.cgstPaise;
+        const sgstPaise = commissionTax.sgstPaise;
+        const igstPaise = commissionTax.igstPaise;
 
-        const renivetStateCode = (settings.gstin || "19").slice(0, 2);
-        const brandStateCode = (brandConfidential?.gstin || "19").slice(0, 2);
-        const intra = renivetStateCode === brandStateCode;
-
-        const cgstPaise = intra ? Math.round(commissionGstPaise / 2) : 0;
-        const sgstPaise = intra ? commissionGstPaise - cgstPaise : 0;
-        const igstPaise = intra ? 0 : commissionGstPaise;
-
-        const commissionNumber = `COM/2627/${String(order.sequenceNo ?? 1).padStart(5, "0")}`;
+        let commissionNumber = order.commissionInvoiceNumber;
+        if (!commissionNumber) {
+            const allocated = await nextCorporateDocumentNumber("CINV");
+            const persisted = await db
+                .update(corporateOrders)
+                .set({ commissionInvoiceNumber: allocated })
+                .where(
+                    and(
+                        eq(corporateOrders.id, order.id),
+                        isNull(corporateOrders.commissionInvoiceNumber)
+                    )
+                )
+                .returning({
+                    commissionInvoiceNumber:
+                        corporateOrders.commissionInvoiceNumber,
+                });
+            commissionNumber =
+                persisted[0]?.commissionInvoiceNumber ?? allocated;
+        }
         const invoiceDate = order.createdAt ?? new Date();
 
         const downloadUrl = `${new URL(request.url).origin}/api/corporate-orders/${order.id}/commission-invoice.pdf`;
@@ -203,8 +252,8 @@ export async function GET(
                         title: `Marketplace Facilitation & Platform Commission Services (Order: ${order.publicOrderId})`,
                         price: commissionTaxablePaise,
                         compareAtPrice: commissionTaxablePaise,
-                        hsCode: "9985",
-                        sku: "SAC-9985",
+                        hsCode: commissionHsnCode,
+                        sku: `SAC-${commissionHsnCode}`,
                     },
                 },
             ],
@@ -223,13 +272,15 @@ export async function GET(
                     phone: settings.supportPhone || "+91-9876543210",
                     bankName: settings.bankName || "HDFC Bank",
                     bankAccountHolderName:
-                        settings.bankAccountName || "Renivet Marketplace Pvt Ltd",
+                        settings.bankAccountName ||
+                        "Renivet Marketplace Pvt Ltd",
                     bankAccountNumber: settings.bankAccountNumber || undefined,
                     bankAccountType: settings.bankAccountType || "Current",
                     bankIfscCode: settings.bankIfscCode || undefined,
                     bankBranch: settings.bankBranch || undefined,
                     authorizedSignatoryName:
-                        settings.authorizedSignatoryName || "Renivet Marketplace",
+                        settings.authorizedSignatoryName ||
+                        "Renivet Marketplace",
                 },
             },
         };
@@ -242,7 +293,10 @@ export async function GET(
             chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
         }
 
-        const safeInvoiceNumber = commissionNumber.replace(/[^a-z0-9_-]+/gi, "_");
+        const safeInvoiceNumber = commissionNumber.replace(
+            /[^a-z0-9_-]+/gi,
+            "_"
+        );
 
         return new NextResponse(Buffer.concat(chunks), {
             headers: {

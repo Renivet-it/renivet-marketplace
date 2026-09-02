@@ -1,6 +1,11 @@
 import crypto from "crypto";
 import { env } from "@/../env";
 import {
+    buildCorporateCustomizationRows,
+    calculateCorporateCustomizationTax,
+    type CorporateCustomizationInput,
+} from "@/lib/corporate-customizations";
+import {
     extractCorporateDeliveryAddress,
     fillCorporateDeliveryAddressDefaults,
     formatCorporateDeliveryAddress,
@@ -16,6 +21,8 @@ import {
     corporateAdminAuditLogs,
     corporateBrandAuditLogs,
     corporateBrandTaxInvoices,
+    corporateBrandTaxInvoiceUploads,
+    corporateCustomizations,
     corporateDeliveryChallans,
     corporateDocuments,
     corporateEscalations,
@@ -47,12 +54,19 @@ import {
     corporateTasks,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    corporateWarehouseGoodsReceipts,
+    hsnMaster,
     packingTypes,
     products,
     users,
 } from "@/lib/db/schema";
 import { createOrder } from "@/lib/delhivery/orders";
 import { schedulePickup } from "@/lib/delhivery/pickup";
+import {
+    resolveCorporatePlaceOfSupply,
+    splitCorporateGstByPlaceOfSupply,
+} from "@/lib/finance/corporate-place-of-supply";
+import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import { resend } from "@/lib/resend";
 import {
     CorporateOrderCustomerReadyForDispatchEmail,
@@ -68,6 +82,7 @@ import {
     nextBrandInvoiceNumber,
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
+import { corporateOrderService } from "@/lib/services/corporate-order";
 import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import {
     convertValueToLabel,
@@ -93,6 +108,7 @@ import {
     corporateProformaInvoiceInputSchema,
     corporatePurchaseOrderInputSchema,
     corporatePurchaseOrderReviewInputSchema,
+    corporateQcReviewInputSchema,
     corporateQcSubmissionInputSchema,
     corporateQuoteDecisionInputSchema,
     corporateQuoteInputSchema,
@@ -105,6 +121,7 @@ import {
     corporateTaskInputSchema,
     corporateTaxInvoiceInputSchema,
     corporateUpdateConsigneeAddressInputSchema,
+    corporateWarehouseGoodsReceiptInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { TRPCError } from "@trpc/server";
 import {
@@ -568,6 +585,11 @@ class CorporatePlatformService {
             totalAmountPaise: number;
             advanceAmountPaise: number;
             balanceAmountPaise: number;
+            commissionAmountPaise: number;
+            commissionHsnCode: string | null;
+            commissionGstRateBps: number;
+            commissionGstAmountPaise: number;
+            commissionTotalPaise: number;
             profile?: {
                 userId: string | null;
                 companyName: string;
@@ -670,6 +692,26 @@ class CorporatePlatformService {
                       })
                     : null,
             ]);
+        const quoteCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.quoteId, quote.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
+        const customizationGstAmountPaise = quoteCustomizations.reduce(
+            (sum, row) =>
+                sum +
+                Number(
+                    (row.metadata as Record<string, unknown>)?.gstPaise ?? 0
+                ),
+            0
+        );
+        const customizationGstRateBps =
+            quote.customizationCostPaise > 0
+                ? Math.round(
+                      (customizationGstAmountPaise * 10_000) /
+                          quote.customizationCostPaise
+                  )
+                : 0;
 
         const createdOrder = await db
             .insert(corporateOrders)
@@ -736,6 +778,15 @@ class CorporatePlatformService {
                 pricingSnapshot: {
                     subtotalPaise: quote.subtotalPaise,
                     customizationCostPaise: quote.customizationCostPaise,
+                    customizationGstAmountPaise,
+                    customizationGstRateBps,
+                    customizations: quoteCustomizations.map((row) => ({
+                        id: row.id,
+                        type: row.customizationType,
+                        amountPaise: row.costPaise,
+                        status: row.status,
+                        metadata: row.metadata,
+                    })),
                     gstAmountPaise: quote.gstAmountPaise,
                     totalAmountPaise: quote.totalAmountPaise,
                 },
@@ -753,6 +804,11 @@ class CorporatePlatformService {
                       )
                     : 0,
                 advancePaidPaise: 0,
+                commissionAmountPaise: quote.commissionAmountPaise,
+                commissionHsnCode: quote.commissionHsnCode,
+                commissionGstRateBps: quote.commissionGstRateBps,
+                commissionGstAmountPaise: quote.commissionGstAmountPaise,
+                commissionTotalPaise: quote.commissionTotalPaise,
                 // A quote's advance split is a requested payment term, not a
                 // completed collection. New orders start fully outstanding.
                 balanceDuePaise: quote.totalAmountPaise,
@@ -770,6 +826,18 @@ class CorporatePlatformService {
             })
             .returning()
             .then((rows) => rows[0]);
+
+        if (quoteCustomizations.length) {
+            await db.insert(corporateCustomizations).values(
+                quoteCustomizations.map((row) => ({
+                    orderId: createdOrder.id,
+                    customizationType: row.customizationType,
+                    costPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                }))
+            );
+        }
 
         return createdOrder;
     }
@@ -1572,42 +1640,68 @@ class CorporatePlatformService {
             .from(corporateQuotes)
             .then((rows) => (rows[0]?.count ?? 0) + 1);
 
-        const created = await db
-            .insert(corporateQuotes)
-            .values({
-                quoteNumber: makeNumber("QUO", sequence),
-                rfqId: parsed.rfqId ?? null,
-                corporateProfileId: parsed.corporateProfileId,
-                brandId: parsed.brandId,
-                productId: parsed.productId ?? null,
-                corporateProductConfigId:
-                    parsed.corporateProductConfigId ?? null,
-                productTypeId: parsed.productTypeId ?? null,
-                gsmOptionId: parsed.gsmOptionId ?? null,
-                fabricCompositionId: parsed.fabricCompositionId ?? null,
-                quantity: parsed.quantity,
-                subtotalPaise,
-                customizationCostPaise: parsed.customizationCostPaise,
-                gstAmountPaise: parsed.gstAmountPaise,
-                totalAmountPaise,
-                advanceAmountPaise,
-                balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
-                validUntil: parsed.validUntil ?? null,
-                status: "sent",
-            })
-            .returning()
-            .then((rows) => rows[0]);
-
-        await db.insert(corporateQuoteRevisions).values({
-            quoteId: created.id,
-            revisionNumber: 1,
-            subtotalPaise: created.subtotalPaise,
-            customizationCostPaise: created.customizationCostPaise,
-            gstAmountPaise: created.gstAmountPaise,
-            totalAmountPaise: created.totalAmountPaise,
-            comments: parsed.comments ?? null,
-            createdByUserId: actorUserId,
-        });
+        const { created, customizationRows } = await db.transaction(
+            async (tx) => {
+                const created = await tx
+                    .insert(corporateQuotes)
+                    .values({
+                        quoteNumber: makeNumber("QUO", sequence),
+                        rfqId: parsed.rfqId ?? null,
+                        corporateProfileId: parsed.corporateProfileId,
+                        brandId: parsed.brandId,
+                        productId: parsed.productId ?? null,
+                        corporateProductConfigId:
+                            parsed.corporateProductConfigId ?? null,
+                        productTypeId: parsed.productTypeId ?? null,
+                        gsmOptionId: parsed.gsmOptionId ?? null,
+                        fabricCompositionId: parsed.fabricCompositionId ?? null,
+                        quantity: parsed.quantity,
+                        subtotalPaise,
+                        customizationCostPaise: parsed.customizationCostPaise,
+                        gstAmountPaise: parsed.gstAmountPaise,
+                        totalAmountPaise,
+                        advanceAmountPaise,
+                        balanceAmountPaise:
+                            totalAmountPaise - advanceAmountPaise,
+                        validUntil: parsed.validUntil ?? null,
+                        status: "sent",
+                    })
+                    .returning()
+                    .then((rows) => rows[0]);
+                const customizationRows = buildCorporateCustomizationRows(
+                    parsed.customizations as CorporateCustomizationInput[],
+                    parsed.customizationCostPaise
+                );
+                if (customizationRows.length) {
+                    await tx.insert(corporateCustomizations).values(
+                        customizationRows.map((row) => ({
+                            quoteId: created.id,
+                            customizationType: row.name,
+                            costPaise: row.amountPaise,
+                            metadata: {
+                                ...row,
+                                name: row.name,
+                                taxTreatment: row.taxTreatment,
+                            },
+                        }))
+                    );
+                }
+                await tx.insert(corporateQuoteRevisions).values({
+                    quoteId: created.id,
+                    revisionNumber: 1,
+                    subtotalPaise: created.subtotalPaise,
+                    customizationCostPaise: created.customizationCostPaise,
+                    gstAmountPaise: created.gstAmountPaise,
+                    totalAmountPaise: created.totalAmountPaise,
+                    customizations: customizationRows.map((row) => ({
+                        ...row,
+                    })),
+                    comments: parsed.comments ?? null,
+                    createdByUserId: actorUserId,
+                });
+                return { created, customizationRows };
+            }
+        );
 
         if (rfq) {
             await db
@@ -1651,6 +1745,28 @@ class CorporatePlatformService {
 
     async createManualQuote(actorUserId: string, input: unknown) {
         const parsed = corporateAdminManualQuoteInputSchema.parse(input);
+        const normalizedHsnCode = parsed.hsnCode?.trim() || null;
+        if (normalizedHsnCode) {
+            await db
+                .insert(hsnMaster)
+                .values({
+                    hsnCode: normalizedHsnCode,
+                    description: "Corporate manual quote classification",
+                    gstRateBps: Math.round(parsed.gstPercent * 100),
+                })
+                .onConflictDoNothing({ target: hsnMaster.hsnCode });
+            const classification = await db.query.hsnMaster.findFirst({
+                where: and(
+                    eq(hsnMaster.hsnCode, normalizedHsnCode),
+                    eq(hsnMaster.isActive, true)
+                ),
+            });
+            requireCorporateTaxClassification({
+                hsnCode: classification?.hsnCode,
+                gstRateBps: classification?.gstRateBps,
+                sourceId: classification?.id,
+            });
+        }
         const normalizedEmail = parsed.email.toLowerCase();
         const matchedUser = await db.query.users.findFirst({
             where: and(
@@ -1667,13 +1783,73 @@ class CorporatePlatformService {
         const subtotalPaise = parsed.unitPricePaise * parsed.quantity;
         const customizationCostPaise = parsed.customizationCostPaise ?? 0;
         const baseGstRateBps = Math.round(parsed.gstPercent * 100);
-        const customizationGstRateBps = 1800; // 18% standard GST on customization/services
+        const customizationRows = buildCorporateCustomizationRows(
+            parsed.customizations as CorporateCustomizationInput[],
+            customizationCostPaise
+        );
+        if (
+            customizationCostPaise > 0 &&
+            customizationRows.some(
+                (row) => row.taxTreatment === "not_yet_classified"
+            )
+        ) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Choose whether each customization is included in the main product supply or is a separate supply",
+            });
+        }
+        const separateHsnCodes = [
+            ...new Set(
+                customizationRows
+                    .filter((row) => row.taxTreatment === "separate_supply")
+                    .map((row) => row.hsnCode?.trim())
+                    .filter((code): code is string => Boolean(code))
+            ),
+        ];
+        if (
+            customizationRows.some(
+                (row) =>
+                    row.taxTreatment === "separate_supply" &&
+                    !row.hsnCode?.trim()
+            )
+        ) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Select an approved HSN/SAC for every separate customization supply",
+            });
+        }
+        const separateClassifications = separateHsnCodes.length
+            ? await db.query.hsnMaster.findMany({
+                  where: and(
+                      inArray(hsnMaster.hsnCode, separateHsnCodes),
+                      eq(hsnMaster.isActive, true)
+                  ),
+              })
+            : [];
+        const separateSupplyRatesByHsn = Object.fromEntries(
+            separateClassifications.map((classification) => [
+                classification.hsnCode,
+                classification.gstRateBps,
+            ])
+        );
+        const customizationTax = calculateCorporateCustomizationTax(
+            customizationRows,
+            baseGstRateBps,
+            separateSupplyRatesByHsn
+        );
+        const customizationGstRateBps =
+            customizationCostPaise > 0
+                ? Math.round(
+                      (customizationTax.gstPaise * 10_000) /
+                          customizationCostPaise
+                  )
+                : 0;
         const baseGstAmountPaise = Math.round(
             (subtotalPaise * baseGstRateBps) / 10000
         );
-        const customizationGstAmountPaise = Math.round(
-            (customizationCostPaise * customizationGstRateBps) / 10000
-        );
+        const customizationGstAmountPaise = customizationTax.gstPaise;
         const gstAmountPaise = baseGstAmountPaise + customizationGstAmountPaise;
         const taxablePaise = subtotalPaise + customizationCostPaise;
         const totalAmountPaise = taxablePaise + gstAmountPaise;
@@ -1682,9 +1858,34 @@ class CorporatePlatformService {
         );
 
         const commissionAmountPaise = parsed.commissionAmountPaise ?? 0;
-        const commissionGstRateBps = Math.round(
-            (parsed.commissionGstPercent ?? 18) * 100
-        );
+        const commissionHsnCode = parsed.commissionHsnCode?.trim() || null;
+        if (!commissionHsnCode) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Select an approved HSN/SAC for the commission service",
+            });
+        }
+        const commissionClassification = await db.query.hsnMaster.findFirst({
+            where: and(
+                eq(hsnMaster.hsnCode, commissionHsnCode),
+                eq(hsnMaster.isActive, true)
+            ),
+        });
+        try {
+            requireCorporateTaxClassification({
+                hsnCode: commissionClassification?.hsnCode,
+                gstRateBps: commissionClassification?.gstRateBps,
+                sourceId: commissionClassification?.id,
+            });
+        } catch {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "An active HSN/SAC Master classification is required for the commission service",
+            });
+        }
+        const commissionGstRateBps = commissionClassification!.gstRateBps;
         const commissionGstAmountPaise = Math.round(
             (commissionAmountPaise * commissionGstRateBps) / 10000
         );
@@ -1722,6 +1923,7 @@ class CorporatePlatformService {
                           contactPerson: parsed.contactPerson,
                           email: normalizedEmail,
                           phone: parsed.phone,
+                          gstNumber: parsed.gstNumber ?? null,
                           ...(hasDeliveryAddress ? { shippingAddress } : {}),
                           updatedAt: new Date(),
                       })
@@ -1736,6 +1938,7 @@ class CorporatePlatformService {
                           contactPerson: parsed.contactPerson,
                           email: normalizedEmail,
                           phone: parsed.phone,
+                          gstNumber: parsed.gstNumber ?? null,
                           billingAddress: {},
                           shippingAddress,
                           isDefault: true,
@@ -1777,6 +1980,7 @@ class CorporatePlatformService {
                     advanceAmountPaise,
                     balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
                     commissionAmountPaise,
+                    commissionHsnCode,
                     commissionGstRateBps,
                     commissionGstAmountPaise,
                     commissionTotalPaise,
@@ -1800,9 +2004,27 @@ class CorporatePlatformService {
                 customizationCostPaise: parsed.customizationCostPaise,
                 gstAmountPaise,
                 totalAmountPaise,
+                customizations: customizationTax.rows,
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             });
+
+            if (customizationRows.length) {
+                await tx.insert(corporateCustomizations).values(
+                    customizationTax.rows.map((row) => ({
+                        quoteId: quote.id,
+                        customizationType: row.name,
+                        costPaise: row.amountPaise,
+                        metadata: {
+                            ...row,
+                            name: row.name,
+                            taxTreatment: row.taxTreatment,
+                            gstRateBps: row.gstRateBps,
+                            gstPaise: row.gstPaise,
+                        },
+                    }))
+                );
+            }
 
             return { quote, profile };
         });
@@ -2489,6 +2711,7 @@ class CorporatePlatformService {
                 customizationCostPaise: parsed.customizationCostPaise,
                 gstAmountPaise: parsed.gstAmountPaise,
                 totalAmountPaise: parsed.totalAmountPaise,
+                customizations: parsed.customizations,
                 comments: parsed.comments ?? null,
                 createdByUserId: actorUserId,
             })
@@ -2835,7 +3058,6 @@ class CorporatePlatformService {
             );
             createdOrderId = createdOrder.id;
         }
-
         const updated = await db
             .update(corporatePurchaseOrders)
             .set({
@@ -3055,37 +3277,42 @@ class CorporatePlatformService {
                     : null;
 
         if (nextOrderStatus && order.status !== nextOrderStatus) {
-            await corporateOrderQueries.updateCorporateOrder(order.id, {
-                status: nextOrderStatus,
-            });
-
-            await corporateOrderQueries.createStatusHistory({
-                corporateOrderId: order.id,
-                fromStatus: order.status,
-                toStatus: nextOrderStatus,
-                changedByUserId: actorUserId,
-                note: `Shipment updated to ${convertValueToLabel(saved.status)}`,
-                metadata: {
-                    source: "shipment_panel",
-                    shipmentId: saved.id,
-                    provider: saved.provider,
-                    trackingNumber: saved.trackingNumber,
-                },
-            });
-
-            if (nextOrderStatus === "delivered") {
-                await this.notifyCustomerOrderDelivered({
-                    order: {
-                        id: order.id,
-                        publicOrderId: order.publicOrderId,
-                        companyName: order.companyName,
-                        quantity: order.quantity,
-                        totalPaise: order.totalPaise,
-                        advancePaidPaise: order.advancePaidPaise,
-                        balanceDuePaise: order.balanceDuePaise,
-                        emailAddress: order.emailAddress,
+            try {
+                await corporateOrderService.updateStatus({
+                    corporateOrderId: order.id,
+                    toStatus: nextOrderStatus,
+                    changedByUserId: actorUserId,
+                    note: `Shipment updated to ${convertValueToLabel(saved.status)}`,
+                    metadata: {
+                        source: "shipment_panel",
+                        shipmentId: saved.id,
+                        provider: saved.provider,
+                        trackingNumber: saved.trackingNumber,
                     },
                 });
+            } catch (error) {
+                if (existing) {
+                    await db
+                        .update(corporateShipments)
+                        .set({
+                            courierName: existing.courierName,
+                            trackingNumber: existing.trackingNumber,
+                            awbNumber: existing.awbNumber,
+                            trackingUrl: existing.trackingUrl,
+                            dispatchDate: existing.dispatchDate,
+                            deliveryDate: existing.deliveryDate,
+                            status: existing.status,
+                            provider: existing.provider,
+                            rawPayload: existing.rawPayload,
+                            updatedAt: existing.updatedAt,
+                        })
+                        .where(eq(corporateShipments.id, existing.id));
+                } else {
+                    await db
+                        .delete(corporateShipments)
+                        .where(eq(corporateShipments.id, saved.id));
+                }
+                throw error;
             }
         }
 
@@ -3204,10 +3431,8 @@ class CorporatePlatformService {
             deliveryPincode = parsed.consignee.deliveryPincode;
             deliveryCountry = parsed.consignee.deliveryCountry;
 
-            const currentCompanySnapshot = (order.companySnapshot ?? {}) as Record<
-                string,
-                unknown
-            >;
+            const currentCompanySnapshot = (order.companySnapshot ??
+                {}) as Record<string, unknown>;
             const updatedCompanySnapshot = {
                 ...currentCompanySnapshot,
                 contactPersonName,
@@ -3334,11 +3559,14 @@ class CorporatePlatformService {
                 ? (packageData as Record<string, unknown>)
                 : {};
         const waybill =
-            typeof packageRecord.waybill === "string" && packageRecord.waybill.trim()
+            typeof packageRecord.waybill === "string" &&
+            packageRecord.waybill.trim()
                 ? packageRecord.waybill.trim()
-                : typeof packageRecord.awb === "string" && packageRecord.awb.trim()
+                : typeof packageRecord.awb === "string" &&
+                    packageRecord.awb.trim()
                   ? packageRecord.awb.trim()
-                  : typeof rawData.waybill === "string" && rawData.waybill.trim()
+                  : typeof rawData.waybill === "string" &&
+                      rawData.waybill.trim()
                     ? rawData.waybill.trim()
                     : typeof rawData.awb === "string" && rawData.awb.trim()
                       ? rawData.awb.trim()
@@ -3415,13 +3643,8 @@ class CorporatePlatformService {
         }
 
         if (order.status !== "ready_for_dispatch") {
-            await corporateOrderQueries.updateCorporateOrder(order.id, {
-                status: "ready_for_dispatch",
-            });
-
-            await corporateOrderQueries.createStatusHistory({
+            await corporateOrderService.updateStatus({
                 corporateOrderId: order.id,
-                fromStatus: order.status,
                 toStatus: "ready_for_dispatch",
                 changedByUserId: actorUserId,
                 note: "Delhivery forward order created",
@@ -3615,40 +3838,75 @@ class CorporatePlatformService {
 
     async submitQc(actorUserId: string, input: unknown) {
         const parsed = corporateQcSubmissionInputSchema.parse(input);
-        const created = await db
-            .insert(corporateQcSubmissions)
-            .values({
-                orderId: parsed.orderId,
-                submittedByUserId: actorUserId,
-                status: "submitted",
-                remarks: parsed.remarks ?? null,
-                sampleCoveragePercent: parsed.sampleCoveragePercent ?? null,
-                submittedAt: new Date().toISOString().slice(0, 10),
-            })
-            .returning()
-            .then((rows) => rows[0]);
-
-        await db.insert(corporateQcImages).values(
-            parsed.images.map((image) => ({
-                qcSubmissionId: created.id,
-                imageUrl: image.url,
-                imageType: image.type,
-            }))
-        );
-
-        await db.insert(corporateDocuments).values(
-            parsed.images.map((image, index) => ({
-                entityType: "qc_submission",
-                entityId: created.id,
-                documentType: "qc_image",
-                fileName: image.name,
-                fileUrl: image.url,
-                mimeType: image.type,
-                fileSizeBytes: image.size,
-                uploadedByUserId: actorUserId,
-                version: index + 1,
-            }))
-        );
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+            columns: { id: true, status: true },
+        });
+        if (!order) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Corporate order not found",
+            });
+        }
+        if (!["quality_check", "in_production"].includes(order.status)) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "QC evidence can only be submitted during production QC",
+            });
+        }
+        for (const image of parsed.images) {
+            let parsedUrl: URL;
+            try {
+                parsedUrl = new URL(image.url);
+            } catch {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "QC evidence URL is invalid",
+                });
+            }
+            if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+                throw new TRPCError({
+                    code: "BAD_REQUEST",
+                    message: "QC evidence URL must use HTTP or HTTPS",
+                });
+            }
+        }
+        const created = await db.transaction(async (tx) => {
+            const submission = await tx
+                .insert(corporateQcSubmissions)
+                .values({
+                    orderId: parsed.orderId,
+                    submittedByUserId: actorUserId,
+                    status: "submitted",
+                    remarks: parsed.remarks ?? null,
+                    sampleCoveragePercent: parsed.sampleCoveragePercent ?? null,
+                    submittedAt: new Date().toISOString().slice(0, 10),
+                })
+                .returning()
+                .then((rows) => rows[0]);
+            await tx.insert(corporateQcImages).values(
+                parsed.images.map((image) => ({
+                    qcSubmissionId: submission.id,
+                    imageUrl: image.url,
+                    imageType: image.type,
+                }))
+            );
+            await tx.insert(corporateDocuments).values(
+                parsed.images.map((image, index) => ({
+                    entityType: "qc_submission",
+                    entityId: submission.id,
+                    documentType: "qc_image",
+                    fileName: image.name,
+                    fileUrl: image.url,
+                    mimeType: image.type,
+                    fileSizeBytes: image.size,
+                    uploadedByUserId: actorUserId,
+                    version: index + 1,
+                }))
+            );
+            return submission;
+        });
 
         await this.createEvent(
             "qc_submission",
@@ -3662,6 +3920,66 @@ class CorporatePlatformService {
         );
 
         return created;
+    }
+
+    async reviewQc(actorUserId: string, input: unknown) {
+        const parsed = corporateQcReviewInputSchema.parse(input);
+        const submission = await db.query.corporateQcSubmissions.findFirst({
+            where: eq(corporateQcSubmissions.id, parsed.submissionId),
+            with: { order: true },
+        });
+        if (!submission) {
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "QC submission not found",
+            });
+        }
+        if (submission.status !== "submitted") {
+            if (submission.status === parsed.decision) return submission;
+            throw new TRPCError({
+                code: "CONFLICT",
+                message: "QC submission has already been finalized",
+            });
+        }
+
+        const reviewedAt = new Date();
+        const updated = await db
+            .update(corporateQcSubmissions)
+            .set({
+                status: parsed.decision,
+                reviewedByUserId: actorUserId,
+                reviewedAt,
+                reviewNotes: parsed.reviewNotes ?? null,
+            })
+            .where(
+                and(
+                    eq(corporateQcSubmissions.id, parsed.submissionId),
+                    eq(corporateQcSubmissions.status, "submitted")
+                )
+            )
+            .returning()
+            .then((rows) => rows[0]);
+
+        if (!updated) {
+            throw new TRPCError({
+                code: "CONFLICT",
+                message: "QC submission was reviewed by another request",
+            });
+        }
+
+        await this.createEvent(
+            "qc_submission",
+            updated.id,
+            `QC_${parsed.decision.toUpperCase()}`,
+            {
+                orderId: updated.orderId,
+                decision: parsed.decision,
+                reviewedAt: reviewedAt.toISOString(),
+            },
+            actorUserId
+        );
+
+        return updated;
     }
 
     async recordPayment(actorUserId: string, input: unknown) {
@@ -3774,6 +4092,11 @@ class CorporatePlatformService {
             orderBy: [desc(corporateProformaInvoices.createdAt)],
         });
         if (existing) return existing;
+        const quoteCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.quoteId, quote.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
 
         const [settings, invoiceNumber] = await Promise.all([
             getCorporateDocumentSettings(),
@@ -3801,6 +4124,13 @@ class CorporatePlatformService {
                     quote.subtotalPaise + quote.customizationCostPaise,
                 gstAmountPaise: quote.gstAmountPaise,
                 totalAmountPaise: quote.totalAmountPaise,
+                customizations: quoteCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 paymentTerms: settings.defaultPaymentTerms,
                 termsAndConditions:
                     "This proforma invoice is not a tax invoice. Supply is subject to quote acceptance, receipt of the corporate purchase order, and payment confirmation.",
@@ -3869,6 +4199,11 @@ class CorporatePlatformService {
         });
         if (existingInvoice) return existingInvoice;
 
+        const orderCustomizations =
+            await db.query.corporateCustomizations.findMany({
+                where: eq(corporateCustomizations.orderId, order.id),
+                orderBy: [asc(corporateCustomizations.createdAt)],
+            });
         const [
             settings,
             brandDetails,
@@ -3902,25 +4237,23 @@ class CorporatePlatformService {
             order.quote?.profile?.gstNumber?.trim() ??
             order.gstNumber?.trim() ??
             "";
-        const sellerStateCode = gstStateCode(sellerGstin);
-        const buyerStateCode = gstStateCode(buyerGstin);
         const billingAddress = order.quote?.profile?.billingAddress as
             | Record<string, unknown>
             | undefined;
-        const sellerState = brandDetails?.state?.trim().toLowerCase();
-        const buyerState =
-            typeof billingAddress?.state === "string"
-                ? billingAddress.state.trim().toLowerCase()
-                : "";
-        // If either GSTIN is unavailable, retain the existing intra-state split.
-        // When both codes exist, use IGST for an inter-state supply.
-        const isIntraState =
-            sellerStateCode && buyerStateCode
-                ? sellerStateCode === buyerStateCode
-                : sellerState && buyerState
-                  ? sellerState === buyerState
-                  : true;
-        const gstHalf = Math.round(order.gstPaise / 2);
+        const placeOfSupply = resolveCorporatePlaceOfSupply({
+            deliveryState: order.deliveryState,
+            billingState:
+                typeof billingAddress?.state === "string"
+                    ? billingAddress.state
+                    : null,
+            registeredState: buyerGstin ? gstStateCode(buyerGstin) : null,
+        });
+        const taxSplit = splitCorporateGstByPlaceOfSupply({
+            taxableValuePaise: order.subtotalPaise + order.customizationPaise,
+            gstRateBps: order.gstRateBps,
+            supplierStateCode: gstStateCode(settings.gstin),
+            placeOfSupplyStateCode: placeOfSupply.stateCode,
+        });
         const invoiceDate = new Date();
         const invoiceNumber = await nextBrandInvoiceNumber({
             brandId: order.brandId,
@@ -3943,10 +4276,20 @@ class CorporatePlatformService {
                 dueDate: dueDate.toISOString().slice(0, 10),
                 taxableValuePaise:
                     order.subtotalPaise + order.customizationPaise,
-                cgstPaise: isIntraState ? gstHalf : 0,
-                sgstPaise: isIntraState ? order.gstPaise - gstHalf : 0,
-                igstPaise: isIntraState ? 0 : order.gstPaise,
+                cgstPaise: taxSplit.cgstPaise,
+                sgstPaise: taxSplit.sgstPaise,
+                igstPaise: taxSplit.igstPaise,
+                placeOfSupplyStateCode: placeOfSupply.stateCode || null,
+                placeOfSupplyStateName: placeOfSupply.stateName || null,
+                placeOfSupplySource: placeOfSupply.source,
                 totalAmountPaise: order.totalPaise,
+                customizations: orderCustomizations.map((row) => ({
+                    id: row.id,
+                    type: row.customizationType,
+                    amountPaise: row.costPaise,
+                    status: row.status,
+                    metadata: row.metadata,
+                })),
                 advanceAdjustmentPaise: order.advancePaidPaise,
                 paymentTerms: "Net 15",
                 bankDetailsSnapshot: settings
@@ -4403,53 +4746,67 @@ class CorporatePlatformService {
 
         const [
             vendorPurchaseOrders,
+            brandTaxInvoiceUploads,
             brandTaxInvoices,
             customerTaxInvoices,
             settlementStatements,
             documentSettings,
         ] = await Promise.all([
-                orderRows.length
-                    ? db.query.corporateVendorPurchaseOrders.findMany({
-                          where: inArray(
-                              corporateVendorPurchaseOrders.orderId,
+            orderRows.length
+                ? db.query.corporateVendorPurchaseOrders.findMany({
+                      where: inArray(
+                          corporateVendorPurchaseOrders.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateBrandTaxInvoiceUploads.findMany({
+                      where: and(
+                          inArray(
+                              corporateBrandTaxInvoiceUploads.orderId,
                               orderRows.map((order) => order.id)
                           ),
-                          orderBy: [
-                              desc(corporateVendorPurchaseOrders.createdAt),
-                          ],
-                      })
-                    : Promise.resolve([]),
-                orderRows.length
-                    ? db.query.corporateBrandTaxInvoices.findMany({
-                          where: inArray(
-                              corporateBrandTaxInvoices.orderId,
-                              orderRows.map((order) => order.id)
-                          ),
-                          orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
-                      })
-                    : Promise.resolve([]),
-                orderRows.length
-                    ? db.query.corporateTaxInvoices.findMany({
-                          where: inArray(
-                              corporateTaxInvoices.orderId,
-                              orderRows.map((order) => order.id)
-                          ),
-                          orderBy: [desc(corporateTaxInvoices.createdAt)],
-                      })
-                    : Promise.resolve([]),
-                orderRows.length
-                    ? db.query.corporateSettlementStatements.findMany({
-                          where: inArray(
-                              corporateSettlementStatements.orderId,
-                              orderRows.map((order) => order.id)
-                          ),
-                          orderBy: [
-                              desc(corporateSettlementStatements.createdAt),
-                          ],
-                      })
-                    : Promise.resolve([]),
-                getCorporateDocumentSettings(),
-            ]);
+                          eq(
+                              corporateBrandTaxInvoiceUploads.status,
+                              "pending_review"
+                          )
+                      ),
+                      orderBy: [
+                          desc(corporateBrandTaxInvoiceUploads.createdAt),
+                      ],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateBrandTaxInvoices.findMany({
+                      where: inArray(
+                          corporateBrandTaxInvoices.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateTaxInvoices.findMany({
+                      where: inArray(
+                          corporateTaxInvoices.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateTaxInvoices.createdAt)],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateSettlementStatements.findMany({
+                      where: inArray(
+                          corporateSettlementStatements.orderId,
+                          orderRows.map((order) => order.id)
+                      ),
+                      orderBy: [desc(corporateSettlementStatements.createdAt)],
+                  })
+                : Promise.resolve([]),
+            getCorporateDocumentSettings(),
+        ]);
         const vendorPoByOrderId = new Map<
             string,
             (typeof vendorPurchaseOrders)[number]
@@ -4469,6 +4826,15 @@ class CorporatePlatformService {
         for (const invoice of brandTaxInvoices) {
             if (!brandInvoiceByOrderId.has(invoice.orderId)) {
                 brandInvoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
+        const brandInvoiceUploadByOrderId = new Map<
+            string,
+            (typeof brandTaxInvoiceUploads)[number]
+        >();
+        for (const upload of brandTaxInvoiceUploads) {
+            if (!brandInvoiceUploadByOrderId.has(upload.orderId)) {
+                brandInvoiceUploadByOrderId.set(upload.orderId, upload);
             }
         }
         const customerInvoiceByOrderId = new Map<
@@ -4540,15 +4906,26 @@ class CorporatePlatformService {
         );
 
         const sanitizedOrders = orderRows.map((order) => {
-            const brandingSnapshot = (order.brandingConfigSnapshot ?? {}) as Record<string, unknown>;
-            const companySnapshot = (order.companySnapshot ?? {}) as Record<string, unknown>;
+            const brandingSnapshot = (order.brandingConfigSnapshot ??
+                {}) as Record<string, unknown>;
+            const companySnapshot = (order.companySnapshot ?? {}) as Record<
+                string,
+                unknown
+            >;
             const rawArtwork =
                 (order.artworkFile as Record<string, unknown> | null) ||
-                (brandingSnapshot.artworkFile as Record<string, unknown> | null) ||
+                (brandingSnapshot.artworkFile as Record<
+                    string,
+                    unknown
+                > | null) ||
                 (brandingSnapshot.logoFile as Record<string, unknown> | null) ||
                 (companySnapshot.logoFile as Record<string, unknown> | null);
 
-            let artworkFile: { url: string; name: string; size: number | null } | null = null;
+            let artworkFile: {
+                url: string;
+                name: string;
+                size: number | null;
+            } | null = null;
             if (rawArtwork) {
                 const url =
                     (rawArtwork.url as string) ||
@@ -4562,19 +4939,23 @@ class CorporatePlatformService {
                             (rawArtwork.fileName as string) ||
                             (rawArtwork.originalName as string) ||
                             "artwork-logo.png",
-                        size: typeof rawArtwork.size === "number" ? rawArtwork.size : null,
+                        size:
+                            typeof rawArtwork.size === "number"
+                                ? rawArtwork.size
+                                : null,
                     };
                 }
             }
 
             const logoLocations = Array.isArray(brandingSnapshot.logoLocations)
-                ? (brandingSnapshot.logoLocations as Array<{ name?: string }>)
+                ? ((brandingSnapshot.logoLocations as Array<{ name?: string }>)
                       .map((l) => (typeof l === "string" ? l : l?.name))
-                      .filter(Boolean) as string[]
+                      .filter(Boolean) as string[])
                 : [];
 
             const printMethod =
-                typeof brandingSnapshot.printMethod === "object" && brandingSnapshot.printMethod !== null
+                typeof brandingSnapshot.printMethod === "object" &&
+                brandingSnapshot.printMethod !== null
                     ? (brandingSnapshot.printMethod as { name?: string }).name
                     : typeof brandingSnapshot.printMethod === "string"
                       ? brandingSnapshot.printMethod
@@ -4601,8 +4982,8 @@ class CorporatePlatformService {
                     return purchaseOrder
                         ? {
                               id: purchaseOrder.id,
-                              poNumber: purchaseOrder.poNumber,
-                              foNumber: (purchaseOrder as any).foNumber || purchaseOrder.poNumber,
+                              poNumber: purchaseOrder.foNumber,
+                              foNumber: purchaseOrder.foNumber,
                               issueDate: purchaseOrder.issueDate,
                               expectedDeliveryDate:
                                   purchaseOrder.expectedDeliveryDate,
@@ -4626,6 +5007,17 @@ class CorporatePlatformService {
                           }
                         : null;
                 })(),
+                brandTaxInvoiceUpload: (() => {
+                    const upload = brandInvoiceUploadByOrderId.get(order.id);
+                    return upload
+                        ? {
+                              id: upload.id,
+                              fileName: upload.fileName,
+                              declaredInvoiceDate: upload.declaredInvoiceDate,
+                              status: upload.status,
+                          }
+                        : null;
+                })(),
                 customerTaxInvoice: (() => {
                     const invoice = customerInvoiceByOrderId.get(order.id);
                     return {
@@ -4635,7 +5027,7 @@ class CorporatePlatformService {
                             `BAM/2627/${String(order.sequenceNo ?? 1).padStart(5, "0")}`,
                         invoiceDate: invoice?.invoiceDate ?? order.createdAt,
                         totalAmountPaise:
-                            invoice?.totalAmountPaise ?? order.totalAmountPaise,
+                            invoice?.totalAmountPaise ?? order.totalPaise,
                         status: invoice?.status ?? "issued",
                         downloadUrl: `/api/corporate-orders/${order.id}/invoice.pdf`,
                     };
@@ -4655,67 +5047,68 @@ class CorporatePlatformService {
                           }
                         : null;
                 })(),
-            selectedGarment: {
-                productType:
-                    (order.quote?.productTypeId
-                        ? productTypeById.get(order.quote.productTypeId)?.name
-                        : null) ??
-                    snapshotLabel(
-                        (
-                            (order.productConfigSnapshot ?? {}) as Record<
-                                string,
-                                unknown
-                            >
-                        ).productType,
-                        ["name", "title", "label"]
-                    ) ??
-                    "Pending admin setup",
-                gsm:
-                    (order.quote?.gsmOptionId
-                        ? gsmOptionById.get(order.quote.gsmOptionId)?.label
-                        : null) ??
-                    snapshotLabel(
-                        (
-                            (order.productConfigSnapshot ?? {}) as Record<
-                                string,
-                                unknown
-                            >
-                        ).gsmOption,
-                        ["label", "name", "gsm", "gsmValue"]
-                    ) ??
-                    "Pending admin setup",
-                fabricComposition:
-                    (order.quote?.fabricCompositionId
-                        ? fabricCompositionById.get(
-                              order.quote.fabricCompositionId
-                          )?.name
-                        : null) ??
-                    snapshotLabel(
-                        (
-                            (order.productConfigSnapshot ?? {}) as Record<
-                                string,
-                                unknown
-                            >
-                        ).fabricComposition,
-                        ["name", "composition", "label"]
-                    ) ??
-                    "Pending admin setup",
-            },
-            employeeRows: order.employeeRows.map((row, index) => ({
-                employeeCode: this.maskEmployeeName(
-                    row.employeeName ?? "",
-                    index
-                ),
-                size: row.size,
-            })),
-            statusHistory: order.statusHistory.map((item) => ({
-                id: item.id,
-                toStatus: item.toStatus,
-                note: item.note,
-                createdAt: item.createdAt,
-            })),
-        };
-    });
+                selectedGarment: {
+                    productType:
+                        (order.quote?.productTypeId
+                            ? productTypeById.get(order.quote.productTypeId)
+                                  ?.name
+                            : null) ??
+                        snapshotLabel(
+                            (
+                                (order.productConfigSnapshot ?? {}) as Record<
+                                    string,
+                                    unknown
+                                >
+                            ).productType,
+                            ["name", "title", "label"]
+                        ) ??
+                        "Pending admin setup",
+                    gsm:
+                        (order.quote?.gsmOptionId
+                            ? gsmOptionById.get(order.quote.gsmOptionId)?.label
+                            : null) ??
+                        snapshotLabel(
+                            (
+                                (order.productConfigSnapshot ?? {}) as Record<
+                                    string,
+                                    unknown
+                                >
+                            ).gsmOption,
+                            ["label", "name", "gsm", "gsmValue"]
+                        ) ??
+                        "Pending admin setup",
+                    fabricComposition:
+                        (order.quote?.fabricCompositionId
+                            ? fabricCompositionById.get(
+                                  order.quote.fabricCompositionId
+                              )?.name
+                            : null) ??
+                        snapshotLabel(
+                            (
+                                (order.productConfigSnapshot ?? {}) as Record<
+                                    string,
+                                    unknown
+                                >
+                            ).fabricComposition,
+                            ["name", "composition", "label"]
+                        ) ??
+                        "Pending admin setup",
+                },
+                employeeRows: order.employeeRows.map((row, index) => ({
+                    employeeCode: this.maskEmployeeName(
+                        row.employeeName ?? "",
+                        index
+                    ),
+                    size: row.size,
+                })),
+                statusHistory: order.statusHistory.map((item) => ({
+                    id: item.id,
+                    toStatus: item.toStatus,
+                    note: item.note,
+                    createdAt: item.createdAt,
+                })),
+            };
+        });
 
         await db.insert(corporateBrandAuditLogs).values({
             brandId,
@@ -4755,8 +5148,8 @@ class CorporatePlatformService {
             });
         }
 
-        const [purchaseOrder, brandDetails, settings] = await Promise.all([
-            db.query.corporateVendorPurchaseOrders.findFirst({
+        const purchaseOrder =
+            await db.query.corporateVendorPurchaseOrders.findFirst({
                 where: and(
                     eq(
                         corporateVendorPurchaseOrders.id,
@@ -4765,56 +5158,64 @@ class CorporatePlatformService {
                     eq(corporateVendorPurchaseOrders.orderId, order.id),
                     eq(corporateVendorPurchaseOrders.brandId, brandId)
                 ),
-            }),
-            db.query.brandConfidentials.findFirst({
-                where: eq(brandConfidentials.id, brandId),
-            }),
-            getCorporateDocumentSettings(),
-        ]);
+            });
         if (!purchaseOrder) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "The Renivet purchase order was not found",
             });
         }
-        if (!brandDetails?.gstin || !settings.gstin) {
+        if (!parsed.file.key) {
             throw new TRPCError({
-                code: "PRECONDITION_FAILED",
-                message: "Supplier or Renivet GST details are incomplete",
+                code: "BAD_REQUEST",
+                message: "Uploaded invoice file key is required",
             });
         }
+        return db.transaction(async (tx) => {
+            const existing =
+                await tx.query.corporateBrandTaxInvoiceUploads.findFirst({
+                    where: and(
+                        eq(corporateBrandTaxInvoiceUploads.orderId, order.id),
+                        eq(
+                            corporateBrandTaxInvoiceUploads.fileKey,
+                            parsed.file.key
+                        )
+                    ),
+                });
+            if (existing) return existing;
 
-        const taxableValuePaise =
-            (purchaseOrder as any).taxableValuePaise ??
-            purchaseOrder.totalAmountPaise ??
-            (purchaseOrder.unitSellPricePaise * purchaseOrder.quantity) ??
-            0;
-
-        const totalAmountPaise =
-            purchaseOrder.totalAmountPaise ??
-            taxableValuePaise;
-
-        const foNumber =
-            (purchaseOrder as any).foNumber ||
-            (purchaseOrder as any).poNumber ||
-            "FO-0001";
-
-        const resolvedHsn =
-            (order.quote as any)?.hsnCode ||
-            (order as any).hsnCode ||
-            "6109";
-
-        return corporateDocumentService.recordBrandTaxInvoice(userId, {
-            ...parsed,
-            invoiceNumber: `INV-${foNumber.replace(/[^a-zA-Z0-9]/g, "")}-${Date.now().toString().slice(-4)}`,
-            supplierGstin: brandDetails.gstin,
-            recipientGstin: settings.gstin,
-            hsnCode: resolvedHsn.length >= 4 ? resolvedHsn.slice(0, 8) : "6109",
-            taxableValuePaise,
-            cgstPaise: 0,
-            sgstPaise: 0,
-            igstPaise: 0,
-            totalAmountPaise,
+            await tx
+                .update(corporateBrandTaxInvoiceUploads)
+                .set({ status: "superseded", updatedAt: new Date() })
+                .where(
+                    and(
+                        eq(
+                            corporateBrandTaxInvoiceUploads.vendorPurchaseOrderId,
+                            purchaseOrder.id
+                        ),
+                        eq(
+                            corporateBrandTaxInvoiceUploads.status,
+                            "pending_review"
+                        )
+                    )
+                );
+            const [upload] = await tx
+                .insert(corporateBrandTaxInvoiceUploads)
+                .values({
+                    orderId: order.id,
+                    brandId,
+                    vendorPurchaseOrderId: purchaseOrder.id,
+                    declaredInvoiceDate: parsed.invoiceDate,
+                    fileName: parsed.file.name,
+                    fileUrl: parsed.file.url,
+                    fileKey: parsed.file.key,
+                    fileType: parsed.file.type,
+                    fileSize: parsed.file.size,
+                    status: "pending_review",
+                    uploadedByUserId: userId,
+                })
+                .returning();
+            return upload;
         });
     }
 
@@ -4841,25 +5242,31 @@ class CorporatePlatformService {
             brandId,
             input.orderId
         );
-        const orderReference = quote?.quoteNumber ?? order.publicOrderId;
-
-        const updated = await corporateOrderQueries.updateCorporateOrder(
-            order.id,
-            {
-                status: input.toStatus,
-            }
-        );
-
-        if (!updated) {
+        const assignedFo =
+            await db.query.corporateVendorPurchaseOrders.findFirst({
+                where: and(
+                    eq(corporateVendorPurchaseOrders.orderId, order.id),
+                    eq(corporateVendorPurchaseOrders.brandId, brandId)
+                ),
+                columns: { deliveryMode: true },
+            });
+        if (
+            ["ready_for_dispatch", "dispatched", "delivered"].includes(
+                input.toStatus
+            ) &&
+            assignedFo?.deliveryMode !== "direct_to_customer"
+        ) {
             throw new TRPCError({
-                code: "INTERNAL_SERVER_ERROR",
-                message: "Failed to update corporate order status",
+                code: "FORBIDDEN",
+                message:
+                    "Brand delivery status updates are limited to direct-to-customer orders",
             });
         }
+        const orderReference = quote?.quoteNumber ?? order.publicOrderId;
+        const didTransition = order.status !== input.toStatus;
 
-        await corporateOrderQueries.createStatusHistory({
+        const updated = await corporateOrderService.updateStatus({
             corporateOrderId: order.id,
-            fromStatus: order.status,
             toStatus: input.toStatus,
             changedByUserId: userId,
             note:
@@ -4872,6 +5279,8 @@ class CorporatePlatformService {
                 orderSource: quote ? "quote" : "self_service",
             },
         });
+
+        if (!didTransition) return updated;
 
         await db.insert(corporateBrandAuditLogs).values({
             brandId,
@@ -4941,22 +5350,121 @@ class CorporatePlatformService {
             });
         }
 
-        if (input.toStatus === "delivered" && order.status !== "delivered") {
-            await this.notifyCustomerOrderDelivered({
-                order: {
-                    id: order.id,
-                    publicOrderId: order.publicOrderId,
-                    companyName: order.companyName,
-                    quantity: order.quantity,
-                    totalPaise: order.totalPaise,
-                    advancePaidPaise: order.advancePaidPaise,
-                    balanceDuePaise: order.balanceDuePaise,
-                    emailAddress: order.emailAddress,
-                },
+        return updated;
+    }
+
+    async recordWarehouseGoodsReceipt(actorUserId: string, input: unknown) {
+        // The order + FO pair is the idempotency key for manual receipt retries.
+        const parsed = corporateWarehouseGoodsReceiptInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+            columns: { id: true, brandId: true },
+        });
+        const fo = await db.query.corporateVendorPurchaseOrders.findFirst({
+            where: and(
+                eq(
+                    corporateVendorPurchaseOrders.id,
+                    parsed.vendorPurchaseOrderId
+                ),
+                eq(corporateVendorPurchaseOrders.orderId, parsed.orderId)
+            ),
+            columns: {
+                id: true,
+                brandId: true,
+                deliveryMode: true,
+                quantity: true,
+            },
+        });
+        if (!order || !fo || fo.deliveryMode !== "renivet_warehouse") {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "A warehouse Fulfillment Order is required for this receipt",
+            });
+        }
+        if (!order.brandId || order.brandId !== fo.brandId) {
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "Receipt brand does not match the corporate order",
+            });
+        }
+        if (parsed.receivedQuantity > fo.quantity) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "Received quantity cannot exceed the Fulfillment Order quantity",
             });
         }
 
-        return updated;
+        return db.transaction(async (tx) => {
+            const current =
+                await tx.query.corporateWarehouseGoodsReceipts.findFirst({
+                    where: and(
+                        eq(
+                            corporateWarehouseGoodsReceipts.vendorPurchaseOrderId,
+                            fo.id
+                        ),
+                        eq(
+                            corporateWarehouseGoodsReceipts.isCurrentAccepted,
+                            true
+                        )
+                    ),
+                    orderBy: [
+                        desc(corporateWarehouseGoodsReceipts.receiptVersion),
+                    ],
+                });
+            if (
+                current &&
+                current.warehouseName === parsed.warehouseName &&
+                current.receivedQuantity === parsed.receivedQuantity &&
+                current.receiptDate === parsed.receiptDate &&
+                current.receiverName === parsed.receiverName &&
+                current.deliveryReference === (parsed.deliveryReference ?? null)
+            ) {
+                return current;
+            }
+            if (current) {
+                await tx
+                    .update(corporateWarehouseGoodsReceipts)
+                    .set({
+                        isCurrentAccepted: false,
+                        status: "superseded",
+                        reviewedByUserId: actorUserId,
+                        reviewedAt: new Date(),
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(corporateWarehouseGoodsReceipts.id, current.id));
+            }
+            const [receipt] = await tx
+                .insert(corporateWarehouseGoodsReceipts)
+                .values({
+                    orderId: parsed.orderId,
+                    vendorPurchaseOrderId: fo.id,
+                    brandId: fo.brandId,
+                    warehouseName: parsed.warehouseName,
+                    receivedQuantity: parsed.receivedQuantity,
+                    receiptDate: parsed.receiptDate,
+                    receiverName: parsed.receiverName,
+                    deliveryReference: parsed.deliveryReference ?? null,
+                    status: "accepted",
+                    receiptVersion: (current?.receiptVersion ?? 0) + 1,
+                    isCurrentAccepted: true,
+                    createdByUserId: actorUserId,
+                })
+                .returning();
+            await tx.insert(corporateOrderStatusHistory).values({
+                corporateOrderId: parsed.orderId,
+                fromStatus: null,
+                toStatus: "under_review",
+                changedByUserId: actorUserId,
+                note: "Warehouse goods receipt recorded",
+                metadata: {
+                    receiptId: receipt.id,
+                    vendorPurchaseOrderId: fo.id,
+                },
+            });
+            return receipt;
+        });
     }
 
     async generateReport(actorUserId: string, input: unknown) {

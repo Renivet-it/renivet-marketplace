@@ -1,0 +1,402 @@
+schema_version: "1.0"
+task:
+    id: REN-179
+    title: "[Corporate Order] Enforce HSN/GST classification before a corporate invoice can be issued (no silent 18% default)"
+    source: linear
+    branch: ayanganguly333/ren-179-corporate-order-enforce-hsngst-classification-before-a
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-179/corporate-order-enforce-hsngst-classification-before-a
+        priority: Urgent
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Changes financial tax correctness for corporate customer invoices.
+        - Crosses quote, order lifecycle, snapshot, document, and settlement paths.
+        - A wrong fallback can charge or report incorrect GST to a real customer.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, updates, comments, relations, and branch context
+        - Corporate buildQuote and createQuote/createManualQuote service paths
+        - Corporate product type, HSN Master, quote, and order schemas
+        - Corporate tax invoice template and document issuance service
+        - Finance calculation helpers and existing net-per-piece logic
+        - Existing corporate snapshot, authorization, tests, migrations, and related REN-175/176 work
+    excluded_areas:
+        - Finance/CA legal decision on T-shirt rate or composite supply
+        - New HSN Master administration UI
+        - Non-corporate marketplace taxation
+        - Rewriting already-issued financial documents
+        - REN-183 warehouse GRN and unrelated delivery controls
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+    integrations: [INT-001, INT-002, INT-003, INT-004, INT-005]
+    security_boundaries: [SEC-001, SEC-002, SEC-003]
+    state_transitions:
+        - quote_input -> classified_quote_snapshot
+        - classified_quote_snapshot -> approved_order
+        - approved_order -> issued_proforma_or_tax_invoice
+    related_tests: [TEXP-001, TEXP-002, TEXP-003, TEXP-004, TEXP-005, TEXP-006]
+    uncertainties:
+        - Finance/CA has not confirmed the final T-shirt HSN/rate or customization composite treatment.
+        - REN-177 field names and rollout order must be reconciled before implementation.
+        - Historical issued documents may lack explicit line-level classification and need a non-fabricating display policy.
+        - Enforcement code may proceed data-first, but pilot issuance remains blocked until authoritative HSN records are populated.
+dependencies:
+    - id: DEP-001
+      name: REN-64 HSN Master integration
+      purpose: Provides authoritative active HSN and GST rates.
+      description: Reuse the existing active HSN Master rather than rebuilding classification infrastructure.
+      status: resolved
+    - id: DEP-002
+      name: REN-177 commercial snapshot
+      purpose: Supplies one immutable cross-document tax/classification source.
+      description: Coordinate snapshot fields and sequencing with the single-source-of-truth work item.
+      status: resolved
+    - id: DEP-003
+      name: REN-180 document integrity
+      purpose: Coordinates safe document rendering and prevents fallback regressions.
+      description: Keep date, GSTIN, HSN, and seller identity fixes compatible with the classification contract.
+      status: resolved
+    - id: DEP-004
+      name: Finance/CA classification decision and catalog data fix
+      purpose: Supplies approved production HSN/rate values without code literals.
+      description: Finance/CA must populate approved HSN/rate and composite-supply data before pilot issuance.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Resolve every taxable corporate line to an active HSN Master or approved override before quote/order/document issuance.
+      type: explicit
+    - id: REQ-002
+      description: Block missing, inactive, or unresolved HSN/rate classification with a clear server-side error and no issued artifact.
+      type: explicit
+    - id: REQ-003
+      description: Derive slab-sensitive GST from the net base-goods per-piece transaction value, excluding GST and customization.
+      type: explicit
+    - id: REQ-004
+      description: Persist resolved line classification and tax values in the authoritative commercial snapshot consumed by all corporate documents and settlement outputs.
+      type: explicit
+    - id: REQ-005
+      description: Remove independent template/service generic HSN and GST fallbacks, including 6109, 5%, and 18% literals.
+      type: explicit
+    - id: REQ-006
+      description: Preserve authorization, tenant scoping, retry safety, and atomicity across all affected quote and invoice paths.
+      type: inferred
+    - id: REQ-007
+      description: Keep Finance/CA classification decisions outside code assumptions and allow future master changes to affect new snapshots without code changes.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-004]
+      description: Active HSN classification produces a reconciled quote/order snapshot.
+    - id: SCN-002
+      requirement_ids: [REQ-001, REQ-002]
+      description: Missing or inactive HSN blocks self-service, admin, and manual quote creation.
+    - id: SCN-003
+      requirement_ids: [REQ-001, REQ-005]
+      description: Client GST percentage or stale product data cannot override the active HSN Master silently.
+    - id: SCN-004
+      requirement_ids: [REQ-003]
+      description: Apparel slab selection uses subtotal divided by quantity and excludes customization.
+    - id: SCN-005
+      requirement_ids: [REQ-004]
+      description: Base and customization lines reconcile taxable amounts, rates, GST, and totals.
+    - id: SCN-006
+      requirement_ids: [REQ-004, REQ-005]
+      description: PI, PO, tax invoice, settlement, export, and PDF readers render the same snapshot values.
+    - id: SCN-007
+      requirement_ids: [REQ-002, REQ-005]
+      description: Unresolved issuance fails before an issued document is persisted and never prints fabricated HSN/rate data.
+    - id: SCN-008
+      requirement_ids: [REQ-005]
+      description: Legacy incomplete documents follow an explicit compatibility display without false classification.
+    - id: SCN-009
+      requirement_ids: [REQ-006]
+      description: Concurrent or retried requests remain atomic and idempotent.
+    - id: SCN-010
+      requirement_ids: [REQ-006]
+      description: Unauthorized callers cannot bypass classification through crafted input.
+    - id: SCN-011
+      requirement_ids: [REQ-007]
+      description: A changed HSN Master rate is used for new snapshots without code modification.
+invariants:
+    - id: INV-001
+      description: Every new taxable corporate document line has an explicit active classification source.
+    - id: INV-002
+      description: No silent generic GST or product-specific HSN fallback exists in any issuance or renderer layer.
+    - id: INV-003
+      description: Slab selection uses net base-goods per-piece value only.
+    - id: INV-004
+      description: Snapshot line taxes and document totals reconcile exactly.
+    - id: INV-005
+      description: Corporate document consumers use one authoritative commercial snapshot.
+    - id: INV-006
+      description: Classification failure is atomic and leaves no issued artifact.
+    - id: INV-007
+      description: Historical compatibility cannot fabricate current tax facts.
+    - id: INV-008
+      description: Existing corporate authorization and tenant boundaries remain enforced.
+flows:
+    - id: FLOW-001
+      description: Quote input resolves HSN/rate, calculates split taxes from net values, and persists the commercial snapshot.
+      state_transitions: [quote_input -> classified_quote_snapshot]
+    - id: FLOW-002
+      description: Issuance asserts snapshot classification and all document consumers read it.
+      state_transitions:
+          [
+              classified_quote_snapshot -> approved_order,
+              approved_order -> issued_proforma_or_tax_invoice,
+          ]
+    - id: FLOW-003
+      description: Renderer safely handles missing historical fields without inventing defaults.
+      state_transitions: [approved_order -> issued_proforma_or_tax_invoice]
+integrations:
+    - id: INT-001
+      system: HSN Master
+      purpose: Authoritative active HSN/rate lookup.
+      failure_mode: Missing/inactive classification causes a precondition failure.
+    - id: INT-002
+      system: Corporate quote/order services
+      purpose: Server-side classification, rate calculation, and snapshot persistence.
+      failure_mode: Validation failure rolls back quote/order writes.
+    - id: INT-003
+      system: Corporate document service/templates
+      purpose: PI/PO/tax invoice rendering from snapshot.
+      failure_mode: Unresolved data cannot be issued or is explicitly marked unavailable historically.
+    - id: INT-004
+      system: REN-177 commercial snapshot
+      purpose: Cross-document consistency.
+      failure_mode: Version/schema mismatch blocks issuance until reconciled.
+    - id: INT-005
+      system: Finance/CA approved data process
+      purpose: Updates HSN/rate and composite-supply decisions.
+      failure_mode: No guessed value is inserted; affected issuance remains blocked.
+personas:
+    - id: PER-001
+      role: corporate_customer
+      applicability: Receives accurate classified corporate commercial documents.
+    - id: PER-002
+      role: corporate_operations_admin
+      applicability: Creates quotes and issues documents under MANAGE_ORDERS.
+    - id: PER-003
+      role: finance_ca_reviewer
+      applicability: Approves classification/rate data outside application assumptions.
+security_boundaries:
+    - id: SEC-001
+      description: Classification and issuance mutations remain authenticated and MANAGE_ORDERS protected.
+    - id: SEC-002
+      description: Server ignores untrusted client tax rates/HSN claims unless they resolve to approved authority.
+    - id: SEC-003
+      description: Tenant/order scoping and historical document access remain unchanged.
+business_rules:
+    - id: BR-001
+      description: Active HSN Master or explicit approved override is the only valid new-document classification source.
+      source: REN-179 acceptance criteria and REN-64 dependency.
+    - id: BR-002
+      description: No code-level ₹ threshold or hard-coded GST rate may encode the Mili example or working tax position.
+      source: REN-179 final Linear update and Finance/CA dependency.
+    - id: BR-003
+      description: Base apparel slab decisions use net base-goods per-piece value.
+      source: Corporate tax audit and related tax-line work item.
+decisions:
+    - id: DEC-001
+      question: What HSN/rate and composite-supply treatment should production use for T-shirts and printing/customization?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Implement fail-closed, data-driven enforcement now; Finance/CA must later populate HSN Master/approved override before pilot issuance.
+      basis: Architecture Lock Pass explicitly permits enforcement independently but requires authoritative effective classification for issuance.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-002
+      question: May manual quote creation auto-create and activate an operator-entered HSN Master row when absent?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      recommendation: Auto-create the active HSN Master row from the entered HSN code and GST rate; future documents resolve that persisted row.
+      basis: Explicit owner approval in the implementation conversation.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Proves authoritative HSN/rate lookup and net-per-piece slab selection.
+      scenarios: [SCN-001, SCN-003, SCN-004, SCN-011]
+    - id: TEXP-002
+      category: api
+      classification: REQUIRED
+      reason: Proves missing/inactive classification blocks all quote paths.
+      scenarios: [SCN-002, SCN-007]
+    - id: TEXP-003
+      category: integration
+      classification: REQUIRED
+      reason: Proves snapshot split lines and cross-document reconciliation.
+      scenarios: [SCN-005, SCN-006]
+    - id: TEXP-004
+      category: component
+      classification: REQUIRED
+      reason: Proves renderer has no generic HSN/GST fallbacks and handles historical missing data safely.
+      scenarios: [SCN-007, SCN-008]
+    - id: TEXP-005
+      category: security
+      classification: REQUIRED
+      reason: Proves authorization, tenant scoping, and rejection of crafted tax input.
+      scenarios: [SCN-003, SCN-010]
+    - id: TEXP-006
+      category: regression
+      classification: REQUIRED
+      reason: Proves atomicity/idempotency and compatibility with existing classified orders.
+      scenarios: [SCN-009]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren175_critic (independent fresh-context read-only critic)
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - id: REN179-CRIT-001
+          severity: DESIGN_BLOCKER
+          summary: Finance/CA classification and composite-supply decision is unresolved; new taxable issuance must remain fail-closed.
+        - id: REN179-CRIT-002
+          severity: MAJOR
+          summary: createQuote/createManualQuote currently accept or calculate untrusted classification before complete server-side resolution.
+        - id: REN179-CRIT-003
+          severity: MAJOR
+          summary: PI and tax-invoice issuance lack a classification precondition.
+        - id: REN179-CRIT-004
+          severity: MAJOR
+          summary: Multiple document templates retain independent HSN/GST fallbacks.
+        - id: REN179-CRIT-005
+          severity: MAJOR
+          summary: Concurrent invoice issuance and quote numbering need uniqueness/transaction safety.
+        - id: REN179-CRIT-006
+          severity: MAJOR
+          summary: Canonical per-line snapshot and rounding policy is required to prevent tax divergence.
+        - id: REN179-CRIT-007
+          severity: MINOR
+          summary: Add structured classification-block error details and observability.
+        - id: REN179-CRIT-008
+          severity: MINOR
+          summary: Define concrete non-fabricating legacy renderer behavior.
+        - id: REN179-CRIT-009
+          severity: MINOR
+          summary: Add HSN authority/source version metadata to snapshots.
+        - id: REN179-CRIT-010
+          severity: DESIGN_BLOCKER
+          summary: Retire or quarantine the corporate settings 1800 default from product tax resolution.
+        - id: REN179-CRIT-011
+          severity: MAJOR
+          summary: Brand tax-invoice recording still falls back to HSN 6109.
+        - id: REN179-CRIT-012
+          severity: MAJOR
+          summary: Quote paths calculate or write before classification preflight.
+        - id: REN179-CRIT-013
+          severity: MAJOR
+          summary: Every issuance entry point, retry, and background job needs the same classification guard.
+        - id: REN179-CRIT-014
+          severity: MAJOR
+          summary: Snapshot authority source/version/effective-at contract is not explicit.
+        - id: REN179-CRIT-015
+          severity: MAJOR
+          summary: Persisted tax, charged ledger, and displayed tax equality needs an invariant and tests.
+        - id: REN179-CRIT-016
+          severity: MINOR
+          summary: Pilot readiness needs an operational check and observable failure metric.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: "Ayan Ganguly (approved enforcement-only implementation; Finance/CA rates remain production-data gated)"
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-007] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-004] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-001, SCN-005, SCN-006] }
+        - {
+              requirement_id: REQ-005,
+              scenario_ids: [SCN-003, SCN-006, SCN-007, SCN-008],
+          }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-009, SCN-010] }
+        - { requirement_id: REQ-007, scenario_ids: [SCN-011] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-004, INV-005] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-006] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-004, INV-005] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-002, INV-004, INV-005] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-002, INV-006, INV-007] }
+        - { scenario_id: SCN-008, invariant_ids: [INV-007] }
+        - { scenario_id: SCN-009, invariant_ids: [INV-006] }
+        - { scenario_id: SCN-010, invariant_ids: [INV-008] }
+        - { scenario_id: SCN-011, invariant_ids: [INV-001, INV-005] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-001, TEXP-005] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-002, TEXP-004] }
+        - { scenario_id: SCN-008, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-009, test_expectation_ids: [TEXP-006] }
+        - { scenario_id: SCN-010, test_expectation_ids: [TEXP-005] }
+        - { scenario_id: SCN-011, test_expectation_ids: [TEXP-001] }
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: main
+    base_commit: "122a62023fd396f7c94b9889b67a705a09addde1"
+    head_commit: "04eaaf6740844cbb15df6195bd99462ae18790b2"
+    pr_url: null
+    material_drift: MINOR_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Define historical-document classification-not-available rendering before legacy re-rendering."
+        - "REV-002: Add a populated HSN Master pilot fixture and end-to-end issuance/PDF reconciliation."
+    evidence:
+        - "Compared approved REN-179 contract with base 122a62023fd396f7c94b9889b67a705a09addde1 and head 04eaaf6740844cbb15df6195bd99462ae18790b2."
+        - "Classification helper and corporate service/template guards are implemented in the changed source paths."
+        - "Bun test suite and governance validation passed before this review artifact update."
+    governance_reentry_required: false

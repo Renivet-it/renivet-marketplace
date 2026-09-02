@@ -15,6 +15,18 @@ type Props = {
     expectedTotalPaise: number;
     recipientGstin?: string | null;
     brandId?: string;
+    expectedQuantity?: number;
+    expectedUnitRatePaise?: number;
+    foReference?: string;
+    pendingUpload?: {
+        id: string;
+        declaredInvoiceDate?: string | null;
+        fileName: string;
+        fileUrl: string;
+        fileKey: string;
+        fileType: string;
+        fileSize: number;
+    } | null;
     onComplete: () => void | Promise<void>;
 };
 
@@ -24,11 +36,26 @@ export function BrandTaxInvoiceForm({
     expectedTotalPaise,
     recipientGstin: defaultRecipientGstin,
     brandId,
+    expectedQuantity,
+    expectedUnitRatePaise,
+    foReference,
+    pendingUpload,
     onComplete,
 }: Props) {
     const { startUpload } = useUploadThing("corporateDocumentUploader");
     const [invoiceNumber, setInvoiceNumber] = useState("");
-    const [invoiceDate, setInvoiceDate] = useState("");
+    const [invoiceDate, setInvoiceDate] = useState(
+        pendingUpload?.declaredInvoiceDate ?? ""
+    );
+    const [invoiceFoReference, setInvoiceFoReference] = useState(
+        foReference ?? ""
+    );
+    const [invoiceQuantity, setInvoiceQuantity] = useState(
+        expectedQuantity ? String(expectedQuantity) : ""
+    );
+    const [unitRate, setUnitRate] = useState(
+        expectedUnitRatePaise ? String(expectedUnitRatePaise / 100) : ""
+    );
     const [supplierGstin, setSupplierGstin] = useState("");
     const [recipientGstin, setRecipientGstin] = useState(
         defaultRecipientGstin ?? ""
@@ -48,11 +75,14 @@ export function BrandTaxInvoiceForm({
         }
     }, [defaultRecipientGstin, recipientGstin]);
 
-    const afterSuccess = async (invoice: { validationStatus: string }) => {
+    const afterSuccess = async (invoice: {
+        validationStatus?: string;
+        status?: string;
+    }) => {
         toast.success(
-            invoice.validationStatus === "validated"
-                ? "Invoice uploaded"
-                : "Invoice sent for review"
+            invoice.validationStatus === "accepted"
+                ? "Invoice accepted"
+                : "Invoice sent for admin review"
         );
         setFile(null);
         await onComplete();
@@ -75,14 +105,23 @@ export function BrandTaxInvoiceForm({
             toast.error("Select the invoice date");
             return;
         }
-        if (!file) {
+        if (!file && !pendingUpload) {
             toast.error("Select the invoice file");
             return;
         }
         setIsUploading(true);
         try {
-            const uploaded = await startUpload([file]);
-            const uploadedFile = uploaded?.[0];
+            const uploadedFile = file
+                ? (await startUpload([file]))?.[0]
+                : pendingUpload
+                  ? {
+                      name: pendingUpload.fileName,
+                      size: pendingUpload.fileSize,
+                      url: pendingUpload.fileUrl,
+                      key: pendingUpload.fileKey,
+                      type: pendingUpload.fileType,
+                    }
+                  : null;
             if (!uploadedFile) throw new Error("Invoice upload failed");
             const uploadedDocument = {
                 orderId,
@@ -105,8 +144,12 @@ export function BrandTaxInvoiceForm({
             }
             const invoice = {
                 ...uploadedDocument,
+                uploadId: file ? null : pendingUpload?.id,
                 invoiceNumber,
                 invoiceDate,
+                foReference: invoiceFoReference,
+                quantity: Number(invoiceQuantity),
+                unitRatePaise: toPaise(unitRate),
                 supplierGstin: supplierGstin.trim().toUpperCase(),
                 recipientGstin: recipientGstin.trim().toUpperCase(),
                 hsnCode: hsnCode.trim(),
@@ -208,6 +251,27 @@ export function BrandTaxInvoiceForm({
                         onChange={(event) => setInvoiceDate(event.target.value)}
                     />
                 </Field>
+                <Field label="FO reference">
+                    <Input
+                        value={invoiceFoReference}
+                        onChange={(event) =>
+                            setInvoiceFoReference(event.target.value)
+                        }
+                    />
+                </Field>
+                <Field label="Quantity">
+                    <Input
+                        type="number"
+                        min="1"
+                        value={invoiceQuantity}
+                        onChange={(event) =>
+                            setInvoiceQuantity(event.target.value)
+                        }
+                    />
+                </Field>
+                <Field label="Unit rate">
+                    <MoneyInput value={unitRate} onChange={setUnitRate} />
+                </Field>
                 <Field label="Supplier GSTIN">
                     <Input
                         value={supplierGstin}
@@ -255,7 +319,9 @@ export function BrandTaxInvoiceForm({
                     <label className="flex h-9 cursor-pointer items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs text-slate-600 hover:bg-slate-50">
                         <Upload className="size-3.5 shrink-0" />
                         <span className="truncate">
-                            {file?.name ?? "Select PDF or image"}
+                            {file?.name ??
+                                pendingUpload?.fileName ??
+                                "Select PDF or image"}
                         </span>
                         <input
                             type="file"
