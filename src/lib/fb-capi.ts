@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+import { isValidFbc, isValidFbp } from "@/lib/analytics/meta-event-quality";
 import { db } from "@/lib/db";
 import { capiLogs } from "@/lib/db/schema";
 import { shouldRunExternalSideEffects } from "@/lib/external-side-effects";
@@ -14,6 +16,24 @@ import { env } from "../../env";
 
 const ACCESS_TOKEN = env.FACEBOOK_CAPI_ACCESS_TOKEN;
 const PIXEL_ID = process.env.NEXT_PUBLIC_FACEBOOK_PIXEL_ID || "618442627790500";
+const SHA256_PATTERN = /^[a-f0-9]{64}$/i;
+
+export function prepareCapiUserDataForMeta(
+    userData: CapiUserData
+): CapiUserData {
+    const sanitized = sanitizeFbUserData(userData) as CapiUserData;
+    if (sanitized.fbc && !isValidFbc(sanitized.fbc)) delete sanitized.fbc;
+    if (sanitized.fbp && !isValidFbp(sanitized.fbp)) delete sanitized.fbp;
+    if (!sanitized.external_id) return sanitized;
+
+    const externalId = sanitized.external_id;
+    return {
+        ...sanitized,
+        external_id: SHA256_PATTERN.test(externalId)
+            ? externalId.toLowerCase()
+            : createHash("sha256").update(externalId).digest("hex"),
+    };
+}
 
 export const CAPI_META_TIMEOUT_MS = 3_000;
 export const CAPI_LOG_TIMEOUT_MS = 1_000;
@@ -602,6 +622,5 @@ export const sendCapiEvent = createCapiEventSender({
     now: () => Date.now(),
     timers: defaultTimers,
     shouldRunExternalSideEffects,
-    sanitizeUserData: (userData) =>
-        sanitizeFbUserData(userData) as CapiUserData,
+    sanitizeUserData: prepareCapiUserDataForMeta,
 });

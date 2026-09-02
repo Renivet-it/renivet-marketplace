@@ -2,6 +2,13 @@
 "use server";
 
 import {
+    buildMetaProfileUserData,
+    isCrawlerAnalyticsSuppressionEnabled,
+    isLikelyAnalyticsBot,
+    mergeMetaUserData,
+    reportCapiSuppression,
+} from "@/lib/analytics/meta-event-quality";
+import {
     createViewContentCapiAfterResponseCaptureScheduler,
     createViewContentCapiAfterResponseScheduler,
     createViewContentCapiSender,
@@ -32,8 +39,75 @@ export async function getCapiRequestData(): Promise<CapiRequestData> {
         headersList.get("x-vercel-ip-country") ||
         headersList.get("x-country") ||
         undefined;
+    const state =
+        headersList.get("x-vercel-ip-country-region") ||
+        headersList.get("x-country-region") ||
+        undefined;
+    const city =
+        headersList.get("x-vercel-ip-city") ||
+        headersList.get("x-city") ||
+        undefined;
 
-    return { userAgent, ip, referer, fbp, fbc, country };
+    return { userAgent, ip, referer, fbp, fbc, country, state, city };
+}
+
+async function enrichCapiUserData(
+    userData: CapiUserData,
+    requestData: CapiRequestData
+) {
+    let profile: CapiUserData | undefined;
+    let primaryAddress:
+        | { city?: string; state?: string; zip?: string; phone?: string }
+        | undefined;
+
+    try {
+        const user = await currentUser();
+        if (
+            user &&
+            (!userData.external_id || user.id === userData.external_id)
+        ) {
+            profile = buildMetaProfileUserData(user);
+            try {
+                const dbUser = await userQueries.getUser(user.id);
+                primaryAddress =
+                    dbUser?.addresses?.find((address) => address.isPrimary) ||
+                    dbUser?.addresses?.[0];
+            } catch (error) {
+                console.error("Error enriching CAPI address data:", error);
+            }
+        }
+    } catch (error) {
+        console.error("Error enriching CAPI profile data:", error);
+    }
+
+    return mergeMetaUserData({
+        supplied: userData,
+        profile,
+        primaryAddress: primaryAddress
+            ? {
+                  ct: primaryAddress.city,
+                  st: primaryAddress.state,
+                  zp: primaryAddress.zip,
+                  ph: primaryAddress.phone,
+              }
+            : undefined,
+        geo: {
+            country: requestData.country,
+            st: requestData.state,
+            ct: requestData.city,
+        },
+    });
+}
+
+function shouldSuppressCapiEvent(
+    eventName: "AddToCart" | "InitiateCheckout" | "Purchase",
+    requestData: CapiRequestData
+) {
+    const shouldSuppress =
+        isCrawlerAnalyticsSuppressionEnabled() &&
+        isLikelyAnalyticsBot(requestData.userAgent);
+    if (shouldSuppress) reportCapiSuppression(eventName);
+    return shouldSuppress;
 }
 
 export async function trackAddToCartCapi(
@@ -42,46 +116,20 @@ export async function trackAddToCartCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc, country } = await getCapiRequestData();
-    let enrichedUserData = { ...userData };
-
-    if (userData.external_id) {
-        try {
-            const user = await currentUser();
-            if (user && user.id === userData.external_id) {
-                const dbUser = await userQueries.getUser(user.id);
-                const primaryAddress =
-                    dbUser?.addresses?.find((a) => a.isPrimary) ||
-                    dbUser?.addresses?.[0];
-
-                if (primaryAddress) {
-                    enrichedUserData = {
-                        ...enrichedUserData,
-                        ct: primaryAddress.city,
-                        st: primaryAddress.state,
-                        zp: primaryAddress.zip,
-                        ph:
-                            enrichedUserData.ph ||
-                            primaryAddress.phone ||
-                            undefined,
-                    };
-                }
-            }
-        } catch (error) {
-            console.error("Error enriching CAPI data:", error);
-        }
-    }
+    const requestData = await getCapiRequestData();
+    if (shouldSuppressCapiEvent("AddToCart", requestData)) return;
+    const enrichedUserData = await enrichCapiUserData(userData, requestData);
 
     await sendCapiEvent(
         "AddToCart",
         {
             ...enrichedUserData,
-            client_user_agent: userAgent,
-            client_ip_address: ip,
-            fbp,
-            fbc,
-            fb_login_id: enrichedUserData.external_id,
-            country: enrichedUserData.country || country,
+            client_user_agent: requestData.userAgent,
+            client_ip_address: requestData.ip,
+            fbp: requestData.fbp,
+            fbc: requestData.fbc,
+            fb_login_id:
+                enrichedUserData.fb_login_id ?? enrichedUserData.external_id,
         },
         customData,
         eventId,
@@ -95,46 +143,20 @@ export async function trackInitiateCheckoutCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc, country } = await getCapiRequestData();
-    let enrichedUserData = { ...userData };
-
-    if (userData.external_id) {
-        try {
-            const user = await currentUser();
-            if (user && user.id === userData.external_id) {
-                const dbUser = await userQueries.getUser(user.id);
-                const primaryAddress =
-                    dbUser?.addresses?.find((a) => a.isPrimary) ||
-                    dbUser?.addresses?.[0];
-
-                if (primaryAddress) {
-                    enrichedUserData = {
-                        ...enrichedUserData,
-                        ct: enrichedUserData.ct || primaryAddress.city,
-                        st: enrichedUserData.st || primaryAddress.state,
-                        zp: enrichedUserData.zp || primaryAddress.zip,
-                        ph:
-                            enrichedUserData.ph ||
-                            primaryAddress.phone ||
-                            undefined,
-                    };
-                }
-            }
-        } catch (error) {
-            console.error("Error enriching CAPI data:", error);
-        }
-    }
+    const requestData = await getCapiRequestData();
+    if (shouldSuppressCapiEvent("InitiateCheckout", requestData)) return;
+    const enrichedUserData = await enrichCapiUserData(userData, requestData);
 
     await sendCapiEvent(
         "InitiateCheckout",
         {
             ...enrichedUserData,
-            client_user_agent: userAgent,
-            client_ip_address: ip,
-            fbp,
-            fbc,
-            fb_login_id: enrichedUserData.external_id,
-            country: enrichedUserData.country || country,
+            client_user_agent: requestData.userAgent,
+            client_ip_address: requestData.ip,
+            fbp: requestData.fbp,
+            fbc: requestData.fbc,
+            fb_login_id:
+                enrichedUserData.fb_login_id ?? enrichedUserData.external_id,
         },
         customData,
         eventId,
@@ -148,18 +170,20 @@ export async function trackPurchaseCapi(
     customData: CapiCustomData,
     url: string
 ) {
-    const { userAgent, ip, fbp, fbc, country } = await getCapiRequestData();
+    const requestData = await getCapiRequestData();
+    if (shouldSuppressCapiEvent("Purchase", requestData)) return;
+    const enrichedUserData = await enrichCapiUserData(userData, requestData);
 
     await sendCapiEvent(
         "Purchase",
         {
-            ...userData,
-            client_user_agent: userAgent,
-            client_ip_address: ip,
-            fbp,
-            fbc,
-            fb_login_id: userData.external_id,
-            country: userData.country || country,
+            ...enrichedUserData,
+            client_user_agent: requestData.userAgent,
+            client_ip_address: requestData.ip,
+            fbp: requestData.fbp,
+            fbc: requestData.fbc,
+            fb_login_id:
+                enrichedUserData.fb_login_id ?? enrichedUserData.external_id,
         },
         customData,
         eventId,
@@ -193,14 +217,16 @@ export async function captureAndScheduleViewContentCapiAfterResponse(
     eventId: string,
     userData: CapiUserData,
     customData: CapiCustomData,
-    url: string
+    url: string,
+    requestDataOverride: Partial<Pick<CapiRequestData, "fbc">> = {}
 ) {
     await captureAndScheduleViewContentCapiAfterResponseInternal(
         registerAfter,
         eventId,
         userData,
         customData,
-        url
+        url,
+        requestDataOverride
     );
 }
 

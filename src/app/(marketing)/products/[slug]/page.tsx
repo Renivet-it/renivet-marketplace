@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BRAND_EVENTS } from "@/config/brand";
 import { siteConfig } from "@/config/site";
+import { buildFbcFromFbclid } from "@/lib/analytics/meta-event-quality";
 import { productQueries } from "@/lib/db/queries";
 import { userQueries } from "@/lib/db/queries/user";
 import {
@@ -28,6 +29,9 @@ import { Suspense } from "react";
 interface PageProps {
     params: Promise<{
         slug: string;
+    }>;
+    searchParams: Promise<{
+        fbclid?: string | string[];
     }>;
 }
 
@@ -151,11 +155,11 @@ export async function generateMetadata({
 // ------------------
 // 🔹 Main Page
 // ------------------
-export default function Page({ params }: PageProps) {
+export default function Page({ params, searchParams }: PageProps) {
     return (
         <GeneralShell>
             <Suspense fallback={<ProductSkeleton />}>
-                <ProductFetch params={params} />
+                <ProductFetch params={params} searchParams={searchParams} />
             </Suspense>
         </GeneralShell>
     );
@@ -164,8 +168,9 @@ export default function Page({ params }: PageProps) {
 // ------------------
 // 🔹 ProductFetch (server)
 // ------------------
-async function ProductFetch({ params }: PageProps) {
+async function ProductFetch({ params, searchParams }: PageProps) {
     const { slug } = await params;
+    const { fbclid } = await searchParams;
     const user = await currentUser();
     const userId = user?.id;
 
@@ -235,6 +240,9 @@ async function ProductFetch({ params }: PageProps) {
             (acc) => acc.provider === "oauth_facebook"
         )?.externalId,
     };
+    const fbc = buildFbcFromFbclid({
+        fbclid: typeof fbclid === "string" ? fbclid : undefined,
+    });
 
     await captureAndScheduleViewContentCapiAfterResponse(
         after,
@@ -250,7 +258,8 @@ async function ProductFetch({ params }: PageProps) {
             value: parseFloat(priceInRupees),
             currency: "INR",
         },
-        getAbsoluteURL(`/products/${slug}`)
+        getAbsoluteURL(`/products/${slug}`),
+        fbc ? { fbc } : undefined
     );
 
     const jsonLd = {

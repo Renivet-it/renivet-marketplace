@@ -5,6 +5,7 @@ import { verifyPayment } from "@/actions/get-shiprocket-balance";
 import { processOrderAfterPayment } from "@/actions/process-order-after-payment";
 import { sendWhatsAppNotification } from "@/actions/whatsapp/send-order-notification";
 import { siteConfig } from "@/config/site";
+import { isCompleteMetaPurchaseOrder } from "@/lib/analytics/meta-purchase";
 // Assuming needed for value formatting if not available
 // crypto is usually available globally in Node but for client side... wait.
 // payment.ts is a utility file. Is it client or server?
@@ -41,6 +42,7 @@ export function createRazorpayPaymentOptions({
     deleteItemFromCart,
     orderIntentId,
     onOrderSuccess,
+    onPurchaseSuccess,
 }: {
     orderId: string;
     deliveryAddress: any;
@@ -86,7 +88,7 @@ export function createRazorpayPaymentOptions({
         }>;
         razorpayOrderId: string;
         razorpayPaymentId: string;
-    }) => void;
+    }) => Promise<Array<{ id: string }>>;
     orderDetailsByBrand: Array<{
         userId: string;
         coupon?: string;
@@ -113,6 +115,7 @@ export function createRazorpayPaymentOptions({
     deleteItemFromCart: (input: { userId: string }) => void;
     orderIntentId: string;
     onOrderSuccess?: () => Promise<void>;
+    onPurchaseSuccess?: (completedOrderIds: string[]) => void | Promise<void>;
 }) {
     const options: RazorpayPaymentOptions = {
         key: env.NEXT_PUBLIC_RAZOR_PAY_KEY_ID,
@@ -171,6 +174,7 @@ export function createRazorpayPaymentOptions({
 
                 // Step 3: Create orders for each brand and process stock and payment status
                 const createdOrders = [];
+                const completedOrderIds: string[] = [];
                 for (const [
                     index,
                     orderDetails,
@@ -181,10 +185,19 @@ export function createRazorpayPaymentOptions({
                             orderDetails
                         );
                         // await createOrder(orderDetails);
-                        await createOrder({
+                        const createdOrder = await createOrder({
                             ...orderDetails,
                             razorpayPaymentId: payload.razorpay_payment_id, // Add payment ID
                         });
+                        const createdOrderIds = createdOrder
+                            .map((order) => order.id)
+                            .filter((orderId): orderId is string => !!orderId);
+                        if (createdOrderIds.length === 0) {
+                            throw new Error(
+                                "Order creation returned no stable order identity"
+                            );
+                        }
+                        completedOrderIds.push(...createdOrderIds);
                         console.log(`Order ${index + 1} created successfully`);
 
                         // Call the new function to handle stock deduction and payment status
@@ -219,6 +232,16 @@ export function createRazorpayPaymentOptions({
                     throw new Error(
                         "No orders were created successfully. Please contact support."
                     );
+                }
+
+                if (
+                    isCompleteMetaPurchaseOrder(
+                        createdOrders.length,
+                        orderDetailsByBrand.length
+                    ) &&
+                    onPurchaseSuccess
+                ) {
+                    await onPurchaseSuccess(completedOrderIds);
                 }
 
                 // Step 4: Send WhatsApp notification
