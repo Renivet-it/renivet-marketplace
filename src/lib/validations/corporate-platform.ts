@@ -588,6 +588,16 @@ export const corporateDeliveryChallanInputSchema = z.object({
     eWayBillNumber: z.string().trim().max(50).nullable().optional(),
 });
 
+export const corporateWarehouseGoodsReceiptInputSchema = z.object({
+    orderId: z.string().uuid(),
+    vendorPurchaseOrderId: z.string().uuid(),
+    warehouseName: z.string().trim().min(2).max(200),
+    receivedQuantity: z.number().int().positive(),
+    receiptDate: z.string().date(),
+    receiverName: z.string().trim().min(2).max(200),
+    deliveryReference: z.string().trim().max(200).nullable().optional(),
+});
+
 export const corporateDocumentSettingsInputSchema = z.object({
     legalName: z.string().trim().min(2),
     tradeName: z.string().trim().min(2),

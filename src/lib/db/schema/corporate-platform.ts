@@ -1139,6 +1139,62 @@ export const corporateDeliveryChallans = pgTable(
     })
 );
 
+export const corporateWarehouseGoodsReceipts = pgTable(
+    "corporate_warehouse_goods_receipts",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        vendorPurchaseOrderId: uuid("vendor_purchase_order_id")
+            .notNull()
+            .references(() => corporateFulfillmentOrders.id, {
+                onDelete: "cascade",
+            }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "restrict" }),
+        warehouseName: text("warehouse_name").notNull(),
+        receivedQuantity: integer("received_quantity").notNull(),
+        receiptDate: date("receipt_date").notNull(),
+        receiverName: text("receiver_name").notNull(),
+        deliveryReference: text("delivery_reference"),
+        status: text("status", {
+            enum: ["accepted", "rejected", "superseded"],
+        })
+            .notNull()
+            .default("accepted"),
+        receiptVersion: integer("receipt_version").notNull().default(1),
+        isCurrentAccepted: boolean("is_current_accepted")
+            .notNull()
+            .default(true),
+        createdByUserId: text("created_by_user_id").references(() => users.id, {
+            onDelete: "set null",
+        }),
+        reviewedByUserId: text("reviewed_by_user_id").references(
+            () => users.id,
+            {
+                onDelete: "set null",
+            }
+        ),
+        reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+        ...timestamps,
+    },
+    (table) => ({
+        orderIdx: index("corporate_warehouse_goods_receipts_order_idx").on(
+            table.orderId
+        ),
+        foIdx: index("corporate_warehouse_goods_receipts_fo_idx").on(
+            table.vendorPurchaseOrderId
+        ),
+        currentFoUnique: uniqueIndex(
+            "corporate_warehouse_goods_receipts_current_fo_idx"
+        )
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.isCurrentAccepted} = true`),
+    })
+);
+
 export const corporateTaxInvoices = pgTable("corporate_tax_invoices", {
     id: uuid("id").primaryKey().notNull().defaultRandom(),
     invoiceNumber: text("invoice_number").notNull(),
@@ -1968,6 +2024,32 @@ export const corporateDeliveryChallansRelations = relations(
         }),
         createdBy: one(users, {
             fields: [corporateDeliveryChallans.createdByUserId],
+            references: [users.id],
+        }),
+    })
+);
+
+export const corporateWarehouseGoodsReceiptsRelations = relations(
+    corporateWarehouseGoodsReceipts,
+    ({ one }) => ({
+        order: one(corporateOrders, {
+            fields: [corporateWarehouseGoodsReceipts.orderId],
+            references: [corporateOrders.id],
+        }),
+        vendorPurchaseOrder: one(corporateVendorPurchaseOrders, {
+            fields: [corporateWarehouseGoodsReceipts.vendorPurchaseOrderId],
+            references: [corporateVendorPurchaseOrders.id],
+        }),
+        brand: one(brands, {
+            fields: [corporateWarehouseGoodsReceipts.brandId],
+            references: [brands.id],
+        }),
+        createdBy: one(users, {
+            fields: [corporateWarehouseGoodsReceipts.createdByUserId],
+            references: [users.id],
+        }),
+        reviewedBy: one(users, {
+            fields: [corporateWarehouseGoodsReceipts.reviewedByUserId],
             references: [users.id],
         }),
     })

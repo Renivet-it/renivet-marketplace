@@ -43,6 +43,7 @@ import {
     corporateTaxInvoiceInputSchema,
     corporateUpdateConsigneeAddressInputSchema,
     corporateVendorPurchaseOrderInputSchema,
+    corporateWarehouseGoodsReceiptInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { z } from "zod";
 
@@ -198,6 +199,15 @@ export const corporatePlatformRouter = createTRPCRouter({
         .mutation(({ ctx, input }) => {
             return corporatePlatformService.saveShipment(ctx.user.id, input);
         }),
+    recordWarehouseGoodsReceipt: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateWarehouseGoodsReceiptInputSchema)
+        .mutation(({ ctx, input }) =>
+            corporatePlatformService.recordWarehouseGoodsReceipt(
+                ctx.user.id,
+                input
+            )
+        ),
     updateConsigneeAddress: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateUpdateConsigneeAddressInputSchema)

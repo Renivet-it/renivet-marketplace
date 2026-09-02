@@ -54,6 +54,7 @@ import {
     corporateTasks,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    corporateWarehouseGoodsReceipts,
     hsnMaster,
     packingTypes,
     products,
@@ -116,6 +117,7 @@ import {
     corporateTaskInputSchema,
     corporateTaxInvoiceInputSchema,
     corporateUpdateConsigneeAddressInputSchema,
+    corporateWarehouseGoodsReceiptInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { TRPCError } from "@trpc/server";
 import {
@@ -5235,6 +5237,26 @@ class CorporatePlatformService {
             brandId,
             input.orderId
         );
+        const assignedFo =
+            await db.query.corporateVendorPurchaseOrders.findFirst({
+                where: and(
+                    eq(corporateVendorPurchaseOrders.orderId, order.id),
+                    eq(corporateVendorPurchaseOrders.brandId, brandId)
+                ),
+                columns: { deliveryMode: true },
+            });
+        if (
+            ["ready_for_dispatch", "dispatched", "delivered"].includes(
+                input.toStatus
+            ) &&
+            assignedFo?.deliveryMode !== "direct_to_customer"
+        ) {
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message:
+                    "Brand delivery status updates are limited to direct-to-customer orders",
+            });
+        }
         const orderReference = quote?.quoteNumber ?? order.publicOrderId;
         const didTransition = order.status !== input.toStatus;
 
@@ -5324,6 +5346,120 @@ class CorporatePlatformService {
         }
 
         return updated;
+    }
+
+    async recordWarehouseGoodsReceipt(actorUserId: string, input: unknown) {
+        // The order + FO pair is the idempotency key for manual receipt retries.
+        const parsed = corporateWarehouseGoodsReceiptInputSchema.parse(input);
+        const order = await db.query.corporateOrders.findFirst({
+            where: eq(corporateOrders.id, parsed.orderId),
+            columns: { id: true, brandId: true },
+        });
+        const fo = await db.query.corporateVendorPurchaseOrders.findFirst({
+            where: and(
+                eq(
+                    corporateVendorPurchaseOrders.id,
+                    parsed.vendorPurchaseOrderId
+                ),
+                eq(corporateVendorPurchaseOrders.orderId, parsed.orderId)
+            ),
+            columns: {
+                id: true,
+                brandId: true,
+                deliveryMode: true,
+                quantity: true,
+            },
+        });
+        if (!order || !fo || fo.deliveryMode !== "renivet_warehouse") {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "A warehouse Fulfillment Order is required for this receipt",
+            });
+        }
+        if (!order.brandId || order.brandId !== fo.brandId) {
+            throw new TRPCError({
+                code: "FORBIDDEN",
+                message: "Receipt brand does not match the corporate order",
+            });
+        }
+        if (parsed.receivedQuantity > fo.quantity) {
+            throw new TRPCError({
+                code: "BAD_REQUEST",
+                message:
+                    "Received quantity cannot exceed the Fulfillment Order quantity",
+            });
+        }
+
+        return db.transaction(async (tx) => {
+            const current =
+                await tx.query.corporateWarehouseGoodsReceipts.findFirst({
+                    where: and(
+                        eq(
+                            corporateWarehouseGoodsReceipts.vendorPurchaseOrderId,
+                            fo.id
+                        ),
+                        eq(
+                            corporateWarehouseGoodsReceipts.isCurrentAccepted,
+                            true
+                        )
+                    ),
+                    orderBy: [
+                        desc(corporateWarehouseGoodsReceipts.receiptVersion),
+                    ],
+                });
+            if (
+                current &&
+                current.warehouseName === parsed.warehouseName &&
+                current.receivedQuantity === parsed.receivedQuantity &&
+                current.receiptDate === parsed.receiptDate &&
+                current.receiverName === parsed.receiverName &&
+                current.deliveryReference === (parsed.deliveryReference ?? null)
+            ) {
+                return current;
+            }
+            if (current) {
+                await tx
+                    .update(corporateWarehouseGoodsReceipts)
+                    .set({
+                        isCurrentAccepted: false,
+                        status: "superseded",
+                        reviewedByUserId: actorUserId,
+                        reviewedAt: new Date(),
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(corporateWarehouseGoodsReceipts.id, current.id));
+            }
+            const [receipt] = await tx
+                .insert(corporateWarehouseGoodsReceipts)
+                .values({
+                    orderId: parsed.orderId,
+                    vendorPurchaseOrderId: fo.id,
+                    brandId: fo.brandId,
+                    warehouseName: parsed.warehouseName,
+                    receivedQuantity: parsed.receivedQuantity,
+                    receiptDate: parsed.receiptDate,
+                    receiverName: parsed.receiverName,
+                    deliveryReference: parsed.deliveryReference ?? null,
+                    status: "accepted",
+                    receiptVersion: (current?.receiptVersion ?? 0) + 1,
+                    isCurrentAccepted: true,
+                    createdByUserId: actorUserId,
+                })
+                .returning();
+            await tx.insert(corporateOrderStatusHistory).values({
+                corporateOrderId: parsed.orderId,
+                fromStatus: null,
+                toStatus: "under_review",
+                changedByUserId: actorUserId,
+                note: "Warehouse goods receipt recorded",
+                metadata: {
+                    receiptId: receipt.id,
+                    vendorPurchaseOrderId: fo.id,
+                },
+            });
+            return receipt;
+        });
     }
 
     async generateReport(actorUserId: string, input: unknown) {

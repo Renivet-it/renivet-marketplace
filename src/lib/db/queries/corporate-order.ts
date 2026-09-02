@@ -39,6 +39,7 @@ import {
     corporateReceiptVouchers,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    corporateWarehouseGoodsReceipts,
     hsnMaster,
     users,
 } from "../schema";
@@ -451,6 +452,7 @@ class CorporateOrderQueries {
             vendorPurchaseOrder,
             brandTaxInvoice,
             deliveryChallan,
+            warehouseGoodsReceipt,
             payments,
         ] = await Promise.all([
             db.query.corporateProformaInvoices
@@ -487,6 +489,13 @@ class CorporateOrderQueries {
             db.query.corporateDeliveryChallans.findFirst({
                 where: eq(corporateDeliveryChallans.orderId, id),
                 orderBy: [desc(corporateDeliveryChallans.createdAt)],
+            }),
+            db.query.corporateWarehouseGoodsReceipts.findFirst({
+                where: and(
+                    eq(corporateWarehouseGoodsReceipts.orderId, id),
+                    eq(corporateWarehouseGoodsReceipts.isCurrentAccepted, true)
+                ),
+                orderBy: [desc(corporateWarehouseGoodsReceipts.createdAt)],
             }),
             db.query.corporatePayments.findMany({
                 where: eq(corporatePayments.orderId, id),
@@ -627,6 +636,7 @@ class CorporateOrderQueries {
                 brandTaxInvoice,
                 customerTaxInvoice: taxInvoice ?? null,
                 deliveryChallan,
+                warehouseGoodsReceipt,
             },
             statusHistory: order.statusHistory.map((item) =>
                 corporateOrderStatusHistorySchema.parse({

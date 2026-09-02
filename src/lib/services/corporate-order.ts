@@ -1159,11 +1159,20 @@ class CorporateOrderService {
             if (
                 chain.vendorPurchaseOrder.deliveryMode === "renivet_warehouse"
             ) {
-                throw new TRPCError({
-                    code: "PRECONDITION_FAILED",
-                    message:
-                        "Warehouse dispatch is blocked until the inbound goods-received document is recorded",
-                });
+                const receipt = chain.warehouseGoodsReceipt;
+                if (
+                    !receipt ||
+                    receipt.status !== "accepted" ||
+                    !receipt.isCurrentAccepted ||
+                    receipt.receivedQuantity <
+                        chain.vendorPurchaseOrder.quantity
+                ) {
+                    throw new TRPCError({
+                        code: "PRECONDITION_FAILED",
+                        message:
+                            "Warehouse dispatch requires an accepted goods-received confirmation for the full Fulfillment Order quantity",
+                    });
+                }
             }
             const latestQc =
                 await corporateOrderQueries.getLatestQcSubmissionForOrder(

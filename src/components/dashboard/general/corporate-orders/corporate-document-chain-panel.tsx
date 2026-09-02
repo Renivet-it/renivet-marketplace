@@ -214,6 +214,14 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             },
             onError: (error) => handleClientError(error),
         });
+    const recordWarehouseReceipt =
+        trpc.general.corporatePlatform.recordWarehouseGoodsReceipt.useMutation({
+            onSuccess: async () => {
+                toast.success("Warehouse goods receipt recorded");
+                await refresh();
+            },
+            onError: (error) => handleClientError(error),
+        });
     const issueSettlement =
         trpc.general.corporatePlatform.issueSettlementStatement.useMutation({
             onSuccess: async () => {
@@ -358,7 +366,7 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
             optionalNote:
                 chain?.vendorPurchaseOrder?.deliveryMode !==
                 "direct_to_customer"
-                    ? "Not required for warehouse fulfilment"
+                    ? "Warehouse receipt required before dispatch"
                     : undefined,
         },
         {
@@ -780,6 +788,89 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 : "Issue Delivery Challan"}
                         </Button>
                     </div>
+                </div>
+            ) : null}
+
+            {chain?.vendorPurchaseOrder?.deliveryMode ===
+            "renivet_warehouse" ? (
+                <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
+                    <h3 className="font-semibold text-slate-900">
+                        Warehouse goods received
+                    </h3>
+                    <p className="mt-1 text-xs text-slate-600">
+                        Admin confirmation is required before Renivet dispatches
+                        warehouse-mode orders. No GRN file upload is required.
+                    </p>
+                    {chain.warehouseGoodsReceipt ? (
+                        <p className="mt-3 text-xs font-medium text-emerald-700">
+                            Received{" "}
+                            {chain.warehouseGoodsReceipt.receivedQuantity} of{" "}
+                            {chain.vendorPurchaseOrder.quantity} units on{" "}
+                            {chain.warehouseGoodsReceipt.receiptDate} by{" "}
+                            {chain.warehouseGoodsReceipt.receiverName}.
+                        </p>
+                    ) : (
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                            <Input
+                                placeholder="Warehouse name"
+                                id="warehouse-name"
+                            />
+                            <Input
+                                placeholder="Receiver name"
+                                id="warehouse-receiver"
+                            />
+                            <Input
+                                type="number"
+                                min={1}
+                                defaultValue={
+                                    chain.vendorPurchaseOrder.quantity
+                                }
+                                placeholder="Received quantity"
+                                id="warehouse-quantity"
+                            />
+                            <Input
+                                type="date"
+                                defaultValue={new Date()
+                                    .toISOString()
+                                    .slice(0, 10)}
+                                id="warehouse-date"
+                            />
+                            <Input
+                                placeholder="Delivery reference (optional)"
+                                id="warehouse-reference"
+                            />
+                            <Button
+                                disabled={recordWarehouseReceipt.isPending}
+                                onClick={() => {
+                                    const value = (id: string) =>
+                                        (
+                                            document.getElementById(
+                                                id
+                                            ) as HTMLInputElement
+                                        )?.value.trim();
+                                    recordWarehouseReceipt.mutate({
+                                        orderId: order.id,
+                                        vendorPurchaseOrderId:
+                                            chain.vendorPurchaseOrder!.id,
+                                        warehouseName: value("warehouse-name"),
+                                        receiverName:
+                                            value("warehouse-receiver"),
+                                        receivedQuantity: Number(
+                                            value("warehouse-quantity")
+                                        ),
+                                        receiptDate: value("warehouse-date"),
+                                        deliveryReference:
+                                            value("warehouse-reference") ||
+                                            null,
+                                    });
+                                }}
+                            >
+                                {recordWarehouseReceipt.isPending
+                                    ? "Saving..."
+                                    : "Confirm goods received"}
+                            </Button>
+                        </div>
+                    )}
                 </div>
             ) : null}
 
