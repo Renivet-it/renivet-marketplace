@@ -249,6 +249,7 @@ export type CorporateCommercialDocumentData = {
         | "Proforma Invoice"
         | "Purchase Order"
         | "Fulfillment Order"
+        | "Brand Fulfillment Order"
         | "Delivery Challan";
     subtitle: string;
     documentType?: string;
@@ -356,16 +357,18 @@ export function CorporateCommercialDocumentTemplate({
     ];
 
     const passedReferences = (data.references ?? []).filter(
-        (ref) =>
-            ![
+        (ref) => {
+            const label = ref.label.trim().toLowerCase();
+            return ![
                 "pi number",
                 "document number",
                 "fo number",
                 "date",
                 "document date",
                 "valid until",
-                "expected delivery",
-            ].includes(ref.label.trim().toLowerCase())
+            ].includes(label) &&
+                !(label === "expected delivery" && !isFulfillmentOrder);
+        }
     );
 
     const references = [...baseReferences, ...passedReferences];
@@ -378,6 +381,32 @@ export function CorporateCommercialDocumentTemplate({
         ((data.totals?.cgstPaise ?? 0) +
             (data.totals?.sgstPaise ?? 0) +
             (data.totals?.igstPaise ?? 0));
+    const hasGstSplit =
+        (data.totals?.cgstPaise ?? 0) > 0 ||
+        (data.totals?.sgstPaise ?? 0) > 0 ||
+        (data.totals?.igstPaise ?? 0) > 0;
+    const splitGstRows = (
+        <>
+            {(data.totals?.cgstPaise ?? 0) > 0 ? (
+                <Total
+                    label={`CGST (${gstRateBps == null ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                    value={data.totals?.cgstPaise ?? 0}
+                />
+            ) : null}
+            {(data.totals?.sgstPaise ?? 0) > 0 ? (
+                <Total
+                    label={`SGST (${gstRateBps == null ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                    value={data.totals?.sgstPaise ?? 0}
+                />
+            ) : null}
+            {(data.totals?.igstPaise ?? 0) > 0 ? (
+                <Total
+                    label={`IGST (${gstRateBps == null ? "" : (gstRateBps / 100).toFixed(2) + "%"})`}
+                    value={data.totals?.igstPaise ?? 0}
+                />
+            ) : null}
+        </>
+    );
     const sizeBreakdown = (data.sizeBreakdown ?? []).filter(
         (row) => row.size.trim() && row.quantity > 0
     );
@@ -389,7 +418,7 @@ export function CorporateCommercialDocumentTemplate({
                     <Image src={renivetLogoUrl} style={styles.logo} />
                     <View style={styles.headerCopy}>
                         <Text style={styles.title}>{data.title}</Text>
-                        {data.subtitle ? (
+                        {data.subtitle && !isFulfillmentOrder ? (
                             <Text style={styles.subtitle}>{data.subtitle}</Text>
                         ) : null}
                     </View>
@@ -795,15 +824,37 @@ export function CorporateCommercialDocumentTemplate({
                                         label="Taxable value (excl. GST)"
                                         value={data.totals.taxableValuePaise}
                                     />
-                                    <Total
-                                        label={`GST${
-                                            gstRateBps === null ||
-                                            gstRateBps === undefined
-                                                ? ""
-                                                : ` (${(gstRateBps / 100).toFixed(2)}%)`
-                                        }`}
-                                        value={gstAmountPaise ?? 0}
-                                    />
+                                    {(data.totals.cgstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label={`CGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                                            value={data.totals.cgstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.sgstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label={`SGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                                            value={data.totals.sgstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.igstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label={`IGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 100).toFixed(2) + "%"})`}
+                                            value={data.totals.igstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.cgstPaise ?? 0) <= 0 &&
+                                    (data.totals.sgstPaise ?? 0) <= 0 &&
+                                    (data.totals.igstPaise ?? 0) <= 0 ? (
+                                        <Total
+                                            label={`GST${
+                                                gstRateBps === null ||
+                                                gstRateBps === undefined
+                                                    ? ""
+                                                    : ` (${(gstRateBps / 100).toFixed(2)}%)`
+                                            }`}
+                                            value={gstAmountPaise ?? 0}
+                                        />
+                                    ) : null}
                                 </>
                             ) : data.totals.customizationPaise &&
                             data.totals.customizationPaise > 0 ? (
@@ -826,7 +877,7 @@ export function CorporateCommercialDocumentTemplate({
                                         }
                                         value={data.totals.customizationPaise}
                                     />
-                                    {data.totals.baseGstAmountPaise !==
+                                    {!hasGstSplit && data.totals.baseGstAmountPaise !==
                                         undefined &&
                                     data.totals.baseGstAmountPaise !== null ? (
                                         <Total
@@ -840,7 +891,7 @@ export function CorporateCommercialDocumentTemplate({
                                             }
                                         />
                                     ) : null}
-                                    {data.totals.customizationGstAmountPaise !==
+                                    {!hasGstSplit && data.totals.customizationGstAmountPaise !==
                                         undefined &&
                                     data.totals.customizationGstAmountPaise !==
                                         null ? (
@@ -856,7 +907,8 @@ export function CorporateCommercialDocumentTemplate({
                                             }
                                         />
                                     ) : null}
-                                    {data.totals.baseGstAmountPaise ===
+                                    {hasGstSplit ? splitGstRows : null}
+                                    {!hasGstSplit && data.totals.baseGstAmountPaise ===
                                         undefined && showDetailedTax ? (
                                         <Total
                                             label={`GST${
@@ -878,7 +930,9 @@ export function CorporateCommercialDocumentTemplate({
                                         }
                                         value={data.totals.taxableValuePaise}
                                     />
-                                    {showDetailedTax ? (
+                                    {showDetailedTax && hasGstSplit ? (
+                                        splitGstRows
+                                    ) : showDetailedTax ? (
                                         <Total
                                             label={`GST${
                                                 gstRateBps === null

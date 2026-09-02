@@ -27,6 +27,10 @@ import {
     getCorporateTaxDataMissingFields,
     resolveCorporateDocumentDate,
 } from "@/lib/utils/corporate-document-integrity";
+import {
+    resolveCorporatePlaceOfSupply,
+    splitCorporateGstByPlaceOfSupply,
+} from "@/lib/finance/corporate-place-of-supply";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
 import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
@@ -316,6 +320,23 @@ export async function GET(
                 typeof value === "string" && value.trim().length > 0
         )
         .join(", ");
+    const shipping = (quote?.profile.shippingAddress ?? {}) as Record<
+        string,
+        unknown
+    >;
+    const shippingAddress = [
+        shipping.addressLine1 ?? shipping.address ?? shipping.street,
+        shipping.addressLine2,
+        shipping.city,
+        shipping.state,
+        shipping.postalCode ?? shipping.pincode,
+        shipping.country,
+    ]
+        .filter(
+            (value): value is string =>
+                typeof value === "string" && value.trim().length > 0
+        )
+        .join(", ");
 
     // Dynamic advance percentage
     let advancePercent = 30;
@@ -393,6 +414,20 @@ export async function GET(
             ? totalAmountFromDb
             : baseSubtotalPaise + customizationPaise + computedTotalGstPaise;
 
+    const placeOfSupply = resolveCorporatePlaceOfSupply({
+        deliveryState: order?.deliveryState ?? (typeof shipping.state === "string" ? shipping.state : null),
+        billingState: order ? null : (typeof billing.state === "string" ? billing.state : null),
+    });
+    const supplierState = resolveCorporatePlaceOfSupply({
+        registeredState: brandConfidential?.state,
+    });
+    const proformaGstSplit = splitCorporateGstByPlaceOfSupply({
+        taxableValuePaise,
+        gstRateBps,
+        supplierStateCode: supplierState.stateCode,
+        placeOfSupplyStateCode: placeOfSupply.stateCode,
+    });
+
     const rawDate =
         (invoice as any).issueDate ||
         invoice.invoiceDate ||
@@ -469,7 +504,7 @@ export async function GET(
                       quote!.profile.companyName ||
                       quote!.profile.contactPerson ||
                       "Corporate customer",
-                  address: billingAddress || "Not provided",
+                  address: shippingAddress || billingAddress || "Not provided",
                   gstin: quote!.profile.gstNumber,
                   email: quote!.profile.email,
                   phone: quote!.profile.phone,
@@ -571,6 +606,9 @@ export async function GET(
                     : undefined,
             gstRateBps: baseGstRateBps,
             gstAmountPaise: computedTotalGstPaise,
+            cgstPaise: proformaGstSplit.cgstPaise,
+            sgstPaise: proformaGstSplit.sgstPaise,
+            igstPaise: proformaGstSplit.igstPaise,
             totalAmountPaise: computedTotalAmountPaise,
         },
         notes: [

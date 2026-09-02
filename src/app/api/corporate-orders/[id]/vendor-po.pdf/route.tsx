@@ -203,23 +203,18 @@ export async function GET(
 
     const extrasSummary = extraChargeDescriptions.join(" | ");
     const specsSummary = [formattedGsm, fabric].filter(Boolean).join(" | ");
-    const itemDetail = [
-        specsSummary,
-        extrasSummary ? `Extras: ${extrasSummary}` : null,
-    ]
-        .filter(Boolean)
-        .join(" | ") ||
+    const itemDetail =
+        specsSummary ||
         "Manufacture and fulfil as per approved corporate specifications.";
 
     const data: CorporateCommercialDocumentData = {
-        title: "Fulfillment Order",
+        title: "Brand Fulfillment Order",
         subtitle:
             "Operational instruction — NOT a purchase order. Renivet is not buying from the brand.",
         documentType: "fulfillment_order",
         documentNumber: docNumber,
         documentDate: vendorPo.issueDate || new Date(),
-        validUntil: vendorPo.expectedDeliveryDate,
-        fromLabel: "Issued By (Platform)",
+        fromLabel: "Fulfilled By",
         toLabel: "Fulfillment Brand (Supplier)",
         from: {
             name: settings.legalName,
@@ -246,11 +241,7 @@ export async function GET(
             },
             {
                 label: "Expected delivery",
-                value: vendorPo.expectedDeliveryDate
-                    ? new Date(
-                          vendorPo.expectedDeliveryDate
-                      ).toLocaleDateString("en-IN")
-                    : "As per agreed timeline",
+                value: vendorPo.expectedDeliveryDate || "",
             },
             { label: "Corporate order", value: order.publicOrderId },
             {
@@ -301,7 +292,7 @@ export async function GET(
                           detail:
                               extrasSummary ||
                               "Customization included with the product supply.",
-                          hsn,
+                          hsn: "NA",
                           quantity: 1,
                           unit: "lot",
                           unitRatePaise: customizationPaise,
