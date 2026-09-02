@@ -5,6 +5,7 @@ import {
     isCrawlerAnalyticsSuppressionEnabled,
     isLikelyAnalyticsBot,
     mergeMetaUserData,
+    reportCapiSuppression,
 } from "@/lib/analytics/meta-event-quality";
 import {
     createViewContentCapiAfterResponseCaptureScheduler,
@@ -89,11 +90,15 @@ async function enrichCapiUserData(
     });
 }
 
-function shouldSuppressCapiEvent(requestData: CapiRequestData) {
-    return (
+function shouldSuppressCapiEvent(
+    eventName: "AddToCart" | "InitiateCheckout" | "Purchase",
+    requestData: CapiRequestData
+) {
+    const shouldSuppress =
         isCrawlerAnalyticsSuppressionEnabled() &&
-        isLikelyAnalyticsBot(requestData.userAgent)
-    );
+        isLikelyAnalyticsBot(requestData.userAgent);
+    if (shouldSuppress) reportCapiSuppression(eventName);
+    return shouldSuppress;
 }
 
 export async function trackAddToCartCapi(
@@ -103,7 +108,7 @@ export async function trackAddToCartCapi(
     url: string
 ) {
     const requestData = await getCapiRequestData();
-    if (shouldSuppressCapiEvent(requestData)) return;
+    if (shouldSuppressCapiEvent("AddToCart", requestData)) return;
     const enrichedUserData = await enrichCapiUserData(userData, requestData);
 
     await sendCapiEvent(
@@ -130,7 +135,7 @@ export async function trackInitiateCheckoutCapi(
     url: string
 ) {
     const requestData = await getCapiRequestData();
-    if (shouldSuppressCapiEvent(requestData)) return;
+    if (shouldSuppressCapiEvent("InitiateCheckout", requestData)) return;
     const enrichedUserData = await enrichCapiUserData(userData, requestData);
 
     await sendCapiEvent(
@@ -157,7 +162,7 @@ export async function trackPurchaseCapi(
     url: string
 ) {
     const requestData = await getCapiRequestData();
-    if (shouldSuppressCapiEvent(requestData)) return;
+    if (shouldSuppressCapiEvent("Purchase", requestData)) return;
     const enrichedUserData = await enrichCapiUserData(userData, requestData);
 
     await sendCapiEvent(

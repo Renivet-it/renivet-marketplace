@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 import {
     buildFbcFromFbclid,
     buildPurchaseEventId,
+    createCapiSuppressionDiagnostic,
     isCrawlerAnalyticsSuppressionEnabled,
     isLikelyAnalyticsBot,
     mergeMetaUserData,
@@ -33,6 +34,20 @@ test("enables crawler suppression only with the explicit rollout flag", () => {
             META_CAPI_SUPPRESS_CRAWLERS: "TRUE",
         })
     ).toBe(false);
+});
+
+test("reports crawler suppression without retaining raw request or customer data", () => {
+    expect(
+        createCapiSuppressionDiagnostic(
+            "ViewContent",
+            "2026-09-03T00:00:00.000Z"
+        )
+    ).toEqual({
+        eventName: "ViewContent",
+        reason: "clear_crawler",
+        userAgentCategory: "crawler",
+        timestamp: "2026-09-03T00:00:00.000Z",
+    });
 });
 
 test("creates an fbc only from a real click id and preserves an existing value", () => {

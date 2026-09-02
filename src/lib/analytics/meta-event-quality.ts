@@ -20,6 +20,25 @@ export function isCrawlerAnalyticsSuppressionEnabled(
     return environment.META_CAPI_SUPPRESS_CRAWLERS === "true";
 }
 
+export function createCapiSuppressionDiagnostic(
+    eventName: string,
+    timestamp: string = new Date().toISOString()
+) {
+    return {
+        eventName,
+        reason: "clear_crawler" as const,
+        userAgentCategory: "crawler" as const,
+        timestamp,
+    };
+}
+
+export function reportCapiSuppression(eventName: string) {
+    console.info(
+        "Meta CAPI event suppressed:",
+        createCapiSuppressionDiagnostic(eventName)
+    );
+}
+
 export function buildFbcFromFbclid({
     existingFbc,
     fbclid,

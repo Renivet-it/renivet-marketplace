@@ -1,6 +1,7 @@
 import {
     isCrawlerAnalyticsSuppressionEnabled,
     isLikelyAnalyticsBot,
+    reportCapiSuppression,
 } from "@/lib/analytics/meta-event-quality";
 import { CapiCustomData, CapiUserData } from "@/lib/fb-capi";
 
@@ -47,8 +48,10 @@ export function createViewContentCapiSender(
         if (
             isCrawlerAnalyticsSuppressionEnabled() &&
             isLikelyAnalyticsBot(requestData.userAgent)
-        )
+        ) {
+            reportCapiSuppression("ViewContent");
             return;
+        }
 
         await send(
             "ViewContent",
