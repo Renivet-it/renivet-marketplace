@@ -397,8 +397,11 @@ export const corporatePlatformRouter = createTRPCRouter({
     reviewBrandTaxInvoice: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateBrandTaxInvoiceReviewInputSchema)
-        .mutation(({ input }) => {
-            return corporateDocumentService.reviewBrandTaxInvoice(input);
+        .mutation(({ ctx, input }) => {
+            return corporateDocumentService.reviewBrandTaxInvoice(
+                ctx.user.id,
+                input
+            );
         }),
     issueDeliveryChallan: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
@@ -449,11 +452,14 @@ export const corporatePlatformRouter = createTRPCRouter({
             })
         )
         .mutation(({ ctx, input }) => {
-            return corporateDocumentService.issueSettlementStatement(ctx.user.id, {
-                ...input,
-                notes: input.notes ?? undefined,
-                adjustmentReason: input.adjustmentReason ?? undefined,
-            });
+            return corporateDocumentService.issueSettlementStatement(
+                ctx.user.id,
+                {
+                    ...input,
+                    notes: input.notes ?? undefined,
+                    adjustmentReason: input.adjustmentReason ?? undefined,
+                }
+            );
         }),
     generateReport: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))

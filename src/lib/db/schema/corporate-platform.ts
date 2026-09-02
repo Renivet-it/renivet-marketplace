@@ -405,8 +405,7 @@ export const corporateQuotes = pgTable(
             .notNull()
             .default(0),
         commissionHsnCode: text("commission_hsn_code"),
-        commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull(),
+        commissionGstRateBps: integer("commission_gst_rate_bps").notNull(),
         commissionGstAmountPaise: integer("commission_gst_amount_paise")
             .notNull()
             .default(0),
@@ -919,7 +918,15 @@ export const corporateFulfillmentOrders = pgTable(
         unitSellPricePaise: integer("unit_sell_price_paise")
             .notNull()
             .default(0),
+        gstRateBps: integer("gst_rate_bps"),
+        taxableValuePaise: integer("taxable_value_paise"),
+        cgstPaise: integer("cgst_paise"),
+        sgstPaise: integer("sgst_paise"),
+        igstPaise: integer("igst_paise"),
         totalAmountPaise: integer("total_amount_paise").notNull().default(0),
+        supplierGstin: text("supplier_gstin"),
+        recipientGstin: text("recipient_gstin"),
+        hsnCode: text("hsn_code"),
         deliveryMode: text("delivery_mode", {
             enum: ["renivet_warehouse", "direct_to_customer"],
         })
@@ -957,6 +964,50 @@ export const corporateFulfillmentOrders = pgTable(
 
 export const corporateVendorPurchaseOrders = corporateFulfillmentOrders;
 
+export const corporateBrandTaxInvoiceUploads = pgTable(
+    "corporate_brand_tax_invoice_uploads",
+    {
+        id: uuid("id").primaryKey().notNull().defaultRandom(),
+        orderId: uuid("order_id")
+            .notNull()
+            .references(() => corporateOrders.id, { onDelete: "cascade" }),
+        brandId: uuid("brand_id")
+            .notNull()
+            .references(() => brands.id, { onDelete: "restrict" }),
+        vendorPurchaseOrderId: uuid("vendor_purchase_order_id")
+            .notNull()
+            .references(() => corporateFulfillmentOrders.id, {
+                onDelete: "cascade",
+            }),
+        declaredInvoiceDate: date("declared_invoice_date"),
+        fileName: text("file_name").notNull(),
+        fileUrl: text("file_url").notNull(),
+        fileKey: text("file_key").notNull(),
+        fileType: text("file_type").notNull(),
+        fileSize: integer("file_size").notNull(),
+        status: text("status", {
+            enum: ["pending_review", "captured", "superseded"],
+        })
+            .notNull()
+            .default("pending_review"),
+        uploadedByUserId: text("uploaded_by_user_id").references(
+            () => users.id,
+            { onDelete: "set null" }
+        ),
+        ...timestamps,
+    },
+    (table) => ({
+        fileKeyUnique: uniqueIndex(
+            "corporate_brand_tax_invoice_uploads_order_file_idx"
+        ).on(table.orderId, table.fileKey),
+        pendingFoUnique: uniqueIndex(
+            "corporate_brand_tax_invoice_uploads_pending_fo_idx"
+        )
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.status} = 'pending_review'`),
+    })
+);
+
 export const corporateBrandTaxInvoices = pgTable(
     "corporate_brand_tax_invoices",
     {
@@ -971,8 +1022,16 @@ export const corporateBrandTaxInvoices = pgTable(
             () => corporateFulfillmentOrders.id,
             { onDelete: "set null" }
         ),
+        uploadId: uuid("upload_id").references(
+            () => corporateBrandTaxInvoiceUploads.id,
+            { onDelete: "set null" }
+        ),
+        supersedesInvoiceId: uuid("supersedes_invoice_id"),
         invoiceNumber: text("invoice_number").notNull(),
         invoiceDate: date("invoice_date").notNull(),
+        foReference: text("fo_reference"),
+        quantity: integer("quantity"),
+        unitRatePaise: integer("unit_rate_paise"),
         supplierGstin: text("supplier_gstin").notNull(),
         recipientGstin: text("recipient_gstin").notNull(),
         hsnCode: text("hsn_code").notNull(),
@@ -983,11 +1042,12 @@ export const corporateBrandTaxInvoices = pgTable(
         totalAmountPaise: integer("total_amount_paise").notNull(),
         fileName: text("file_name").notNull(),
         fileUrl: text("file_url").notNull(),
+        fileKey: text("file_key"),
         validationStatus: text("validation_status", {
-            enum: ["pending", "validated", "rejected"],
+            enum: ["held", "accepted", "rejected", "superseded"],
         })
             .notNull()
-            .default("pending"),
+            .default("held"),
         validationIssues: jsonb("validation_issues")
             .$type<string[]>()
             .notNull()
@@ -998,6 +1058,15 @@ export const corporateBrandTaxInvoices = pgTable(
             .notNull()
             .default("pending"),
         reviewNotes: text("review_notes"),
+        reviewedByUserId: text("reviewed_by_user_id").references(
+            () => users.id,
+            { onDelete: "set null" }
+        ),
+        reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+        transitionVersion: integer("transition_version").notNull().default(1),
+        isCurrentAccepted: boolean("is_current_accepted")
+            .notNull()
+            .default(false),
         isDeprecated: boolean("is_deprecated").notNull().default(true),
         uploadedByUserId: text("uploaded_by_user_id").references(
             () => users.id,
@@ -1017,6 +1086,14 @@ export const corporateBrandTaxInvoices = pgTable(
         gstr2bIdx: index("corporate_brand_tax_invoices_gstr2b_idx").on(
             table.gstr2bStatus
         ),
+        heldFoUnique: uniqueIndex("corporate_brand_tax_invoices_held_fo_idx")
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.validationStatus} = 'held'`),
+        acceptedFoUnique: uniqueIndex(
+            "corporate_brand_tax_invoices_current_accepted_fo_idx"
+        )
+            .on(table.vendorPurchaseOrderId)
+            .where(sql`${table.isCurrentAccepted} = true`),
     })
 );
 
@@ -1304,8 +1381,7 @@ export const corporateSettlementStatements = pgTable(
         taxableValuePaise: integer("taxable_value_paise").notNull(),
         commissionPercentBps: integer("commission_percent_bps").notNull(),
         commissionAmountPaise: integer("commission_amount_paise").notNull(),
-        commissionGstRateBps: integer("commission_gst_rate_bps")
-            .notNull(),
+        commissionGstRateBps: integer("commission_gst_rate_bps").notNull(),
         commissionGstAmountPaise: integer(
             "commission_gst_amount_paise"
         ).notNull(),

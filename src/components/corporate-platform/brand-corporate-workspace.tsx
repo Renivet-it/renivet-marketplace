@@ -313,7 +313,8 @@ function BrandOrderDetailPanel({
                                         Fulfillment Order (FO)
                                     </p>
                                     <p className="mt-2 text-sm font-semibold text-slate-900">
-                                        {(order.renivetPurchaseOrder as any).foNumber ||
+                                        {(order.renivetPurchaseOrder as any)
+                                            .foNumber ||
                                             order.renivetPurchaseOrder.poNumber}
                                     </p>
                                     <p className="mt-1 text-xs text-slate-500">
@@ -331,9 +332,7 @@ function BrandOrderDetailPanel({
                                     </p>
                                 </div>
                                 <a
-                                    href={
-                                        `/api/corporate-orders/${order.id}/fulfillment-order.pdf`
-                                    }
+                                    href={`/api/corporate-orders/${order.id}/fulfillment-order.pdf`}
                                     className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                                 >
                                     <Download className="size-4" />
@@ -343,7 +342,9 @@ function BrandOrderDetailPanel({
                         </div>
                     ) : null}
 
-                    {order.renivetPurchaseOrder && !order.brandTaxInvoice ? (
+                    {order.renivetPurchaseOrder &&
+                    !order.brandTaxInvoice &&
+                    !order.brandTaxInvoiceUpload ? (
                         <BrandTaxInvoiceForm
                             brandId={brandId}
                             orderId={order.id}
@@ -360,6 +361,17 @@ function BrandOrderDetailPanel({
                                 );
                             }}
                         />
+                    ) : null}
+
+                    {order.brandTaxInvoiceUpload ? (
+                        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
+                            <p className="text-xs font-semibold text-amber-900">
+                                Supplier invoice waiting for admin review
+                            </p>
+                            <p className="mt-1 text-[11px] text-amber-700">
+                                {order.brandTaxInvoiceUpload.fileName}
+                            </p>
+                        </div>
                     ) : null}
 
                     {order.brandTaxInvoice ? (
@@ -398,12 +410,23 @@ function BrandOrderDetailPanel({
                                     </span>
                                 </div>
                                 <p className="mt-1 text-[11px] text-slate-500">
-                                    {(order as any).customerTaxInvoice.invoiceNumber} ·{" "}
-                                    {formatINR((order as any).customerTaxInvoice.totalAmountPaise, { keepDecimals: true })}
+                                    {
+                                        (order as any).customerTaxInvoice
+                                            .invoiceNumber
+                                    }{" "}
+                                    ·{" "}
+                                    {formatINR(
+                                        (order as any).customerTaxInvoice
+                                            .totalAmountPaise,
+                                        { keepDecimals: true }
+                                    )}
                                 </p>
                             </div>
                             <a
-                                href={(order as any).customerTaxInvoice.downloadUrl}
+                                href={
+                                    (order as any).customerTaxInvoice
+                                        .downloadUrl
+                                }
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
@@ -427,14 +450,25 @@ function BrandOrderDetailPanel({
                                     </span>
                                 </div>
                                 <p className="mt-1 text-[11px] text-slate-500">
-                                    {(order as any).settlementStatement.statementNumber} · Net Remittance:{" "}
+                                    {
+                                        (order as any).settlementStatement
+                                            .statementNumber
+                                    }{" "}
+                                    · Net Remittance:{" "}
                                     <span className="font-semibold text-slate-900">
-                                        {formatINR((order as any).settlementStatement.netRemittancePaise, { keepDecimals: true })}
+                                        {formatINR(
+                                            (order as any).settlementStatement
+                                                .netRemittancePaise,
+                                            { keepDecimals: true }
+                                        )}
                                     </span>
                                 </p>
                             </div>
                             <a
-                                href={(order as any).settlementStatement.downloadUrl}
+                                href={
+                                    (order as any).settlementStatement
+                                        .downloadUrl
+                                }
                                 target="_blank"
                                 rel="noreferrer"
                                 className="inline-flex h-9 items-center gap-2 rounded-md border border-slate-300 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
@@ -453,7 +487,8 @@ function BrandOrderDetailPanel({
                                     Customer Logo & Artwork
                                 </p>
                                 <p className="mt-0.5 text-xs text-slate-500">
-                                    Artwork files and placement specifications for manufacturing
+                                    Artwork files and placement specifications
+                                    for manufacturing
                                 </p>
                             </div>
                             {(order as any).artworkFile?.url ? (
@@ -461,7 +496,10 @@ function BrandOrderDetailPanel({
                                     href={(order as any).artworkFile.url}
                                     target="_blank"
                                     rel="noreferrer"
-                                    download={(order as any).artworkFile.name || "logo-artwork.png"}
+                                    download={
+                                        (order as any).artworkFile.name ||
+                                        "logo-artwork.png"
+                                    }
                                     className="inline-flex h-9 items-center gap-2 rounded-md bg-emerald-700 px-3 text-xs font-semibold text-white shadow-sm hover:bg-emerald-800"
                                 >
                                     <Download className="size-4" />
@@ -476,29 +514,47 @@ function BrandOrderDetailPanel({
                                     {/* eslint-disable-next-line @next/next/no-img-element */}
                                     <img
                                         src={(order as any).artworkFile.url}
-                                        alt={(order as any).artworkFile.name || "Logo preview"}
+                                        alt={
+                                            (order as any).artworkFile.name ||
+                                            "Logo preview"
+                                        }
                                         className="max-h-full max-w-full object-contain"
                                     />
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <p className="truncate text-sm font-semibold text-slate-900">
-                                        {(order as any).artworkFile.name || "Customer Logo / Artwork"}
+                                        {(order as any).artworkFile.name ||
+                                            "Customer Logo / Artwork"}
                                     </p>
                                     <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-                                        {(order as any).brandingConfig?.printMethod ? (
+                                        {(order as any).brandingConfig
+                                            ?.printMethod ? (
                                             <span className="rounded bg-slate-100 px-2 py-0.5 font-medium text-slate-700">
-                                                Print Method: {(order as any).brandingConfig.printMethod}
+                                                Print Method:{" "}
+                                                {
+                                                    (order as any)
+                                                        .brandingConfig
+                                                        .printMethod
+                                                }
                                             </span>
                                         ) : null}
-                                        {(order as any).brandingConfig?.logoLocations?.length ? (
+                                        {(order as any).brandingConfig
+                                            ?.logoLocations?.length ? (
                                             <span className="rounded bg-emerald-50 px-2 py-0.5 font-medium text-emerald-800">
-                                                Placements: {(order as any).brandingConfig.logoLocations.join(", ")}
+                                                Placements:{" "}
+                                                {(
+                                                    order as any
+                                                ).brandingConfig.logoLocations.join(
+                                                    ", "
+                                                )}
                                             </span>
                                         ) : null}
                                     </div>
                                     <div className="mt-2 flex items-center gap-3">
                                         <a
-                                            href={(order as any).artworkFile.url}
+                                            href={
+                                                (order as any).artworkFile.url
+                                            }
                                             target="_blank"
                                             rel="noreferrer"
                                             className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 hover:underline"
@@ -516,10 +572,12 @@ function BrandOrderDetailPanel({
                                 </div>
                                 <div>
                                     <p className="text-xs font-medium text-slate-700">
-                                        No custom artwork/logo file attached to this order
+                                        No custom artwork/logo file attached to
+                                        this order
                                     </p>
                                     <p className="text-[11px] text-slate-400">
-                                        Standard merchandise or pending custom upload from platform operations.
+                                        Standard merchandise or pending custom
+                                        upload from platform operations.
                                     </p>
                                 </div>
                             </div>

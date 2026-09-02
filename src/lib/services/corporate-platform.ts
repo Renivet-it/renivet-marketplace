@@ -21,13 +21,13 @@ import {
     corporateAdminAuditLogs,
     corporateBrandAuditLogs,
     corporateBrandTaxInvoices,
+    corporateBrandTaxInvoiceUploads,
     corporateCustomizations,
     corporateDeliveryChallans,
     corporateDocuments,
     corporateEscalations,
     corporateFabricCompositions,
     corporateGsmOptions,
-    hsnMaster,
     corporateNotifications,
     corporateOrders,
     corporateOrderStatusHistory,
@@ -54,12 +54,14 @@ import {
     corporateTasks,
     corporateTaxInvoices,
     corporateVendorPurchaseOrders,
+    hsnMaster,
     packingTypes,
     products,
     users,
 } from "@/lib/db/schema";
 import { createOrder } from "@/lib/delhivery/orders";
 import { schedulePickup } from "@/lib/delhivery/pickup";
+import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import { resend } from "@/lib/resend";
 import {
     CorporateOrderCustomerReadyForDispatchEmail,
@@ -76,7 +78,6 @@ import {
     nextCorporateDocumentNumber,
 } from "@/lib/services/corporate-documents";
 import { corporateOrderService } from "@/lib/services/corporate-order";
-import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import { corporatePaymentRequestService } from "@/lib/services/corporate-payment-request";
 import {
     convertValueToLabel,
@@ -692,7 +693,10 @@ class CorporatePlatformService {
             });
         const customizationGstAmountPaise = quoteCustomizations.reduce(
             (sum, row) =>
-                sum + Number((row.metadata as Record<string, unknown>)?.gstPaise ?? 0),
+                sum +
+                Number(
+                    (row.metadata as Record<string, unknown>)?.gstPaise ?? 0
+                ),
             0
         );
         const customizationGstRateBps =
@@ -4735,6 +4739,7 @@ class CorporatePlatformService {
 
         const [
             vendorPurchaseOrders,
+            brandTaxInvoiceUploads,
             brandTaxInvoices,
             customerTaxInvoices,
             settlementStatements,
@@ -4747,6 +4752,23 @@ class CorporatePlatformService {
                           orderRows.map((order) => order.id)
                       ),
                       orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
+                  })
+                : Promise.resolve([]),
+            orderRows.length
+                ? db.query.corporateBrandTaxInvoiceUploads.findMany({
+                      where: and(
+                          inArray(
+                              corporateBrandTaxInvoiceUploads.orderId,
+                              orderRows.map((order) => order.id)
+                          ),
+                          eq(
+                              corporateBrandTaxInvoiceUploads.status,
+                              "pending_review"
+                          )
+                      ),
+                      orderBy: [
+                          desc(corporateBrandTaxInvoiceUploads.createdAt),
+                      ],
                   })
                 : Promise.resolve([]),
             orderRows.length
@@ -4797,6 +4819,15 @@ class CorporatePlatformService {
         for (const invoice of brandTaxInvoices) {
             if (!brandInvoiceByOrderId.has(invoice.orderId)) {
                 brandInvoiceByOrderId.set(invoice.orderId, invoice);
+            }
+        }
+        const brandInvoiceUploadByOrderId = new Map<
+            string,
+            (typeof brandTaxInvoiceUploads)[number]
+        >();
+        for (const upload of brandTaxInvoiceUploads) {
+            if (!brandInvoiceUploadByOrderId.has(upload.orderId)) {
+                brandInvoiceUploadByOrderId.set(upload.orderId, upload);
             }
         }
         const customerInvoiceByOrderId = new Map<
@@ -4944,10 +4975,8 @@ class CorporatePlatformService {
                     return purchaseOrder
                         ? {
                               id: purchaseOrder.id,
-                              poNumber: purchaseOrder.poNumber,
-                              foNumber:
-                                  (purchaseOrder as any).foNumber ||
-                                  purchaseOrder.poNumber,
+                              poNumber: purchaseOrder.foNumber,
+                              foNumber: purchaseOrder.foNumber,
                               issueDate: purchaseOrder.issueDate,
                               expectedDeliveryDate:
                                   purchaseOrder.expectedDeliveryDate,
@@ -4971,6 +5000,17 @@ class CorporatePlatformService {
                           }
                         : null;
                 })(),
+                brandTaxInvoiceUpload: (() => {
+                    const upload = brandInvoiceUploadByOrderId.get(order.id);
+                    return upload
+                        ? {
+                              id: upload.id,
+                              fileName: upload.fileName,
+                              declaredInvoiceDate: upload.declaredInvoiceDate,
+                              status: upload.status,
+                          }
+                        : null;
+                })(),
                 customerTaxInvoice: (() => {
                     const invoice = customerInvoiceByOrderId.get(order.id);
                     return {
@@ -4980,7 +5020,7 @@ class CorporatePlatformService {
                             `BAM/2627/${String(order.sequenceNo ?? 1).padStart(5, "0")}`,
                         invoiceDate: invoice?.invoiceDate ?? order.createdAt,
                         totalAmountPaise:
-                            invoice?.totalAmountPaise ?? order.totalAmountPaise,
+                            invoice?.totalAmountPaise ?? order.totalPaise,
                         status: invoice?.status ?? "issued",
                         downloadUrl: `/api/corporate-orders/${order.id}/invoice.pdf`,
                     };
@@ -5101,8 +5141,8 @@ class CorporatePlatformService {
             });
         }
 
-        const [purchaseOrder, brandDetails, settings] = await Promise.all([
-            db.query.corporateVendorPurchaseOrders.findFirst({
+        const purchaseOrder =
+            await db.query.corporateVendorPurchaseOrders.findFirst({
                 where: and(
                     eq(
                         corporateVendorPurchaseOrders.id,
@@ -5111,59 +5151,64 @@ class CorporatePlatformService {
                     eq(corporateVendorPurchaseOrders.orderId, order.id),
                     eq(corporateVendorPurchaseOrders.brandId, brandId)
                 ),
-            }),
-            db.query.brandConfidentials.findFirst({
-                where: eq(brandConfidentials.id, brandId),
-            }),
-            getCorporateDocumentSettings(),
-        ]);
+            });
         if (!purchaseOrder) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
                 message: "The Renivet purchase order was not found",
             });
         }
-        if (!brandDetails?.gstin || !settings.gstin) {
+        if (!parsed.file.key) {
             throw new TRPCError({
-                code: "PRECONDITION_FAILED",
-                message: "Supplier or Renivet GST details are incomplete",
+                code: "BAD_REQUEST",
+                message: "Uploaded invoice file key is required",
             });
         }
+        return db.transaction(async (tx) => {
+            const existing =
+                await tx.query.corporateBrandTaxInvoiceUploads.findFirst({
+                    where: and(
+                        eq(corporateBrandTaxInvoiceUploads.orderId, order.id),
+                        eq(
+                            corporateBrandTaxInvoiceUploads.fileKey,
+                            parsed.file.key
+                        )
+                    ),
+                });
+            if (existing) return existing;
 
-        const taxableValuePaise =
-            (purchaseOrder as any).taxableValuePaise ??
-            purchaseOrder.totalAmountPaise ??
-            purchaseOrder.unitSellPricePaise * purchaseOrder.quantity ??
-            0;
-
-        const totalAmountPaise =
-            purchaseOrder.totalAmountPaise ?? taxableValuePaise;
-
-        const foNumber =
-            (purchaseOrder as any).foNumber ||
-            (purchaseOrder as any).poNumber ||
-            "FO-0001";
-
-        const resolvedHsn =
-            (order.quote as any)?.hsnCode || (order as any).hsnCode || null;
-        if (!resolvedHsn || resolvedHsn.length < 4) {
-            throw new TRPCError({
-                code: "PRECONDITION_FAILED",
-                message: "An approved HSN classification is required before issuing the tax invoice",
-            });
-        }
-
-        return corporateDocumentService.recordBrandTaxInvoice(userId, {
-            ...parsed,
-            invoiceNumber: `INV-${foNumber.replace(/[^a-zA-Z0-9]/g, "")}-${Date.now().toString().slice(-4)}`,
-            supplierGstin: brandDetails.gstin,
-            recipientGstin: settings.gstin,
-            hsnCode: resolvedHsn.slice(0, 8),
-            taxableValuePaise,
-            cgstPaise: 0,
-            sgstPaise: 0,
-            igstPaise: 0,
-            totalAmountPaise,
+            await tx
+                .update(corporateBrandTaxInvoiceUploads)
+                .set({ status: "superseded", updatedAt: new Date() })
+                .where(
+                    and(
+                        eq(
+                            corporateBrandTaxInvoiceUploads.vendorPurchaseOrderId,
+                            purchaseOrder.id
+                        ),
+                        eq(
+                            corporateBrandTaxInvoiceUploads.status,
+                            "pending_review"
+                        )
+                    )
+                );
+            const [upload] = await tx
+                .insert(corporateBrandTaxInvoiceUploads)
+                .values({
+                    orderId: order.id,
+                    brandId,
+                    vendorPurchaseOrderId: purchaseOrder.id,
+                    declaredInvoiceDate: parsed.invoiceDate,
+                    fileName: parsed.file.name,
+                    fileUrl: parsed.file.url,
+                    fileKey: parsed.file.key,
+                    fileType: parsed.file.type,
+                    fileSize: parsed.file.size,
+                    status: "pending_review",
+                    uploadedByUserId: userId,
+                })
+                .returning();
+            return upload;
         });
     }
 

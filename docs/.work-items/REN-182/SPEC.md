@@ -32,26 +32,82 @@ recorded an override reason.
 - The management route is protected by `MANAGE_ORDERS`; the brand-assigned
   upload requires brand membership (`src/lib/trpc/routes/general/corporate-platform.ts:374-401`).
 
-## Proposed design, pending financial-policy confirmation
+## Approved design
 
-1. Introduce an explicit `held` state for a materially discrepant invoice,
-   separate from `validated` and `rejected`.
-2. On structured invoice submission, run all material checks and persist the
-   invoice with all failed checks in `held`; it is never treated as validated
-   merely because it exists.
-3. A reviewer override is a distinct, attributed state transition. It requires
-   an explicit reason and retains the original validation issues, reviewer, and
-   timestamp. A normal review cannot overwrite validation to `validated`.
-4. Any downstream path that uses a brand invoice for financial reporting or
-   settlement must select only `validated` or explicitly overridden invoices.
-   Existing settlement does not yet use this invoice, so no settlement-value
-   source is changed by this task.
-5. FO comparison must use the selected FO belonging to the same order and
-   brand. Required comparison fields must be made available in the structured
-   invoice input and persisted/audited; the uploaded PDF remains an attachment
-   and is not parsed.
-6. Historical invoices remain readable. They are not silently upgraded to
-   validated; migration/rollout needs a defined legacy policy.
+1. Brand members and order admins may upload the invoice file. A brand-file
+   upload creates a separate `brand_tax_invoice_upload` record in
+   `pending_review`; it does not create a tax-invoice record or invent facts
+   from the FO. The upload record contains only file metadata, order, brand,
+   selected FO, submitter, and a unique file key.
+2. Admin submits/captures the invoice's structured facts and the system runs
+   every check. A clean invoice is `accepted`; a mismatch is `held` with every
+   failed check retained.
+3. An order admin with existing `MANAGE_ORDERS` permission may accept or reject
+   a held invoice. Acceptance of a held mismatch requires a non-empty reason,
+   actor, and timestamp; it is the explicit approval for financial use.
+4. Upload states are `pending_review`, `captured`, and `superseded`. Captured
+   invoice states are `held`, `accepted`, `rejected`, and `superseded`. Only
+   captured `accepted` invoices meet the trusted financial predicate.
+   A corrected re-upload creates a new review candidate but does not supersede
+   the currently accepted financial invoice. The predecessor becomes
+   `superseded` atomically only when the replacement is accepted. A held or
+   rejected replacement therefore cannot revoke an accepted invoice.
+   Informational views may show all records; financial consumers use only the
+   current accepted record.
+5. The FO will persist its expected quantity, unit rate, taxable value, CGST,
+   SGST, IGST, total, FO number, normalized supplier GSTIN, normalized Renivet
+   GSTIN, and approved normalized HSN as an immutable effective-at-issuance
+   snapshot. Validation never rereads mutable brand, settings, or product rows. The
+   structured supplier invoice persists the supplier-asserted FO reference and
+   compares normalized references exactly. The authoritative FO snapshot comes
+   from the issued FO input: taxable value is `unitBuyPricePaise * quantity` and
+   GST is rounded once with `Math.round(taxableValuePaise * gstRateBps / 10000)`.
+   Matching supplier/recipient GSTIN state codes split that GST into CGST and
+   SGST (`CGST = floor(total GST / 2)`, `SGST = remainder`); different state
+   codes use IGST only. Invoice values must match every persisted component
+   exactly in paise; CGST/SGST and IGST are not interchangeable.
+6. Upload submission uses a deterministic `(order_id, file_key)` key;
+   it is the uploaded file key plus order ID. A database unique constraint on
+   `(order_id, file_key)` makes repeat requests return the same pending upload.
+   Admin may correct structured facts while the upload is pending without
+   creating another invoice candidate. Once held, accepted, or rejected, a
+   correction requires a new file upload/candidate. A locked acceptance
+   transaction supersedes the prior accepted invoice only after validating the
+   replacement and uses partial unique database indexes to leave at most one
+   pending upload in the upload table, one held captured invoice in the invoice
+   table, and one current accepted invoice per FO. Admin capture atomically
+   marks the upload `captured` and inserts its held/accepted invoice. One
+   accepted invoice may coexist with one pending upload or held replacement.
+   A transition version prevents a review from accepting a superseded row. A failed DB transaction leaves no trusted
+   invoice record; the already-uploaded file can be retried with the same key.
+7. Existing invoice records remain readable. Per FO, migration orders legacy
+   rows deterministically by creation time and id, maps the newest non-rejected
+   row to `held`, maps older duplicates to `superseded`, and preserves
+   `rejected`. No legacy row is placed in the upload table or becomes accepted
+   without fresh review against a reliable snapshot. New
+   acceptance on a legacy FO
+   without a reliable tax snapshot is blocked until the FO is reissued with a
+   snapshot; no historical row is newly promoted by this migration. Enforcement
+   is enabled on release, with an Operations release note.
+
+## Consumer contract
+
+- `getOrderDocumentChain`, the corporate dashboard, brand workspace, and the
+  document download route are informational consumers: they may show an active
+  invoice and must display its state.
+- Financial consumers must use `activeAcceptedBrandTaxInvoice`: the active
+  non-superseded record with status `accepted` for the same order, brand, and
+  FO. The current settlement does not consume brand invoices.
+- The review mutation passes the admin actor ID to the service. The service
+  verifies invoice/order/brand/FO ownership before changing state, persists
+  actor/time/reason, and rejects held-invoice acceptance without a reason.
+
+## Race and recovery coverage
+
+Tests must prove same-key retry returns the original pending upload; simultaneous
+corrected uploads leave one active captured invoice; a review cannot accept a row
+superseded by a correction; and a retry after a file upload but failed database
+write recovers the candidate without trusting duplicate records.
 
 ## Required validation set
 
@@ -64,27 +120,10 @@ recorded an override reason.
 - taxable value + CGST + SGST + IGST equals invoice total exactly;
 - invoice total matches the FO total exactly.
 
-## Decisions requiring Ayan/Finance confirmation
+## Operational note
 
-1. **Disposition:** retain a discrepant invoice as `held` for audit and
-   correction, or reject it outright without storing a financial invoice row?
-   Recommendation: retain it as `held`; it preserves the uploaded evidence
-   without allowing financial use.
-2. **Override authority:** does existing `MANAGE_ORDERS` suffice, or must the
-   override be limited to a Finance/CA role/permission? Recommendation: a
-   dedicated finance-review permission or a named Finance/CA role.
-3. **Override scope:** may an override authorize settlement/reporting use, or
-   may it only close the operational review while the invoice stays excluded?
-   Recommendation: allow financial use only after an attributed Finance/CA
-   override with a mandatory reason.
-4. **Brand uploads:** without OCR, must the brand enter all invoice fields in a
-   structured form for validation, or should such uploads be held as
-   `unverified` until an admin enters/reviews the fields? Recommendation: hold
-   uploads as unverified and require admin structured capture; do not fabricate
-   invoice data from the FO.
-5. **Rollout:** should validation enforcement apply immediately to all brands,
-   or be behind a short-lived feature flag with an Ops announcement? The Linear
-   issue requires that the change is not shipped silently.
+The release must include an Operations note that supplier tax-invoice uploads
+now require admin acceptance before financial use.
 
 ## Out of scope
 

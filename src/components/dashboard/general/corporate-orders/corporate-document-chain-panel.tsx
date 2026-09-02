@@ -11,6 +11,8 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 export function CorporateDocumentChainPanel({ order }: { order: any }) {
+    const [brandInvoiceReviewReason, setBrandInvoiceReviewReason] =
+        useState("");
     const utils = trpc.useUtils();
     const { data: chain = order.documentChain } =
         trpc.general.corporatePlatform.getOrderDocumentChain.useQuery(
@@ -222,8 +224,7 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
         });
 
     const settlementGrossPaidPaise =
-        chain?.customerTaxInvoice?.totalAmountPaise ??
-        order.totalAmountPaise;
+        chain?.customerTaxInvoice?.totalAmountPaise ?? order.totalAmountPaise;
     const settlementGstEmbeddedPaise = chain?.customerTaxInvoice
         ? chain.customerTaxInvoice.cgstPaise +
           chain.customerTaxInvoice.sgstPaise +
@@ -237,15 +238,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
     const parsedCommissionPercent =
         settlementTaxablePaise > 0
             ? Math.round(
-                  (calculatedCommissionPaise * 10_000) /
-                      settlementTaxablePaise
+                  (calculatedCommissionPaise * 10_000) / settlementTaxablePaise
               ) / 100
             : 0;
-    const commissionGstRatePercent =
-        (order.commissionGstRateBps ?? 0) / 100;
+    const commissionGstRatePercent = (order.commissionGstRateBps ?? 0) / 100;
     const calculatedGstOnCommissionPaise = Math.round(
-        (calculatedCommissionPaise * (order.commissionGstRateBps ?? 0)) /
-            10_000
+        (calculatedCommissionPaise * (order.commissionGstRateBps ?? 0)) / 10_000
     );
     const calculatedTcsPaise = 0;
     const calculatedTdsPaise = 0;
@@ -655,6 +653,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                         chain.vendorPurchaseOrder.totalAmountPaise
                     }
                     recipientGstin={settings?.gstin}
+                    expectedQuantity={chain.vendorPurchaseOrder.quantity}
+                    expectedUnitRatePaise={
+                        chain.vendorPurchaseOrder.unitSellPricePaise
+                    }
+                    foReference={chain.vendorPurchaseOrder.foNumber}
+                    pendingUpload={chain.brandTaxInvoiceUpload ?? null}
                     onComplete={refresh}
                 />
             ) : null}
@@ -683,37 +687,63 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 </p>
                             ) : null}
                         </div>
-                        <div className="flex gap-2">
-                            <Button
-                                variant="outline"
-                                disabled={reviewBrandInvoice.isPending}
-                                onClick={() =>
-                                    reviewBrandInvoice.mutate({
-                                        invoiceId: chain.brandTaxInvoice.id,
-                                        validationStatus: "validated",
-                                        gstr2bStatus: "matched",
-                                        reviewNotes:
-                                            "Validated against Renivet PO and matched in GSTR-2B.",
-                                    })
-                                }
-                            >
-                                Validate and match
-                            </Button>
-                            <Button
-                                variant="outline"
-                                disabled={reviewBrandInvoice.isPending}
-                                onClick={() =>
-                                    reviewBrandInvoice.mutate({
-                                        invoiceId: chain.brandTaxInvoice.id,
-                                        validationStatus: "rejected",
-                                        gstr2bStatus: "mismatch",
-                                        reviewNotes:
-                                            "Invoice requires correction.",
-                                    })
-                                }
-                            >
-                                Mark mismatch
-                            </Button>
+                        <div className="flex min-w-[280px] flex-col gap-2">
+                            {chain.brandTaxInvoice.validationIssues?.length ? (
+                                <Input
+                                    value={brandInvoiceReviewReason}
+                                    onChange={(event) =>
+                                        setBrandInvoiceReviewReason(
+                                            event.target.value
+                                        )
+                                    }
+                                    placeholder="Reason required to accept mismatch"
+                                />
+                            ) : null}
+                            <div className="flex gap-2">
+                                <Button
+                                    variant="outline"
+                                    disabled={
+                                        reviewBrandInvoice.isPending ||
+                                        (chain.brandTaxInvoice.validationIssues
+                                            ?.length > 0 &&
+                                            !brandInvoiceReviewReason.trim())
+                                    }
+                                    onClick={() =>
+                                        reviewBrandInvoice.mutate({
+                                            invoiceId: chain.brandTaxInvoice.id,
+                                            validationStatus: "accepted",
+                                            gstr2bStatus: "matched",
+                                            reviewReason:
+                                                brandInvoiceReviewReason ||
+                                                "Validated against the Fulfillment Order snapshot.",
+                                            expectedVersion:
+                                                chain.brandTaxInvoice
+                                                    .transitionVersion,
+                                        })
+                                    }
+                                >
+                                    Validate and match
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    disabled={reviewBrandInvoice.isPending}
+                                    onClick={() =>
+                                        reviewBrandInvoice.mutate({
+                                            invoiceId: chain.brandTaxInvoice.id,
+                                            validationStatus: "rejected",
+                                            gstr2bStatus: "mismatch",
+                                            reviewReason:
+                                                brandInvoiceReviewReason ||
+                                                "Invoice requires correction.",
+                                            expectedVersion:
+                                                chain.brandTaxInvoice
+                                                    .transitionVersion,
+                                        })
+                                    }
+                                >
+                                    Mark mismatch
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -870,7 +900,9 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             </div>
                             <div className="flex items-center justify-between px-4 py-2">
                                 <span className="text-slate-600">
-                                    - GST on commission ({commissionGstRatePercent}% as saved on order)
+                                    - GST on commission (
+                                    {commissionGstRatePercent}% as saved on
+                                    order)
                                 </span>
                                 <span className="font-medium text-rose-600">
                                     -₹

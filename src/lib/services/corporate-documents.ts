@@ -4,6 +4,7 @@ import {
     brandConfidentials,
     corporateBrandPayouts,
     corporateBrandTaxInvoices,
+    corporateBrandTaxInvoiceUploads,
     corporateCustomizations,
     corporateDeliveryChallans,
     corporateDocumentSequences,
@@ -18,6 +19,11 @@ import {
     hsnMaster,
     products,
 } from "@/lib/db/schema";
+import {
+    assertBrandInvoiceReviewTransition,
+    buildFulfillmentTaxSnapshot,
+    validateBrandTaxInvoice,
+} from "@/lib/finance/corporate-brand-invoice-validation";
 import { requireCorporateTaxClassification } from "@/lib/finance/corporate-tax-classification";
 import {
     corporateBrandTaxInvoiceInputSchema,
@@ -79,7 +85,17 @@ export async function nextBrandInvoiceNumber(params: {
 }
 
 export async function nextCorporateDocumentNumber(
-    prefix: "PI" | "RV" | "FO" | "RPO" | "CINV" | "DC" | "CN" | "DN" | "QT" | "SET",
+    prefix:
+        | "PI"
+        | "RV"
+        | "FO"
+        | "RPO"
+        | "CINV"
+        | "DC"
+        | "CN"
+        | "DN"
+        | "QT"
+        | "SET",
     date: string | Date = new Date()
 ) {
     const financialYear = corporateFinancialYear(date);
@@ -422,10 +438,30 @@ export const corporateDocumentService = {
             });
         }
         assertCorporateLegalIdentity(settings);
-        const unitSellPricePaise = parsed.unitBuyPricePaise ?? 0;
-        const totalAmountPaise = unitSellPricePaise * order.quantity;
+        const hsnCode =
+            order.quote?.hsnCode ??
+            (typeof order.pricingSnapshot?.hsnCode === "string"
+                ? order.pricingSnapshot.hsnCode
+                : null);
+        if (!brandDetails?.gstin || !settings.gstin || !hsnCode) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Supplier GSTIN, Renivet GSTIN, and approved HSN are required before issuing the Fulfillment Order",
+            });
+        }
+        const unitSellPricePaise = parsed.unitBuyPricePaise;
         const issueDate = new Date();
         const foNumber = await nextCorporateDocumentNumber("FO", issueDate);
+        const taxSnapshot = buildFulfillmentTaxSnapshot({
+            foReference: foNumber,
+            quantity: order.quantity,
+            unitRatePaise: unitSellPricePaise,
+            gstRateBps: parsed.gstRateBps,
+            supplierGstin: brandDetails.gstin,
+            recipientGstin: settings.gstin,
+            hsnCode,
+        });
         const deliveryAddress =
             parsed.deliveryMode === "direct_to_customer"
                 ? orderDeliveryAddress(order)
@@ -441,7 +477,15 @@ export const corporateDocumentService = {
                 expectedDeliveryDate: parsed.expectedDeliveryDate ?? null,
                 quantity: order.quantity,
                 unitSellPricePaise,
-                totalAmountPaise,
+                gstRateBps: taxSnapshot.gstRateBps,
+                taxableValuePaise: taxSnapshot.taxableValuePaise,
+                cgstPaise: taxSnapshot.cgstPaise,
+                sgstPaise: taxSnapshot.sgstPaise,
+                igstPaise: taxSnapshot.igstPaise,
+                totalAmountPaise: taxSnapshot.totalAmountPaise,
+                supplierGstin: taxSnapshot.supplierGstin,
+                recipientGstin: taxSnapshot.recipientGstin,
+                hsnCode: taxSnapshot.hsnCode,
                 deliveryMode: parsed.deliveryMode,
                 deliveryAddress,
                 paymentTerms: parsed.paymentTerms,
@@ -473,39 +517,28 @@ export const corporateDocumentService = {
                 message: "This order has no assigned brand",
             });
         }
+        const brandId = order.brandId;
 
-        const [settings, brandDetails, vendorPo, product] = await Promise.all([
-            getCorporateDocumentSettings(),
-            db.query.brandConfidentials.findFirst({
-                where: eq(brandConfidentials.id, order.brandId!),
-            }),
-            parsed.vendorPurchaseOrderId
-                ? db.query.corporateVendorPurchaseOrders.findFirst({
-                      where: eq(
-                          corporateVendorPurchaseOrders.id,
-                          parsed.vendorPurchaseOrderId
-                      ),
-                  })
-                : db.query.corporateVendorPurchaseOrders.findFirst({
-                      where: eq(
-                          corporateVendorPurchaseOrders.orderId,
-                          order.id
-                      ),
-                      orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
-                  }),
-            order.quote?.productId
-                ? db.query.products.findFirst({
-                      where: eq(products.id, order.quote.productId),
-                  })
-                : Promise.resolve(null),
-        ]);
-        const validationIssues: string[] = [];
-        if (!vendorPo)
-            validationIssues.push("Renivet purchase order is missing");
+        const vendorPo = await (parsed.vendorPurchaseOrderId
+            ? db.query.corporateVendorPurchaseOrders.findFirst({
+                  where: eq(
+                      corporateVendorPurchaseOrders.id,
+                      parsed.vendorPurchaseOrderId
+                  ),
+              })
+            : db.query.corporateVendorPurchaseOrders.findFirst({
+                  where: eq(corporateVendorPurchaseOrders.orderId, order.id),
+                  orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
+              }));
+        if (!vendorPo) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message: "The Fulfillment Order snapshot is missing",
+            });
+        }
         if (
-            vendorPo &&
-            (vendorPo.orderId !== order.id ||
-                vendorPo.brandId !== order.brandId)
+            vendorPo.orderId !== order.id ||
+            vendorPo.brandId !== brandId
         ) {
             throw new TRPCError({
                 code: "BAD_REQUEST",
@@ -514,82 +547,229 @@ export const corporateDocumentService = {
             });
         }
         if (
-            brandDetails?.gstin &&
-            parsed.supplierGstin !== brandDetails.gstin.trim().toUpperCase()
+            vendorPo.gstRateBps == null ||
+            vendorPo.taxableValuePaise == null ||
+            vendorPo.cgstPaise == null ||
+            vendorPo.sgstPaise == null ||
+            vendorPo.igstPaise == null ||
+            !vendorPo.supplierGstin ||
+            !vendorPo.recipientGstin ||
+            !vendorPo.hsnCode
         ) {
-            validationIssues.push(
-                "Supplier GSTIN does not match the brand record"
-            );
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Reissue the Fulfillment Order with a complete tax snapshot before reviewing this invoice",
+            });
         }
-        if (
-            settings.gstin &&
-            parsed.recipientGstin !== settings.gstin.trim().toUpperCase()
-        ) {
-            validationIssues.push("Recipient GSTIN does not match Renivet");
-        }
-        if (
-            product?.hsCode &&
-            parsed.hsnCode !== product.hsCode.replace(/\s/g, "")
-        ) {
-            validationIssues.push("HSN does not match the ordered product");
-        }
-        if (vendorPo && parsed.totalAmountPaise !== vendorPo.totalAmountPaise) {
-            validationIssues.push(
-                "Invoice total does not match the Renivet PO"
-            );
-        }
-        const calculatedTotal =
-            parsed.taxableValuePaise +
-            parsed.cgstPaise +
-            parsed.sgstPaise +
-            parsed.igstPaise;
-        if (calculatedTotal !== parsed.totalAmountPaise) {
-            validationIssues.push(
-                "Taxable value plus GST does not equal total"
-            );
-        }
+        const result = validateBrandTaxInvoice(
+            {
+                foReference: vendorPo.foNumber,
+                quantity: vendorPo.quantity,
+                unitRatePaise: vendorPo.unitSellPricePaise,
+                taxableValuePaise: vendorPo.taxableValuePaise,
+                gstRateBps: vendorPo.gstRateBps,
+                cgstPaise: vendorPo.cgstPaise,
+                sgstPaise: vendorPo.sgstPaise,
+                igstPaise: vendorPo.igstPaise,
+                totalAmountPaise: vendorPo.totalAmountPaise,
+                supplierGstin: vendorPo.supplierGstin,
+                recipientGstin: vendorPo.recipientGstin,
+                hsnCode: vendorPo.hsnCode,
+            },
+            parsed
+        );
 
-        return db
-            .insert(corporateBrandTaxInvoices)
-            .values({
-                orderId: order.id,
-                brandId: order.brandId,
-                vendorPurchaseOrderId: vendorPo?.id ?? null,
-                invoiceNumber: parsed.invoiceNumber,
-                invoiceDate: parsed.invoiceDate,
-                supplierGstin: parsed.supplierGstin,
-                recipientGstin: parsed.recipientGstin,
-                hsnCode: parsed.hsnCode,
-                taxableValuePaise: parsed.taxableValuePaise,
-                cgstPaise: parsed.cgstPaise,
-                sgstPaise: parsed.sgstPaise,
-                igstPaise: parsed.igstPaise,
-                totalAmountPaise: parsed.totalAmountPaise,
-                fileName: parsed.file.name,
-                fileUrl: parsed.file.url,
-                validationStatus:
-                    validationIssues.length === 0 ? "validated" : "pending",
-                validationIssues,
-                gstr2bStatus: "pending",
-                uploadedByUserId: actorUserId,
-            })
-            .returning()
-            .then((rows) => rows[0]);
+        return db.transaction(async (tx) => {
+            const priorAccepted =
+                await tx.query.corporateBrandTaxInvoices.findFirst({
+                    where: and(
+                        eq(
+                            corporateBrandTaxInvoices.vendorPurchaseOrderId,
+                            vendorPo.id
+                        ),
+                        eq(corporateBrandTaxInvoices.isCurrentAccepted, true)
+                    ),
+                });
+            await tx
+                .update(corporateBrandTaxInvoices)
+                .set({
+                    validationStatus: "superseded",
+                    transitionVersion: sql`${corporateBrandTaxInvoices.transitionVersion} + 1`,
+                    updatedAt: new Date(),
+                })
+                .where(
+                    and(
+                        eq(
+                            corporateBrandTaxInvoices.vendorPurchaseOrderId,
+                            vendorPo.id
+                        ),
+                        eq(corporateBrandTaxInvoices.validationStatus, "held")
+                    )
+                );
+            if (result.status === "accepted" && priorAccepted) {
+                await tx
+                    .update(corporateBrandTaxInvoices)
+                    .set({
+                        validationStatus: "superseded",
+                        isCurrentAccepted: false,
+                        transitionVersion: sql`${corporateBrandTaxInvoices.transitionVersion} + 1`,
+                        updatedAt: new Date(),
+                    })
+                    .where(eq(corporateBrandTaxInvoices.id, priorAccepted.id));
+            }
+            const [invoice] = await tx
+                .insert(corporateBrandTaxInvoices)
+                .values({
+                    orderId: order.id,
+                    brandId,
+                    vendorPurchaseOrderId: vendorPo.id,
+                    uploadId: parsed.uploadId ?? null,
+                    supersedesInvoiceId:
+                        result.status === "accepted"
+                            ? (priorAccepted?.id ?? null)
+                            : null,
+                    invoiceNumber: parsed.invoiceNumber,
+                    invoiceDate: parsed.invoiceDate,
+                    foReference: parsed.foReference,
+                    quantity: parsed.quantity,
+                    unitRatePaise: parsed.unitRatePaise,
+                    supplierGstin: parsed.supplierGstin,
+                    recipientGstin: parsed.recipientGstin,
+                    hsnCode: parsed.hsnCode,
+                    taxableValuePaise: parsed.taxableValuePaise,
+                    cgstPaise: parsed.cgstPaise,
+                    sgstPaise: parsed.sgstPaise,
+                    igstPaise: parsed.igstPaise,
+                    totalAmountPaise: parsed.totalAmountPaise,
+                    fileName: parsed.file.name,
+                    fileUrl: parsed.file.url,
+                    fileKey: parsed.file.key,
+                    validationStatus: result.status,
+                    validationIssues: result.issues,
+                    gstr2bStatus: "pending",
+                    isCurrentAccepted: result.status === "accepted",
+                    uploadedByUserId: actorUserId,
+                })
+                .returning();
+            if (parsed.uploadId) {
+                await tx
+                    .update(corporateBrandTaxInvoiceUploads)
+                    .set({ status: "captured", updatedAt: new Date() })
+                    .where(
+                        and(
+                            eq(
+                                corporateBrandTaxInvoiceUploads.id,
+                                parsed.uploadId
+                            ),
+                            eq(
+                                corporateBrandTaxInvoiceUploads.orderId,
+                                order.id
+                            ),
+                            eq(
+                                corporateBrandTaxInvoiceUploads.vendorPurchaseOrderId,
+                                vendorPo.id
+                            ),
+                            eq(
+                                corporateBrandTaxInvoiceUploads.status,
+                                "pending_review"
+                            )
+                        )
+                    );
+            }
+            return invoice;
+        });
     },
 
-    async reviewBrandTaxInvoice(input: unknown) {
+    async reviewBrandTaxInvoice(actorUserId: string, input: unknown) {
         const parsed = corporateBrandTaxInvoiceReviewInputSchema.parse(input);
-        return db
-            .update(corporateBrandTaxInvoices)
-            .set({
-                validationStatus: parsed.validationStatus,
-                gstr2bStatus: parsed.gstr2bStatus,
-                reviewNotes: parsed.reviewNotes ?? null,
-                updatedAt: new Date(),
-            })
-            .where(eq(corporateBrandTaxInvoices.id, parsed.invoiceId))
-            .returning()
-            .then((rows) => rows[0]);
+        const invoice = await db.query.corporateBrandTaxInvoices.findFirst({
+            where: eq(corporateBrandTaxInvoices.id, parsed.invoiceId),
+        });
+        if (!invoice)
+            throw new TRPCError({
+                code: "NOT_FOUND",
+                message: "Invoice not found",
+            });
+        if (!invoice.vendorPurchaseOrderId) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    "Legacy invoice requires recapture against a Fulfillment Order snapshot",
+            });
+        }
+        const vendorPurchaseOrderId = invoice.vendorPurchaseOrderId;
+        try {
+            assertBrandInvoiceReviewTransition({
+                currentStatus: invoice.validationStatus,
+                requestedStatus: parsed.validationStatus,
+                validationIssues: invoice.validationIssues,
+                reviewReason: parsed.reviewReason,
+                expectedVersion: parsed.expectedVersion,
+                currentVersion: invoice.transitionVersion,
+            });
+        } catch (error) {
+            throw new TRPCError({
+                code: "PRECONDITION_FAILED",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : "Invoice review failed",
+            });
+        }
+        return db.transaction(async (tx) => {
+            if (parsed.validationStatus === "accepted") {
+                await tx
+                    .update(corporateBrandTaxInvoices)
+                    .set({
+                        validationStatus: "superseded",
+                        isCurrentAccepted: false,
+                        transitionVersion: sql`${corporateBrandTaxInvoices.transitionVersion} + 1`,
+                        updatedAt: new Date(),
+                    })
+                    .where(
+                        and(
+                            eq(
+                                corporateBrandTaxInvoices.vendorPurchaseOrderId,
+                                vendorPurchaseOrderId
+                            ),
+                            eq(
+                                corporateBrandTaxInvoices.isCurrentAccepted,
+                                true
+                            )
+                        )
+                    );
+            }
+            const [reviewed] = await tx
+                .update(corporateBrandTaxInvoices)
+                .set({
+                    validationStatus: parsed.validationStatus,
+                    gstr2bStatus: parsed.gstr2bStatus,
+                    reviewNotes: parsed.reviewReason ?? null,
+                    reviewedByUserId: actorUserId,
+                    reviewedAt: new Date(),
+                    isCurrentAccepted: parsed.validationStatus === "accepted",
+                    transitionVersion: invoice.transitionVersion + 1,
+                    updatedAt: new Date(),
+                })
+                .where(
+                    and(
+                        eq(corporateBrandTaxInvoices.id, invoice.id),
+                        eq(
+                            corporateBrandTaxInvoices.transitionVersion,
+                            parsed.expectedVersion
+                        ),
+                        eq(corporateBrandTaxInvoices.validationStatus, "held")
+                    )
+                )
+                .returning();
+            if (!reviewed)
+                throw new TRPCError({
+                    code: "CONFLICT",
+                    message: "BRAND_INVOICE_STALE_REVIEW",
+                });
+            return reviewed;
+        });
     },
 
     async issueDeliveryChallan(actorUserId: string, input: unknown) {
@@ -693,8 +873,7 @@ export const corporateDocumentService = {
             orderBy: [desc(corporateTaxInvoices.createdAt)],
         });
 
-        const grossPaidPaise =
-            invoice?.totalAmountPaise ?? order.totalPaise;
+        const grossPaidPaise = invoice?.totalAmountPaise ?? order.totalPaise;
         const gstEmbeddedPaise = invoice
             ? invoice.cgstPaise + invoice.sgstPaise + invoice.igstPaise
             : order.gstPaise;
@@ -717,15 +896,21 @@ export const corporateDocumentService = {
         );
 
         const commissionAmountPaise = order.commissionAmountPaise;
-        if (!Number.isFinite(commissionAmountPaise) || commissionAmountPaise < 0) {
+        if (
+            !Number.isFinite(commissionAmountPaise) ||
+            commissionAmountPaise < 0
+        ) {
             throw new TRPCError({
                 code: "PRECONDITION_FAILED",
-                message: "An agreed commission amount is required before settlement issuance",
+                message:
+                    "An agreed commission amount is required before settlement issuance",
             });
         }
         const commissionPercentBps =
             taxableValuePaise > 0
-                ? Math.round((commissionAmountPaise * 10000) / taxableValuePaise)
+                ? Math.round(
+                      (commissionAmountPaise * 10000) / taxableValuePaise
+                  )
                 : 0;
 
         const commissionGstRateBps = order.commissionGstRateBps;
@@ -760,9 +945,10 @@ export const corporateDocumentService = {
                 orderBy: [asc(corporateCustomizations.createdAt)],
             });
         return db.transaction(async (tx) => {
-            const currentPayout = await tx.query.corporateBrandPayouts.findFirst({
-                where: eq(corporateBrandPayouts.orderId, order.id),
-            });
+            const currentPayout =
+                await tx.query.corporateBrandPayouts.findFirst({
+                    where: eq(corporateBrandPayouts.orderId, order.id),
+                });
             if (adjustmentReason && currentPayout?.payoutStatus === "paid") {
                 throw new TRPCError({
                     code: "PRECONDITION_FAILED",
@@ -774,7 +960,12 @@ export const corporateDocumentService = {
                 await tx
                     .update(corporateSettlementStatements)
                     .set({ isCurrent: false, updatedAt: new Date() })
-                    .where(eq(corporateSettlementStatements.id, existingStatement.id));
+                    .where(
+                        eq(
+                            corporateSettlementStatements.id,
+                            existingStatement.id
+                        )
+                    );
             }
 
             const statementNumber = await nextCorporateDocumentNumber(
@@ -849,6 +1040,7 @@ export const corporateDocumentService = {
             incomingPurchaseOrder,
             receiptVoucher,
             vendorPurchaseOrder,
+            brandTaxInvoiceUpload,
             brandTaxInvoice,
             customerTaxInvoice,
             deliveryChallan,
@@ -881,6 +1073,13 @@ export const corporateDocumentService = {
                 where: eq(corporateVendorPurchaseOrders.orderId, order.id),
                 orderBy: [desc(corporateVendorPurchaseOrders.createdAt)],
             }),
+            db.query.corporateBrandTaxInvoiceUploads.findFirst({
+                where: and(
+                    eq(corporateBrandTaxInvoiceUploads.orderId, order.id),
+                    eq(corporateBrandTaxInvoiceUploads.status, "pending_review")
+                ),
+                orderBy: [desc(corporateBrandTaxInvoiceUploads.createdAt)],
+            }),
             db.query.corporateBrandTaxInvoices.findFirst({
                 where: eq(corporateBrandTaxInvoices.orderId, order.id),
                 orderBy: [desc(corporateBrandTaxInvoices.createdAt)],
@@ -907,6 +1106,7 @@ export const corporateDocumentService = {
             incomingPurchaseOrder,
             receiptVoucher,
             vendorPurchaseOrder,
+            brandTaxInvoiceUpload,
             brandTaxInvoice,
             customerTaxInvoice,
             deliveryChallan,

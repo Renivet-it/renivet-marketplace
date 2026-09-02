@@ -550,8 +550,12 @@ export const corporateVendorPurchaseOrderInputSchema = z.object({
 export const corporateBrandTaxInvoiceInputSchema = z.object({
     orderId: z.string().uuid(),
     vendorPurchaseOrderId: z.string().uuid().nullable().optional(),
+    uploadId: z.string().uuid().nullable().optional(),
     invoiceNumber: z.string().trim().min(1).max(100),
     invoiceDate: z.string().date(),
+    foReference: z.string().trim().min(1).max(100),
+    quantity: z.number().int().positive(),
+    unitRatePaise: z.number().int().positive(),
     supplierGstin: gstinSchema,
     recipientGstin: gstinSchema,
     hsnCode: z.string().trim().min(4).max(8),
@@ -560,21 +564,22 @@ export const corporateBrandTaxInvoiceInputSchema = z.object({
     sgstPaise: z.number().int().nonnegative().default(0),
     igstPaise: z.number().int().nonnegative().default(0),
     totalAmountPaise: z.number().int().positive(),
-    file: corporatePlatformFileSchema,
+    file: corporatePlatformFileSchema.extend({ key: z.string().min(1) }),
 });
 
 export const corporateBrandInvoiceUploadInputSchema = z.object({
     orderId: z.string().uuid(),
     vendorPurchaseOrderId: z.string().uuid(),
     invoiceDate: z.string().date(),
-    file: corporatePlatformFileSchema,
+    file: corporatePlatformFileSchema.extend({ key: z.string().min(1) }),
 });
 
 export const corporateBrandTaxInvoiceReviewInputSchema = z.object({
     invoiceId: z.string().uuid(),
-    validationStatus: z.enum(["validated", "rejected"]),
+    validationStatus: z.enum(["accepted", "rejected"]),
     gstr2bStatus: z.enum(["pending", "matched", "mismatch"]),
-    reviewNotes: z.string().trim().max(1000).nullable().optional(),
+    reviewReason: z.string().trim().max(1000).nullable().optional(),
+    expectedVersion: z.number().int().positive(),
 });
 
 export const corporateDeliveryChallanInputSchema = z.object({
