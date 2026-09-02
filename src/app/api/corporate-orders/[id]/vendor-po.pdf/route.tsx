@@ -203,12 +203,8 @@ export async function GET(
 
     const extrasSummary = extraChargeDescriptions.join(" | ");
     const specsSummary = [formattedGsm, fabric].filter(Boolean).join(" | ");
-    const itemDetail = [
-        specsSummary,
-        extrasSummary ? `Extras: ${extrasSummary}` : null,
-    ]
-        .filter(Boolean)
-        .join(" | ") ||
+    const itemDetail =
+        specsSummary ||
         "Manufacture and fulfil as per approved corporate specifications.";
 
     const data: CorporateCommercialDocumentData = {
@@ -296,7 +292,7 @@ export async function GET(
                           detail:
                               extrasSummary ||
                               "Customization included with the product supply.",
-                          hsn,
+                          hsn: "NA",
                           quantity: 1,
                           unit: "lot",
                           unitRatePaise: customizationPaise,

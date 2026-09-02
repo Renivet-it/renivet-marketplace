@@ -109,4 +109,18 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain('label: "Expected delivery"');
         expect(route).toContain('vendorPo.expectedDeliveryDate || ""');
     });
+
+    test("keeps customization pricing out of the base row and marks its HSN as not applicable", () => {
+        const route = readFileSync(
+            new URL(
+                "../src/app/api/corporate-orders/[id]/vendor-po.pdf/route.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(route).toContain("const itemDetail = specsSummary ||");
+        expect(route).toContain('description: "Customization / Extras"');
+        expect(route).toContain('hsn: "NA"');
+    });
 });
