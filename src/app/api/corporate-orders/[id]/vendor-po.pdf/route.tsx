@@ -218,7 +218,6 @@ export async function GET(
         documentType: "fulfillment_order",
         documentNumber: docNumber,
         documentDate: vendorPo.issueDate || new Date(),
-        validUntil: vendorPo.expectedDeliveryDate,
         fromLabel: "Fulfilled By",
         toLabel: "Fulfillment Brand (Supplier)",
         from: {
@@ -246,11 +245,7 @@ export async function GET(
             },
             {
                 label: "Expected delivery",
-                value: vendorPo.expectedDeliveryDate
-                    ? new Date(
-                          vendorPo.expectedDeliveryDate
-                      ).toLocaleDateString("en-IN")
-                    : "As per agreed timeline",
+                value: vendorPo.expectedDeliveryDate || "",
             },
             { label: "Corporate order", value: order.publicOrderId },
             {

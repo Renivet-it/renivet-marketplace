@@ -96,4 +96,17 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain('fromLabel: "Fulfilled By"');
         expect(route).not.toContain('fromLabel: "Issued By (Platform)"');
     });
+
+    test("keeps the FO expected delivery reference visible when populated", () => {
+        const route = readFileSync(
+            new URL(
+                "../src/app/api/corporate-orders/[id]/vendor-po.pdf/route.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(route).toContain('label: "Expected delivery"');
+        expect(route).toContain('vendorPo.expectedDeliveryDate || ""');
+    });
 });

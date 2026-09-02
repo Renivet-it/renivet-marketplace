@@ -357,16 +357,18 @@ export function CorporateCommercialDocumentTemplate({
     ];
 
     const passedReferences = (data.references ?? []).filter(
-        (ref) =>
-            ![
+        (ref) => {
+            const label = ref.label.trim().toLowerCase();
+            return ![
                 "pi number",
                 "document number",
                 "fo number",
                 "date",
                 "document date",
                 "valid until",
-                "expected delivery",
-            ].includes(ref.label.trim().toLowerCase())
+            ].includes(label) &&
+                !(label === "expected delivery" && !isFulfillmentOrder);
+        }
     );
 
     const references = [...baseReferences, ...passedReferences];
