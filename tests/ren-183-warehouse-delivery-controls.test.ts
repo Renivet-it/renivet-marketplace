@@ -20,6 +20,23 @@ const documentPanel = readFile(
     ),
     "utf8"
 );
+const documentService = readFile(
+    new URL("../src/lib/services/corporate-documents.ts", import.meta.url),
+    "utf8"
+);
+
+test("a customer receipt voucher does not block fulfillment-order issuance", async () => {
+    const source = await documentService;
+    const fulfillmentOrderIssuance = source.slice(
+        source.indexOf("async issueFulfillmentOrder("),
+        source.indexOf("async issueVendorPurchaseOrder(")
+    );
+
+    expect(fulfillmentOrderIssuance).not.toContain("corporateReceiptVouchers");
+    expect(fulfillmentOrderIssuance).not.toContain(
+        "Record the advance and issue its receipt voucher"
+    );
+});
 
 test("warehouse dispatch requires an accepted current receipt in the shared guard", async () => {
     const source = await orderService;

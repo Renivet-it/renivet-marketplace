@@ -520,13 +520,13 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                             />
                         </CompactField>
                         <CompactField
-                            label="GST on packaging / extras"
+                            label="GST on included packaging / extras"
                             suffix="%"
                         >
                             <Input
                                 type="number"
                                 disabled
-                                value="18.00"
+                                value={gstRatePercent}
                                 className="bg-slate-50 text-slate-500"
                             />
                         </CompactField>
@@ -583,15 +583,12 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                         const parsedBaseGst = Number(gstRatePercent) || 0;
                         const parsedExtras = Number(customizationCharges) || 0;
                         const baseSubtotal = parsedUnitPrice * order.quantity;
-                        const baseGstAmt = Math.round(
-                            (baseSubtotal * parsedBaseGst) / 100
+                        const parentSupplyTaxable = baseSubtotal + parsedExtras;
+                        const parentSupplyGstAmt = Math.round(
+                            (parentSupplyTaxable * parsedBaseGst) / 100
                         );
-                        const extrasGstAmt = 0;
                         const grandTotal =
-                            baseSubtotal +
-                            parsedExtras +
-                            baseGstAmt +
-                            extrasGstAmt;
+                            parentSupplyTaxable + parentSupplyGstAmt;
 
                         return (
                             <div className="grid grid-cols-2 gap-2 border-t border-slate-100 bg-slate-50/50 p-3 text-xs sm:grid-cols-5">
@@ -613,18 +610,18 @@ export function CorporateDocumentChainPanel({ order }: { order: any }) {
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-500">
-                                        GST on Base ({parsedBaseGst}%)
+                                        Taxable value (base + included extras)
                                     </p>
                                     <p className="font-semibold text-slate-800">
-                                        INR {baseGstAmt.toFixed(2)}
+                                        INR {parentSupplyTaxable.toFixed(2)}
                                     </p>
                                 </div>
                                 <div>
                                     <p className="text-[10px] text-slate-500">
-                                        GST on Extras (18%)
+                                        GST on parent supply ({parsedBaseGst}%)
                                     </p>
                                     <p className="font-semibold text-slate-800">
-                                        INR {extrasGstAmt.toFixed(2)}
+                                        INR {parentSupplyGstAmt.toFixed(2)}
                                     </p>
                                 </div>
                                 <div>

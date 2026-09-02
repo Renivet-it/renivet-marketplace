@@ -28,7 +28,9 @@ type SnapshotInput = Pick<
     | "supplierGstin"
     | "recipientGstin"
     | "hsnCode"
->;
+> & {
+    includedCustomizationPaise?: number;
+};
 
 export type CorporateBrandInvoiceFacts = Omit<
     CorporateFulfillmentTaxSnapshot,
@@ -52,7 +54,9 @@ export function buildFulfillmentTaxSnapshot(
 ): CorporateFulfillmentTaxSnapshot {
     const supplierGstin = normalizeGstin(input.supplierGstin);
     const recipientGstin = normalizeGstin(input.recipientGstin);
-    const taxableValuePaise = input.unitRatePaise * input.quantity;
+    const taxableValuePaise =
+        input.unitRatePaise * input.quantity +
+        Math.max(0, input.includedCustomizationPaise ?? 0);
     const gstPaise = Math.round((taxableValuePaise * input.gstRateBps) / 10000);
     const intraState = supplierGstin.slice(0, 2) === recipientGstin.slice(0, 2);
     const cgstPaise = intraState ? Math.floor(gstPaise / 2) : 0;

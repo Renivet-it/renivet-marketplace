@@ -420,23 +420,12 @@ export const corporateDocumentService = {
                 orderBy: [asc(corporateCustomizations.createdAt)],
             });
 
-        const [settings, brandDetails, receiptVoucher] = await Promise.all([
+        const [settings, brandDetails] = await Promise.all([
             getCorporateDocumentSettings(),
             db.query.brandConfidentials.findFirst({
                 where: eq(brandConfidentials.id, order.brandId),
             }),
-            db.query.corporateReceiptVouchers.findFirst({
-                where: eq(corporateReceiptVouchers.orderId, order.id),
-                orderBy: [desc(corporateReceiptVouchers.createdAt)],
-            }),
         ]);
-        if (!receiptVoucher || receiptVoucher.status !== "issued") {
-            throw new TRPCError({
-                code: "PRECONDITION_FAILED",
-                message:
-                    "Record the advance and issue its receipt voucher before issuing the Fulfillment Order",
-            });
-        }
         assertCorporateLegalIdentity(settings);
         const hsnCode =
             order.quote?.hsnCode ??
@@ -451,12 +440,24 @@ export const corporateDocumentService = {
             });
         }
         const unitSellPricePaise = parsed.unitBuyPricePaise;
+        const includedCustomizationPaise = parsed.customizations.reduce(
+            (sum, customization) =>
+                customization.taxTreatment === "included_in_product_supply"
+                    ? sum +
+                      Math.max(
+                          0,
+                          Number(customization.amountPaise ?? 0)
+                      )
+                    : sum,
+            0
+        );
         const issueDate = new Date();
         const foNumber = await nextCorporateDocumentNumber("FO", issueDate);
         const taxSnapshot = buildFulfillmentTaxSnapshot({
             foReference: foNumber,
             quantity: order.quantity,
             unitRatePaise: unitSellPricePaise,
+            includedCustomizationPaise,
             gstRateBps: parsed.gstRateBps,
             supplierGstin: brandDetails.gstin,
             recipientGstin: settings.gstin,
