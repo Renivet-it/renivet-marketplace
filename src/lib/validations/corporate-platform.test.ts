@@ -11,10 +11,27 @@ test("manual corporate quotes retain an entered customer GSTIN without GSTIN val
         quantity: 30,
         unitPricePaise: 40_000,
         gstNumber: "buyer supplied GST number",
+        hsnCode: "61091000",
     });
 
     expect(result.success).toBe(true);
     if (result.success) {
         expect(result.data.gstNumber).toBe("buyer supplied GST number");
     }
+});
+
+test("manual corporate quotes require entered GSTIN and HSN", () => {
+    const result = corporateAdminManualQuoteInputSchema.safeParse({
+        companyName: "Mili.ai Technologies Private Limited",
+        contactPerson: "Mili Buyer",
+        email: "buyer@mili.ai",
+        phone: "9876543210",
+        brandId: "00000000-0000-4000-8000-000000000001",
+        quantity: 30,
+        unitPricePaise: 40_000,
+        gstNumber: "",
+        hsnCode: "",
+    });
+
+    expect(result.success).toBe(false);
 });

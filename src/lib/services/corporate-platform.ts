@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { env } from "@/../env";
 import {
     buildCorporateCustomizationRows,
+    calculateCorporateSupplyTax,
     calculateCorporateCustomizationTax,
     type CorporateCustomizationInput,
 } from "@/lib/corporate-customizations";
@@ -1834,11 +1835,12 @@ class CorporatePlatformService {
                 classification.gstRateBps,
             ])
         );
-        const customizationTax = calculateCorporateCustomizationTax(
-            customizationRows,
-            baseGstRateBps,
-            separateSupplyRatesByHsn
-        );
+        const customizationTax = calculateCorporateSupplyTax({
+            baseTaxablePaise: subtotalPaise,
+            parentGstRateBps: baseGstRateBps,
+            customizations: customizationRows,
+            separateSupplyRatesByHsn,
+        });
         const customizationGstRateBps =
             customizationCostPaise > 0
                 ? Math.round(
@@ -1846,11 +1848,10 @@ class CorporatePlatformService {
                           customizationCostPaise
                   )
                 : 0;
-        const baseGstAmountPaise = Math.round(
-            (subtotalPaise * baseGstRateBps) / 10000
-        );
-        const customizationGstAmountPaise = customizationTax.gstPaise;
-        const gstAmountPaise = baseGstAmountPaise + customizationGstAmountPaise;
+        const baseGstAmountPaise = customizationTax.baseGstPaise;
+        const customizationGstAmountPaise =
+            customizationTax.totalGstPaise - baseGstAmountPaise;
+        const gstAmountPaise = customizationTax.totalGstPaise;
         const taxablePaise = subtotalPaise + customizationCostPaise;
         const totalAmountPaise = taxablePaise + gstAmountPaise;
         const advanceAmountPaise = Math.round(
@@ -1977,6 +1978,7 @@ class CorporatePlatformService {
                     customizationCostPaise: parsed.customizationCostPaise,
                     gstAmountPaise,
                     totalAmountPaise,
+                    customizations: customizationTax.rows,
                     advanceAmountPaise,
                     balanceAmountPaise: totalAmountPaise - advanceAmountPaise,
                     commissionAmountPaise,

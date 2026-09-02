@@ -344,9 +344,9 @@ export function CorporateCommercialDocumentTemplate({
     const references = [...baseReferences, ...passedReferences];
     const hasPricing = Boolean(data.totals);
     const firstItem = data.items?.[0] ?? data.item;
-    const gstRateBps = firstItem?.gstRateBps ?? data.totals?.gstRateBps ?? null;
+    const gstRateBps = data.totals?.gstRateBps ?? firstItem?.gstRateBps ?? null;
     const gstAmountPaise =
-        firstItem?.gstAmountPaise ?? data.totals?.gstAmountPaise ?? null;
+        data.totals?.gstAmountPaise ?? firstItem?.gstAmountPaise ?? null;
 
     return (
         <Document>

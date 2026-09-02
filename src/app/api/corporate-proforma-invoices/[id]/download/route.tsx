@@ -14,6 +14,7 @@ import {
     corporateProductTypes,
     corporateProformaInvoices,
     corporateQuotes,
+    corporateCustomizations,
     products,
 } from "@/lib/db/schema";
 import { userCache } from "@/lib/redis/methods";
@@ -23,6 +24,7 @@ import {
 } from "@/lib/services/corporate-documents";
 import {
     assertCorporateTaxData,
+    getCorporateTaxDataMissingFields,
     resolveCorporateDocumentDate,
 } from "@/lib/utils/corporate-document-integrity";
 import { getUserPermissions, hasPermission } from "@/lib/utils";
@@ -163,6 +165,20 @@ export async function GET(
         quote?.subtotalPaise ?? order?.subtotalPaise ?? taxableValuePaise;
     const customizationPaise =
         quote?.customizationCostPaise ?? order?.customizationPaise ?? 0;
+    const customizationQuoteId = quote?.id ?? order?.quoteId;
+    const customizationRecords = customizationQuoteId
+        ? await db.query.corporateCustomizations.findMany({
+              where: eq(corporateCustomizations.quoteId, customizationQuoteId),
+          })
+        : [];
+    const customizationIsIncludedInMainSupply =
+        customizationPaise > 0 &&
+        customizationRecords.length > 0 &&
+        customizationRecords.every(
+            (row) =>
+                (row.metadata as Record<string, unknown>)?.taxTreatment ===
+                "included_in_product_supply"
+        );
 
     const gstRateBps =
         order?.gstRateBps ??
@@ -333,15 +349,23 @@ export async function GET(
         quote?.totalAmountPaise ?? invoice.totalAmountPaise;
 
     const customizationGstRateBps = gstRateBps;
+    const combinedParentSupplyGstPaise = Math.round(
+        ((baseSubtotalPaise + customizationPaise) * gstRateBps) / 10_000
+    );
     const customizationGstAmountPaise =
-        customizationPaise > 0
+        customizationIsIncludedInMainSupply
+            ? combinedParentSupplyGstPaise -
+              Math.round((baseSubtotalPaise * gstRateBps) / 10_000)
+            : customizationPaise > 0
             ? Math.round(
                   (customizationPaise * customizationGstRateBps) / 10_000
               )
             : 0;
 
     const baseGstAmountPaise =
-        totalGstFromDb > customizationGstAmountPaise
+        customizationIsIncludedInMainSupply
+            ? Math.round((baseSubtotalPaise * gstRateBps) / 10_000)
+            : totalGstFromDb > customizationGstAmountPaise
             ? totalGstFromDb - customizationGstAmountPaise
             : totalGstFromDb > 0
               ? totalGstFromDb
@@ -357,11 +381,15 @@ export async function GET(
             : gstRateBps;
 
     const computedTotalGstPaise =
-        totalGstFromDb > 0
+        customizationIsIncludedInMainSupply
+            ? combinedParentSupplyGstPaise
+            : totalGstFromDb > 0
             ? totalGstFromDb
             : baseGstAmountPaise + customizationGstAmountPaise;
     const computedTotalAmountPaise =
-        totalAmountFromDb > 0
+        customizationIsIncludedInMainSupply
+            ? baseSubtotalPaise + customizationPaise + computedTotalGstPaise
+            : totalAmountFromDb > 0
             ? totalAmountFromDb
             : baseSubtotalPaise + customizationPaise + computedTotalGstPaise;
 
@@ -371,15 +399,32 @@ export async function GET(
         (invoice as any).createdAt;
     let safeDate: Date;
     let safeValidUntil: Date | undefined;
+    const missingTaxFields = getCorporateTaxDataMissingFields(
+        order?.gstNumber ?? quote?.profile.gstNumber,
+        [{ hsnCode: resolvedHsn, taxable: true }]
+    );
+    if (missingTaxFields.length > 0) {
+        return NextResponse.json(
+            {
+                code: "CORPORATE_DOCUMENT_TAX_DATA_INCOMPLETE",
+                message: `Cannot download this proforma until ${missingTaxFields
+                    .map((field) =>
+                        field === "customer_gstin"
+                            ? "the customer GSTIN is entered"
+                            : "an HSN code is selected"
+                    )
+                    .join(" and ")}.`,
+                missingFields: missingTaxFields,
+            },
+            { status: 422 }
+        );
+    }
     try {
         safeDate = resolveCorporateDocumentDate(rawDate, quote?.createdAt ?? order?.createdAt);
         safeValidUntil = invoice.validUntil
             ? resolveCorporateDocumentDate(invoice.validUntil)
             : undefined;
-        assertCorporateTaxData(
-            order?.gstNumber ?? quote?.profile.gstNumber,
-            [{ hsnCode: resolvedHsn, taxable: true }]
-        );
+        assertCorporateTaxData(order?.gstNumber ?? quote?.profile.gstNumber, [{ hsnCode: resolvedHsn, taxable: true }]);
     } catch (error) {
         const message = error instanceof Error ? error.message : "CORPORATE_DOCUMENT_SOURCE_INVALID";
         return NextResponse.json({ message }, { status: 422 });
@@ -393,14 +438,15 @@ export async function GET(
         documentNumber: invoice.invoiceNumber,
         documentDate: safeDate,
         validUntil: safeValidUntil,
-        fromLabel: "Seller",
+        fromLabel: "From (Supplier)",
         toLabel: "To",
         from: {
-            name: settings.legalName || "Renivet",
-            address: renivetAddress,
-            gstin: settings.gstin,
+            name: supplierName,
+            address: supplierAddress,
+            gstin: supplierGstin,
             email: supplierEmail,
             phone: supplierPhone,
+            facilitatedBy: `Facilitated by: ${settings.legalName || "Renivet"}, ${renivetAddress}${settings.gstin ? ` | GSTIN: ${settings.gstin}` : ""}`,
         },
         to: order
             ? {
@@ -507,13 +553,20 @@ export async function GET(
             customizationPaise:
                 customizationPaise > 0 ? customizationPaise : undefined,
             taxableValuePaise,
-            baseGstRateBps: customizationPaise > 0 ? baseGstRateBps : undefined,
+            baseGstRateBps:
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
+                    ? baseGstRateBps
+                    : undefined,
             baseGstAmountPaise:
-                customizationPaise > 0 ? baseGstAmountPaise : undefined,
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
+                    ? baseGstAmountPaise
+                    : undefined,
             customizationGstRateBps:
-                customizationPaise > 0 ? customizationGstRateBps : undefined,
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
+                    ? customizationGstRateBps
+                    : undefined,
             customizationGstAmountPaise:
-                customizationPaise > 0
+                customizationPaise > 0 && !customizationIsIncludedInMainSupply
                     ? customizationGstAmountPaise
                     : undefined,
             gstRateBps: baseGstRateBps,
