@@ -147,6 +147,21 @@ export async function GET(
             (order.unitPricePaise ?? Math.round(order.subtotalPaise / Math.max(1, order.quantity))));
 
     const baseSubtotalPaise = unitPricePaise * vendorPo.quantity;
+    const totalTaxablePaise =
+        vendorPo.taxableValuePaise ?? baseSubtotalPaise;
+    const customizationPaise = Math.max(
+        0,
+        totalTaxablePaise - baseSubtotalPaise
+    );
+    const gstAmountPaise =
+        (vendorPo.cgstPaise ?? 0) +
+        (vendorPo.sgstPaise ?? 0) +
+        (vendorPo.igstPaise ?? 0);
+    const totalAmountPaise =
+        vendorPo.totalAmountPaise ?? totalTaxablePaise + gstAmountPaise;
+    const sizeBreakdown = Object.entries(order.sizeBreakdown ?? {})
+        .map(([size, quantity]) => ({ size, quantity: Number(quantity) }))
+        .filter((row) => row.size.trim() && Number.isFinite(row.quantity));
 
     // Fetch extra charge rules with amounts if selected
     let extraChargeDescriptions: string[] = [];
@@ -187,14 +202,6 @@ export async function GET(
     }
 
     const extrasSummary = extraChargeDescriptions.join(" | ");
-    const customizationPaise =
-        order.quote?.customizationCostPaise ??
-        order.quote?.manualExtraAmountPaise ??
-        order.customizationPaise ??
-        0;
-
-    const totalTaxablePaise = baseSubtotalPaise + customizationPaise;
-
     const specsSummary = [formattedGsm, fabric].filter(Boolean).join(" | ");
     const itemDetail = [
         specsSummary,
@@ -284,14 +291,23 @@ export async function GET(
             quantity: vendorPo.quantity,
             unitRatePaise: unitPricePaise,
             amountPaise: baseSubtotalPaise,
+            gstRateBps: vendorPo.gstRateBps,
+            gstAmountPaise,
+            totalAmountPaise,
         },
+        sizeBreakdown,
         totals: {
             subtotalPaise:
                 customizationPaise > 0 ? baseSubtotalPaise : undefined,
             customizationPaise:
                 customizationPaise > 0 ? customizationPaise : undefined,
             taxableValuePaise: totalTaxablePaise,
-            totalAmountPaise: totalTaxablePaise,
+            gstRateBps: vendorPo.gstRateBps,
+            gstAmountPaise,
+            cgstPaise: vendorPo.cgstPaise,
+            sgstPaise: vendorPo.sgstPaise,
+            igstPaise: vendorPo.igstPaise,
+            totalAmountPaise,
         },
         notes: Array.from(
             new Set([

@@ -132,6 +132,32 @@ const styles = StyleSheet.create({
     purchaseTotal: { width: "12%", textAlign: "right" },
     last: { borderRightWidth: 0 },
     itemDetail: { marginTop: 2, color: "#66756a" },
+    sizeBreakdown: {
+        marginTop: 9,
+        borderWidth: 1,
+        borderColor: line,
+    },
+    sizeBreakdownTitle: {
+        padding: 4,
+        backgroundColor: paperAlt,
+        color: moss,
+        fontFamily: "Helvetica-Bold",
+        fontSize: 6.6,
+    },
+    sizeBreakdownRow: {
+        flexDirection: "row",
+        borderTopWidth: 1,
+        borderTopColor: line,
+    },
+    sizeBreakdownCell: { width: "50%", padding: 4, fontSize: 6.8 },
+    sizeBreakdownQuantity: {
+        width: "50%",
+        padding: 4,
+        fontSize: 6.8,
+        textAlign: "right",
+        borderLeftWidth: 1,
+        borderLeftColor: line,
+    },
     lower: {
         marginTop: 10,
         flexDirection: "row",
@@ -237,6 +263,7 @@ export type CorporateCommercialDocumentData = {
     references?: Array<{ label: string; value?: string | null }>;
     item?: CorporateCommercialItem;
     items?: CorporateCommercialItem[];
+    sizeBreakdown?: Array<{ size: string; quantity: number }>;
     totals?: {
         subtotalPaise?: number;
         customizationPaise?: number;
@@ -346,7 +373,14 @@ export function CorporateCommercialDocumentTemplate({
     const firstItem = data.items?.[0] ?? data.item;
     const gstRateBps = data.totals?.gstRateBps ?? firstItem?.gstRateBps ?? null;
     const gstAmountPaise =
-        data.totals?.gstAmountPaise ?? firstItem?.gstAmountPaise ?? null;
+        data.totals?.gstAmountPaise ??
+        firstItem?.gstAmountPaise ??
+        ((data.totals?.cgstPaise ?? 0) +
+            (data.totals?.sgstPaise ?? 0) +
+            (data.totals?.igstPaise ?? 0));
+    const sizeBreakdown = (data.sizeBreakdown ?? []).filter(
+        (row) => row.size.trim() && row.quantity > 0
+    );
 
     return (
         <Document>
@@ -641,6 +675,51 @@ export function CorporateCommercialDocumentTemplate({
                     })}
                 </View>
 
+                {isFulfillmentOrder && sizeBreakdown.length > 0 ? (
+                    <View style={styles.sizeBreakdown}>
+                        <Text style={styles.sizeBreakdownTitle}>
+                            SIZE-WISE PRODUCTION BREAKDOWN
+                        </Text>
+                        <View style={styles.sizeBreakdownRow}>
+                            <Text style={styles.sizeBreakdownCell}>Size</Text>
+                            <Text style={styles.sizeBreakdownQuantity}>
+                                Pieces
+                            </Text>
+                        </View>
+                        {sizeBreakdown.map((row) => (
+                            <View key={row.size} style={styles.sizeBreakdownRow}>
+                                <Text style={styles.sizeBreakdownCell}>
+                                    {row.size}
+                                </Text>
+                                <Text style={styles.sizeBreakdownQuantity}>
+                                    {row.quantity} pcs
+                                </Text>
+                            </View>
+                        ))}
+                        <View style={styles.sizeBreakdownRow}>
+                            <Text
+                                style={[
+                                    styles.sizeBreakdownCell,
+                                    styles.grandTotal,
+                                ]}
+                            >
+                                Total
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.sizeBreakdownQuantity,
+                                    styles.grandTotal,
+                                ]}
+                            >
+                                {sizeBreakdown.reduce(
+                                    (sum, row) => sum + row.quantity,
+                                    0
+                                )} pcs
+                            </Text>
+                        </View>
+                    </View>
+                ) : null}
+
                 <View
                     style={[
                         styles.lower,
@@ -695,7 +774,38 @@ export function CorporateCommercialDocumentTemplate({
 
                     {data.totals ? (
                         <View style={styles.totals}>
-                            {data.totals.customizationPaise &&
+                            {isFulfillmentOrder ? (
+                                <>
+                                    {data.totals.subtotalPaise ? (
+                                        <Total
+                                            label="Base items subtotal (excl. GST)"
+                                            value={data.totals.subtotalPaise}
+                                        />
+                                    ) : null}
+                                    {data.totals.customizationPaise &&
+                                    data.totals.customizationPaise > 0 ? (
+                                        <Total
+                                            label="Customization / Extras (excl. GST)"
+                                            value={
+                                                data.totals.customizationPaise
+                                            }
+                                        />
+                                    ) : null}
+                                    <Total
+                                        label="Taxable value (excl. GST)"
+                                        value={data.totals.taxableValuePaise}
+                                    />
+                                    <Total
+                                        label={`GST${
+                                            gstRateBps === null ||
+                                            gstRateBps === undefined
+                                                ? ""
+                                                : ` (${(gstRateBps / 100).toFixed(2)}%)`
+                                        }`}
+                                        value={gstAmountPaise ?? 0}
+                                    />
+                                </>
+                            ) : data.totals.customizationPaise &&
                             data.totals.customizationPaise > 0 ? (
                                 <>
                                     {data.totals.subtotalPaise ? (
@@ -803,11 +913,9 @@ export function CorporateCommercialDocumentTemplate({
                             )}
                             <Total
                                 label={
-                                    showDetailedTax
+                                    showDetailedTax || isFulfillmentOrder
                                         ? "Grand total incl. GST"
-                                        : isFulfillmentOrder
-                                          ? "Document total (excl. GST)"
-                                          : "Document total"
+                                        : "Document total"
                                 }
                                 value={data.totals.totalAmountPaise}
                                 final

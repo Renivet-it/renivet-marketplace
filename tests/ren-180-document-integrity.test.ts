@@ -53,4 +53,27 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain('fromLabel: "From (Supplier)"');
         expect(route).toContain("facilitatedBy:");
     });
+
+    test("fulfillment orders show size-wise production and GST-inclusive commercial details", () => {
+        const route = readFileSync(
+            new URL(
+                "../src/app/api/corporate-orders/[id]/vendor-po.pdf/route.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+        const template = readFileSync(
+            new URL(
+                "../src/components/pdf/corporate-commercial-document-template.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(route).toContain("sizeBreakdown");
+        expect(route).toContain("gstRateBps: vendorPo.gstRateBps");
+        expect(route).toContain("gstAmountPaise");
+        expect(template).toContain("SIZE-WISE PRODUCTION BREAKDOWN");
+        expect(template).toContain("Grand total incl. GST");
+    });
 });
