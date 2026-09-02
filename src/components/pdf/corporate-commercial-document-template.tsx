@@ -800,19 +800,19 @@ export function CorporateCommercialDocumentTemplate({
                                     />
                                     {(data.totals.cgstPaise ?? 0) > 0 ? (
                                         <Total
-                                            label="CGST"
+                                            label={`CGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
                                             value={data.totals.cgstPaise ?? 0}
                                         />
                                     ) : null}
                                     {(data.totals.sgstPaise ?? 0) > 0 ? (
                                         <Total
-                                            label="SGST"
+                                            label={`SGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
                                             value={data.totals.sgstPaise ?? 0}
                                         />
                                     ) : null}
                                     {(data.totals.igstPaise ?? 0) > 0 ? (
                                         <Total
-                                            label="IGST"
+                                            label={`IGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 100).toFixed(2) + "%"})`}
                                             value={data.totals.igstPaise ?? 0}
                                         />
                                     ) : null}

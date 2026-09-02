@@ -133,8 +133,8 @@ describe("REN-180 corporate document integrity", () => {
             "utf8"
         );
 
-        expect(template).toContain('label="CGST"');
-        expect(template).toContain('label="SGST"');
-        expect(template).toContain('label="IGST"');
+        expect(template).toContain('label={`CGST (${');
+        expect(template).toContain('label={`SGST (${');
+        expect(template).toContain('label={`IGST (${');
     });
 });
