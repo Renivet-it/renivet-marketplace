@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, test } from "bun:test";
 import {
     buildCorporateCustomizationRows,
+    calculateCorporateSupplyTax,
     calculateCorporateCustomizationTax,
     type CorporateCustomizationInput,
 } from "./corporate-customizations";
@@ -67,6 +68,26 @@ describe("corporate customization model", () => {
         expect(tax.gstPaise).toBe(2_300);
         expect(tax.rows[0]?.gstRateBps).toBe(500);
         expect(tax.rows[1]?.gstRateBps).toBe(1800);
+    });
+
+    test("calculates included customizations together with the parent supply", () => {
+        const tax = calculateCorporateSupplyTax({
+            baseTaxablePaise: 1_200_000,
+            parentGstRateBps: 500,
+            customizations: [
+                {
+                    name: "Logo print",
+                    amountPaise: 200_000,
+                    taxTreatment: "included_in_product_supply",
+                    displayOrder: 1,
+                },
+            ],
+            separateSupplyRatesByHsn: {},
+        });
+
+        expect(tax.parentSupplyTaxablePaise).toBe(1_400_000);
+        expect(tax.parentSupplyGstPaise).toBe(70_000);
+        expect(tax.totalGstPaise).toBe(70_000);
     });
 
     test("keeps the customization snapshot on every corporate document", () => {

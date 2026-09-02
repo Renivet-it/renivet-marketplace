@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
 import {
     getCorporateTaxDataMissingFields,
     resolveCorporateDocumentDate,
@@ -38,5 +39,18 @@ describe("REN-180 corporate document integrity", () => {
             "customer_gstin",
             "hsn_code",
         ]);
+    });
+
+    test("proforma identifies the brand as supplier and Renivet only as facilitator", () => {
+        const route = readFileSync(
+            new URL(
+                "../src/app/api/corporate-proforma-invoices/[id]/download/route.tsx",
+                import.meta.url
+            ),
+            "utf8"
+        );
+
+        expect(route).toContain('fromLabel: "From (Supplier)"');
+        expect(route).toContain("facilitatedBy:");
     });
 });
