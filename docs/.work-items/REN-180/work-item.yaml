@@ -3,7 +3,7 @@ task:
     id: REN-180
     title: "[Corporate Order] Proforma/tax document data integrity: invalid date, missing GSTIN/HSN, wrong seller identity framing"
     source: linear
-    branch: ayanganguly333/ren-180-corporate-order-proformatax-document-data-integrity-invalid
+    branch: ayanganguly333/corporate-order-qc
     status: IN_REVIEW
     linear:
         url: https://linear.app/renivet/issue/REN-180/corporate-order-proformatax-document-data-integrity-invalid

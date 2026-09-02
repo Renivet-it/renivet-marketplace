@@ -3,7 +3,7 @@ task:
     id: REN-179
     title: "[Corporate Order] Enforce HSN/GST classification before a corporate invoice can be issued (no silent 18% default)"
     source: linear
-    branch: ayanganguly333/ren-179-corporate-order-enforce-hsngst-classification-before-a
+    branch: ayanganguly333/corporate-order-qc
     status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-179/corporate-order-enforce-hsngst-classification-before-a
