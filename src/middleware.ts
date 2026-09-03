@@ -3,8 +3,7 @@ import { NextResponse } from "next/server";
 import { BitFieldSitePermission } from "./config/permissions";
 import { generalSidebarConfig, generateBrandSideNav } from "./config/site";
 import { buildAuthRedirectUrl } from "./lib/auth/redirect";
-import { userCache } from "./lib/redis/methods";
-import { cFetch, getUserPermissions, hasPermission } from "./lib/utils";
+import { cFetch, hasPermission } from "./lib/utils";
 import { ResponseData } from "./lib/validations";
 
 export default clerkMiddleware(async (auth, req) => {
@@ -40,7 +39,14 @@ export default clerkMiddleware(async (auth, req) => {
             path: url.pathname,
         });
 
-        const res = await cFetch<ResponseData<{ isAuthorized: boolean }>>(
+        const res = await cFetch<
+            ResponseData<{
+                isAuthorized: boolean;
+                sitePermissions: number;
+                brandPermissions: number;
+                brandId: string | null;
+            }>
+        >(
             new URL(
                 `/api/permission?${searchParams.toString()}`,
                 url
@@ -56,19 +62,16 @@ export default clerkMiddleware(async (auth, req) => {
         }
 
         if (url.pathname.startsWith("/dashboard")) {
-            const existingUser = await userCache.get(isAuth.userId);
-            if (!existingUser) return NextResponse.redirect(new URL("/", url));
-            const { brandPermissions, sitePermissions } = getUserPermissions(
-                existingUser.roles
-            );
+            const routingContext = res.data?.data;
+            if (!routingContext?.isAuthorized)
+                return NextResponse.redirect(new URL("/", url));
+            const { brandPermissions, sitePermissions, brandId } =
+                routingContext;
 
             if (url.pathname === "/dashboard") {
-                if (existingUser.brand) {
+                if (brandId) {
                     return NextResponse.redirect(
-                        new URL(
-                            `/dashboard/brands/${existingUser.brand.id}/analytics`,
-                            url
-                        )
+                        new URL(`/dashboard/brands/${brandId}/analytics`, url)
                     );
                 } else {
                     // Find the first route the user has permission for
