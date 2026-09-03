@@ -1,0 +1,189 @@
+schema_version: "1.0"
+task:
+    id: REN-153
+    title: Show cart items as unavailable in the cart view itself
+    source: linear
+    branch: ayanganguly333/ren-153-show-cart-items-as-unavailable-in-the-cart-view-itself
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-153/show-cart-items-as-unavailable-in-the-cart-view-itself-not-only-as-a
+        priority: High
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Customer-visible eligibility messaging must match checkout behavior.
+        - The change spans a shared availability rule and two responsive render branches.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, acceptance criteria, evidence, labels, relation to REN-152, and status
+        - Cart card mobile and desktop render branches
+        - CachedCart product and selected-variant fields
+        - Existing checkout availability predicate and its consumers
+        - Existing cart actions, controls, accessibility, and test inventory
+    excluded_areas:
+        - Checkout-time filtering logic; explicitly out of scope
+        - Cart persistence, inventory writes, and database schema/migrations
+        - REN-152 checkout consolidation
+        - New network requests or availability refresh mechanisms
+    dependencies: [DEP-153-001]
+    integrations: []
+    security_boundaries: []
+    state_transitions:
+        - cart_item_loaded -> availability_evaluated
+        - availability_evaluated -> available_display_or_unavailable_display
+    related_tests: [TEXP-153-001, TEXP-153-002]
+    uncertainties:
+        - The existing checkout predicate should be extracted or mirrored carefully so its current semantics do not change.
+requirements:
+    - id: REQ-153-001
+      description: Derive cart-item availability using the same product and variant eligibility rules already used at checkout.
+      type: explicit
+    - id: REQ-153-002
+      description: Show an unavailable badge or text message in both mobile and desktop cart-card variants.
+      type: explicit
+    - id: REQ-153-003
+      description: Preserve available-item rendering and existing cart actions without new fetching or persistence changes.
+      type: explicit
+    - id: REQ-153-004
+      description: Keep checkout-time filtering behavior unchanged.
+      type: explicit
+    - id: REQ-153-005
+      description: Make the unavailable state understandable through accessible text and not color alone.
+      type: inferred
+scenarios:
+    - id: SCN-153-001
+      requirement_ids: [REQ-153-001, REQ-153-002]
+      description: A product that is unpublished, unapproved, deleted, unavailable, inactive, or out of stock is marked unavailable in the cart.
+    - id: SCN-153-002
+      requirement_ids: [REQ-153-001, REQ-153-002]
+      description: A selected deleted or out-of-stock variant is marked unavailable in both responsive card branches.
+    - id: SCN-153-003
+      requirement_ids: [REQ-153-003, REQ-153-004]
+      description: An eligible product and variant render as before, and checkout continues to apply its existing filter.
+    - id: SCN-153-004
+      requirement_ids: [REQ-153-003, REQ-153-005]
+      description: An unavailable card remains manageable through existing remove or wishlist actions and exposes a text notice.
+invariants:
+    - id: INV-153-001
+      description: Cart-view availability cannot disagree with the approved checkout eligibility predicate for the same loaded item.
+    - id: INV-153-002
+      description: Every unavailable state has a non-color text explanation visible to assistive technology and sighted users.
+    - id: INV-153-003
+      description: The cart display does not mutate cart, inventory, or checkout data.
+    - id: INV-153-004
+      description: Available items do not receive the unavailable presentation.
+flows:
+    - id: FLOW-153-001
+      description: Render a loaded cart item, evaluate existing eligibility fields, and choose the available or unavailable card presentation.
+      state_transitions: [cart_item_loaded, availability_evaluated, available_display_or_unavailable_display]
+    - id: FLOW-153-002
+      description: Preserve existing responsive rendering and item management actions after the notice is added.
+      state_transitions: [availability_evaluated, available_display_or_unavailable_display]
+dependencies:
+    - id: DEP-153-001
+      name: CachedCart and checkout eligibility fields
+      purpose: Provide the already-loaded product and variant fields needed for the display predicate.
+      owner: Cart and checkout maintainers
+      required_state: Cart query includes the product, selected variant, stock, lifecycle, and approval fields.
+      description: The cached cart schema already exposes the required fields.
+      status: resolved
+integrations: []
+personas:
+    - id: PER-153-001
+      role: cart_customer
+      applicability: Customers reviewing saved cart items before checkout.
+security_boundaries: []
+business_rules:
+    - id: BR-153-001
+      description: Customers must receive clear notice before checkout excludes an unavailable cart item.
+decisions:
+    - id: DEC-153-001
+      question: Should the cart remove or disable unavailable items when showing the notice?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Keep the item visible and preserve existing remove/wishlist controls; add display-only notice and leave checkout filtering unchanged.
+      basis: The issue requests visible notice and explicitly scopes the change to the cart-card display layer.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-153-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies exact product and selected-variant eligibility predicate parity, including each unavailable reason and available regression.
+      scenarios: [SCN-153-001, SCN-153-002, SCN-153-003]
+    - id: TEXP-153-002
+      category: component
+      classification: REQUIRED
+      reason: Verifies the unavailable text appears in both mobile and desktop card branches while existing actions remain available.
+      scenarios: [SCN-153-002, SCN-153-004]
+    - id: TEXP-153-003
+      category: accessibility
+      classification: REQUIRED
+      reason: Verifies the notice is textual and discoverable without color perception.
+      scenarios: [SCN-153-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-153-001
+          scenario_ids: [SCN-153-001, SCN-153-002]
+        - requirement_id: REQ-153-002
+          scenario_ids: [SCN-153-001, SCN-153-002]
+        - requirement_id: REQ-153-003
+          scenario_ids: [SCN-153-003, SCN-153-004]
+        - requirement_id: REQ-153-004
+          scenario_ids: [SCN-153-003]
+        - requirement_id: REQ-153-005
+          scenario_ids: [SCN-153-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-153-001
+          invariant_ids: [INV-153-001, INV-153-002, INV-153-004]
+        - scenario_id: SCN-153-002
+          invariant_ids: [INV-153-001, INV-153-002, INV-153-004]
+        - scenario_id: SCN-153-003
+          invariant_ids: [INV-153-001, INV-153-003, INV-153-004]
+        - scenario_id: SCN-153-004
+          invariant_ids: [INV-153-002, INV-153-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-153-001
+          test_expectation_ids: [TEXP-153-001]
+        - scenario_id: SCN-153-002
+          test_expectation_ids: [TEXP-153-001, TEXP-153-002]
+        - scenario_id: SCN-153-003
+          test_expectation_ids: [TEXP-153-001]
+        - scenario_id: SCN-153-004
+          test_expectation_ids: [TEXP-153-002, TEXP-153-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-153-001
+          severity: MINOR
+          references: [REQ-153-001, SCN-153-001]
+          description: Preserve exact checkout predicate semantics when sharing the display predicate.
+        - id: CRIT-153-002
+          severity: MINOR
+          references: [REQ-153-002, SCN-153-002]
+          description: Test both responsive card branches.
+        - id: CRIT-153-003
+          severity: MINOR
+          references: [REQ-153-005, SCN-153-004]
+          description: Use text, not color alone, for unavailable status.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Linear acceptance criteria and owner-approved display-only scope
