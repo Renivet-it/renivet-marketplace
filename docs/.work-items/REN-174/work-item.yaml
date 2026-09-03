@@ -1,0 +1,168 @@
+schema_version: "1.0"
+task:
+    id: REN-174
+    title: Inventory double-decremented on order cancellation
+    source: linear
+    branch: ayanganguly333/ren-174-inventory-double-decremented-on-order-cancellation
+    status: BLOCKED
+    linear:
+        priority: Urgent
+        status: Backlog
+        labels: [qa-finding, Bug]
+        assignee: Ayan Ganguly
+        url: https://linear.app/renivet/issue/REN-174/inventory-double-decremented-on-order-cancellation
+        comments: []
+        relations: [REN-144]
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Inventory and order lifecycle integrity are affected across customer and admin cancellation paths.
+        - The defect can create systemic negative stock and suppress sellable inventory.
+        - The shared mutation is used by payment/order creation paths and requires regression protection.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - src/lib/db/queries/product.ts
+        - src/lib/trpc/routes/general/orders.ts
+        - src/lib/support/cancel-order-helper.ts
+        - src/app/api/webhooks/razorpay/payments/route.ts
+        - src/lib/db/schema/product.ts
+        - Linear REN-174 issue, relations, and comments
+    excluded_areas:
+        - area: database schemas and migrations
+          reason: The issue requires an arithmetic contract correction and no schema change.
+        - area: historical inventory reconstruction
+          reason: Exact historical DB values are unavailable and reconstruction is out of scope.
+        - area: refund policy redesign
+          reason: Existing refund/shipment/status behavior must remain unchanged.
+    dependencies: [DEP-001, DEP-002]
+    integrations: [INT-001, INT-002, INT-003, INT-004, INT-005]
+    security_boundaries: [SEC-001, SEC-002]
+    state_transitions:
+        - cancellation_requested -> cancellation_authorized
+        - cancellation_authorized -> refund_or_shipment_processing
+        - refund_or_shipment_processing -> stock_restoration
+        - stock_restoration -> order_cancelled
+        - stock_restoration -> cancellation_failed
+    related_tests:
+        - src/lib/db/queries/product-ordering.test.ts
+        - src/lib/trpc/routes/general/orders.test.ts
+        - src/lib/support/cancel-order-helper.test.ts
+    uncertainties:
+        - Existing repository test seams may require database integration fixtures for exact stock assertions.
+        - Concurrent/repeated cancellation semantics remain coordinated with REN-144.
+requirements:
+    - {id: REQ-001, description: updateProductStock treats quantity as a relative decrement delta for products and variants., type: explicit}
+    - {id: REQ-002, description: Customer cancellation passes item quantity and restores exact pre-order stock., type: explicit}
+    - {id: REQ-003, description: Admin/support cancellation uses the identical relative restoration contract., type: explicit}
+    - {id: REQ-004, description: Shared stock mutation floors resulting product and variant quantity at zero., type: explicit}
+    - {id: REQ-005, description: Active order-creation decrement paths retain existing behavior., type: explicit}
+    - {id: REQ-006, description: Authorization, shipment/refund handling, order state, and error isolation remain unchanged., type: explicit}
+    - {id: REQ-007, description: Missing or stale related records cannot update an unrelated inventory row., type: inferred}
+scenarios:
+    - {id: SCN-001, requirement_ids: [REQ-001, REQ-002], description: Customer cancellation restores a product-only item exactly.}
+    - {id: SCN-002, requirement_ids: [REQ-001, REQ-002], description: Customer cancellation restores a variant item exactly.}
+    - {id: SCN-003, requirement_ids: [REQ-001, REQ-003], description: Admin/support cancellation restores product and variant items exactly.}
+    - {id: SCN-004, requirement_ids: [REQ-001, REQ-004], description: Stock never persists below zero.}
+    - {id: SCN-005, requirement_ids: [REQ-001, REQ-005], description: Order creation and Razorpay webhook continue decrementing by item quantity.}
+    - {id: SCN-006, requirement_ids: [REQ-006], description: Unauthorized cancellation remains rejected without stock mutation.}
+    - {id: SCN-007, requirement_ids: [REQ-006], description: Existing failure and state boundaries remain unchanged.}
+    - {id: SCN-008, requirement_ids: [REQ-007], description: Missing inventory matches do not update another row.}
+invariants:
+    - {id: INV-001, description: All shared stock updates use relative-delta semantics.}
+    - {id: INV-002, description: Successful cancellation reverses the original decrement exactly once.}
+    - {id: INV-003, description: Product and variant stock never persists below zero.}
+    - {id: INV-004, description: Product and variant identity remains scoped by existing IDs.}
+    - {id: INV-005, description: Only authorized cancellation reaches customer stock restoration.}
+    - {id: INV-006, description: Order creation remains a decrement path.}
+    - {id: INV-007, description: Inventory correction does not alter refund shipment or order-state transitions.}
+flows:
+    - id: FLOW-001
+      description: Authorized customer cancellation performs existing lifecycle work, restores item deltas, floors stock, and cancels the order.
+      state_transitions: [{from: cancellation_requested, to: cancellation_authorized}, {from: cancellation_authorized, to: refund_or_shipment_processing}, {from: refund_or_shipment_processing, to: stock_restoration}, {from: stock_restoration, to: order_cancelled}, {from: stock_restoration, to: cancellation_failed}]
+    - id: FLOW-002
+      description: Admin/support cancellation uses the same relative restoration delta while preserving its audit and error boundary.
+      state_transitions: [{from: cancellation_authorized, to: stock_restoration}, {from: stock_restoration, to: order_cancelled}]
+    - id: FLOW-003
+      description: Order creation continues passing item quantities to the shared decrement mutation, including the Razorpay webhook.
+      state_transitions: [{from: order_creation_started, to: stock_decremented}, {from: order_creation_started, to: order_creation_failed}]
+dependencies:
+    - {id: DEP-001, description: Existing product/variant transaction and availability/QC reconciliation remain the persistence boundary., status: resolved}
+    - {id: DEP-002, description: REN-144 order/payment integrity is related coordination only and does not block this arithmetic correction., status: resolved}
+integrations:
+    - {id: INT-001, system: Product stock persistence, purpose: Persist product-level quantity deltas.}
+    - {id: INT-002, system: Variant stock persistence, purpose: Persist variant-level quantity deltas.}
+    - {id: INT-003, system: Customer cancellation API, purpose: Authorize and execute customer cancellation.}
+    - {id: INT-004, system: Admin/support cancellation helper, purpose: Execute authorized operational cancellation.}
+    - {id: INT-005, system: Razorpay payment webhook, purpose: Preserve order-creation stock decrement behavior.}
+personas:
+    - {id: PER-001, role: cancelling_customer, applicability: Customer cancelling an eligible order.}
+    - {id: PER-002, role: operations_user, applicability: Authorized admin/support cancellation.}
+    - {id: PER-003, role: inventory_consumer, applicability: Warehouse/vendor availability consumer.}
+security_boundaries:
+    - {id: SEC-001, description: Protected customer cancellation authorization and ownership check.}
+    - {id: SEC-002, description: Existing admin/support permission boundary around operational cancellation.}
+business_rules:
+    - {id: BR-001, description: Cancellation reverses the original inventory delta exactly once.}
+    - {id: BR-002, description: Stock cannot be persisted below zero.}
+    - {id: BR-003, description: Product and variant rows are distinct inventory identities.}
+    - {id: BR-004, description: Historical inventory movements are not reconstructed by this task.}
+decisions:
+    - {id: DEC-001, question: Should cancellation pass an absolute stock target or a relative delta?, class: HUMAN_CONFIRMATION, status: unresolved, recommendation: Pass item.quantity because updateProductStock subtracts relative deltas., confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-002, question: Should the shared mutation floor negative stock?, class: HUMAN_CONFIRMATION, status: unresolved, recommendation: Add a database-side greatest-zero floor as defense-in-depth., confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-003, question: Should historical stock be reconstructed?, class: AUTO_DECIDE, status: resolved, recommendation: No; exact historical values are unavailable and out of scope., confidence: high, consequence: medium, human_confirmation_required: false}
+test_expectations:
+    - {id: TEXP-001, category: unit, classification: REQUIRED, reason: Shared relative-decrement semantics must be explicit for products and variants.}
+    - {id: TEXP-002, category: integration, classification: REQUIRED, reason: Customer cancellation must restore exact product and variant quantities.}
+    - {id: TEXP-003, category: integration, classification: REQUIRED, reason: Admin/support cancellation must use the same restoration contract.}
+    - {id: TEXP-004, category: unit, classification: REQUIRED, reason: Database-side zero floor prevents negative inventory persistence.}
+    - {id: TEXP-005, category: regression, classification: REQUIRED, reason: Order creation and Razorpay webhook decrements must remain unchanged.}
+    - {id: TEXP-006, category: security, classification: REQUIRED, reason: Unauthorized cancellation must not mutate inventory.}
+    - {id: TEXP-007, category: regression, classification: REQUIRED, reason: Existing refund shipment status and error boundaries must remain unchanged.}
+    - {id: TEXP-008, category: exploratory, classification: OPTIONAL, reason: Concurrent/repeated cancellation behavior remains coordinated with REN-144.}
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-004, SCN-005]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-001, SCN-002]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-003]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-004]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-005]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-006, SCN-007]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-008]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-002, INV-004]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-001, INV-002, INV-004]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-001, INV-002, INV-004]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-001, INV-003]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-001, INV-006]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-005]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-007]}
+        - {scenario_id: SCN-008, invariant_ids: [INV-004]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-001, TEXP-004]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-005]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-006]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-007]}
+        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-001]}
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent_read_only_governance_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - {severity: MINOR, id: REQ-007, description: Direct missing-row integration coverage depends on existing query-test seams.}
+        - {severity: MINOR, id: TEXP-008, description: Concurrency and retry/idempotency remain coordinated with REN-144.}
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-001, DEC-002]
+    approved_by: Pending explicit human confirmation of high-consequence inventory decisions
