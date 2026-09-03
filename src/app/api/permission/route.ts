@@ -9,26 +9,35 @@ import {
     handleError,
     hasPermission,
 } from "@/lib/utils";
-import { clerkClient } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { NextRequest } from "next/server";
+import {
+    buildPermissionResponse,
+    resolvePermissionUserId,
+} from "./permission-policy";
 
 export async function GET(req: NextRequest) {
     try {
+        const { userId: authenticatedUserId } = await auth();
+        const userId = resolvePermissionUserId({
+            authenticatedUserId,
+            requestedUserId: req.nextUrl.searchParams.get("uId"),
+        });
+        if (!userId) throw new AppError("Unauthorized", "UNAUTHORIZED");
+
         const searchParams = req.nextUrl.searchParams;
-        const uId = searchParams.get("uId");
         const path = searchParams.get("path");
 
         if (!searchParams) throw new AppError("Invalid request", "BAD_REQUEST");
-        if (!uId || !path)
-            throw new AppError("Invalid parameters", "BAD_REQUEST");
+        if (!path) throw new AppError("Invalid parameters", "BAD_REQUEST");
 
-        let existingUser = await userCache.get(uId);
+        let existingUser = await userCache.get(userId);
 
         // A Clerk session can become active a moment before the user.created
         // webhook writes the local profile. Create the minimal local profile
         // here as a safe fallback so a newly signed-in customer is not bounced.
         if (!existingUser) {
-            const clerkUser = await (await clerkClient()).users.getUser(uId);
+            const clerkUser = await (await clerkClient()).users.getUser(userId);
             const email =
                 clerkUser.primaryEmailAddress ?? clerkUser.emailAddresses[0];
             const phone =
@@ -42,8 +51,9 @@ export async function GET(req: NextRequest) {
             await db
                 .insert(users)
                 .values({
-                    id: clerkUser.id,
-                    firstName: clerkUser.firstName || (phone ? "User" : "Customer"),
+                    id: userId,
+                    firstName:
+                        clerkUser.firstName || (phone ? "User" : "Customer"),
                     lastName: clerkUser.lastName || "",
                     email: emailAddress,
                     phone: phone?.phoneNumber ?? null,
@@ -54,7 +64,7 @@ export async function GET(req: NextRequest) {
                     updatedAt: new Date(clerkUser.updatedAt),
                 })
                 .onConflictDoNothing();
-            existingUser = await userCache.get(uId);
+            existingUser = await userCache.get(userId);
         }
         if (!existingUser) throw new AppError("User not found", "NOT_FOUND");
 
@@ -71,7 +81,7 @@ export async function GET(req: NextRequest) {
 
         return CResponse({
             message: isAuthorized ? "OK" : "FORBIDDEN",
-            data: existingUser,
+            data: buildPermissionResponse(isAuthorized),
         });
     } catch (err) {
         console.error(err);
