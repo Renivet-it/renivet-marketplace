@@ -6,7 +6,7 @@
 
 ## Review Scope and Git Evidence
 
-Compared the tracked `master` merge-base commit `d88e9ac5c762504d48c58967c12f73ff3c7c773a` with implementation commit `02f6afc3884acf2d05cbeae559249167286b07ad` on branch `ayanganguly333/ren-174-inventory-double-decremented-on-order-cancellation`. No PR exists (`pr_url: null`). The diff includes the REN-174 specification artifacts, implementation plan, the shared product/variant stock mutation, both cancellation callers, and focused regression tests. No schema, migration, webhook order-creation, authorization, refund, shipment, or status-transition code was changed.
+Compared current `master` commit `cee89e42ef379996841291f10d24e8b38610ca83` with implementation commit `38a2ce92f89b64c8d61e7e88dcfc711aa74e5aa7` on branch `ayanganguly333/ren-174-inventory-double-decremented-on-order-cancellation`. PR [#620](https://github.com/Renivet-it/renivet-marketplace/pull/620) targets `master`. The diff includes only the REN-174 specification/review artifacts, implementation plan, shared product/variant stock mutation, both cancellation callers, and focused regression tests. No REN-144 artifact, schema, migration, webhook order-creation, authorization, refund, shipment, or status-transition code is part of the current PR diff.
 
 ## Requirement Reconciliation
 

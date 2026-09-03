@@ -170,9 +170,9 @@ implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: master
-    base_commit: d88e9ac5c762504d48c58967c12f73ff3c7c773a
-    head_commit: 02f6afc3884acf2d05cbeae559249167286b07ad
-    pr_url: null
+    base_commit: cee89e42ef379996841291f10d24e8b38610ca83
+    head_commit: 38a2ce92f89b64c8d61e7e88dcfc711aa74e5aa7
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/620
     material_drift: NO_DRIFT
     reconciliation:
         requirements: PASS
@@ -186,7 +186,7 @@ implementation_review:
     required_actions:
         - "REV-001: Add database-seeded exact-restoration tests when a stable integration test seam is available."
     evidence:
-        - "Compared the approved REN-174 contract with the master merge-base d88e9ac5c762504d48c58967c12f73ff3c7c773a and implementation commit 02f6afc3884acf2d05cbeae559249167286b07ad."
+        - "Compared the approved REN-174 contract with current master commit cee89e42ef379996841291f10d24e8b38610ca83 and implementation commit 38a2ce92f89b64c8d61e7e88dcfc711aa74e5aa7."
         - "The focused cancellation-stock regression test covers both relative-delta callers and the product/variant zero-floor expressions."
         - "Order-creation and Razorpay webhook decrement paths are unchanged in the reviewed diff."
     governance_reentry_required: false
