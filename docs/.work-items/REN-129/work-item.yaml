@@ -3,201 +3,152 @@ task:
     id: REN-129
     title: Reassess the 5-second delayed PostHog init
     source: linear
-    branch: ayanganguly333/ren-129-130-131-132
-    status: READY_FOR_DEV
+    branch: ayanganguly333/ren-129-reassess-the-5-second-delayed-posthog-init
+    status: BLOCKED
     linear:
-        url: https://linear.app/renivet/issue/REN-129/reassess-the-5-second-delayed-posthog-init
         priority: High
+        status: Deployed to Prod
         labels: []
-        status: Backlog
         assignee: Ayan Ganguly
-        project: Customer Tracking & Analytics Instrumentation
-        milestone: null
+        url: https://linear.app/renivet/issue/REN-129/reassess-the-5-second-delayed-posthog-init
+        comments: []
+        relations: [REN-164]
 risk:
-    initial_risk: L2
-    path_rule_risk: L2
-    semantic_risk: L2
-    final_risk: L2
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
     reasons:
-        - Changes browser analytics timing and external telemetry behavior across mobile and in-app-browser traffic.
-        - Initialization timing can affect performance budgets, privacy/session-recording exposure, and event completeness.
+        - "Changes the external analytics SDK lifecycle and early event coverage."
+        - "Immediate initialization versus delayed replay is a performance and measurement trade-off."
     escalation_history: []
 investigation:
     depth: dependency_tracing
     investigated_areas:
-        - Linear issue, status, project, relations, and comments
-        - Client provider initialization, pageview capture, and identity bridge
-        - Existing PostHog event configuration and test inventory
-        - Performance, early-exit, privacy, cleanup, and external-failure implications
+        - src/components/providers/client.tsx
+        - src/components/providers/posthog-init-policy.ts
+        - src/components/globals/posthog/page-view.tsx
+        - src/components/globals/posthog/identify-bridge.tsx
+        - package.json and bun.lock posthog-js version
+        - pinned posthog-js capture/init/session-recording source
+        - Linear REN-129 and related REN-164
     excluded_areas:
-        - Production PageSpeed and PostHog dashboards; not available in repository context
-        - Changing event taxonomy, server-side capture, or session-recording policy beyond the approved timing experiment
-        - Application source and tests; SPEC boundary is read-only
-    dependencies: [DEP-129-001]
-    integrations: [INT-129-001]
-    security_boundaries: [SEC-129-001]
+        - {area: production_deployment, reason: "No production mutation during specification."}
+        - {area: event_schema_redesign, reason: "Issue concerns initialization timing only."}
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+    integrations: [INT-001, INT-002, INT-003]
+    security_boundaries: [SEC-001]
     state_transitions:
-        - page_loaded -> initialization_pending -> initialized_or_timed_out
-        - initialized -> capture_available
-    related_tests: [TEXP-129-001, TEXP-129-002, TEXP-129-003]
+        - provider_mount -> posthog_initialized
+        - posthog_initialized -> replay_enabled
+        - provider_unmount -> replay_start_cancelled
+    related_tests:
+        - src/components/providers/client.test.ts
+        - src/components/globals/posthog/identify-bridge.test.ts
     uncertainties:
-        - Original PageSpeed target and acceptable performance regression are unknown.
-        - PostHog client queue behavior before initialization is assumed but must be verified against the installed SDK.
+        - "Deployed PageSpeed and event-coverage deltas require staging/production validation."
 requirements:
-    - id: REQ-129-001
-      description: Select and document a measured PostHog initialization timing/configuration policy.
-      type: explicit
-    - id: REQ-129-002
-      description: Preserve capture, identify/reset, host/key, and session-recording privacy semantics under the selected policy.
-      type: inferred
-    - id: REQ-129-003
-      description: Add deterministic and field-level performance/capture verification for short visits and normal visits.
-      type: explicit
+    - {id: REQ-001, description: "PostHog initialization is not delayed by replay delay.", type: explicit}
+    - {id: REQ-002, description: "Session recording is disabled during immediate initialization.", type: explicit}
+    - {id: REQ-003, description: "Session recording starts after the configured delay when mounted.", type: explicit}
+    - {id: REQ-004, description: "Early core events remain eligible for capture.", type: explicit}
+    - {id: REQ-005, description: "Existing analytics and lifecycle contracts remain unchanged.", type: explicit}
+    - {id: REQ-006, description: "Cleanup cancels delayed replay startup safely.", type: explicit}
+    - {id: REQ-007, description: "Staging and production verify tracking and PageSpeed impact.", type: explicit}
 scenarios:
-    - id: SCN-129-001
-      requirement_ids: [REQ-129-001]
-      description: A normal visit initializes PostHog within the approved timing budget and makes pageview capture available.
-    - id: SCN-129-002
-      requirement_ids: [REQ-129-002]
-      description: A visitor who exits before the historical five-second window does not lose all eligible core capture solely because initialization was delayed; session recording remains within policy.
-    - id: SCN-129-003
-      requirement_ids: [REQ-129-003]
-      description: Initialization cleanup, repeated route changes, failed SDK initialization, and signed-in identify/reset transitions remain safe.
+    - {id: SCN-001, requirement_ids: [REQ-001, REQ-002], description: "Provider mount immediately initializes with replay disabled."}
+    - {id: SCN-002, requirement_ids: [REQ-004], description: "Early pageview is not lost after provider mount."}
+    - {id: SCN-003, requirement_ids: [REQ-003], description: "Replay starts after delay while mounted."}
+    - {id: SCN-004, requirement_ids: [REQ-006], description: "Unmount cancels delayed replay startup."}
+    - {id: SCN-005, requirement_ids: [REQ-005], description: "Existing event and identity behavior is unchanged."}
+    - {id: SCN-006, requirement_ids: [REQ-007], description: "Staging verifies the performance/tracking trade-off."}
+    - {id: SCN-007, requirement_ids: [REQ-007], description: "Production verifies rollout metrics."}
 invariants:
-    - id: INV-129-001
-      description: Initialization uses at most one active timer/client lifecycle per mounted provider.
-    - id: INV-129-002
-      description: No analytics timing change enables session recording or exposes identity data outside the existing consent/configuration boundary.
-    - id: INV-129-003
-      description: A PostHog failure cannot block application rendering or authentication state transitions.
+    - {id: INV-001, description: "PostHog initializes once per provider mount."}
+    - {id: INV-002, description: "Core capture is available before replay starts."}
+    - {id: INV-003, description: "Replay is not enabled before the configured delay."}
+    - {id: INV-004, description: "Cleanup prevents stale delayed callbacks."}
+    - {id: INV-005, description: "The change introduces no duplicate pageview."}
+    - {id: INV-006, description: "Automated tests emit no production analytics."}
 flows:
-    - id: FLOW-129-001
-      description: Mount provider, schedule or perform initialization, then expose capture and pageview behavior.
-      state_transitions: [page_loaded, initialization_pending, initialized_or_timed_out, capture_available]
-    - id: FLOW-129-002
-      description: Handle unmount, route changes, SDK failure, and identify/reset without leaking timers or blocking UI.
-      state_transitions: [initialized, route_or_identity_change, cleanup_or_reset]
+    - id: FLOW-001
+      description: "Mount, initialize immediately with replay disabled, and capture core events."
+      state_transitions: [{from: provider_mount, to: posthog_initialized}, {from: posthog_initialized, to: core_capture_available}]
+    - id: FLOW-002
+      description: "After the delay, start recording only if the provider remains mounted."
+      state_transitions: [{from: posthog_initialized, to: replay_enabled}]
+    - id: FLOW-003
+      description: "Unmount clears the delayed replay callback."
+      state_transitions: [{from: provider_mount, to: replay_start_cancelled}]
+    - id: FLOW-004
+      description: "Validate staging, roll out, and measure production behavior."
+      state_transitions: [{from: staging_verified, to: production_rollout_measured}]
 dependencies:
-    - id: DEP-129-001
-      name: posthog-js and PostHog project configuration
-      purpose: Browser event capture and identity lifecycle.
-      owner: Application analytics maintainers and PostHog administrators
-      required_state: Supported SDK initialization and documented project privacy settings.
-      description: The provider currently uses the installed browser SDK with a delayed init.
-      status: resolved
+    - {id: DEP-001, description: "Pinned posthog-js 1.215.6 init and session recording APIs.", status: resolved}
+    - {id: DEP-002, description: "Renivet PostHog provider and consumer components.", status: resolved}
+    - {id: DEP-003, description: "Existing 1.5-second initialization delay policy, repurposed as replay delay.", status: resolved}
+    - {id: DEP-004, description: "REN-164 verification evidence confirming pre-init capture loss.", status: resolved}
 integrations:
-    - id: INT-129-001
-      system: PostHog browser SDK
-      purpose: Pageview, autocapture, funnel events, and identity reset.
-      failure_mode: SDK load/init failure, blocked network, fast exit, or timer cleanup.
-      retry_idempotency: SDK queueing/capture must not duplicate pageviews or identify calls.
+    - {id: INT-001, system: "PostHog browser SDK", purpose: "Initialize analytics and control session recording."}
+    - {id: INT-002, system: "React lifecycle", purpose: "Schedule and cancel delayed replay startup."}
+    - {id: INT-003, system: "Vercel and PostHog environments", purpose: "Verify deployed performance and event coverage."}
 personas:
-    - id: PER-129-001
-      role: storefront_visitor
-      applicability: All browser visitors, especially mobile and in-app-browser sessions.
-    - id: PER-129-002
-      role: authenticated_customer
-      applicability: Signed-in users crossing the identify/reset bridge.
+    - {id: PER-001, role: analytics_operator, applicability: "Needs complete early event coverage."}
+    - {id: PER-002, role: performance_owner, applicability: "Needs PageSpeed impact measured before rollout."}
 security_boundaries:
-    - id: SEC-129-001
-      description: PostHog identity and session-recording settings remain bounded by existing client configuration and privacy policy.
+    - {id: SEC-001, description: "Automated validation must not emit analytics to production."}
 business_rules:
-    - id: BR-129-001
-      description: Analytics completeness must improve without making performance or privacy behavior worse than the approved budget/policy.
+    - {id: BR-001, description: "Core event capture takes priority over delayed replay startup."}
+    - {id: BR-002, description: "Replay starts only after the configured delay."}
+    - {id: BR-003, description: "Performance impact is measured, not assumed."}
 decisions:
-    - id: DEC-129-001
-      question: Which initialization timing and session-recording configuration should ship?
-      class: HUMAN_CONFIRMATION
-      status: resolved
-      recommendation: Reduce the delay to approximately 1–2 seconds while preserving the existing session-recording configuration; measure mobile and short-session performance/capture before considering immediate initialization.
-      basis: Owner selected the smaller, safer, reversible timing change.
-      confidence: high
-      consequence: medium
-      human_confirmation_required: false
+    - {id: DEC-001, question: "Immediate init with delayed replay or retain a short init delay?", class: HUMAN_CONFIRMATION, status: unresolved, recommendation: "Choose immediate init with disable_session_recording true, then startSessionRecording after 1.5 seconds.", confidence: high, consequence: high, human_confirmation_required: true}
 test_expectations:
-    - id: TEXP-129-001
-      category: unit
-      classification: REQUIRED
-      reason: Verifies timer/configuration selection, cleanup, and failure-safe initialization.
-      scenarios: [SCN-129-001, SCN-129-003]
-    - id: TEXP-129-002
-      category: integration
-      classification: REQUIRED
-      reason: Verifies PostHog capture, pageview, identify, reset, and no duplicate lifecycle calls.
-      scenarios: [SCN-129-001, SCN-129-002, SCN-129-003]
-    - id: TEXP-129-003
-      category: performance
-      classification: REQUIRED
-      reason: Compares current and candidate timing under normal, mobile-like, and short-exit sessions against the approved budget.
-      scenarios: [SCN-129-002]
+    - {id: TEXP-001, category: unit, classification: REQUIRED, reason: "Immediate init must disable session recording."}
+    - {id: TEXP-002, category: unit, classification: REQUIRED, reason: "Delayed replay must start once and only after the delay."}
+    - {id: TEXP-003, category: regression, classification: REQUIRED, reason: "Unmount must cancel delayed replay startup."}
+    - {id: TEXP-004, category: regression, classification: REQUIRED, reason: "Existing pageview and identity behavior must remain intact."}
+    - {id: TEXP-005, category: external_integration, classification: REQUIRED, reason: "Staging must verify early capture and replay timing."}
+    - {id: TEXP-006, category: external_integration, classification: REQUIRED, reason: "Production must verify event coverage, replay, and PageSpeed."}
 traceability:
     requirement_to_scenarios:
-        - requirement_id: REQ-129-001
-          scenario_ids: [SCN-129-001]
-        - requirement_id: REQ-129-002
-          scenario_ids: [SCN-129-002, SCN-129-003]
-        - requirement_id: REQ-129-003
-          scenario_ids: [SCN-129-003]
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-001]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-003]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-002]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-005]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-004]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-006, SCN-007]}
     scenario_to_invariants:
-        - scenario_id: SCN-129-001
-          invariant_ids: [INV-129-001, INV-129-003]
-        - scenario_id: SCN-129-002
-          invariant_ids: [INV-129-002]
-        - scenario_id: SCN-129-003
-          invariant_ids: [INV-129-001, INV-129-003]
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-002, INV-003]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-002, INV-005]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-002, INV-003]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-004]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-005]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-006]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-006]}
     scenario_to_test_expectations:
-        - scenario_id: SCN-129-001
-          test_expectation_ids: [TEXP-129-001, TEXP-129-002]
-        - scenario_id: SCN-129-002
-          test_expectation_ids: [TEXP-129-002, TEXP-129-003]
-        - scenario_id: SCN-129-003
-          test_expectation_ids: [TEXP-129-001, TEXP-129-002]
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-005]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-006]}
 critic:
     required: true
     completed: true
     artifact: CRITIQUE.md
-    reviewer: Codex (fresh-context independent critic)
+    reviewer: independent_read_only_governance_critic
     fresh_context: true
     read_only: true
     categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
-        - id: CRIT-129-001
-          severity: DESIGN_BLOCKER
-          references: [REQ-129-001, DEC-129-001]
-          description: Original performance budget and the selected timing policy require owner confirmation.
-        - id: CRIT-129-002
-          severity: MAJOR
-          references: [REQ-129-002, SCN-129-002]
-          description: Session recording must remain separately bounded from core event capture.
-        - id: CRIT-129-003
-          severity: MINOR
-          references: [TEXP-129-003]
-          description: Short mobile/in-app-browser sessions must be included in measurement.
+        - {severity: MINOR, id: MINOR-001, description: "Deployed PageSpeed impact requires staging/production measurement."}
+        - {severity: MINOR, id: MINOR-002, description: "Delayed replay callback requires cleanup coverage."}
+        - {severity: DESIGN_BLOCKER, id: DESIGN_BLOCKER-001, description: "Immediate-init versus short-delay trade-off needs human confirmation."}
 approval:
-    state: APPROVED
-    design_blockers: []
-    approved_by: Ayan Ganguly (owner confirmation)
-implementation_review:
-    artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: origin/master
-    base_commit: "b9f0a8c17b691884cc78f9f6f10ebcd5eab82055"
-    head_commit: "0211b1b87f8e15f1574fdc90d09e69a5ba2fb70f"
-    pr_url: null
-    material_drift: NO_DRIFT
-    reconciliation:
-        requirements: PARTIAL
-        scenarios: PARTIAL
-        invariants: PASS
-        architecture: PASS
-        security: PASS
-        test_coverage: PARTIAL
-        scope: PASS
-    blocking_findings: []
-    required_actions:
-        - "REV-129-001: Run and attach mobile/short-session PostHog capture and performance measurements after deployment."
-    evidence:
-        - "Compared the approved REN-129 contract with the base-to-head diff from b9f0a8c17b691884cc78f9f6f10ebcd5eab82055 to 0211b1b87f8e15f1574fdc90d09e69a5ba2fb70f."
-        - "The provider uses the centralized 1500 ms policy value and preserves existing PostHog configuration and cleanup."
-        - "Static test inspection found the focused delay-bound regression test; runtime performance evidence remains outstanding."
-    governance_reentry_required: false
+    state: BLOCKED
+    design_blockers:
+        - "DESIGN_BLOCKER-001: Confirm immediate initialization with delayed replay, or choose the short-delay alternative."
+    approved_by: ""
