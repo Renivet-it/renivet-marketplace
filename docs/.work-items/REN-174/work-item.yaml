@@ -4,7 +4,7 @@ task:
     title: Inventory double-decremented on order cancellation
     source: linear
     branch: ayanganguly333/ren-174-inventory-double-decremented-on-order-cancellation
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         priority: Urgent
         status: Backlog
@@ -112,8 +112,8 @@ business_rules:
     - {id: BR-003, description: Product and variant rows are distinct inventory identities.}
     - {id: BR-004, description: Historical inventory movements are not reconstructed by this task.}
 decisions:
-    - {id: DEC-001, question: Should cancellation pass an absolute stock target or a relative delta?, class: HUMAN_CONFIRMATION, status: unresolved, recommendation: Pass item.quantity because updateProductStock subtracts relative deltas., confidence: high, consequence: high, human_confirmation_required: true}
-    - {id: DEC-002, question: Should the shared mutation floor negative stock?, class: HUMAN_CONFIRMATION, status: unresolved, recommendation: Add a database-side greatest-zero floor as defense-in-depth., confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-001, question: Should cancellation pass an absolute stock target or a relative delta?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Pass item.quantity because updateProductStock subtracts relative deltas., confidence: high, consequence: high, human_confirmation_required: true}
+    - {id: DEC-002, question: Should the shared mutation floor negative stock?, class: HUMAN_CONFIRMATION, status: resolved, recommendation: Add a database-side greatest-zero floor as defense-in-depth., confidence: high, consequence: high, human_confirmation_required: true}
     - {id: DEC-003, question: Should historical stock be reconstructed?, class: AUTO_DECIDE, status: resolved, recommendation: No; exact historical values are unavailable and out of scope., confidence: high, consequence: medium, human_confirmation_required: false}
 test_expectations:
     - {id: TEXP-001, category: unit, classification: REQUIRED, reason: Shared relative-decrement semantics must be explicit for products and variants.}
@@ -163,6 +163,6 @@ critic:
         - {severity: MINOR, id: REQ-007, description: Direct missing-row integration coverage depends on existing query-test seams.}
         - {severity: MINOR, id: TEXP-008, description: Concurrency and retry/idempotency remain coordinated with REN-144.}
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-001, DEC-002]
-    approved_by: Pending explicit human confirmation of high-consequence inventory decisions
+    state: APPROVED
+    design_blockers: []
+    approved_by: User confirmation recorded in conversation; governance workflow
