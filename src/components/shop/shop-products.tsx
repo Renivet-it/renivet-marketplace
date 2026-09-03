@@ -43,6 +43,7 @@ interface PageProps extends GenericProps {
     defaultSortBy?: "price" | "createdAt" | "recommended" | "best-sellers";
     defaultSortOrder?: "asc" | "desc";
     prioritizeNewProducts?: boolean;
+    catalogContext?: "festive";
 }
 
 export function ShopProducts({
@@ -55,6 +56,7 @@ export function ShopProducts({
     defaultSortBy = "recommended",
     defaultSortOrder = "desc",
     prioritizeNewProducts = false,
+    catalogContext,
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
@@ -206,6 +208,7 @@ export function ShopProducts({
                 maxPrice >= SHOP_PRICE_FILTER_MAX &&
                 !minDiscount,
             prioritizeNewProducts,
+            catalogContext,
             requireMedia: true,
             useRecommendations:
                 !search &&
@@ -222,6 +225,7 @@ export function ShopProducts({
             effectiveBrandIds,
             defaultSortBy,
             prioritizeNewProducts,
+            catalogContext,
             minPrice,
             maxPrice,
             categoryId,

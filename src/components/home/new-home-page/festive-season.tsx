@@ -5,8 +5,9 @@ import {
     ProductCard,
 } from "@/components/home/new-home-page/new-arrivals";
 import { cn } from "@/lib/utils";
+import { Gift, Grid2X2, Search, SlidersHorizontal, Sparkles } from "lucide-react";
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import { useState } from "react";
 
 interface FestiveSeasonProps {
     products: Product[];
@@ -15,34 +16,14 @@ interface FestiveSeasonProps {
     showAllProducts?: boolean;
 }
 
-const DESKTOP_SLOTS = 6;
+const categories = [
+    { label: "All Items", icon: null },
+    { label: "Gifts", icon: Gift },
+    { label: "Organisers", icon: Grid2X2 },
+    { label: "Fashion", icon: Sparkles },
+];
 
-function FlowerRail() {
-    return (
-        <div className="flower-rail" aria-hidden="true">
-            {[0, 1, 2, 3].map((flower) => (
-                <span className="rail-group" key={flower}>
-                    <span className="rail-flower">
-                        {Array.from({ length: 6 }).map((_, petal) => (
-                            <i
-                                key={petal}
-                                style={{ "--petal": petal } as CSSProperties}
-                            />
-                        ))}
-                        <b />
-                    </span>
-                    {flower < 3 ? (
-                        <span className="rail-line">
-                            <i />
-                            <i />
-                            <i />
-                        </span>
-                    ) : null}
-                </span>
-            ))}
-        </div>
-    );
-}
+const PAGE_SIZE = 6;
 
 export function FestiveSeason({
     products,
@@ -50,554 +31,138 @@ export function FestiveSeason({
     className,
     showAllProducts = false,
 }: FestiveSeasonProps) {
+    const [page, setPage] = useState(1);
     if (!products.length) return null;
-
-    const desktopProducts = showAllProducts
-        ? products
-        : products.slice(0, DESKTOP_SLOTS);
+    const paginatedProducts = showAllProducts ? products : products.slice(0, PAGE_SIZE);
+    const pageCount = Math.max(1, Math.ceil(paginatedProducts.length / PAGE_SIZE));
+    const displayedProducts = paginatedProducts.slice(
+        (page - 1) * PAGE_SIZE,
+        page * PAGE_SIZE
+    );
 
     return (
-        <section className={cn("festive-shell", className)}>
-            <div className="festive-canvas">
-                <div className="peach-art" aria-hidden="true">
+        <section className={cn("festive-v2", className)}>
+            <main>
+                <div className="festive-v2-banner">
                     <Image
-                        src="/assets/festive-season/peach-left.png"
-                        alt=""
+                        src="/assets/festive-season/festive-banner-desktop.png"
+                        alt="Celebrate consciously — sustainable festive picks"
                         fill
-                        className="festive-left-image"
-                        sizes="(max-width: 767px) 34vw, 38vw"
+                        priority
+                        unoptimized
+                        className="festive-v2-banner-desktop"
+                        sizes="(min-width: 768px) 100vw, 0px"
+                    />
+                    <Image
+                        src="/assets/festive-season/festive-banner.png"
+                        alt="Celebrate consciously — sustainable festive picks"
+                        fill
+                        priority
+                        unoptimized
+                        className="festive-v2-banner-mobile"
+                        sizes="(max-width: 767px) 100vw, 960px"
                     />
                 </div>
 
-                <div className="hanging-rakhi" aria-hidden="true">
-                    <Image
-                        src="/assets/festive-season/rakhi-mobile-cutout-trimmed.png"
-                        alt=""
-                        fill
-                        className="festive-rakhi-image"
-                        sizes="(max-width: 767px) 15vw, 7vw"
-                    />
+                <div className="festive-v2-breadcrumb">Home <span>›</span> <strong>Shop</strong></div>
+
+                <label className="festive-v2-search">
+                    <Search aria-hidden="true" />
+                    <input aria-label="Search products" placeholder="Search products, brands..." />
+                </label>
+
+                <nav className="festive-v2-categories" aria-label="Festive categories">
+                    {categories.map(({ label, icon: Icon }, index) => (
+                        <button type="button" className={cn(index === 0 && "is-active")} key={label}>
+                            {Icon ? <Icon aria-hidden="true" /> : null}
+                            {label}
+                        </button>
+                    ))}
+                </nav>
+
+                <div className="festive-v2-rail" aria-hidden="true">
+                    <Image src="/assets/festive-season/festive-floral-rail.svg" alt="" fill sizes="100vw" />
                 </div>
 
-                <div className="mobile-rakhi-crop" aria-hidden="true">
-                    <Image
-                        src="/assets/festive-season/rakhi-mobile-cutout-trimmed.png"
-                        alt=""
-                        fill
-                        className="mobile-rakhi-source"
-                        sizes="18vw"
-                    />
-                </div>
-
-                <header className="festive-heading">
-                    <div className="festive-heading-lotus" aria-hidden="true">
-                        <Image
-                            src="/assets/festive-season/flower-lotus.png"
-                            alt=""
-                            fill
-                            className="festive-heading-decoration-image"
-                            sizes="(max-width: 767px) 120px, 150px"
-                        />
-                    </div>
-                    <h2>Rakhi Collection</h2>
-                    <p>
-                        Celebrate the bond that makes every moment
-                        unforgettable.
-                    </p>
-                    <div className="festive-heading-divider" aria-hidden="true">
-                        <Image
-                            src="/assets/festive-season/flower-divider.png"
-                            alt=""
-                            fill
-                            className="festive-heading-decoration-image"
-                            sizes="(max-width: 767px) 180px, 260px"
-                        />
-                    </div>
-                </header>
-
-                <div
-                    className="festive-desktop"
-                    aria-label="Rakhi collection products"
-                >
-                    {desktopProducts.map((product) => (
-                        <div className="festive-frame" key={product.id}>
-                            <ProductCard
-                                product={product}
-                                userId={userId}
-                                className="festive-product-card"
-                                showAddToCart
-                            />
+                <div className="festive-v2-products" aria-label="Festive products">
+                    {displayedProducts.map((product) => (
+                        <div className="festive-v2-card" key={product.id}>
+                            <ProductCard product={product} userId={userId} className="festive-v2-product-card" />
                         </div>
                     ))}
                 </div>
 
-                <div className="festive-mobile">
-                    {products.map((product) => (
-                        <div className="mobile-frame" key={product.id}>
-                            <ProductCard
-                                product={product}
-                                userId={userId}
-                                className="festive-product-card"
-                                showAddToCart
-                                showDescription
-                            />
-                        </div>
-                    ))}
+                <div className="festive-v2-sortbar">
+                    <button type="button"><SlidersHorizontal /> Filters</button>
+                    <Image src="/assets/festive-season/festive-lotus.png" alt="" width={44} height={44} />
+                    <button type="button">↯ &nbsp; Recommended</button>
                 </div>
-
-                <FlowerRail />
-            </div>
-
-            <style jsx global>{`
-                .festive-shell {
-                    width: 100%;
-                    overflow: hidden;
-                    background: #fff5e8;
-                    padding: 0;
-                }
-                .festive-canvas {
-                    position: relative;
-                    isolation: isolate;
-                    width: 100%;
-                    min-height: 350px;
-                    overflow: hidden;
-                    background-color: #fff5e8;
-                    background-image: radial-gradient(
-                            circle at 91% 12%,
-                            rgba(255, 220, 172, 0.22),
-                            transparent 28%
-                        ),
-                        linear-gradient(
-                            105deg,
-                            #fff8ef 0%,
-                            #fff5e8 72%,
-                            #fff1de 100%
-                        );
-                }
-                .peach-art {
-                    position: absolute;
-                    z-index: -1;
-                    inset: 0 auto 0 0;
-                    width: min(36%, 720px);
-                    overflow: hidden;
-                    pointer-events: none;
-                }
-                .festive-left-image {
-                    object-fit: cover;
-                    object-position: left center;
-                }
-                .festive-heading {
-                    position: relative;
-                    z-index: 3;
-                    margin: 0 auto;
-                    padding-top: clamp(5px, 0.8vw, 14px);
-                    text-align: center;
-                    color: #4a2a1d;
-                }
-                .festive-heading-lotus {
-                    position: relative;
-                    width: clamp(82px, 7.5vw, 145px);
-                    aspect-ratio: 163 / 96;
-                    margin: 0 auto clamp(-12px, -0.6vw, -7px);
-                }
-                .festive-heading-decoration-image {
-                    object-fit: contain;
-                }
-                .festive-heading h2 {
-                    margin: 0;
-                    font-family: var(--font-playfair), Georgia, serif;
-                    font-size: clamp(30px, 3.2vw, 60px);
-                    font-weight: 400;
-                    line-height: 1;
-                    letter-spacing: -0.025em;
-                }
-                .festive-heading p {
-                    margin: clamp(12px, 1.15vw, 22px) auto 0;
-                    font-size: clamp(7px, 0.62vw, 12px);
-                    font-weight: 700;
-                    line-height: 1;
-                    letter-spacing: 0.15em;
-                    text-transform: uppercase;
-                }
-                .festive-heading-divider {
-                    position: relative;
-                    width: clamp(145px, 15vw, 285px);
-                    aspect-ratio: 305 / 65;
-                    margin-top: clamp(12px, 1.3vw, 24px);
-                    margin-right: auto;
-                    margin-left: auto;
-                }
-                .festive-desktop {
-                    position: relative;
-                    z-index: 2;
-                    display: grid;
-                    width: 84%;
-                    margin: clamp(10px, 1.4vw, 26px) 5.6% 0 auto;
-                    grid-template-columns: repeat(6, minmax(0, 1fr));
-                    gap: clamp(12px, 1.65vw, 31px);
-                }
-                .festive-frame {
-                    aspect-ratio: 0.64;
-                    overflow: hidden;
-                    border: 1px solid #e5b879;
-                    background: #fff9f0;
-                }
-                .festive-frame .festive-product-card {
-                    width: 100%;
-                    height: 100%;
-                    padding: clamp(4px, 0.45vw, 8px);
-                    background: #fff9f0;
-                }
-                .festive-frame .festive-product-card > a,
-                .festive-frame .festive-product-card > a > span:first-child {
-                    height: 100%;
-                }
-                .festive-frame .festive-product-card > a > span:first-child {
-                    display: flex;
-                    flex-direction: column;
-                }
-                .festive-frame .product-card-media {
-                    aspect-ratio: 1;
-                    border-radius: 0;
-                    clip-path: none;
-                }
-                .festive-frame .product-card-quick-view-mobile {
-                    display: none;
-                }
-                .festive-frame .product-card-wishlist-button {
-                    top: clamp(11px, 0.85vw, 16px);
-                    right: clamp(11px, 0.85vw, 16px);
-                }
-                .festive-frame .product-card-copy {
-                    padding: clamp(5px, 0.5vw, 9px) 3px 4px;
-                }
-                .festive-frame .product-card-title {
-                    display: -webkit-box;
-                    overflow: hidden;
-                    font-family: Georgia, "Times New Roman", serif;
-                    font-size: clamp(9px, 0.72vw, 14px);
-                    font-weight: 600;
-                    line-height: 1.18;
-                    color: #552d1c;
-                    white-space: normal;
-                    -webkit-box-orient: vertical;
-                    -webkit-line-clamp: 1;
-                }
-                .festive-frame .festival-card-footer {
-                    display: grid;
-                    width: fit-content;
-                    max-width: 100%;
-                    min-height: clamp(38px, 2.8vw, 52px);
-                    align-items: center;
-                    justify-content: center;
-                    margin: auto;
-                    padding: 2px 0;
-                    grid-template-columns: minmax(0, 1fr) auto;
-                    gap: clamp(7px, 0.65vw, 13px);
-                }
-                .festive-frame .product-card-price {
-                    display: grid;
-                    min-width: 0;
-                    align-items: baseline;
-                    justify-content: start;
-                    grid-template-columns: max-content minmax(0, 1fr);
-                    column-gap: 4px;
-                    row-gap: 2px;
-                    line-height: 1;
-                }
-                .festive-frame .product-card-current-price {
-                    grid-column: 1;
-                    white-space: nowrap;
-                    font-size: clamp(11px, 0.88vw, 17px);
-                    font-weight: 700;
-                    color: #f05b50;
-                }
-                .festive-frame .product-card-original-price {
-                    grid-column: 2;
-                    overflow: hidden;
-                    white-space: nowrap;
-                    text-overflow: ellipsis;
-                    font-size: clamp(7px, 0.48vw, 9px);
-                }
-                .festive-frame .product-card-discount {
-                    grid-column: 1 / -1;
-                    font-size: clamp(7px, 0.48vw, 9px);
-                    line-height: 1.1;
-                    color: #f05b50;
-                }
-                .festive-frame .festival-add-to-cart {
-                    min-width: clamp(58px, 4.8vw, 92px);
-                    border-radius: 7px;
-                    padding: clamp(5px, 0.45vw, 8px) 5px;
-                    font-size: clamp(5px, 0.43vw, 8px);
-                    line-height: 1;
-                }
-                .festive-frame .festival-add-to-cart svg {
-                    width: clamp(9px, 0.7vw, 13px);
-                    height: clamp(9px, 0.7vw, 13px);
-                }
-                .festive-mobile {
-                    display: none;
-                }
-                .hanging-rakhi {
-                    position: absolute;
-                    z-index: 4;
-                    top: -2%;
-                    left: 1%;
-                    width: clamp(46px, 5.5vw, 100px);
-                    height: 78%;
-                    pointer-events: none;
-                }
-                .festive-rakhi-image {
-                    object-fit: contain;
-                    object-position: top center;
-                }
-                .mobile-rakhi-crop {
-                    display: none;
-                }
-                .flower-rail {
-                    position: relative;
-                    z-index: 3;
-                    display: flex;
-                    align-items: center;
-                    justify-content: flex-end;
-                    width: 58%;
-                    margin: clamp(18px, 2.2vw, 42px) 2.5%
-                        clamp(10px, 1.2vw, 22px) auto;
-                }
-                .rail-group {
-                    display: flex;
-                    flex: 1;
-                    align-items: center;
-                }
-                .rail-group:last-child {
-                    flex: 0 0 auto;
-                }
-                .rail-flower {
-                    position: relative;
-                    display: block;
-                    width: clamp(22px, 2.5vw, 47px);
-                    aspect-ratio: 1;
-                    flex: 0 0 auto;
-                }
-                .rail-flower i {
-                    position: absolute;
-                    left: 40%;
-                    top: 3%;
-                    width: 22%;
-                    height: 48%;
-                    border-radius: 90% 10% 90% 10%;
-                    background: linear-gradient(#ff8b73, #ef5958);
-                    transform: rotate(calc(var(--petal) * 60deg));
-                    transform-origin: 50% 98%;
-                }
-                .rail-flower b {
-                    position: absolute;
-                    inset: 38%;
-                    border-radius: 50%;
-                    background: #f1b247;
-                }
-                .rail-line {
-                    display: flex;
-                    flex: 1;
-                    align-items: center;
-                    justify-content: space-around;
-                    margin: 0 7px;
-                    border-top: 2px dotted #f17968;
-                }
-                .rail-line i {
-                    width: 7px;
-                    height: 7px;
-                    margin-top: -1px;
-                    transform: rotate(45deg);
-                    background: #f56b61;
-                }
-                @media (max-width: 767px) {
-                    .festive-shell {
-                        padding: 0;
-                    }
-                    .festive-canvas {
-                        min-height: 0;
-                        padding: 0 6px 18px;
-                    }
-                    .peach-art {
-                        width: 25%;
-                    }
-                    .festive-left-image {
-                        object-fit: fill;
-                        object-position: left center;
-                    }
-                    .hanging-rakhi {
-                        display: none;
-                    }
-                    .mobile-rakhi-crop {
-                        position: absolute;
-                        z-index: 1;
-                        left: -2%;
-                        top: 0;
-                        display: block;
-                        width: 17%;
-                        height: min(76vw, 450px);
-                        pointer-events: none;
-                    }
-                    .mobile-rakhi-source {
-                        object-fit: contain;
-                        object-position: left top;
-                        filter: drop-shadow(0 3px 5px rgba(91, 36, 18, 0.2));
-                    }
-                    .festive-heading {
-                        padding-top: 8px;
-                    }
-                    .festive-heading-lotus {
-                        width: 92px;
-                        margin-bottom: -7px;
-                    }
-                    .festive-heading h2 {
-                        font-size: clamp(30px, 9.5vw, 43px);
-                    }
-                    .festive-heading p {
-                        width: 72%;
-                        margin-top: 13px;
-                        font-size: clamp(7px, 2.15vw, 10px);
-                        line-height: 1.55;
-                        letter-spacing: 0.18em;
-                    }
-                    .festive-heading-divider {
-                        width: 170px;
-                        margin-top: 9px;
-                    }
-                    .festive-desktop {
-                        display: none;
-                    }
-                    .festive-mobile {
-                        position: relative;
-                        z-index: 2;
-                        display: grid;
-                        width: 92%;
-                        margin: 12px 0 0 auto;
-                        grid-template-columns: repeat(2, minmax(0, 1fr));
-                        row-gap: 9px;
-                        column-gap: 16px;
-                    }
-                    .mobile-frame {
-                        overflow: hidden;
-                        border: 1px solid #e5b879;
-                        background: #fff9f0;
-                    }
-                    .mobile-frame .festive-product-card {
-                        height: 100%;
-                        padding: 7px;
-                        background: #fff9f0;
-                    }
-                    .mobile-frame .festive-product-card > a,
-                    .mobile-frame .festive-product-card > a > span:first-child {
-                        height: 100%;
-                    }
-                    .mobile-frame .festive-product-card > a > span:first-child {
-                        display: flex;
-                        flex-direction: column;
-                    }
-                    .mobile-frame .product-card-media {
-                        aspect-ratio: 1;
-                        border-radius: 0;
-                        clip-path: none;
-                    }
-                    .mobile-frame .product-card-quick-view-mobile {
-                        display: none;
-                    }
-                    .mobile-frame .product-card-wishlist-button {
-                        top: 14px;
-                        right: 14px;
-                    }
-                    .mobile-frame .product-card-copy {
-                        padding: 8px 4px 5px;
-                    }
-                    .mobile-frame .product-card-title {
-                        display: -webkit-box;
-                        overflow: hidden;
-                        font-family: Georgia, "Times New Roman", serif;
-                        font-size: clamp(11px, 3.2vw, 15px);
-                        font-weight: 600;
-                        line-height: 1.15;
-                        color: #552d1c;
-                        white-space: normal;
-                        -webkit-box-orient: vertical;
-                        -webkit-line-clamp: 1;
-                    }
-                    .mobile-frame .product-card-description {
-                        min-height: 2.5em;
-                        margin-top: 6px;
-                        font-size: clamp(8px, 2.25vw, 10px);
-                        font-style: italic;
-                        line-height: 1.25;
-                        color: #57392b;
-                    }
-                    .mobile-frame .product-card-description p {
-                        margin: 0;
-                    }
-                    .mobile-frame .festival-card-footer {
-                        display: grid;
-                        width: 100%;
-                        min-width: 0;
-                        align-items: center;
-                        justify-items: start;
-                        margin-top: auto;
-                        padding: 0 3px 7px;
-                        grid-template-columns: 1fr;
-                        row-gap: 5px;
-                    }
-                    .mobile-frame .product-card-price {
-                        display: grid;
-                        width: 100%;
-                        min-width: 0;
-                        overflow: visible;
-                        align-items: baseline;
-                        grid-template-columns: max-content max-content;
-                        column-gap: 4px;
-                        row-gap: 2px;
-                        line-height: 1;
-                    }
-                    .mobile-frame .product-card-current-price {
-                        grid-column: 1;
-                        white-space: nowrap;
-                        font-size: clamp(11px, 3.05vw, 14px);
-                        font-weight: 700;
-                        color: #f05b50;
-                    }
-                    .mobile-frame .product-card-original-price {
-                        grid-column: 2;
-                        overflow: visible;
-                        white-space: nowrap;
-                        text-overflow: clip;
-                        font-size: clamp(7px, 1.8vw, 9px);
-                    }
-                    .mobile-frame .product-card-discount {
-                        grid-column: 1 / -1;
-                        white-space: nowrap;
-                        font-size: clamp(7px, 1.8vw, 9px);
-                        line-height: 1.1;
-                        color: #f05b50;
-                    }
-                    .mobile-frame .festival-add-to-cart {
-                        justify-self: end;
-                        min-width: 0;
-                        border-radius: 7px;
-                        padding: 7px 6px;
-                        gap: 3px;
-                        font-size: clamp(6px, 1.55vw, 7px);
-                        line-height: 1;
-                        letter-spacing: 0;
-                        white-space: nowrap;
-                    }
-                    .mobile-frame .festival-add-to-cart svg {
-                        width: 12px;
-                        height: 12px;
-                    }
-                    .flower-rail {
-                        display: none;
-                    }
-                }
-            `}</style>
+                {pageCount > 1 ? (
+                    <nav className="festive-v2-pagination" aria-label="Festive product pages">
+                        <button type="button" disabled={page === 1} onClick={() => setPage((current) => current - 1)}>
+                            Previous
+                        </button>
+                        <span>Page {page} of {pageCount}</span>
+                        <button type="button" disabled={page === pageCount} onClick={() => setPage((current) => current + 1)}>
+                            Next
+                        </button>
+                    </nav>
+                ) : null}
+            </main>
+            <style jsx global>{festiveStyles}</style>
         </section>
     );
 }
+
+// The page is intentionally styled here because this editorial surface has a distinct visual system.
+// It still delegates product behavior to the shared ProductCard.
+const festiveStyles = `
+    .festive-v2 { --cream: #f5eee4; --ink: #1d1c19; --pink: #ef2867; --green: #485d3b; width: 100%; overflow: hidden; background: var(--cream); color: var(--ink); }
+    .festive-v2 main { padding: 8px 3.5% 0; }
+    .festive-v2-banner { position: relative; width: 100%; aspect-ratio: 2048 / 865; overflow: hidden; background: #f5eee4; }
+    .festive-v2-banner img { object-fit: contain; }
+    .festive-v2-banner-mobile { display: none; }
+    .festive-v2-breadcrumb { margin: 12px 3% 8px; color: #716b64; font-size: 17px; }
+    .festive-v2-breadcrumb span { padding: 0 4px; color: #25221f; }
+    .festive-v2-breadcrumb strong { color: #24211e; font-weight: 500; }
+    .festive-v2-search { height: 48px; display: flex; align-items: center; gap: 12px; margin: 0 1.5%; padding: 0 22px; border: 1px solid #ef2867; border-radius: 30px; background: transparent; }
+    .festive-v2-search svg { width: 25px; height: 25px; stroke-width: 1.2; }
+    .festive-v2-search input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 16px; }
+    .festive-v2-categories { display: flex; gap: 12px; justify-content: center; margin: 20px 0 14px; }
+    .festive-v2-categories button { height: 40px; display: flex; align-items: center; justify-content: center; gap: 7px; padding: 0 25px; border: 1px solid #ef2867; border-radius: 24px; background: transparent; color: #27231f; font-size: 14px; }
+    .festive-v2-categories button svg { width: 16px; height: 16px; }
+    .festive-v2-categories button.is-active { background: var(--pink); color: white; }
+    .festive-v2-rail { position: relative; height: 23px; margin: 0 -3.5%; border-top: 2px solid #efbc42; border-bottom: 2px solid #efbc42; }
+    .festive-v2-rail img { object-fit: cover; }
+    .festive-v2-products { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; padding: 28px 1.5% 16px; background: #fff; }
+    .festive-v2-card { min-width: 0; overflow: hidden; background: #fff; }
+    .festive-v2-product-card { height: 100%; padding: 0; background: #fff; }
+    .festive-v2-product-card .product-card-media { aspect-ratio: 3 / 4; border-radius: 0; }
+    .festive-v2-product-card .product-card-copy { padding: 10px 0 5px; }
+    .festive-v2-product-card .product-card-title { color: #24211e; font-size: 16px; font-weight: 600; }
+    .festive-v2-product-card .product-card-brand { color: #77716c; font-size: 12px; }
+    .festive-v2-product-card .product-card-current-price { color: #1f1c19; font-size: 17px; font-weight: 700; }
+    .festive-v2-sortbar { display: flex; align-items: center; justify-content: space-between; max-width: 680px; margin: 0 auto; padding: 20px 4% 26px; color: #45563b; font-size: 17px; }
+    .festive-v2-sortbar button { display: flex; align-items: center; border: 0; background: transparent; color: inherit; font: inherit; }
+    .festive-v2-sortbar svg { width: 18px; margin-right: 10px; }
+    .festive-v2-pagination { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 0 0 28px; color: #4b5a42; font-size: 13px; }
+    .festive-v2-pagination button { border: 1px solid #d8cdbd; border-radius: 20px; background: transparent; padding: 8px 14px; color: inherit; }
+    .festive-v2-pagination button:disabled { cursor: not-allowed; opacity: .45; }
+    @media (max-width: 767px) {
+        .festive-v2 main { padding: 8px 10px 0; }
+        .festive-v2-banner { aspect-ratio: 1.86; }
+        .festive-v2-banner-desktop { display: none; }
+        .festive-v2-banner-mobile { display: block; }
+        .festive-v2-breadcrumb { margin: 12px 10px 8px; font-size: 17px; }
+        .festive-v2-search { height: 48px; margin: 0 6px; padding: 0 25px; }
+        .festive-v2-categories { justify-content: flex-start; gap: 10px; margin: 20px 10px 24px; overflow-x: auto; scrollbar-width: none; }
+        .festive-v2-categories::-webkit-scrollbar { display: none; }
+        .festive-v2-categories button { flex: 0 0 auto; height: 40px; padding: 0 21px; font-size: 14px; }
+        .festive-v2-rail { height: 22px; margin: 0 -10px; }
+        .festive-v2-products { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; padding: 28px 22px 26px; }
+        .festive-v2-product-card .product-card-copy { padding: 9px 0 4px; }
+        .festive-v2-product-card .product-card-title { font-size: 15px; }
+        .festive-v2-product-card .product-card-current-price { font-size: 16px; }
+        .festive-v2-sortbar { padding-top: 20px; font-size: 17px; }
+    }
+`;

@@ -1,0 +1,240 @@
+schema_version: "1.0"
+task:
+  id: REN-190
+  title: Create festive landing page catalog UI
+  source: linear
+  branch: ayanganganguly333/ren-190-create-festive-landing-page-catalog-ui
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-190/create-festive-landing-page-catalog-ui
+    priority: Medium
+    labels: [Feature]
+    status: Backlog
+    assignee: Ayan Ganguly
+    project: null
+    milestone: null
+risk:
+  initial_risk: L2
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - Public product discovery must be restricted to an administrator-curated set through a server-resolved context rather than browser-provided product IDs.
+    - Shared server and client catalogue data paths, filters, sorting, and pagination require coordinated scope propagation.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas:
+    - /festive page and its bespoke FestiveSeason component
+    - /swap-passport page and StorefrontCatalogPage shared catalogue flow
+    - productQueries.getFestiveSeasonProducts and festiveSeasonProducts persistence
+    - Admin Product Admin Action festive-season selector
+    - productQueries.getProducts, shared filters, and brands.products.getProducts tRPC refetch
+  excluded_areas:
+    - Changes to admin selection UX or database schema
+    - Changes to non-festive catalogue routes
+  dependencies: [DEP-001, DEP-002, DEP-003]
+  integrations: [INT-001]
+  security_boundaries: [SEC-001]
+  state_transitions:
+    - admin_selects_product -> festive_scope_updated
+    - festive_scope_updated -> shopper_catalogue_rendered
+dependencies:
+  - id: DEP-001
+    name: Festive Season admin selection
+    purpose: Supplies the authoritative selected product IDs and positions.
+    description: Existing festiveSeasonProducts rows are the source of eligibility and curator position; the implementation de-duplicates rows before applying scope.
+    status: resolved
+  - id: DEP-002
+    name: Shared StorefrontCatalogPage
+    purpose: Supplies the established responsive search, filters, sorting, cards, and pagination.
+    description: Existing shared server and client catalogue components will receive a closed festive context while non-festive callers omit it.
+    status: resolved
+  - id: DEP-003
+    name: Shared product query and tRPC route
+    purpose: Must resolve the festive context server-side and preserve its scope for both SSR and client updates.
+    description: The public tRPC route accepts only a closed context literal and resolves curated IDs internally before product and metadata queries run.
+    status: resolved
+requirements:
+  - id: REQ-001
+    description: /festive uses the shared Swap Passport-style storefront catalogue rather than bespoke local controls or cards.
+    type: explicit
+  - id: REQ-002
+    description: Only products selected through Admin Products → Festive Season are discoverable on /festive, including every search, filter, sort, pagination, client-refetch, direct tRPC request, and filter-metadata path. The browser may request only the literal festive context; product IDs are resolved server-side.
+    type: explicit
+  - id: REQ-003
+    description: The approved festive desktop and mobile banner assets and festive cream/pink/green styling remain on /festive.
+    type: explicit
+  - id: REQ-004
+    description: Mobile is first-class and exposes the shared search, filter, sort, product cards, and pagination behavior.
+    type: explicit
+  - id: REQ-005
+    description: Existing /swap-passport and other catalogue pages retain their current behavior.
+    type: inferred
+scenarios:
+  - id: SCN-001
+    description: Admin selects products A and B; /festive displays A and B but not unselected C.
+    requirement_ids: [REQ-002]
+  - id: SCN-002
+    description: Shopper searches, filters, sorts, and changes pages on /festive; every result and metadata count remains within the server-resolved selected set.
+    requirement_ids: [REQ-001, REQ-002, REQ-004]
+  - id: SCN-003
+    description: Shopper opens /festive on a phone; the festive hero is visible followed by shared catalogue search, controls, cards, and pagination.
+    requirement_ids: [REQ-001, REQ-003, REQ-004]
+  - id: SCN-004
+    description: Shopper opens /festive on desktop; the wide festive banner and desktop shared filters/catalogue are visible.
+    requirement_ids: [REQ-001, REQ-003]
+  - id: SCN-005
+    description: Shopper uses /swap-passport after the change; it remains unscoped and unchanged.
+    requirement_ids: [REQ-005]
+  - id: SCN-006
+    description: A direct public tRPC request supplies festive context with arbitrary other filters; it cannot supply IDs or return an unselected product.
+    requirement_ids: [REQ-002]
+  - id: SCN-007
+    description: Admin removes all festive selections; /festive renders the shared empty result state and never falls back to the global catalogue.
+    requirement_ids: [REQ-002, REQ-004]
+  - id: SCN-008
+    description: Admin updates festive selection; a subsequent /festive request reflects the current selection after path invalidation.
+    requirement_ids: [REQ-002]
+invariants:
+  - id: INV-001
+    description: An unselected product cannot be rendered or counted by any /festive catalogue request.
+  - id: INV-002
+    description: The same server-resolved festive scope is used by server render, client refetch, pagination, brands, category/subcategory counts, colours, alpha sizes, and numeric sizes.
+  - id: INV-003
+    description: An empty festive selection produces an empty shared-catalogue state rather than falling back to all products.
+  - id: INV-004
+    description: Festive cache and query keys include catalogContext and cannot reuse a global catalogue response.
+  - id: INV-005
+    description: Without an explicit shopper sort, default festive order is curator position, then createdAt descending, then id ascending.
+flows:
+  - id: FLOW-001
+    description: Admin marks product as Festive Season -> selection row stores product and position -> /festive or tRPC receives only festive context -> server resolves IDs -> shared catalogue applies IDs to results and every metadata query.
+    state_transitions: [admin_selects_product -> festive_scope_updated, festive_scope_updated -> shopper_catalogue_rendered]
+integrations:
+  - id: INT-001
+    system: Existing product database and tRPC catalogue route
+    purpose: Serve consistent scoped catalogue results to SSR and client interactions.
+    failure_mode: Empty or unavailable selection returns zero festive products; it never widens to the full catalogue. Admin selection updates invalidate /festive.
+personas:
+  - id: PER-001
+    role: catalogue_admin
+    applicability: Curates products in Admin Products → Festive Season.
+  - id: PER-002
+    role: mobile_shopper
+    applicability: Browses, filters, sorts, and pages the festive catalogue.
+security_boundaries:
+  - id: SEC-001
+    description: Public festive product discovery is limited to the admin-curated selection and must not be bypassed with query parameters.
+business_rules:
+  - id: BR-001
+    description: Festive Season admin selection is the single source of truth for the festive catalogue.
+    source: User direction for REN-190.
+  - id: BR-002
+    description: Curator position is the default order; equal or blank positions use createdAt DESC then id ASC. An explicit shopper sort uses standard shared catalogue sort behavior within the scope.
+    source: User direction and existing festive selection position field.
+decisions:
+  - id: DEC-001
+    question: How should the new page achieve the Swap Passport design?
+    class: RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: Reuse StorefrontCatalogPage and extend it with an optional catalogContext. The product tRPC route resolves the festive selection server-side; no client-provided product-ID scope is accepted.
+    basis: /swap-passport already uses this component and provides the requested responsive controls.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+  - id: DEC-002
+    question: What order applies before a shopper chooses sorting?
+    class: RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: Use the admin curator position, then createdAt DESC and id ASC; apply user-selected shared sorts only within the festive scope.
+    basis: Existing festive selection stores position and the user requires admin-chosen products.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+test_expectations:
+  - id: TEXP-001
+    category: unit
+    classification: REQUIRED
+    reason: Server-resolved scope, empty/duplicate inputs, and curator ordering must be deterministic.
+    scenarios: [SCN-001, SCN-002, SCN-007]
+  - id: TEXP-002
+    category: integration
+    classification: REQUIRED
+    reason: SSR, direct tRPC client paths, metadata fan-out, and RAG search must all preserve the festive scope.
+    scenarios: [SCN-001, SCN-002, SCN-006]
+  - id: TEXP-003
+    category: regression
+    classification: REQUIRED
+    reason: Shared /swap-passport behavior, selection invalidation, and non-festive scopes must remain unaffected.
+    scenarios: [SCN-005, SCN-008]
+  - id: TEXP-004
+    category: ui_ux
+    classification: REQUIRED
+    reason: Mobile and desktop must show the approved banner and shared catalogue controls.
+    scenarios: [SCN-003, SCN-004]
+  - id: TEXP-005
+    category: regression
+    classification: REQUIRED
+    reason: Context-bearing cache keys, invalidation after admin selection, and default ordering must be verified.
+    scenarios: [SCN-001, SCN-002, SCN-007, SCN-008]
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: ren190_fresh_critic
+  fresh_context: true
+  read_only: true
+  required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - id: CRIT-001
+      classification: RESOLVED
+      summary: Public festive scope is now server-derived from a closed catalogContext rather than browser-provided IDs.
+    - id: CRIT-002
+      classification: RESOLVED
+      summary: The scope is specified for results and all six metadata query paths.
+    - id: CRIT-003
+      classification: RESOLVED
+      summary: Default curator ordering has explicit stable tie-breakers.
+    - id: CRIT-004
+      classification: RESOLVED
+      summary: Context-bearing cache identity, festive cache bypass, and path invalidation are specified.
+    - id: CRIT-005
+      classification: RESOLVED
+      summary: The query-level ordered curated-ID representation and sort override rules are specified.
+    - id: CRIT-006
+      classification: RESOLVED
+      summary: Dependencies and bidirectional traceability are now complete.
+    - id: CRIT-007
+      classification: RESOLVED
+      summary: The shared-catalogue reuse decision is medium consequence because it introduces no schema, billing, or authority change.
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Ayan Ganguly
+traceability:
+  requirement_to_scenarios:
+    - {requirement_id: REQ-001, scenario_ids: [SCN-002, SCN-003, SCN-004]}
+    - {requirement_id: REQ-002, scenario_ids: [SCN-001, SCN-002, SCN-006, SCN-007, SCN-008]}
+    - {requirement_id: REQ-003, scenario_ids: [SCN-003, SCN-004]}
+    - {requirement_id: REQ-004, scenario_ids: [SCN-002, SCN-003]}
+    - {requirement_id: REQ-005, scenario_ids: [SCN-005]}
+  scenario_to_invariants:
+    - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-002, INV-005]}
+    - {scenario_id: SCN-002, invariant_ids: [INV-001, INV-002, INV-004]}
+    - {scenario_id: SCN-003, invariant_ids: [INV-002]}
+    - {scenario_id: SCN-004, invariant_ids: [INV-002]}
+    - {scenario_id: SCN-005, invariant_ids: [INV-004]}
+    - {scenario_id: SCN-006, invariant_ids: [INV-001, INV-002]}
+    - {scenario_id: SCN-007, invariant_ids: [INV-001, INV-003]}
+    - {scenario_id: SCN-008, invariant_ids: [INV-001, INV-004]}
+  scenario_to_test_expectations:
+    - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001, TEXP-002, TEXP-005]}
+    - {scenario_id: SCN-002, test_expectation_ids: [TEXP-001, TEXP-002, TEXP-005]}
+    - {scenario_id: SCN-003, test_expectation_ids: [TEXP-004]}
+    - {scenario_id: SCN-004, test_expectation_ids: [TEXP-004]}
+    - {scenario_id: SCN-005, test_expectation_ids: [TEXP-003]}
+    - {scenario_id: SCN-006, test_expectation_ids: [TEXP-002]}
+    - {scenario_id: SCN-007, test_expectation_ids: [TEXP-001, TEXP-005]}
+    - {scenario_id: SCN-008, test_expectation_ids: [TEXP-003, TEXP-005]}

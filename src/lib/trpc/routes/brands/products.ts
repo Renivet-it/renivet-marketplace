@@ -143,6 +143,7 @@ export const productsRouter = createTRPCRouter({
                 prioritizeBestSellers: z.boolean().optional(),
                 prioritizeNewProducts: z.boolean().optional(),
                 requireMedia: z.boolean().optional(),
+                catalogContext: z.literal("festive").optional(),
                 // NEW: Enable personalized recommendations for shop page
                 useRecommendations: z.boolean().optional(),
             })
@@ -153,8 +154,23 @@ export const productsRouter = createTRPCRouter({
 
             // Check if we should use personalized recommendations
             // Apply when no specific category/search filters are active
+            const festiveSelection =
+                input.catalogContext === "festive"
+                    ? await queries.products.getFestiveSeasonProducts()
+                    : undefined;
+            const curatedProductIds = festiveSelection
+                ? Array.from(
+                      new Set(
+                          festiveSelection
+                              .map((entry: any) => entry.productId)
+                              .filter(Boolean)
+                      )
+                  )
+                : undefined;
+
             const shouldUseRecommendations =
                 input.useRecommendations &&
+                input.catalogContext !== "festive" &&
                 !input.search &&
                 !input.categoryId &&
                 !input.subcategoryId &&
@@ -200,7 +216,12 @@ export const productsRouter = createTRPCRouter({
             }
 
             // Default behavior: use regular getProducts
-            const data = await queries.products.getProducts(input);
+            const { catalogContext: _catalogContext, ...productInput } = input;
+            const data = await queries.products.getProducts({
+                ...productInput,
+                curatedProductIds,
+                curatedDefaultOrder: curatedProductIds,
+            });
             return { ...data, recommendationSource: null };
         }),
     getAllCatalogueProducts: publicProcedure

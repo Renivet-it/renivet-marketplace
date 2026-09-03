@@ -55,6 +55,7 @@ interface StorefrontCatalogPageProps {
     defaultSortOrder?: "asc" | "desc";
     prioritizeNewProducts?: boolean;
     hideRecommendationSorts?: boolean;
+    catalogContext?: "festive";
 }
 
 const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
@@ -70,9 +71,20 @@ export async function StorefrontCatalogPage({
     defaultSortOrder = "desc",
     prioritizeNewProducts = false,
     hideRecommendationSorts = false,
+    catalogContext,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
+    const curatedProductIds =
+        catalogContext === "festive"
+            ? Array.from(
+                  new Set(
+                      (await productQueries.getFestiveSeasonProducts())
+                          .map((entry: any) => entry.productId)
+                          .filter(Boolean)
+                  )
+              )
+            : undefined;
     const [productTypes, categories, subCategories] = await Promise.all([
         productTypeCache.getAll(),
         categoryCache.getAll(),
@@ -146,6 +158,7 @@ export async function StorefrontCatalogPage({
                             minDiscount={params.minDiscount}
                             lockedBrandId={lockedBrandId}
                             hideBrandFilter={hideBrandFilter}
+                            curatedProductIds={curatedProductIds}
                         />
                     </Suspense>
                 </aside>
@@ -183,6 +196,7 @@ export async function StorefrontCatalogPage({
                                     minDiscount={params.minDiscount}
                                     lockedBrandId={lockedBrandId}
                                     hideBrandFilter={hideBrandFilter}
+                                    curatedProductIds={curatedProductIds}
                                 />
                             </Suspense>
                         }
@@ -197,6 +211,7 @@ export async function StorefrontCatalogPage({
                             defaultSortBy={defaultSortBy}
                             defaultSortOrder={defaultSortOrder}
                             prioritizeNewProducts={prioritizeNewProducts}
+                            catalogContext={catalogContext}
                             desktopCatalogHeader={
                                 <div className="hidden items-center justify-between rounded-2xl border border-[#dce5ee] bg-[#f9fbfd] px-5 py-3.5 md:flex">
                                     <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
@@ -244,6 +259,7 @@ interface StorefrontFilterQueryInput {
     minDiscount?: string;
     lockedBrandId?: string;
     hideBrandFilter?: boolean;
+    curatedProductIds?: string[];
 }
 
 const getStorefrontFilterData = cache(async (serializedInput: string) => {
@@ -261,6 +277,7 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
         minDiscount,
         lockedBrandId,
         hideBrandFilter,
+        curatedProductIds,
     } = input;
 
     const minPriceValue =
@@ -296,6 +313,7 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
               colors: colorsValue,
               sizes: sizesValue,
               minDiscount: minDiscountValue,
+              curatedProductIds,
           });
 
     const [
@@ -321,6 +339,7 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
             colors: colorsValue,
             sizes: sizesValue,
             minDiscount: minDiscountValue,
+            curatedProductIds,
         }),
         productQueries.getFilteredSubCategoryCounts({
             categoryId,
@@ -331,24 +350,28 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
             colors: colorsValue,
             sizes: sizesValue,
             minDiscount: minDiscountValue,
+            curatedProductIds,
         }),
         productQueries.getUniqueColors({
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
             brandIds: brandIdsValue,
+            curatedProductIds,
         }),
         productQueries.getAlphaSizes({
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
             brandIds: brandIdsValue,
+            curatedProductIds,
         }),
         productQueries.getNumericSizes({
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
             brandIds: brandIdsValue,
+            curatedProductIds,
         }),
     ]);
 
@@ -386,6 +409,7 @@ async function StorefrontFiltersFetch(
         minDiscount,
         lockedBrandId,
         hideBrandFilter,
+        curatedProductIds,
         ...rest
     } = props;
     const filterData = await getStorefrontFilterData(
@@ -402,6 +426,7 @@ async function StorefrontFiltersFetch(
             minDiscount,
             lockedBrandId,
             hideBrandFilter,
+            curatedProductIds,
         } satisfies StorefrontFilterQueryInput)
     );
 
@@ -470,6 +495,7 @@ async function StorefrontProductsFetch({
     defaultSortOrder = "desc",
     prioritizeNewProducts = false,
     desktopCatalogHeader,
+    catalogContext,
 }: {
     searchParams: Promise<StorefrontSearchParams>;
     productTypes: any[];
@@ -479,6 +505,7 @@ async function StorefrontProductsFetch({
     defaultSortOrder?: "asc" | "desc";
     prioritizeNewProducts?: boolean;
     desktopCatalogHeader?: ReactNode;
+    catalogContext?: "festive";
 }) {
     const { userId } = await auth();
 
@@ -558,6 +585,7 @@ async function StorefrontProductsFetch({
             : undefined;
 
     const shouldUseRecommendations =
+        !catalogContext &&
         page === 1 &&
         !search &&
         !categoryId &&
@@ -636,7 +664,32 @@ async function StorefrontProductsFetch({
             !sizes &&
             !minDiscount;
 
-        if (isDefaultNewArrivalsView) {
+        if (catalogContext) {
+            finalData = await productQueries.getProducts({
+                page,
+                limit,
+                search,
+                isAvailable: true,
+                isActive: true,
+                isPublished: true,
+                isDeleted: false,
+                verificationStatus: "approved",
+                brandIds,
+                minPrice,
+                maxPrice: effectiveMaxPrice,
+                categoryId,
+                subcategoryId: subCategoryId,
+                productTypeId,
+                sortBy,
+                sortOrder,
+                colors,
+                sizes,
+                minDiscount,
+                requireMedia: true,
+                curatedProductIds: Array.from(new Set((await productQueries.getFestiveSeasonProducts()).map((entry: any) => entry.productId).filter(Boolean))),
+                curatedDefaultOrder: Array.from(new Set((await productQueries.getFestiveSeasonProducts()).map((entry: any) => entry.productId).filter(Boolean))),
+            });
+        } else if (isDefaultNewArrivalsView) {
             finalData = await getCachedNewArrivalProducts();
         } else if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
@@ -757,6 +810,7 @@ async function StorefrontProductsFetch({
                 defaultSortBy={defaultSortBy}
                 defaultSortOrder={defaultSortOrder}
                 prioritizeNewProducts={prioritizeNewProducts}
+                catalogContext={catalogContext}
             />
         </div>
     );

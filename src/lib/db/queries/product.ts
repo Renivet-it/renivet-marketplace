@@ -1071,6 +1071,8 @@ class ProductQuery {
         priorityProductIds,
         isSummerCollection,
         isUnder999,
+        curatedProductIds,
+        curatedDefaultOrder,
     }: {
         limit: number;
         page: number;
@@ -1101,6 +1103,8 @@ class ProductQuery {
         priorityProductIds?: string[];
         isSummerCollection?: boolean | null;
         isUnder999?: boolean | null;
+        curatedProductIds?: string[];
+        curatedDefaultOrder?: string[];
     }) {
         console.log(
             "[getProducts] search:",
@@ -1418,10 +1422,32 @@ class ProductQuery {
             isUnder999 !== undefined && isUnder999 !== null
                 ? eq(products.isUnder999, isUnder999)
                 : undefined,
+            curatedProductIds !== undefined
+                ? curatedProductIds.length
+                    ? inArray(products.id, curatedProductIds)
+                    : sql`false`
+                : undefined,
         ].filter(Boolean);
 
         // --- OrderBy construction ---
         const orderBy: any[] = [];
+
+        // Curated catalogues (such as Festive Season) use the administrator's
+        // sequence by default. Shopper-selected sort values deliberately take
+        // precedence while the product-ID scope remains enforced above.
+        if (
+            curatedDefaultOrder?.length &&
+            (!sortBy || sortBy === "recommended") &&
+            !search
+        ) {
+            const cases = curatedDefaultOrder
+                .map(
+                    (id, index) =>
+                        `WHEN products.id::text = '${id.replace(/'/g, "''")}' THEN ${index}`
+                )
+                .join(" ");
+            orderBy.push(sql`CASE ${sql.raw(cases)} ELSE 999999 END ASC`);
+        }
 
         // Keep currently tagged NEW products ahead of the older catalogue on
         // the New Arrivals landing page. June 2026 has a one-off 3-month tag;
@@ -1551,6 +1577,10 @@ class ProductQuery {
             );
         } else if (!sortBy || sortBy === "best-sellers") {
             orderBy.push(desc(products.createdAt));
+        }
+
+        if (curatedProductIds !== undefined) {
+            orderBy.push(asc(products.id));
         }
 
         // --- Query the DB ---
@@ -5655,6 +5685,7 @@ class ProductQuery {
         subcategoryId?: string;
         productTypeId?: string;
         brandIds?: string[];
+        curatedProductIds?: string[];
     }): Promise<{ name: string; count: number }[]> {
         try {
             const whereConditions = [
@@ -5668,6 +5699,11 @@ class ProductQuery {
                 eq(products.isActive, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
             ];
 
             if (filters?.categoryId) {
@@ -5755,6 +5791,7 @@ class ProductQuery {
         colors?: string[];
         sizes?: string[];
         minDiscount?: number;
+        curatedProductIds?: string[];
     }): Promise<{ id: string; name: string; slug: string; count: number }[]> {
         try {
             const normalizedColors = filters?.colors?.map((c) =>
@@ -5772,6 +5809,11 @@ class ProductQuery {
                 eq(products.verificationStatus, "approved"),
                 eq(brands.isActive, true),
                 hasMedia(products, "media"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
                 filters?.search?.length
                     ? ilike(products.title, `%${filters.search}%`)
                     : undefined,
@@ -5887,6 +5929,7 @@ class ProductQuery {
         colors?: string[];
         sizes?: string[];
         minDiscount?: number;
+        curatedProductIds?: string[];
     }): Promise<Map<string, number>> {
         try {
             const normalizedColors = filters?.colors?.map((c) =>
@@ -5903,6 +5946,11 @@ class ProductQuery {
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
                 hasMedia(products, "media"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
                 filters?.brandIds?.length
                     ? inArray(products.brandId, filters.brandIds)
                     : undefined,
@@ -5996,6 +6044,7 @@ class ProductQuery {
         colors?: string[];
         sizes?: string[];
         minDiscount?: number;
+        curatedProductIds?: string[];
     }): Promise<Map<string, number>> {
         try {
             const normalizedColors = filters?.colors?.map((c) =>
@@ -6012,6 +6061,11 @@ class ProductQuery {
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
                 hasMedia(products, "media"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
                 filters?.brandIds?.length
                     ? inArray(products.brandId, filters.brandIds)
                     : undefined,
@@ -6131,6 +6185,7 @@ class ProductQuery {
         subcategoryId?: string;
         productTypeId?: string;
         brandIds?: string[];
+        curatedProductIds?: string[];
     }) {
         try {
             const whereConditions = [
@@ -6143,6 +6198,11 @@ class ProductQuery {
                 eq(products.isActive, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
             ];
 
             if (filters?.categoryId) {
@@ -6208,6 +6268,7 @@ class ProductQuery {
         subcategoryId?: string;
         productTypeId?: string;
         brandIds?: string[];
+        curatedProductIds?: string[];
     }) {
         try {
             const whereConditions = [
@@ -6220,6 +6281,11 @@ class ProductQuery {
                 eq(products.isActive, true),
                 eq(products.isPublished, true),
                 eq(products.verificationStatus, "approved"),
+                filters?.curatedProductIds !== undefined
+                    ? filters.curatedProductIds.length
+                        ? inArray(products.id, filters.curatedProductIds)
+                        : sql`false`
+                    : undefined,
             ];
 
             if (filters?.categoryId) {

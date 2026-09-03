@@ -1082,6 +1082,7 @@ export async function toggleHomeHeroProduct(
 
             revalidatePath("/dashboard/general/products");
             revalidatePath("/");
+            revalidatePath("/festive");
             return {
                 success: true,
                 message: "Product removed from Home Best Sellers section",
@@ -1746,6 +1747,7 @@ export async function toggleFestiveSeasonProduct(
             .where(eq(products.id, productId));
         revalidatePath("/dashboard/general/products");
         revalidatePath("/");
+        revalidatePath("/festive");
         return { success: true, message: "Product added to Festive Season" };
     } catch (error) {
         console.error("Error toggling Festive Season status:", error);

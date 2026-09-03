@@ -17,7 +17,7 @@ export function ShopMobileActions({
     hideRecommendationSorts,
 }: ShopMobileActionsProps) {
     return (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e7dece] bg-[#fffdfa] pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_18px_rgba(45,38,26,0.08)] md:hidden">
+        <div className="fixed inset-x-0 bottom-0 z-50 border-y border-[#e7dece] bg-[#fffdfa] pb-[max(env(safe-area-inset-bottom),0px)] shadow-[0_-6px_18px_rgba(45,38,26,0.08)] md:hidden">
             <div className="grid h-14 w-full grid-cols-2">
                 {filters}
                 <ShopSortByWithDefault

@@ -1,49 +1,72 @@
-import { FestiveSeason } from "@/components/home/new-home-page/festive-season";
+import { StorefrontCatalogPage, type StorefrontSearchParams } from "@/components/shop/storefront-catalog-page";
 import { siteConfig } from "@/config/site";
-import { productQueries } from "@/lib/db/queries";
 import { getAbsoluteURL } from "@/lib/utils";
-import { auth } from "@clerk/nextjs/server";
+import Image from "next/image";
 import type { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-    title: "Rakhi Collection",
+    title: "Festive Collection",
     description:
-        "Discover Renivet's curated Rakhi collection, selected for celebrating meaningful bonds with conscious gifting.",
+        "Discover Renivet's curated festive collection, selected for conscious celebrations and thoughtful gifting.",
     alternates: {
         canonical: getAbsoluteURL("/festive"),
     },
     openGraph: {
-        title: "Rakhi Collection | Renivet",
+        title: "Festive Collection | Renivet",
         description:
-            "Shop Renivet's curated Rakhi collection for thoughtful festive gifting.",
+            "Shop Renivet's curated festive collection for thoughtful gifting.",
         url: getAbsoluteURL("/festive"),
         type: "website",
         images: [
             {
                 ...siteConfig.og,
-                alt: "Renivet Rakhi Collection",
+                alt: "Renivet Festive Collection",
             },
         ],
     },
 };
 
-export default async function FestivePage() {
-    const [{ userId }, selected] = await Promise.all([
-        auth(),
-        productQueries.getFestiveSeasonProducts(),
-    ]);
-    const products = selected
-        .map((entry: any) => entry.product)
-        .filter(Boolean);
-
+export default async function FestivePage({
+    searchParams,
+}: {
+    searchParams: Promise<StorefrontSearchParams>;
+}) {
     return (
-        <FestiveSeason
-            products={products as any}
-            userId={userId ?? undefined}
-            className="min-h-full"
-            showAllProducts
+        <StorefrontCatalogPage
+            searchParams={searchParams}
+            basePath="/festive"
+            breadcrumbBaseItems={[
+                { label: "Home", href: "/" },
+                { label: "Shop", href: "/festive" },
+            ]}
+            catalogContext="festive"
+            defaultSortBy="createdAt"
+            defaultSortOrder="desc"
+            hideRecommendationSorts
+            hero={
+                <section className="overflow-hidden rounded-[20px] bg-[#F0EBE2] p-2 md:mx-auto md:max-w-[1280px] md:rounded-[28px] md:p-3">
+                    <Image
+                        src="/assets/festive-season/festive-banner-desktop.png"
+                        alt="Celebrate consciously — sustainable festive picks"
+                        width={2048}
+                        height={865}
+                        priority
+                        unoptimized
+                        className="hidden h-auto w-full md:block"
+                    />
+                    <Image
+                        src="/assets/festive-season/festive-banner.png"
+                        alt="Celebrate consciously — sustainable festive picks"
+                        width={960}
+                        height={516}
+                        priority
+                        unoptimized
+                        className="h-auto w-full md:hidden"
+                    />
+                </section>
+            }
         />
     );
 }
