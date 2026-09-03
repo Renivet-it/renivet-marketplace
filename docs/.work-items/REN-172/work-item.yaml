@@ -3,7 +3,7 @@ task:
   id: REN-172
   title: Cross-tenant authorization bypass across 51 brand-router procedures (includes F10's 6 Unicommerce procedures)
   source: linear
-  branch: akshayatwork1/ren-172-cross-tenant-authorization-bypass-across-51-brand-router
+  branch: docs/enhancement-improvements-governance
   status: READY_FOR_DEV
   linear:
     url: https://linear.app/renivet/issue/REN-172

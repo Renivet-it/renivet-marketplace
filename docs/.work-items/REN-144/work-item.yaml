@@ -3,7 +3,7 @@ task:
   id: REN-144
   title: "Payment/order integrity: successful payment can result in partial or missing orders with no reliable reconciliation path"
   source: linear
-  branch: akshayatwork1/ren-144-paymentorder-integrity-successful-payment-can-result-in
+  branch: docs/enhancement-improvements-governance
   status: READY_FOR_DEV
   linear:
     url: https://linear.app/renivet/issue/REN-144
