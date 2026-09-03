@@ -30,3 +30,27 @@ test("builds a verdict-only permission response", () => {
         isAuthorized: false,
     });
 });
+
+test("builds middleware-safe routing context without user profile data", () => {
+    expect(
+        buildPermissionResponse(true, {
+            sitePermissions: 7,
+            brandPermissions: 3,
+            brandId: "brand-1",
+        })
+    ).toEqual({
+        isAuthorized: true,
+        sitePermissions: 7,
+        brandPermissions: 3,
+        brandId: "brand-1",
+    });
+});
+
+test("keeps Edge middleware independent from the Redis implementation", async () => {
+    const middleware = await Bun.file(
+        new URL("../../../middleware.ts", import.meta.url)
+    ).text();
+
+    expect(middleware).not.toContain("lib/redis");
+    expect(middleware).toContain("routingContext");
+});

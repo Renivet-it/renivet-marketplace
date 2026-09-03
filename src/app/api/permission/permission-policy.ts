@@ -7,6 +7,16 @@ export function resolvePermissionUserId({
     return authenticatedUserId ?? null;
 }
 
-export function buildPermissionResponse(isAuthorized: boolean) {
-    return { isAuthorized };
+export function buildPermissionResponse(
+    isAuthorized: boolean,
+    routingContext?: {
+        sitePermissions: number;
+        brandPermissions: number;
+        brandId: string | null;
+    }
+) {
+    return {
+        isAuthorized,
+        ...(routingContext ?? {}),
+    };
 }

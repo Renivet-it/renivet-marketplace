@@ -68,7 +68,9 @@ export async function GET(req: NextRequest) {
         }
         if (!existingUser) throw new AppError("User not found", "NOT_FOUND");
 
-        const { sitePermissions } = getUserPermissions(existingUser.roles);
+        const { sitePermissions, brandPermissions } = getUserPermissions(
+            existingUser.roles
+        );
 
         let isAuthorized = true;
 
@@ -81,7 +83,11 @@ export async function GET(req: NextRequest) {
 
         return CResponse({
             message: isAuthorized ? "OK" : "FORBIDDEN",
-            data: buildPermissionResponse(isAuthorized),
+            data: buildPermissionResponse(isAuthorized, {
+                sitePermissions,
+                brandPermissions,
+                brandId: existingUser.brand?.id ?? null,
+            }),
         });
     } catch (err) {
         console.error(err);
