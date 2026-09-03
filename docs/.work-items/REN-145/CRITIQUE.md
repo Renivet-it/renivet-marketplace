@@ -1,6 +1,3 @@
-Exit code: 0
-Wall time: 0.3 seconds
-Output:
 # REN-145 Independent Critic Review
 
 Reviewer: independent read-only governance critic
