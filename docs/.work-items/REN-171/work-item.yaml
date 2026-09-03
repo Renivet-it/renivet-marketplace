@@ -1,0 +1,259 @@
+schema_version: "1.0"
+task:
+    id: REN-171
+    title: Unauthenticated `/api/permission` endpoint leaks PII
+    source: linear
+    branch: ayanganguly333/ren-171-unauthenticated-apipermission-endpoint-leaks-pii
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-171/unauthenticated-apipermission-endpoint-leaks-pii
+        priority: Urgent
+        labels: [qa-finding, security, Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: Security & Compliance Audit
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Authentication and authorization boundary protects customer PII.
+        - The endpoint is used by middleware as an RBAC decision dependency.
+        - Incorrect fail-closed behavior could affect all protected navigation.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, acceptance criteria, evidence, labels, relations, and status
+        - Permission route identity source, cache lookup, Clerk fallback, database insert, and response shape
+        - Middleware bypass and authenticated caller contract
+        - Permission helpers, user record shape, and existing authorization tests
+        - Failure, privacy, compatibility, and regression boundaries
+    excluded_areas:
+        - Database schema and migrations; no data model change is required
+        - Production exploitation; source-level verification is sufficient and live exploitation is out of scope
+        - Unrelated API authorization policies and permission definitions
+    dependencies: [DEP-171-001, DEP-171-002]
+    integrations: [INT-171-001]
+    security_boundaries: [SEC-171-001]
+    state_transitions:
+        - request_received -> authenticated_or_rejected
+        - authenticated -> effective_user_loaded
+        - effective_user_loaded -> verdict_response
+    related_tests: [TEXP-171-001, TEXP-171-002, TEXP-171-003]
+    uncertainties:
+        - Existing route response consumers may rely on fields beyond the middleware verdict and must be confirmed before implementation.
+        - Clerk test mocking conventions may require an adapter rather than direct route invocation.
+requirements:
+    - id: REQ-171-001
+      description: Reject unauthenticated permission requests with HTTP 401 before user lookup or profile creation.
+      type: explicit
+    - id: REQ-171-002
+      description: Bind authorization identity to auth().userId and never trust query-string uId.
+      type: explicit
+    - id: REQ-171-003
+      description: Preserve authenticated permission decisions and safe new-user profile fallback for the session user.
+      type: inferred
+    - id: REQ-171-004
+      description: Minimize the response to the authorization verdict and safe message without user PII.
+      type: explicit
+    - id: REQ-171-005
+      description: Contain authentication, cache, Clerk, and database failures without leaking data or blocking unrelated rendering.
+      type: inferred
+scenarios:
+    - id: SCN-171-001
+      requirement_ids: [REQ-171-001, REQ-171-004]
+      description: An unauthenticated request with any uId/path returns 401 and no user data.
+    - id: SCN-171-002
+      requirement_ids: [REQ-171-002, REQ-171-003]
+      description: An authenticated user requesting with their own or an arbitrary query uId is evaluated only as the session user.
+    - id: SCN-171-003
+      requirement_ids: [REQ-171-002, REQ-171-004]
+      description: User A cannot retrieve user B's email, phone, addresses, roles, brand, or full record by supplying B's ID.
+    - id: SCN-171-004
+      requirement_ids: [REQ-171-003, REQ-171-004]
+      description: Authenticated dashboard and non-dashboard checks preserve existing allowed and forbidden verdicts with a minimized response.
+    - id: SCN-171-005
+      requirement_ids: [REQ-171-003, REQ-171-005]
+      description: A session user missing from the local cache may be provisioned from the matching Clerk user, while an attacker cannot trigger provisioning for another ID.
+    - id: SCN-171-006
+      requirement_ids: [REQ-171-005]
+      description: Clerk, cache, or database failure returns the existing safe error response and never exposes a record.
+invariants:
+    - id: INV-171-001
+      description: No unauthenticated request reaches user cache, Clerk profile creation, or database profile insertion.
+    - id: INV-171-002
+      description: Effective user identity always equals the authenticated Clerk session user ID.
+    - id: INV-171-003
+      description: Permission responses never serialize a complete user record or customer PII.
+    - id: INV-171-004
+      description: Authorization failures are fail-closed and cannot become allow decisions because of malformed or missing response data.
+    - id: INV-171-005
+      description: The route cannot block application rendering beyond the existing middleware permission dependency.
+flows:
+    - id: FLOW-171-001
+      description: Authenticate request, resolve the session user, calculate the existing permission verdict, and return a minimized response.
+      state_transitions: [request_received, authenticated_or_rejected, effective_user_loaded, verdict_response]
+    - id: FLOW-171-002
+      description: Handle missing local profile, dependency failure, forbidden permission, and cleanup without identity confusion or data disclosure.
+      state_transitions: [authenticated, effective_user_loaded, verdict_response]
+dependencies:
+    - id: DEP-171-001
+      name: Clerk auth session
+      purpose: Authoritative request identity.
+      owner: Application authentication maintainers
+      required_state: auth() returns a valid session user ID for protected permission calls.
+      description: The route must use the current Clerk session rather than caller-provided identity.
+      status: resolved
+    - id: DEP-171-002
+      name: Middleware permission consumer
+      purpose: Protected-route authorization and redirects.
+      owner: Application platform maintainers
+      required_state: Consumer understands the minimized permission response.
+      description: Middleware currently bypasses this route at its entry point and calls it for authenticated requests.
+      status: resolved
+integrations:
+    - id: INT-171-001
+      system: Clerk, Redis user cache, and local user database
+      purpose: Resolve authenticated user permissions and provision a missing local profile.
+      failure_mode: Missing session, cache miss, Clerk failure, database failure, or stale user record.
+      retry_idempotency: Profile fallback remains conflict-safe; authorization must not retry using caller-supplied identity.
+personas:
+    - id: PER-171-001
+      role: unauthenticated_requester
+      applicability: Any internet caller without a Clerk session.
+    - id: PER-171-002
+      role: authenticated_customer
+      applicability: Signed-in customer using protected navigation.
+    - id: PER-171-003
+      role: authenticated_brand_or_operator
+      applicability: Signed-in user whose dashboard permission is evaluated.
+security_boundaries:
+    - id: SEC-171-001
+      description: Clerk session identity and the minimized permission response are the boundary preventing cross-user PII disclosure.
+business_rules:
+    - id: BR-171-001
+      description: Authorization decisions may be exposed; customer profile data may not be exposed through this endpoint.
+decisions:
+    - id: DEC-171-001
+      question: How should the route bind identity and shape its response?
+      class: HUMAN_CONFIRMATION
+      status: resolved
+      options:
+          - Authenticate directly with auth(), ignore caller-selected identity, preserve the verdict, and return no user record. (Recommended)
+          - Keep caller-supplied identity and return the existing user record. (Rejected: preserves the confirmed PII disclosure.)
+      recommendation: Authenticate directly with auth(), ignore caller-selected identity, preserve the verdict, and return no user record.
+      basis: Explicit Linear acceptance criteria and least-privilege response design.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-171-001
+      category: api
+      classification: REQUIRED
+      reason: Verifies 401 behavior and no lookup for unauthenticated requests.
+      scenarios: [SCN-171-001]
+    - id: TEXP-171-002
+      category: integration
+      classification: REQUIRED
+      reason: Verifies session identity binding, cross-user query resistance, preserved permission verdicts, and safe profile fallback.
+      scenarios: [SCN-171-002, SCN-171-003, SCN-171-004, SCN-171-005]
+    - id: TEXP-171-003
+      category: security
+      classification: REQUIRED
+      reason: Asserts representative PII fields are absent and dependency failures fail safely.
+      scenarios: [SCN-171-003, SCN-171-006]
+    - id: TEXP-171-004
+      category: regression
+      classification: REQUIRED
+      reason: Confirms middleware authorization behavior remains compatible with the minimized response contract.
+      scenarios: [SCN-171-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-171-001
+          scenario_ids: [SCN-171-001]
+        - requirement_id: REQ-171-002
+          scenario_ids: [SCN-171-002, SCN-171-003]
+        - requirement_id: REQ-171-003
+          scenario_ids: [SCN-171-002, SCN-171-004, SCN-171-005]
+        - requirement_id: REQ-171-004
+          scenario_ids: [SCN-171-001, SCN-171-003, SCN-171-004]
+        - requirement_id: REQ-171-005
+          scenario_ids: [SCN-171-005, SCN-171-006]
+    scenario_to_invariants:
+        - scenario_id: SCN-171-001
+          invariant_ids: [INV-171-001, INV-171-003, INV-171-004]
+        - scenario_id: SCN-171-002
+          invariant_ids: [INV-171-002, INV-171-003]
+        - scenario_id: SCN-171-003
+          invariant_ids: [INV-171-002, INV-171-003, INV-171-004]
+        - scenario_id: SCN-171-004
+          invariant_ids: [INV-171-003, INV-171-004, INV-171-005]
+        - scenario_id: SCN-171-005
+          invariant_ids: [INV-171-001, INV-171-002, INV-171-004]
+        - scenario_id: SCN-171-006
+          invariant_ids: [INV-171-003, INV-171-004, INV-171-005]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-171-001
+          test_expectation_ids: [TEXP-171-001, TEXP-171-003]
+        - scenario_id: SCN-171-002
+          test_expectation_ids: [TEXP-171-002]
+        - scenario_id: SCN-171-003
+          test_expectation_ids: [TEXP-171-002, TEXP-171-003]
+        - scenario_id: SCN-171-004
+          test_expectation_ids: [TEXP-171-002, TEXP-171-004]
+        - scenario_id: SCN-171-005
+          test_expectation_ids: [TEXP-171-002]
+        - scenario_id: SCN-171-006
+          test_expectation_ids: [TEXP-171-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-171-001
+          severity: MAJOR
+          references: [REQ-171-002, REQ-171-004, SCN-171-004]
+          description: Middleware consumer compatibility must be tested when response data is minimized.
+        - id: CRIT-171-002
+          severity: MAJOR
+          references: [REQ-171-003, SCN-171-005]
+          description: New-user fallback must be bound to the authenticated Clerk ID.
+        - id: CRIT-171-003
+          severity: MINOR
+          references: [REQ-171-004, SCN-171-003]
+          description: Tests must assert representative PII fields are absent.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit owner confirmation)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "5dc0647404697524eaade1202f50eb7590f42915"
+    head_commit: "c3a3e29451cf883a77c839109a97ac65cb09d7b6"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PARTIAL
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-171-001: Add direct route-level and middleware integration coverage."
+    evidence:
+        - "Compared the approved REN-171 contract with the origin/master-to-c3a3e29451cf883a77c839109a97ac65cb09d7b6 Git diff."
+        - "The route binds identity to auth().userId and returns a verdict-only response; middleware resolves dashboard routing data from the authenticated cache user."
+        - "Targeted policy tests pass; repository-wide test execution retains an unrelated React PDF dependency failure."
+    governance_reentry_required: false

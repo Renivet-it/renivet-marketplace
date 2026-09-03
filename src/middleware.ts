@@ -2,9 +2,10 @@ import { clerkMiddleware } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { BitFieldSitePermission } from "./config/permissions";
 import { generalSidebarConfig, generateBrandSideNav } from "./config/site";
-import { cFetch, getUserPermissions, hasPermission } from "./lib/utils";
-import { CachedUser, ResponseData } from "./lib/validations";
 import { buildAuthRedirectUrl } from "./lib/auth/redirect";
+import { userCache } from "./lib/redis/methods";
+import { cFetch, getUserPermissions, hasPermission } from "./lib/utils";
+import { ResponseData } from "./lib/validations";
 
 export default clerkMiddleware(async (auth, req) => {
     const url = new URL(req.url);
@@ -39,11 +40,12 @@ export default clerkMiddleware(async (auth, req) => {
             path: url.pathname,
         });
 
-        const res = await cFetch<ResponseData<CachedUser>>(
+        const res = await cFetch<ResponseData<{ isAuthorized: boolean }>>(
             new URL(
                 `/api/permission?${searchParams.toString()}`,
                 url
-            ).toString()
+            ).toString(),
+            { headers: { cookie: req.headers.get("cookie") ?? "" } }
         );
         // Do not redirect the homepage back to itself when a newly-created
         // Clerk user is still being synchronized to the local database.
@@ -54,7 +56,8 @@ export default clerkMiddleware(async (auth, req) => {
         }
 
         if (url.pathname.startsWith("/dashboard")) {
-            const existingUser = res.data!.data!;
+            const existingUser = await userCache.get(isAuth.userId);
+            if (!existingUser) return NextResponse.redirect(new URL("/", url));
             const { brandPermissions, sitePermissions } = getUserPermissions(
                 existingUser.roles
             );
@@ -281,7 +284,10 @@ export default clerkMiddleware(async (auth, req) => {
             url.pathname.startsWith("/become-a-seller")
         )
             return NextResponse.redirect(
-                new URL(buildAuthRedirectUrl(`${url.pathname}${url.search}`), url)
+                new URL(
+                    buildAuthRedirectUrl(`${url.pathname}${url.search}`),
+                    url
+                )
             );
 
     return res;
