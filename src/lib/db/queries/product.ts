@@ -3510,7 +3510,7 @@ class ProductQuery {
                                 const [result] = await tx
                                     .update(productVariants)
                                     .set({
-                                        quantity: sql`${productVariants.quantity} - ${item.quantity}`,
+                                        quantity: sql`GREATEST(${productVariants.quantity} - ${item.quantity}, 0)`,
                                         updatedAt: new Date(),
                                     })
                                     .where(
@@ -3531,7 +3531,7 @@ class ProductQuery {
                                 const [result] = await tx
                                     .update(products)
                                     .set({
-                                        quantity: sql`${products.quantity} - ${item.quantity}`,
+                                        quantity: sql`GREATEST(${products.quantity} - ${item.quantity}, 0)`,
                                         updatedAt: new Date(),
                                     })
                                     .where(eq(products.id, item.productId))
