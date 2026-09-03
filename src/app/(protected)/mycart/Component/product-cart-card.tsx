@@ -4,7 +4,6 @@ import { ProductCartQuantityChangeForm } from "@/components/globals/forms";
 import { Icons } from "@/components/icons";
 import { Button } from "@/components/ui/button-general";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Textarea } from "@/components/ui/textarea-general";
 import {
     Dialog,
     DialogContent,
@@ -17,6 +16,7 @@ import {
     PopoverContent,
     PopoverTrigger,
 } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea-general";
 import { addToGuestWishlist } from "@/lib/hooks/wishlist";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -36,6 +36,7 @@ import {
     MoveProductToWishlistModal,
     RemoveProductFromCartModal,
 } from "../../../../components/globals/modals";
+import { isCartItemAvailable } from "./cart-availability";
 
 interface PageProps extends GenericProps {
     item: CachedCart;
@@ -78,7 +79,9 @@ function CustomizationRequestField({
             </label>
             <Textarea
                 value={request}
-                onChange={(event) => setRequest(event.target.value.slice(0, 500))}
+                onChange={(event) =>
+                    setRequest(event.target.value.slice(0, 500))
+                }
                 onBlur={persistRequest}
                 disabled={readOnly || isPending}
                 placeholder="E.g. Add initials, preferred color, or special instructions"
@@ -110,6 +113,7 @@ export function ProductCartCard({
         itemMedia?.url ??
         "https://4o4vm2cu6g.ufs.sh/f/HtysHtJpctzNNQhfcW4g0rgXZuWwadPABUqnljV5RbJMFsx1";
     const imageAlt = itemMedia?.alt ?? item.product.title;
+    const isAvailable = isCartItemAvailable(item);
 
     const itemPrice =
         item.variantId && item.product.variants.length > 0
@@ -162,6 +166,7 @@ export function ProductCartCard({
             <div
                 className={cn(
                     "relative rounded-xl border border-gray-200 bg-white p-3 md:hidden",
+                    !isAvailable && "border-amber-300 bg-amber-50/40",
                     className
                 )}
                 {...props}
@@ -278,6 +283,15 @@ export function ProductCartCard({
                             Supporting 1 artisan family
                         </p>
 
+                        {!isAvailable && (
+                            <p
+                                role="status"
+                                className="rounded-md border border-amber-300 bg-amber-100 px-2 py-1 text-[11px] font-semibold text-amber-900"
+                            >
+                                Unavailable — remove or move to wishlist
+                            </p>
+                        )}
+
                         {/* Delivery estimate */}
                         <div className="flex items-center gap-1 text-[11px] text-gray-600">
                             <Truck className="size-3 text-gray-400" />
@@ -378,6 +392,7 @@ export function ProductCartCard({
             <div
                 className={cn(
                     "relative hidden rounded-xl border border-gray-200 bg-white p-4 transition-shadow hover:shadow-md md:block",
+                    !isAvailable && "border-amber-300 bg-amber-50/40",
                     className
                 )}
                 {...props}
@@ -446,6 +461,15 @@ export function ProductCartCard({
                                 parseFloat(convertPaiseToRupees(itemPrice))
                             )}
                         </div>
+
+                        {!isAvailable && (
+                            <p
+                                role="status"
+                                className="rounded-md border border-amber-300 bg-amber-100 px-3 py-1.5 text-xs font-semibold text-amber-900"
+                            >
+                                Unavailable — remove or move to wishlist
+                            </p>
+                        )}
 
                         {/* Sustainability badges */}
                         <div className="flex flex-wrap gap-2">
