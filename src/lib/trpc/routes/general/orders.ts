@@ -1942,13 +1942,10 @@ export const ordersRouter = createTRPCRouter({
 
             // Restore product stock
             const updateProductStockData = existingOrder.items.map((item) => {
-                const quantity = item.quantity;
-                const currentStock =
-                    item.variant?.quantity ?? item.product.quantity ?? 0;
                 return {
                     productId: item.product.id,
                     variantId: item.variant?.id,
-                    quantity: currentStock + quantity,
+                    quantity: item.quantity,
                 };
             });
 
