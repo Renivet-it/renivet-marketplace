@@ -4,7 +4,7 @@ task:
     title: Unauthenticated `/api/permission` endpoint leaks PII
     source: linear
     branch: ayanganguly333/ren-171-unauthenticated-apipermission-endpoint-leaks-pii
-    status: BLOCKED
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-171/unauthenticated-apipermission-endpoint-leaks-pii
         priority: Urgent
@@ -140,7 +140,7 @@ decisions:
     - id: DEC-171-001
       question: How should the route bind identity and shape its response?
       class: HUMAN_CONFIRMATION
-      status: unresolved
+      status: resolved
       options:
           - Authenticate directly with auth(), ignore caller-selected identity, preserve the verdict, and return no user record. (Recommended)
           - Keep caller-supplied identity and return the existing user record. (Rejected: preserves the confirmed PII disclosure.)
@@ -230,6 +230,6 @@ critic:
           references: [REQ-171-004, SCN-171-003]
           description: Tests must assert representative PII fields are absent.
 approval:
-    state: BLOCKED
-    design_blockers: [DEC-171-001 requires explicit owner confirmation]
-    approved_by: Pending explicit owner confirmation
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit owner confirmation)
