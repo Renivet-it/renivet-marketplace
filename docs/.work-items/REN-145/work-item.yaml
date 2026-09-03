@@ -3,7 +3,7 @@ task:
     id: REN-145
     title: Meta Purchase event currency unit and event fan-out correction
     source: linear
-    branch: ayanganguly333/ren-145-meta-purchase-event-currency-unit-defect-and-per-brand-event
+    branch: ayanganguly333/ren-145-meta-purchase-event-currency
     status: READY_FOR_DEV
     linear:
         priority: Urgent
