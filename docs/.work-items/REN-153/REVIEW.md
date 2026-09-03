@@ -10,7 +10,7 @@ The implementation matches the approved display-only contract. Automated unit co
 
 ## Review Scope and Git Evidence
 
-Compared `origin/master` commit `bebee53ef97f50cd26b3846a72a2ec47906c920d` with implementation commit `4137a59960fe6ec1dc09a8d9bdbe2b0a4d8d386b` on branch `ayanganguly333/ren-153-show-cart-items-as-unavailable-in-the-cart-view-itself`. No PR exists and the working tree was clean after the implementation commit. The diff contains the REN-153 work-item artifacts, `cart-availability.ts`, its tests, `cartorder-section.tsx`, and `product-cart-card.tsx`.
+Compared `origin/master` commit `47361942ae8cf5831fb7183605472ba58df5f52f` with implementation/review commit `6359c918eb6bf5fa4d5b7ebdea1482eac9746553` on branch `ayanganguly333/ren-153-show-cart-items-as-unavailable-in-the-cart-view-itself`. No PR exists and the working tree was clean after the rebase and formatting verification. The diff contains the REN-153 work-item artifacts, `cart-availability.ts`, its tests, `cartorder-section.tsx`, and `product-cart-card.tsx`.
 
 ## Requirement Reconciliation
 

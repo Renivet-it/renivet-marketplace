@@ -191,8 +191,8 @@ implementation_review:
     artifact: REVIEW.md
     result: REVIEW_PASSED_WITH_FINDINGS
     base_branch: master
-    base_commit: "bebee53ef97f50cd26b3846a72a2ec47906c920d"
-    head_commit: "4137a59960fe6ec1dc09a8d9bdbe2b0a4d8d386b"
+    base_commit: "47361942ae8cf5831fb7183605472ba58df5f52f"
+    head_commit: "6359c918eb6bf5fa4d5b7ebdea1482eac9746553"
     pr_url: null
     material_drift: NO_DRIFT
     reconciliation:
@@ -207,7 +207,7 @@ implementation_review:
     required_actions:
         - "REV-153-001: Perform manual mobile and desktop QA for unavailable product and variant states."
     evidence:
-        - "Compared origin/master commit bebee53ef97f50cd26b3846a72a2ec47906c920d with implementation commit 4137a59960fe6ec1dc09a8d9bdbe2b0a4d8d386b."
+        - "Compared origin/master commit 47361942ae8cf5831fb7183605472ba58df5f52f with implementation commit 6359c918eb6bf5fa4d5b7ebdea1482eac9746553."
         - "Focused REN-153 availability tests passed; repository-wide verification retains one unrelated React PDF dependency failure."
         - "Static review confirms both responsive notices, shared predicate use, preserved cart actions, and unchanged checkout totals/filtering."
     governance_reentry_required: false
