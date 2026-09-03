@@ -1,0 +1,17 @@
+# Architecture Critique — P08
+
+This package carries forward `14-critic/ARCHITECTURE_CRITIQUE.md`'s conclusions rather than re-deriving them, per the parent task's instruction, and adds package-specific critique where the translation into this SRS template surfaced something the original critique didn't need to address.
+
+## Carried forward from the research's own critic pass
+
+**Q1 — Is the "shared spine" a hidden OMS rebuild?** No, not literally (multi-warehouse was explicitly rejected; a single nullable `warehouseId` is insurance, not a dimension). But the sharper version holds: the full shared spine (canonical ingest interface + provenance + validation + reconciliation + confidence-tier queues + audit trail) is functionally an in-house iPaaS built by hand, right after buying one (Option G) was rejected for cost/lock-in — and the comparison never asked whether building the equivalent in-house carries comparable engineering/maintenance cost to the vendor cost avoided. This package's response: V1 builds only the minimal-provenance slice of that spine, explicitly not the confidence-tier/reconciliation machinery, which stays gated (see `10-roadmap/VERSION_TRIGGERS.md`) — the cost question the critique raised is deferred along with the components it applies to, not answered.
+
+**Q3 — Could File-First alone get ~80% of the value?** Plausibly yes — File-First is the only mechanism that works for every brand tier and closes F9 immediately; its one weakness (near-real-time inventory freshness) is a need already met for brands sophisticated enough to be on Unicommerce. The marginal population needing API-tier freshness beyond Unicommerce is not evidenced anywhere (same brand-tier-distribution UNKNOWN). This package's V1 scope reflects this finding directly: File-First + hardened-existing-Unicommerce, no rush to generalize API-First.
+
+**Q5 — Is the Hybrid-vs-API-only comparison honest?** Yes, doesn't hide API-First's own gaps. Less robust: Hybrid's "medium overall, front-loaded" cost rating assumes spine cost amortizes across tiers — if the brand population skews API-capable (unmeasured), Hybrid could be *more* total engineering cost than a hardened API-First+File-First-fallback without the full spine. The comparison matrix doesn't run this sensitivity case. This package does not resolve this gap either — it is a real unresolved sensitivity, correctly attributable to the still-UNKNOWN brand-tier distribution, not to a flaw in this package's translation.
+
+**Overall research verdict, preserved**: doesn't overturn Hybrid's core insight but requires the scoped-down, sequenced version this package implements as V1/V2/V3 — File-First + minimal provenance now, measure brand-tier distribution before committing to API-First generalization or Scheduled-File, treat the full spine as staged investment gated on measurement.
+
+## Package-level addition: does the SRS-template translation introduce any new architectural risk?
+
+One risk worth naming: spreading the architecture across many small template files (`SYSTEM_ARCHITECTURE.md`, `COMPONENT_ARCHITECTURE.md`, `DATA_FLOW.md`, `STATE_MACHINE.md`, `INTEGRATIONS.md`) creates surface area for the files to drift out of sync with each other over time, in a way the original research's more consolidated `RECOMMENDED_ARCHITECTURE.md` didn't have. Mitigation: each file cites its research source directly rather than re-deriving architecture facts independently, so a future editor correcting one file has a clear path back to the same source the others also cite.
