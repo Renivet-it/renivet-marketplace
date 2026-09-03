@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { expect, test } from "bun:test";
 
@@ -16,6 +17,9 @@ type CapiLogWriter = {
     ) => CancellableQuery<unknown>;
 };
 type CapiModule = {
+    prepareCapiUserDataForMeta?: (
+        userData: Record<string, string>
+    ) => Record<string, string>;
     createCapiEventSender?: (
         dependencies: Record<string, unknown>
     ) => (...args: typeof event) => Promise<unknown>;
@@ -173,6 +177,82 @@ test("reads the CAPI access token from the typed server environment", async () =
 test("provides the bounded CAPI transport and logging seams", () => {
     expect(implementationAvailable).toBe(true);
 });
+
+test("hashes external_id only for Meta while preserving browser identifiers", () => {
+    const rawUserData = {
+        em: "Buyer@Renivet.com",
+        external_id: "user_123",
+        fbp: "fb.1.1558571054389.1098115397",
+        fbc: "fb.1.1554763741205.AbCdEfGhIjKlMnOpQrStUvWxYz1234567890",
+    };
+
+    expect(capi.prepareCapiUserDataForMeta?.(rawUserData)).toEqual({
+        em: "buyer@renivet.com",
+        external_id: createHash("sha256").update("user_123").digest("hex"),
+        fbp: rawUserData.fbp,
+        fbc: rawUserData.fbc,
+    });
+});
+
+test("omits malformed browser identifiers from the outbound Meta payload", () => {
+    expect(
+        capi.prepareCapiUserDataForMeta?.({
+            external_id: "user_123",
+            fbp: "malformed-fbp",
+            fbc: "malformed-fbc",
+        })
+    ).toEqual({
+        external_id: createHash("sha256").update("user_123").digest("hex"),
+    });
+});
+
+behaviorTest(
+    "keeps CAPI logs raw while hashing only the outbound Meta external id",
+    async () => {
+        const calls: Array<{ url: string; init?: RequestInit }> = [];
+        const { writer, writes } = createWriter();
+        const rawUserData = {
+            em: "buyer@renivet.com",
+            external_id: "user_123",
+            fbp: "fb.1.1558571054389.1098115397",
+            fbc: "fb.1.1554763741205.AbCdEf123",
+        };
+        const send = capi.createCapiEventSender!({
+            accessToken: "test-access-token",
+            pixelId: "pixel-123",
+            fetch: async (url: URL | RequestInfo, init?: RequestInit) => {
+                calls.push({ url: String(url), init });
+                return acceptedResponse();
+            },
+            logWriter: writer,
+            now: () => 1_700_000_000_000,
+            timers: createTimers(),
+            shouldRunExternalSideEffects: async () => true,
+            sanitizeUserData: capi.prepareCapiUserDataForMeta,
+        });
+
+        await send(
+            "Purchase",
+            rawUserData,
+            { value: 42, currency: "INR", order_id: "order-1" },
+            "event-1",
+            "https://renivet.com/checkout"
+        );
+
+        expect(writes[0]).toMatchObject({
+            kind: "pending",
+            values: { userData: rawUserData },
+        });
+        const body = JSON.parse(String(calls[0].init?.body));
+        expect(body.data[0].user_data).toMatchObject({
+            external_id: [
+                createHash("sha256").update("user_123").digest("hex"),
+            ],
+            fbp: rawUserData.fbp,
+            fbc: rawUserData.fbc,
+        });
+    }
+);
 
 behaviorTest(
     "sends SDK-generated URL, headers, and params through the custom HTTP service",

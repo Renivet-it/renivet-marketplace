@@ -1,0 +1,268 @@
+schema_version: "1.0"
+task:
+    id: REN-183
+    title: "[Corporate Order] Delivery mode controls: give renivet_warehouse mode an equivalent pre-dispatch document requirement"
+    source: linear
+    branch: ayanganguly333/corporate-order-qc
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-183/corporate-order-delivery-mode-controls-give-renivet-warehouse-mode-an
+        priority: High
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Dispatch authorization is an order-lifecycle and financial-integrity control.
+        - The task adds schema, mutations, guarded state transitions, and warehouse evidence boundaries.
+        - Existing direct-mode behavior must remain backward compatible while warehouse mode changes from fail-closed to conditionally allowed.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear REN-183 description, updates, and relations
+        - Shared corporate order status guard and all shipment status writers
+        - Fulfillment Order, Delivery Challan, shipment, QC, and document-chain schemas/queries
+        - Corporate document-chain UI and Delhivery pickup path
+        - Existing warehouse/RTO receipt concepts and migration numbering
+    excluded_areas:
+        - Full warehouse inventory/WMS
+        - OCR, barcode scanning, or carrier proof-of-delivery ingestion
+        - Finance/CA freight tax policy beyond preserving the stated shipping classification
+    dependencies: [DEP-001, DEP-002, DEP-003]
+    integrations: [INT-001, INT-002]
+    security_boundaries: [SEC-001, SEC-002]
+    state_transitions:
+        - draft_receipt -> accepted
+        - draft_receipt -> rejected
+        - warehouse_order_with_qc -> ready_for_dispatch only when accepted_grn_exists
+        - warehouse_order_with_qc -> dispatched only when accepted_grn_exists
+dependencies:
+    - id: DEP-001
+      name: REN-175 shared guarded status transitions
+      purpose: Provides the single server-side authorization gate used by all status writers.
+      description: Warehouse GRN must be a branch of the existing guard, not a UI-only or shipment-specific check.
+      status: resolved
+    - id: DEP-002
+      name: Fulfillment Order snapshot
+      purpose: Identifies the authoritative order, brand, quantity, and selected delivery mode.
+      description: GRN acceptance is evaluated against the issued FO and its quantity.
+      status: resolved
+    - id: DEP-003
+      name: Finance/operations receipt policy
+      purpose: Confirms who may accept a receipt and which minimum evidence is mandatory.
+      description: User-confirmed admin-only manual confirmation with required receiver/date/quantity/warehouse fields and optional delivery reference; no file upload.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Warehouse-mode orders require a current accepted inbound GRN before ready_for_dispatch or dispatched; direct mode retains Delivery Challan gating.
+      type: explicit
+    - id: REQ-002
+      description: GRN records identify the exact order and FO and capture receipt date, warehouse, receiver, quantity, and audit metadata; no file upload is required.
+      type: inferred
+    - id: REQ-003
+      description: The precondition is enforced in the same central server-side status guard used by every status writer.
+      type: explicit
+    - id: REQ-004
+      description: Existing authorization, tenant/brand isolation, QC sequencing, shipment flow, and direct-mode behavior remain intact.
+      type: explicit
+    - id: REQ-005
+      description: Warehouse GRN records are versioned/idempotent and corrections do not erase prior audit evidence; concurrent transitions fail closed.
+      type: inferred
+    - id: REQ-006
+      description: Documents represent customer shipping-charge classification explicitly and never invent a zero shipping/GST line when no charge exists.
+      type: explicit
+scenarios:
+    - id: SCN-001
+      description: Warehouse order with FO and QC but no GRN is rejected for ready_for_dispatch and dispatched.
+      requirement_ids: [REQ-001, REQ-003]
+    - id: SCN-002
+      description: Warehouse order with a current accepted sufficient-quantity GRN passes the shared dispatch guard.
+      requirement_ids: [REQ-001, REQ-002, REQ-003]
+    - id: SCN-003
+      description: Wrong-order/FO, rejected, stale, invalid-date, or insufficient-quantity GRNs fail closed.
+      requirement_ids: [REQ-001, REQ-002, REQ-005]
+    - id: SCN-004
+      description: Direct-mode order behavior remains Delivery Challan + QC gated and does not require a GRN.
+      requirement_ids: [REQ-001, REQ-004]
+    - id: SCN-005
+      description: Unauthorized or cross-brand receipt creation/acceptance is rejected without changing authorization state.
+      requirement_ids: [REQ-004]
+    - id: SCN-006
+      description: Receipt retry is idempotent; correction preserves the predecessor, and concurrent replacement/status attempts leave one current accepted record or fail closed.
+      requirement_ids: [REQ-005]
+    - id: SCN-007
+      description: Document-chain UI and APIs show GRN status and explicit shipping classification for both delivery modes.
+      requirement_ids: [REQ-006]
+    - id: SCN-008
+      description: Existing warehouse orders remain readable after migration but cannot dispatch without a newly accepted GRN.
+      requirement_ids: [REQ-004, REQ-005]
+invariants:
+    - id: INV-001
+      description: No warehouse order reaches dispatch authorization without an accepted GRN for its current FO.
+    - id: INV-002
+      description: Direct-mode challan and warehouse-mode GRN are mutually mode-specific requirements enforced by one central guard.
+    - id: INV-003
+      description: A receipt cannot authorize a different order, FO, brand, quantity, or delivery mode.
+    - id: INV-004
+      description: Receipt corrections and review decisions retain immutable audit history and at most one current accepted receipt per FO.
+    - id: INV-005
+      description: Shipment/provider calls cannot bypass the shared status guard.
+flows:
+    - id: FLOW-001
+      description: Admin records/reviews warehouse GRN -> shared guard checks FO/QC/GRN -> dispatch authorization -> shipment.
+      state_transitions: [draft_receipt -> accepted, accepted_grn -> dispatch_authorized]
+    - id: FLOW-002
+      description: Direct order continues through FO/QC/Delivery Challan -> shared guard -> dispatch authorization.
+      state_transitions: [challan_issued -> dispatch_authorized]
+integrations:
+    - id: INT-001
+      system: Corporate database
+      purpose: Persist GRN evidence, state, version, and audit history atomically with guarded checks.
+      failure_mode: Transaction failure leaves no accepted receipt or status transition.
+    - id: INT-002
+      system: Delhivery/manual shipment workflow
+      purpose: Executes shipment only after the shared guard authorizes the order.
+      failure_mode: Provider failure does not advance order status or create a bypass path.
+personas:
+    - id: PER-001
+      role: corporate_order_admin
+      applicability: Records or reviews the warehouse receipt under MANAGE_ORDERS.
+    - id: PER-002
+      role: warehouse_receiver
+      applicability: Supplies receiver identity; admin records the confirmation and no separate receiver login is required.
+    - id: PER-003
+      role: brand_member
+      applicability: May provide supplier shipment evidence but cannot self-approve dispatch authorization by default.
+security_boundaries:
+    - id: SEC-001
+      description: Receipt operations are authenticated, permission-protected, and scoped to the order's brand/FO tenant boundary.
+    - id: SEC-002
+      description: Only an authorized admin can create/accept/reject the record that unlocks dispatch; provider callbacks cannot unlock it.
+business_rules:
+    - id: BR-001
+      description: Both modes require FO + QC + mode-specific authorization evidence before dispatch.
+      source: Linear REN-183 expected behavior and acceptance criteria.
+    - id: BR-002
+      description: Warehouse mode uses an inbound goods-received confirmation, not a Delivery Challan or shipment record reused as a receipt.
+      source: Linear REN-183 scope and root cause.
+    - id: BR-003
+      description: Mili AI customer shipping charge is NOT_CHARGED; future separately charged freight tax classification requires Finance/CA confirmation.
+      source: Linear REN-183 shipping/delivery update.
+decisions:
+    - id: DEC-001
+      question: Which role records and accepts a warehouse GRN, and is warehouse receiver confirmation sufficient or must an order admin accept it?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Only an order admin with MANAGE_ORDERS records the manual goods-received confirmation; brand notification is informational.
+      basis: User confirmed the warehouse flow remains Renivet-managed and the admin manually confirms receipt before shipping.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-002
+      question: What minimum evidence is mandatory for a GRN (file, supplier delivery reference, AWB, or receiver attestation)?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Require receiver, date, quantity, and warehouse; delivery reference is optional and no file upload is required.
+      basis: User confirmed this is a manual status/control option, not a blocking document-upload workflow.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: integration
+      classification: REQUIRED
+      reason: Prove no-GRN warehouse dispatch is rejected and accepted GRN allows it.
+      scenarios: [SCN-001, SCN-002]
+    - id: TEXP-002
+      category: regression
+      classification: REQUIRED
+      reason: Direct-mode challan behavior remains unchanged.
+      scenarios: [SCN-004]
+    - id: TEXP-003
+      category: security
+      classification: REQUIRED
+      reason: Authorization and cross-brand isolation protect receipt acceptance.
+      scenarios: [SCN-005]
+    - id: TEXP-004
+      category: integration
+      classification: REQUIRED
+      reason: Retry, correction, concurrency, provider failure, and migration fail-closed behavior must be verified.
+      scenarios: [SCN-003, SCN-006, SCN-008]
+    - id: TEXP-005
+      category: ui_ux
+      classification: REQUIRED
+      reason: Document-chain UI/API exposes GRN status and shipping classification without fake zero lines.
+      scenarios: [SCN-007]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren183_critic
+    fresh_context: true
+    read_only: true
+    required_categories:
+        [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed:
+        [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-001
+          classification: MINOR
+          summary: "Resolved by user: admin-only manual GRN confirmation with no file upload."
+        - id: CRIT-002
+          classification: MAJOR
+          summary: Guard/receipt correction race needs an atomic locking/version design.
+        - id: CRIT-003
+          classification: MAJOR
+          summary: Idempotency key and duplicate retry semantics are unspecified.
+        - id: CRIT-004
+          classification: MAJOR
+          summary: Current/stale receipt semantics across FO lifecycle changes are undefined.
+        - id: CRIT-005
+          classification: MAJOR
+          summary: Receipt transition matrix and cumulative quantity semantics are incomplete.
+        - id: CRIT-006
+          classification: MAJOR
+          summary: Legacy migration/index rollout and rollback behavior are unspecified.
+        - id: CRIT-007
+          classification: MINOR
+          summary: Receipt audit events, metrics, and API error contracts need definition.
+        - id: CRIT-008
+          classification: MINOR
+          summary: Provider/status transition atomicity needs explicit contract.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+traceability:
+    requirement_to_scenarios:
+        - { requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-002, SCN-003, SCN-004] }
+        - { requirement_id: REQ-002, scenario_ids: [SCN-002, SCN-003] }
+        - { requirement_id: REQ-003, scenario_ids: [SCN-001, SCN-002] }
+        - { requirement_id: REQ-004, scenario_ids: [SCN-004, SCN-005, SCN-008] }
+        - { requirement_id: REQ-005, scenario_ids: [SCN-003, SCN-006, SCN-008] }
+        - { requirement_id: REQ-006, scenario_ids: [SCN-007] }
+    scenario_to_invariants:
+        - { scenario_id: SCN-001, invariant_ids: [INV-001, INV-002] }
+        - { scenario_id: SCN-002, invariant_ids: [INV-001, INV-003, INV-005] }
+        - { scenario_id: SCN-003, invariant_ids: [INV-001, INV-003, INV-004] }
+        - { scenario_id: SCN-004, invariant_ids: [INV-002, INV-005] }
+        - { scenario_id: SCN-005, invariant_ids: [INV-003] }
+        - { scenario_id: SCN-006, invariant_ids: [INV-004] }
+        - { scenario_id: SCN-007, invariant_ids: [INV-002] }
+        - { scenario_id: SCN-008, invariant_ids: [INV-001, INV-004] }
+    scenario_to_test_expectations:
+        - { scenario_id: SCN-001, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-002, test_expectation_ids: [TEXP-001] }
+        - { scenario_id: SCN-003, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-004, test_expectation_ids: [TEXP-002] }
+        - { scenario_id: SCN-005, test_expectation_ids: [TEXP-003] }
+        - { scenario_id: SCN-006, test_expectation_ids: [TEXP-004] }
+        - { scenario_id: SCN-007, test_expectation_ids: [TEXP-005] }
+        - { scenario_id: SCN-008, test_expectation_ids: [TEXP-004] }

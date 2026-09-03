@@ -29,6 +29,7 @@ import {
     corporateProformaInvoiceInputSchema,
     corporatePurchaseOrderInputSchema,
     corporatePurchaseOrderReviewInputSchema,
+    corporateQcReviewInputSchema,
     corporateQcSubmissionInputSchema,
     corporateQuoteDecisionInputSchema,
     corporateQuoteInputSchema,
@@ -42,6 +43,7 @@ import {
     corporateTaxInvoiceInputSchema,
     corporateUpdateConsigneeAddressInputSchema,
     corporateVendorPurchaseOrderInputSchema,
+    corporateWarehouseGoodsReceiptInputSchema,
 } from "@/lib/validations/corporate-platform";
 import { z } from "zod";
 
@@ -180,9 +182,16 @@ export const corporatePlatformRouter = createTRPCRouter({
             return corporatePlatformService.createTask(ctx.user.id, input);
         }),
     submitQc: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateQcSubmissionInputSchema)
         .mutation(({ ctx, input }) => {
             return corporatePlatformService.submitQc(ctx.user.id, input);
+        }),
+    reviewQc: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateQcReviewInputSchema)
+        .mutation(({ ctx, input }) => {
+            return corporatePlatformService.reviewQc(ctx.user.id, input);
         }),
     saveShipment: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
@@ -190,6 +199,15 @@ export const corporatePlatformRouter = createTRPCRouter({
         .mutation(({ ctx, input }) => {
             return corporatePlatformService.saveShipment(ctx.user.id, input);
         }),
+    recordWarehouseGoodsReceipt: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
+        .input(corporateWarehouseGoodsReceiptInputSchema)
+        .mutation(({ ctx, input }) =>
+            corporatePlatformService.recordWarehouseGoodsReceipt(
+                ctx.user.id,
+                input
+            )
+        ),
     updateConsigneeAddress: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateUpdateConsigneeAddressInputSchema)
@@ -389,8 +407,11 @@ export const corporatePlatformRouter = createTRPCRouter({
     reviewBrandTaxInvoice: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(corporateBrandTaxInvoiceReviewInputSchema)
-        .mutation(({ input }) => {
-            return corporateDocumentService.reviewBrandTaxInvoice(input);
+        .mutation(({ ctx, input }) => {
+            return corporateDocumentService.reviewBrandTaxInvoice(
+                ctx.user.id,
+                input
+            );
         }),
     issueDeliveryChallan: protectedProcedure
         .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
@@ -411,6 +432,7 @@ export const corporatePlatformRouter = createTRPCRouter({
             return corporateDocumentService.updateSettings(input);
         }),
     updateBrandAssignedOrderStatus: protectedProcedure
+        .use(isTRPCAuth(BitFieldSitePermission.MANAGE_ORDERS))
         .input(
             z.object({
                 brandId: z.string().uuid(),
@@ -435,14 +457,18 @@ export const corporatePlatformRouter = createTRPCRouter({
         .input(
             z.object({
                 orderId: z.string().uuid(),
-                commissionPercent: z.number().min(0).max(100),
                 notes: z.string().trim().max(1000).nullish(),
+                adjustmentReason: z.string().trim().min(3).max(1000).nullish(),
             })
         )
         .mutation(({ ctx, input }) => {
             return corporateDocumentService.issueSettlementStatement(
                 ctx.user.id,
-                input
+                {
+                    ...input,
+                    notes: input.notes ?? undefined,
+                    adjustmentReason: input.adjustmentReason ?? undefined,
+                }
             );
         }),
     generateReport: protectedProcedure

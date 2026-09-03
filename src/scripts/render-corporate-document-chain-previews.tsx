@@ -163,6 +163,7 @@ async function main() {
             <CorporateSettlementStatementTemplate
                 data={{
                     statementNumber: "SET/2627/00001",
+                    version: 1,
                     statementDate: "2026-08-20",
                     orderNumber: "REN-CORP-PO-1787161038701",
                     invoiceNumber: "BAM/2627/00001",
@@ -172,6 +173,7 @@ async function main() {
                     commissionPercent: 20,
                     commissionAmountPaise: 1_200_000,
                     commissionGstRatePercent: 18,
+                    commissionHsnCode: "9985",
                     commissionGstAmountPaise: 216_000,
                     tcsPercent: 0.5,
                     tcsAmountPaise: 30_000,

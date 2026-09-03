@@ -147,6 +147,21 @@ export async function GET(
             (order.unitPricePaise ?? Math.round(order.subtotalPaise / Math.max(1, order.quantity))));
 
     const baseSubtotalPaise = unitPricePaise * vendorPo.quantity;
+    const totalTaxablePaise =
+        vendorPo.taxableValuePaise ?? baseSubtotalPaise;
+    const customizationPaise = Math.max(
+        0,
+        totalTaxablePaise - baseSubtotalPaise
+    );
+    const gstAmountPaise =
+        (vendorPo.cgstPaise ?? 0) +
+        (vendorPo.sgstPaise ?? 0) +
+        (vendorPo.igstPaise ?? 0);
+    const totalAmountPaise =
+        vendorPo.totalAmountPaise ?? totalTaxablePaise + gstAmountPaise;
+    const sizeBreakdown = Object.entries(order.sizeBreakdown ?? {})
+        .map(([size, quantity]) => ({ size, quantity: Number(quantity) }))
+        .filter((row) => row.size.trim() && Number.isFinite(row.quantity));
 
     // Fetch extra charge rules with amounts if selected
     let extraChargeDescriptions: string[] = [];
@@ -187,32 +202,26 @@ export async function GET(
     }
 
     const extrasSummary = extraChargeDescriptions.join(" | ");
-    const customizationPaise =
-        order.quote?.customizationCostPaise ??
-        order.quote?.manualExtraAmountPaise ??
-        order.customizationPaise ??
-        0;
-
-    const totalTaxablePaise = baseSubtotalPaise + customizationPaise;
-
     const specsSummary = [formattedGsm, fabric].filter(Boolean).join(" | ");
-    const itemDetail = [
-        specsSummary,
-        extrasSummary ? `Extras: ${extrasSummary}` : null,
-    ]
-        .filter(Boolean)
-        .join(" | ") ||
+    const itemDetail =
+        specsSummary ||
         "Manufacture and fulfil as per approved corporate specifications.";
+    const expectedDeliveryDate = (() => {
+        const date = vendorPo.expectedDeliveryDate
+            ? new Date(vendorPo.expectedDeliveryDate)
+            : new Date();
+        if (!vendorPo.expectedDeliveryDate) date.setDate(date.getDate() + 7);
+        return date.toLocaleDateString("en-IN");
+    })();
 
     const data: CorporateCommercialDocumentData = {
-        title: "Fulfillment Order",
+        title: "Brand Fulfillment Order",
         subtitle:
             "Operational instruction — NOT a purchase order. Renivet is not buying from the brand.",
         documentType: "fulfillment_order",
         documentNumber: docNumber,
         documentDate: vendorPo.issueDate || new Date(),
-        validUntil: vendorPo.expectedDeliveryDate,
-        fromLabel: "Issued By (Platform)",
+        fromLabel: "Fulfilled By",
         toLabel: "Fulfillment Brand (Supplier)",
         from: {
             name: settings.legalName,
@@ -239,11 +248,7 @@ export async function GET(
             },
             {
                 label: "Expected delivery",
-                value: vendorPo.expectedDeliveryDate
-                    ? new Date(
-                          vendorPo.expectedDeliveryDate
-                      ).toLocaleDateString("en-IN")
-                    : "As per agreed timeline",
+                value: expectedDeliveryDate,
             },
             { label: "Corporate order", value: order.publicOrderId },
             {
@@ -275,23 +280,48 @@ export async function GET(
                 value: "Renivet issues Tax Invoice on brand behalf",
             },
         ],
-        item: {
-            description:
-                product?.title ?? productType ?? "Corporate merchandise",
-            detail: itemDetail,
-            sku: product?.sku ?? product?.nativeSku,
-            hsn,
-            quantity: vendorPo.quantity,
-            unitRatePaise: unitPricePaise,
-            amountPaise: baseSubtotalPaise,
-        },
+        items: [
+            {
+                description:
+                    product?.title ?? productType ?? "Corporate merchandise",
+                detail: itemDetail,
+                sku: product?.sku ?? product?.nativeSku,
+                hsn,
+                quantity: vendorPo.quantity,
+                unitRatePaise: unitPricePaise,
+                amountPaise: baseSubtotalPaise,
+                totalAmountPaise: baseSubtotalPaise,
+            },
+            ...(customizationPaise > 0
+                ? [
+                      {
+                          description: "Customization / Extras",
+                          detail:
+                              extrasSummary ||
+                              "Customization included with the product supply.",
+                          hsn: "NA",
+                          quantity: 1,
+                          unit: "lot",
+                          unitRatePaise: customizationPaise,
+                          amountPaise: customizationPaise,
+                          totalAmountPaise: customizationPaise,
+                      },
+                  ]
+                : []),
+        ],
+        sizeBreakdown,
         totals: {
             subtotalPaise:
                 customizationPaise > 0 ? baseSubtotalPaise : undefined,
             customizationPaise:
                 customizationPaise > 0 ? customizationPaise : undefined,
             taxableValuePaise: totalTaxablePaise,
-            totalAmountPaise: totalTaxablePaise,
+            gstRateBps: vendorPo.gstRateBps,
+            gstAmountPaise,
+            cgstPaise: vendorPo.cgstPaise,
+            sgstPaise: vendorPo.sgstPaise,
+            igstPaise: vendorPo.igstPaise,
+            totalAmountPaise,
         },
         notes: Array.from(
             new Set([

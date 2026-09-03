@@ -1,4 +1,3 @@
-import React from "react";
 import {
     Document,
     Image,
@@ -7,6 +6,7 @@ import {
     Text,
     View,
 } from "@react-pdf/renderer";
+import React from "react";
 
 const ink = "#1e2a22";
 const moss = "#3f5e42";
@@ -132,6 +132,32 @@ const styles = StyleSheet.create({
     purchaseTotal: { width: "12%", textAlign: "right" },
     last: { borderRightWidth: 0 },
     itemDetail: { marginTop: 2, color: "#66756a" },
+    sizeBreakdown: {
+        marginTop: 9,
+        borderWidth: 1,
+        borderColor: line,
+    },
+    sizeBreakdownTitle: {
+        padding: 4,
+        backgroundColor: paperAlt,
+        color: moss,
+        fontFamily: "Helvetica-Bold",
+        fontSize: 6.6,
+    },
+    sizeBreakdownRow: {
+        flexDirection: "row",
+        borderTopWidth: 1,
+        borderTopColor: line,
+    },
+    sizeBreakdownCell: { width: "50%", padding: 4, fontSize: 6.8 },
+    sizeBreakdownQuantity: {
+        width: "50%",
+        padding: 4,
+        fontSize: 6.8,
+        textAlign: "right",
+        borderLeftWidth: 1,
+        borderLeftColor: line,
+    },
     lower: {
         marginTop: 10,
         flexDirection: "row",
@@ -223,6 +249,7 @@ export type CorporateCommercialDocumentData = {
         | "Proforma Invoice"
         | "Purchase Order"
         | "Fulfillment Order"
+        | "Brand Fulfillment Order"
         | "Delivery Challan";
     subtitle: string;
     documentType?: string;
@@ -233,9 +260,11 @@ export type CorporateCommercialDocumentData = {
     toLabel: string;
     from: CorporateCommercialParty;
     to: CorporateCommercialParty;
+    shipTo?: CorporateCommercialParty | null;
     references?: Array<{ label: string; value?: string | null }>;
     item?: CorporateCommercialItem;
     items?: CorporateCommercialItem[];
+    sizeBreakdown?: Array<{ size: string; quantity: number }>;
     totals?: {
         subtotalPaise?: number;
         customizationPaise?: number;
@@ -273,7 +302,10 @@ function money(value?: number | null) {
 }
 
 function date(value: string | Date) {
-    return new Date(value).toLocaleDateString("en-IN");
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime())
+        ? new Date().toLocaleDateString("en-IN")
+        : parsed.toLocaleDateString("en-IN");
 }
 
 export function CorporateCommercialDocumentTemplate({
@@ -325,25 +357,59 @@ export function CorporateCommercialDocumentTemplate({
     ];
 
     const passedReferences = (data.references ?? []).filter(
-        (ref) =>
-            ![
+        (ref) => {
+            const label = ref.label.trim().toLowerCase();
+            return ![
                 "pi number",
                 "document number",
                 "fo number",
                 "date",
                 "document date",
                 "valid until",
-                "expected delivery",
-            ].includes(ref.label.trim().toLowerCase())
+            ].includes(label) &&
+                !(label === "expected delivery" && !isFulfillmentOrder);
+        }
     );
 
     const references = [...baseReferences, ...passedReferences];
     const hasPricing = Boolean(data.totals);
     const firstItem = data.items?.[0] ?? data.item;
-    const gstRateBps =
-        firstItem?.gstRateBps ?? data.totals?.gstRateBps ?? null;
+    const gstRateBps = data.totals?.gstRateBps ?? firstItem?.gstRateBps ?? null;
     const gstAmountPaise =
-        firstItem?.gstAmountPaise ?? data.totals?.gstAmountPaise ?? null;
+        data.totals?.gstAmountPaise ??
+        firstItem?.gstAmountPaise ??
+        ((data.totals?.cgstPaise ?? 0) +
+            (data.totals?.sgstPaise ?? 0) +
+            (data.totals?.igstPaise ?? 0));
+    const hasGstSplit =
+        (data.totals?.cgstPaise ?? 0) > 0 ||
+        (data.totals?.sgstPaise ?? 0) > 0 ||
+        (data.totals?.igstPaise ?? 0) > 0;
+    const splitGstRows = (
+        <>
+            {(data.totals?.cgstPaise ?? 0) > 0 ? (
+                <Total
+                    label={`CGST (${gstRateBps == null ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                    value={data.totals?.cgstPaise ?? 0}
+                />
+            ) : null}
+            {(data.totals?.sgstPaise ?? 0) > 0 ? (
+                <Total
+                    label={`SGST (${gstRateBps == null ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                    value={data.totals?.sgstPaise ?? 0}
+                />
+            ) : null}
+            {(data.totals?.igstPaise ?? 0) > 0 ? (
+                <Total
+                    label={`IGST (${gstRateBps == null ? "" : (gstRateBps / 100).toFixed(2) + "%"})`}
+                    value={data.totals?.igstPaise ?? 0}
+                />
+            ) : null}
+        </>
+    );
+    const sizeBreakdown = (data.sizeBreakdown ?? []).filter(
+        (row) => row.size.trim() && row.quantity > 0
+    );
 
     return (
         <Document>
@@ -352,15 +418,16 @@ export function CorporateCommercialDocumentTemplate({
                     <Image src={renivetLogoUrl} style={styles.logo} />
                     <View style={styles.headerCopy}>
                         <Text style={styles.title}>{data.title}</Text>
-                    {data.subtitle ? (
-                        <Text style={styles.subtitle}>{data.subtitle}</Text>
-                    ) : null}
+                        {data.subtitle && !isFulfillmentOrder ? (
+                            <Text style={styles.subtitle}>{data.subtitle}</Text>
+                        ) : null}
                     </View>
                 </View>
 
                 <View style={styles.grid}>
                     <Party label={data.fromLabel} party={data.from} />
-                    <Party label={data.toLabel} party={data.to} right />
+                    <Party label="Bill To" party={data.to} right />
+                    {data.shipTo ? <Party label="Ship To" party={data.shipTo} /> : null}
                 </View>
 
                 <View style={styles.meta}>
@@ -390,11 +457,7 @@ export function CorporateCommercialDocumentTemplate({
                             Description
                         </Text>
                         {showSku ? (
-                            <Text
-                                style={[styles.th, styles.sku]}
-                            >
-                                SKU
-                            </Text>
+                            <Text style={[styles.th, styles.sku]}>SKU</Text>
                         ) : null}
                         <Text
                             style={[
@@ -433,7 +496,7 @@ export function CorporateCommercialDocumentTemplate({
                             {showDetailedTax
                                 ? "Unit price excl. GST"
                                 : isFulfillmentOrder
-                                  ? "Agreed rate (excl. GST)"
+                                  ? "Agreed rate per piece (excl. GST)"
                                   : "Rate INR"}
                         </Text>
                         {showDetailedTax ? (
@@ -494,7 +557,22 @@ export function CorporateCommercialDocumentTemplate({
                           ? [data.item]
                           : []
                     ).map((rowItem, idx) => {
-                        const rowGstRateBps = rowItem.gstRateBps ?? gstRateBps;
+                        const isCustomizationRow =
+                            rowItem.description.trim().toLowerCase() ===
+                            "customization / extras";
+                        const rowGstRateBps = isCustomizationRow
+                            ? null
+                            : (rowItem.gstRateBps ?? gstRateBps);
+                        if (
+                            showDetailedTax &&
+                            !isCustomizationRow &&
+                            (rowItem.amountPaise ?? 0) > 0 &&
+                            rowGstRateBps === null
+                        ) {
+                            throw new Error(
+                                "Corporate document requires a resolved GST classification"
+                            );
+                        }
                         const rowGstAmountPaise =
                             rowItem.gstAmountPaise ??
                             (rowItem.amountPaise && rowGstRateBps
@@ -545,7 +623,7 @@ export function CorporateCommercialDocumentTemplate({
                                               : styles.hsn,
                                     ]}
                                 >
-                                    {rowItem.hsn || "-"}
+                                    {isCustomizationRow ? "NA" : rowItem.hsn || "-"}
                                 </Text>
                                 <Text
                                     style={[
@@ -557,8 +635,7 @@ export function CorporateCommercialDocumentTemplate({
                                               : styles.quantity,
                                     ]}
                                 >
-                                    {rowItem.quantity}{" "}
-                                    {rowItem.unit || "pcs"}
+                                    {rowItem.quantity} {rowItem.unit || "pcs"}
                                 </Text>
                                 <Text
                                     style={[
@@ -596,7 +673,9 @@ export function CorporateCommercialDocumentTemplate({
                                                     : styles.purchaseGstRate,
                                             ]}
                                         >
-                                            {rowGstRateBps === null ||
+                                            {isCustomizationRow
+                                                ? "NA"
+                                                : rowGstRateBps === null ||
                                             rowGstRateBps === undefined
                                                 ? "-"
                                                 : `${(rowGstRateBps / 100).toFixed(2)}%`}
@@ -609,7 +688,9 @@ export function CorporateCommercialDocumentTemplate({
                                                     : styles.purchaseGstAmount,
                                             ]}
                                         >
-                                            {hasPricing
+                                            {isCustomizationRow
+                                                ? "NA"
+                                                : hasPricing
                                                 ? money(rowGstAmountPaise)
                                                 : "-"}
                                         </Text>
@@ -626,66 +707,170 @@ export function CorporateCommercialDocumentTemplate({
                                         styles.last,
                                     ]}
                                 >
-                                    {hasPricing ? money(rowTotalPaise) : "-"}
+                                    {isCustomizationRow
+                                        ? "NA"
+                                        : hasPricing
+                                          ? money(rowTotalPaise)
+                                          : "-"}
                                 </Text>
                             </View>
                         );
                     })}
                 </View>
 
+                {isFulfillmentOrder && sizeBreakdown.length > 0 ? (
+                    <View style={styles.sizeBreakdown}>
+                        <Text style={styles.sizeBreakdownTitle}>
+                            SIZE-WISE PRODUCTION BREAKDOWN
+                        </Text>
+                        <View style={styles.sizeBreakdownRow}>
+                            <Text style={styles.sizeBreakdownCell}>Size</Text>
+                            <Text style={styles.sizeBreakdownQuantity}>
+                                Pieces
+                            </Text>
+                        </View>
+                        {sizeBreakdown.map((row) => (
+                            <View key={row.size} style={styles.sizeBreakdownRow}>
+                                <Text style={styles.sizeBreakdownCell}>
+                                    {row.size}
+                                </Text>
+                                <Text style={styles.sizeBreakdownQuantity}>
+                                    {row.quantity} pcs
+                                </Text>
+                            </View>
+                        ))}
+                        <View style={styles.sizeBreakdownRow}>
+                            <Text
+                                style={[
+                                    styles.sizeBreakdownCell,
+                                    styles.grandTotal,
+                                ]}
+                            >
+                                Total
+                            </Text>
+                            <Text
+                                style={[
+                                    styles.sizeBreakdownQuantity,
+                                    styles.grandTotal,
+                                ]}
+                            >
+                                {sizeBreakdown.reduce(
+                                    (sum, row) => sum + row.quantity,
+                                    0
+                                )} pcs
+                            </Text>
+                        </View>
+                    </View>
+                ) : null}
+
                 <View
                     style={[
                         styles.lower,
-                        ...(showSignatureBlock
-                            ? []
-                            : [styles.lowerTotalsOnly]),
+                        ...(showSignatureBlock ? [] : [styles.lowerTotalsOnly]),
                     ]}
                 >
                     {showSignatureBlock ? (
                         <View style={styles.identity}>
-                        <Text style={styles.identityName}>
-                            {data.declarationCompanyName.toUpperCase()}
-                        </Text>
-                        {data.bank ? (
-                            <>
-                                <Text style={styles.label}>BANK DETAILS</Text>
-                                <BankRow
-                                    label="Bank name"
-                                    value={data.bank.bankName}
-                                />
-                                <BankRow
-                                    label="Account name"
-                                    value={data.bank.accountName || "Renivet"}
-                                />
-                                <BankRow
-                                    label="Account number"
-                                    value={data.bank.accountNumber}
-                                />
-                                <BankRow
-                                    label="IFSC code"
-                                    value={data.bank.ifsc}
-                                />
-                                {data.bank.branch ? (
+                            <Text style={styles.identityName}>
+                                {data.declarationCompanyName.toUpperCase()}
+                            </Text>
+                            {data.bank ? (
+                                <>
+                                    <Text style={styles.label}>
+                                        BANK DETAILS
+                                    </Text>
                                     <BankRow
-                                        label="Branch"
-                                        value={data.bank.branch}
+                                        label="Bank name"
+                                        value={data.bank.bankName}
                                     />
-                                ) : null}
-                            </>
-                        ) : null}
-                        <Text style={styles.signature}>
-                            For {data.declarationCompanyName}
-                            {"\n"}
-                            {data.signatoryName}
-                            {"\n"}
-                            Authorised Signatory
-                        </Text>
+                                    <BankRow
+                                        label="Account name"
+                                        value={
+                                            data.bank.accountName || "Renivet"
+                                        }
+                                    />
+                                    <BankRow
+                                        label="Account number"
+                                        value={data.bank.accountNumber}
+                                    />
+                                    <BankRow
+                                        label="IFSC code"
+                                        value={data.bank.ifsc}
+                                    />
+                                    {data.bank.branch ? (
+                                        <BankRow
+                                            label="Branch"
+                                            value={data.bank.branch}
+                                        />
+                                    ) : null}
+                                </>
+                            ) : null}
+                            <Text style={styles.signature}>
+                                For {data.declarationCompanyName}
+                                {"\n"}
+                                {data.signatoryName}
+                                {"\n"}
+                                Authorised Signatory
+                            </Text>
                         </View>
                     ) : null}
 
                     {data.totals ? (
                         <View style={styles.totals}>
-                            {data.totals.customizationPaise &&
+                            {isFulfillmentOrder ? (
+                                <>
+                                    {data.totals.subtotalPaise ? (
+                                        <Total
+                                            label="Base items subtotal (excl. GST)"
+                                            value={data.totals.subtotalPaise}
+                                        />
+                                    ) : null}
+                                    {data.totals.customizationPaise &&
+                                    data.totals.customizationPaise > 0 ? (
+                                        <Total
+                                            label="Customization / Extras (excl. GST)"
+                                            value={
+                                                data.totals.customizationPaise
+                                            }
+                                        />
+                                    ) : null}
+                                    <Total
+                                        label="Taxable value (excl. GST)"
+                                        value={data.totals.taxableValuePaise}
+                                    />
+                                    {(data.totals.cgstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label={`CGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                                            value={data.totals.cgstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.sgstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label={`SGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 200).toFixed(2) + "%"})`}
+                                            value={data.totals.sgstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.igstPaise ?? 0) > 0 ? (
+                                        <Total
+                                            label={`IGST (${gstRateBps === null || gstRateBps === undefined ? "" : (gstRateBps / 100).toFixed(2) + "%"})`}
+                                            value={data.totals.igstPaise ?? 0}
+                                        />
+                                    ) : null}
+                                    {(data.totals.cgstPaise ?? 0) <= 0 &&
+                                    (data.totals.sgstPaise ?? 0) <= 0 &&
+                                    (data.totals.igstPaise ?? 0) <= 0 ? (
+                                        <Total
+                                            label={`GST${
+                                                gstRateBps === null ||
+                                                gstRateBps === undefined
+                                                    ? ""
+                                                    : ` (${(gstRateBps / 100).toFixed(2)}%)`
+                                            }`}
+                                            value={gstAmountPaise ?? 0}
+                                        />
+                                    ) : null}
+                                </>
+                            ) : data.totals.customizationPaise &&
                             data.totals.customizationPaise > 0 ? (
                                 <>
                                     {data.totals.subtotalPaise ? (
@@ -706,7 +891,13 @@ export function CorporateCommercialDocumentTemplate({
                                         }
                                         value={data.totals.customizationPaise}
                                     />
-                                    {data.totals.baseGstAmountPaise !==
+                                    {!isFulfillmentOrder ? (
+                                        <Total
+                                            label="Taxable value"
+                                            value={data.totals.taxableValuePaise}
+                                        />
+                                    ) : null}
+                                    {!hasGstSplit && data.totals.baseGstAmountPaise !==
                                         undefined &&
                                     data.totals.baseGstAmountPaise !== null ? (
                                         <Total
@@ -720,7 +911,7 @@ export function CorporateCommercialDocumentTemplate({
                                             }
                                         />
                                     ) : null}
-                                    {data.totals.customizationGstAmountPaise !==
+                                    {!hasGstSplit && data.totals.customizationGstAmountPaise !==
                                         undefined &&
                                     data.totals.customizationGstAmountPaise !==
                                         null ? (
@@ -728,8 +919,7 @@ export function CorporateCommercialDocumentTemplate({
                                             label={`GST on customization (${(
                                                 (data.totals
                                                     .customizationGstRateBps ??
-                                                    1800) /
-                                                100
+                                                    0) / 100
                                             ).toFixed(2)}%)`}
                                             value={
                                                 data.totals
@@ -737,7 +927,8 @@ export function CorporateCommercialDocumentTemplate({
                                             }
                                         />
                                     ) : null}
-                                    {data.totals.baseGstAmountPaise ===
+                                    {hasGstSplit ? splitGstRows : null}
+                                    {!hasGstSplit && data.totals.baseGstAmountPaise ===
                                         undefined && showDetailedTax ? (
                                         <Total
                                             label={`GST${
@@ -759,7 +950,9 @@ export function CorporateCommercialDocumentTemplate({
                                         }
                                         value={data.totals.taxableValuePaise}
                                     />
-                                    {showDetailedTax ? (
+                                    {showDetailedTax && hasGstSplit ? (
+                                        splitGstRows
+                                    ) : showDetailedTax ? (
                                         <Total
                                             label={`GST${
                                                 gstRateBps === null
@@ -769,19 +962,22 @@ export function CorporateCommercialDocumentTemplate({
                                             value={gstAmountPaise ?? 0}
                                         />
                                     ) : null}
-                                    {!showDetailedTax && data.totals.cgstPaise ? (
+                                    {!showDetailedTax &&
+                                    data.totals.cgstPaise ? (
                                         <Total
                                             label="CGST"
                                             value={data.totals.cgstPaise}
                                         />
                                     ) : null}
-                                    {!showDetailedTax && data.totals.sgstPaise ? (
+                                    {!showDetailedTax &&
+                                    data.totals.sgstPaise ? (
                                         <Total
                                             label="SGST"
                                             value={data.totals.sgstPaise}
                                         />
                                     ) : null}
-                                    {!showDetailedTax && data.totals.igstPaise ? (
+                                    {!showDetailedTax &&
+                                    data.totals.igstPaise ? (
                                         <Total
                                             label="IGST"
                                             value={data.totals.igstPaise}
@@ -791,11 +987,9 @@ export function CorporateCommercialDocumentTemplate({
                             )}
                             <Total
                                 label={
-                                    showDetailedTax
+                                    showDetailedTax || isFulfillmentOrder
                                         ? "Grand total incl. GST"
-                                        : isFulfillmentOrder
-                                          ? "Document total (excl. GST)"
-                                          : "Document total"
+                                        : "Document total"
                                 }
                                 value={data.totals.totalAmountPaise}
                                 final

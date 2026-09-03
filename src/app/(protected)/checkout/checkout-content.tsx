@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea-general";
 import { POSTHOG_EVENTS } from "@/config/posthog";
+import { buildMetaPurchaseTrackingEvent } from "@/lib/analytics/meta-purchase";
 import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { fbEvent } from "@/lib/fbpixel";
 import {
@@ -467,59 +468,45 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
     const { mutateAsync: createOrder, isPending: isOrderCreating } =
         trpc.general.orders.createOrder.useMutation({
-            onSuccess: (order, variables) => {
-                const totalAmountPaise = Number(variables.totalAmount ?? 0);
-                const eventId =
-                    typeof crypto !== "undefined" && crypto.randomUUID
-                        ? crypto.randomUUID()
-                        : "evt_" +
-                          new Date().getTime() +
-                          "_" +
-                          Math.random().toString(36).substr(2, 9);
-
-                fbEvent(
-                    "Purchase",
-                    {
-                        value: totalAmountPaise,
-                        currency: "INR",
-                        content_type: "product",
-                        content_ids: variables.items.map(
-                            (item: any) => item.productId
-                        ),
-                        num_items: variables.totalItems,
-                    },
-                    { eventId }
-                );
-
-                trackPurchaseCapi(
-                    eventId,
-                    {
-                        em: user?.email,
-                        ph: selectedShippingAddress?.phone,
-                        fn: user?.firstName ?? undefined,
-                        ln: user?.lastName ?? undefined,
-                        ct: selectedShippingAddress?.city,
-                        st: selectedShippingAddress?.state,
-                        zp: selectedShippingAddress?.zip,
-                        external_id: user?.id,
-                    },
-                    {
-                        value: totalAmountPaise,
-                        currency: "INR",
-                        content_type: "product",
-                        content_ids: variables.items.map(
-                            (item: any) => item.productId
-                        ),
-                        num_items: variables.totalItems,
-                    },
-                    getAbsoluteURL(window.location.href)
-                ).catch((err) => console.error("CAPI Purchase Error:", err));
-            },
+            onSuccess: () => undefined,
             onError: (err) => {
                 console.error("Error creating order:", err);
                 handleClientError(err);
             },
         });
+
+    const trackMetaPurchase = (completedOrderIds: string[]) => {
+        if (completedOrderIds.length === 0) {
+            console.error("Skipping Meta Purchase without completed order IDs");
+            return;
+        }
+
+        const { eventId, purchasePayload } = buildMetaPurchaseTrackingEvent({
+            completedOrderIds,
+            totalAmountPaise: payableTotalPaise,
+            items: availableItems.map((item: any) => ({
+                productId: item.product.id,
+                quantity: item.quantity,
+            })),
+        });
+
+        fbEvent("Purchase", purchasePayload, { eventId });
+        trackPurchaseCapi(
+            eventId,
+            {
+                em: user?.email,
+                ph: selectedShippingAddress?.phone,
+                fn: user?.firstName ?? undefined,
+                ln: user?.lastName ?? undefined,
+                ct: selectedShippingAddress?.city,
+                st: selectedShippingAddress?.state,
+                zp: selectedShippingAddress?.zip,
+                external_id: user?.id,
+            },
+            purchasePayload,
+            getAbsoluteURL(window.location.href)
+        ).catch((err) => console.error("CAPI Purchase Error:", err));
+    };
 
     const buildOrderDetailsByBrand = ({
         paymentMethod,
@@ -800,13 +787,18 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                 ...orderDetails,
                                 intentId,
                             });
-                            if (orderIntent?.id && createdOrder?.id) {
-                                await linkOrderIntentToOrder({
-                                    userId: user.id,
-                                    intentId: orderIntent.id,
-                                    orderId: createdOrder.id,
-                                });
+                            if (orderIntent?.id) {
+                                await Promise.all(
+                                    createdOrder.map((order: { id: string }) =>
+                                        linkOrderIntentToOrder({
+                                            userId: user.id,
+                                            intentId: orderIntent.id,
+                                            orderId: order.id,
+                                        })
+                                    )
+                                );
                             }
+                            return createdOrder;
                         } catch (error: any) {
                             throw new Error(
                                 `Order creation failed: ${error.message}`
@@ -819,6 +811,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     },
                     orderIntentId: orderIntent.id,
                     onOrderSuccess: playSwapStampCelebration,
+                    onPurchaseSuccess: trackMetaPurchase,
                 });
 
                 initializeRazorpayPayment(options);
@@ -865,9 +858,17 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         setIsProcessingModalOpen(true);
 
         try {
+            const completedOrderIds: string[] = [];
             for (const orderDetails of orderDetailsByBrand) {
-                await retryCreateOrder(orderDetails);
+                const createdOrders = await retryCreateOrder(orderDetails);
+                completedOrderIds.push(
+                    ...createdOrders.map(
+                        (createdOrder: { id: string }) => createdOrder.id
+                    )
+                );
             }
+
+            trackMetaPurchase(completedOrderIds);
 
             if (!isBuyNow) {
                 deleteItemFromCart({ userId });
@@ -922,9 +923,17 @@ export default function CheckoutContent({ userId }: { userId: string }) {
         setIsProcessingModalOpen(true);
 
         try {
+            const completedOrderIds: string[] = [];
             for (const orderDetails of orderDetailsByBrand) {
-                await retryCreateOrder(orderDetails);
+                const createdOrders = await retryCreateOrder(orderDetails);
+                completedOrderIds.push(
+                    ...createdOrders.map(
+                        (createdOrder: { id: string }) => createdOrder.id
+                    )
+                );
             }
+
+            trackMetaPurchase(completedOrderIds);
 
             setProcessingModalTitle("Reward Redeemed Successfully");
             setProcessingModalDescription(

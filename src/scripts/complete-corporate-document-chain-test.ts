@@ -19,7 +19,8 @@ async function main() {
     const order = await db.query.corporateOrders.findFirst({
         where: eq(schema.corporateOrders.publicOrderId, "TEST-CORP-20X20-30"),
     });
-    if (!order?.brandId) throw new Error("Run the corporate test seed first");
+    if (!order?.brandId || !order.userId)
+        throw new Error("Run the corporate test seed first");
     const brandDetails = await db.query.brandConfidentials.findFirst({
         where: eq(schema.brandConfidentials.id, order.brandId),
     });
@@ -40,6 +41,14 @@ async function main() {
                 "Ship directly to the corporate customer after Renivet QC approval.",
         }
     );
+    if (
+        vendorPo.taxableValuePaise == null ||
+        vendorPo.cgstPaise == null ||
+        vendorPo.sgstPaise == null ||
+        vendorPo.igstPaise == null
+    ) {
+        throw new Error("The test Fulfillment Order needs a tax snapshot");
+    }
     let brandInvoice = await db.query.corporateBrandTaxInvoices.findFirst({
         where: eq(schema.corporateBrandTaxInvoices.orderId, order.id),
     });
@@ -51,6 +60,9 @@ async function main() {
                 vendorPurchaseOrderId: vendorPo.id,
                 invoiceNumber: "TEST-BRAND-TI-20X20",
                 invoiceDate: "2026-08-18",
+                foReference: vendorPo.foNumber,
+                quantity: vendorPo.quantity,
+                unitRatePaise: vendorPo.unitSellPricePaise,
                 supplierGstin: brandDetails.gstin,
                 recipientGstin: "10AANCR5687A1ZG",
                 hsnCode: "6109",
@@ -69,13 +81,18 @@ async function main() {
             }
         );
     }
-    if (brandInvoice.validationStatus !== "validated") {
-        brandInvoice = await corporateDocumentService.reviewBrandTaxInvoice({
-            invoiceId: brandInvoice.id,
-            validationStatus: "validated",
-            gstr2bStatus: "matched",
-            reviewNotes: "Validated test invoice; no external message sent.",
-        });
+    if (brandInvoice.validationStatus === "held") {
+        brandInvoice = await corporateDocumentService.reviewBrandTaxInvoice(
+            order.userId,
+            {
+                invoiceId: brandInvoice.id,
+                validationStatus: "accepted",
+                gstr2bStatus: "matched",
+                reviewReason:
+                    "Validated test invoice; no external message sent.",
+                expectedVersion: brandInvoice.transitionVersion,
+            }
+        );
     }
     await corporateDocumentService.issueDeliveryChallan(order.userId, {
         orderId: order.id,
@@ -114,7 +131,7 @@ async function main() {
                     proforma: chain.proformaInvoice?.invoiceNumber,
                     customerPo: chain.incomingPurchaseOrder?.poNumber,
                     receiptVoucher: chain.receiptVoucher?.voucherNumber,
-                    renivetPo: chain.vendorPurchaseOrder?.poNumber,
+                    renivetPo: chain.vendorPurchaseOrder?.foNumber,
                     brandTaxInvoice: chain.brandTaxInvoice?.invoiceNumber,
                     customerTaxInvoice: chain.customerTaxInvoice?.invoiceNumber,
                     deliveryChallan: chain.deliveryChallan?.challanNumber,

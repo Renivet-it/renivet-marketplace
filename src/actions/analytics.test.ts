@@ -75,6 +75,32 @@ test("request-free ViewContent sender forwards captured request data", async () 
     ]);
 });
 
+test("request-free ViewContent sender suppresses clear crawler traffic", async () => {
+    const sentEvents: unknown[][] = [];
+    const send = async (...args: unknown[]) => {
+        sentEvents.push(args);
+    };
+    const sendViewContent = viewContent.createViewContentCapiSender(send);
+    const previousFlag = process.env.META_CAPI_SUPPRESS_CRAWLERS;
+    process.env.META_CAPI_SUPPRESS_CRAWLERS = "true";
+
+    try {
+        await sendViewContent(...eventArguments, {
+            ...requestData,
+            userAgent:
+                "meta-externalads/1.1 (+https://developers.facebook.com/docs/sharing/webmasters/crawler)",
+        });
+    } finally {
+        if (previousFlag === undefined) {
+            delete process.env.META_CAPI_SUPPRESS_CRAWLERS;
+        } else {
+            process.env.META_CAPI_SUPPRESS_CRAWLERS = previousFlag;
+        }
+    }
+
+    expect(sentEvents).toEqual([]);
+});
+
 test("all public analytics wrappers retain four arguments", () => {
     expect(analytics.trackAddToCartCapi.length).toBe(4);
     expect(analytics.trackInitiateCheckoutCapi.length).toBe(4);
@@ -130,6 +156,23 @@ test("product lifecycle captures request data before after registration", async 
     expect(lifecycle).toEqual(["capture", "register"]);
     afterCallback!();
     expect(lifecycle).toEqual(["capture", "register", "after callback"]);
+});
+
+test("product lifecycle forwards a valid first-touch fbc override", async () => {
+    const schedule =
+        viewContent.createViewContentCapiAfterResponseCaptureScheduler(
+            async () => requestData,
+            (_registerAfter, ...args) => {
+                expect(args).toEqual([
+                    ...eventArguments,
+                    { ...requestData, fbc: "fb.1.1711111111111.paid-click" },
+                ]);
+            }
+        );
+
+    await schedule(() => {}, ...eventArguments, {
+        fbc: "fb.1.1711111111111.paid-click",
+    });
 });
 
 test("product lifecycle contains request-data capture failures without scheduling", async () => {

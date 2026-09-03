@@ -1,0 +1,323 @@
+schema_version: "1.0"
+task:
+    id: REN-177
+    title: "[Corporate Order] Fulfillment Order must be the single authoritative production source (size/artwork/color/QC/GST missing)"
+    source: linear
+    branch: ayanganguly333/corporate-order-qc
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-177/corporate-order-fulfillment-order-must-be-the-single
+        priority: High
+        labels: [Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L3
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Establishes the financial and production source of truth for corporate documents.
+        - Changes order/fulfillment persistence and downstream integrations.
+        - Incorrect totals or delivery responsibility can cause operational and financial loss.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, updates, comments, relations, and branch context
+        - Corporate FO schema, issuance service, validation schema, admin FO panel, and vendor-PO PDF route
+        - Corporate order/quote product, pricing, size, artwork, and delivery fields
+        - PI, invoice, order summary, settlement readers and local recomputation/fallbacks
+        - Existing authorization, idempotency, migrations, tests, and REN-178/179/180/183 dependencies
+    excluded_areas:
+        - Finance/CA tax and shipping legal decisions
+        - REN-183 warehouse GRN implementation
+        - Multi-vendor fulfillment architecture
+        - Broad PDF visual redesign
+        - Non-corporate marketplace documents
+    dependencies: [DEP-001, DEP-002, DEP-003, DEP-004]
+    integrations: [INT-001, INT-002, INT-003, INT-004, INT-005]
+    security_boundaries: [SEC-001, SEC-002, SEC-003]
+    state_transitions:
+        - approved_order -> snapshot_validated
+        - snapshot_validated -> fulfillment_order_issued
+        - fulfillment_order_issued -> downstream_documents_rendered
+    related_tests: [TEXP-001, TEXP-002, TEXP-003, TEXP-004, TEXP-005, TEXP-006]
+    uncertainties:
+        - REN-178 customization schema and REN-183 shipping classification are pending.
+        - Finance/CA customization tax treatment/rate is intentionally unresolved.
+        - Historical FOs lack fields that cannot always be derived and need an explicit compatibility policy.
+dependencies:
+    - id: DEP-001
+      name: REN-178 customization model
+      purpose: Supplies the canonical customization list.
+      description: Consume the structured list rather than creating an FO-specific duplicate model.
+      status: pending
+    - id: DEP-002
+      name: REN-179 HSN/GST enforcement
+      purpose: Supplies authoritative classified tax metadata.
+      description: FO snapshot must reject unresolved classification and avoid local defaults.
+      status: pending
+    - id: DEP-003
+      name: REN-180 document integrity
+      purpose: Coordinates document-safe identity/date/HSN/GST rendering.
+      description: All document readers must consume snapshot fields consistently.
+      status: pending
+    - id: DEP-004
+      name: REN-183 delivery-mode controls
+      purpose: Supplies warehouse GRN and shipping-charge classification rules.
+      description: Snapshot records delivery responsibility and exposes NOT_CHARGED (default), INCLUDED_IN_SUPPLY, or SEPARATELY_CHARGED.
+      status: resolved
+requirements:
+    - id: REQ-001
+      description: Persist a complete immutable versioned corporate commercial/production snapshot at FO issuance.
+      type: explicit
+    - id: REQ-002
+      description: Include all production fields and structured customizations required for factory execution.
+      type: explicit
+    - id: REQ-003
+      description: Include GST, customization/extras, and approved shipping classifications in one reconciled commercial total.
+      type: explicit
+    - id: REQ-004
+      description: Render FO and downstream documents from the stored snapshot without local recomputation or defaults.
+      type: explicit
+    - id: REQ-005
+      description: Persist and render explicit direct versus warehouse delivery responsibility without inventing freight.
+      type: explicit
+    - id: REQ-006
+      description: Ensure UI-entered values, including Packaging/Extras, are committed atomically or issuance fails visibly.
+      type: explicit
+    - id: REQ-007
+      description: Preserve authorization, idempotency, legacy readability, and provenance-marked additive migration.
+      type: inferred
+scenarios:
+    - id: SCN-001
+      requirement_ids: [REQ-001, REQ-002]
+      description: Issued FO stores a complete versioned snapshot.
+    - id: SCN-002
+      requirement_ids: [REQ-002, REQ-004]
+      description: All production fields appear identically in FO storage and PDF.
+    - id: SCN-003
+      requirement_ids: [REQ-003]
+      description: Stored total includes approved GST/customization/extras/shipping and reconciles.
+    - id: SCN-004
+      requirement_ids: [REQ-005]
+      description: Direct and warehouse delivery responsibility renders explicitly without fake freight.
+    - id: SCN-005
+      requirement_ids: [REQ-006]
+      description: Packaging/Extras is persisted and rendered or issuance fails.
+    - id: SCN-006
+      requirement_ids: [REQ-004]
+      description: Downstream documents consume the same snapshot.
+    - id: SCN-007
+      requirement_ids: [REQ-001, REQ-003, REQ-006]
+      description: Missing authority/data blocks issuance atomically.
+    - id: SCN-008
+      requirement_ids: [REQ-007]
+      description: Concurrent/retried issuance is idempotent.
+    - id: SCN-009
+      requirement_ids: [REQ-007]
+      description: Unauthorized cross-order snapshot access is rejected.
+    - id: SCN-010
+      requirement_ids: [REQ-007]
+      description: Legacy FOs remain readable with provenance-marked compatibility data.
+    - id: SCN-011
+      requirement_ids: [REQ-001, REQ-003]
+      description: Future approved authority changes affect new snapshots only.
+invariants:
+    - id: INV-001
+      description: Each issued FO has one immutable authoritative versioned snapshot.
+    - id: INV-002
+      description: Stored and rendered totals are identical and reconciled.
+    - id: INV-003
+      description: Readers do not recompute or silently default snapshot fields.
+    - id: INV-004
+      description: UI values are persisted or issuance fails.
+    - id: INV-005
+      description: Delivery responsibility and freight classification are explicit.
+    - id: INV-006
+      description: Snapshot and FO writes are atomic and idempotent.
+    - id: INV-007
+      description: Snapshot data is authorized and order-scoped.
+    - id: INV-008
+      description: Legacy migration never invents facts.
+    - id: INV-009
+      description: Tax-treatment metadata remains data-driven and decision-neutral.
+flows:
+    - id: FLOW-001
+      description: Approved order and FO input build and atomically persist the canonical snapshot.
+      state_transitions: [approved_order -> snapshot_validated, snapshot_validated -> fulfillment_order_issued]
+    - id: FLOW-002
+      description: FO snapshot drives all downstream document readers.
+      state_transitions: [fulfillment_order_issued -> downstream_documents_rendered]
+    - id: FLOW-003
+      description: Delivery mode determines explicit ship-to and responsibility metadata.
+      state_transitions: [approved_order -> snapshot_validated]
+    - id: FLOW-004
+      description: Legacy records receive provenance-marked compatibility snapshots.
+      state_transitions: [fulfillment_order_issued -> downstream_documents_rendered]
+integrations:
+    - id: INT-001
+      system: Corporate FO admin UI/tRPC
+      purpose: Collects FO-specific commercial and production inputs.
+      failure_mode: Validation rejects missing/malformed data before issuance.
+    - id: INT-002
+      system: Corporate order/FO database
+      purpose: Stores snapshot, FO record, and immutable totals.
+      failure_mode: Transaction rollback prevents partial issuance.
+    - id: INT-003
+      system: Corporate PDF/document readers
+      purpose: Renders stored snapshot.
+      failure_mode: Missing required data cannot be silently reconstructed.
+    - id: INT-004
+      system: REN-178/179/180 dependencies
+      purpose: Supplies customization and authoritative tax/document metadata.
+      failure_mode: Version/authority mismatch blocks issuance.
+    - id: INT-005
+      system: REN-183 delivery controls
+      purpose: Supplies delivery responsibility and shipping classification.
+      failure_mode: Unapproved freight state blocks or remains explicitly uncharged.
+personas:
+    - id: PER-001
+      role: corporate_operations_admin
+      applicability: Issues and reviews Fulfillment Orders.
+    - id: PER-002
+      role: supplier_brand_factory
+      applicability: Uses FO as the production source.
+    - id: PER-003
+      role: corporate_customer
+      applicability: Receives consistent customer documents.
+    - id: PER-004
+      role: unauthorized_actor
+      applicability: Must not access or alter another order snapshot.
+security_boundaries:
+    - id: SEC-001
+      description: FO issuance requires authenticated MANAGE_ORDERS authorization.
+    - id: SEC-002
+      description: Snapshot reads/writes are scoped to the corporate order and tenant.
+    - id: SEC-003
+      description: Artwork and customer identity data use existing validation/access controls.
+business_rules:
+    - id: BR-001
+      description: The FO snapshot is the only authoritative source for production and commercial document data.
+      source: REN-177 final Linear update.
+    - id: BR-002
+      description: Warehouse mode states Renivet onward-dispatch responsibility; direct mode states customer ship-to.
+      source: REN-177 Mili scenario update.
+    - id: BR-003
+      description: No unapproved freight line or tax treatment may be invented.
+      source: REN-177 and REN-183 dependency.
+decisions:
+    - id: DEC-001
+      question: What GST/composite-supply classification and rate should customization lines use?
+      class: HUMAN_CONFIRMATION
+      status: deferred
+      recommendation: Finance/CA must approve; shipping classification is resolved as a three-option field defaulting to NOT_CHARGED.
+      basis: Financial/legal consequence; owner confirmed shipping dropdown behavior while customization tax rate remains pending.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-001
+      category: unit
+      classification: REQUIRED
+      reason: Covers snapshot construction, versioning, and line/total reconciliation.
+      scenarios: [SCN-001, SCN-003]
+    - id: TEXP-002
+      category: integration
+      classification: REQUIRED
+      reason: Covers persistence of all production/commercial fields and FO/PDF equality.
+      scenarios: [SCN-002, SCN-005]
+    - id: TEXP-003
+      category: e2e
+      classification: REQUIRED
+      reason: Covers propagation to PI, invoice, settlement, and summary readers.
+      scenarios: [SCN-006]
+    - id: TEXP-004
+      category: api
+      classification: REQUIRED
+      reason: Covers fail-closed unresolved authority, atomicity, and idempotency.
+      scenarios: [SCN-007, SCN-008]
+    - id: TEXP-005
+      category: security
+      classification: REQUIRED
+      reason: Covers authorization, order scoping, and artwork/reference protections.
+      scenarios: [SCN-009]
+    - id: TEXP-006
+      category: regression
+      classification: REQUIRED
+      reason: Covers legacy compatibility and future-authority immutability.
+      scenarios: [SCN-010, SCN-011]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: ren175_critic (independent fresh-context read-only critic)
+    fresh_context: true
+    read_only: true
+    required_categories: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: REN177-CRIT-001
+          severity: DESIGN_BLOCKER
+          summary: Finance/CA customization GST treatment and rate remain unresolved; shipping dropdown behavior is now owner-confirmed.
+        - id: REN177-CRIT-002
+          severity: MAJOR
+          summary: Snapshot storage, versioning, immutability, linkage, and atomic write boundary need concrete design.
+        - id: REN177-CRIT-003
+          severity: MAJOR
+          summary: Existing FO total excludes GST, customization, and extras.
+        - id: REN177-CRIT-004
+          severity: MAJOR
+          summary: FO PDF and other templates independently recompute commercial data.
+        - id: REN177-CRIT-005
+          severity: MAJOR
+          summary: FO issuance lacks database-backed exactly-once protection.
+        - id: REN177-CRIT-006
+          severity: MAJOR
+          summary: Delivery responsibility and freight classification need explicit immutable fields.
+        - id: REN177-CRIT-007
+          severity: MAJOR
+          summary: FO Packaging/Extras input/schema parity is missing.
+        - id: REN177-CRIT-008
+          severity: MINOR
+          summary: Legacy markers, read authorization, and structured observability need detail.
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-001, REN177-CRIT-001]
+    approved_by: null
+traceability:
+    requirement_to_scenarios:
+        - {requirement_id: REQ-001, scenario_ids: [SCN-001, SCN-007, SCN-011]}
+        - {requirement_id: REQ-002, scenario_ids: [SCN-001, SCN-002]}
+        - {requirement_id: REQ-003, scenario_ids: [SCN-003, SCN-007, SCN-011]}
+        - {requirement_id: REQ-004, scenario_ids: [SCN-002, SCN-006]}
+        - {requirement_id: REQ-005, scenario_ids: [SCN-004]}
+        - {requirement_id: REQ-006, scenario_ids: [SCN-005, SCN-007]}
+        - {requirement_id: REQ-007, scenario_ids: [SCN-008, SCN-009, SCN-010]}
+    scenario_to_invariants:
+        - {scenario_id: SCN-001, invariant_ids: [INV-001, INV-004]}
+        - {scenario_id: SCN-002, invariant_ids: [INV-002, INV-003]}
+        - {scenario_id: SCN-003, invariant_ids: [INV-002, INV-009]}
+        - {scenario_id: SCN-004, invariant_ids: [INV-005]}
+        - {scenario_id: SCN-005, invariant_ids: [INV-004, INV-006]}
+        - {scenario_id: SCN-006, invariant_ids: [INV-001, INV-003]}
+        - {scenario_id: SCN-007, invariant_ids: [INV-006, INV-009]}
+        - {scenario_id: SCN-008, invariant_ids: [INV-001, INV-006]}
+        - {scenario_id: SCN-009, invariant_ids: [INV-007]}
+        - {scenario_id: SCN-010, invariant_ids: [INV-008]}
+        - {scenario_id: SCN-011, invariant_ids: [INV-001, INV-009]}
+    scenario_to_test_expectations:
+        - {scenario_id: SCN-001, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-002, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-003, test_expectation_ids: [TEXP-001]}
+        - {scenario_id: SCN-004, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-005, test_expectation_ids: [TEXP-002]}
+        - {scenario_id: SCN-006, test_expectation_ids: [TEXP-003]}
+        - {scenario_id: SCN-007, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-008, test_expectation_ids: [TEXP-004]}
+        - {scenario_id: SCN-009, test_expectation_ids: [TEXP-005]}
+        - {scenario_id: SCN-010, test_expectation_ids: [TEXP-006]}
+        - {scenario_id: SCN-011, test_expectation_ids: [TEXP-006]}
