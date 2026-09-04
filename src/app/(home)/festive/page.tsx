@@ -34,39 +34,41 @@ export default async function FestivePage({
     searchParams: Promise<StorefrontSearchParams>;
 }) {
     return (
-        <StorefrontCatalogPage
-            searchParams={searchParams}
-            basePath="/festive"
-            breadcrumbBaseItems={[
-                { label: "Home", href: "/" },
-                { label: "Shop", href: "/festive" },
-            ]}
-            catalogContext="festive"
-            defaultSortBy="createdAt"
-            defaultSortOrder="desc"
-            hideRecommendationSorts
-            hero={
-                <section className="overflow-hidden rounded-[20px] bg-[#F0EBE2] p-2 md:mx-auto md:max-w-[1280px] md:rounded-[28px] md:p-3">
-                    <Image
-                        src="/assets/festive-season/festive-banner-desktop.png"
-                        alt="Celebrate consciously — sustainable festive picks"
-                        width={2048}
-                        height={865}
-                        priority
-                        unoptimized
-                        className="hidden h-auto w-full md:block"
-                    />
-                    <Image
-                        src="/assets/festive-season/festive-banner.png"
-                        alt="Celebrate consciously — sustainable festive picks"
-                        width={960}
-                        height={516}
-                        priority
-                        unoptimized
-                        className="h-auto w-full md:hidden"
-                    />
-                </section>
-            }
-        />
+        <div className="min-h-screen bg-[#F0EBE2]">
+            <StorefrontCatalogPage
+                searchParams={searchParams}
+                basePath="/festive"
+                breadcrumbBaseItems={[
+                    { label: "Home", href: "/" },
+                    { label: "Shop", href: "/festive" },
+                ]}
+                catalogContext="festive"
+                theme="festive"
+                defaultSortBy="recommended"
+                defaultSortOrder="desc"
+                hero={
+                    <section className="overflow-hidden rounded-[20px] bg-[#F0EBE2] p-2 md:mx-auto md:max-w-[1280px] md:rounded-[28px] md:p-3">
+                        <Image
+                            src="/assets/festive-season/festive-banner-desktop.png"
+                            alt="Celebrate consciously — sustainable festive picks"
+                            width={2048}
+                            height={865}
+                            priority
+                            unoptimized
+                            className="hidden h-auto w-full md:block"
+                        />
+                        <Image
+                            src="/assets/festive-season/festive-banner.png"
+                            alt="Celebrate consciously — sustainable festive picks"
+                            width={960}
+                            height={516}
+                            priority
+                            unoptimized
+                            className="h-auto w-full md:hidden"
+                        />
+                    </section>
+                }
+            />
+        </div>
     );
 }

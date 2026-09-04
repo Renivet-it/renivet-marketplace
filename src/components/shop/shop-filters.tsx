@@ -393,6 +393,7 @@ interface PageProps extends GenericProps {
     sizes?: string[];
     hideBrandFilter?: boolean;
     displayMode?: "mobile" | "desktop";
+    theme?: "festive";
 }
 
 const getBrandProductCount = (brand: any): number | null => {
@@ -426,6 +427,7 @@ export function ShopFilters({
     sizes,
     hideBrandFilter = false,
     displayMode,
+    theme,
     ...props
 }: PageProps) {
     const matchesMobileViewport = useMediaQuery("(max-width: 768px)");
@@ -597,6 +599,7 @@ export function ShopFilters({
             allSizes={allSizes}
             search={search}
             setSearch={setSearch}
+            theme={theme}
             {...props}
         />
     );
@@ -644,6 +647,7 @@ function ShopFiltersSection({
     allSizes,
     search,
     setSearch,
+    theme,
     ...props
 }: {
     className?: string;
@@ -654,6 +658,7 @@ function ShopFiltersSection({
     colors: { name: string; count: number }[];
     allSizes: string[];
     search?: string;
+    theme?: "festive";
     [key: string]: any;
 }) {
     const hasCategories = categories.length > 0;
@@ -663,12 +668,13 @@ function ShopFiltersSection({
     return (
         <div
             className={cn(
-                "overflow-hidden rounded-[26px] border border-[#dbe3ec] bg-white",
+                "overflow-hidden rounded-[26px] border border-[#dbe3ec]",
+                theme === "festive" ? "bg-[#F0EBE2]" : "bg-white",
                 className
             )}
             {...props}
         >
-            <div className="flex items-center justify-between border-b border-[#e6ecf3] bg-[#f2f6fb] px-5 py-5">
+            <div className={cn("flex items-center justify-between border-b border-[#e6ecf3] px-5 py-5", theme === "festive" ? "bg-[#F0EBE2]" : "bg-[#f2f6fb]")}>
                 <h4 className="text-[13px] font-semibold uppercase tracking-[0.22em] text-[#223f62]">
                     Refine Results
                 </h4>

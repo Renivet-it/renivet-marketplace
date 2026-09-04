@@ -13,8 +13,9 @@ describe("festive landing UI", () => {
         expect(source).toContain("/assets/festive-season/festive-banner.png");
         expect(source).toContain("/assets/festive-season/festive-banner-desktop.png");
         expect(source).toContain("StorefrontCatalogPage");
-        expect(source).toContain('basePath="/festive"');
-        expect(source).toContain('catalogContext="festive"');
-        expect(source).toContain("hideRecommendationSorts");
+        expect(source).toContain("basePath=\"/festive\"");
+        expect(source).toContain("catalogContext=\"festive\"");
+        expect(source).toContain("defaultSortBy=\"recommended\"");
+        expect(source).not.toContain("hideRecommendationSorts");
     });
 });
