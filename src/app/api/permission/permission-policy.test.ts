@@ -54,3 +54,12 @@ test("keeps Edge middleware independent from the Redis implementation", async ()
     expect(middleware).not.toContain("lib/redis");
     expect(middleware).toContain("routingContext");
 });
+
+test("uses the permission routing context instead of an undefined user profile", async () => {
+    const middleware = await Bun.file(
+        new URL("../../../middleware.ts", import.meta.url)
+    ).text();
+
+    expect(middleware).not.toContain("existingUser.brand");
+    expect(middleware).toContain("if (brandId)");
+});
