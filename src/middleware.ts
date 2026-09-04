@@ -132,7 +132,7 @@ export default clerkMiddleware(async (auth, req) => {
             }
 
             if (url.pathname.startsWith("/dashboard/general")) {
-                if (existingUser.brand)
+                if (brandId)
                     return NextResponse.redirect(new URL("/dashboard", url));
 
                 const routes = generalSidebarConfig
@@ -224,9 +224,9 @@ export default clerkMiddleware(async (auth, req) => {
                 if (isBrandProductsRoute && canManageProductsAcrossBrands)
                     return NextResponse.next();
 
-                if (!existingUser.brand)
+                if (!brandId)
                     return NextResponse.redirect(new URL("/dashboard", url));
-                const userBrand = existingUser.brand;
+                const userBrand = { id: brandId };
 
                 if (url.pathname === "/dashboard/brands")
                     return NextResponse.redirect(
