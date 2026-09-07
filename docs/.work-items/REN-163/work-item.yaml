@@ -3,8 +3,8 @@ task:
     id: REN-163
     title: Return the customer to their originating context on payment cancellation, not always /mycart
     source: linear
-    branch: ayanganguly333/ren-134-157-161-163
-    status: BLOCKED
+    branch: ayanganguly333/ren-163-return-the-originating-context-on-payment
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-163/return-the-customer-to-their-originating-context-on-payment
         priority: Low
@@ -133,7 +133,7 @@ dependencies:
       owner: Ayan Ganguly
       required_state: Current branch matches ayanganguly333/ren-163-return-the-originating-context-on-payment.
       description: Current branch is ayanganguly333/ren-129-reassess-the-5-second-delayed-posthog-init.
-      status: blocked
+      status: resolved
 integrations:
     - id: INT-163-001
       system: Razorpay browser checkout
@@ -266,8 +266,6 @@ critic:
           references: [TEXP-163-001, TEXP-163-002, TEXP-163-006]
           description: Resolved by adding deterministic unit/component expectations for destination, delay, state, and malformed context.
 approval:
-    state: BLOCKED
-    design_blockers:
-        - Current branch does not match the Linear REN-163 branch.
-        - Independent L2 Critic review is pending.
-    approved_by: ""
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (REN-163 task branch aligned and independent Critic findings resolved)

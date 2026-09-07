@@ -2,7 +2,7 @@
 
 ## Contract status
 
-`BLOCKED` because this combined branch is not the exact Linear task branch `ayanganguly333/ren-163-return-the-originating-context-on-payment`; implementation remains gated until the task branch is explicitly aligned.
+`READY_FOR_DEV`: the repository is now on the exact Linear task branch `ayanganguly333/ren-163-return-the-originating-context-on-payment`.
 
 ## Source context
 
@@ -18,7 +18,7 @@ The issue reports that the shared Razorpay customer-payment helper hardcodes `wi
 - `src/components/orders/order-page.tsx` calls the same helper for payment of an existing pending order; it does not carry checkout query context and must retain the `/mycart` fallback.
 - The checkout route already supports `buy_now`, `item`, `variant`, `qty`, `swap_reward`, and `redemption` URL parameters.
 - The issue has no Linear comments and no blocking/duplicate relations; it is related to REN-144 and REN-135 only for adjacent payment-flow ownership and merge coordination.
-- The current branch is `ayanganguly333/ren-134-157-161-163`, while Linear expects `ayanganguly333/ren-163-return-the-originating-context-on-payment`.
+- The current branch matches Linear's expected task branch: `ayanganguly333/ren-163-return-the-originating-context-on-payment`.
 
 ## Risk assessment
 
