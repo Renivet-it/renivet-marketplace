@@ -2,7 +2,7 @@
 
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { brandInviteQueries, brandMemberQueries } from "@/lib/db/queries";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { brandCache, userCache } from "@/lib/redis/methods";
 
 export async function acceptBrandInvite({

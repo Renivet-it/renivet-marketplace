@@ -8,7 +8,7 @@ import {
     returnExchangePolicy,
 } from "@/lib/db/schema/product";
 import { auditEntityChange } from "@/lib/monitoring-sla/audit";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { getEmbedding } from "@/lib/python/sematic-search";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";

@@ -1,6 +1,6 @@
 import { BRAND_EVENTS } from "@/config/brand";
 import { POSTHOG_EVENTS } from "@/config/posthog";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 import { getEmbedding768 } from "@/lib/python/sematic-search";
 import {

@@ -524,7 +524,8 @@ export default function CheckoutSection({ userId }: PageProps) {
                         <div className="mt-3 space-y-3">
                             {/* Applied coupon banner */}
                             {appliedCoupon && (
-                                <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50/60 px-3 py-2">
+                                <>
+                                    <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50/60 px-3 py-2">
                                     <span className="text-xs font-semibold text-green-700">
                                         {appliedCoupon.code} — saving{" "}
                                         {formatPriceTag(
@@ -539,7 +540,15 @@ export default function CheckoutSection({ userId }: PageProps) {
                                     >
                                         Remove
                                     </button>
-                                </div>
+                                    </div>
+                                    {appliedCoupon.code.toUpperCase() ===
+                                        AUTO_COUPON_CODE && (
+                                        <p className="mt-1 text-xs text-green-700">
+                                            TRYNEW20 was automatically applied to
+                                            eligible carts.
+                                        </p>
+                                    )}
+                                </>
                             )}
 
                             {/* Manual Input */}
