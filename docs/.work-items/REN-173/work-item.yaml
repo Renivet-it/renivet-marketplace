@@ -1,0 +1,513 @@
+schema_version: "1.0"
+task:
+    id: REN-173
+    title: Delhivery shipment permanently stuck in "Active" state, no reconciliation path
+    source: linear
+    branch: ayanganguly333/ren-173-delhivery-shipment-permanently-stuck-in-active-state-no
+    status: BLOCKED
+    linear:
+        url: https://linear.app/renivet/issue/REN-173/delhivery-shipment-permanently-stuck-in-active-state-no-reconciliation
+        priority: Urgent
+        labels: [qa-finding, Bug]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - External carrier cancellation and tracking APIs can affect real fulfillment state.
+        - The path crosses order cancellation, refund timing, inventory restoration, and operational alerts.
+        - A false positive can ship a cancelled order; a false negative needs a durable operator recovery path.
+    escalation_history:
+        - from: L2
+          to: L3
+          reason: Release-blocking external integration and order-lifecycle reconciliation risk.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, description, comments, and relations.
+        - Delhivery cancellation and tracking wrappers and their callers.
+        - Customer cancellation route and order-ops cancellation helper.
+        - Existing Delhivery polling route, cron authorization, and status mapping.
+        - Existing shipment JSONB audit field and operational alert/audit infrastructure.
+        - Delhivery public cancellation/tracking documentation and staging endpoint contract.
+        - Existing tests, scripts, and branch state.
+    excluded_areas:
+        - Payment-success, order-creation, and unrelated refund policy changes.
+        - New database schemas/migrations because the approved design reuses existing JSONB and alert storage.
+        - Carrier webhooks and replacement-carrier integration.
+        - Production execution, carrier dashboard mutation, and live shipment data.
+    dependencies: [DEP-173-001, DEP-173-002, DEP-173-003, DEP-173-004, DEP-173-005, DEP-173-006, DEP-173-007]
+    integrations: [INT-173-001, INT-173-002, INT-173-003]
+    security_boundaries: [SEC-173-001, SEC-173-002, SEC-173-003, SEC-173-004]
+    state_transitions:
+        [cancel_requested -> carrier_cancel_attempted -> carrier_verified_terminal | reconciliation_pending -> local_cancelled | operator_action_required]
+    related_tests: [TEXP-173-001, TEXP-173-002, TEXP-173-003, TEXP-173-004, TEXP-173-005, TEXP-173-006, TEXP-173-007, TEXP-173-008, TEXP-173-009, TEXP-173-010, TEXP-173-011, TEXP-173-012, TEXP-173-013, TEXP-173-014, TEXP-173-015]
+    uncertainties:
+        - Exact positive response shapes and payment-mode terminal statuses require configured Delhivery staging verification.
+        - Sponsor-provided AWB evidence is not independently queryable from this environment.
+        - Existing refund-before-carrier-cancel ordering can leave a refund pending after carrier failure; no new financial policy is approved.
+requirements:
+    - id: REQ-173-001
+      description: Send the documented Delhivery cancellation payload using waybill and cancellation true.
+      type: explicit
+    - id: REQ-173-002
+      description: Classify cancellation responses fail-closed and accept only explicit documented positive responses.
+      type: explicit
+    - id: REQ-173-003
+      description: Persist raw cancellation and follow-up verification evidence in the existing shipment JSON audit field before local status changes.
+      type: explicit
+    - id: REQ-173-004
+      description: Verify carrier terminal cancellation state after an accepted cancellation response, including documented Returned/Cancelled outcomes.
+      type: explicit
+    - id: REQ-173-005
+      description: Do not treat local shipment/order cancellation as reconciled when carrier cancellation or verification fails or is ambiguous.
+      type: explicit
+    - id: REQ-173-006
+      description: Apply the shared contract to customer and order-ops cancellation paths.
+      type: explicit
+    - id: REQ-173-007
+      description: Reconcile pending/divergent attempts through the authenticated existing Delhivery polling path and alert order managers.
+      type: explicit
+    - id: REQ-173-008
+      description: Keep retries idempotent and avoid duplicate alerts, refunds, stock restoration, and terminal transitions.
+      type: inferred
+    - id: REQ-173-009
+      description: Keep carrier credentials server-side and preserve the existing server-side raw-response boundary.
+      type: inferred
+    - id: REQ-173-010
+      description: Preserve unrelated tracking, payment, Shiprocket, and order flows.
+      type: inferred
+    - id: REQ-173-011
+      description: Resolve refund and stock side-effect ordering before changing cancellation semantics.
+      type: explicit
+    - id: REQ-173-012
+      description: Define versioned merge, write-failure, concurrency, and retention semantics for cancellation evidence.
+      type: inferred
+    - id: REQ-173-013
+      description: Define durable attempt identity and concurrency behavior across identifiers and callers.
+      type: inferred
+    - id: REQ-173-014
+      description: Redact sensitive carrier data from logs and expose only safe reconciliation errors.
+      type: inferred
+    - id: REQ-173-015
+      description: Make divergence alerts discoverable and actionable by authorized order managers.
+      type: inferred
+scenarios:
+    - id: SCN-173-001
+      requirement_ids: [REQ-173-001, REQ-173-002, REQ-173-003, REQ-173-004, REQ-173-005]
+      description: Customer cancellation is accepted only after explicit carrier success and terminal tracking verification.
+    - id: SCN-173-002
+      requirement_ids: [REQ-173-005, REQ-173-006]
+      description: Order-ops cancellation uses the same shared service and does not silently mark local shipment cancelled on carrier failure.
+    - id: SCN-173-003
+      requirement_ids: [REQ-173-002, REQ-173-003, REQ-173-007]
+      description: Missing, malformed, failure, or unknown carrier response persists evidence and creates an operator recovery state.
+    - id: SCN-173-004
+      requirement_ids: [REQ-173-003, REQ-173-004, REQ-173-007]
+      description: A positive cancellation followed by an active carrier tracking state remains pending and raises one deduplicated alert.
+    - id: SCN-173-005
+      requirement_ids: [REQ-173-004]
+      description: Prepaid/COD Returned and pickup Cancelled carrier states are recognized as terminal cancellation states.
+    - id: SCN-173-006
+      requirement_ids: [REQ-173-007, REQ-173-008]
+      description: Repeated reconciliation confirms once or keeps one actionable alert without duplicate side effects.
+    - id: SCN-173-007
+      requirement_ids: [REQ-173-002, REQ-173-003, REQ-173-005, REQ-173-007]
+      description: Timeout, non-JSON, rate-limit, and tracking-read failures fail closed and remain recoverable.
+    - id: SCN-173-008
+      requirement_ids: [REQ-173-010]
+      description: Ordinary active-shipment tracking continues unchanged outside the cancellation reconciliation branch.
+    - id: SCN-173-009
+      requirement_ids: [REQ-173-009]
+      description: Cron authorization, server-only credentials, and shipment/order scoping remain enforced.
+    - id: SCN-173-010
+      requirement_ids: [REQ-173-011]
+      description: Carrier cancellation failure cannot create an unintended refund, stock, or order state before the financial ordering decision is approved.
+    - id: SCN-173-011
+      requirement_ids: [REQ-173-012]
+      description: Concurrent tracking and cancellation writes preserve evidence under explicit merge and retention semantics.
+    - id: SCN-173-012
+      requirement_ids: [REQ-173-013]
+      description: Multiple identifiers, mixed shipments, and overlapping callers share one coherent attempt state.
+    - id: SCN-173-013
+      requirement_ids: [REQ-173-014]
+      description: Carrier payloads and errors are redacted in logs and safe at the HTTP boundary.
+    - id: SCN-173-014
+      requirement_ids: [REQ-173-015]
+      description: Divergence alerts are visible to authorized order managers, atomically deduplicated, and actionable.
+invariants:
+    - id: INV-173-001
+      description: No absent, unknown, or negative carrier signal is interpreted as cancellation success.
+    - id: INV-173-002
+      description: Local cancellation is not treated as reconciled before carrier verification confirms a terminal state.
+    - id: INV-173-003
+      description: Every cancellation attempt has durable raw evidence before the success/failure decision.
+    - id: INV-173-004
+      description: Reconciliation is idempotent and does not double-refund, double-restore stock, or duplicate alerts.
+    - id: INV-173-005
+      description: Carrier/local divergence remains discoverable by Renivet without a customer complaint.
+    - id: INV-173-006
+      description: Existing successful payment, order creation, tracking, Shiprocket, and ordinary status transitions remain unchanged.
+    - id: INV-173-007
+      description: Carrier credentials and customer-sensitive raw responses remain server-side.
+    - id: INV-173-008
+      description: Financial side effects do not move relative to carrier cancellation until the Class C ordering decision is resolved.
+    - id: INV-173-009
+      description: Cancellation evidence cannot be erased by ordinary tracking writes.
+    - id: INV-173-010
+      description: Concurrent attempts share durable identity and cannot duplicate terminal side effects.
+    - id: INV-173-011
+      description: Logs and HTTP responses never expose raw carrier/customer-sensitive payloads.
+    - id: INV-173-012
+      description: Every unresolved divergence is discoverable and actionable by an authorized order manager.
+flows:
+    - id: FLOW-173-001
+      description: Cancellation caller to shared carrier request, explicit classifier, evidence persistence, tracking verification, local transition or pending reconciliation, and alert.
+      state_transitions: [cancel_requested, carrier_cancel_attempted, carrier_verified_terminal, reconciliation_pending, local_cancelled, operator_action_required]
+dependencies:
+    - id: DEP-173-001
+      name: Delhivery cancellation contract and staging fixtures
+      purpose: Confirms request/response shapes and payment-mode terminal states.
+      owner: Logistics integration maintainers
+      required_state: Configured staging credentials and captured positive/negative fixtures.
+      description: Public docs identify cancellation true and allowed lifecycle states; exact account response fixtures remain to be captured.
+      status: pending
+    - id: DEP-173-002
+      name: Delhivery tracking API
+      purpose: Verifies carrier state after cancellation.
+      owner: Logistics integration maintainers
+      required_state: Existing tracking endpoint and token remain available.
+      description: Existing cron uses the tracking endpoint and stores raw tracking JSON.
+      status: resolved
+    - id: DEP-173-003
+      name: Shipment JSONB audit field
+      purpose: Stores raw cancellation and verification evidence without migration.
+      owner: Storefront/order maintainers
+      required_state: orderShipments.delhiveryTrackingJson remains writable.
+      description: Existing order_shipments schema contains the JSONB column.
+      status: resolved
+    - id: DEP-173-004
+      name: Cron and operational alert infrastructure
+      purpose: Finds unresolved carrier divergence and alerts order managers.
+      owner: Operations platform maintainers
+      required_state: Cron secret and monitoring SLA alert persistence remain available.
+      description: Existing protected Delhivery polling route and createOperationalAlert path are reusable.
+      status: resolved
+    - id: DEP-173-005
+      name: Existing cancellation side effects
+      purpose: Prevents duplicate refunds and stock restoration while gating false local cancellation.
+      owner: Order lifecycle maintainers
+      required_state: Payment and inventory behavior is not broadened by this task.
+      description: Existing cancellation code performs refund and stock side effects; the task does not establish a new financial policy.
+      status: resolved
+    - id: DEP-173-006
+      name: Refund and stock side-effect ordering decision
+      purpose: Prevents an unintended financial state when carrier cancellation fails.
+      owner: Ayan Ganguly / product owner
+      required_state: Explicit human decision on refund and stock ordering.
+      description: Current customer and order-ops callers refund before carrier cancellation.
+      status: blocked
+    - id: DEP-173-007
+      name: Alert access and atomic dedupe semantics
+      purpose: Ensures divergence is discoverable and actionable.
+      owner: Operations platform maintainers
+      required_state: Verified order-manager access, metadata, dedupe, and recovery action.
+      description: Existing alert persistence and monitoring access need reconciliation with the new carrier divergence contract.
+      status: pending
+integrations:
+    - id: INT-173-001
+      system: Delhivery cancellation API
+      purpose: Cancels an eligible carrier shipment.
+      failure_mode: Explicit failure, unknown response, timeout, and rate limit are persisted and remain pending.
+      retry_idempotency: Reconciliation is idempotent; automatic repeated cancellation is not introduced without a verified contract.
+    - id: INT-173-002
+      system: Delhivery shipment tracking API
+      purpose: Confirms terminal carrier state after cancellation.
+      failure_mode: Tracking failure preserves pending state and alert visibility.
+      retry_idempotency: Repeated reads update evidence and do not repeat local side effects.
+    - id: INT-173-003
+      system: Renivet monitoring SLA alerts
+      purpose: Makes carrier/local divergence visible to order managers.
+      failure_mode: Alert persistence failure is logged and must not turn an unverified carrier response into success.
+      retry_idempotency: Stable dedupe key per shipment/cancellation attempt.
+personas:
+    - id: PER-173-001
+      role: customer
+      applicability: Customer cancellation must not falsely complete while the carrier remains active.
+    - id: PER-173-002
+      role: order_manager
+      applicability: Operator needs actionable visibility and a terminal reconciliation path.
+    - id: PER-173-003
+      role: scheduled_reconciliation
+      applicability: Authenticated cron process polls and records carrier divergence.
+security_boundaries:
+    - id: SEC-173-001
+      description: Customer and order-ops cancellation permissions remain enforced.
+    - id: SEC-173-002
+      description: The reconciliation route requires the existing cron secret and fails closed.
+    - id: SEC-173-003
+      description: Delhivery token is server-only and raw responses are not logged verbatim or exposed to customers.
+    - id: SEC-173-004
+      description: Reconciliation updates are scoped to the identified shipment/order and existing ownership boundaries.
+business_rules:
+    - id: BR-173-001
+      description: A cancelled Renivet order must not be left with a carrier shipment that is silently active and undiscoverable.
+    - id: BR-173-002
+      description: Carrier terminal cancellation state must be explicit before local cancellation is treated as reconciled.
+decisions:
+    - id: DEC-173-001
+      question: Should missing or unknown carrier cancellation responses be accepted?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: No; use explicit positive allowlists and fail closed.
+      basis: The confirmed defect is enabled by the current fail-open classifier.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-173-002
+      question: Should the task add a new persistence schema for reconciliation evidence?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: No; use the existing JSONB audit field and monitoring alert path.
+      basis: The issue explicitly states no schema change is required and both storage paths already exist.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-173-003
+      question: Which exact positive response fixtures and payment-mode terminal states does this Delhivery account return?
+      class: RECOMMEND_CONTINUE
+      status: unresolved
+      recommendation: Capture and approve staging fixtures before production rollout; unknown values must remain failures.
+      basis: Public docs define the request and terminal status families, but account-specific response shapes are not available in this session.
+      confidence: medium
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-173-004
+      question: Should refunds and stock restoration wait for carrier cancellation/verification, or may a failed carrier cancellation leave a refund pending while local cancellation remains blocked?
+      class: HUMAN_CONFIRMATION
+      status: unresolved
+      recommendation: Block implementation until the financial/order-lifecycle policy is explicitly confirmed.
+      basis: Both existing cancellation callers perform refund or financial side effects before carrier cancellation, and changing that order can alter customer and accounting outcomes.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+test_expectations:
+    - id: TEXP-173-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies the documented cancellation payload and prevents regression to action.
+      scenarios: [SCN-173-001, SCN-173-002]
+    - id: TEXP-173-002
+      category: unit
+      classification: REQUIRED
+      reason: Prevents fail-open acceptance of missing, malformed, or negative carrier responses.
+      scenarios: [SCN-173-001, SCN-173-003, SCN-173-007]
+    - id: TEXP-173-003
+      category: unit
+      classification: REQUIRED
+      reason: Covers documented terminal and active tracking states.
+      scenarios: [SCN-173-001, SCN-173-004, SCN-173-005]
+    - id: TEXP-173-004
+      category: unit
+      classification: REQUIRED
+      reason: Verifies pending state, stable alert dedupe, and no duplicate side effects.
+      scenarios: [SCN-173-004, SCN-173-006, SCN-173-007]
+    - id: TEXP-173-005
+      category: component
+      classification: REQUIRED
+      reason: Confirms both cancellation callers gate local changes on shared carrier verification.
+      scenarios: [SCN-173-001, SCN-173-002, SCN-173-008]
+    - id: TEXP-173-006
+      category: regression
+      classification: REQUIRED
+      reason: Protects successful payment, refund, stock, ordinary tracking, Shiprocket, and order flows.
+      scenarios: [SCN-173-006, SCN-173-008]
+    - id: TEXP-173-007
+      category: security
+      classification: REQUIRED
+      reason: Protects cron auth, server-only secrets, redaction, and scope boundaries.
+      scenarios: [SCN-173-009]
+    - id: TEXP-173-008
+      category: integration
+      classification: REQUIRED
+      reason: Verifies staging request/response, raw persistence, tracking read, and retry behavior.
+      scenarios: [SCN-173-001, SCN-173-003, SCN-173-004, SCN-173-006, SCN-173-007]
+    - id: TEXP-173-009
+      category: e2e
+      classification: REQUIRED
+      reason: Confirms a real sandbox AWB reaches a documented terminal state before local acceptance.
+      scenarios: [SCN-173-001, SCN-173-005]
+    - id: TEXP-173-010
+      category: exploratory
+      classification: REQUIRED
+      reason: Confirms order-ops can discover and act on carrier/local divergence after repeated reconciliation.
+      scenarios: [SCN-173-004, SCN-173-006, SCN-173-007]
+    - id: TEXP-173-011
+      category: business_uat
+      classification: REQUIRED
+      reason: Requires explicit approval of refund/stock ordering before changing financial cancellation behavior.
+      scenarios: [SCN-173-010]
+    - id: TEXP-173-012
+      category: unit
+      classification: REQUIRED
+      reason: Verifies versioned merge, write-failure, and bounded evidence retention behavior.
+      scenarios: [SCN-173-011]
+    - id: TEXP-173-013
+      category: integration
+      classification: REQUIRED
+      reason: Verifies durable attempt identity and concurrency handling for mixed identifiers and callers.
+      scenarios: [SCN-173-012]
+    - id: TEXP-173-014
+      category: security
+      classification: REQUIRED
+      reason: Verifies redacted logs and safe HTTP error boundaries.
+      scenarios: [SCN-173-013]
+    - id: TEXP-173-015
+      category: exploratory
+      classification: REQUIRED
+      reason: Verifies authorized order-manager discovery, metadata, dedupe, and recovery action.
+      scenarios: [SCN-173-014]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-173-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-173-005, REQ-173-008, REQ-173-011, INV-173-002, INV-173-004, DEC-173-004]
+          description: Refund and stock side-effect ordering is unresolved; existing customer and order-ops callers perform financial side effects before carrier cancellation.
+        - id: CRIT-173-002
+          severity: DESIGN_BLOCKER
+          references: [REQ-173-002, REQ-173-004, DEP-173-001, DEC-173-003]
+          description: Exact positive cancellation response and terminal-state allowlists require staging fixtures and explicit contract finalization.
+        - id: CRIT-173-003
+          severity: DESIGN_BLOCKER
+          references: [REQ-173-003, REQ-173-012, INV-173-003, INV-173-009]
+          description: JSONB evidence append/merge/version/concurrency/size-retention semantics are not yet specified and ordinary tracking can overwrite the field.
+        - id: CRIT-173-004
+          severity: MAJOR
+          references: [REQ-173-007, REQ-173-008, REQ-173-013, INV-173-004]
+          description: Reconciliation lacks durable attempt identity, pending selector, concurrency claims, and atomic terminal transition rules.
+        - id: CRIT-173-005
+          severity: MAJOR
+          references: [REQ-173-006, SCN-173-002]
+          description: Customer and order-ops cancellation paths currently have materially different carrier failure behavior; multi-identifier and mixed-shipment scenarios need explicit handling.
+        - id: CRIT-173-006
+          severity: MAJOR
+          references: [REQ-173-009, REQ-173-014, INV-173-007, INV-173-011]
+          description: Existing cron logs raw response prefixes and returns raw error strings; redaction and safe error-boundary behavior must be specified.
+        - id: CRIT-173-007
+          severity: MAJOR
+          references: [REQ-173-007, REQ-173-015, INV-173-005, INV-173-012, INT-173-003, DEP-173-007]
+          description: Alert discoverability, severity, metadata, access, atomic dedupe, and recovery action are not yet contractually proven.
+        - id: CRIT-173-008
+          severity: MAJOR
+          references: [SCN-173-003, SCN-173-006, SCN-173-007, SCN-173-010, SCN-173-011, SCN-173-012, SCN-173-013, SCN-173-014]
+          description: Failure/recovery coverage was incomplete for evidence-write failure, alert-write failure, concurrent callers, delayed verification, already-terminal retry, and mixed identifiers.
+approval:
+    state: BLOCKED
+    design_blockers:
+        - CRIT-173-001: Resolve refund/stock side-effect ordering with explicit human confirmation.
+        - CRIT-173-002: Capture and approve exact Delhivery staging response and terminal-state fixtures.
+        - CRIT-173-003: Define conflict-safe JSONB evidence retention and merge semantics.
+    approved_by: ""
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-173-001
+          scenario_ids: [SCN-173-001, SCN-173-002]
+        - requirement_id: REQ-173-002
+          scenario_ids: [SCN-173-001, SCN-173-003, SCN-173-007]
+        - requirement_id: REQ-173-003
+          scenario_ids: [SCN-173-001, SCN-173-003, SCN-173-004]
+        - requirement_id: REQ-173-004
+          scenario_ids: [SCN-173-001, SCN-173-004, SCN-173-005]
+        - requirement_id: REQ-173-005
+          scenario_ids: [SCN-173-001, SCN-173-002, SCN-173-003, SCN-173-004, SCN-173-007]
+        - requirement_id: REQ-173-006
+          scenario_ids: [SCN-173-002]
+        - requirement_id: REQ-173-007
+          scenario_ids: [SCN-173-003, SCN-173-004, SCN-173-006, SCN-173-007]
+        - requirement_id: REQ-173-008
+          scenario_ids: [SCN-173-006]
+        - requirement_id: REQ-173-009
+          scenario_ids: [SCN-173-009]
+        - requirement_id: REQ-173-010
+          scenario_ids: [SCN-173-008]
+        - requirement_id: REQ-173-011
+          scenario_ids: [SCN-173-010]
+        - requirement_id: REQ-173-012
+          scenario_ids: [SCN-173-011]
+        - requirement_id: REQ-173-013
+          scenario_ids: [SCN-173-012]
+        - requirement_id: REQ-173-014
+          scenario_ids: [SCN-173-013]
+        - requirement_id: REQ-173-015
+          scenario_ids: [SCN-173-014]
+    scenario_to_invariants:
+        - scenario_id: SCN-173-001
+          invariant_ids: [INV-173-001, INV-173-002, INV-173-003, INV-173-006]
+        - scenario_id: SCN-173-002
+          invariant_ids: [INV-173-001, INV-173-002, INV-173-003, INV-173-006]
+        - scenario_id: SCN-173-003
+          invariant_ids: [INV-173-001, INV-173-003, INV-173-005]
+        - scenario_id: SCN-173-004
+          invariant_ids: [INV-173-002, INV-173-003, INV-173-004, INV-173-005]
+        - scenario_id: SCN-173-005
+          invariant_ids: [INV-173-002, INV-173-006]
+        - scenario_id: SCN-173-006
+          invariant_ids: [INV-173-004, INV-173-005]
+        - scenario_id: SCN-173-007
+          invariant_ids: [INV-173-001, INV-173-003, INV-173-004, INV-173-005]
+        - scenario_id: SCN-173-008
+          invariant_ids: [INV-173-006]
+        - scenario_id: SCN-173-009
+          invariant_ids: [INV-173-007]
+        - scenario_id: SCN-173-010
+          invariant_ids: [INV-173-004, INV-173-008]
+        - scenario_id: SCN-173-011
+          invariant_ids: [INV-173-003, INV-173-009]
+        - scenario_id: SCN-173-012
+          invariant_ids: [INV-173-004, INV-173-010]
+        - scenario_id: SCN-173-013
+          invariant_ids: [INV-173-007, INV-173-011]
+        - scenario_id: SCN-173-014
+          invariant_ids: [INV-173-005, INV-173-012]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-173-001
+          test_expectation_ids: [TEXP-173-001, TEXP-173-002, TEXP-173-003, TEXP-173-005, TEXP-173-008, TEXP-173-009]
+        - scenario_id: SCN-173-002
+          test_expectation_ids: [TEXP-173-001, TEXP-173-002, TEXP-173-005, TEXP-173-006]
+        - scenario_id: SCN-173-003
+          test_expectation_ids: [TEXP-173-002, TEXP-173-004, TEXP-173-008]
+        - scenario_id: SCN-173-004
+          test_expectation_ids: [TEXP-173-003, TEXP-173-004, TEXP-173-008, TEXP-173-010]
+        - scenario_id: SCN-173-005
+          test_expectation_ids: [TEXP-173-003, TEXP-173-009]
+        - scenario_id: SCN-173-006
+          test_expectation_ids: [TEXP-173-004, TEXP-173-006, TEXP-173-008, TEXP-173-010]
+        - scenario_id: SCN-173-007
+          test_expectation_ids: [TEXP-173-002, TEXP-173-004, TEXP-173-008, TEXP-173-010]
+        - scenario_id: SCN-173-008
+          test_expectation_ids: [TEXP-173-005, TEXP-173-006]
+        - scenario_id: SCN-173-009
+          test_expectation_ids: [TEXP-173-007]
+        - scenario_id: SCN-173-010
+          test_expectation_ids: [TEXP-173-011]
+        - scenario_id: SCN-173-011
+          test_expectation_ids: [TEXP-173-012]
+        - scenario_id: SCN-173-012
+          test_expectation_ids: [TEXP-173-013]
+        - scenario_id: SCN-173-013
+          test_expectation_ids: [TEXP-173-014]
+        - scenario_id: SCN-173-014
+          test_expectation_ids: [TEXP-173-015]
