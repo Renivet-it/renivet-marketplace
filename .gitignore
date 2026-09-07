@@ -49,3 +49,8 @@ next-env.d.ts
 
 # local Git worktrees
 /.worktrees/
+
+# local browser previews and generated festive screenshots
+/tmp/chrome-festive-*/
+/tmp/asset-*.png
+/tmp/festive-*.png

@@ -20,6 +20,8 @@ import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
 import { MobileFilterLoadingButton } from "./mobile-filter-loading-button";
+import { FestiveFloralDivider } from "./festive-floral-divider";
+import { FestiveMobileSearch } from "./festive-mobile-search";
 import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
 import { ShopFilters, ShopSortByWithDefault } from "./shop-filters";
 import { ShopMobileActions } from "./shop-mobile-actions";
@@ -55,6 +57,8 @@ interface StorefrontCatalogPageProps {
     defaultSortOrder?: "asc" | "desc";
     prioritizeNewProducts?: boolean;
     hideRecommendationSorts?: boolean;
+    catalogContext?: "festive";
+    theme?: "festive";
 }
 
 const DESKTOP_CATALOG_STICKY_TOP_CLASS = "md:top-5";
@@ -70,9 +74,21 @@ export async function StorefrontCatalogPage({
     defaultSortOrder = "desc",
     prioritizeNewProducts = false,
     hideRecommendationSorts = false,
+    catalogContext,
+    theme,
 }: StorefrontCatalogPageProps) {
     const params = await searchParams;
     const subCategoryId = params.subCategoryId || params.subcategoryId;
+    const curatedProductIds =
+        catalogContext === "festive"
+            ? Array.from(
+                  new Set(
+                      (await productQueries.getFestiveSeasonProducts())
+                          .map((entry: any) => entry.productId)
+                          .filter(Boolean)
+                  )
+              )
+            : undefined;
     const [productTypes, categories, subCategories] = await Promise.all([
         productTypeCache.getAll(),
         categoryCache.getAll(),
@@ -146,31 +162,53 @@ export async function StorefrontCatalogPage({
                             minDiscount={params.minDiscount}
                             lockedBrandId={lockedBrandId}
                             hideBrandFilter={hideBrandFilter}
+                            curatedProductIds={curatedProductIds}
+                            theme={theme}
                         />
                     </Suspense>
                 </aside>
 
                 <main className="w-full space-y-4 pb-40 md:flex-1 md:space-y-5 md:pb-0">
                     <div className="md:hidden">
-                        <ProductSearch
-                            searchBasePath={basePath}
-                            className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
-                        />
+                        {theme === "festive" ? (
+                            <FestiveMobileSearch>
+                                <ProductSearch
+                                    searchBasePath={basePath}
+                                    className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
+                                />
+                            </FestiveMobileSearch>
+                        ) : (
+                            <ProductSearch
+                                searchBasePath={basePath}
+                                className="h-14 rounded-[22px] border-[#e3d6c3] bg-[#fffdf8] px-5 text-base shadow-[0_14px_34px_rgba(64,54,36,0.09)]"
+                            />
+                        )}
                     </div>
 
                     <ShopMobileActions
+                        theme={theme}
                         defaultSortBy={defaultSortBy}
                         defaultSortOrder={defaultSortOrder}
                         hideRecommendationSorts={hideRecommendationSorts}
                         filters={
                             <Suspense
                                 fallback={
-                                    <MobileFilterLoadingButton className="h-full w-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]" />
+                                    <MobileFilterLoadingButton
+                                        className={
+                                            theme === "festive"
+                                                ? "size-full justify-center rounded-none border-0 bg-transparent px-2 text-base font-medium text-[#25321d] shadow-none hover:bg-transparent active:bg-transparent"
+                                                : "size-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
+                                        }
+                                    />
                                 }
                             >
                                 <StorefrontFiltersFetch
                                     displayMode="mobile"
-                                    className="h-full w-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
+                                    className={
+                                        theme === "festive"
+                                            ? "size-full justify-center rounded-none border-0 bg-transparent px-2 text-base font-medium text-[#25321d] shadow-none hover:bg-transparent active:bg-transparent"
+                                            : "size-full rounded-none border-0 border-r border-[#e7dece] bg-transparent text-[15px] font-semibold text-[#25321d] shadow-none hover:bg-[#faf7f1] active:bg-[#f6f0e7]"
+                                    }
                                     brandIds={params.brandIds}
                                     categoryId={params.categoryId}
                                     subCategoryId={subCategoryId}
@@ -183,6 +221,8 @@ export async function StorefrontCatalogPage({
                                     minDiscount={params.minDiscount}
                                     lockedBrandId={lockedBrandId}
                                     hideBrandFilter={hideBrandFilter}
+                                    curatedProductIds={curatedProductIds}
+                                    theme={theme}
                                 />
                             </Suspense>
                         }
@@ -197,8 +237,10 @@ export async function StorefrontCatalogPage({
                             defaultSortBy={defaultSortBy}
                             defaultSortOrder={defaultSortOrder}
                             prioritizeNewProducts={prioritizeNewProducts}
+                            catalogContext={catalogContext}
+                            theme={theme}
                             desktopCatalogHeader={
-                                <div className="hidden items-center justify-between rounded-2xl border border-[#dce5ee] bg-[#f9fbfd] px-5 py-3.5 md:flex">
+                                <div className={`hidden items-center justify-between rounded-2xl border px-5 py-3.5 md:flex ${theme === "festive" ? "border-[#dfd3c2] bg-[#F0EBE2]" : "border-[#dce5ee] bg-[#f9fbfd]"}`}>
                                     <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
                                         Refine By Category, Color, Size And Fit
                                     </p>
@@ -244,6 +286,7 @@ interface StorefrontFilterQueryInput {
     minDiscount?: string;
     lockedBrandId?: string;
     hideBrandFilter?: boolean;
+    curatedProductIds?: string[];
 }
 
 const getStorefrontFilterData = cache(async (serializedInput: string) => {
@@ -261,6 +304,7 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
         minDiscount,
         lockedBrandId,
         hideBrandFilter,
+        curatedProductIds,
     } = input;
 
     const minPriceValue =
@@ -296,6 +340,7 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
               colors: colorsValue,
               sizes: sizesValue,
               minDiscount: minDiscountValue,
+              curatedProductIds,
           });
 
     const [
@@ -321,6 +366,7 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
             colors: colorsValue,
             sizes: sizesValue,
             minDiscount: minDiscountValue,
+            curatedProductIds,
         }),
         productQueries.getFilteredSubCategoryCounts({
             categoryId,
@@ -331,24 +377,28 @@ const getStorefrontFilterData = cache(async (serializedInput: string) => {
             colors: colorsValue,
             sizes: sizesValue,
             minDiscount: minDiscountValue,
+            curatedProductIds,
         }),
         productQueries.getUniqueColors({
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
             brandIds: brandIdsValue,
+            curatedProductIds,
         }),
         productQueries.getAlphaSizes({
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
             brandIds: brandIdsValue,
+            curatedProductIds,
         }),
         productQueries.getNumericSizes({
             categoryId,
             subcategoryId: subCategoryId,
             productTypeId,
             brandIds: brandIdsValue,
+            curatedProductIds,
         }),
     ]);
 
@@ -386,6 +436,7 @@ async function StorefrontFiltersFetch(
         minDiscount,
         lockedBrandId,
         hideBrandFilter,
+        curatedProductIds,
         ...rest
     } = props;
     const filterData = await getStorefrontFilterData(
@@ -402,6 +453,7 @@ async function StorefrontFiltersFetch(
             minDiscount,
             lockedBrandId,
             hideBrandFilter,
+            curatedProductIds,
         } satisfies StorefrontFilterQueryInput)
     );
 
@@ -470,6 +522,8 @@ async function StorefrontProductsFetch({
     defaultSortOrder = "desc",
     prioritizeNewProducts = false,
     desktopCatalogHeader,
+    catalogContext,
+    theme,
 }: {
     searchParams: Promise<StorefrontSearchParams>;
     productTypes: any[];
@@ -479,6 +533,8 @@ async function StorefrontProductsFetch({
     defaultSortOrder?: "asc" | "desc";
     prioritizeNewProducts?: boolean;
     desktopCatalogHeader?: ReactNode;
+    catalogContext?: "festive";
+    theme?: "festive";
 }) {
     const { userId } = await auth();
 
@@ -558,6 +614,7 @@ async function StorefrontProductsFetch({
             : undefined;
 
     const shouldUseRecommendations =
+        !catalogContext &&
         page === 1 &&
         !search &&
         !categoryId &&
@@ -636,7 +693,32 @@ async function StorefrontProductsFetch({
             !sizes &&
             !minDiscount;
 
-        if (isDefaultNewArrivalsView) {
+        if (catalogContext) {
+            finalData = await productQueries.getProducts({
+                page,
+                limit,
+                search,
+                isAvailable: true,
+                isActive: true,
+                isPublished: true,
+                isDeleted: false,
+                verificationStatus: "approved",
+                brandIds,
+                minPrice,
+                maxPrice: effectiveMaxPrice,
+                categoryId,
+                subcategoryId: subCategoryId,
+                productTypeId,
+                sortBy,
+                sortOrder,
+                colors,
+                sizes,
+                minDiscount,
+                requireMedia: true,
+                curatedProductIds: Array.from(new Set((await productQueries.getFestiveSeasonProducts()).map((entry: any) => entry.productId).filter(Boolean))),
+                curatedDefaultOrder: Array.from(new Set((await productQueries.getFestiveSeasonProducts()).map((entry: any) => entry.productId).filter(Boolean))),
+            });
+        } else if (isDefaultNewArrivalsView) {
             finalData = await getCachedNewArrivalProducts();
         } else if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
@@ -725,11 +807,12 @@ async function StorefrontProductsFetch({
                     productTypeId={productTypeIdRaw ?? ""}
                     initialProducts={finalData?.data ?? []}
                     basePath={basePath}
+                    theme={theme}
                 />
             </div>
 
             <div
-                className={`hidden md:sticky ${DESKTOP_CATALOG_STICKY_TOP_CLASS} md:z-40 md:block md:space-y-3 md:bg-[#ffffff] md:pb-2 md:shadow-[0_10px_18px_-18px_rgba(36,55,84,0.55)]`}
+                className={`hidden md:sticky ${DESKTOP_CATALOG_STICKY_TOP_CLASS} md:z-40 md:block md:space-y-3 md:pb-2 md:shadow-[0_10px_18px_-18px_rgba(36,55,84,0.55)] ${theme === "festive" ? "md:bg-[#F0EBE2]" : "md:bg-[#ffffff]"}`}
             >
                 {desktopCatalogHeader}
 
@@ -739,10 +822,13 @@ async function StorefrontProductsFetch({
                     initialProducts={finalData?.data ?? []}
                     isDesktop
                     basePath={basePath}
+                    theme={theme}
                 />
 
                 <div className="border-b border-[#e4e9ef]" />
             </div>
+
+            {theme === "festive" ? <FestiveFloralDivider /> : null}
 
             <ShopProducts
                 initialData={{
@@ -757,6 +843,7 @@ async function StorefrontProductsFetch({
                 defaultSortBy={defaultSortBy}
                 defaultSortOrder={defaultSortOrder}
                 prioritizeNewProducts={prioritizeNewProducts}
+                catalogContext={catalogContext}
             />
         </div>
     );
