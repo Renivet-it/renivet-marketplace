@@ -125,11 +125,11 @@ The implementation should extract pure helpers for payload construction, respons
 - `DEC-173-001` (`AUTO_DECIDE`, resolved): Use explicit positive allowlists for cancellation and terminal tracking states; missing/unknown values are failures because the current fail-open classifier caused the confirmed risk.
 - `DEC-173-002` (`RECOMMEND_CONTINUE`, resolved): Reuse `delhiveryTrackingJson` with a structured cancellation-attempt envelope and the existing operational alert/audit path instead of adding a migration; this preserves rollback simplicity and the issue's no-schema-change constraint.
 - `DEC-173-003` (`RECOMMEND_CONTINUE`, unresolved pending dependency): Confirm exact staging response fixtures and whether the configured account returns `Returned` versus `Cancelled` for each payment mode before finalizing the literal allowlist. This is an integration verification action, not permission to accept unknown responses.
-- `DEC-173-004` (`HUMAN_CONFIRMATION`, unresolved): Decide whether refunds and stock restoration must wait for carrier cancellation/verification, or whether a failed carrier cancellation may leave a refund pending while local order cancellation remains blocked. This cannot be inferred safely because it changes financial and order-lifecycle semantics.
+- `DEC-173-004` (`HUMAN_CONFIRMATION`, resolved by product direction): Delhivery cancellation and follow-up terminal-state verification must succeed before Renivet finalizes local shipment/order cancellation, refund, or stock restoration. A carrier failure leaves the order recoverable and alerts order operations; it must not be treated as a successful cancellation.
 
 ## Critic outcome
 
-The independent fresh-context L3 Critic completed read-only review and returned `BLOCKED` with two design blockers and six major findings. The blockers are preserved in `CRITIQUE.md`: unresolved refund ordering and unspecified carrier allowlists. The major findings require the added evidence-merge, concurrency, redaction, alert-discoverability, and multi-path failure requirements above before implementation can be approved.
+The independent fresh-context L3 Critic completed read-only review and returned `BLOCKED`. Product direction resolved the refund-ordering blocker, but two design blockers remain: unspecified carrier allowlists and conflict-safe JSONB evidence retention. The major findings require the added concurrency, redaction, alert-discoverability, and multi-path failure requirements above before implementation can be approved.
 
 ## Test expectations
 

@@ -209,9 +209,9 @@ dependencies:
       name: Refund and stock side-effect ordering decision
       purpose: Prevents an unintended financial state when carrier cancellation fails.
       owner: Ayan Ganguly / product owner
-      required_state: Explicit human decision on refund and stock ordering.
-      description: Current customer and order-ops callers refund before carrier cancellation.
-      status: blocked
+      required_state: Carrier cancellation and verification precede refund, stock restoration, and local order finalization.
+      description: "Product direction resolves the ordering: Delhivery must confirm cancellation before Renivet finalizes the local cancellation side effects."
+      status: resolved
     - id: DEP-173-007
       name: Alert access and atomic dedupe semantics
       purpose: Ensures divergence is discoverable and actionable.
@@ -290,9 +290,9 @@ decisions:
     - id: DEC-173-004
       question: Should refunds and stock restoration wait for carrier cancellation/verification, or may a failed carrier cancellation leave a refund pending while local cancellation remains blocked?
       class: HUMAN_CONFIRMATION
-      status: unresolved
-      recommendation: Block implementation until the financial/order-lifecycle policy is explicitly confirmed.
-      basis: Both existing cancellation callers perform refund or financial side effects before carrier cancellation, and changing that order can alter customer and accounting outcomes.
+      status: resolved
+      recommendation: "Require Delhivery cancellation and terminal verification before local shipment/order cancellation, refund, or stock restoration; leave failures recoverable and alert order operations."
+      basis: "Product direction explicitly prioritizes carrier-side cancellation and verification before Renivet finalizes local cancellation side effects."
       confidence: high
       consequence: high
       human_confirmation_required: true
@@ -383,9 +383,9 @@ critic:
         [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
     findings:
         - id: CRIT-173-001
-          severity: DESIGN_BLOCKER
+          severity: MINOR
           references: [REQ-173-005, REQ-173-008, REQ-173-011, INV-173-002, INV-173-004, DEC-173-004]
-          description: Refund and stock side-effect ordering is unresolved; existing customer and order-ops callers perform financial side effects before carrier cancellation.
+          description: Product direction resolved the refund and stock side-effect ordering; implementation must still apply the carrier-first contract to both existing callers.
         - id: CRIT-173-002
           severity: DESIGN_BLOCKER
           references: [REQ-173-002, REQ-173-004, DEP-173-001, DEC-173-003]
@@ -417,7 +417,6 @@ critic:
 approval:
     state: BLOCKED
     design_blockers:
-        - CRIT-173-001: Resolve refund/stock side-effect ordering with explicit human confirmation.
         - CRIT-173-002: Capture and approve exact Delhivery staging response and terminal-state fixtures.
         - CRIT-173-003: Define conflict-safe JSONB evidence retention and merge semantics.
     approved_by: ""

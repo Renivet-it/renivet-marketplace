@@ -46,3 +46,9 @@ Existing raw-response logging conflicts with the privacy boundary: `src/app/api/
 - Assumptions/dependencies: FAIL
 
 No application test suites were run and no repository files were modified by the Critic.
+
+## Re-review after product decision
+
+The product decision resolved `CRIT-173-001` at the contract level: Delhivery cancellation and terminal verification must precede local shipment/order cancellation, refund, and stock restoration. The re-review confirmed that implementation has not begun and therefore did not treat the decision as implemented behavior.
+
+The remaining blockers are `CRIT-173-002` (exact Delhivery positive-response and terminal-state fixtures) and `CRIT-173-003` (conflict-safe JSONB evidence retention). `CRIT-173-004` through `CRIT-173-008` remain major implementation-contract findings. The re-review concluded that `READY_FOR_DEV` is not justified yet.
