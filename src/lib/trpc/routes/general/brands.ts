@@ -11,7 +11,7 @@ import {
     createOperationalAlert,
 } from "@/lib/monitoring-sla/audit";
 import { brandStatusReasonCodes } from "@/lib/monitoring-sla/reason-codes";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { brandCache, userCache } from "@/lib/redis/methods";
 import { resend } from "@/lib/resend";
 import {

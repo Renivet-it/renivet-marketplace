@@ -2,7 +2,7 @@ import { BRAND_EVENTS } from "@/config/brand";
 import { DEFAULT_MESSAGES } from "@/config/const";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { productQueries } from "@/lib/db/queries";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import {
     analytics,
     userCartCache,

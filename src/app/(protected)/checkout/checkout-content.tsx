@@ -1197,6 +1197,13 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                                             <p className="mt-0.5 text-xs text-gray-500">
                                                 Extra savings with coupon
                                             </p>
+                                            {appliedCoupon.code.toUpperCase() ===
+                                                AUTO_COUPON_CODE && (
+                                                <p className="mt-1 text-xs text-green-700">
+                                                    TRYNEW20 was automatically applied
+                                                    to eligible carts.
+                                                </p>
+                                            )}
                                         </>
                                     ) : (
                                         <>

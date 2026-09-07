@@ -6,7 +6,7 @@ import { DEFAULT_BLOG_THUMBNAIL_URL } from "@/config/const";
 import { POSTHOG_EVENTS } from "@/config/posthog";
 import { siteConfig } from "@/config/site";
 import { blogQueries } from "@/lib/db/queries";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { cn, getAbsoluteURL } from "@/lib/utils";
 import { blogWithAuthorAndTagSchema } from "@/lib/validations";
 import { auth } from "@clerk/nextjs/server";

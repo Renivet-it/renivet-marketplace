@@ -3,7 +3,7 @@ import { POSTHOG_EVENTS } from "@/config/posthog";
 import { db } from "@/lib/db";
 import { corporateOrders, corporateProfiles, users } from "@/lib/db/schema";
 import { sendMarketingEmail } from "@/lib/marketing/email";
-import { posthog } from "@/lib/posthog/client";
+import { posthog } from "@/lib/posthog/server";
 import { first100Cache, userCache } from "@/lib/redis/methods";
 import { AccountCreated } from "@/lib/resend/emails";
 import { CResponse, handleError } from "@/lib/utils";
