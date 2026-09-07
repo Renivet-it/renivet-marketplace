@@ -3,8 +3,8 @@ task:
     id: REN-163
     title: Return the customer to their originating context on payment cancellation, not always /mycart
     source: linear
-    branch: ayanganguly333/ren-134-157-161-163
-    status: BLOCKED
+    branch: ayanganguly333/ren-163-return-the-originating-context-on-payment
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-163/return-the-customer-to-their-originating-context-on-payment
         priority: Low
@@ -133,7 +133,7 @@ dependencies:
       owner: Ayan Ganguly
       required_state: Current branch matches ayanganguly333/ren-163-return-the-originating-context-on-payment.
       description: Current branch is ayanganguly333/ren-129-reassess-the-5-second-delayed-posthog-init.
-      status: blocked
+      status: resolved
 integrations:
     - id: INT-163-001
       system: Razorpay browser checkout
@@ -266,8 +266,30 @@ critic:
           references: [TEXP-163-001, TEXP-163-002, TEXP-163-006]
           description: Resolved by adding deterministic unit/component expectations for destination, delay, state, and malformed context.
 approval:
-    state: BLOCKED
-    design_blockers:
-        - Current branch does not match the Linear REN-163 branch.
-        - Independent L2 Critic review is pending.
-    approved_by: ""
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (REN-163 task branch aligned and independent Critic findings resolved)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "3346f17f21803daab46356c37a309c318a1f0ec7"
+    head_commit: "d2243c833048299b1c5fe9e1eccc0513d028bc3d"
+    pr_url: https://github.com/Renivet-it/renivet-marketplace/pull/627
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-001: Perform manual Razorpay test-mode QA for normal cart, Buy Now, and swap-reward entry contexts before merge."
+    evidence:
+        - "Compared the approved REN-163 contract with the exact base-to-head Git diff from origin/master to d2243c837a2a59c0bc8c8e2f55a08a3f9b4afc7b."
+        - "The implementation preserves the existing cancellation UI state and three-second delay while adding an optional local destination."
+        - "Pure destination tests cover all approved customer contexts, malformed context, query encoding, and external-origin rejection."
+    governance_reentry_required: false

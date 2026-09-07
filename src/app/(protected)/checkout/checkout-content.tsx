@@ -21,6 +21,7 @@ import {
     createRazorpayPaymentOptions,
     initializeRazorpayPayment,
 } from "@/lib/razorpay/payment";
+import { getCustomerPaymentCancellationPath } from "@/lib/razorpay/payment-cancellation";
 import { useCartStore } from "@/lib/store/cart-store";
 import { trpc } from "@/lib/trpc/client";
 import {
@@ -67,6 +68,14 @@ export default function CheckoutContent({ userId }: { userId: string }) {
     const buyNowQty = searchParams.get("qty");
     const isSwapReward = searchParams.get("swap_reward") === "true";
     const rewardRedemptionId = searchParams.get("redemption");
+    const paymentCancellationPath = getCustomerPaymentCancellationPath({
+        isBuyNow,
+        buyNowItemId,
+        buyNowVariantId,
+        buyNowQty,
+        isSwapReward,
+        rewardRedemptionId,
+    });
 
     const [isProcessingModalOpen, setIsProcessingModalOpen] = useState(false);
     const [processingModalTitle, setProcessingModalTitle] = useState("");
@@ -769,6 +778,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
 
                 const options = createRazorpayPaymentOptions({
                     orderId: razorpayOrderId,
+                    cancelRedirectUrl: paymentCancellationPath,
                     deliveryAddress: selectedShippingAddress,
                     prices: {
                         ...priceList,
