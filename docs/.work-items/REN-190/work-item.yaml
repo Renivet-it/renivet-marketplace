@@ -3,7 +3,7 @@ task:
   id: REN-190
   title: Create festive landing page catalog UI
   source: linear
-  branch: ayanganganguly333/ren-190-create-festive-landing-page-catalog-ui
+  branch: ayanganguly333/ren-129-reassess-the-5-second-delayed-posthog-init
   status: READY_FOR_DEV
   linear:
     url: https://linear.app/renivet/issue/REN-190/create-festive-landing-page-catalog-ui
