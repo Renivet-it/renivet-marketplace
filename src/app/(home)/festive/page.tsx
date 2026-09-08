@@ -26,6 +26,13 @@ export const metadata: Metadata = {
             },
         ],
     },
+    twitter: {
+        card: "summary_large_image",
+        title: "Festive Collection | Renivet",
+        description:
+            "Shop Renivet's curated festive collection for thoughtful gifting.",
+        images: [siteConfig.og.url],
+    },
 };
 
 export default async function FestivePage({

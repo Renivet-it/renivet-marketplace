@@ -1,4 +1,10 @@
 import { ImageResponse } from "next/og";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
+const renivetLogo = `data:image/png;base64,${readFileSync(
+    join(process.cwd(), "public", "favicon-96x96.png")
+).toString("base64")}`;
 
 export const alt = "Renivet - Sustainable Marketplace";
 export const size = {
@@ -49,21 +55,18 @@ export default function Image() {
                             fontWeight: 700,
                         }}
                     >
-                        <div
+                        {/* ImageResponse requires a native image element. */}
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                            alt="Renivet logo"
+                            src={renivetLogo}
                             style={{
                                 width: 58,
                                 height: 58,
-                                borderRadius: 29,
-                                background: "#235b49",
-                                color: "#fffaf2",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 34,
+                                borderRadius: 14,
+                                objectFit: "contain",
                             }}
-                        >
-                            R
-                        </div>
+                        />
                         Renivet
                     </div>
                     <div
