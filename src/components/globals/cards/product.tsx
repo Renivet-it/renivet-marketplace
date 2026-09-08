@@ -81,6 +81,7 @@ interface PageProps extends GenericProps {
     product: ProductWithBrand;
     isWishlisted: boolean;
     userId?: string;
+    theme?: "festive";
 }
 
 const PLACEHOLDER_IMAGE_URL =
@@ -91,6 +92,7 @@ export function ProductCard({
     isWishlisted,
     product,
     userId,
+    theme,
     ...props
 }: PageProps) {
     const router = useRouter();
@@ -424,7 +426,10 @@ export function ProductCard({
                                 <DialogTrigger asChild>
                                     <button
                                         className={cn(
-                                            "relative flex h-11 w-11 items-center justify-center rounded-full border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] transition-all duration-300 active:scale-95 sm:h-12 sm:w-12",
+                                            "relative flex items-center justify-center rounded-full transition-all duration-300 active:scale-95",
+                                            theme
+                                                ? "h-10 w-10 border-[#DF2463] bg-[#DF2463] text-white shadow-[0_8px_20px_rgba(223,36,99,0.28)] sm:h-11 sm:w-11"
+                                                : "h-11 w-11 border border-[#dfcda6] bg-[radial-gradient(circle_at_30%_30%,#fffaf0_0%,#f7edd8_45%,#dcc28f_100%)] text-primary shadow-[0_12px_28px_rgba(144,112,44,0.26)] sm:h-12 sm:w-12",
                                             isQuickViewOpen &&
                                                 "border-primary bg-[linear-gradient(180deg,#485231_0%,#2e381d_100%)] text-primary-foreground shadow-[0_18px_36px_rgba(49,58,31,0.34)]"
                                         )}
@@ -432,7 +437,13 @@ export function ProductCard({
                                         onPointerDown={preloadQuickViewImages}
                                     >
                                         <span className="absolute inset-0 rounded-full bg-[radial-gradient(circle,rgba(255,255,255,0.5)_0%,rgba(255,255,255,0)_68%)] opacity-70" />
-                                        <ShoppingCart className="size-[18px]" />
+                                        <ShoppingCart
+                                            className={cn(
+                                                theme
+                                                    ? "size-3.5 text-white"
+                                                    : "size-[18px]"
+                                            )}
+                                        />
                                     </button>
                                 </DialogTrigger>
                             </div>

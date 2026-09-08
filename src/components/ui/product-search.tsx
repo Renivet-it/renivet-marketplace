@@ -672,7 +672,7 @@ const ProductSearch = React.forwardRef<HTMLInputElement, InputProps>(
                         >
                             <Icons.Search className="size-[18px] text-primary" />
                             <span className="flex-1 truncate text-left text-13 tracking-wide text-[#7d7567]">
-                                Search for products, brands...
+                                {localSearch || "Search for products, brands..."}
                             </span>
                         </button>
                     </SheetTrigger>
