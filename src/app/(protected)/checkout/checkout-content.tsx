@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { Spinner } from "@/components/ui/spinner";
 import { Textarea } from "@/components/ui/textarea-general";
 import { POSTHOG_EVENTS } from "@/config/posthog";
-import { buildMetaPurchaseTrackingEvent } from "@/lib/analytics/meta-purchase";
+import { trackMetaPurchase } from "@/lib/analytics/meta-purchase";
 import { canPlaceCustomerOrder } from "@/lib/customer-order-access";
 import { fbEvent } from "@/lib/fbpixel";
 import {
@@ -484,37 +484,34 @@ export default function CheckoutContent({ userId }: { userId: string }) {
             },
         });
 
-    const trackMetaPurchase = (completedOrderIds: string[]) => {
-        if (completedOrderIds.length === 0) {
-            console.error("Skipping Meta Purchase without completed order IDs");
-            return;
-        }
-
-        const { eventId, purchasePayload } = buildMetaPurchaseTrackingEvent({
-            completedOrderIds,
-            totalAmountPaise: payableTotalPaise,
-            items: availableItems.map((item: any) => ({
-                productId: item.product.id,
-                quantity: item.quantity,
-            })),
-        });
-
-        fbEvent("Purchase", purchasePayload, { eventId });
-        trackPurchaseCapi(
-            eventId,
+    const trackCompletedPurchase = (completedOrderIds: string[]) => {
+        trackMetaPurchase(
             {
-                em: user?.email,
-                ph: selectedShippingAddress?.phone,
-                fn: user?.firstName ?? undefined,
-                ln: user?.lastName ?? undefined,
-                ct: selectedShippingAddress?.city,
-                st: selectedShippingAddress?.state,
-                zp: selectedShippingAddress?.zip,
-                external_id: user?.id,
+                completedOrderIds,
+                totalAmountPaise: payableTotalPaise,
+                items: availableItems.map((item: any) => ({
+                    productId: item.product.id,
+                    quantity: item.quantity,
+                })),
+                userData: {
+                    em: user?.email,
+                    ph: selectedShippingAddress?.phone,
+                    fn: user?.firstName ?? undefined,
+                    ln: user?.lastName ?? undefined,
+                    ct: selectedShippingAddress?.city,
+                    st: selectedShippingAddress?.state,
+                    zp: selectedShippingAddress?.zip,
+                    external_id: user?.id,
+                },
+                sourceUrl: getAbsoluteURL(window.location.href),
             },
-            purchasePayload,
-            getAbsoluteURL(window.location.href)
-        ).catch((err) => console.error("CAPI Purchase Error:", err));
+            {
+                sendPixel: fbEvent,
+                sendCapi: trackPurchaseCapi,
+                reportError: (message, error) =>
+                    console.error(`${message}:`, error),
+            }
+        );
     };
 
     const buildOrderDetailsByBrand = ({
@@ -821,7 +818,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                     },
                     orderIntentId: orderIntent.id,
                     onOrderSuccess: playSwapStampCelebration,
-                    onPurchaseSuccess: trackMetaPurchase,
+                    onPurchaseSuccess: trackCompletedPurchase,
                 });
 
                 initializeRazorpayPayment(options);
@@ -878,7 +875,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 );
             }
 
-            trackMetaPurchase(completedOrderIds);
+            trackCompletedPurchase(completedOrderIds);
 
             if (!isBuyNow) {
                 deleteItemFromCart({ userId });
@@ -943,7 +940,7 @@ export default function CheckoutContent({ userId }: { userId: string }) {
                 );
             }
 
-            trackMetaPurchase(completedOrderIds);
+            trackCompletedPurchase(completedOrderIds);
 
             setProcessingModalTitle("Reward Redeemed Successfully");
             setProcessingModalDescription(

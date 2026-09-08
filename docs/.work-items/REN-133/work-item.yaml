@@ -1,0 +1,260 @@
+schema_version: "1.0"
+task:
+  id: REN-133
+  title: "Consolidate duplicate purchase_completed instrumentation"
+  source: linear
+  branch: ayanganguly333/ren-133-consolidate-purchase-completed-instrumentation
+  status: READY_FOR_DEV
+  linear:
+    url: https://linear.app/renivet/issue/REN-133/consolidate-duplicate-purchase-completed-instrumentation
+    priority: Medium
+    labels: []
+    status: Backlog
+    assignee: Ayan Ganguly
+    project: Customer Tracking & Analytics Instrumentation
+    milestone: null
+risk:
+  initial_risk: L1
+  path_rule_risk: L2
+  semantic_risk: L2
+  final_risk: L2
+  reasons:
+    - The change spans two independent checkout entry points and shared conversion instrumentation.
+    - Payload or event-ID drift could corrupt Meta conversion attribution without immediately breaking checkout.
+    - Existing customer matching data crosses the client analytics boundary, but no new fields or state mutation are proposed.
+  escalation_history: []
+investigation:
+  depth: dependency_tracing
+  investigated_areas:
+    - Linear REN-133 description, status, branch context, related issues, and comments
+    - Cart payment-stepper purchase callback and Meta tracking function
+    - Standalone checkout purchase callback and all current completion call sites
+    - Shared Meta payload/event-ID helper and analytics action
+    - Existing server-side purchase_completed helper and order mutation invocation
+    - Focused purchase, Meta, and analytics tests
+  excluded_areas:
+    - Application source, tests, production configuration, and QA artifacts during specification phase
+    - Order creation, payment, cart clearing, redirects, and notification behavior
+    - Event taxonomy, attribution policy, CAPI credentials, and schema changes
+    - New retries, deduplication state, or broader checkout consolidation
+  dependencies: [DEP-133-001, DEP-133-002]
+  integrations: [INT-133-001, INT-133-002]
+  security_boundaries: [SEC-133-001]
+  state_transitions:
+    - order_success_callback -> typed_purchase_input -> pixel_and_capi_attempted -> checkout_continues
+  related_tests: [TEXP-133-001, TEXP-133-002, TEXP-133-003, TEXP-133-004]
+  uncertainties:
+    - The issue text refers to duplicate purchase_completed capture, while the current server-side PostHog implementation is already centralized by prior work.
+    - The two checkout components use different item collections and have different alternate completion branches; adapters must preserve each existing trigger.
+requirements:
+  - id: REQ-133-001
+    description: Consolidate duplicated browser Meta Purchase Pixel/CAPI construction into one shared client-safe helper used by both checkout implementations, while leaving server purchase_completed ownership unchanged.
+    type: explicit
+  - id: REQ-133-002
+    description: Preserve existing payload fields, item quantities, totals, event IDs, callback registrations, and completion triggers across cart, standalone, split-order, COD, reward, and Razorpay paths.
+    type: explicit
+  - id: REQ-133-003
+    description: Keep Pixel and CAPI best-effort and failure-isolated so analytics failures do not affect successful order handling, cart clearing, UI, or navigation.
+    type: explicit
+  - id: REQ-133-004
+    description: Preserve the single server-side purchase_completed PostHog capture after successful order creation and introduce no retries or new deduplication behavior.
+    type: inferred
+  - id: REQ-133-005
+    description: Keep existing analytics data boundaries and matching-field handling without adding sensitive fields or logging payload contents.
+    type: inferred
+scenarios:
+  - id: SCN-133-001
+    requirement_ids: [REQ-133-001, REQ-133-002]
+    description: Cart and standalone checkout completion delegate to the same helper and emit equivalent Meta payloads with the existing event ID.
+  - id: SCN-133-002
+    requirement_ids: [REQ-133-002, REQ-133-004]
+    description: Regular, COD, reward, and split-order completion retain current callback invocation and server purchase_completed behavior.
+  - id: SCN-133-003
+    requirement_ids: [REQ-133-003]
+    description: Pixel failure, CAPI rejection, and empty order IDs do not throw into checkout and follow the current skip/log behavior.
+  - id: SCN-133-004
+    requirement_ids: [REQ-133-004, REQ-133-005]
+    description: The refactor adds no retry/duplicate state, preserves server-only event ownership, and does not expand analytics payload or logging boundaries.
+invariants:
+  - id: INV-133-001
+    description: One shared helper owns browser Meta purchase payload construction and event-ID pairing for both checkout callers.
+  - id: INV-133-002
+    description: The event ID and purchase payload passed to Pixel and CAPI are equivalent for each existing tracking invocation.
+  - id: INV-133-003
+    description: Analytics failure cannot mutate or block order, payment, cart, customer, or notification state, and no retry is introduced.
+  - id: INV-133-004
+    description: Server purchase_completed remains emitted only by the existing server order path with its current allowlisted fields.
+  - id: INV-133-005
+    description: Existing matching fields remain within the established analytics action boundary and are never printed in logs.
+flows:
+  - id: FLOW-133-001
+    description: A successful checkout callback adapts local state into the shared helper, attempts paired browser/server Meta events, isolates analytics failure, and continues checkout.
+    state_transitions: [order_success_callback, typed_purchase_input, pixel_and_capi_attempted, checkout_continues]
+dependencies:
+  - id: DEP-133-001
+    name: existing Meta event builders/actions
+    purpose: Supplies canonical purchase payload conversion, event ID generation, Pixel dispatch, and CAPI action.
+    owner: Analytics maintainers
+    required_state: Existing payload field names and event-ID generation remain compatible.
+    description: "buildMetaPurchaseTrackingEvent, fbEvent, and trackPurchaseCapi already exist."
+    status: resolved
+  - id: DEP-133-002
+    name: server purchase_completed capture
+    purpose: Records the canonical PostHog purchase event after order creation.
+    owner: Orders/analytics maintainers
+    required_state: "capturePurchaseCompleted remains called from the successful order mutation."
+    description: Current repository state already centralizes this event server-side.
+    status: resolved
+integrations:
+  - id: INT-133-001
+    system: Meta Pixel and Meta CAPI
+    purpose: Receives browser and server conversion events correlated by event ID.
+    failure_mode: Browser global unavailable, synchronous Pixel error, CAPI network/API rejection, or browser navigation before completion.
+    retry_idempotency: No retries; preserve current best-effort one-attempt behavior.
+  - id: INT-133-002
+    system: checkout order-success callbacks
+    purpose: Supplies completed order IDs and purchase context from two independent flows.
+    failure_mode: Wrong adapter fields, missing items, altered trigger count, or analytics exception blocking checkout.
+    retry_idempotency: Preserve current callback semantics; helper extraction must not add deduplication.
+personas:
+  - id: PER-133-001
+    role: shopper
+    applicability: Completes a purchase through cart or standalone checkout.
+  - id: PER-133-002
+    role: marketing_analytics_operator
+    applicability: Uses correlated conversion events for attribution and reporting.
+security_boundaries:
+  - id: SEC-133-001
+    description: Analytics matching data stays within the existing client-to-CAPI action contract; no new sensitive field, identity authority, or payload logging is added.
+business_rules:
+  - id: BR-133-001
+    description: Successful checkout must not depend on analytics availability.
+  - id: BR-133-002
+    description: Pixel and CAPI purchase events must remain correlated by the same event ID.
+decisions:
+  - id: DEC-133-001
+    question: Should REN-133 change server-side purchase_completed capture as well as duplicated client Meta instrumentation?
+    class: RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: Consolidate only the duplicated client Meta Pixel/CAPI implementation; preserve the already-centralized server PostHog capture unchanged.
+    basis: "Repository evidence shows capturePurchaseCompleted is already called once from the successful order mutation, while duplication remains in the two checkout components."
+    confidence: high
+    consequence: high
+    human_confirmation_required: true
+  - id: DEC-133-002
+    question: Should the refactor add deduplication or retries for repeated callbacks?
+    class: RECOMMEND_CONTINUE
+    status: resolved
+    recommendation: No; preserve existing invocation behavior and make only the implementation shared.
+    basis: The issue asks for consolidation, and retries/deduplication could change attribution and order-success timing.
+    confidence: high
+    consequence: medium
+    human_confirmation_required: false
+test_expectations:
+  - id: TEXP-133-001
+    category: unit
+    classification: REQUIRED
+    reason: Verifies shared helper payload/event-ID parity, empty IDs, and preserved customer/item/value fields.
+    scenarios: [SCN-133-001, SCN-133-003]
+  - id: TEXP-133-002
+    category: regression
+    classification: REQUIRED
+    reason: Verifies both checkout callers delegate to the helper, all current completion branches remain wired, and server PostHog capture remains centralized.
+    scenarios: [SCN-133-001, SCN-133-002, SCN-133-004]
+  - id: TEXP-133-003
+    category: integration
+    classification: REQUIRED
+    reason: Verifies Pixel and CAPI receive the same event ID, CAPI rejection is isolated, and successful checkout continues.
+    scenarios: [SCN-133-001, SCN-133-003]
+  - id: TEXP-133-004
+    category: security
+    classification: REQUIRED
+    reason: Verifies no new sensitive fields or payload logging, no state mutation, and no retry/deduplication behavior.
+    scenarios: [SCN-133-003, SCN-133-004]
+traceability:
+  requirement_to_scenarios:
+    - requirement_id: REQ-133-001
+      scenario_ids: [SCN-133-001]
+    - requirement_id: REQ-133-002
+      scenario_ids: [SCN-133-001, SCN-133-002]
+    - requirement_id: REQ-133-003
+      scenario_ids: [SCN-133-003]
+    - requirement_id: REQ-133-004
+      scenario_ids: [SCN-133-002, SCN-133-004]
+    - requirement_id: REQ-133-005
+      scenario_ids: [SCN-133-004]
+  scenario_to_invariants:
+    - scenario_id: SCN-133-001
+      invariant_ids: [INV-133-001, INV-133-002]
+    - scenario_id: SCN-133-002
+      invariant_ids: [INV-133-003, INV-133-004]
+    - scenario_id: SCN-133-003
+      invariant_ids: [INV-133-002, INV-133-003, INV-133-005]
+    - scenario_id: SCN-133-004
+      invariant_ids: [INV-133-003, INV-133-004, INV-133-005]
+  scenario_to_test_expectations:
+    - scenario_id: SCN-133-001
+      test_expectation_ids: [TEXP-133-001, TEXP-133-002, TEXP-133-003]
+    - scenario_id: SCN-133-002
+      test_expectation_ids: [TEXP-133-002]
+    - scenario_id: SCN-133-003
+      test_expectation_ids: [TEXP-133-001, TEXP-133-003, TEXP-133-004]
+    - scenario_id: SCN-133-004
+      test_expectation_ids: [TEXP-133-002, TEXP-133-004]
+critic:
+  required: true
+  completed: true
+  artifact: CRITIQUE.md
+  reviewer: Carson (fresh-context independent critic)
+  fresh_context: true
+  read_only: true
+  categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+  findings:
+    - id: CRIT-133-001
+      severity: MAJOR
+      references: [REQ-133-001, DEC-133-001]
+      description: Resolve stale issue wording by explicitly preserving the current server-side PostHog source of truth and consolidating only client Meta instrumentation.
+    - id: CRIT-133-002
+      severity: MAJOR
+      references: [REQ-133-002, SCN-133-002]
+      description: Preserve differing checkout item sources and all current completion triggers through typed adapters.
+    - id: CRIT-133-003
+      severity: MINOR
+      references: [REQ-133-003, INV-133-002]
+      description: Test Pixel/CAPI event-ID parity under independent transport failures.
+    - id: CRIT-133-004
+      severity: MINOR
+      references: [REQ-133-004, INV-133-003]
+      description: Do not add retries or deduplication state during consolidation.
+    - id: CRIT-133-005
+      severity: MINOR
+      references: [SEC-133-001, TEXP-133-004]
+      description: Preserve existing analytics data boundary and avoid logging matching fields.
+approval:
+  state: APPROVED
+  design_blockers: []
+  approved_by: Ayan Ganguly (explicit REN-133 specification approval)
+implementation_review:
+  artifact: REVIEW.md
+  result: REVIEW_PASSED_WITH_FINDINGS
+  base_branch: origin/master
+  base_commit: "7eb28fd56eb75769e8088938693c3e0831882297"
+  head_commit: "7eb28fd56eb75769e8088938693c3e0831882297"
+  pr_url: null
+  material_drift: NO_DRIFT
+  reconciliation:
+    requirements: PASS
+    scenarios: PASS
+    invariants: PASS
+    architecture: PASS
+    security: PASS
+    test_coverage: PARTIAL
+    scope: PASS
+  blocking_findings: []
+  required_actions:
+    - "REV-133-001: Add checkout-level integration coverage for analytics failure isolation when a reliable checkout harness is available."
+  evidence:
+    - "Compared the approved REN-133 contract with the origin/master-to-working-tree implementation diff on ayanganguly333/ren-133-consolidate-purchase-completed-instrumentation."
+    - "Verified shared event construction, paired event-ID reuse, independent transport failure isolation, and preservation of all five existing checkout completion trigger locations."
+    - "Inspected focused Meta and purchase analytics tests statically; REVIEW did not execute application tests."
+  governance_reentry_required: false
