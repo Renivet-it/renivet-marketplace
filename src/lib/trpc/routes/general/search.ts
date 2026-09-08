@@ -2,6 +2,7 @@ import {
     getSearchCopy,
     getSearchRedirectUrl,
     getSuggestions,
+    logSearchProductClick,
     logSearchQuery,
     processSearch,
 } from "@/lib/search/search-engine";
@@ -44,12 +45,13 @@ export const searchRouter = createTRPCRouter({
             const result = await processSearch(query);
 
             // Log the search for analytics (Stage 10)
-            await logSearchQuery(result, sessionId, userId);
+            const searchId = await logSearchQuery(result, sessionId, userId);
 
             // Return result with routing info
             return {
                 ...result,
-                redirectUrl: getSearchRedirectUrl(result),
+                searchId,
+                redirectUrl: getSearchRedirectUrl(result, searchId),
                 uiCopy: getSearchCopy(result),
             };
         }),
@@ -60,15 +62,14 @@ export const searchRouter = createTRPCRouter({
     logSearchClick: publicProcedure
         .input(
             z.object({
-                searchId: z.string().optional(),
+                searchId: z.string().uuid().optional(),
                 productId: z.string(),
             })
         )
         .mutation(async ({ input }) => {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
-            const { productId } = input;
-            // TODO: Implement click logging
-            // This can update the searchAnalytics record with clickedProductId
+            if (!input.searchId) return { success: false };
+
+            await logSearchProductClick(input.searchId, input.productId);
             return { success: true };
         }),
 });

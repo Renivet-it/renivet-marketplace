@@ -46,6 +46,7 @@ interface PageProps extends GenericProps {
     prioritizeNewProducts?: boolean;
     catalogContext?: "festive";
     theme?: "festive";
+    searchId?: string;
 }
 
 export function ShopProducts({
@@ -60,9 +61,12 @@ export function ShopProducts({
     prioritizeNewProducts = false,
     catalogContext,
     theme,
+    searchId,
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
+    const logSearchClickMutation =
+        trpc.general.search.logSearchClick.useMutation();
 
     const [page, setPage] = useQueryState(
         "shopPage",
@@ -488,12 +492,18 @@ export function ShopProducts({
                         return (
                             <div
                                 key={product.id}
-                                onClick={() =>
+                                onClick={() => {
                                     sendProductClickEvent(
                                         product.id,
                                         product.brandId
-                                    )
-                                }
+                                    );
+                                    if (searchId) {
+                                        logSearchClickMutation.mutate({
+                                            searchId,
+                                            productId: product.id,
+                                        });
+                                    }
+                                }}
                                 className="cursor-pointer"
                             >
                                 <ProductCard
