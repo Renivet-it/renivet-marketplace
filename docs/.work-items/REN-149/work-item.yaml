@@ -1,0 +1,282 @@
+schema_version: "1.0"
+task:
+    id: REN-149
+    title: Reconnect the search bar's intent-classification redirect
+    source: linear
+    branch: ayanganguly333/ren-149-reconnect-the-search-bars-intent-classification-redirect
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-149/reconnect-the-search-bars-intent-classification-redirect-currently
+        priority: High
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Customer-facing navigation depends on a server-returned routing contract.
+        - The change must preserve generic-search fallback and existing loading/UI behavior.
+        - No payment, identity, schema, destructive, or authorization behavior is changed.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Repository root, current branch, dirty/expected Git state, and task branch context
+        - Linear issue metadata, description, acceptance criteria, labels, and relations
+        - ProductSearch mutation success/error handlers and navigation helper
+        - Search procedure response construction and redirect helper mappings
+        - Destination URL forms for brand and filtered shop routes
+        - Existing test inventory and Bun/governance verification commands
+    excluded_areas:
+        - Intent classification algorithm and confidence thresholds
+        - Search analytics schema and persistence implementation
+        - Typeahead suggestions and unrelated search-filter facet-count behavior
+        - Brand/category destination page implementation beyond manual route verification
+        - Authentication, payment, order, inventory, and database migration behavior
+    dependencies: [DEP-149-001, DEP-149-002]
+    integrations: [INT-149-001]
+    security_boundaries: [SEC-149-001]
+    state_transitions:
+        - query_submitted -> search_mutation_succeeded
+        - search_mutation_succeeded -> search_ui_closed
+        - search_ui_closed -> redirect_navigation_started
+        - search_mutation_failed -> generic_fallback_navigation
+    related_tests:
+        [TEXP-149-001, TEXP-149-002, TEXP-149-003, TEXP-149-004, TEXP-149-005]
+    uncertainties:
+        - The implementation must choose direct router navigation or an equivalent helper path that does not rewrite server-provided brand URLs while preserving existing loading cleanup.
+requirements:
+    - id: REQ-149-001
+      description: Successful search submissions use the server-returned redirectUrl as the destination.
+      type: explicit
+    - id: REQ-149-002
+      description: BRAND results land at the returned brand destination.
+      type: explicit
+    - id: REQ-149-003
+      description: CATEGORY, SUBCATEGORY, and PRODUCT_TYPE results land at their returned filtered shop destination.
+      type: explicit
+    - id: REQ-149-004
+      description: UNKNOWN results retain generic shop search behavior.
+      type: explicit
+    - id: REQ-149-005
+      description: Mutation errors retain the existing submitted-query fallback.
+      type: explicit
+    - id: REQ-149-006
+      description: Existing loading, sheet-closing, current-URL short-circuit, and navigation behavior remain intact where applicable.
+      type: explicit
+    - id: REQ-149-007
+      description: No client identity or analytics contract is added or changed.
+      type: explicit
+scenarios:
+    - id: SCN-149-001
+      requirement_ids: [REQ-149-001, REQ-149-002]
+      description: Known brand search navigates to the server-returned brand path.
+    - id: SCN-149-002
+      requirement_ids: [REQ-149-001, REQ-149-003]
+      description: Known category-family search navigates to the server-returned filtered shop path.
+    - id: SCN-149-003
+      requirement_ids: [REQ-149-004]
+      description: Unknown/free-text search retains the generic shop search destination.
+    - id: SCN-149-004
+      requirement_ids: [REQ-149-005]
+      description: Search mutation failure uses the submitted-query fallback.
+    - id: SCN-149-005
+      requirement_ids: [REQ-149-006]
+      description: Search UI cleanup and single navigation behavior remain intact after success.
+invariants:
+    - id: INV-149-001
+      description: The client does not override a valid server-provided intent destination.
+    - id: INV-149-002
+      description: Search failure cannot prevent the existing fallback navigation.
+    - id: INV-149-003
+      description: Search navigation does not trust or transmit customer identity from the browser.
+    - id: INV-149-004
+      description: One search submission creates at most one navigation attempt.
+flows:
+    - id: FLOW-149-001
+      description: Submit query, process mutation, close search UI, and navigate to result.redirectUrl.
+      state_transitions:
+          [
+              query_submitted,
+              search_mutation_succeeded,
+              search_ui_closed,
+              redirect_navigation_started,
+          ]
+    - id: FLOW-149-002
+      description: On mutation failure, close search UI and navigate through the existing generic fallback.
+      state_transitions:
+          [query_submitted, search_mutation_failed, generic_fallback_navigation]
+dependencies:
+    - id: DEP-149-001
+      name: general.search.processSearch response
+      purpose: Supplies redirectUrl generated from the classified result.
+      owner: Renivet application
+      required_state: Successful responses continue to include a non-empty redirectUrl.
+      description: Existing tRPC procedure returns result fields plus redirectUrl and uiCopy.
+      status: resolved
+    - id: DEP-149-002
+      name: Brand and shop destination routes
+      purpose: Render the destinations generated by the redirect helper.
+      owner: Renivet application
+      required_state: Brand and filtered shop URL forms remain routable.
+      description: Existing route families are used; no route contract change is proposed.
+      status: resolved
+integrations:
+    - id: INT-149-001
+      system: Search intent classifier and redirect helper
+      name: Server-generated search routing
+      purpose: Determines the customer landing path for successful searches.
+      owner: Renivet search code
+      contract: processSearch returns redirectUrl alongside the classified result.
+      failure_behavior: Mutation errors use the current generic query fallback.
+      retry_idempotency: No new retry or duplicate-submission behavior.
+      status: existing
+personas:
+    - id: PER-149-001
+      role: customer
+      applicability: Searches for brand, category, product type, or free-text terms.
+security_boundaries:
+    - id: SEC-149-001
+      boundary: Server-side search processing and analytics persistence
+      description: Client consumes routing data; existing server procedure remains responsible for processing and analytics persistence.
+      requirement: Do not add client-provided identity or bypass the existing procedure.
+      evidence: src/lib/trpc/routes/general/search.ts calls processSearch and logSearchQuery before returning routing data.
+business_rules:
+    - id: BR-149-001
+      description: Confident intent classifications use their curated destination; UNKNOWN uses generic search.
+decisions:
+    - id: DEC-149-001
+      question: Should the client duplicate intent logic or consume redirectUrl?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Consume the existing server-provided redirectUrl.
+      basis: It is already the authoritative response field and avoids client/server classification drift.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-149-002
+      question: How should raw-query fallback and server-provided paths coexist?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Preserve navigateToCatalogWithSearch for empty/error/raw-query behavior and use an equivalent direct path for successful redirectUrl values.
+      basis: The current helper intentionally rewrites shop search parameters and should not rewrite a brand URL.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-149-001
+      category: component
+      classification: REQUIRED
+      reason: Verifies successful brand and category-family responses use redirectUrl.
+      scenarios: [SCN-149-001, SCN-149-002]
+    - id: TEXP-149-002
+      category: regression
+      classification: REQUIRED
+      reason: Verifies UNKNOWN responses retain generic search behavior.
+      scenarios: [SCN-149-003]
+    - id: TEXP-149-003
+      category: regression
+      classification: REQUIRED
+      reason: Verifies mutation errors retain existing fallback navigation.
+      scenarios: [SCN-149-004]
+    - id: TEXP-149-004
+      category: ui_ux
+      classification: REQUIRED
+      reason: Verifies real destination paths, loader cleanup, sheet cleanup, and one navigation attempt.
+      scenarios: [SCN-149-001, SCN-149-002, SCN-149-003, SCN-149-005]
+    - id: TEXP-149-005
+      category: integration
+      classification: REQUIRED
+      reason: Confirms search analytics and server identity boundaries remain unchanged.
+      scenarios: [SCN-149-001, SCN-149-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-149-001
+          scenario_ids: [SCN-149-001, SCN-149-002]
+        - requirement_id: REQ-149-002
+          scenario_ids: [SCN-149-001]
+        - requirement_id: REQ-149-003
+          scenario_ids: [SCN-149-002]
+        - requirement_id: REQ-149-004
+          scenario_ids: [SCN-149-003]
+        - requirement_id: REQ-149-005
+          scenario_ids: [SCN-149-004]
+        - requirement_id: REQ-149-006
+          scenario_ids: [SCN-149-005]
+        - requirement_id: REQ-149-007
+          scenario_ids: [SCN-149-001, SCN-149-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-149-001
+          invariant_ids: [INV-149-001, INV-149-003, INV-149-004]
+        - scenario_id: SCN-149-002
+          invariant_ids: [INV-149-001, INV-149-003, INV-149-004]
+        - scenario_id: SCN-149-003
+          invariant_ids: [INV-149-001, INV-149-004]
+        - scenario_id: SCN-149-004
+          invariant_ids: [INV-149-002, INV-149-003, INV-149-004]
+        - scenario_id: SCN-149-005
+          invariant_ids: [INV-149-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-149-001
+          test_expectation_ids: [TEXP-149-001, TEXP-149-004, TEXP-149-005]
+        - scenario_id: SCN-149-002
+          test_expectation_ids: [TEXP-149-001, TEXP-149-004]
+        - scenario_id: SCN-149-003
+          test_expectation_ids: [TEXP-149-002, TEXP-149-004]
+        - scenario_id: SCN-149-004
+          test_expectation_ids: [TEXP-149-003, TEXP-149-005]
+        - scenario_id: SCN-149-005
+          test_expectation_ids: [TEXP-149-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED
+    base_branch: master
+    base_commit: "ca3da7f17d3a1613f1d8c0d3980fab1024cf130b"
+    head_commit: "68aa8dea81975828d3dd4a4c230488214e30a802"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PASS
+        scope: PASS
+    blocking_findings: []
+    required_actions: []
+    evidence:
+        - Compared origin/master at ca3da7f17d3a1613f1d8c0d3980fab1024cf130b with implementation commit b209c38419fe7eba00e35206804b7700ba128482.
+        - ProductSearch now consumes result.redirectUrl on success and preserves submitted-query fallback on mutation error.
+        - Focused test code covers brand, category, subcategory, product-type, UNKNOWN, UI-close, and error-fallback behavior.
+        - Existing brand and shop routes accept the URL forms generated by the unchanged server redirect helper.
+        - Local browser QA observed OCAU, Sarees, Women, Trousers, and Co-ords reach their expected brand, filtered-shop, and generic-search destinations with rendered content and no framework error overlay.
+    governance_reentry_required: false
