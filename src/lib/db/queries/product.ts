@@ -71,6 +71,13 @@ import {
 import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
 import { productTypeQueries } from "./product-type";
+import {
+    buildCatalogMediaPostFilterObservation,
+    emitCatalogMediaPostFilterObservation,
+    filterProductsByResolvedMedia,
+    getCatalogRequireMediaPredicate,
+    shouldRequireCatalogMedia,
+} from "./product-media-filter";
 import { subCategoryQueries } from "./sub-category";
 import { shouldApplySearchRelevanceOrdering } from "./product-ordering";
 
@@ -1132,7 +1139,7 @@ class ProductQuery {
         const sizeOptionNames = ["sizes", "size", "SIZE", "Size", "Sizes"];
         const normalizedColors = colors?.map((c) => c.toLowerCase());
         const normalizedSizes = sizes?.map((s) => s.toLowerCase());
-        const shouldRequireMedia = !!requireMedia;
+        const shouldRequireMedia = shouldRequireCatalogMedia(requireMedia);
         // --- Thresholds for semantic search ---
         const BRAND_MATCH_THRESHOLD = 0.28;
 
@@ -1415,7 +1422,7 @@ class ProductQuery {
                 )`
                 : undefined,
             // Filter for products with media (images) - used by shop page
-            shouldRequireMedia ? hasMedia(products, "media") : undefined,
+            getCatalogRequireMediaPredicate(shouldRequireMedia),
             isSummerCollection !== undefined && isSummerCollection !== null
                 ? eq(products.isSummerCollection, isSummerCollection)
                 : undefined,
@@ -1665,31 +1672,19 @@ class ProductQuery {
 
         // Filter out products with no valid media (where media items don't have URLs)
         // This handles cases where media IDs exist but the actual media was deleted
-        const filteredData = shouldRequireMedia
-            ? parsed.filter((product) => {
-                  // Check if product has at least one media item with a valid URL
-                  const hasValidMedia = product.media.some(
-                      (m) => m.mediaItem?.url
-                  );
-                  return hasValidMedia;
-              })
-            : parsed;
+        const filteredData = filterProductsByResolvedMedia(
+            parsed,
+            shouldRequireMedia
+        );
 
-        if (shouldRequireMedia && search) {
-            console.log(
-                `[getProducts] Filtered ${parsed.length} -> ${filteredData.length} products`
-            );
-            if (filteredData.length > 0) {
-                console.log(
-                    "[getProducts] Sample passed media:",
-                    JSON.stringify(filteredData[0].media, null, 2)
-                );
-            } else if (parsed.length > 0) {
-                console.log(
-                    "[getProducts] Sample rejected media:",
-                    JSON.stringify(parsed[0].media, null, 2)
-                );
-            }
+        const mediaPostFilterObservation =
+            buildCatalogMediaPostFilterObservation({
+                inputCount: parsed.length,
+                outputCount: filteredData.length,
+                hasSearch: Boolean(search),
+            });
+        if (mediaPostFilterObservation) {
+            emitCatalogMediaPostFilterObservation(mediaPostFilterObservation);
         }
 
         return {
