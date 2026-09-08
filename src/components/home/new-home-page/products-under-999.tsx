@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog-general";
 import { NewProductRibbon } from "@/components/ui/new-product-ribbon";
 import { Spinner } from "@/components/ui/spinner";
+import { sendProductClickEvent } from "@/lib/analytics/product-click";
 import { useAddToCartTracking } from "@/lib/hooks/useAddToCartTracking";
 import { useGuestWishlist } from "@/lib/hooks/useGuestWishlist";
 import { trpc } from "@/lib/trpc/client";
@@ -265,6 +266,9 @@ function Under999ProductCard({
                 <AnimatedProductLink
                     href={productUrl}
                     className="absolute inset-0 z-10"
+                    onClick={() =>
+                        sendProductClickEvent(product.id, product.brandId)
+                    }
                 >
                     <span className="sr-only">{product.title}</span>
                 </AnimatedProductLink>
@@ -660,6 +664,9 @@ function Under999ProductCard({
             <AnimatedProductLink
                 href={productUrl}
                 className="relative z-10 block pb-1 pt-2"
+                onClick={() =>
+                    sendProductClickEvent(product.id, product.brandId)
+                }
             >
                 <h3 className="truncate text-[11px] font-normal leading-tight text-gray-800 sm:text-xs">
                     {product.title}
