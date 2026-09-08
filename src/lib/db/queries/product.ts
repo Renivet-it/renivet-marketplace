@@ -43,6 +43,7 @@ import {
     beautyTopPicks,
     brands,
     categories,
+    festiveSeasonProducts,
     homeandlivingNewArrival,
     homeandlivingTopPicks,
     homeNewArrivals,
@@ -50,7 +51,6 @@ import {
     homeProductMayAlsoLikeThese,
     homeProductPageList,
     homeProductSection,
-    festiveSeasonProducts,
     kidsFreshCollectionSection,
     menPageFeaturedProducts,
     newProductEventPage,
@@ -70,7 +70,6 @@ import {
 } from "../schema";
 import { brandQueries } from "./brand";
 import { categoryQueries } from "./category";
-import { productTypeQueries } from "./product-type";
 import {
     buildCatalogMediaPostFilterObservation,
     emitCatalogMediaPostFilterObservation,
@@ -78,8 +77,10 @@ import {
     getCatalogRequireMediaPredicate,
     shouldRequireCatalogMedia,
 } from "./product-media-filter";
-import { subCategoryQueries } from "./sub-category";
 import { shouldApplySearchRelevanceOrdering } from "./product-ordering";
+import { getCatalogSearchPredicate } from "./product-search-predicate";
+import { productTypeQueries } from "./product-type";
+import { subCategoryQueries } from "./sub-category";
 
 type EventFilters = {
     page?: number;
@@ -1240,49 +1241,10 @@ class ProductQuery {
                     console.error("[getProducts] RAG Engine failed:", error);
                 }
 
-                const localSearchPattern = `%${processedSearch}%`;
-                const localSearchFallbackQuery = or(
-                    ilike(products.title, localSearchPattern),
-                    ilike(products.description, localSearchPattern),
-                    ilike(products.metaTitle, localSearchPattern),
-                    ilike(products.metaDescription, localSearchPattern),
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM brands b
-                    WHERE b.id = ${products.brandId}
-                      AND LOWER(b.name) LIKE ${localSearchPattern}
-                )`,
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM categories c
-                    WHERE c.id = ${products.categoryId}
-                      AND LOWER(c.name) LIKE ${localSearchPattern}
-                )`,
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM sub_categories sc
-                    WHERE sc.id = ${products.subcategoryId}
-                      AND LOWER(sc.name) LIKE ${localSearchPattern}
-                )`,
-                    sql`EXISTS (
-                    SELECT 1
-                    FROM product_types pt
-                    WHERE pt.id = ${products.productTypeId}
-                      AND LOWER(pt.name) LIKE ${localSearchPattern}
-                )`
-                );
-
-                // Apply search filter
-                if (ragProductIds.length > 0) {
-                    searchQuery = or(
-                        inArray(products.id, ragProductIds),
-                        localSearchFallbackQuery
-                    );
-                } else {
-                    // Fall back to the local catalogue when the external RAG engine
-                    // is connected to a different product copy or returns no ids.
-                    searchQuery = localSearchFallbackQuery;
-                }
+                searchQuery = getCatalogSearchPredicate({
+                    processedSearch,
+                    ragProductIds,
+                });
             }
         }
 

@@ -1,0 +1,323 @@
+schema_version: "1.0"
+task:
+    id: REN-158
+    title: Skip the unindexed ILIKE fallback query when the external RAG search already returned candidates
+    source: linear
+    branch: ayanganguly333/ren-158-skip-the-unindexed-ilike-fallback-query-when-the-external
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-158/skip-the-unindexed-ilike-fallback-query-when-the-external-rag-search
+        priority: Medium
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The change crosses an external RAG service and database-query boundary on the customer-facing search path.
+        - Candidate membership intentionally changes from a RAG/local union to RAG-only when candidates exist.
+        - Data and count statements share the affected WHERE clause.
+        - No payment, identity, schema, destructive, or authorization behavior changes.
+    escalation_history:
+        - from: L1
+          to: L2
+          reason: External integration failure behavior and customer-visible candidate semantics require dependency tracing and independent critique.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Repository root, origin/master baseline, worktree isolation, and task branch metadata
+        - Linear issue description, acceptance criteria, labels, comments, and relations
+        - getProducts exact-brand, embedding, external RAG, local fallback, filtering, ordering, data, and count paths
+        - P01 search-ranking current/target algorithm, acceptance, failure, performance, and test documentation
+        - Existing product query helper and test inventory
+    excluded_areas:
+        - Full-text and pg_trgm implementation tracked by REN-167
+        - External timeout/configuration work tracked by REN-146
+        - External-call concurrency tracked by REN-151
+        - Search intent classification, caching, analytics, schema/index changes, and new observability
+        - Remediation of pre-existing RAG relevance-order raw SQL construction
+    dependencies: [DEP-158-001, DEP-158-002]
+    integrations: [INT-158-001]
+    security_boundaries: [SEC-158-001]
+    state_transitions:
+        - search_received -> exact_brand_predicate_selected
+        - search_received -> rag_candidates_returned -> rag_id_predicate_selected
+        - search_received -> rag_empty_or_failed -> local_fallback_predicate_selected
+        - predicate_selected -> data_and_count_queries_executed
+    related_tests:
+        [
+            TEXP-158-001,
+            TEXP-158-002,
+            TEXP-158-003,
+            TEXP-158-004,
+            TEXP-158-005,
+            TEXP-158-006,
+        ]
+    uncertainties:
+        - Actual performance gain remains unmeasured until representative staging EXPLAIN ANALYZE evidence is collected.
+        - Staging must provide controllable RAG-hit and fallback queries for final validation.
+requirements:
+    - id: REQ-158-001
+      description: A non-empty usable RAG ID list selects only product-ID membership and excludes the local ILIKE/EXISTS predicate.
+      type: explicit
+    - id: REQ-158-002
+      description: Empty, unusable, non-OK, or thrown RAG outcomes select the existing local fallback predicate.
+      type: explicit
+    - id: REQ-158-003
+      description: The selected search predicate is shared by the data and total-count queries.
+      type: explicit
+    - id: REQ-158-004
+      description: Exact active-brand matching retains its existing brand-ID predicate and bypass behavior.
+      type: derived
+    - id: REQ-158-005
+      description: Existing filters, sorting, RAG relevance ordering, pagination, and response shaping remain unchanged.
+      type: explicit
+    - id: REQ-158-006
+      description: RAG-success candidate membership intentionally becomes RAG-only; valid RAG candidates remain eligible subject to existing filters and lexical-only rows outside that set are excluded.
+      type: derived
+    - id: REQ-158-007
+      description: No schema, index, API, retry, timeout, analytics, or raw-SQL interpolation change is introduced.
+      type: explicit
+scenarios:
+    - id: SCN-158-001
+      requirement_ids: [REQ-158-001, REQ-158-003, REQ-158-006]
+      description: One RAG candidate yields ID-only membership in both data and count WHERE clauses.
+    - id: SCN-158-002
+      requirement_ids: [REQ-158-001, REQ-158-005, REQ-158-006]
+      description: Multiple RAG candidates retain existing eligibility filters and RAG relevance ordering without lexical additions.
+    - id: SCN-158-003
+      requirement_ids: [REQ-158-002, REQ-158-003]
+      description: Empty or unusable RAG data selects the unchanged local fallback.
+    - id: SCN-158-004
+      requirement_ids: [REQ-158-002, REQ-158-007]
+      description: Non-OK or thrown RAG processing degrades to the local fallback.
+    - id: SCN-158-005
+      requirement_ids: [REQ-158-004, REQ-158-005]
+      description: An exact active-brand search retains the current branch.
+    - id: SCN-158-006
+      requirement_ids: [REQ-158-001, REQ-158-002, REQ-158-006]
+      description: Staging plans prove branch exclusivity and staging results satisfy clarified candidate semantics.
+invariants:
+    - id: INV-158-001
+      description: Exactly one candidate-source predicate is selected for a non-exact-brand search.
+    - id: INV-158-002
+      description: External RAG failure never removes local catalog fallback.
+    - id: INV-158-003
+      description: Data and total count use the same WHERE clause.
+    - id: INV-158-004
+      description: Existing filters and explicit sorting retain current behavior.
+    - id: INV-158-005
+      description: RAG IDs use parameterized membership and this task adds no raw SQL.
+flows:
+    - id: FLOW-158-001
+      description: RAG-hit search selects ID membership and executes the shared data/count WHERE clause.
+      state_transitions:
+          [
+              search_received,
+              rag_candidates_returned,
+              rag_id_predicate_selected,
+              data_and_count_queries_executed,
+          ]
+    - id: FLOW-158-002
+      description: RAG empty, unusable, or failure selects local fallback and executes the shared data/count WHERE clause.
+      state_transitions:
+          [
+              search_received,
+              rag_empty_or_failed,
+              local_fallback_predicate_selected,
+              data_and_count_queries_executed,
+          ]
+    - id: FLOW-158-003
+      description: Exact active-brand search selects the existing brand predicate.
+      state_transitions:
+          [
+              search_received,
+              exact_brand_predicate_selected,
+              data_and_count_queries_executed,
+          ]
+dependencies:
+    - id: DEP-158-001
+      name: Drizzle getProducts query composition
+      purpose: Builds the shared WHERE clause used by product data and count queries.
+      owner: Renivet application
+      required_state: Predicate selection remains exclusive and parameterized.
+      description: Existing internal dependency.
+      status: resolved
+    - id: DEP-158-002
+      name: Staging catalog and database access
+      purpose: Supplies representative query-plan and result evidence for both branches.
+      owner: Renivet engineering
+      required_state: RAG-hit and fallback inputs can be exercised safely outside production.
+      description: Existing staging capability; evidence remains required during implementation verification under TEXP-158-004 and TEXP-158-005.
+      status: resolved
+integrations:
+    - id: INT-158-001
+      system: Advanced RAG search endpoint
+      name: Catalog RAG candidate retrieval
+      purpose: Supplies authoritative candidate IDs when a non-empty usable array is returned.
+      owner: Renivet search service
+      contract: Successful array items contribute stringified id values; all outcomes without candidates retain local fallback.
+      failure_behavior: Non-array, non-OK, empty, or thrown processing leaves no candidates and selects local fallback.
+      retry_idempotency: Existing fetch and Next revalidation behavior remain unchanged; no retry is added.
+      status: existing
+personas:
+    - id: PER-158-001
+      role: customer
+      applicability: Searches the public product catalog.
+security_boundaries:
+    - id: SEC-158-001
+      boundary: External RAG response to database query construction
+      description: Candidate IDs originate outside the application and are used in catalog SQL composition.
+      requirement: Continue using Drizzle-parameterized inArray membership and add no raw interpolation.
+      evidence: src/lib/db/queries/product.ts currently passes ragProductIds to inArray for candidate filtering.
+business_rules:
+    - id: BR-158-001
+      description: Non-empty RAG candidates are authoritative for candidate membership; local lexical matching is fallback-only.
+    - id: BR-158-002
+      description: Existing catalog eligibility filters and sort rules still apply after candidate selection.
+decisions:
+    - id: DEC-158-001
+      question: How should the issue's unchanged-content statement be reconciled with its explicit RAG-only target?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Preserve RAG candidates/order and fallback results; intentionally exclude lexical-only additions during RAG success.
+      basis: The current OR can add rows outside RAG IDs, so exact membership cannot remain unchanged while satisfying the explicit target.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+    - id: DEC-158-002
+      question: Should implementation introduce a broad query abstraction?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Keep the smallest predicate-selection change and extract only a small pure boundary if required for robust tests.
+      basis: The task is localized and broader search refactoring increases regression risk.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-158-003
+      question: Where should EXPLAIN ANALYZE validation run?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Run representative EXPLAIN ANALYZE with buffers in staging, not production.
+      basis: Actual cost is unmeasured and production analysis is unnecessary for this scoped change.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-158-001
+      category: unit
+      classification: REQUIRED
+      reason: Proves non-empty RAG IDs select only ID membership without combining fallback.
+      scenarios: [SCN-158-001, SCN-158-002]
+    - id: TEXP-158-002
+      category: regression
+      classification: REQUIRED
+      reason: Proves empty, unusable, non-OK, and thrown RAG outcomes retain fallback.
+      scenarios: [SCN-158-003, SCN-158-004]
+    - id: TEXP-158-003
+      category: integration
+      classification: REQUIRED
+      reason: Protects exact-brand behavior, filtering, explicit sorting, and RAG relevance ordering.
+      scenarios: [SCN-158-002, SCN-158-005]
+    - id: TEXP-158-004
+      category: performance
+      classification: REQUIRED
+      reason: Staging query plans must prove absence of fallback predicates on RAG hit and presence on fallback.
+      scenarios: [SCN-158-001, SCN-158-003, SCN-158-006]
+    - id: TEXP-158-005
+      category: integration
+      classification: REQUIRED
+      reason: Validates clarified RAG-only candidate semantics and unchanged fallback results.
+      scenarios: [SCN-158-002, SCN-158-003, SCN-158-006]
+    - id: TEXP-158-006
+      category: regression
+      classification: REQUIRED
+      reason: Requires the repository Bun suite and task-local governance validation.
+      scenarios: [SCN-158-001, SCN-158-003, SCN-158-005]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-158-001
+          scenario_ids: [SCN-158-001, SCN-158-002, SCN-158-006]
+        - requirement_id: REQ-158-002
+          scenario_ids: [SCN-158-003, SCN-158-004, SCN-158-006]
+        - requirement_id: REQ-158-003
+          scenario_ids: [SCN-158-001, SCN-158-003]
+        - requirement_id: REQ-158-004
+          scenario_ids: [SCN-158-005]
+        - requirement_id: REQ-158-005
+          scenario_ids: [SCN-158-002, SCN-158-005]
+        - requirement_id: REQ-158-006
+          scenario_ids: [SCN-158-001, SCN-158-002, SCN-158-006]
+        - requirement_id: REQ-158-007
+          scenario_ids: [SCN-158-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-158-001
+          invariant_ids: [INV-158-001, INV-158-003, INV-158-005]
+        - scenario_id: SCN-158-002
+          invariant_ids: [INV-158-001, INV-158-004]
+        - scenario_id: SCN-158-003
+          invariant_ids: [INV-158-001, INV-158-002, INV-158-003]
+        - scenario_id: SCN-158-004
+          invariant_ids: [INV-158-001, INV-158-002, INV-158-005]
+        - scenario_id: SCN-158-005
+          invariant_ids: [INV-158-004]
+        - scenario_id: SCN-158-006
+          invariant_ids: [INV-158-001, INV-158-002, INV-158-003, INV-158-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-158-001
+          test_expectation_ids: [TEXP-158-001, TEXP-158-004, TEXP-158-006]
+        - scenario_id: SCN-158-002
+          test_expectation_ids: [TEXP-158-001, TEXP-158-003, TEXP-158-005]
+        - scenario_id: SCN-158-003
+          test_expectation_ids:
+              [TEXP-158-002, TEXP-158-004, TEXP-158-005, TEXP-158-006]
+        - scenario_id: SCN-158-004
+          test_expectation_ids: [TEXP-158-002]
+        - scenario_id: SCN-158-005
+          test_expectation_ids: [TEXP-158-003, TEXP-158-006]
+        - scenario_id: SCN-158-006
+          test_expectation_ids: [TEXP-158-004, TEXP-158-005]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Codex (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
+    findings:
+        - id: CRIT-158-001
+          severity: MAJOR
+          references: [REQ-158-006, DEC-158-001]
+          description: The unchanged-content phrase conflicts with explicit RAG-only membership and is resolved by preserving RAG candidates/order and fallback results while intentionally excluding lexical-only additions on RAG success.
+        - id: CRIT-158-002
+          severity: MINOR
+          references: [REQ-158-002, SCN-158-004, TEXP-158-002]
+          description: Non-array, non-OK, and thrown external outcomes require fallback coverage in addition to an empty successful array.
+        - id: CRIT-158-003
+          severity: MINOR
+          references: [TEXP-158-004, DEP-158-002]
+          description: Structural tests cannot measure planner behavior, so representative staging EXPLAIN ANALYZE evidence is required.
+        - id: CRIT-158-004
+          severity: MINOR
+          references: [SEC-158-001, INV-158-005, REQ-158-007]
+          description: External candidate IDs must remain parameterized and this focused change must add no raw SQL interpolation.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit implementation approval)
