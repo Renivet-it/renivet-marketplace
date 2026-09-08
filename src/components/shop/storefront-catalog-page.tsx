@@ -16,12 +16,16 @@ import {
     subCategoryCache,
     userWishlistCache,
 } from "@/lib/redis/methods";
+import {
+    isSearchAnalyticsId,
+    logSearchResultCount,
+} from "@/lib/search/search-engine";
 import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
-import { MobileFilterLoadingButton } from "./mobile-filter-loading-button";
 import { FestiveFloralDivider } from "./festive-floral-divider";
 import { FestiveMobileSearch } from "./festive-mobile-search";
+import { MobileFilterLoadingButton } from "./mobile-filter-loading-button";
 import { SHOP_PRICE_FILTER_MAX } from "./price-filter-config";
 import { ShopFilters, ShopSortByWithDefault } from "./shop-filters";
 import { ShopMobileActions } from "./shop-mobile-actions";
@@ -44,6 +48,7 @@ export interface StorefrontSearchParams {
     sortOrder?: "asc" | "desc";
     sizes?: string;
     minDiscount?: string;
+    searchId?: string;
 }
 
 interface StorefrontCatalogPageProps {
@@ -241,7 +246,9 @@ export async function StorefrontCatalogPage({
                             catalogContext={catalogContext}
                             theme={theme}
                             desktopCatalogHeader={
-                                <div className={`hidden items-center justify-between rounded-2xl border px-5 py-3.5 md:flex ${theme === "festive" ? "border-[#dfd3c2] bg-[#F0EBE2]" : "border-[#dce5ee] bg-[#f9fbfd]"}`}>
+                                <div
+                                    className={`hidden items-center justify-between rounded-2xl border px-5 py-3.5 md:flex ${theme === "festive" ? "border-[#dfd3c2] bg-[#F0EBE2]" : "border-[#dce5ee] bg-[#f9fbfd]"}`}
+                                >
                                     <p className="text-xs font-semibold uppercase tracking-[0.15em] text-[#5f7897]">
                                         Refine By Category, Color, Size And Fit
                                     </p>
@@ -556,6 +563,7 @@ async function StorefrontProductsFetch({
         colors: colorsRaw,
         sizes: sizesRaw,
         minDiscount: minDiscountRaw,
+        searchId: searchIdRaw,
     } = await searchParams;
 
     const limit =
@@ -613,6 +621,7 @@ async function StorefrontProductsFetch({
         minDiscountRaw && !isNaN(parseInt(minDiscountRaw, 10))
             ? parseInt(minDiscountRaw, 10)
             : undefined;
+    const searchId = isSearchAnalyticsId(searchIdRaw) ? searchIdRaw : undefined;
 
     const shouldUseRecommendations =
         !catalogContext &&
@@ -716,8 +725,20 @@ async function StorefrontProductsFetch({
                 sizes,
                 minDiscount,
                 requireMedia: true,
-                curatedProductIds: Array.from(new Set((await productQueries.getFestiveSeasonProducts()).map((entry: any) => entry.productId).filter(Boolean))),
-                curatedDefaultOrder: Array.from(new Set((await productQueries.getFestiveSeasonProducts()).map((entry: any) => entry.productId).filter(Boolean))),
+                curatedProductIds: Array.from(
+                    new Set(
+                        (await productQueries.getFestiveSeasonProducts())
+                            .map((entry: any) => entry.productId)
+                            .filter(Boolean)
+                    )
+                ),
+                curatedDefaultOrder: Array.from(
+                    new Set(
+                        (await productQueries.getFestiveSeasonProducts())
+                            .map((entry: any) => entry.productId)
+                            .filter(Boolean)
+                    )
+                ),
             });
         } else if (isDefaultNewArrivalsView) {
             finalData = await getCachedNewArrivalProducts();
@@ -756,6 +777,10 @@ async function StorefrontProductsFetch({
                 requireMedia: true,
             });
         }
+    }
+
+    if (searchId && page === 1) {
+        await logSearchResultCount(searchId, Number(finalData?.count ?? 0));
     }
 
     const userWishlist = userId
@@ -846,6 +871,7 @@ async function StorefrontProductsFetch({
                 prioritizeNewProducts={prioritizeNewProducts}
                 catalogContext={catalogContext}
                 theme={theme}
+                searchId={searchId}
             />
         </div>
     );

@@ -39,6 +39,15 @@ export interface SearchResult {
     confidence: "high" | "medium" | "low";
 }
 
+const SEARCH_ANALYTICS_ID_PATTERN =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+export function isSearchAnalyticsId(
+    value: string | undefined
+): value is string {
+    return !!value && SEARCH_ANALYTICS_ID_PATTERN.test(value);
+}
+
 interface BrandData {
     id: string;
     name: string;
@@ -463,25 +472,59 @@ export async function logSearchQuery(
     resultCount?: number
 ) {
     try {
-        await db.insert(searchAnalytics).values({
-            originalQuery: result.originalQuery,
-            normalizedQuery: result.normalizedQuery,
-            intentType:
-                result.intentType === "PRODUCT_TYPE"
-                    ? "PRODUCT"
-                    : result.intentType === "SUBCATEGORY"
-                      ? "CATEGORY"
-                      : result.intentType,
-            matchedBrandId: result.brandId,
-            matchedCategoryId: result.categoryId,
-            matchedSubcategoryId: result.subcategoryId,
-            matchedProductTypeId: result.productTypeId,
-            sessionId,
-            userId,
-            resultCount: resultCount?.toString(),
-        });
+        const [searchAnalyticsRow] = await db
+            .insert(searchAnalytics)
+            .values({
+                originalQuery: result.originalQuery,
+                normalizedQuery: result.normalizedQuery,
+                intentType:
+                    result.intentType === "PRODUCT_TYPE"
+                        ? "PRODUCT"
+                        : result.intentType === "SUBCATEGORY"
+                          ? "CATEGORY"
+                          : result.intentType,
+                matchedBrandId: result.brandId,
+                matchedCategoryId: result.categoryId,
+                matchedSubcategoryId: result.subcategoryId,
+                matchedProductTypeId: result.productTypeId,
+                sessionId,
+                userId,
+                resultCount: resultCount?.toString(),
+            })
+            .returning({ id: searchAnalytics.id });
+
+        return searchAnalyticsRow?.id;
     } catch (error) {
         console.error("Failed to log search query:", error);
+        return undefined;
+    }
+}
+
+export async function logSearchResultCount(
+    searchId: string,
+    resultCount: number
+) {
+    try {
+        await db
+            .update(searchAnalytics)
+            .set({ resultCount: resultCount.toString() })
+            .where(eq(searchAnalytics.id, searchId));
+    } catch (error) {
+        console.error("Failed to log search result count:", error);
+    }
+}
+
+export async function logSearchProductClick(
+    searchId: string,
+    productId: string
+) {
+    try {
+        await db
+            .update(searchAnalytics)
+            .set({ clickedProductId: productId })
+            .where(eq(searchAnalytics.id, searchId));
+    } catch (error) {
+        console.error("Failed to log search click:", error);
     }
 }
 
@@ -492,24 +535,38 @@ export async function logSearchQuery(
 /**
  * Generate the URL path based on search result
  */
-export function getSearchRedirectUrl(result: SearchResult): string {
+export function getSearchRedirectUrl(
+    result: SearchResult,
+    searchId?: string
+): string {
+    let redirectUrl: string;
+
     switch (result.intentType) {
         case "BRAND":
-            return `/brands/${result.brandSlug}`;
+            redirectUrl = `/brands/${result.brandSlug}`;
+            break;
 
         case "CATEGORY":
-            return `/shop?categoryId=${result.categoryId}`;
+            redirectUrl = `/shop?categoryId=${result.categoryId}`;
+            break;
 
         case "SUBCATEGORY":
-            return `/shop?subcategoryId=${result.subcategoryId}`;
+            redirectUrl = `/shop?subcategoryId=${result.subcategoryId}`;
+            break;
 
         case "PRODUCT_TYPE":
-            return `/shop?productTypeId=${result.productTypeId}`;
+            redirectUrl = `/shop?productTypeId=${result.productTypeId}`;
+            break;
 
         case "UNKNOWN":
         default:
-            return `/shop?search=${encodeURIComponent(result.originalQuery)}`;
+            redirectUrl = `/shop?search=${encodeURIComponent(result.originalQuery)}`;
     }
+
+    if (!searchId) return redirectUrl;
+
+    const separator = redirectUrl.includes("?") ? "&" : "?";
+    return `${redirectUrl}${separator}searchId=${encodeURIComponent(searchId)}`;
 }
 
 /**

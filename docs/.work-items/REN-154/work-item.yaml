@@ -1,0 +1,269 @@
+schema_version: "1.0"
+task:
+    id: REN-154
+    title: Implement search click-through and result-count logging
+    source: linear
+    branch: ayanganguly333/ren-154-implement-search-click-through-and-result-count-logging
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-154/implement-search-click-through-and-result-count-logging
+        priority: High
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The change spans a search submission, server catalog fetch, redirect transport, and result-grid click.
+        - Incorrect correlation would produce misleading CTR and zero-result reporting without necessarily breaking the storefront.
+        - A public analytics mutation crosses a client/server data boundary and must validate the row identifier and remain failure-isolated.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue, acceptance criteria, relations to REN-149 and REN-150, and current task state
+        - Search classifier, redirect builder, analytics insert, and no-op click mutation
+        - Existing search result URL consumers and brand slug-to-shop redirect
+        - Storefront catalog query and authoritative `finalData.count`
+        - Shop result-grid click beacon and existing product-event tracking
+        - Existing `search_analytics` columns and UUID identity boundary
+    excluded_areas:
+        - Ranking, relevance, classifier, and catalog query semantics
+        - Database schema/migration changes
+        - Authentication, payment, order, notification, and product-event taxonomy changes
+        - Application source and tests during specification phase
+    dependencies: [DEP-154-001, DEP-154-002, DEP-154-003]
+    integrations: [INT-154-001, INT-154-002]
+    security_boundaries: [SEC-154-001]
+    state_transitions:
+        - search_submitted -> analytics_row_created -> redirect_context_carried -> catalog_count_reconciled -> result_rendered
+        - result_rendered -> product_clicked -> click_recorded_or_ignored -> navigation_continues
+    related_tests: [TEXP-154-001, TEXP-154-002, TEXP-154-003, TEXP-154-004]
+    uncertainties:
+        - The existing result-grid click component may require a small client mutation hook or equivalent best-effort transport to call the already-defined tRPC mutation.
+        - Product cards rendered outside the search shop grid are not part of this task unless they consume the same search context.
+requirements:
+    - id: REQ-154-001
+      description: Create each search analytics row once per successful processSearch submission and return its opaque UUID as searchId with the existing search response.
+      type: explicit
+    - id: REQ-154-002
+      description: Reconcile the initial storefront catalog request with the authoritative finalData.count for the associated search row, with safe repeated updates and no duplicate catalog query.
+      type: explicit
+    - id: REQ-154-003
+      description: Preserve searchId through all internal search redirects, including brand slug-to-shop routing, without changing visible search behavior or canonical SEO URLs.
+      type: inferred
+    - id: REQ-154-004
+      description: Record clickedProductId on the exact associated analytics row while preserving existing product-click tracking, navigation, and analytics failure isolation.
+      type: explicit
+    - id: REQ-154-005
+      description: Validate the opaque search identifier and keep browser-provided identity/query fields non-authoritative; no analytics path may mutate catalog, order, or customer state.
+      type: inferred
+scenarios:
+    - id: SCN-154-001
+      requirement_ids: [REQ-154-001]
+      description: A successful classifier submission returns a searchId and redirectUrl while preserving the existing result and UI-copy response.
+    - id: SCN-154-002
+      requirement_ids: [REQ-154-002, REQ-154-003]
+      description: A search landing on shop, category, subcategory, product type, unknown search, or brand shop writes the server catalog total to the same analytics row.
+    - id: SCN-154-003
+      requirement_ids: [REQ-154-003, REQ-154-004]
+      description: A product click from a search result records the product on the correlated row, including after brand routing, while navigation and existing product telemetry continue.
+    - id: SCN-154-004
+      requirement_ids: [REQ-154-004, REQ-154-005]
+      description: Missing/invalid IDs, repeated clicks, unavailable analytics, and delayed analytics requests do not block product navigation or alter storefront state.
+invariants:
+    - id: INV-154-001
+      description: resultCount and clickedProductId updates target only the analytics row identified by the validated searchId.
+    - id: INV-154-002
+      description: The catalog total is sourced from the server-owned result query and is never fabricated by the classifier or browser.
+    - id: INV-154-003
+      description: Search analytics is observational; its failure cannot block search redirects, result rendering, existing product telemetry, or product navigation.
+    - id: INV-154-004
+      description: Search context contains no trusted user identity, query secrets, payment data, or order data, and cannot mutate non-analytics state.
+flows:
+    - id: FLOW-154-001
+      description: Insert analytics row during processSearch, return searchId, carry it through the internal redirect, and reconcile resultCount during the initial server catalog fetch.
+      state_transitions: [search_submitted, analytics_row_created, redirect_context_carried, catalog_count_reconciled, result_rendered]
+    - id: FLOW-154-002
+      description: Preserve the existing product-click beacon, send a best-effort correlated click mutation when searchId exists, and continue navigation regardless of mutation outcome.
+      state_transitions: [result_rendered, product_clicked, click_recorded_or_ignored, navigation_continues]
+dependencies:
+    - id: DEP-154-001
+      name: search analytics schema
+      purpose: Stores resultCount and clickedProductId on an existing UUID-keyed row.
+      owner: Analytics/storefront maintainers
+      required_state: Existing columns remain available; no migration is needed.
+      description: "search_analytics already has the required fields and indexes."
+      status: resolved
+    - id: DEP-154-002
+      name: storefront catalog result contract
+      purpose: Supplies the authoritative total for the search query.
+      owner: Storefront catalog maintainers
+      required_state: "finalData.count remains the total represented by the result pagination contract."
+      description: The classifier does not query products; StorefrontProductsFetch does.
+      status: resolved
+    - id: DEP-154-003
+      name: REN-149 search redirect integration
+      purpose: Keeps server-owned redirect selection as the navigation source of truth.
+      owner: Storefront search maintainers
+      required_state: Redirect URL generation remains compatible while carrying opaque context.
+      description: REN-149 is merged on the origin/master base used by this branch.
+      status: resolved
+integrations:
+    - id: INT-154-001
+      system: storefront search and catalog routes
+      purpose: Carries search correlation from classifier response to server result count and client click.
+      failure_mode: Redirect/query stripping, refresh, or brand routing can lose context.
+      retry_idempotency: Exact-row count updates are repeat-safe; missing context leaves search behavior unchanged.
+    - id: INT-154-002
+      system: existing product-click analytics
+      purpose: Preserves productEvents tracking while adding search CTR correlation.
+      failure_mode: Beacon/tRPC failure, browser close, or network delay.
+      retry_idempotency: Analytics is best-effort and repeated updates do not alter storefront state.
+personas:
+    - id: PER-154-001
+      role: shopper
+      applicability: Searches and selects products from the storefront result grid.
+    - id: PER-154-002
+      role: analytics_operator
+      applicability: Uses result-count, zero-result, and click-through reporting.
+security_boundaries:
+    - id: SEC-154-001
+      description: The browser may provide only a validated opaque UUID capability; server updates are limited to the matching analytics row and never trust client identity or query text.
+business_rules:
+    - id: BR-154-001
+      description: Search CTR must correlate a click with the same search submission whose result set contained the clicked product.
+    - id: BR-154-002
+      description: Observability must never degrade the shopping journey.
+decisions:
+    - id: DEC-154-001
+      question: Where should the actual search result count be obtained?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Insert during processSearch and reconcile from server-side finalData.count during the initial catalog fetch.
+      basis: processSearch has classifier data but no catalog result count; duplicating getProducts would add cost and risk inconsistent totals.
+      confidence: high
+      consequence: high
+      human_confirmation_required: true
+    - id: DEC-154-002
+      question: How should search context reach the result grid?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Carry the opaque searchId in the existing internal URL/query context and explicitly preserve it through brand slug-to-shop routing.
+      basis: The current search flow is URL redirect based, and this keeps server result-count reconciliation and client click correlation on one identifier.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-154-001
+      category: integration
+      classification: REQUIRED
+      reason: Verifies analytics row creation/ID return, server-owned result-count reconciliation, repeat-safe updates, and all redirect/context forms.
+      scenarios: [SCN-154-001, SCN-154-002]
+    - id: TEXP-154-002
+      category: component
+      classification: REQUIRED
+      reason: Verifies result-grid clicks send correlated search analytics, preserve the existing product beacon, and do not delay navigation.
+      scenarios: [SCN-154-003, SCN-154-004]
+    - id: TEXP-154-003
+      category: security
+      classification: REQUIRED
+      reason: Verifies invalid IDs and untrusted identity/query fields cannot update another row or non-analytics state.
+      scenarios: [SCN-154-004]
+    - id: TEXP-154-004
+      category: regression
+      classification: REQUIRED
+      reason: Verifies search classification, redirect behavior, result rendering, pagination, brand routing, and product navigation remain unchanged when analytics fails or context is absent.
+      scenarios: [SCN-154-002, SCN-154-003, SCN-154-004]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-154-001
+          scenario_ids: [SCN-154-001]
+        - requirement_id: REQ-154-002
+          scenario_ids: [SCN-154-002]
+        - requirement_id: REQ-154-003
+          scenario_ids: [SCN-154-002, SCN-154-003]
+        - requirement_id: REQ-154-004
+          scenario_ids: [SCN-154-003, SCN-154-004]
+        - requirement_id: REQ-154-005
+          scenario_ids: [SCN-154-004]
+    scenario_to_invariants:
+        - scenario_id: SCN-154-001
+          invariant_ids: [INV-154-001, INV-154-002]
+        - scenario_id: SCN-154-002
+          invariant_ids: [INV-154-001, INV-154-002, INV-154-003]
+        - scenario_id: SCN-154-003
+          invariant_ids: [INV-154-001, INV-154-003, INV-154-004]
+        - scenario_id: SCN-154-004
+          invariant_ids: [INV-154-003, INV-154-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-154-001
+          test_expectation_ids: [TEXP-154-001]
+        - scenario_id: SCN-154-002
+          test_expectation_ids: [TEXP-154-001, TEXP-154-004]
+        - scenario_id: SCN-154-003
+          test_expectation_ids: [TEXP-154-002, TEXP-154-004]
+        - scenario_id: SCN-154-004
+          test_expectation_ids: [TEXP-154-002, TEXP-154-003, TEXP-154-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Carson (fresh-context independent critic)
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-154-001
+          severity: MAJOR
+          references: [REQ-154-002, FLOW-154-001]
+          description: Resolved by obtaining resultCount from server-side finalData.count during catalog reconciliation.
+        - id: CRIT-154-002
+          severity: MAJOR
+          references: [REQ-154-003, SCN-154-003]
+          description: Resolved by preserving searchId through brand slug-to-shop routing and testing all redirect forms.
+        - id: CRIT-154-003
+          severity: MAJOR
+          references: [INV-154-003, INT-154-002]
+          description: Resolved by additive best-effort search-click logging that preserves the existing product beacon.
+        - id: CRIT-154-004
+          severity: MINOR
+          references: [SEC-154-001, SCN-154-004]
+          description: Resolved by UUID validation, exact-row updates, and no trusted browser identity/query fields.
+        - id: CRIT-154-005
+          severity: MINOR
+          references: [TEXP-154-001]
+          description: Resolved by repeat-safe updates and duplicate-event regression coverage.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit REN-154 specification approval)
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "b59093f63b61515ef232f84468f08839142f4170"
+    head_commit: "b59093f63b61515ef232f84468f08839142f4170"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-154-001: Add focused brand-routing/catalog and ShopProducts journey coverage for search correlation."
+    evidence:
+        - "Compared the approved REN-154 contract with the uncommitted origin/master-to-working-tree diff on ayanganguly333/ren-154-implement-search-click-through-and-result-count-logging."
+        - "Verified the two-phase analytics lifecycle in search-engine, search tRPC, StorefrontProductsFetch, BrandFetch, and ShopProducts."
+        - "Inspected focused search analytics, redirect, navigation, and product-click tests; REVIEW did not execute application tests."
+    governance_reentry_required: false
