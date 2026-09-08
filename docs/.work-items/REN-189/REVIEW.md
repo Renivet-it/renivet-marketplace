@@ -2,47 +2,51 @@
 
 ## Executive Result
 
-`REVIEW_PASSED_WITH_FINDINGS`; `NO_DRIFT`; governance re-entry is not required. Compared `origin/master` commit `27b9a69fd5ee4ffa766e195a494b1cfe9f907266` with implementation commit `8c5f66c776aa183b5baa78e20f484416382ea6d9`. Required external integration, crawler/browser, and post-rollout measurement evidence remains operator-owned.
+`REVIEW_PASSED_WITH_FINDINGS`; `NO_DRIFT`; governance re-entry is not required. Compared `origin/main` commit `c0852b3512031fe0f27babd5965f2fa3a0ec5022` with implementation commit `bb5384027765cbcc5740b1eeb35392cd4babd939`. The hotfix closes a production-observed crawler-signature gap within the approved conservative detector; required external and post-deployment verification remains operator-owned.
 
 ## Review Scope and Git Evidence
 
-The review covers the clean master-based branch diff, including `src/actions/analytics.ts`, `src/lib/capi-view-content.ts`, `src/lib/analytics/meta-event-quality.ts`, `src/lib/analytics/meta-purchase.ts`, `src/lib/fb-capi.ts`, the product page, Pixel component, Razorpay helper, both checkout implementations, and their tests. No PR exists.
+The comparison contains only `src/lib/analytics/meta-event-quality.ts` and `src/lib/analytics/meta-event-quality.test.ts`: ten insertions and one deletion. The production hunk adds explicit `YouBot`, `MJ12bot`, `OAI-SearchBot`, and `DotBot` signatures to `BOT_USER_AGENT_PATTERN`; the test hunk adds the four exact observed user agents to the existing crawler-versus-browser behavior test. No uncommitted implementation state was present when the comparison commits were resolved. No PR existed at review time.
 
 ## Requirement Reconciliation
 
-- `REQ-001`–`REQ-007`: PASS. Clear-user-agent suppression is feature-gated in `createViewContentCapiSender` and all action wrappers, with `reportCapiSuppression` emitting only event name, reason, category, and timestamp. `buildFbcFromFbclid`, `isValidFbc`, and `isValidFbp` preserve only valid raw browser identifiers without fabricating clicks. `buildMetaProfileUserData` and `mergeMetaUserData` centralize available Clerk profile, selected checkout, primary-address, and trusted request-geography data. `prepareCapiUserDataForMeta` omits malformed browser identifiers and hashes `external_id` only at the outbound boundary while `createCapiEventSender` persists the approved raw input. `buildMetaPurchaseTrackingEvent` supplies one deterministic `event_id`/`order_id`, all product IDs, item count, and the full-order rupee value.
-- `REQ-008`: PARTIAL. No SEO file was changed, but required Meta/Search Console and post-rollout human verification are operator actions, not implementation evidence.
+- `REQ-001`: PASS. `isLikelyAnalyticsBot` now classifies the four production-observed crawler signatures while the existing ordinary desktop/mobile and `CUBOT X30` assertions preserve normal page eligibility. The diff changes only analytics classification, not page rendering or SEO paths.
+- `REQ-002`: PASS. The hotfix does not alter `META_CAPI_SUPPRESS_CRAWLERS`, its disabled-by-default behavior, or the privacy-safe suppression diagnostic.
+- `REQ-003`–`REQ-007`: PASS. The diff does not modify browser identifiers, identity enrichment, event IDs, Purchase behavior, outbound hashing, CAPI persistence, or dashboard authorization; the merged REN-189 implementation at the comparison base remains intact.
+- `REQ-008`: PARTIAL. Static evidence improves crawler classification coverage, but Meta Test Events, crawler inspection, and post-deployment human-only quality measurement remain external operator actions.
 
 ## Scenario Reconciliation
 
-- `SCN-001`–`SCN-005`, `SCN-007`–`SCN-010`: PARTIAL. Static test evidence covers conservative bot detection, flag behavior, browser-ID validation, complete profile enrichment, checkout-address precedence, raw-log/outbound-hash separation, and full-order payload construction, but external/e2e evidence does not yet cover every deployed browser, consent, crawler, and order path.
-- `SCN-006`: PASS. `buildPurchaseEventId` is deterministic over the sorted completed order set, and Pixel/CAPI use the returned common ID.
+- `SCN-001`: PASS. Exact observed crawler requests are newly classified for the existing feature-gated suppression path, with no page-path change.
+- `SCN-002`: PASS. Existing assertions retain ordinary desktop/mobile browsers and the bot-like `CUBOT X30` device as eligible.
+- `SCN-003`–`SCN-010`: PARTIAL. Their merged implementations and static tests are unchanged by this narrow matcher hotfix; complete deployed consent, cookie, provider, crawler, and order-path evidence remains outside this diff.
 
 ## Invariant Reconciliation
 
-- `INV-001`–`INV-008`: PASS. No SEO path is changed; uncertain agents fail open; unavailable data and malformed browser IDs are omitted; valid fbc/fbp remain raw; personal-field SDK hashing and explicit outbound `external_id` hashing are separated from approved raw Renivet logging; Pixel/CAPI IDs match; telemetry failures are contained; and Purchase remains one complete full-order rupee event.
+- `INV-001`–`INV-002`: PASS. The change is confined to explicit analytics crawler signatures, preserves uncertain-user-agent fail-open behavior, and leaves access, rendering, metadata, JSON-LD, robots, and indexing controls untouched.
+- `INV-003`–`INV-008`: PASS. Identity construction, raw browser identifiers, hashing/logging boundaries, event-ID parity, telemetry isolation, and REN-145 Purchase semantics are unchanged.
 
 ## Flow and Architecture Review
 
-- `FLOW-001`: PASS. Crawler classification occurs only in analytics paths and `reportCapiSuppression` records a privacy-safe observation.
-- `FLOW-002`: PASS. Request data is captured, only valid fbc/fbp values are forwarded raw, authenticated profile data is loaded independently of individual callers, selected checkout values take precedence, `external_id` is hashed only outbound, and action interfaces remain four arguments.
-- `FLOW-003`: PASS. `createRazorpayPaymentOptions` invokes Purchase only after every expected brand group creates orders; COD and reward paths collect returned persisted IDs before dispatching the full-order payload with matching `event_id` and `order_id`.
-- `DEP-001`–`DEP-005`, `INT-001`–`INT-004`: PARTIAL. The branch makes the missing REN-145 Purchase behavior self-contained on master; external Meta and Search Console confirmation remains pending.
+- `FLOW-001`: PASS. Classification remains in the shared server analytics boundary; the hotfix only expands confirmed inputs recognized by that classifier.
+- `FLOW-002`–`FLOW-003`: PASS. Identifier enrichment, Pixel/CAPI dispatch, and completed-order Purchase flow are unchanged.
+- `DEP-001`–`DEP-004`, `INT-001`–`INT-003`: PASS. No dependency, interface, persistence, lifecycle, retry, or failure-handling contract changes.
+- `DEP-005`, `INT-004`: PARTIAL. Meta Test Events and deployed crawler/Search Console verification are not available as repository evidence.
 
 ## Security and Integration Review
 
-- `SEC-001`–`SEC-004`: PASS. Provider calls and hashing remain server-side, the side-effect gate is unchanged, raw logs are retained under the existing authorized store, the outbound payload does not leak raw `external_id`, and no token is added to log inputs.
-- `SEC-005`: PARTIAL. No synthetic fbc is generated without `fbclid`, but the repository has no inspectable consent gate proving the new browser cookie operation is consent-conditioned.
+- `SEC-001`–`SEC-005`: PASS. No token, database, authorization, consent, identity, logging, or provider-payload code changed. The explicit signatures do not introduce synthetic identifiers or expose request/customer data.
+- Meta CAPI integration behavior changes only for requests that identify themselves as one of four confirmed crawlers and only when the existing suppression flag is enabled.
 
 ## Scope and Drift Review
 
-`NO_DRIFT`. The changed files implement approved analytics, identity, purchase, and test behavior. No schema, migration, robots, metadata, SEO, queue, retry, or token-configuration change is present.
+`NO_DRIFT`. Explicitly recognizing additional clear crawler signatures is implementation detail authorized by `REQ-001`, `INV-002`, `DEC-001`, and `DEC-002`. The diff contains no schema, migration, configuration, SEO, page-content, queue, retry, token, attribution, checkout, order, or unrelated change.
 
 ## Test Expectation Review
 
-- `TEXP-001`–`TEXP-005`: PARTIAL. Static tests directly cover crawler/ordinary-browser classification, privacy-safe suppression diagnostics, browser-ID validation, profile/address precedence, outbound hashing, raw logging, deterministic Purchase IDs, and scheduler forwarding; deployed page-lifecycle evidence remains pending.
-- `TEXP-006`–`TEXP-011`: PARTIAL. Existing static and unit coverage supports portions of the flows, but required integration/component coverage is incomplete.
-- `TEXP-012`–`TEXP-014`: PARTIAL. These require Meta Test Events, crawler/browser inspection, and 48–72-hour production measurement by the approved operator.
+- `TEXP-001`: PASS. The real classifier is exercised with all four exact observed crawler user agents while existing ordinary-browser, mobile-browser, `CUBOT`, empty-agent, and flag behavior coverage remains present.
+- `TEXP-002`–`TEXP-011`: PASS for static regression scope. Their existing implementation/tests are unchanged, and the hotfix does not alter diagnostics, identifiers, identity, event IDs, page lifecycle, Purchase, logs, dashboard, or customer flows.
+- `TEXP-012`–`TEXP-014`: PARTIAL. Deployed crawler/browser inspection, Meta Test Events, and 48–72-hour EMQ/human-only coverage measurement remain operator-owned.
 
 ## Findings
 
@@ -54,4 +58,4 @@ None.
 
 ## Final Recommendation
 
-The implementation is ready for release review. After deployment, complete the required Meta Test Events, Search Console/URL Inspection, and 48–72-hour EMQ verification actions.
+The hotfix is consistent with the approved REN-189 contract and may proceed to PR review. After deployment, confirm the four observed crawler agents no longer create CAPI rows when `META_CAPI_SUPPRESS_CRAWLERS=true`, then complete the existing Meta Test Events and 48–72-hour human-only quality checks.
