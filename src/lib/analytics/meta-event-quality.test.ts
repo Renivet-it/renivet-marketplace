@@ -39,6 +39,15 @@ test("suppresses clear crawler user agents but keeps ordinary browsers eligible"
             "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)"
         )
     ).toBe(true);
+    const observedCrawlerUserAgents = [
+        "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; YouBot/1.0; +https://docs.you.com/youbot; env:prod) Chrome/142.0.0.0 Safari/537.36",
+        "Mozilla/5.0 (compatible; MJ12bot/v1.4.8; http://mj12bot.com/)",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36; compatible; OAI-SearchBot/1.4; +https://openai.com/searchbot",
+        "Mozilla/5.0 (compatible; DotBot/1.2; +https://opensiteexplorer.org/dotbot; help@moz.com)",
+    ];
+    for (const userAgent of observedCrawlerUserAgents) {
+        expect(isLikelyAnalyticsBot(userAgent)).toBe(true);
+    }
     expect(
         isLikelyAnalyticsBot(
             "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/125 Mobile Safari/537.36"

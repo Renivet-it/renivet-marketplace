@@ -1,7 +1,7 @@
 import type { CapiUserData } from "@/lib/fb-capi";
 
 const BOT_USER_AGENT_PATTERN =
-    /(?:facebookexternalhit|meta-externalads|meta-externalagent|googlebot|bingbot|amazonbot|applebot|claudebot|gptbot|ahrefsbot|baiduspider|bytespider|\b(?:bot|crawler|spider)\b)/i;
+    /(?:facebookexternalhit|meta-externalads|meta-externalagent|googlebot|bingbot|amazonbot|applebot|claudebot|gptbot|ahrefsbot|baiduspider|bytespider|youbot|mj12bot|oai-searchbot|dotbot|\b(?:bot|crawler|spider)\b)/i;
 const FBC_PATTERN = /^fb\.\d+\.\d{13}\.[A-Za-z0-9._-]+$/;
 const FBP_PATTERN = /^fb\.\d+\.\d{13}\.\d+$/;
 const FBCLID_PATTERN = /^[A-Za-z0-9._-]{1,500}$/;
