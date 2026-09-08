@@ -39,6 +39,7 @@ import { isClerkAPIResponseError } from "@clerk/nextjs/errors";
 import { useMutation } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "motion/react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { usePostHog } from "posthog-js/react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -116,7 +117,7 @@ function NavbarActionButton({
         <Link
             href={href}
             className={cn(
-                "relative flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2937] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary [&_svg]:size-5",
+                "relative flex size-10 shrink-0 items-center justify-center rounded-xl border border-transparent bg-transparent text-[#1f2937] transition-all duration-200 hover:border-[#e7dfd1] hover:bg-[#f5f1e8] hover:text-primary",
                 className
             )}
         >
@@ -149,6 +150,7 @@ export function NavbarHome({
     customLogo,
 }: { customLogo?: React.ReactNode } = {}) {
     const [isMenuHidden] = useState(false);
+    const isFestivePage = usePathname() === "/festive";
 
     const isMenuOpen = useNavbarStore((state) => state.isOpen);
     const setIsMenuOpen = useNavbarStore((state) => state.setIsOpen);
@@ -829,7 +831,13 @@ export function NavbarHome({
                                         }}
                                         className="flex items-center justify-center"
                                     >
-                                        <Icons.ShoppingCart className="size-5" />
+                                        <Icons.ShoppingCart
+                                            className={cn(
+                                                "size-5",
+                                                isFestivePage &&
+                                                    "size-4 text-[#DF2463]"
+                                            )}
+                                        />
                                     </motion.div>
                                     <span className="sr-only">Cart</span>
                                 </NavbarActionButton>
@@ -860,7 +868,13 @@ export function NavbarHome({
                                                 {(availableCart ?? []).length}
                                             </div>
                                         )}
-                                        <Icons.ShoppingCart className="size-6" />
+                                        <Icons.ShoppingCart
+                                            className={cn(
+                                                "size-6",
+                                                isFestivePage &&
+                                                    "size-4 text-[#DF2463]"
+                                            )}
+                                        />
                                     </motion.div>
                                 </Link>
 
@@ -1035,7 +1049,13 @@ export function NavbarHome({
                                             }}
                                             className="flex items-center justify-center"
                                         >
-                                            <Icons.ShoppingCart className="size-5" />
+                                            <Icons.ShoppingCart
+                                                className={cn(
+                                                    "size-5",
+                                                    isFestivePage &&
+                                                        "size-4 text-[#DF2463]"
+                                                )}
+                                            />
                                         </motion.div>
                                         <span className="sr-only">Cart</span>
                                     </NavbarActionButton>

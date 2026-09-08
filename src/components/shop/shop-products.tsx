@@ -44,6 +44,7 @@ interface PageProps extends GenericProps {
     defaultSortOrder?: "asc" | "desc";
     prioritizeNewProducts?: boolean;
     catalogContext?: "festive";
+    theme?: "festive";
 }
 
 export function ShopProducts({
@@ -57,6 +58,7 @@ export function ShopProducts({
     defaultSortOrder = "desc",
     prioritizeNewProducts = false,
     catalogContext,
+    theme,
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
@@ -520,6 +522,7 @@ export function ShopProducts({
                                     product={product}
                                     isWishlisted={isWishlisted}
                                     userId={userId}
+                                    theme={theme}
                                 />
                             </div>
                         );
