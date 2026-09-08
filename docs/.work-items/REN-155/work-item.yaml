@@ -1,0 +1,262 @@
+schema_version: "1.0"
+task:
+    id: REN-155
+    title: requireMedia catalog filter applied after pagination — page counts can overstate results
+    source: linear
+    branch: ayanganguly333/ren-155-requiremedia-catalog-filter-applied-after-pagination-page
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-155/requiremedia-catalog-filter-applied-after-pagination-page-counts-can
+        priority: Medium
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Shared catalog query behavior affects page membership and total counts.
+        - The change is read-only and has no payment, order, inventory, or external-write path.
+        - Existing SQL helper and shared whereClause limit the change surface.
+    escalation_history: []
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue metadata, description, comments, and relations.
+        - getProducts filter construction, paginated query, count query, and post-fetch media filtering.
+        - Existing hasMedia helper usage and catalog/API callers.
+        - Existing repository test and Bun verification conventions.
+    excluded_areas:
+        - Schema, migration, and media-cache changes because the issue scopes a query-level fix.
+        - Payment, order, inventory, and external integration flows.
+        - Full stale-cache URL validity counting because it is explicitly out of scope.
+    dependencies: [DEP-155-001, DEP-155-002, DEP-155-003]
+    integrations: []
+    security_boundaries: []
+    state_transitions: []
+    related_tests: [TEXP-155-001, TEXP-155-002, TEXP-155-003, TEXP-155-004, TEXP-155-005]
+    uncertainties:
+        - The current source already contains the SQL hasMedia predicate; the implementation diff may be a verification/test-only change.
+requirements:
+    - id: REQ-155-001
+      description: Exclude zero-media products from both data and count when requireMedia is true.
+      type: explicit
+    - id: REQ-155-002
+      description: Preserve behavior when requireMedia is disabled or omitted.
+      type: explicit
+    - id: REQ-155-003
+      description: Preserve the existing valid-media URL post-filter and its bounded limitation.
+      type: explicit
+    - id: REQ-155-004
+      description: Keep the change scoped to getProducts and unrelated callers unchanged.
+      type: inferred
+    - id: REQ-155-005
+      description: Emit a best-effort structured catalog_media_post_filter observation with input, output, removed counts, and search context.
+      type: explicit
+scenarios:
+    - id: SCN-155-001
+      requirement_ids: [REQ-155-001]
+      description: requireMedia true excludes zero-media products from data and count.
+    - id: SCN-155-002
+      requirement_ids: [REQ-155-001, REQ-155-004]
+      description: Media-bearing products retain normal page boundaries and count.
+    - id: SCN-155-003
+      requirement_ids: [REQ-155-002]
+      description: Disabled or omitted requireMedia preserves existing behavior.
+    - id: SCN-155-004
+      requirement_ids: [REQ-155-003]
+      description: Unresolvable cached media remains the documented post-fetch limitation.
+    - id: SCN-155-005
+      requirement_ids: [REQ-155-005]
+      description: Post-fetch removals emit a structured observation without changing query results.
+invariants:
+    - id: INV-155-001
+      description: Data and count queries share the same effective requireMedia predicate.
+    - id: INV-155-002
+      description: Disabled requireMedia does not add a media predicate.
+    - id: INV-155-003
+      description: The SQL count does not claim knowledge of external cached URL validity.
+    - id: INV-155-004
+      description: Telemetry is best-effort and cannot change catalog results or errors.
+flows:
+    - id: FLOW-155-001
+      description: Build shared filters, query data and count, then apply existing media mapping and post-filter.
+      state_transitions: []
+dependencies:
+    - id: DEP-155-001
+      name: Drizzle hasMedia helper
+      purpose: Express the zero-media-row predicate.
+      owner: Catalog maintainers
+      required_state: Existing helper remains available.
+      description: getProducts already uses this helper in the requireMedia branch.
+      status: resolved
+    - id: DEP-155-002
+      name: Media cache URL resolution
+      purpose: Preserve existing valid-URL post-filter behavior.
+      owner: Media infrastructure maintainers
+      required_state: Existing cache lookup remains available.
+      description: Full cache validity counting is outside this task.
+      status: resolved
+    - id: DEP-155-003
+      name: getProducts callers
+      purpose: Protect storefront and API catalog behavior.
+      owner: Catalog maintainers
+      required_state: Existing caller contracts remain unchanged.
+      description: Callers pass requireMedia through the shared query method.
+      status: resolved
+integrations: []
+personas:
+    - id: PER-155-001
+      role: customer
+      applicability: Customers need truthful catalog page sizes and counts.
+    - id: PER-155-002
+      role: catalog_consumer
+      applicability: Storefront and product APIs consume the shared query.
+security_boundaries: []
+business_rules:
+    - id: BR-155-001
+      description: Catalog totals must reflect the same database-level inclusion rule as the page query.
+decisions:
+    - id: DEC-155-001
+      question: Should the existing hasMedia SQL predicate be reused?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Reuse it in the shared filter path.
+      basis: It already expresses the scoped zero-media-row requirement.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-155-002
+      question: Should stale cached media URL validity be included in SQL count?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: No; retain the documented post-fetch limitation.
+      basis: External cache resolution is outside the issue scope and cannot be represented by the existing SQL predicate.
+      confidence: high
+      consequence: medium
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-155-001
+      category: unit
+      classification: REQUIRED
+      reason: Protects conditional filter construction.
+      scenarios: [SCN-155-001, SCN-155-003]
+    - id: TEXP-155-002
+      category: integration
+      classification: REQUIRED
+      reason: Verifies data and count exclude zero-media products together.
+      scenarios: [SCN-155-001, SCN-155-002]
+    - id: TEXP-155-003
+      category: regression
+      classification: REQUIRED
+      reason: Protects disabled/omitted requireMedia behavior.
+      scenarios: [SCN-155-003]
+    - id: TEXP-155-004
+      category: regression
+      classification: REQUIRED
+      reason: Protects existing filters, ordering, and post-fetch media behavior.
+      scenarios: [SCN-155-002, SCN-155-004]
+    - id: TEXP-155-005
+      category: exploratory
+      classification: OPTIONAL
+      reason: Confirms the known stale-cache URL limitation remains bounded and understood.
+      scenarios: [SCN-155-004]
+    - id: TEXP-155-006
+      category: unit
+      classification: REQUIRED
+      reason: Protects the required mismatch measurement and its best-effort failure behavior.
+      scenarios: [SCN-155-005]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: Lagrange
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-155-001
+          severity: DESIGN_BLOCKER
+          summary: The scoped SQL predicate already exists in the current baseline; the deliverable must distinguish verification/regression work from a duplicate implementation.
+          references: [REQ-155-001, SCN-155-001, INV-155-001]
+          resolution: Resolved by making helper extraction, measurement, and regression proof the exact deliverable while preserving the existing predicate.
+        - id: CRIT-155-002
+          severity: MAJOR
+          summary: The issue-requested residual mismatch measurement was not originally contracted.
+          references: [REQ-155-003, SCN-155-004]
+          resolution: Resolved by REQ-155-005 and TEXP-155-006 with a defined structured stdout event and best-effort behavior.
+        - id: CRIT-155-003
+          severity: MAJOR
+          summary: Regression coverage needs concrete fixtures and boundary assertions because no existing product-query tests were found.
+          references: [TEXP-155-001, TEXP-155-002]
+          resolution: Resolved by the concrete pure-helper and media-shape test strategy in SPEC.md.
+        - id: CRIT-155-004
+          severity: MINOR
+          summary: Existing database/cache failure and fallback behavior needs to be explicitly preserved.
+          references: [SCN-155-004, DEP-155-002]
+          resolution: Resolved by preserving existing DB/Redis propagation and isolating only telemetry failure.
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-155-001
+          scenario_ids: [SCN-155-001, SCN-155-002]
+        - requirement_id: REQ-155-002
+          scenario_ids: [SCN-155-003]
+        - requirement_id: REQ-155-003
+          scenario_ids: [SCN-155-004]
+        - requirement_id: REQ-155-004
+          scenario_ids: [SCN-155-002]
+        - requirement_id: REQ-155-005
+          scenario_ids: [SCN-155-005]
+    scenario_to_invariants:
+        - scenario_id: SCN-155-001
+          invariant_ids: [INV-155-001]
+        - scenario_id: SCN-155-002
+          invariant_ids: [INV-155-001]
+        - scenario_id: SCN-155-003
+          invariant_ids: [INV-155-002]
+        - scenario_id: SCN-155-004
+          invariant_ids: [INV-155-003]
+        - scenario_id: SCN-155-005
+          invariant_ids: [INV-155-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-155-001
+          test_expectation_ids: [TEXP-155-001, TEXP-155-002]
+        - scenario_id: SCN-155-002
+          test_expectation_ids: [TEXP-155-002, TEXP-155-004]
+        - scenario_id: SCN-155-003
+          test_expectation_ids: [TEXP-155-001, TEXP-155-003]
+        - scenario_id: SCN-155-004
+          test_expectation_ids: [TEXP-155-004, TEXP-155-005]
+        - scenario_id: SCN-155-005
+          test_expectation_ids: [TEXP-155-006]
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED
+    base_branch: origin/master
+    base_commit: "0da89e796366ec66632c4b03d60e2309071b6e9c"
+    head_commit: "a47d0baf92cbb77c92efdda75b0d81b5583a85cd"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: NOT_APPLICABLE
+        test_coverage: PASS
+        scope: PASS
+    blocking_findings: []
+    required_actions: []
+    evidence:
+        - Compared the approved REN-155 contract with implementation commit a47d0baf92cbb77c92efdda75b0d81b5583a85cd based on origin/master.
+        - The implementation preserves the shared hasMedia whereClause and adds focused pure-helper tests and structured telemetry.
+        - Focused tests compile page and count query shapes through the PostgreSQL dialect and verify both contain the shared zero-media exclusion.
+    governance_reentry_required: false
