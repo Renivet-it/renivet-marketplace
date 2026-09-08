@@ -1,5 +1,6 @@
 "use client";
 
+import { sendProductClickEvent } from "@/lib/analytics/product-click";
 import { trpc } from "@/lib/trpc/client";
 import { cn } from "@/lib/utils";
 import { CachedWishlist, ProductWithBrand } from "@/lib/validations";
@@ -62,29 +63,6 @@ export function ShopProducts({
     ...props
 }: PageProps) {
     const utils = trpc.useUtils();
-
-    const handleProductClick = (productId: string, brandId: string) => {
-        try {
-            const payload = JSON.stringify({ productId, brandId });
-
-            if (typeof navigator !== "undefined" && navigator.sendBeacon) {
-                const blob = new Blob([payload], {
-                    type: "application/json",
-                });
-                navigator.sendBeacon("/api/products/track-click", blob);
-                return;
-            }
-
-            void fetch("/api/products/track-click", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: payload,
-                keepalive: true,
-            });
-        } catch (error) {
-            console.error("Failed to track click:", error);
-        }
-    };
 
     const [page, setPage] = useQueryState(
         "shopPage",
@@ -511,7 +489,7 @@ export function ShopProducts({
                             <div
                                 key={product.id}
                                 onClick={() =>
-                                    handleProductClick(
+                                    sendProductClickEvent(
                                         product.id,
                                         product.brandId
                                     )
