@@ -1,0 +1,181 @@
+schema_version: "1.0"
+task:
+    id: REN-150
+    title: Shop page default Recommended sort preserves computed personalization rank
+    source: linear
+    branch: ayanganguly333/ren-150-shop-page-default-recommended-sort-discards-computed
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-150/shop-page-default-recommended-sort-discards-computed-personalization
+        priority: High
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L1
+    semantic_risk: L1
+    final_risk: L1
+    reasons:
+        - Localized customer-visible ranking behavior changes in one read-only catalog query.
+        - No schema, API, authorization, payment, or external integration behavior changes.
+    escalation_history: []
+investigation:
+    depth: targeted
+    investigated_areas:
+        - Linear issue, status, labels, comments, relations, scope, and acceptance criteria
+        - getProducts personalized and RAG order expressions
+        - Server-side priorityProductIds producers in storefront catalog and brands products routes
+        - Existing product ordering regression test
+    excluded_areas:
+        - Recommendation score generation and event weighting
+        - RAG ordering, explicit user-selected sort, filters, schemas, caching, and analytics
+    dependencies: [DEP-150-001, DEP-150-002]
+    integrations: []
+    security_boundaries: []
+    state_transitions: [recommendations_ranked -> priority_ids_passed, priority_ids_passed -> personalized_order_applied]
+    related_tests: [TEXP-150-001, TEXP-150-002, TEXP-150-003]
+    uncertainties:
+        - The narrowest test seam for SQL-rank construction should be selected during implementation without refactoring unrelated query behavior.
+requirements:
+    - id: REQ-150-001
+      description: Preserve supplied priorityProductIds order in the personalized order clause.
+      type: explicit
+    - id: REQ-150-002
+      description: Keep unlisted products after listed products in that clause.
+      type: explicit
+    - id: REQ-150-003
+      description: Preserve subsequent best-seller, recency, explicit sort, and RAG ordering behavior.
+      type: explicit
+    - id: REQ-150-004
+      description: Do not alter recommendation ID computation or caller behavior.
+      type: explicit
+scenarios:
+    - id: SCN-150-001
+      requirement_ids: [REQ-150-001, REQ-150-002]
+      description: Ordered IDs A, B, C rank before unlisted products in that exact order.
+    - id: SCN-150-002
+      requirement_ids: [REQ-150-001, REQ-150-003]
+      description: An unlisted best seller does not displace a listed product within personalized ranking.
+    - id: SCN-150-003
+      requirement_ids: [REQ-150-002, REQ-150-003]
+      description: Empty or omitted IDs preserve existing ordering.
+    - id: SCN-150-004
+      requirement_ids: [REQ-150-003]
+      description: RAG relevance ordering remains unchanged.
+    - id: SCN-150-005
+      requirement_ids: [REQ-150-004]
+      description: Existing recommendation producers retain their ordered IDs and eligibility behavior.
+invariants:
+    - id: INV-150-001
+      description: Lower priorityProductIds index always means earlier personalized rank.
+    - id: INV-150-002
+      description: The ordering change does not alter candidate filtering or product eligibility.
+    - id: INV-150-003
+      description: Explicit sort and RAG ranking behavior remain unchanged.
+flows:
+    - id: FLOW-150-001
+      description: Recommendation result supplies ordered IDs to getProducts, which applies position-preserving personalized ordering before existing later clauses.
+      state_transitions: [recommendations_ranked -> priority_ids_passed, priority_ids_passed -> personalized_order_applied]
+dependencies:
+    - id: DEP-150-001
+      name: Server-side recommendation producers
+      purpose: Supply ordered priorityProductIds.
+      owner: Storefront catalog and brands products routes
+      required_state: Existing recommendation output remains ordered.
+      description: Callers map recommendation products to IDs without client-provided rank input.
+      status: resolved
+    - id: DEP-150-002
+      name: Existing RAG CASE ordering pattern
+      purpose: Provides a proven local position-preserving ordering pattern.
+      owner: ProductQuery
+      required_state: Existing RAG expression remains untouched.
+      description: Pattern is a local implementation reference only.
+      status: resolved
+integrations: []
+personas:
+    - id: PER-150-001
+      role: returning_storefront_shopper
+      applicability: Shopper using the default Recommended catalog view.
+security_boundaries: []
+business_rules:
+    - id: BR-150-001
+      description: Recommendation producer order is the authoritative personalized rank.
+decisions:
+    - id: DEC-150-001
+      question: Which ordering representation should preserve personalized rank?
+      class: AUTO_DECIDE
+      status: resolved
+      recommendation: Mirror the existing RAG position-preserving CASE semantics for priorityProductIds only.
+      basis: Linear identifies the local RAG expression as the correct pattern and scope is one order clause.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-150-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies exact rank positions and unlisted fallback rank.
+      scenarios: [SCN-150-001, SCN-150-002, SCN-150-003]
+    - id: TEXP-150-002
+      category: regression
+      classification: REQUIRED
+      reason: Protects existing RAG ordering behavior from the adjacent personalized-ranking change.
+      scenarios: [SCN-150-004]
+    - id: TEXP-150-003
+      category: integration
+      classification: REQUIRED
+      reason: Verifies getProducts returns personalized rank before later best-seller/recency clauses.
+      scenarios: [SCN-150-001, SCN-150-002, SCN-150-005]
+    - id: TEXP-150-004
+      category: exploratory
+      classification: REQUIRED
+      reason: Confirms a known recommendation order matches the staging Recommended view.
+      scenarios: [SCN-150-001]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-150-001
+          scenario_ids: [SCN-150-001, SCN-150-002]
+        - requirement_id: REQ-150-002
+          scenario_ids: [SCN-150-001, SCN-150-003]
+        - requirement_id: REQ-150-003
+          scenario_ids: [SCN-150-002, SCN-150-003, SCN-150-004]
+        - requirement_id: REQ-150-004
+          scenario_ids: [SCN-150-005]
+    scenario_to_invariants:
+        - scenario_id: SCN-150-001
+          invariant_ids: [INV-150-001, INV-150-002]
+        - scenario_id: SCN-150-002
+          invariant_ids: [INV-150-001, INV-150-003]
+        - scenario_id: SCN-150-003
+          invariant_ids: [INV-150-002, INV-150-003]
+        - scenario_id: SCN-150-004
+          invariant_ids: [INV-150-003]
+        - scenario_id: SCN-150-005
+          invariant_ids: [INV-150-002]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-150-001
+          test_expectation_ids: [TEXP-150-001, TEXP-150-003, TEXP-150-004]
+        - scenario_id: SCN-150-002
+          test_expectation_ids: [TEXP-150-001, TEXP-150-003]
+        - scenario_id: SCN-150-003
+          test_expectation_ids: [TEXP-150-001]
+        - scenario_id: SCN-150-004
+          test_expectation_ids: [TEXP-150-002]
+        - scenario_id: SCN-150-005
+          test_expectation_ids: [TEXP-150-003]
+critic:
+    required: false
+    completed: false
+    artifact: null
+    reviewer: null
+    fresh_context: false
+    read_only: false
+    categories_reviewed: []
+    findings: []
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (explicit spec approval)
