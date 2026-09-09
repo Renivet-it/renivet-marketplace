@@ -1,0 +1,246 @@
+schema_version: "1.0"
+task:
+    id: REN-159
+    title: Cache category-only and category+sort catalog listing views
+    source: linear
+    branch: ayanganguly333/ren-159-cache-category-only-and-categorysort-catalog-listing-views
+    status: IN_REVIEW
+    linear:
+        url: https://linear.app/renivet/issue/REN-159/cache-category-only-and-categorysort-catalog-listing-views
+        priority: Medium
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L2
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - Public catalog caching changes freshness and database-load behavior across multiple listing shapes.
+        - An incomplete cache key could return another category, sort, or filtered result.
+        - The cache must not cross into personalized, curated, search, or arbitrary-filtered requests.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue description, acceptance criteria, tests, observability, and rollback
+        - Current storefront parameter normalization and branch ordering
+        - Existing default and new-arrivals unstable_cache wrappers and 60-second TTL
+        - Product query filter, ordering, pagination, media, and result-shape inputs
+        - Filter metadata/count loading and displayed-product alignment boundary
+        - Existing branch state and origin/master base
+    excluded_areas:
+        - Application source changes and test changes during specification phase
+        - Database schema, migrations, product mutation invalidation, and cache-provider redesign
+        - Production load testing and live query-volume measurement
+    dependencies: [DEP-159-001, DEP-159-002]
+    integrations: [INT-159-001]
+    security_boundaries: [SEC-159-001]
+    state_transitions: [direct_query_miss -> cached_result -> cached_hit -> ttl_expiry -> refreshed_result]
+    related_tests: [TEXP-159-001, TEXP-159-002, TEXP-159-003, TEXP-159-004]
+    uncertainties:
+        - The exact cache API seam for testing must be selected during implementation without widening the production cache boundary.
+        - Runtime hit-rate and database query-volume evidence requires staging or production observation after deployment.
+requirements:
+    - id: REQ-159-001
+      description: Cache eligible page-1 category-only public catalog results for 60 seconds and reuse an identical result within the TTL.
+      type: explicit
+    - id: REQ-159-002
+      description: Cache eligible category-plus-supported-sort results with independent canonical keys for category, sort, direction, page, limit, and cache version.
+      type: explicit
+    - id: REQ-159-003
+      description: Use a fail-closed eligibility predicate that excludes search, price, arbitrary filters, personalization, curated scopes, and non-page-1 requests.
+      type: inferred
+    - id: REQ-159-004
+      description: Preserve existing product predicates, ordering, pagination, media enrichment, result shape, filter metadata, and error behavior.
+      type: inferred
+    - id: REQ-159-005
+      description: Provide testable hit/miss and TTL-refresh behavior and record bounded query-volume or cache evidence without customer data.
+      type: explicit
+scenarios:
+    - id: SCN-159-001
+      requirement_ids: [REQ-159-001, REQ-159-004]
+      description: The first identical eligible category-only request queries the database and the second request within 60 seconds reuses the same result.
+    - id: SCN-159-002
+      requirement_ids: [REQ-159-002, REQ-159-004]
+      description: Each supported category-plus-sort field/direction uses the correct independent key and preserves direct-query ordering.
+    - id: SCN-159-003
+      requirement_ids: [REQ-159-001, REQ-159-002]
+      description: An eligible request after TTL expiry refreshes from the database and does not serve the expired value as a fresh hit.
+    - id: SCN-159-004
+      requirement_ids: [REQ-159-003]
+      description: Search, price, arbitrary filters, personalized, curated, and non-page-1 requests bypass the new cache.
+    - id: SCN-159-005
+      requirement_ids: [REQ-159-003, REQ-159-004]
+      description: Cache/query failure does not cross category or sort boundaries and follows the existing direct error behavior.
+    - id: SCN-159-006
+      requirement_ids: [REQ-159-004, REQ-159-005]
+      description: Filter metadata remains aligned with the displayed category products and instrumentation contains no customer data.
+invariants:
+    - id: INV-159-001
+      description: A cache key represents exactly one category, one allowlisted sort shape, one page/limit pair, and one cache contract version.
+    - id: INV-159-002
+      description: Out-of-scope or user-specific requests are never served from this cache.
+    - id: INV-159-003
+      description: Cached values use unchanged public visibility predicates and the existing product result shape.
+    - id: INV-159-004
+      description: The TTL is 60 seconds and a miss never silently falls back to another key.
+    - id: INV-159-005
+      description: Cache instrumentation is bounded and excludes secrets, customer data, and raw arbitrary search text.
+flows:
+    - id: FLOW-159-001
+      description: Storefront parameters are normalized, eligibility is checked, an eligible key is resolved through the 60-second read-through cache, and a miss executes the existing product query.
+      state_transitions: [request_normalized, eligibility_checked, cache_miss, direct_query, cached_result, cache_hit]
+    - id: FLOW-159-002
+      description: Ineligible requests continue through the existing direct query path, while filter metadata remains separately resolved.
+      state_transitions: [request_normalized, eligibility_rejected, direct_query, metadata_resolved, response_rendered]
+dependencies:
+    - id: DEP-159-001
+      name: storefront catalog parameter normalization
+      purpose: Provides the bounded category, sort, page, limit, and filter state used by cache eligibility.
+      owner: Storefront maintainers
+      required_state: Normalized values distinguish eligible category shapes from search and arbitrary filters.
+      description: Implemented in the storefront catalog fetch path.
+      status: resolved
+    - id: DEP-159-002
+      name: existing unstable_cache 60-second pattern
+      purpose: Establishes the requested cache mechanism and expiry contract.
+      owner: Storefront maintainers
+      required_state: Existing default/new-arrivals behavior remains unchanged.
+      description: Existing wrappers use next/cache unstable_cache with revalidate 60.
+      status: resolved
+integrations:
+    - id: INT-159-001
+      system: Next.js cache and product database query
+      purpose: Adds bounded read-through caching around public catalog reads.
+      failure_mode: Cache miss/expiry or cache failure executes the existing direct query path without cross-key fallback.
+      retry_idempotency: Reads are safe to repeat; no mutation or retry behavior is introduced.
+personas:
+    - id: PER-159-001
+      role: shopper
+      applicability: Public catalog visitor browsing a category and optional supported sort.
+    - id: PER-159-002
+      role: support_operator
+      applicability: Operator reviewing bounded hit/miss and query-volume evidence.
+security_boundaries:
+    - id: SEC-159-001
+      description: Only public catalog results are cacheable; personalized or private data and customer identifiers never enter this cache key or value.
+business_rules:
+    - id: BR-159-001
+      description: Catalog freshness may be delayed only within the existing 60-second cache contract.
+decisions: []
+test_expectations:
+    - id: TEXP-159-001
+      category: unit
+      classification: REQUIRED
+      reason: Tests canonical eligibility and proves category/sort/page/limit keys cannot collide.
+      scenarios: [SCN-159-001, SCN-159-002, SCN-159-004]
+    - id: TEXP-159-002
+      category: integration
+      classification: REQUIRED
+      reason: Tests first-call miss, identical-call hit, independent sort variants, and TTL refresh with the existing product query seam.
+      scenarios: [SCN-159-001, SCN-159-002, SCN-159-003]
+    - id: TEXP-159-003
+      category: regression
+      classification: REQUIRED
+      reason: Confirms search, price, arbitrary filters, personalization, curated context, and non-page-1 requests remain uncached and preserve existing arguments.
+      scenarios: [SCN-159-004, SCN-159-005]
+    - id: TEXP-159-004
+      category: exploratory
+      classification: REQUIRED
+      reason: Verifies bounded hit/miss or query-volume evidence and checks no sensitive or arbitrary query data is emitted.
+      scenarios: [SCN-159-005, SCN-159-006]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-159-001
+          scenario_ids: [SCN-159-001, SCN-159-003]
+        - requirement_id: REQ-159-002
+          scenario_ids: [SCN-159-002, SCN-159-003]
+        - requirement_id: REQ-159-003
+          scenario_ids: [SCN-159-004, SCN-159-005]
+        - requirement_id: REQ-159-004
+          scenario_ids: [SCN-159-001, SCN-159-002, SCN-159-005, SCN-159-006]
+        - requirement_id: REQ-159-005
+          scenario_ids: [SCN-159-006]
+    scenario_to_invariants:
+        - scenario_id: SCN-159-001
+          invariant_ids: [INV-159-001, INV-159-003, INV-159-004]
+        - scenario_id: SCN-159-002
+          invariant_ids: [INV-159-001, INV-159-003]
+        - scenario_id: SCN-159-003
+          invariant_ids: [INV-159-004]
+        - scenario_id: SCN-159-004
+          invariant_ids: [INV-159-002]
+        - scenario_id: SCN-159-005
+          invariant_ids: [INV-159-002, INV-159-004]
+        - scenario_id: SCN-159-006
+          invariant_ids: [INV-159-003, INV-159-005]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-159-001
+          test_expectation_ids: [TEXP-159-001, TEXP-159-002]
+        - scenario_id: SCN-159-002
+          test_expectation_ids: [TEXP-159-001, TEXP-159-002]
+        - scenario_id: SCN-159-003
+          test_expectation_ids: [TEXP-159-002]
+        - scenario_id: SCN-159-004
+          test_expectation_ids: [TEXP-159-001, TEXP-159-003]
+        - scenario_id: SCN-159-005
+          test_expectation_ids: [TEXP-159-003, TEXP-159-004]
+        - scenario_id: SCN-159-006
+          test_expectation_ids: [TEXP-159-004]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context contract reviewer
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-159-R01
+          severity: MAJOR
+          references: [REQ-159-003, INV-159-002]
+          description: "Resolved: cache eligibility is fail-closed and explicitly excludes unbounded, filtered, curated, and personalized requests."
+        - id: CRIT-159-R02
+          severity: MAJOR
+          references: [REQ-159-002, INV-159-001]
+          description: "Resolved: canonical key inputs and non-collision tests are required."
+        - id: CRIT-159-R03
+          severity: MAJOR
+          references: [REQ-159-004, SCN-159-003, SCN-159-005]
+          description: "Resolved: TTL refresh and no cross-key fallback on cache/query failure are explicit."
+        - id: CRIT-159-R04
+          severity: MINOR
+          references: [REQ-159-004, SCN-159-006]
+          description: "Resolved: filter metadata remains outside the cache and alignment regression coverage is required."
+        - id: CRIT-159-R05
+          severity: MINOR
+          references: [REQ-159-005, TEXP-159-004]
+          description: "Open operational follow-up: staging/production hit-rate and query-volume evidence is required after implementation."
+approval:
+    state: PENDING
+    design_blockers: []
+    approved_by: null
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_BLOCKED
+    base_branch: origin/master
+    base_commit: null
+    head_commit: null
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PARTIAL
+        scenarios: PARTIAL
+        invariants: PARTIAL
+        architecture: PARTIAL
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: ["Implementation has not started; no implementation diff exists to reconcile."]
+    required_actions: ["Obtain owner approval, implement the approved contract, then run renivet-review against the committed implementation."]
+    evidence:
+        - "Comparison input unavailable: implementation has not started, so no application diff exists to reconcile."
+    governance_reentry_required: false
