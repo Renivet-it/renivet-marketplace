@@ -1,10 +1,10 @@
-import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import {
+    assertCorporateTaxData,
     getCorporateTaxDataMissingFields,
     resolveCorporateDocumentDate,
-    assertCorporateTaxData,
 } from "@/lib/utils/corporate-document-integrity";
+import { describe, expect, test } from "bun:test";
 
 describe("REN-180 corporate document integrity", () => {
     test("uses authoritative dates and rejects malformed values", () => {
@@ -35,10 +35,11 @@ describe("REN-180 corporate document integrity", () => {
     });
 
     test("identifies the missing tax fields for a blocked document download", () => {
-        expect(getCorporateTaxDataMissingFields("", [{ hsnCode: "", taxable: true }])).toEqual([
-            "customer_gstin",
-            "hsn_code",
-        ]);
+        expect(
+            getCorporateTaxDataMissingFields("", [
+                { hsnCode: "", taxable: true },
+            ])
+        ).toEqual(["customer_gstin", "hsn_code"]);
     });
 
     test("proforma identifies the brand as supplier and Renivet only as facilitator", () => {
@@ -53,7 +54,9 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).toContain('fromLabel: "From (Supplier)"');
         expect(route).toContain("facilitatedBy:");
         expect(route).toContain("quote?.profile.shippingAddress");
-        expect(route).toContain("shippingAddress || billingAddress || \"Not provided\"");
+        expect(route).toContain(
+            'shippingAddress || billingAddress || "Not provided"'
+        );
     });
 
     test("fulfillment orders show size-wise production and GST-inclusive commercial details", () => {
@@ -97,7 +100,7 @@ describe("REN-180 corporate document integrity", () => {
         expect(route).not.toContain('fromLabel: "Issued By (Platform)"');
     });
 
-    test("keeps the FO expected delivery reference visible when populated", () => {
+    test("keeps the FO expected delivery reference blank when unavailable", () => {
         const route = readFileSync(
             new URL(
                 "../src/app/api/corporate-orders/[id]/vendor-po.pdf/route.tsx",
@@ -107,7 +110,10 @@ describe("REN-180 corporate document integrity", () => {
         );
 
         expect(route).toContain('label: "Expected delivery"');
-        expect(route).toContain("date.setDate(date.getDate() + 7)");
+        expect(route).toContain(
+            "const expectedDeliveryDate = vendorPo.expectedDeliveryDate"
+        );
+        expect(route).not.toContain("date.setDate(date.getDate() + 7)");
         expect(route).toContain("value: expectedDeliveryDate");
     });
 
@@ -134,9 +140,9 @@ describe("REN-180 corporate document integrity", () => {
             "utf8"
         );
 
-        expect(template).toContain('label={`CGST (${');
-        expect(template).toContain('label={`SGST (${');
-        expect(template).toContain('label={`IGST (${');
+        expect(template).toContain("label={`CGST (${");
+        expect(template).toContain("label={`SGST (${");
+        expect(template).toContain("label={`IGST (${");
     });
 
     test("passes GST split values to proforma rendering", () => {
@@ -171,7 +177,10 @@ describe("REN-180 corporate document integrity", () => {
 
     test("uses random quote identifiers and shows proforma taxable value", () => {
         const service = readFileSync(
-            new URL("../src/lib/services/corporate-platform.ts", import.meta.url),
+            new URL(
+                "../src/lib/services/corporate-platform.ts",
+                import.meta.url
+            ),
             "utf8"
         );
         const route = readFileSync(

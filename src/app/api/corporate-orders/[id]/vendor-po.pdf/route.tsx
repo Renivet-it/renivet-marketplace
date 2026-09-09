@@ -9,6 +9,8 @@ import {
     brandMembers,
     corporateExtraChargeRules,
     corporatePurchaseOrders,
+    corporateQcSubmissions,
+    corporateShipments,
     corporateVendorPurchaseOrders,
     products,
 } from "@/lib/db/schema";
@@ -22,6 +24,7 @@ import { auth } from "@clerk/nextjs/server";
 import { renderToStream } from "@react-pdf/renderer";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
+import { buildBrandFulfillmentOrderSections } from "../vendor-po-data";
 
 export const runtime = "nodejs";
 
@@ -86,21 +89,30 @@ export async function GET(
         );
     }
 
-    const [settings, brandDetails, customerPo, product] = await Promise.all([
-        getCorporateDocumentSettings(),
-        db.query.brandConfidentials.findFirst({
-            where: eq(brandConfidentials.id, order.brand.id),
-        }),
-        db.query.corporatePurchaseOrders.findFirst({
-            where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
-            orderBy: [desc(corporatePurchaseOrders.createdAt)],
-        }),
-        order.quote?.productId
-            ? db.query.products.findFirst({
-                  where: eq(products.id, order.quote.productId),
-              })
-            : Promise.resolve(null),
-    ]);
+    const [settings, brandDetails, customerPo, product, qc, shipment] =
+        await Promise.all([
+            getCorporateDocumentSettings(),
+            db.query.brandConfidentials.findFirst({
+                where: eq(brandConfidentials.id, order.brand.id),
+            }),
+            db.query.corporatePurchaseOrders.findFirst({
+                where: eq(corporatePurchaseOrders.corporateOrderId, order.id),
+                orderBy: [desc(corporatePurchaseOrders.createdAt)],
+            }),
+            order.quote?.productId
+                ? db.query.products.findFirst({
+                      where: eq(products.id, order.quote.productId),
+                  })
+                : Promise.resolve(null),
+            db.query.corporateQcSubmissions.findFirst({
+                where: eq(corporateQcSubmissions.orderId, order.id),
+                orderBy: [desc(corporateQcSubmissions.createdAt)],
+            }),
+            db.query.corporateShipments.findFirst({
+                where: eq(corporateShipments.orderId, order.id),
+                orderBy: [desc(corporateShipments.createdAt)],
+            }),
+        ]);
 
     const productConfig = (order.productConfigSnapshot ?? {}) as Record<
         string,
@@ -144,11 +156,11 @@ export async function GET(
         (vendorPo as any).unitSellPricePaise ||
         (vendorPo as any).unitBuyPricePaise ||
         (order.quote?.unitPricePaise ??
-            (order.unitPricePaise ?? Math.round(order.subtotalPaise / Math.max(1, order.quantity))));
+            order.unitPricePaise ??
+            Math.round(order.subtotalPaise / Math.max(1, order.quantity)));
 
     const baseSubtotalPaise = unitPricePaise * vendorPo.quantity;
-    const totalTaxablePaise =
-        vendorPo.taxableValuePaise ?? baseSubtotalPaise;
+    const totalTaxablePaise = vendorPo.taxableValuePaise ?? baseSubtotalPaise;
     const customizationPaise = Math.max(
         0,
         totalTaxablePaise - baseSubtotalPaise
@@ -206,13 +218,22 @@ export async function GET(
     const itemDetail =
         specsSummary ||
         "Manufacture and fulfil as per approved corporate specifications.";
-    const expectedDeliveryDate = (() => {
-        const date = vendorPo.expectedDeliveryDate
-            ? new Date(vendorPo.expectedDeliveryDate)
-            : new Date();
-        if (!vendorPo.expectedDeliveryDate) date.setDate(date.getDate() + 7);
-        return date.toLocaleDateString("en-IN");
-    })();
+    const operationalSections = buildBrandFulfillmentOrderSections({
+        brand: {
+            name: order.brand.name,
+            address: corporatePartyAddress(brandDetails ?? {}),
+            gstin: brandDetails?.gstin,
+            email: order.brand.email,
+            phone: order.brand.phone,
+        },
+        order,
+        fulfillmentOrder: vendorPo,
+        qc,
+        shipment,
+    });
+    const expectedDeliveryDate = vendorPo.expectedDeliveryDate
+        ? new Date(vendorPo.expectedDeliveryDate).toLocaleDateString("en-IN")
+        : null;
 
     const data: CorporateCommercialDocumentData = {
         title: "Brand Fulfillment Order",
@@ -335,6 +356,7 @@ export async function GET(
         signatoryName: settings.authorizedSignatoryName,
         declarationCompanyName: settings.legalName,
         showSignatureBlock: false,
+        operationalSections,
     };
 
     const stream = await renderToStream(

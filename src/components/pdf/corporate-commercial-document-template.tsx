@@ -1,3 +1,4 @@
+import type { BrandFulfillmentOrderSections } from "@/app/api/corporate-orders/[id]/vendor-po-data";
 import {
     Document,
     Image,
@@ -57,6 +58,32 @@ const styles = StyleSheet.create({
     },
     party: { width: "50%", minHeight: 70, padding: 7 },
     rightCell: { borderLeftWidth: 1, borderLeftColor: line },
+    operationalGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        borderWidth: 1,
+        borderColor: line,
+        marginBottom: 9,
+    },
+    operationalBlock: {
+        width: "33.333%",
+        minHeight: 70,
+        padding: 6,
+        borderRightWidth: 1,
+        borderBottomWidth: 1,
+        borderRightColor: line,
+        borderBottomColor: line,
+    },
+    operationalBlockWide: { width: "50%" },
+    operationalTitle: {
+        color: moss,
+        fontFamily: "Helvetica-Bold",
+        fontSize: 7,
+        marginBottom: 4,
+    },
+    operationalRow: { flexDirection: "row", marginBottom: 2 },
+    operationalLabel: { width: "38%", color: "#66756a", fontSize: 6.3 },
+    operationalValue: { width: "62%", color: "#334155", fontSize: 6.8 },
     label: {
         color: moss,
         fontFamily: "Helvetica-Bold",
@@ -262,6 +289,7 @@ export type CorporateCommercialDocumentData = {
     to: CorporateCommercialParty;
     shipTo?: CorporateCommercialParty | null;
     references?: Array<{ label: string; value?: string | null }>;
+    operationalSections?: BrandFulfillmentOrderSections;
     item?: CorporateCommercialItem;
     items?: CorporateCommercialItem[];
     sizeBreakdown?: Array<{ size: string; quantity: number }>;
@@ -356,10 +384,10 @@ export function CorporateCommercialDocumentTemplate({
             : []),
     ];
 
-    const passedReferences = (data.references ?? []).filter(
-        (ref) => {
-            const label = ref.label.trim().toLowerCase();
-            return ![
+    const passedReferences = (data.references ?? []).filter((ref) => {
+        const label = ref.label.trim().toLowerCase();
+        return (
+            ![
                 "pi number",
                 "document number",
                 "fo number",
@@ -367,9 +395,9 @@ export function CorporateCommercialDocumentTemplate({
                 "document date",
                 "valid until",
             ].includes(label) &&
-                !(label === "expected delivery" && !isFulfillmentOrder);
-        }
-    );
+            !(label === "expected delivery" && !isFulfillmentOrder)
+        );
+    });
 
     const references = [...baseReferences, ...passedReferences];
     const hasPricing = Boolean(data.totals);
@@ -378,9 +406,9 @@ export function CorporateCommercialDocumentTemplate({
     const gstAmountPaise =
         data.totals?.gstAmountPaise ??
         firstItem?.gstAmountPaise ??
-        ((data.totals?.cgstPaise ?? 0) +
+        (data.totals?.cgstPaise ?? 0) +
             (data.totals?.sgstPaise ?? 0) +
-            (data.totals?.igstPaise ?? 0));
+            (data.totals?.igstPaise ?? 0);
     const hasGstSplit =
         (data.totals?.cgstPaise ?? 0) > 0 ||
         (data.totals?.sgstPaise ?? 0) > 0 ||
@@ -427,8 +455,14 @@ export function CorporateCommercialDocumentTemplate({
                 <View style={styles.grid}>
                     <Party label={data.fromLabel} party={data.from} />
                     <Party label="Bill To" party={data.to} right />
-                    {data.shipTo ? <Party label="Ship To" party={data.shipTo} /> : null}
+                    {data.shipTo ? (
+                        <Party label="Ship To" party={data.shipTo} />
+                    ) : null}
                 </View>
+
+                {isFulfillmentOrder && data.operationalSections ? (
+                    <OperationalSections data={data.operationalSections} />
+                ) : null}
 
                 <View style={styles.meta}>
                     {references.map((entry) => (
@@ -623,7 +657,9 @@ export function CorporateCommercialDocumentTemplate({
                                               : styles.hsn,
                                     ]}
                                 >
-                                    {isCustomizationRow ? "NA" : rowItem.hsn || "-"}
+                                    {isCustomizationRow
+                                        ? "NA"
+                                        : rowItem.hsn || "-"}
                                 </Text>
                                 <Text
                                     style={[
@@ -676,9 +712,9 @@ export function CorporateCommercialDocumentTemplate({
                                             {isCustomizationRow
                                                 ? "NA"
                                                 : rowGstRateBps === null ||
-                                            rowGstRateBps === undefined
-                                                ? "-"
-                                                : `${(rowGstRateBps / 100).toFixed(2)}%`}
+                                                    rowGstRateBps === undefined
+                                                  ? "-"
+                                                  : `${(rowGstRateBps / 100).toFixed(2)}%`}
                                         </Text>
                                         <Text
                                             style={[
@@ -691,8 +727,8 @@ export function CorporateCommercialDocumentTemplate({
                                             {isCustomizationRow
                                                 ? "NA"
                                                 : hasPricing
-                                                ? money(rowGstAmountPaise)
-                                                : "-"}
+                                                  ? money(rowGstAmountPaise)
+                                                  : "-"}
                                         </Text>
                                     </>
                                 ) : null}
@@ -730,7 +766,10 @@ export function CorporateCommercialDocumentTemplate({
                             </Text>
                         </View>
                         {sizeBreakdown.map((row) => (
-                            <View key={row.size} style={styles.sizeBreakdownRow}>
+                            <View
+                                key={row.size}
+                                style={styles.sizeBreakdownRow}
+                            >
                                 <Text style={styles.sizeBreakdownCell}>
                                     {row.size}
                                 </Text>
@@ -757,7 +796,8 @@ export function CorporateCommercialDocumentTemplate({
                                 {sizeBreakdown.reduce(
                                     (sum, row) => sum + row.quantity,
                                     0
-                                )} pcs
+                                )}{" "}
+                                pcs
                             </Text>
                         </View>
                     </View>
@@ -871,7 +911,7 @@ export function CorporateCommercialDocumentTemplate({
                                     ) : null}
                                 </>
                             ) : data.totals.customizationPaise &&
-                            data.totals.customizationPaise > 0 ? (
+                              data.totals.customizationPaise > 0 ? (
                                 <>
                                     {data.totals.subtotalPaise ? (
                                         <Total
@@ -894,10 +934,13 @@ export function CorporateCommercialDocumentTemplate({
                                     {!isFulfillmentOrder ? (
                                         <Total
                                             label="Taxable value"
-                                            value={data.totals.taxableValuePaise}
+                                            value={
+                                                data.totals.taxableValuePaise
+                                            }
                                         />
                                     ) : null}
-                                    {!hasGstSplit && data.totals.baseGstAmountPaise !==
+                                    {!hasGstSplit &&
+                                    data.totals.baseGstAmountPaise !==
                                         undefined &&
                                     data.totals.baseGstAmountPaise !== null ? (
                                         <Total
@@ -911,7 +954,8 @@ export function CorporateCommercialDocumentTemplate({
                                             }
                                         />
                                     ) : null}
-                                    {!hasGstSplit && data.totals.customizationGstAmountPaise !==
+                                    {!hasGstSplit &&
+                                    data.totals.customizationGstAmountPaise !==
                                         undefined &&
                                     data.totals.customizationGstAmountPaise !==
                                         null ? (
@@ -928,8 +972,10 @@ export function CorporateCommercialDocumentTemplate({
                                         />
                                     ) : null}
                                     {hasGstSplit ? splitGstRows : null}
-                                    {!hasGstSplit && data.totals.baseGstAmountPaise ===
-                                        undefined && showDetailedTax ? (
+                                    {!hasGstSplit &&
+                                    data.totals.baseGstAmountPaise ===
+                                        undefined &&
+                                    showDetailedTax ? (
                                         <Total
                                             label={`GST${
                                                 gstRateBps === null
@@ -1018,6 +1064,121 @@ export function CorporateCommercialDocumentTemplate({
                 </View>
             </Page>
         </Document>
+    );
+}
+
+function OperationalSections({
+    data,
+}: {
+    data: BrandFulfillmentOrderSections;
+}) {
+    const optionalDate = (entry: string | Date | null) =>
+        entry ? date(entry) : "Not provided";
+    const mode = data.delivery.mode?.replaceAll("_", " ") ?? null;
+    const sizes = data.production.sizeBreakdown
+        .map((row) => `${row.size}: ${row.quantity} pcs`)
+        .join(" | ");
+
+    return (
+        <View style={styles.operationalGrid}>
+            <OperationalBlock
+                title={data.supplier.label}
+                rows={[
+                    ["Brand", data.supplier.name],
+                    ["Address", data.supplier.address],
+                    ["GSTIN", data.supplier.gstin],
+                    ["Email", data.supplier.email],
+                    ["Phone", data.supplier.phone],
+                ]}
+            />
+            <OperationalBlock
+                title={data.customer.label}
+                rows={[
+                    ["Company", data.customer.companyName],
+                    ["Contact", data.customer.contactPersonName],
+                    ["Order", data.customer.orderId],
+                    ["GSTIN", data.customer.gstin],
+                    ["Phone", data.customer.phone],
+                ]}
+            />
+            <OperationalBlock
+                title={data.delivery.label}
+                rows={[
+                    ["Mode", mode],
+                    ["Address", data.delivery.address],
+                    ["Instructions", data.delivery.instructions],
+                ]}
+            />
+            <OperationalBlock
+                title="PRODUCTION & CUSTOMIZATION"
+                rows={[
+                    ["Product", data.production.productType],
+                    ["GSM", data.production.gsm],
+                    ["Fabric", data.production.fabric],
+                    [
+                        "Customizations",
+                        data.production.customizations.join(" | "),
+                    ],
+                    [
+                        "Production instructions",
+                        data.production.productionInstructions.join(" | "),
+                    ],
+                    ["Sizes", sizes],
+                ]}
+            />
+            <OperationalBlock
+                title="QUALITY CONTROL"
+                rows={[
+                    ["Status", data.qc.status],
+                    [
+                        "Coverage",
+                        data.qc.sampleCoveragePercent == null
+                            ? null
+                            : `${data.qc.sampleCoveragePercent}%`,
+                    ],
+                    ["Remarks", data.qc.remarks],
+                    ["Review notes", data.qc.reviewNotes],
+                    ["Submitted", optionalDate(data.qc.submittedAt)],
+                    ["Reviewed", optionalDate(data.qc.reviewedAt)],
+                ]}
+            />
+            <OperationalBlock
+                title="DELIVERY & SHIPMENT"
+                rows={[
+                    ["Expected", optionalDate(data.expectedDeliveryDate)],
+                    ["Courier", data.shipment.courierName],
+                    ["Tracking", data.shipment.trackingNumber],
+                    ["AWB", data.shipment.awbNumber],
+                    ["Status", data.shipment.status],
+                    ["Dispatched", optionalDate(data.shipment.dispatchDate)],
+                    ["Delivered", optionalDate(data.shipment.deliveryDate)],
+                ]}
+            />
+        </View>
+    );
+}
+
+function OperationalBlock({
+    title,
+    rows,
+}: {
+    title: string;
+    rows: Array<[string, unknown]>;
+}) {
+    return (
+        <View style={styles.operationalBlock}>
+            <Text style={styles.operationalTitle}>{title}</Text>
+            {rows.map(([label, entry]) => (
+                <View key={label} style={styles.operationalRow}>
+                    <Text style={styles.operationalLabel}>{label}</Text>
+                    <Text style={styles.operationalValue}>
+                        {entry === null || entry === undefined || entry === ""
+                            ? "Not provided"
+                            : String(entry)}
+                    </Text>
+                </View>
+            ))}
+        </View>
     );
 }
 
