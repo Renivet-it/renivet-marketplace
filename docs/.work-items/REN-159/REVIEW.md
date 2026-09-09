@@ -2,82 +2,77 @@
 
 ## Executive Result
 
-`REVIEW_FAILED`; drift: `MATERIAL_DRIFT`; governance re-entry is required. The implementation introduces cache entries whose query ordering differs from the existing direct-query path and can be shared across storefront contexts with different ordering semantics.
+`REVIEW_PASSED_WITH_FINDINGS`; drift: `NO_DRIFT`; governance re-entry is not required. The corrected cache descriptor now preserves all result-affecting ordering context. Runtime cache metrics remain a non-blocking deployment follow-up.
 
 ## Review Scope and Git Evidence
 
-Compared `origin/master` commit `14a9f6422ef619b71aebc2fc8be74db321112c7b` with implementation commit `97f31751367eb0d0cb1a555d90408014c548ed79` on branch `ayanganguly333/ren-159-cache-category-only-and-categorysort-catalog-listing-views`. The review also inspected the follow-up governance commit `1f6ac9f9097e5281335478967797c96721e4fd59`; it contains only review artifacts. Source evidence is limited to `src/components/shop/catalog-cache.ts`, `src/components/shop/catalog-cache.test.ts`, and `src/components/shop/storefront-catalog-page.tsx`.
+Compared `origin/master` commit `14a9f6422ef619b71aebc2fc8be74db321112c7b` with implementation commit `9891badad8e7c4bf4d0f27f25d6813a1fe3045f0` on branch `ayanganguly333/ren-159-cache-category-only-and-categorysort-catalog-listing-views`. The changed application files are `src/components/shop/catalog-cache.ts`, `src/components/shop/catalog-cache.test.ts`, and `src/components/shop/storefront-catalog-page.tsx`; remaining changes are task-local REN-159 governance artifacts. No PR is open.
 
 ## Requirement Reconciliation
 
-- `REQ-159-001`: FAIL. Category-only cached calls omit the direct path's `prioritizeBestSellers` setting, so an identical request can have different product ordering when served from cache.
-- `REQ-159-002`: FAIL. The key does not include `prioritizeNewProducts` or the storefront context. `/swap-passport?categoryId=<id>` and `/shop?categoryId=<id>&sortBy=createdAt&sortOrder=desc` share the same category/sort key although their direct queries have different priority behavior.
-- `REQ-159-003`: PASS. The eligibility predicate excludes the approved unbounded and personalized inputs.
-- `REQ-159-004`: FAIL. Existing ordering semantics are not preserved.
-- `REQ-159-005`: PARTIAL. A cache-miss log exists, but repeat-hit, TTL refresh, and query-volume behavior are not covered by executable tests.
-- `REQ-159-006`: FAIL. Displayed product ordering can differ solely because the response is cached.
-- `REQ-159-007`: PASS. The added cache-miss log has bounded category/sort fields and no customer data.
+- `REQ-159-001`: PASS. `createCategoryCatalogCachedLoader` configures a 60-second read-through cache and only eligible page-1/limit-28 category shapes reach it.
+- `REQ-159-002`: PASS. Canonical keys contain category, page, limit, sort, sort direction, cache version, best-seller priority, and new-product priority.
+- `REQ-159-003`: PASS. `isCategoryCatalogCacheable` rejects search, price, arbitrary filters, personalized, curated, and non-page-1 shapes.
+- `REQ-159-004`: PASS. `buildCategoryCatalogQueryInput` supplies the same public predicates, media requirement, ordering, and priority inputs used by the direct path.
+- `REQ-159-005`: PARTIAL. The cache seam has repeat-hit and TTL-refresh coverage, but post-rollout query-volume evidence is not available in repository review.
+- `REQ-159-006`: PASS. The cached query preserves result-affecting product ordering; filter metadata remains outside the cache path.
+- `REQ-159-007`: PASS. Cache-miss instrumentation is bounded to category and sort context.
+- `REQ-159-008`: PASS. Best-seller/new-product priorities are included in both the key and the cached query input.
 
 ## Scenario Reconciliation
 
-- `SCN-159-001`: FAIL. The normal category-only cached query omits best-seller prioritization used by the uncached path.
-- `SCN-159-002`: FAIL. Category-plus-createdAt can collide across `/shop` and `/swap-passport` despite distinct direct-query behavior.
-- `SCN-159-003`: PARTIAL. A 60-second `revalidate` value is configured, but no test demonstrates refresh after expiry.
-- `SCN-159-004`: PASS. The eligibility helper rejects search, price, extra filters, curated, personalized, and non-page-1 inputs.
-- `SCN-159-005`: FAIL. A valid cache key can represent different ordering contracts depending on the storefront context.
-- `SCN-159-006`: FAIL. Product ordering and filter-panel alignment can diverge from the existing direct path.
+- `SCN-159-001`: PASS. The cache seam test proves first load followed by repeated reuse for an identical descriptor.
+- `SCN-159-002`: PASS. Key tests prove category and sort-direction separation.
+- `SCN-159-003`: PASS. The cache seam test advances beyond 60 seconds and proves refresh.
+- `SCN-159-004`: PASS. Focused tests reject all approved out-of-scope filters.
+- `SCN-159-005`: PASS. The cache factory receives one canonical descriptor key and no cross-key fallback is introduced.
+- `SCN-159-006`: PASS. The product-list cache branch leaves filter metadata resolution unchanged.
+- `SCN-159-007`: PASS. Tests prove priority-specific keys and query arguments; `/shop` default, Swap Passport new-product priority, and explicit createdAt sorting cannot collide.
 
 ## Invariant Reconciliation
 
-- `INV-159-001`: FAIL. The key does not uniquely identify all result-affecting ordering inputs.
-- `INV-159-002`: PASS. Ineligible and user-specific requests are rejected by the cache eligibility helper.
-- `INV-159-003`: FAIL. The cached callback omits result-affecting `prioritizeBestSellers` and `prioritizeNewProducts` arguments.
-- `INV-159-004`: PARTIAL. The 60-second TTL is configured, but expiration behavior has no direct test evidence.
-- `INV-159-005`: PASS. The diagnostic is bounded and non-sensitive.
+- `INV-159-001`: PASS. The versioned key represents category, page, limit, sort, and both priority flags.
+- `INV-159-002`: PASS. Ineligible/personalized requests cannot reach the cache helper.
+- `INV-159-003`: PASS. The shared query-input builder retains visibility predicates, media, and every result-affecting ordering argument.
+- `INV-159-004`: PASS. The factory passes the explicit 60-second TTL and a single canonical key.
+- `INV-159-005`: PASS. The diagnostic contains no customer data, secret, or free-text search value.
+- `INV-159-006`: PASS. The descriptor is shared between key construction and query-input construction, preventing the prior priority omission.
 
 ## Flow and Architecture Review
 
-`FLOW-159-001` fails because `getCachedCategoryProducts` accepts only category and sort, but the direct query also depends on storefront ordering priorities. The normal direct fallback at `storefront-catalog-page.tsx` passes `prioritizeBestSellers` for default recommended shop listings and `prioritizeNewProducts` for the Swap Passport storefront. The cached callback at the same file does not pass either value. `FLOW-159-002` is otherwise preserved for rejected cache shapes. `DEP-159-001` is not fully respected because parameter normalization alone is insufficient to express the ordering context.
+`FLOW-159-001` and `FLOW-159-002` PASS. `StorefrontProductsFetch` builds one normalized descriptor, checks eligibility, and uses it for the cached loader. Recommendations and curated contexts are rejected before cache use; ineligible requests retain the direct product query path. `DEP-159-001`, `DEP-159-002`, and `INT-159-001` remain compatible. The generic cache seam only adapts the existing Next `unstable_cache` pattern and does not introduce a new provider.
 
 ## Security and Integration Review
 
-`SEC-159-001` PASS. This is a public catalog cache with no user identity in the eligibility descriptor or key. There are no authentication, authorization, secret, mutation, or external-provider changes. The Next.js cache integration is safe only after the result-affecting ordering inputs are restored to its descriptor/key/query.
+`SEC-159-001` PASS. The cache descriptor and key contain public catalog/filter-ordering values only. No user identity, authorization behavior, mutation, secret, schema, or external integration change was added. Bounded cache-miss logging contains category and sort context only.
 
 ## Scope and Drift Review
 
-The files remain within the intended catalog-caching scope, but `REQ-159-001`, `REQ-159-002`, `REQ-159-004`, and `INV-159-001`–`INV-159-003` are contradicted. This is `MATERIAL_DRIFT`, because cache-key identity and displayed result ordering are approved behavioral invariants.
+All changed source files are within the approved cache-layer scope. The revised contract explicitly covers the ordering-priority inputs required by the corrected implementation. No unapproved caching of search, price ranges, complex filters, recommendations, or curated catalogues is introduced. Drift classification: `NO_DRIFT`.
 
 ## Test Expectation Review
 
-- `TEXP-159-001`: PARTIAL. Tests cover basic category/sort key separation but omit storefront ordering priorities and cross-context collision cases.
-- `TEXP-159-002`: FAIL. No test verifies first miss/second hit/TTL refresh against the actual cache wrapper, and no test compares cached arguments to the direct query.
-- `TEXP-159-003`: PASS. Focused tests cover many out-of-scope bypass inputs.
-- `TEXP-159-004`: PARTIAL. The miss diagnostic is inspectable, but live hit/miss/query-volume evidence remains unavailable.
+- `TEXP-159-001`: PASS. Unit tests cover eligibility and canonical-key separation.
+- `TEXP-159-002`: PASS. The injected cache seam demonstrates miss, repeat hit, and 60-second refresh behavior at the cache boundary.
+- `TEXP-159-003`: PASS. Regression tests retain the uncached boundary for search, prices, arbitrary filters, personalized, curated, and pagination states.
+- `TEXP-159-004`: PARTIAL. Bounded miss diagnostics are static evidence; deployed hit/miss and database-volume measurement remain pending.
+- `TEXP-159-005`: PASS. Regression tests prove priority query parity and prevent the previously observed cross-context collision.
 
 ## Findings
 
-### REV-159-002
+### REV-159-001
 
-- Severity: BLOCKER
-- Category: invariant
-- Description: Cached category listings omit the direct path's `prioritizeBestSellers` and `prioritizeNewProducts` inputs, and the key does not distinguish these ordering contexts.
-- Evidence: `REQ-159-001`, `REQ-159-002`, `REQ-159-004`, `SCN-159-001`, `SCN-159-002`, `INV-159-001`, `INV-159-003`; `getCachedCategoryProducts` at `src/components/shop/storefront-catalog-page.tsx:528` accepts only category/sort, while the direct path at `:844`–`:848` supplies priority flags. `src/app/(marketing)/swap-passport/page.tsx` sets `defaultSortBy="createdAt"` and `prioritizeNewProducts`, producing a key collision with an ordinary createdAt category sort.
-- Impact: Shoppers can receive a cached product order that differs from the live result, including across different storefront routes.
-- Recommendation: Re-enter specification, then make the cache descriptor/key/query include every result-affecting ordering priority or explicitly exclude contexts with priority behavior; add regression tests covering normal category default ordering and the `/shop` versus `/swap-passport` createdAt collision.
-
-### REV-159-003
-
-- Severity: HIGH
+- Severity: LOW
 - Category: test
-- Description: Tests do not exercise actual cache miss/hit/TTL behavior or compare the cached query contract with the direct query contract.
-- Evidence: `TEXP-159-002`; `src/components/shop/catalog-cache.test.ts` tests only the pure eligibility/key helper.
-- Impact: The required repeat-request and expiry behavior is unproven and the ordering regression was not detected.
-- Recommendation: Add an injectable cache/query seam or an integration test that proves first miss, repeated hit, expiry refresh, and exact direct/cached query-argument parity.
+- Description: Deployed cache-hit rate, TTL behavior, and category-query volume have not yet been measured in staging or production.
+- Evidence: `REQ-159-005`, `REQ-159-007`, `TEXP-159-004`; the code emits bounded miss diagnostics and tests the cache seam, but no runtime deployment evidence is available.
+- Impact: The implementation is verified in code and automated tests, while the expected performance gain remains unmeasured.
+- Recommendation: After deployment, capture one category-only and one category+sort first miss, repeated hit, post-60-second refresh, and database query-volume comparison.
 
 ## Decisions Requiring Attention
 
-None. The fixes are constrained by the already approved requirement to preserve ordering and key identity.
+None.
 
 ## Final Recommendation
 
-Do not merge this implementation. Re-enter REN-159 specification governance, correct `REV-159-002` and `REV-159-003`, then rerun tests and the read-only review. No production or Linear state should be changed from this review.
+The corrected implementation is ready for integration. Complete `REV-159-001` after deployment; no governance re-entry is required.
