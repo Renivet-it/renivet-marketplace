@@ -1,0 +1,305 @@
+schema_version: "1.0"
+task:
+    id: REN-147
+    title: Cart cross-sell fallback independent of the ML host
+    source: linear
+    branch: ayanganguly333/ren-147-cart-cross-sell-wardrobe-suggestions-has-no-independent
+    status: READY_FOR_DEV
+    linear:
+        url: https://linear.app/renivet/issue/REN-147
+        priority: High
+        labels: [qa-finding]
+        status: Backlog
+        assignee: Ayan Ganguly
+        project: null
+        milestone: null
+risk:
+    initial_risk: L1
+    path_rule_risk: L2
+    semantic_risk: L2
+    final_risk: L2
+    reasons:
+        - The customer-facing cart route spans a cache, two external ML tiers, and a local catalog fallback.
+        - The change is read-only and does not alter payment, schema, authorization, or checkout state.
+    escalation_history:
+        - L1 -> L2 because outage recovery crosses external integration and catalog-query boundaries.
+investigation:
+    depth: dependency_tracing
+    investigated_areas:
+        - Linear issue scope, acceptance criteria, labels, and relation to REN-146
+        - src/lib/trpc/routes/general/cart.ts getWardrobeSuggestions recommendation tiers and response shaping
+        - src/lib/redis/methods/cart.ts cached cart product data
+        - src/app/(protected)/mycart/Component/wardrobe-suggestions.tsx empty-state behavior
+        - src/app/(protected)/mycart/Component/empty-cart-recommendations.tsx catalog best-seller pattern
+    excluded_areas:
+        - area: ML timeout and endpoint configuration
+          reason: Explicitly tracked by REN-146 and out of scope.
+        - area: Cart UI wording and empty-state design
+          reason: The issue explicitly excludes UI copy changes.
+        - area: Checkout, payment, schema, and product mutations
+          reason: The route is a read-only cart recommendation flow with no dependency path into these areas.
+    dependencies: [DEP-147-001, DEP-147-002]
+    integrations: [INT-147-001, INT-147-002, INT-147-003]
+    security_boundaries: [SEC-147-001]
+    state_transitions:
+        - cart_loaded -> primary_ml_attempted
+        - primary_ml_no_candidates -> vector_ml_attempted
+        - vector_ml_no_candidates -> local_catalog_fallback
+        - local_catalog_fallback -> suggestions_returned
+    related_tests: [TEXP-147-001, TEXP-147-002, TEXP-147-003, TEXP-147-004]
+    uncertainties:
+        - Select the narrowest existing test seam for the router query without refactoring unrelated cart behavior.
+requirements:
+    - id: REQ-147-001
+      description: Preserve the advanced-recommendation result path as the highest-priority source.
+      type: explicit
+    - id: REQ-147-002
+      description: Preserve the embedding/vector result path as the second-priority source when advanced recommendations yield no usable IDs.
+      type: explicit
+    - id: REQ-147-003
+      description: When ML-backed paths fail or yield no candidates, query the local catalog by distinct cart category IDs using deterministic best-seller or recommended ordering.
+      type: explicit
+    - id: REQ-147-004
+      description: The local fallback must not call an ML endpoint, must exclude cart products, and must apply storefront eligibility constraints.
+      type: explicit
+    - id: REQ-147-005
+      description: Return no more than the existing limit in the unchanged normalized product-card response shape.
+      type: explicit
+    - id: REQ-147-006
+      description: Return an intentional empty result when no eligible category-based fallback candidate exists.
+      type: explicit
+    - id: REQ-147-007
+      description: Log deterministic fallback selection without customer or cart data.
+      type: explicit
+scenarios:
+    - id: SCN-147-001
+      requirement_ids: [REQ-147-001, REQ-147-005]
+      description: Advanced recommendation IDs resolve to eligible products and return the existing normalized cards.
+    - id: SCN-147-002
+      requirement_ids: [REQ-147-002, REQ-147-005]
+      description: Advanced recommendations have no usable IDs and vector search returns eligible products.
+    - id: SCN-147-003
+      requirement_ids: [REQ-147-003, REQ-147-004, REQ-147-005, REQ-147-007]
+      description: Both ML paths are unavailable or empty and a categorized cart returns eligible non-cart local catalog cards.
+    - id: SCN-147-004
+      requirement_ids: [REQ-147-003, REQ-147-006]
+      description: Both ML paths are unavailable or empty and no eligible product exists for the cart categories, so the route returns an intentional empty result.
+    - id: SCN-147-005
+      requirement_ids: [REQ-147-006]
+      description: An empty cart returns no suggestions without invoking recommendation sources.
+invariants:
+    - id: INV-147-001
+      description: The final fallback tier uses only local catalog and cache reads, never an external ML service.
+    - id: INV-147-002
+      description: A returned suggestion cannot be a product already present in the cart.
+    - id: INV-147-003
+      description: The change performs no writes, cache invalidations, or checkout changes.
+    - id: INV-147-004
+      description: Existing successful ML results take precedence over deterministic local results.
+    - id: INV-147-005
+      description: The tRPC response and cart component interface remain compatible.
+flows:
+    - id: FLOW-147-001
+      description: Read the cached cart, attempt advanced recommendations, then vector search only when needed, and return successful normalized results.
+      state_transitions:
+          - from: cart_loaded
+            to: primary_ml_attempted
+          - from: primary_ml_no_candidates
+            to: vector_ml_attempted
+          - from: vector_ml_attempted
+            to: suggestions_returned
+    - id: FLOW-147-002
+      description: When both ML tiers are unavailable or empty, derive cart categories, query local eligible non-cart products, log fallback selection, and return cards or the deliberate empty result.
+      state_transitions:
+          - from: vector_ml_no_candidates
+            to: local_catalog_fallback
+          - from: local_catalog_fallback
+            to: suggestions_returned
+dependencies:
+    - id: DEP-147-001
+      description: Cached cart product records provide cart product IDs and category IDs.
+      status: resolved
+    - id: DEP-147-002
+      description: Local catalog, variants, brands, and media cache provide independent eligible product cards.
+      status: resolved
+integrations:
+    - id: INT-147-001
+      system: Advanced recommendation service
+      purpose: Existing highest-priority ML recommendation source.
+      failure_mode: Rejection or no usable IDs proceeds to the vector tier and then local fallback.
+      retry_idempotency: Read-only best-effort call; no retry or side effect is introduced.
+    - id: INT-147-002
+      system: Embedding and vector search service
+      purpose: Existing second-priority ML recommendation source.
+      failure_mode: Rejection or no candidates proceeds to the local deterministic tier.
+      retry_idempotency: Read-only best-effort call; no retry or side effect is introduced.
+    - id: INT-147-003
+      system: Local catalog database and media cache
+      purpose: Independent final source and existing card enrichment.
+      failure_mode: No eligible local candidates returns the intentional empty state; existing enrichment failure handling remains unchanged.
+      retry_idempotency: Read-only queries and cache reads; no retries or writes are introduced.
+personas:
+    - id: PER-147-001
+      role: cart_customer
+      applicability: Customer with one or more categorized products in the cart.
+security_boundaries:
+    - id: SEC-147-001
+      description: The existing protected tRPC cart route and its response contract remain unchanged; fallback logs omit customer and cart data.
+business_rules:
+    - id: BR-147-001
+      description: Product suggestions must be active, available, published, not deleted, and approved.
+    - id: BR-147-002
+      description: Products in the current cart are not eligible suggestions.
+    - id: BR-147-003
+      description: An empty local candidate set is a deliberate no-suggestions outcome.
+decisions:
+    - id: DEC-147-001
+      question: Where should recommendation tiering and the fallback query live?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Keep all tiers in getWardrobeSuggestions.
+      basis: It preserves the existing response contract and avoids cross-procedure coupling.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-147-002
+      question: What local relevance signal should be used when ML is unavailable?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Use distinct category IDs already present in cached cart products, with deterministic catalog ordering.
+      basis: The data is already available and has no external dependency.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-147-003
+      question: Should a category-less cart receive unrelated global best sellers?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: No; return the deliberate empty result when no cart category can produce candidates.
+      basis: The issue defines category-based fallback and permits deliberate no-candidate behavior.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+    - id: DEC-147-004
+      question: Should local fallback change AI-oriented UI copy?
+      class: RECOMMEND_CONTINUE
+      status: resolved
+      recommendation: Preserve the current copy and empty state.
+      basis: UI copy is explicitly out of scope for REN-147.
+      confidence: high
+      consequence: low
+      human_confirmation_required: false
+test_expectations:
+    - id: TEXP-147-001
+      category: unit
+      classification: REQUIRED
+      reason: Verifies category extraction, de-duplication, and intentional no-category behavior.
+    - id: TEXP-147-002
+      category: integration
+      classification: REQUIRED
+      reason: Verifies rejected ML calls choose eligible normalized local catalog cards and exclude cart products.
+    - id: TEXP-147-003
+      category: regression
+      classification: REQUIRED
+      reason: Verifies successful primary and vector recommendation behavior remains preferred and compatible.
+    - id: TEXP-147-004
+      category: exploratory
+      classification: REQUIRED
+      reason: Verifies staging behavior with an unreachable ML host and a categorized cart.
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-147-001
+          scenario_ids: [SCN-147-001]
+        - requirement_id: REQ-147-002
+          scenario_ids: [SCN-147-002]
+        - requirement_id: REQ-147-003
+          scenario_ids: [SCN-147-003, SCN-147-004]
+        - requirement_id: REQ-147-004
+          scenario_ids: [SCN-147-003]
+        - requirement_id: REQ-147-005
+          scenario_ids: [SCN-147-001, SCN-147-002, SCN-147-003]
+        - requirement_id: REQ-147-006
+          scenario_ids: [SCN-147-004, SCN-147-005]
+        - requirement_id: REQ-147-007
+          scenario_ids: [SCN-147-003]
+    scenario_to_invariants:
+        - scenario_id: SCN-147-001
+          invariant_ids: [INV-147-004, INV-147-005]
+        - scenario_id: SCN-147-002
+          invariant_ids: [INV-147-004, INV-147-005]
+        - scenario_id: SCN-147-003
+          invariant_ids: [INV-147-001, INV-147-002, INV-147-003, INV-147-005]
+        - scenario_id: SCN-147-004
+          invariant_ids: [INV-147-001, INV-147-003]
+        - scenario_id: SCN-147-005
+          invariant_ids: [INV-147-003]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-147-001
+          test_expectation_ids: [TEXP-147-003]
+        - scenario_id: SCN-147-002
+          test_expectation_ids: [TEXP-147-003]
+        - scenario_id: SCN-147-003
+          test_expectation_ids: [TEXP-147-002, TEXP-147-004]
+        - scenario_id: SCN-147-004
+          test_expectation_ids: [TEXP-147-001, TEXP-147-002, TEXP-147-004]
+        - scenario_id: SCN-147-005
+          test_expectation_ids: [TEXP-147-001]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent_codex_critic
+    fresh_context: true
+    read_only: true
+    categories_reviewed:
+        - requirements_scenarios
+        - failure_recovery
+        - security_privacy
+        - state_data_consistency
+        - integrations_idempotency
+        - compatibility_migration
+        - observability_testability
+        - assumptions_dependencies
+    findings:
+        - id: CRIT-147-001
+          severity: minor
+          disposition: addressed
+        - id: CRIT-147-002
+          severity: minor
+          disposition: addressed
+        - id: CRIT-147-003
+          severity: minor
+          disposition: addressed
+        - id: CRIT-147-004
+          severity: minor
+          disposition: accepted_scope_limit
+        - id: CRIT-147-005
+          severity: minor
+          disposition: addressed
+implementation_review:
+    artifact: REVIEW.md
+    result: REVIEW_PASSED_WITH_FINDINGS
+    base_branch: origin/master
+    base_commit: "aebc080fcf9ac31e3d2da8470f13c5cc56e82ca3"
+    head_commit: "94a61dfb8e5a553809484fe8fec0d5018ad04a08"
+    pr_url: null
+    material_drift: NO_DRIFT
+    reconciliation:
+        requirements: PASS
+        scenarios: PASS
+        invariants: PASS
+        architecture: PASS
+        security: PASS
+        test_coverage: PARTIAL
+        scope: PASS
+    blocking_findings: []
+    required_actions:
+        - "REV-147-001: Run the required unreachable-ML staging exercise before production rollout."
+    evidence:
+        - "Compared origin/master aebc080fcf9ac31e3d2da8470f13c5cc56e82ca3 with implementation commit 94a61dfb8e5a553809484fe8fec0d5018ad04a08."
+        - "Inspected cart.ts getWardrobeSuggestions and the task-local fallback helper/test diff against approved REQ-147-001 through REQ-147-007."
+    governance_reentry_required: false
+approval:
+    state: APPROVED
+    design_blockers: []
+    approved_by: Ayan Ganguly (implementation request after REN-147 specification)
