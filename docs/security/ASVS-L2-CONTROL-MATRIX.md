@@ -1,6 +1,6 @@
 # OWASP ASVS Level 2 control matrix — Renivet engineering evidence
 
-Date: 2026-09-10  
+Date: 2026-09-10
 Scope: engineering evidence for the Renivet application only
 
 ## Important limitation
