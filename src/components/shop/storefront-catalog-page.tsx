@@ -23,6 +23,13 @@ import {
 import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
+import {
+    buildCategoryCatalogQueryInput,
+    createCategoryCatalogCachedLoader,
+    isCategoryCatalogCacheable,
+    type CategoryCatalogCacheFactory,
+    type CategoryCatalogCacheInput,
+} from "./catalog-cache";
 import { FestiveFloralDivider } from "./festive-floral-divider";
 import { FestiveMobileSearch } from "./festive-mobile-search";
 import { MobileFilterLoadingButton } from "./mobile-filter-loading-button";
@@ -521,6 +528,28 @@ const getCachedNewArrivalProducts = unstable_cache(
     { revalidate: 60 }
 );
 
+const categoryCatalogCache: CategoryCatalogCacheFactory = (
+    load,
+    keyParts,
+    options
+) => unstable_cache(load, keyParts, options);
+
+const getCachedCategoryProducts = (descriptor: CategoryCatalogCacheInput) =>
+    createCategoryCatalogCachedLoader({
+        descriptor,
+        cache: categoryCatalogCache,
+        load: async () => {
+            console.info("[catalog-cache] category listing miss", {
+                categoryId: descriptor.categoryId,
+                sortBy: descriptor.sortBy ?? "default",
+                sortOrder: descriptor.sortOrder ?? "default",
+            });
+            return productQueries.getProducts(
+                buildCategoryCatalogQueryInput(descriptor)
+            );
+        },
+    })();
+
 async function StorefrontProductsFetch({
     searchParams,
     productTypes,
@@ -703,6 +732,34 @@ async function StorefrontProductsFetch({
             !sizes &&
             !minDiscount;
 
+        const prioritizeBestSellers =
+            !search &&
+            defaultSortBy === "recommended" &&
+            (!sortByRaw || sortByRaw === "recommended");
+        const categoryCacheDescriptor = {
+            page,
+            limit,
+            categoryId,
+            sortBy,
+            sortOrder,
+            search,
+            brandIds,
+            minPrice,
+            maxPrice,
+            subcategoryId: subCategoryId,
+            productTypeId,
+            colors,
+            sizes,
+            minDiscount,
+            curated: Boolean(catalogContext),
+            personalized: shouldUseRecommendations,
+            prioritizeBestSellers,
+            prioritizeNewProducts,
+        } satisfies CategoryCatalogCacheInput;
+        const isCategoryCatalogView = isCategoryCatalogCacheable(
+            categoryCacheDescriptor
+        );
+
         if (catalogContext) {
             finalData = await productQueries.getProducts({
                 page,
@@ -744,6 +801,10 @@ async function StorefrontProductsFetch({
             finalData = await getCachedNewArrivalProducts();
         } else if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
+        } else if (isCategoryCatalogView) {
+            finalData = await getCachedCategoryProducts(
+                categoryCacheDescriptor
+            );
         } else {
             finalData = await productQueries.getProducts({
                 page,
@@ -769,10 +830,7 @@ async function StorefrontProductsFetch({
                 colors,
                 sizes,
                 minDiscount,
-                prioritizeBestSellers:
-                    !search &&
-                    defaultSortBy === "recommended" &&
-                    (!sortByRaw || sortByRaw === "recommended"),
+                prioritizeBestSellers,
                 prioritizeNewProducts,
                 requireMedia: true,
             });
