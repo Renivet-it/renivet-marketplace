@@ -23,6 +23,10 @@ import {
 import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
+import {
+    getCategoryCatalogCacheKey,
+    isCategoryCatalogCacheable,
+} from "./catalog-cache";
 import { FestiveFloralDivider } from "./festive-floral-divider";
 import { FestiveMobileSearch } from "./festive-mobile-search";
 import { MobileFilterLoadingButton } from "./mobile-filter-loading-button";
@@ -521,6 +525,49 @@ const getCachedNewArrivalProducts = unstable_cache(
     { revalidate: 60 }
 );
 
+const getCachedCategoryProducts = ({
+    categoryId,
+    sortBy,
+    sortOrder,
+}: {
+    categoryId: string;
+    sortBy?: "price" | "createdAt";
+    sortOrder?: "asc" | "desc";
+}) =>
+    unstable_cache(
+        async () => {
+            console.info("[catalog-cache] category listing miss", {
+                categoryId,
+                sortBy: sortBy ?? "default",
+                sortOrder: sortOrder ?? "default",
+            });
+            return productQueries.getProducts({
+                page: 1,
+                limit: 28,
+                isAvailable: true,
+                isActive: true,
+                isPublished: true,
+                isDeleted: false,
+                verificationStatus: "approved",
+                minPrice: 0,
+                categoryId,
+                sortBy,
+                sortOrder,
+                requireMedia: true,
+            });
+        },
+        [
+            getCategoryCatalogCacheKey({
+                categoryId,
+                page: 1,
+                limit: 28,
+                sortBy,
+                sortOrder,
+            }),
+        ],
+        { revalidate: 60 }
+    )();
+
 async function StorefrontProductsFetch({
     searchParams,
     productTypes,
@@ -703,6 +750,25 @@ async function StorefrontProductsFetch({
             !sizes &&
             !minDiscount;
 
+        const isCategoryCatalogView = isCategoryCatalogCacheable({
+            page,
+            limit,
+            categoryId,
+            sortBy,
+            sortOrder,
+            search,
+            brandIds,
+            minPrice,
+            maxPrice,
+            subcategoryId: subCategoryId,
+            productTypeId,
+            colors,
+            sizes,
+            minDiscount,
+            curated: Boolean(catalogContext),
+            personalized: shouldUseRecommendations,
+        });
+
         if (catalogContext) {
             finalData = await productQueries.getProducts({
                 page,
@@ -744,6 +810,12 @@ async function StorefrontProductsFetch({
             finalData = await getCachedNewArrivalProducts();
         } else if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
+        } else if (isCategoryCatalogView) {
+            finalData = await getCachedCategoryProducts({
+                categoryId: categoryId!,
+                sortBy: sortBy === "best-sellers" ? undefined : sortBy,
+                sortOrder,
+            });
         } else {
             finalData = await productQueries.getProducts({
                 page,

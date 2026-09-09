@@ -4,7 +4,7 @@ task:
     title: Cache category-only and category+sort catalog listing views
     source: linear
     branch: ayanganguly333/ren-159-cache-category-only-and-categorysort-catalog-listing-views
-    status: IN_REVIEW
+    status: READY_FOR_DEV
     linear:
         url: https://linear.app/renivet/issue/REN-159/cache-category-only-and-categorysort-catalog-listing-views
         priority: Medium
@@ -38,7 +38,10 @@ investigation:
     dependencies: [DEP-159-001, DEP-159-002]
     integrations: [INT-159-001]
     security_boundaries: [SEC-159-001]
-    state_transitions: [direct_query_miss -> cached_result -> cached_hit -> ttl_expiry -> refreshed_result]
+    state_transitions:
+        [
+            direct_query_miss -> cached_result -> cached_hit -> ttl_expiry -> refreshed_result,
+        ]
     related_tests: [TEXP-159-001, TEXP-159-002, TEXP-159-003, TEXP-159-004]
     uncertainties:
         - The exact cache API seam for testing must be selected during implementation without widening the production cache boundary.
@@ -92,10 +95,25 @@ invariants:
 flows:
     - id: FLOW-159-001
       description: Storefront parameters are normalized, eligibility is checked, an eligible key is resolved through the 60-second read-through cache, and a miss executes the existing product query.
-      state_transitions: [request_normalized, eligibility_checked, cache_miss, direct_query, cached_result, cache_hit]
+      state_transitions:
+          [
+              request_normalized,
+              eligibility_checked,
+              cache_miss,
+              direct_query,
+              cached_result,
+              cache_hit,
+          ]
     - id: FLOW-159-002
       description: Ineligible requests continue through the existing direct query path, while filter metadata remains separately resolved.
-      state_transitions: [request_normalized, eligibility_rejected, direct_query, metadata_resolved, response_rendered]
+      state_transitions:
+          [
+              request_normalized,
+              eligibility_rejected,
+              direct_query,
+              metadata_resolved,
+              response_rendered,
+          ]
 dependencies:
     - id: DEP-159-001
       name: storefront catalog parameter normalization
@@ -197,7 +215,17 @@ critic:
     reviewer: independent fresh-context contract reviewer
     fresh_context: true
     read_only: true
-    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    categories_reviewed:
+        [
+            requirements_scenarios,
+            failure_recovery,
+            security_privacy,
+            state_data_consistency,
+            integrations_idempotency,
+            compatibility_migration,
+            observability_testability,
+            assumptions_dependencies,
+        ]
     findings:
         - id: CRIT-159-R01
           severity: MAJOR
@@ -220,9 +248,9 @@ critic:
           references: [REQ-159-005, TEXP-159-004]
           description: "Open operational follow-up: staging/production hit-rate and query-volume evidence is required after implementation."
 approval:
-    state: PENDING
+    state: APPROVED
     design_blockers: []
-    approved_by: null
+    approved_by: Ayan Ganguly (owner approved REN-159 spec)
 implementation_review:
     artifact: REVIEW.md
     result: REVIEW_BLOCKED
@@ -239,8 +267,14 @@ implementation_review:
         security: PASS
         test_coverage: PARTIAL
         scope: PASS
-    blocking_findings: ["Implementation has not started; no implementation diff exists to reconcile."]
-    required_actions: ["Obtain owner approval, implement the approved contract, then run renivet-review against the committed implementation."]
+    blocking_findings:
+        [
+            "Implementation has not started; no implementation diff exists to reconcile.",
+        ]
+    required_actions:
+        [
+            "Obtain owner approval, implement the approved contract, then run renivet-review against the committed implementation.",
+        ]
     evidence:
         - "Comparison input unavailable: implementation has not started, so no application diff exists to reconcile."
     governance_reentry_required: false
