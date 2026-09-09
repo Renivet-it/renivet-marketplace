@@ -20,7 +20,7 @@ risk:
     final_risk: L2
     reasons:
         - Public catalog caching changes freshness and database-load behavior across multiple listing shapes.
-        - An incomplete cache key could return another category, sort, or filtered result.
+        - An incomplete cache key could return another category, sort, filtered result, or ordering-priority context.
         - The cache must not cross into personalized, curated, search, or arbitrary-filtered requests.
 investigation:
     depth: dependency_tracing
@@ -62,6 +62,9 @@ requirements:
     - id: REQ-159-005
       description: Provide testable hit/miss and TTL-refresh behavior and record bounded query-volume or cache evidence without customer data.
       type: explicit
+    - id: REQ-159-008
+      description: Cache eligibility, key construction, and query arguments preserve best-seller and new-product priority flags so different ordering contexts never share an entry.
+      type: inferred
 scenarios:
     - id: SCN-159-001
       requirement_ids: [REQ-159-001, REQ-159-004]
@@ -81,6 +84,9 @@ scenarios:
     - id: SCN-159-006
       requirement_ids: [REQ-159-004, REQ-159-005]
       description: Filter metadata remains aligned with the displayed category products and instrumentation contains no customer data.
+    - id: SCN-159-007
+      requirement_ids: [REQ-159-002, REQ-159-004, REQ-159-008]
+      description: Default shop category ordering retains best-seller priority, Swap Passport retains new-product priority, and neither can collide with an explicit createdAt category sort.
 invariants:
     - id: INV-159-001
       description: A cache key represents exactly one category, one allowlisted sort shape, one page/limit pair, and one cache contract version.
@@ -92,6 +98,8 @@ invariants:
       description: The TTL is 60 seconds and a miss never silently falls back to another key.
     - id: INV-159-005
       description: Cache instrumentation is bounded and excludes secrets, customer data, and raw arbitrary search text.
+    - id: INV-159-006
+      description: Cached category calls receive the same result-affecting ordering-priority arguments as their direct-query equivalent.
 flows:
     - id: FLOW-159-001
       description: Storefront parameters are normalized, eligibility is checked, an eligible key is resolved through the 60-second read-through cache, and a miss executes the existing product query.
@@ -170,6 +178,11 @@ test_expectations:
       classification: REQUIRED
       reason: Verifies bounded hit/miss or query-volume evidence and checks no sensitive or arbitrary query data is emitted.
       scenarios: [SCN-159-005, SCN-159-006]
+    - id: TEXP-159-005
+      category: regression
+      classification: REQUIRED
+      reason: Proves best-seller/new-product priorities are forwarded to the cached query and produces distinct keys from explicit createdAt sorting.
+      scenarios: [SCN-159-001, SCN-159-002, SCN-159-007]
 traceability:
     requirement_to_scenarios:
         - requirement_id: REQ-159-001
@@ -182,6 +195,8 @@ traceability:
           scenario_ids: [SCN-159-001, SCN-159-002, SCN-159-005, SCN-159-006]
         - requirement_id: REQ-159-005
           scenario_ids: [SCN-159-006]
+        - requirement_id: REQ-159-008
+          scenario_ids: [SCN-159-007]
     scenario_to_invariants:
         - scenario_id: SCN-159-001
           invariant_ids: [INV-159-001, INV-159-003, INV-159-004]
@@ -195,6 +210,8 @@ traceability:
           invariant_ids: [INV-159-002, INV-159-004]
         - scenario_id: SCN-159-006
           invariant_ids: [INV-159-003, INV-159-005]
+        - scenario_id: SCN-159-007
+          invariant_ids: [INV-159-001, INV-159-003, INV-159-006]
     scenario_to_test_expectations:
         - scenario_id: SCN-159-001
           test_expectation_ids: [TEXP-159-001, TEXP-159-002]
@@ -208,6 +225,8 @@ traceability:
           test_expectation_ids: [TEXP-159-003, TEXP-159-004]
         - scenario_id: SCN-159-006
           test_expectation_ids: [TEXP-159-004]
+        - scenario_id: SCN-159-007
+          test_expectation_ids: [TEXP-159-005]
 critic:
     required: true
     completed: true
@@ -247,30 +266,19 @@ critic:
           severity: MINOR
           references: [REQ-159-005, TEXP-159-004]
           description: "Open operational follow-up: staging/production hit-rate and query-volume evidence is required after implementation."
+        - id: CRIT-159-R06
+          severity: DESIGN_BLOCKER
+          references:
+              [
+                  REQ-159-002,
+                  REQ-159-004,
+                  REQ-159-008,
+                  INV-159-001,
+                  INV-159-003,
+                  INV-159-006,
+              ]
+          description: "Resolved in revised contract: cache descriptor/key/query must preserve every result-affecting priority flag and test cross-context non-collision."
 approval:
     state: APPROVED
     design_blockers: []
-    approved_by: Ayan Ganguly (owner approved REN-159 spec)
-implementation_review:
-    artifact: REVIEW.md
-    result: REVIEW_PASSED_WITH_FINDINGS
-    base_branch: origin/master
-    base_commit: "14a9f6422ef619b71aebc2fc8be74db321112c7b"
-    head_commit: "97f31751367eb0d0cb1a555d90408014c548ed79"
-    pr_url: null
-    material_drift: NO_DRIFT
-    reconciliation:
-        requirements: PARTIAL
-        scenarios: PARTIAL
-        invariants: PARTIAL
-        architecture: PARTIAL
-        security: PASS
-        test_coverage: PARTIAL
-        scope: PASS
-    blocking_findings: []
-    required_actions:
-        ["REV-159-001: Verify runtime cache hit, TTL refresh, and query-volume evidence after deployment."]
-    evidence:
-        - "Compared the approved REN-159 contract with the origin/master-to-97f31751367eb0d0cb1a555d90408014c548ed79 Git diff."
-        - "Static review confirmed bounded eligibility, canonical key separation, unchanged direct-query fallback, and non-sensitive instrumentation."
-    governance_reentry_required: false
+    approved_by: Ayan Ganguly (owner approved REN-159 spec and authorized correction of review findings)

@@ -24,8 +24,11 @@ import { auth } from "@clerk/nextjs/server";
 import { unstable_cache } from "next/cache";
 import { cache, Suspense, type ReactNode } from "react";
 import {
-    getCategoryCatalogCacheKey,
+    buildCategoryCatalogQueryInput,
+    createCategoryCatalogCachedLoader,
     isCategoryCatalogCacheable,
+    type CategoryCatalogCacheFactory,
+    type CategoryCatalogCacheInput,
 } from "./catalog-cache";
 import { FestiveFloralDivider } from "./festive-floral-divider";
 import { FestiveMobileSearch } from "./festive-mobile-search";
@@ -525,48 +528,27 @@ const getCachedNewArrivalProducts = unstable_cache(
     { revalidate: 60 }
 );
 
-const getCachedCategoryProducts = ({
-    categoryId,
-    sortBy,
-    sortOrder,
-}: {
-    categoryId: string;
-    sortBy?: "price" | "createdAt";
-    sortOrder?: "asc" | "desc";
-}) =>
-    unstable_cache(
-        async () => {
+const categoryCatalogCache: CategoryCatalogCacheFactory = (
+    load,
+    keyParts,
+    options
+) => unstable_cache(load, keyParts, options);
+
+const getCachedCategoryProducts = (descriptor: CategoryCatalogCacheInput) =>
+    createCategoryCatalogCachedLoader({
+        descriptor,
+        cache: categoryCatalogCache,
+        load: async () => {
             console.info("[catalog-cache] category listing miss", {
-                categoryId,
-                sortBy: sortBy ?? "default",
-                sortOrder: sortOrder ?? "default",
+                categoryId: descriptor.categoryId,
+                sortBy: descriptor.sortBy ?? "default",
+                sortOrder: descriptor.sortOrder ?? "default",
             });
-            return productQueries.getProducts({
-                page: 1,
-                limit: 28,
-                isAvailable: true,
-                isActive: true,
-                isPublished: true,
-                isDeleted: false,
-                verificationStatus: "approved",
-                minPrice: 0,
-                categoryId,
-                sortBy,
-                sortOrder,
-                requireMedia: true,
-            });
+            return productQueries.getProducts(
+                buildCategoryCatalogQueryInput(descriptor)
+            );
         },
-        [
-            getCategoryCatalogCacheKey({
-                categoryId,
-                page: 1,
-                limit: 28,
-                sortBy,
-                sortOrder,
-            }),
-        ],
-        { revalidate: 60 }
-    )();
+    })();
 
 async function StorefrontProductsFetch({
     searchParams,
@@ -750,7 +732,11 @@ async function StorefrontProductsFetch({
             !sizes &&
             !minDiscount;
 
-        const isCategoryCatalogView = isCategoryCatalogCacheable({
+        const prioritizeBestSellers =
+            !search &&
+            defaultSortBy === "recommended" &&
+            (!sortByRaw || sortByRaw === "recommended");
+        const categoryCacheDescriptor = {
             page,
             limit,
             categoryId,
@@ -767,7 +753,12 @@ async function StorefrontProductsFetch({
             minDiscount,
             curated: Boolean(catalogContext),
             personalized: shouldUseRecommendations,
-        });
+            prioritizeBestSellers,
+            prioritizeNewProducts,
+        } satisfies CategoryCatalogCacheInput;
+        const isCategoryCatalogView = isCategoryCatalogCacheable(
+            categoryCacheDescriptor
+        );
 
         if (catalogContext) {
             finalData = await productQueries.getProducts({
@@ -811,11 +802,9 @@ async function StorefrontProductsFetch({
         } else if (isDefaultView) {
             finalData = await getCachedDefaultProducts();
         } else if (isCategoryCatalogView) {
-            finalData = await getCachedCategoryProducts({
-                categoryId: categoryId!,
-                sortBy: sortBy === "best-sellers" ? undefined : sortBy,
-                sortOrder,
-            });
+            finalData = await getCachedCategoryProducts(
+                categoryCacheDescriptor
+            );
         } else {
             finalData = await productQueries.getProducts({
                 page,
@@ -841,10 +830,7 @@ async function StorefrontProductsFetch({
                 colors,
                 sizes,
                 minDiscount,
-                prioritizeBestSellers:
-                    !search &&
-                    defaultSortBy === "recommended" &&
-                    (!sortByRaw || sortByRaw === "recommended"),
+                prioritizeBestSellers,
                 prioritizeNewProducts,
                 requireMedia: true,
             });

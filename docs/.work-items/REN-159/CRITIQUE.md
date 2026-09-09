@@ -11,7 +11,8 @@ Result: `PASS_WITH_REVISIONS`
 - `CRIT-159-R03` — MAJOR, resolved in contract: TTL refresh and direct-query fallback are required, with no cross-category or cross-sort fallback on errors.
 - `CRIT-159-R04` — MINOR, resolved in contract: filter metadata remains outside this cache and must be checked for alignment with displayed products.
 - `CRIT-159-R05` — MINOR, open operational evidence: production/staging hit-rate and query-volume measurement must be performed after implementation; it cannot be established during specification from source inspection alone.
+- `CRIT-159-R06` — DESIGN_BLOCKER, resolved in the revised contract: every result-affecting ordering priority must be part of the cache descriptor, key, and cached query. The earlier descriptor omitted default best-seller/new-product priorities and allowed cross-context key collisions.
 
 ## Gate assessment
 
-The contract is implementable without schema changes and is traceable to the Linear acceptance criteria. No unresolved design blocker remains. Owner approval is still required before implementation begins.
+The revised contract is implementable without schema changes and is traceable to the Linear acceptance criteria. The owner explicitly authorized correction of the review findings; no unresolved design blocker remains.

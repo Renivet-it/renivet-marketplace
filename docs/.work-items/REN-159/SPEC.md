@@ -27,7 +27,7 @@ Implement a bounded read-through cache for public catalog listing results when a
 4. It uses the storefront’s public product predicates and media requirement.
 5. It uses either the default/recommended ordering or one of the supported category sort shapes (`price` with `asc`/`desc`, or `createdAt` with `asc`/`desc`) as represented by the current normalized storefront parameters.
 
-The cache key must include every input that can change the returned listing, at minimum category ID, normalized sort field/order, page, limit, and the cache contract version. Key construction must use a stable allowlisted representation, not raw query-string order.
+The cache key must include every input that can change the returned listing, at minimum category ID, normalized sort field/order, page, limit, applicable best-seller/new-product priority flags, and the cache contract version. The cached query must pass the same ordering-priority flags as the direct query.
 
 ## Out of scope
 
@@ -46,6 +46,7 @@ The cache key must include every input that can change the returned listing, at 
 - `REQ-159-005`: Search, price, arbitrary filters, personalization, curated catalogues, and non-page-1 requests retain the current uncached query path.
 - `REQ-159-006`: Existing product result shape, total count, ordering, media enrichment, filter metadata, and error behavior remain unchanged.
 - `REQ-159-007`: Add observable hit/miss or query-volume evidence using the repository’s existing safe logging/measurement conventions without logging customer data or changing production data.
+- `REQ-159-008`: Cache eligibility, key construction, and query arguments must preserve best-seller/new-product priority flags so different ordering contexts never share an entry.
 
 ## Scenarios
 
@@ -55,6 +56,7 @@ The cache key must include every input that can change the returned listing, at 
 - `SCN-159-004`: Free-text search, any price range, non-page-1, subcategory, product type, brand, color, size, discount, curated, and personalized requests bypass the new cache.
 - `SCN-159-005`: A cache miss/query failure follows the current error path and does not return data from a different category or sort key.
 - `SCN-159-006`: Filter-panel metadata and displayed products remain aligned for a category request; adding or removing a cache hit does not change counts or selected-filter behavior.
+- `SCN-159-007`: A default `/shop` category request retains best-seller priority, while a Swap Passport category request retains new-product priority; neither can collide with an explicit created-at sort.
 
 ## Invariants
 
@@ -63,17 +65,19 @@ The cache key must include every input that can change the returned listing, at 
 - `INV-159-003`: Cached values contain only the same public catalog result that the existing query returns; authorization and visibility predicates are unchanged.
 - `INV-159-004`: TTL remains 60 seconds, and cache misses/expiry never silently use another key’s result.
 - `INV-159-005`: Cache instrumentation is bounded and contains no secrets, customer data, or raw arbitrary search text.
+- `INV-159-006`: A cached category response receives exactly the same result-affecting ordering arguments as its corresponding direct query.
 
 ## Implementation contract
 
 Prefer a small wrapper alongside the existing `getCachedDefaultProducts` and `getCachedNewArrivalProducts` functions. The wrapper should accept a validated key descriptor and call the existing `productQueries.getProducts` with the same public predicates and `requireMedia: true`. Dynamic `unstable_cache` keys or an equivalent repository-supported bounded cache are acceptable only if the key is deterministic and the TTL is explicit. Do not wrap the general `getProducts` method because its broad parameter surface includes unbounded and personalized queries.
 
-The implementation must preserve the existing normalized storefront decision order: recommendation handling and curated/catalog contexts take precedence, then eligible category caching, then the existing default/new-arrival cache, then the direct query path. If the current ordering normalization treats `recommended` as no explicit sort, category-only must remain distinct from an explicit sort request only where the resulting query behavior differs.
+The implementation must preserve the existing normalized storefront decision order: recommendation handling and curated/catalog contexts take precedence, then eligible category caching, then the existing default/new-arrival cache, then the direct query path. The descriptor must carry best-seller and new-product priorities so cached and direct ordering remain equivalent for `/shop`, Swap Passport, and compatible future storefront contexts.
 
 ## Verification plan
 
 - Add focused unit tests for eligibility and canonical key construction, including key non-collision.
 - Add cache behavior tests with an injectable clock/cache or the project’s existing cache seam: first-call miss, identical-call hit, independent sort keys, and TTL refresh.
+- Add regression tests proving best-seller/new-product priorities are forwarded to the cached query and that `/shop` created-at sorting cannot collide with Swap Passport category results.
 - Add bypass tests for search, price, extra filters, personalized results, curated context, and page > 1.
 - Add a regression test that compares cached and direct result arguments/shape for a category-only and category-plus-sort request.
 - Run `bun test` and `bun run governance:validate -- docs/.work-items/REN-159/work-item.yaml`.

@@ -17,9 +17,12 @@ export type CategoryCatalogCacheInput = {
     minDiscount?: number | null;
     curated?: boolean;
     personalized?: boolean;
+    prioritizeBestSellers?: boolean;
+    prioritizeNewProducts?: boolean;
 };
 
 const CACHE_VERSION = "category-catalog-v1";
+export const CATEGORY_CATALOG_CACHE_TTL_SECONDS = 60;
 
 export function isCategoryCatalogCacheable(
     input: CategoryCatalogCacheInput
@@ -53,7 +56,13 @@ export function isCategoryCatalogCacheable(
 export function getCategoryCatalogCacheKey(
     input: Pick<
         CategoryCatalogCacheInput,
-        "categoryId" | "page" | "limit" | "sortBy" | "sortOrder"
+        | "categoryId"
+        | "page"
+        | "limit"
+        | "sortBy"
+        | "sortOrder"
+        | "prioritizeBestSellers"
+        | "prioritizeNewProducts"
     >
 ): string {
     if (!input.categoryId) {
@@ -66,5 +75,52 @@ export function getCategoryCatalogCacheKey(
         `page:${input.page}`,
         `limit:${input.limit}`,
         `sort:${input.sortBy ?? "default"}:${input.sortOrder ?? "default"}`,
+        `best-sellers:${input.prioritizeBestSellers ? "1" : "0"}`,
+        `new-products:${input.prioritizeNewProducts ? "1" : "0"}`,
     ].join(":");
+}
+
+export function buildCategoryCatalogQueryInput(
+    input: CategoryCatalogCacheInput
+) {
+    if (!input.categoryId) {
+        throw new Error("Category catalog query requires a category ID");
+    }
+
+    return {
+        page: 1,
+        limit: 28,
+        isAvailable: true,
+        isActive: true,
+        isPublished: true,
+        isDeleted: false,
+        verificationStatus: "approved" as const,
+        minPrice: 0,
+        categoryId: input.categoryId,
+        sortBy: input.sortBy === "best-sellers" ? undefined : input.sortBy,
+        sortOrder: input.sortOrder,
+        prioritizeBestSellers: Boolean(input.prioritizeBestSellers),
+        prioritizeNewProducts: Boolean(input.prioritizeNewProducts),
+        requireMedia: true,
+    };
+}
+
+export type CategoryCatalogCacheFactory = <T>(
+    load: () => Promise<T>,
+    keyParts: string[],
+    options: { revalidate: number }
+) => () => Promise<T>;
+
+export function createCategoryCatalogCachedLoader<T>({
+    descriptor,
+    load,
+    cache,
+}: {
+    descriptor: CategoryCatalogCacheInput;
+    load: () => Promise<T>;
+    cache: CategoryCatalogCacheFactory;
+}) {
+    return cache(load, [getCategoryCatalogCacheKey(descriptor)], {
+        revalidate: CATEGORY_CATALOG_CACHE_TTL_SECONDS,
+    });
 }
