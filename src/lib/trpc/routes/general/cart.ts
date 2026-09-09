@@ -4,6 +4,11 @@ import { posthog } from "@/lib/posthog/server";
 import { getAdvancedRecommendations } from "@/lib/python/product-recommendation";
 import { getEmbedding768 } from "@/lib/python/sematic-search";
 import {
+    getDeterministicWardrobeFallbackRows,
+    getVectorOrDeterministicFallbackRows,
+    getWardrobeFallbackCategoryIds,
+} from "./wardrobe-suggestion-fallback";
+import {
     analytics,
     mediaCache,
     userCartCache,
@@ -744,6 +749,7 @@ export const cartRouter = createTRPCRouter({
                 // We'll take the last 3 items added to cart to generate suggestions
                 const cartItems = cart.slice(0, 3);
                 const cartProductIds = new Set(cart.map((c) => c.productId));
+                const fallbackCategoryIds = getWardrobeFallbackCategoryIds(cart);
 
                 // Fetch recommendations in parallel
                 const recommendationsPromises = cartItems.map((item) =>
@@ -821,46 +827,67 @@ export const cartRouter = createTRPCRouter({
                         })
                         .join(". ");
 
-                    // Generate 768-dim embedding
-                    const embedding = await getEmbedding768(searchText);
+                    similarProducts =
+                        await getVectorOrDeterministicFallbackRows({
+                            getVectorRows: async () => {
+                                // Generate 768-dim embedding
+                                const embedding = await getEmbedding768(
+                                    searchText
+                                );
 
-                    // Find similar products via cosine similarity, excluding cart items
-                    const excludeList = cartProductIds
-                        .map((id) => `'${id}'`)
-                        .join(", ");
+                                // Find similar products via cosine similarity, excluding cart items
+                                const excludeList = cartProductIds
+                                    .map((id) => `'${id}'`)
+                                    .join(", ");
+                                const vectorResult = await db.execute(sql`
+                                    SELECT
+                                        p.id::text AS id,
+                                        p.title,
+                                        p.slug,
+                                        COALESCE(NULLIF(p.price, 0), (SELECT MIN(price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_deleted = false)) AS price,
+                                        COALESCE(NULLIF(p.compare_at_price, 0), (SELECT MIN(compare_at_price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_deleted = false)) AS "compareAtPrice",
+                                        p.brand_id::text AS "brandId",
+                                        p.media,
+                                        p.category_id::text AS "categoryId",
+                                        b.name AS "brandName",
+                                        (
+                                            SELECT id::text
+                                            FROM product_variants pv
+                                            WHERE pv.product_id = p.id
+                                              AND pv.is_deleted = false
+                                              AND pv.quantity > 0
+                                            LIMIT 1
+                                        ) AS "defaultVariantId",
+                                        (p.semantic_search_embeddings <=> ${JSON.stringify(embedding)}::vector) AS distance
+                                    FROM products p
+                                    LEFT JOIN brands b ON p.brand_id = b.id
+                                    WHERE p.semantic_search_embeddings IS NOT NULL
+                                      AND p.is_deleted = false
+                                      AND p.is_active = true
+                                      AND p.is_available = true
+                                      AND p.is_published = true
+                                      AND p.verification_status = 'approved'
+                                      AND p.id::text NOT IN (${sql.raw(excludeList)})
+                                    ORDER BY distance ASC
+                                    LIMIT 8
+                                `);
 
-                    similarProducts = await db.execute(sql`
-                        SELECT
-                            p.id::text AS id,
-                            p.title,
-                            p.slug,
-                            COALESCE(NULLIF(p.price, 0), (SELECT MIN(price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_deleted = false)) AS price,
-                            COALESCE(NULLIF(p.compare_at_price, 0), (SELECT MIN(compare_at_price) FROM product_variants pv WHERE pv.product_id = p.id AND pv.is_deleted = false)) AS "compareAtPrice",
-                            p.brand_id::text AS "brandId",
-                            p.media,
-                            p.category_id::text AS "categoryId",
-                            b.name AS "brandName",
-                            (
-                                SELECT id::text 
-                                FROM product_variants pv 
-                                WHERE pv.product_id = p.id 
-                                  AND pv.is_deleted = false 
-                                  AND pv.quantity > 0 
-                                LIMIT 1
-                            ) AS "defaultVariantId",
-                            (p.semantic_search_embeddings <=> ${JSON.stringify(embedding)}::vector) AS distance
-                        FROM products p
-                        LEFT JOIN brands b ON p.brand_id = b.id
-                        WHERE p.semantic_search_embeddings IS NOT NULL
-                          AND p.is_deleted = false
-                          AND p.is_active = true
-                          AND p.is_available = true
-                          AND p.is_published = true
-                          AND p.verification_status = 'approved'
-                          AND p.id::text NOT IN (${sql.raw(excludeList)})
-                        ORDER BY distance ASC
-                        LIMIT 8
-                    `);
+                                return Array.isArray(vectorResult)
+                                    ? vectorResult
+                                    : (vectorResult?.rows ?? []);
+                            },
+                            getFallbackRows: () =>
+                                getDeterministicWardrobeFallbackRows({
+                                    categoryIds: fallbackCategoryIds,
+                                    cartProductIds: Array.from(cartProductIds),
+                                    execute: (query) => db.execute(query),
+                                }),
+                            onFallback: (reason) => {
+                                console.warn(
+                                    `Wardrobe suggestions: using local catalog fallback after ${reason}`
+                                );
+                            },
+                        });
                 }
 
                 const rows = Array.isArray(similarProducts)
