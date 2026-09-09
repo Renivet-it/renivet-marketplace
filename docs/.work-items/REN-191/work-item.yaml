@@ -1,0 +1,268 @@
+schema_version: "1.0"
+task:
+    id: REN-191
+    title: Remediate ASVS upload-limit and insecure catalog transport failures
+    source: Linear
+    branch: ayanganguly333/ren-191-remediate-asvs-upload-limit-and-insecure-catalog-transport
+    status: BLOCKED
+    linear:
+        priority: High
+        status: Backlog
+        url: https://linear.app/renivet/issue/REN-191/remediate-asvs-upload-limit-and-insecure-catalog-transport-failures
+risk:
+    initial_risk: L2
+    path_rule_risk: L3
+    semantic_risk: L3
+    final_risk: L3
+    reasons:
+        - Security-sensitive upload policy changes accepted file sizes, counts, and MIME families.
+        - External catalog and recommendation traffic crosses a transport-security boundary.
+        - Incorrect fallback behavior could affect customer catalog availability.
+    escalation_history:
+        - from: L2
+          to: L3
+          reason: Investigation found three external-service consumers and an authorization-protected bulk media route.
+investigation:
+    depth: L3
+    investigated_areas:
+        - src/app/api/uploadthing/core.ts brandMediaUploader policy and permission middleware
+        - brand media upload and selection clients
+        - src/app/api/search/products/route.ts
+        - src/lib/db/queries/product.ts catalog RAG branch and fallback
+        - src/app/api/search/suggestions/route.ts
+        - src/lib/python/sematic-search.ts embedding clients
+        - src/lib/python/product-recommendation.ts recommendation client
+        - env.ts server environment contract
+        - existing related tests and ASVS/SOC2 evidence
+    excluded_areas:
+        - area: Other UploadThing routes
+          reason: Their limits are already bounded and are not part of the confirmed V5.2.1 failure.
+        - area: External embedding-service deployment
+          reason: This repository controls only the client URL and fallback; certificates and service deployment are external.
+    dependencies:
+        - UploadThing route configuration
+        - EMBEDDING_SERVICE_URL deployment value
+        - External embedding/RAG service with six active calls across five files
+    integrations:
+        - UploadThing
+        - Embedding/RAG HTTP API
+    boundaries:
+        - Authorized brand/platform media-management boundary
+        - Server environment configuration boundary
+        - Outbound HTTPS service boundary
+    transitions:
+        - Authorized upload request is accepted within limits or rejected before processing.
+        - Search/recommendation uses configured secure upstream or safe local fallback.
+    tests:
+        - Upload policy shape and allowlist tests
+        - Service URL validation and construction tests
+        - Search/recommendation fallback tests
+        - Full Bun suite
+    uncertainties:
+        - Final upload limits require owner approval.
+        - A deployable HTTPS service origin requires owner confirmation.
+requirements:
+    - id: REQ-191-001
+      type: explicit
+      description: Replace brand media limits of 9999 files and 1024GB with an exact approved MIME allowlist and per-key limits, and remove unrestricted blob uploads.
+      acceptance: Router exposes only approved types, sizes, and counts while retaining existing authorization.
+    - id: REQ-191-002
+      type: explicit
+      description: Remove hardcoded insecure embedding-service URLs from all six active calls across search routes, catalog RAG, embeddings, and recommendations.
+      acceptance: All consumers use one validated EMBEDDING_SERVICE_URL helper and no insecure production fallback exists.
+    - id: REQ-191-003
+      type: inferred
+      description: Permit HTTP only for explicit loopback development/test origins.
+      acceptance: Non-loopback HTTP is rejected; HTTPS and eligible loopback URLs are accepted.
+    - id: REQ-191-004
+      type: explicit
+      description: Preserve catalog availability when configuration or the external service fails.
+      acceptance: Optional RAG/recommendation calls fail safely without breaking catalog browsing.
+    - id: REQ-191-005
+      type: explicit
+      description: Add reproducible evidence that supports reassessment of ASVS V5.2.1 and V12.3.1.
+      acceptance: Focused tests and static checks cover both findings.
+scenarios:
+    - id: SCN-191-001
+      requirement_ids: [REQ-191-001]
+      description: An authorized operator uploads allowed media within approved limits.
+      expected: UploadThing accepts the request and existing completion handling is unchanged.
+    - id: SCN-191-002
+      requirement_ids: [REQ-191-001, REQ-191-005]
+      description: A request exceeds a count/size limit or uses generic blob content.
+      expected: UploadThing rejects it before completion processing.
+    - id: SCN-191-003
+      requirement_ids: [REQ-191-002, REQ-191-003]
+      description: A valid HTTPS service origin is configured.
+      expected: All consumers construct encoded endpoint URLs from the shared origin.
+    - id: SCN-191-004
+      requirement_ids: [REQ-191-002, REQ-191-003, REQ-191-004]
+      description: The service origin is absent, malformed, or non-loopback HTTP.
+      expected: No insecure request is made and existing catalog fallback remains available.
+    - id: SCN-191-005
+      requirement_ids: [REQ-191-004, REQ-191-005]
+      description: The configured service times out or returns an error.
+      expected: Search and recommendations return safe fallback results without exposing configuration.
+invariants:
+    - id: INV-191-001
+      description: Upload authorization and ownership checks are never weakened.
+    - id: INV-191-002
+      description: Production-capable outbound service traffic never uses plaintext HTTP.
+    - id: INV-191-003
+      description: External search failure never blocks the core catalog result path.
+    - id: INV-191-004
+      description: New logs contain no credentials, full service URLs, or customer queries.
+flows:
+    - id: FLOW-191-001
+      description: Upload client -> UploadThing allowlist/limits -> existing authorization middleware -> completion metadata.
+      state_transitions:
+          - selected -> validated-or-rejected -> authorized -> completed
+    - id: FLOW-191-002
+      description: Server consumer -> validated service-origin helper -> URL endpoint construction -> bounded external request -> existing fallback.
+      state_transitions:
+          - configured -> validated-or-disabled -> requested-or-skipped -> result-or-fallback
+dependencies:
+    - id: DEP-191-001
+      name: UploadThing route limit semantics
+      description: UploadThing must enforce declared MIME, size, and count limits before completion.
+      status: resolved
+      evidence: Existing routes use maxFileSize and maxFileCount per MIME family.
+    - id: DEP-191-002
+      name: Production EMBEDDING_SERVICE_URL
+      description: Production requires an HTTPS service origin to enable optional semantic features.
+      status: unresolved
+      evidence: No verified HTTPS hostname or certificate is present in repository evidence; owner must identify the deployable origin.
+integrations:
+    - id: INT-191-001
+      system: UploadThing
+      purpose: Enforce file type, size, and count before completion callback.
+    - id: INT-191-002
+      system: Embedding/RAG service
+      purpose: Provide optional semantic search, suggestions, embeddings, and recommendations over HTTPS.
+personas:
+    - id: PER-191-001
+      role: Authorized brand media manager
+      applicability: Uploads and reuses media within approved limits.
+    - id: PER-191-002
+      role: Catalog customer
+      applicability: Uses search and recommendation experiences that must degrade safely.
+security_boundaries:
+    - id: SEC-191-001
+      description: Existing media authorization middleware remains unchanged and executes before upload completion.
+    - id: SEC-191-002
+      description: External service origins are validated server-side; only HTTPS or development/test loopback HTTP is allowed.
+    - id: SEC-191-003
+      description: Configuration diagnostics do not disclose environment values, credentials, or customer queries.
+    - id: SEC-191-004
+      description: Service requests use an origin-only operator configuration, five-second timeout, zero retries, disabled redirects, and expected-shape response validation.
+business_rules:
+    - id: BR-191-001
+      description: Optional semantic-search failure must degrade to existing catalog behavior rather than a customer-visible outage.
+decisions:
+    - id: DEC-191-001
+      class: C
+      question: Approve image 8MB/20, video 64MB/5, audio 32MB/10, PDF 16MB/10, text 1MB/10, and removal of generic blob uploads?
+      recommendation: Approve these bounded limits because they support existing media workflows while eliminating effectively unlimited requests.
+      basis: Existing routes use 4-8MB images, 32MB videos, and small request counts; brand media is the only bulk library.
+      confidence: medium
+      impact: Oversized files, excessive batches, and generic blobs will be rejected.
+      consequence: Existing operator uploads outside the approved limits or using generic blob MIME types will stop working.
+      human_confirmation_required: true
+      status: unresolved
+    - id: DEC-191-002
+      class: C
+      question: Confirm the production HTTPS origin for the embedding service and that it will be provisioned/configured before application rollout.
+      recommendation: Provision a DNS hostname with a valid TLS certificate in front of the current service, verify it in Preview, then configure the same approved origin in Production.
+      basis: The only repository-known endpoint is a plaintext unauthenticated raw IP and cannot satisfy V12.3.1.
+      confidence: high
+      impact: Without a verified HTTPS origin, optional semantic search, embeddings, and recommendations will be disabled after this secure client change.
+      consequence: Deploying the application before the HTTPS endpoint is configured can reduce semantic-search and recommendation functionality, although core catalog fallback remains available.
+      human_confirmation_required: true
+      status: unresolved
+test_expectations:
+    - id: TEXP-191-001
+      category: security
+      classification: REQUIRED
+      reason: Verify exact upload allowlist, limits, and rejection contract.
+      scenarios: [SCN-191-001, SCN-191-002]
+    - id: TEXP-191-002
+      category: unit
+      classification: REQUIRED
+      reason: Verify secure origin parsing and endpoint construction.
+      scenarios: [SCN-191-003, SCN-191-004]
+    - id: TEXP-191-003
+      category: regression
+      classification: REQUIRED
+      reason: Verify missing, invalid, timeout, and error paths retain safe catalog fallback.
+      scenarios: [SCN-191-004, SCN-191-005]
+traceability:
+    requirement_to_scenarios:
+        - requirement_id: REQ-191-001
+          scenario_ids: [SCN-191-001, SCN-191-002]
+        - requirement_id: REQ-191-002
+          scenario_ids: [SCN-191-003, SCN-191-004]
+        - requirement_id: REQ-191-003
+          scenario_ids: [SCN-191-003, SCN-191-004]
+        - requirement_id: REQ-191-004
+          scenario_ids: [SCN-191-004, SCN-191-005]
+        - requirement_id: REQ-191-005
+          scenario_ids: [SCN-191-002, SCN-191-005]
+    scenario_to_invariants:
+        - scenario_id: SCN-191-001
+          invariant_ids: [INV-191-001]
+        - scenario_id: SCN-191-002
+          invariant_ids: [INV-191-001]
+        - scenario_id: SCN-191-003
+          invariant_ids: [INV-191-002, INV-191-004]
+        - scenario_id: SCN-191-004
+          invariant_ids: [INV-191-002, INV-191-003, INV-191-004]
+        - scenario_id: SCN-191-005
+          invariant_ids: [INV-191-003, INV-191-004]
+    scenario_to_test_expectations:
+        - scenario_id: SCN-191-001
+          test_expectation_ids: [TEXP-191-001]
+        - scenario_id: SCN-191-002
+          test_expectation_ids: [TEXP-191-001]
+        - scenario_id: SCN-191-003
+          test_expectation_ids: [TEXP-191-002]
+        - scenario_id: SCN-191-004
+          test_expectation_ids: [TEXP-191-002, TEXP-191-003]
+        - scenario_id: SCN-191-005
+          test_expectation_ids: [TEXP-191-003]
+critic:
+    required: true
+    completed: true
+    artifact: CRITIQUE.md
+    reviewer: independent fresh-context contract reviewer
+    fresh_context: true
+    read_only: true
+    categories_reviewed: [requirements_scenarios, failure_recovery, security_privacy, state_data_consistency, integrations_idempotency, compatibility_migration, observability_testability, assumptions_dependencies]
+    findings:
+        - id: CRIT-191-001
+          severity: DESIGN_BLOCKER
+          references: [REQ-191-001, DEC-191-001]
+          description: Exact upload MIME and limits require owner approval.
+        - id: CRIT-191-002
+          severity: DESIGN_BLOCKER
+          references: [DEP-191-002, DEC-191-002]
+          description: A deployable HTTPS service origin is not established.
+        - id: CRIT-191-003
+          severity: MAJOR
+          references: [REQ-191-004, SCN-191-005]
+          description: Requests require an explicit timeout, retry, redirect, response-validation, and fallback contract.
+        - id: CRIT-191-004
+          severity: MAJOR
+          references: [REQ-191-002, SEC-191-002, SEC-191-004]
+          description: Validate the operator-configured origin and prevent unsafe redirects or plaintext deployment traffic.
+        - id: CRIT-191-005
+          severity: MAJOR
+          references: [REQ-191-002, TEXP-191-002]
+          description: Cover all six active consumers, caller-specific fallback, and sanitized error behavior.
+        - id: CRIT-191-006
+          severity: MINOR
+          references: [REQ-191-001, INV-191-001]
+          description: Existing media compatibility requires explicit owner acceptance; provider-to-database orphan handling remains out of scope.
+approval:
+    state: BLOCKED
+    design_blockers: [DEC-191-001, DEC-191-002]
+    approved_by: pending owner confirmation
